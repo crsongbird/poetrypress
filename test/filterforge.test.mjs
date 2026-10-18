@@ -159,6 +159,30 @@ check('a Note makes nothing and breaks nothing', run([node(5, 'note', { text: 'h
 { const g = graph([node(1, 'knob', { slot: '1', name: 'Wired' }), node(2, 'knob', { slot: '2', name: 'Loose' }), node(3, 'number', {}), node(4, 'blur', {}, { 1: [3, 1], [S.paramPort('blur', 'radius')]: [1, 1] }),
     node(6, 'hue', { slot: '2', name: 'Loose Hue' }), node(99, 'surface', {}, { 1: [4, 1] })]);
   check('controls show only when they reach the Surface (Filter Forge: a control not connected to the Result isn\'t shown)', JSON.stringify(C.athanorKnobs(g).map(k => k.label)) === '["Wired"]' && C.athanorHues(g).length === 0); }
+// ---- the preview's channels (Filter Forge's, B2): one thing the Surface is made of at a time; view only ----
+{ const lit = ch => C.evalAthanor(graph([node(1, 'gradient', { shape: 'linear', angle: 90 }), node(2, 'perlin', { scale: 6 }),
+    node(99, 'surface', { ground: 'grey' }, { 1: [1, 1], 2: [2, 1] })]), W, H, { seed: 3, knobs: [], tints: [], light: 315, ...(ch ? { channel: ch } : {}) }, {});
+  const bare = ch => C.evalAthanor(graph([node(1, 'gradient', { shape: 'linear', angle: 90 }), node(99, 'surface', { ground: 'grey' }, { 1: [1, 1] })]), W, H, { seed: 3, knobs: [], tints: [], channel: ch }, {});
+  const hgt = C.evalAthanor(graph([node(2, 'perlin', { scale: 6 }), node(99, 'surface', { ground: 'grey' }, { 1: [2, 1] })]), W, H, { seed: 3, knobs: [], tints: [] }, {});
+  const fin = lit('final'), none = lit(), h = lit('height'), nm = lit('normal'), oc = lit('occlusion'), sp = lit('specular');
+  check('Final is the picture as ever', fin.r.every((v, i) => v === none.r[i]));
+  check('Height shows what is wired into the Surface\'s Height, as gray', h.r.every((v, i) => Math.abs(v - Math.max(0, Math.min(1, hgt.r[i]))) < 1e-6 && v === h.g[i] && v === h.b[i]));
+  check('Normal is a normal map: blue over all, red and green leaning with the slopes', nm.b.every(v => v > 0.5) && nm.r.some(v => v > 0.52) && nm.r.some(v => v < 0.48) && nm.g.some(v => v > 0.52) && nm.g.some(v => v < 0.48));
+  check('Occlusion and Specular are grays in range, darker in some hollows and shining on some slopes', oc.r.every(v => v >= 0 && v <= 1) && oc.r.some(v => v < 0.95) && sp.r.some(v => v > 0.01) && sp.r.every(v => v >= 0 && v <= 1));
+  const fl = bare('normal'), fh = bare('height'), fo = bare('occlusion'), fs = bare('specular');
+  check('with nothing in the Height: flat gray, the flat normal (0.5, 0.5, 1), all open, no shine', fh.r.every(v => v === 0.5) && fl.r.every(v => v === 0.5) && fl.g.every(v => v === 0.5) && fl.b.every(v => v === 1) && fo.r.every(v => v === 1) && fs.r.every(v => v === 0)); }
+
+// ---- the Light Engine's Ambient Hue (C1): the light from everywhere, in a color; white or empty draws as ever ----
+{ const lit = hex => C.evalAthanor(graph([node(1, 'colour', { hex: '#B0B0B0' }), node(2, 'perlin', { scale: 5 }), ...(hex ? [node(3, 'colour', { hex })] : []),
+    node(4, 'material', { relief: 120, shadow: 80, occlusion: 60, ambient: 40 }, { 1: [1, 1], 2: [2, 1], ...(hex ? { 8: [3, 1] } : {}) }), node(99, 'surface', { ground: 'colour' }, { 1: [4, 1] })]), W, H, { seed: 3, knobs: [], tints: [], light: 315 }, {});
+  const none = lit(), white = lit('#FFFFFF'), blue = lit('#4060FF');
+  check('Ambient Hue: white (or empty) draws exactly as before', white.r.every((v, i) => v === none.r[i]) && white.b.every((v, i) => v === none.b[i]));
+  // (the light from everywhere is the same everywhere, so it colors the shade, where little else reaches, the most:
+  //  blue over red, against what it was, leans further on the shaded points than on the lit ones)
+  const idx = [...none.r.keys()].sort((a, b) => none.r[a] - none.r[b]), dark = idx.slice(0, 200), bright = idx.slice(-200);
+  const lean = set => set.reduce((t, i) => t + blue.b[i]/Math.max(1e-3, blue.r[i]) - none.b[i]/Math.max(1e-3, none.r[i]), 0)/set.length;
+  check('…a blue one turns the shade blue, more than the lit faces', lean(dark) > 0.05 && lean(dark) > lean(bright)); }
+
 // ---- the Surface's Anti-aliasing (Filter Forge's menu, A6) ----
 { const hard = [node(1, 'noise', { scale: 30 }), node(2, 'threshold', { at: 50, soft: 0 }, { 1: [1, 1] })];
   const off = run(hard, [2, 1]), off2 = run(hard, [2, 1], { surface: { aa: 'off' } }), edge = run(hard, [2, 1], { surface: { aa: 'edges only' } });

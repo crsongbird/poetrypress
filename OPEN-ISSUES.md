@@ -6,7 +6,7 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Greip, Saturn–Tarqeq, Saturn–Siarnaq, Saturn–Skoll, Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
@@ -33,6 +33,10 @@ Recommendations".
 - THE CURVE CONTROL (Hand-Drawn Tones shows it): a pad under the sliders, its points dragged, added by a tap, taken
   away by a double-tap or a hold. Is it easy on the phone? Should a point get handles (ROADMAP F10, Bezier)?
 - THE ANGLE DIAL beside an Angle knob (Dot Grid's Turn), and the WIRE RANGE's two handles: clearer than before?
+- THE PREVIEW'S CHANNELS (sheet sent): Final, Height, Normal, Occlusion, Specular under the Athanor's preview, the last
+  three at full contrast. Clear? Should Diffuse (the light alone) or a Light channel join them?
+- AMBIENT HUE on the Light Engine (sheet sent): the light from everywhere in a color. Strong at Ambient 45: should it
+  be half as strong for the same setting?
 - THE PATTERN STARTERS: Paving Stones, Brick Wall, Pyramid Studs, Dot Grid, Techno Blocks. Do they teach the parts?
 - THE TAB CAPTIONS, the SWITCHES and the CAMERA DIAL'S ZOOM SLIDER (screenshots sent): right on the phone?
 - GROUPS IN THE ATHANOR: choosing parts by tap or by a box dragged across the grid (Shift and a drag with a mouse).

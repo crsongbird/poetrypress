@@ -3442,9 +3442,9 @@ function whenTexture(slot, type, w, h, opts, done){
   setTimeout(off, 20000);
 }
 /** The Athanor's large preview: what the graph makes, made off the page's thread. */
-function previewAthanor(json, cv){
+function previewAthanor(json, cv, channel){
   const n = cv.width || 320;
-  whenTexture('athanorPreview', 'athanor', n, n, athanorOpts(json, n), tex => {
+  whenTexture('athanorPreview', 'athanor', n, n, { ...athanorOpts(json, n), channel: channel || 'final' }, tex => {
     const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height); });
 }
 /** The STEP PREVIEWS: every node's own result, as one sheet of tiles made in the worker. */

@@ -62,12 +62,12 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Remappers (limit or reverse a control's range per target; one slider, many ranges) | `'~key': 'lo,hi'` per wired ⚙ (lo > hi reverses) | ✅ engine; ⇄ Reverse and two handles in the menu (Saturn–Erriapus) |
 | Required inputs (red; a stand-in image keeps the rest working) | `STEP_REQUIRED`: a red port with "!", and a "!"-in-a-circle stand-in in step previews only | ✅ |
 | Result: Simple vs Surface (lit by Surface Color, Height, Reflectivity, Reflection Blur, Metallic) | Surface: picture, height, reflectivity, reflection blur, metallic and emission (Saturn–Albiorix); the Light Engine as a part | ✅ (environment reflections: C4) |
-| Render channels (Final, Diffuse, Bump, Normal, Specular, Metallic, Occlusion) | Step previews show each part's first output | **B2** |
+| Render channels (Final, Diffuse, Bump, Normal, Specular, Metallic, Occlusion) | The preview's channel menu: Final, Height, Normal, Occlusion, Specular (view only); step previews show each part's first output | ✅ (Saturn–Greip) |
 | Global Size (all distances relative; resolution-independent) | Canonical pixels everywhere; the Surface's **Size** (25–400) scales a graph | ✅ |
 | Global Variation (one seed into every random part, plus each part's own) | The page seed; v2 seeds each node from (seed, id); every random part has a Variation | ✅ |
 | Seamless Tiling | Not needed: a page is not tiled | parked |
 | Anti-aliasing: supersampling, "edges only" by AA zones | The Surface's Anti-aliasing: edges only (FXAA on the grid), all pixels (a grid twice as fine, within the budget) | ✅ (Saturn–Bebhionn) |
-| Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | One dial light, ambient, materials (Highlight, Shade, Diffuse hues), soft shadows, AO | **C1–C4** |
+| Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | One dial light, ambient (its color on the Light Engine: Ambient Hue), materials (Highlight, Shade, Diffuse hues), soft shadows, AO | **C1–C4** |
 | Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (8 slots), Hue (2), Curve Control (2 pads), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ (the Angle's dial, the Curve Control: Saturn–Erriapus) |
 | Groups (control components inside a group define its inputs) | **Group** parts: their insides a module of the editor's; each Group Input and Knob inside an input, the Group Result its outputs; laid out flat before drawing | ✅ (Saturn–Paaliaq) |
 | Loop and its slaves (Iteration, Accumulated, Randomizer); Bitmap Cache; Lua script components | A group's Repeats (the first result fed back as Accumulated; an Iteration part); results kept automatically (ATHANOR_KEPT) | ✅ (Saturn–Albiorix); scripts parked (security) |
@@ -83,16 +83,12 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 Each item lists its **files**, what it **depends on**, and how to **prove** it.
 IDs are for cross-reference. They are not priorities (see §3 for the order).
 
-### B · The output stage (the Surface)
-
-- **B2 · Channels in the Athanor preview.** A selector under the preview:
-  Final, Height, Normal, Occlusion, Specular.
-  - View only, for understanding a surface; no export.
-
 ### C · Lighting (texCore.js lightHeights + shader; the dial UI)
 
-- **C1 · Ambient light color.** A hue for the light that comes from
-  everywhere. Its "none" draws exactly as today (colour roles rule).
+- **C1 · Ambient light color, on the page.** The Light Engine has its
+  Ambient Hue; the menu textures' own lighting (texCore `litK`) and the
+  Surface's height lighting could take one too, as a hue on the page. Its
+  "none" draws exactly as today (colour roles rule).
 - **C2 · More lights.** A rim light or backlight beside the dial's light:
   color (negative allowed: it draws light out), softness (Filter Forge's
   angular width), diffuse-only or specular-only.
@@ -254,7 +250,6 @@ superseded) wait for Stage 4.
   what they unlock (§2 F).
 
 ### Stage 2 · Features: the engine, the controls, the poem
-- **B2** channels view.
 - **C1–C4** lighting; **C5** the camera dial on more textures.
 - **G2** punctuation, **G4** Emotional Seed.
 
@@ -304,12 +299,12 @@ superseded) wait for Stage 4.
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
                               (controls: dial, two handles, curves) ─────────────────────┘      ├─► E4 author locks
                                                                                                 └─► THE PRESETS PASS
-                              B2 channels ─► C1 ─► C2 ─► C4; C3
+                              C1 ─► C2 ─► C4; C3
 ```
 
 **Suggested passes** (one release each, AGENTS' recipe):
 
-1. Stage 2: B2 channels; then C1–C4.
+1. Stage 2: C1 on the page, then C2–C4.
 2. Stage 2: G2, G4.
 3. Stage 1: F7 Refraction (with F1), F10 Bezier curves.
 4. Stage 3: the Surface Studies become textures, a few per pass; black boxes

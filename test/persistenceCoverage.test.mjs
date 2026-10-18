@@ -23,6 +23,7 @@ const html = src('index.html'), ev = src('appEvents.js'), renderer = src('canvas
 const EXEMPT = {
   uiTheme:      'the app\'s own theme: a preference saved on its own, not part of an image',
   forgeSteps:   'the Athanor\'s step previews on or off: a working preference of this browser (localStorage), not part of an image',
+  forgeChannel: 'which channel the Athanor\'s preview shows: a view of the graph while working on it, never part of an image',
   soundToggle:  'interface sounds on or off (murmur.js): this browser\'s preference, kept in localStorage, not part of an image',
   soundVolume:  'interface sound volume: this browser\'s preference, kept in localStorage, not part of an image',
   hintsToggle:  'hints written out under every section: this browser\'s preference, kept in localStorage, not part of an image',

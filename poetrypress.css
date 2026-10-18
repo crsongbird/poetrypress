@@ -2217,6 +2217,7 @@ body.is-mobile .forge-doc .wk-tools{ justify-content:flex-start; }
 body.is-mobile .forge-doc .wk-tools [data-doc="close"]{ margin-left:auto; }
 .forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
+.forge-channel{ width:auto; margin:0; padding:2px 4px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; }
 
 /* ============================================================
    THE CHOOSER (chooser.js): a surface menu shown as tiles.

@@ -247,7 +247,18 @@ export const WIKI_ARTICLES = [
 <li><b>Relief</b> on the Light Engine sets how tall the heights stand.</li>
 <li><b>High Pass</b> keeps only fine detail, for grain without big hills.</li>
 <li>Add maps together (Math › Add) to put small detail on top of big shapes.</li>
-</ul>` },
+</ul>
+<h3>Seeing the channels</h3>
+<p>The menu under the preview shows one thing the Surface is made of at a time, as Filter Forge’s channels do. It is only a view: the page always shows the final picture.</p>
+<ul>
+<li><b>Final</b>: the finished picture, lit.</li>
+<li><b>Height</b>: what is wired into the Surface’s Height, as gray (white high). Flat gray means nothing is wired there.</li>
+<li><b>Normal</b>: the slopes the heights make, as colors, the way games store them in a normal map: flat ground is a soft blue (half red, half green, full blue), a slope facing right is redder and one facing up is greener. Hard steps show as bright seams.</li>
+<li><b>Occlusion</b>: how much light reaches into the hollows: white where open, darker in the creases between bumps.</li>
+<li><b>Specular</b>: the shine, where the dial’s light glances off a slope toward you.</li>
+</ul>
+<p>Normal, Occlusion and Specular are drawn at full contrast, gentle slopes steepened and the faintest shade stretched, so you see where each one falls; Final shows how strong it really is.</p>
+<p>Try: a Cells into the Surface’s Height, then look at Normal while you Blur it, to watch the hard steps turn into slopes.</p>` },
   { id: 'seeds', group: 'Building techniques', title: 'Seeds, Variation and chance', body: `
 <p>Random parts (noise, cells, scattered marks) aren’t truly random: they follow a <b>seed</b>, a number that decides the pattern. The same seed always gives the same picture, so a look can be saved and shared exactly.</p>
 {{fig:seeds}}

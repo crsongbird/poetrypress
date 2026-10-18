@@ -660,6 +660,22 @@ const STEP_RUN = {
   },
   surface(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
     const img = asImage(input(n, 1) ?? 0.5), h0 = asField(input(n, 2));
+    // ONE CHANNEL for the preview (ROADMAP B2; view only): the height as gray, the normals it makes (a normal map's colors:
+    // flat is (0.5, 0.5, 1), green up), the light that reaches into its hollows (occlusion), its shine (specular). Each but
+    // the height is drawn at full contrast, so you see WHERE it falls (gentle slopes steepened until the usual one reads at
+    // about 35°; the deepest hollow black, the brightest shine white): Final shows how strong it really is.
+    if(ctx.channel && ctx.channel !== 'final'){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, put = (i, r, g, b) => { o.r[i] = r; o.g[i] = g; o.b[i] = b; };
+      const { ww, wh } = E, H = new Float32Array(N); if(h0) for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
+      if(ctx.channel === 'height'){ for(let i = 0; i < N; i++){ const v = h0 ? Math.max(0, Math.min(1, h0[i])) : 0.5; put(i, v, v, v); } return [o]; }
+      if(ctx.channel === 'normal'){ const GX = new Float32Array(N), GY = new Float32Array(N), mags = [];
+        for(let y = 0, i = 0; y < wh; y++) for(let x = 0; x < ww; x++, i++){ GX[i] = (H[y*ww + Math.min(ww - 1, x + 1)] - H[y*ww + Math.max(0, x - 1)])*0.5; GY[i] = (H[Math.min(wh - 1, y + 1)*ww + x] - H[Math.max(0, y - 1)*ww + x])*0.5;
+          if(i % Math.max(1, N >> 12) === 0) mags.push(Math.hypot(GX[i], GY[i])); }
+        mags.sort((a, b) => a - b); const p90 = mags[Math.floor(mags.length*0.9)] || 0, k = p90 > 1e-9 ? Math.max(1, Math.min(32, 0.7/p90)) : 1;
+        for(let i = 0; i < N; i++){ const gx = GX[i]*k, gy = GY[i]*k, nl = Math.hypot(gx, gy, 1); put(i, 0.5 - gx/nl*0.5, 0.5 + gy/nl*0.5, 0.5 + 0.5/nl); } return [o]; }
+      const L = lightOf(H, ctx.light ?? 315, 1, 0.3, 0.6, { components: true }), A = ctx.channel === 'occlusion' ? L.occl : L.spec;
+      let top = 0; for(let i = 0; i < N; i++) if(A[i] > top) top = A[i];
+      for(let i = 0; i < N; i++){ const t = h0 && top > 1e-6 ? Math.max(0, Math.min(1, A[i]/top)) : 0, v = ctx.channel === 'occlusion' ? 1 - t : t; put(i, v, v, v); }
+      return [o]; }
     // THE LIT SURFACE (B1): only when one of its material maps is wired, so every older graph draws as it did
     const RF = asField(input(n, 3)), BL = asField(input(n, 4)), MT = asField(input(n, 5)), EM = asField(input(n, 6));
     if(RF || BL || MT || EM){

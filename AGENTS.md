@@ -359,6 +359,10 @@ Other parts of a look:
     piece.
   - **With white hues a texture draws exactly as before** (the fingerprints
     prove it).
+  - The Athanor's Light Engine also takes a color for the ambient light (its
+    eighth input, `ambient hue`; ROADMAP C1): the ambient share of the light (`ambient × (1 −
+    occlusion)`, from `opts.components`) is tinted by it per channel, so the
+    shade, lit mostly by it, takes its color most. Empty or white: unchanged.
 - **GPU lighting:** the WebGL2 shader must stay line-for-line with the CPU
   `lightHeights`.
   - Change both together and compare them (`opts.cpuLight`; they agree to
@@ -897,6 +901,12 @@ The full study and what is still to do are in ROADMAP.md §1.
   drew wires to the wrong rows.
 - **Step previews:** one sheet made in the worker (`athanorsteps`),
   switchable (`#forgeSteps`, localStorage `uv.forge.steps`).
+- **The preview's channels** (`#forgeChannel`, `ATHANOR_CHANNELS`; ROADMAP
+  B2): Final, Height, Normal, Occlusion, Specular, view only. The request
+  carries `channel` (keyed `_ch`, never for Final; `ctx.channel`) and the
+  Surface hands that one: the height as gray, a normal map from it, the
+  occlusion and the shine from `lightOf`'s components, each but the height
+  drawn at full contrast (where it falls; Final shows how strong).
 - **Drawflow** (like Panzoom and Coloris) loads from jsdelivr at an exact
   version, only when the Athanor opens. The app must work without them.
   - This sandbox can't reach jsdelivr. To test the editor, inject the npm

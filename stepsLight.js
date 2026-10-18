@@ -35,8 +35,8 @@ const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
 /** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
 function ltMaterial(E, n){
   const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
-  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di');
-  return (sh || hi || di) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di } : null;
+  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di'), am = pick(8, 'am');
+  return (sh || hi || di || am) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di, am } : null;
 }
 /** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
 function ltK(k, M, c){
@@ -53,15 +53,17 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   // (a light at its own height, whatever the page's dial says: Ringworld's dial is its camera, and its star its own light)
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
+  // (the AMBIENT share, for an Ambient Hue (ROADMAP C1): the light from everywhere, less what the hollows keep out)
+  const A = o.amb ? new Float32Array(K.length) : null; if(A) for(let i = 0; i < A.length; i++) A[i] = o.ambient*(1 - L.occl[i])/f;
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
   if(o.sss > 0){ const r = Math.max(1, Math.round(unit*0.006*(0.5 + o.sss))), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
     for(let i = 0; i < K.length; i++){ const k = K[i] + (B[i] - K[i])*o.sss*0.85; K[i] = k + (1 - Math.min(1, k))*0.22*o.sss; S[i] = S[i]*(1 - o.sss*0.5) + SB[i]*o.sss*0.6; } }
-  return { K, S };
+  return { K, S, A };
 }
 // a box blur on a gw×gh grid (rows, then columns)
 function ltBlur(F, gw, gh, r){
@@ -422,39 +424,40 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 export const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
-    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130)],
     cost: () => 10,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){
-      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2);
+      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2); if(M && M.am) o.amb = M.am;
       const [pc, px] = kitPicture(E.input(n, 1), w, h);
       if(hv == null) return [pc, kitFieldCanvas(new Float32Array(4).fill(0.5), 2, 2), kitFieldCanvas(new Float32Array(4), 2, 2)];
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
       const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
-      const { K, S } = ltLight(H, gw, gh, o.deg, o, G);
+      const { K, S, A } = ltLight(H, gw, gh, o.deg, o, G);
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
         for(let x = 0; x < w; x++){ const gx = Math.min(gw - 1.001, (x + 0.5)/dv - 0.5), x0 = Math.max(0, gx|0), fx = Math.max(0, gx - x0), x1 = Math.min(gw - 1, x0 + 1);
           const k = (K[r0 + x0]*(1 - fx) + K[r0 + x1]*fx)*(1 - fy) + (K[r1 + x0]*(1 - fx) + K[r1 + x1]*fx)*fy;
           const s = ((S[r0 + x0]*(1 - fx) + S[r0 + x1]*fx)*(1 - fy) + (S[r1 + x0]*(1 - fx) + S[r1 + x1]*fx)*fy)*sk, q = (y*w + x)*4;
-          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*ltK(k, M, c) + s*(M ? M.hi[c] : 1); } }
+          const am = A ? (A[r0 + x0]*(1 - fx) + A[r0 + x1]*fx)*(1 - fy) + (A[r1 + x0]*(1 - fx) + A[r1 + x1]*fx)*fy : 0;
+          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); } }
       px.putImageData(im, 0, 0);
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
       return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
     run(E, n){
-      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n);
+      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n); if(M && M.am) o.amb = M.am;
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
       // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
-      const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
+      const { K, S, A } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
-        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*ltK(K[i], M, c) + s*(M ? M.hi[c] : 1); }
+        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); }
       return [out, lf, S]; } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),

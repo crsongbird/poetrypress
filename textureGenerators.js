@@ -31,7 +31,7 @@
  */
 
 import { TEXTURES } from './tunables.js';
-import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion, athanorStepIds, athanorAA, ATHANOR_LIMITS } from './athanor.js';
+import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion, athanorStepIds, athanorAA, ATHANOR_LIMITS, ATHANOR_CHANNELS } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withPage, wordsRoom, withLightTilt, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
 import { genAstralFog, genAstralStars } from './texWhimsy.js';
@@ -1058,6 +1058,7 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps') && opts.box && graphUsesBox(opts.graph) ? `_x${opts.box}` : '')
             // (the curves drawn on the page, for a graph with a Curve Control)
             + ((type === 'athanor' || type === 'athanorsteps') && Array.isArray(opts.curves) && opts.curves.some(Boolean) && graphUsesCurves(opts.graph) ? `_cv${layoutHash(opts.curves.join('|'))}` : '')
+            + (type === 'athanor' && ATHANOR_CHANNELS.includes(opts.channel) && opts.channel !== 'final' ? `_ch${opts.channel}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
@@ -1084,7 +1085,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      channel: ATHANOR_CHANNELS.includes(extra.channel) && extra.channel !== 'final' ? extra.channel : null, aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -1201,7 +1202,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

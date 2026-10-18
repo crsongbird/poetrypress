@@ -4,6 +4,22 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Greip (2026-10-17)
+
+- **See what a surface is made of.** A menu under the Athanor's preview
+  shows one channel at a time, as Filter Forge's do:
+  - **Final**: the picture, lit.
+  - **Height**: what is wired into the Surface's Height, as gray.
+  - **Normal**: the slopes it makes, as a normal map's colors.
+  - **Occlusion**: the shade in the hollows.
+  - **Specular**: the shine.
+  It is only a view: the page always shows the final picture. Normal,
+  Occlusion and Specular are drawn at full contrast, so you see where each
+  falls. The wiki's Height maps and light page explains each.
+- **Colored ambient light.** The Light Engine has a new input, **Ambient
+  Hue**: the color of the light that comes from everywhere (a blue sky's, a
+  warm room's). It tints the shaded sides most. Left empty, nothing changes.
+
 ## Saturn–Tarqeq (2026-10-17)
 
 - **Ringworld orbits Saturn too**, one ring in four: Saturn hangs huge in

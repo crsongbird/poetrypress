@@ -1356,6 +1356,13 @@ but bear with me, dear}]/jitter:200
         <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes. Click or tap to enlarge or shrink."></canvas>
         <div class="forge-dock-row">
           <span class="forge-status" id="forgeStatus"></span>
+          <select class="forge-channel" id="forgeChannel" aria-label="Which channel the preview shows" title="Look at one thing the Surface is made of: Height (gray), Normal (the slopes as colors), Occlusion (shade in the hollows), Specular (the shine). View only: the page always shows the final picture.">
+            <option value="final" data-str="option.channel_final">Final</option>
+            <option value="height" data-str="option.channel_height">Height</option>
+            <option value="normal" data-str="option.channel_normal">Normal</option>
+            <option value="occlusion" data-str="option.channel_occlusion">Occlusion</option>
+            <option value="specular" data-str="option.channel_specular">Specular</option>
+          </select>
           <label class="forge-check" title="Show a small preview of each part's result"><input type="checkbox" id="forgeSteps"> Steps</label>
           <button type="button" class="forge-seed-btn" id="forgeSeedBtn" title="New texture seed (shared with the page); every part that uses chance changes">⟳ Seed</button>
           <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeDoc" title="Show or hide the wiki: how the Athanor works, and a page for every part">?</button>

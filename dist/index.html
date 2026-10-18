@@ -2250,6 +2250,7 @@ body.is-mobile .forge-doc .wk-tools{ justify-content:flex-start; }
 body.is-mobile .forge-doc .wk-tools [data-doc="close"]{ margin-left:auto; }
 .forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
+.forge-channel{ width:auto; margin:0; padding:2px 4px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; }
 
 /* ============================================================
    THE CHOOSER (chooser.js): a surface menu shown as tiles.
@@ -12105,8 +12106,8 @@ const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
 /** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
 function ltMaterial(E, n){
   const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
-  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di');
-  return (sh || hi || di) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di } : null;
+  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di'), am = pick(8, 'am');
+  return (sh || hi || di || am) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di, am } : null;
 }
 /** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
 function ltK(k, M, c){
@@ -12123,15 +12124,17 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   // (a light at its own height, whatever the page's dial says: Ringworld's dial is its camera, and its star its own light)
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
+  // (the AMBIENT share, for an Ambient Hue (ROADMAP C1): the light from everywhere, less what the hollows keep out)
+  const A = o.amb ? new Float32Array(K.length) : null; if(A) for(let i = 0; i < A.length; i++) A[i] = o.ambient*(1 - L.occl[i])/f;
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
   if(o.sss > 0){ const r = Math.max(1, Math.round(unit*0.006*(0.5 + o.sss))), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
     for(let i = 0; i < K.length; i++){ const k = K[i] + (B[i] - K[i])*o.sss*0.85; K[i] = k + (1 - Math.min(1, k))*0.22*o.sss; S[i] = S[i]*(1 - o.sss*0.5) + SB[i]*o.sss*0.6; } }
-  return { K, S };
+  return { K, S, A };
 }
 // a box blur on a gw×gh grid (rows, then columns)
 function ltBlur(F, gw, gh, r){
@@ -12492,39 +12495,40 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
-    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130)],
     cost: () => 10,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){
-      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2);
+      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2); if(M && M.am) o.amb = M.am;
       const [pc, px] = kitPicture(E.input(n, 1), w, h);
       if(hv == null) return [pc, kitFieldCanvas(new Float32Array(4).fill(0.5), 2, 2), kitFieldCanvas(new Float32Array(4), 2, 2)];
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
       const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
-      const { K, S } = ltLight(H, gw, gh, o.deg, o, G);
+      const { K, S, A } = ltLight(H, gw, gh, o.deg, o, G);
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
         for(let x = 0; x < w; x++){ const gx = Math.min(gw - 1.001, (x + 0.5)/dv - 0.5), x0 = Math.max(0, gx|0), fx = Math.max(0, gx - x0), x1 = Math.min(gw - 1, x0 + 1);
           const k = (K[r0 + x0]*(1 - fx) + K[r0 + x1]*fx)*(1 - fy) + (K[r1 + x0]*(1 - fx) + K[r1 + x1]*fx)*fy;
           const s = ((S[r0 + x0]*(1 - fx) + S[r0 + x1]*fx)*(1 - fy) + (S[r1 + x0]*(1 - fx) + S[r1 + x1]*fx)*fy)*sk, q = (y*w + x)*4;
-          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*ltK(k, M, c) + s*(M ? M.hi[c] : 1); } }
+          const am = A ? (A[r0 + x0]*(1 - fx) + A[r0 + x1]*fx)*(1 - fy) + (A[r1 + x0]*(1 - fx) + A[r1 + x1]*fx)*fy : 0;
+          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); } }
       px.putImageData(im, 0, 0);
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
       return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
     run(E, n){
-      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n);
+      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n); if(M && M.am) o.amb = M.am;
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
       // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
-      const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
+      const { K, S, A } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
-        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*ltK(K[i], M, c) + s*(M ? M.hi[c] : 1); }
+        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); }
       return [out, lf, S]; } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),
@@ -16686,6 +16690,22 @@ const STEP_RUN = {
   },
   surface(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
     const img = asImage(input(n, 1) ?? 0.5), h0 = asField(input(n, 2));
+    // ONE CHANNEL for the preview (ROADMAP B2; view only): the height as gray, the normals it makes (a normal map's colors:
+    // flat is (0.5, 0.5, 1), green up), the light that reaches into its hollows (occlusion), its shine (specular). Each but
+    // the height is drawn at full contrast, so you see WHERE it falls (gentle slopes steepened until the usual one reads at
+    // about 35°; the deepest hollow black, the brightest shine white): Final shows how strong it really is.
+    if(ctx.channel && ctx.channel !== 'final'){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, put = (i, r, g, b) => { o.r[i] = r; o.g[i] = g; o.b[i] = b; };
+      const { ww, wh } = E, H = new Float32Array(N); if(h0) for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
+      if(ctx.channel === 'height'){ for(let i = 0; i < N; i++){ const v = h0 ? Math.max(0, Math.min(1, h0[i])) : 0.5; put(i, v, v, v); } return [o]; }
+      if(ctx.channel === 'normal'){ const GX = new Float32Array(N), GY = new Float32Array(N), mags = [];
+        for(let y = 0, i = 0; y < wh; y++) for(let x = 0; x < ww; x++, i++){ GX[i] = (H[y*ww + Math.min(ww - 1, x + 1)] - H[y*ww + Math.max(0, x - 1)])*0.5; GY[i] = (H[Math.min(wh - 1, y + 1)*ww + x] - H[Math.max(0, y - 1)*ww + x])*0.5;
+          if(i % Math.max(1, N >> 12) === 0) mags.push(Math.hypot(GX[i], GY[i])); }
+        mags.sort((a, b) => a - b); const p90 = mags[Math.floor(mags.length*0.9)] || 0, k = p90 > 1e-9 ? Math.max(1, Math.min(32, 0.7/p90)) : 1;
+        for(let i = 0; i < N; i++){ const gx = GX[i]*k, gy = GY[i]*k, nl = Math.hypot(gx, gy, 1); put(i, 0.5 - gx/nl*0.5, 0.5 + gy/nl*0.5, 0.5 + 0.5/nl); } return [o]; }
+      const L = lightOf(H, ctx.light ?? 315, 1, 0.3, 0.6, { components: true }), A = ctx.channel === 'occlusion' ? L.occl : L.spec;
+      let top = 0; for(let i = 0; i < N; i++) if(A[i] > top) top = A[i];
+      for(let i = 0; i < N; i++){ const t = h0 && top > 1e-6 ? Math.max(0, Math.min(1, A[i]/top)) : 0, v = ctx.channel === 'occlusion' ? 1 - t : t; put(i, v, v, v); }
+      return [o]; }
     // THE LIT SURFACE (B1): only when one of its material maps is wired, so every older graph draws as it did
     const RF = asField(input(n, 3)), BL = asField(input(n, 4)), MT = asField(input(n, 5)), EM = asField(input(n, 6));
     if(RF || BL || MT || EM){
@@ -18873,7 +18893,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -19053,6 +19073,9 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   return img && athanorAA(flatG) !== 'off' ? fxaaImage(img, ww, wh) : img;
 }
 /** The Surface's Anti-aliasing: 'off' (absent, as every graph drew before it), 'edges only' or 'all pixels'. */
+// THE PREVIEW'S CHANNELS (ROADMAP B2; Filter Forge's own): what the Surface is made of, one at a time, for understanding a
+// surface (view only: the page always draws the final picture). The Surface hands the one asked for (ctx.channel).
+const ATHANOR_CHANNELS = ['final', 'height', 'normal', 'occlusion', 'specular'];
 function athanorAA(graph){
   const s = Object.values(graph && graph.nodes ? graph.nodes : athanorFlat(graph).nodes).find(n => n.name === 'surface'), v = s && (s.data || {}).aa;
   return v === 'edges only' || v === 'all pixels' ? v : 'off';
@@ -20345,6 +20368,7 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps') && opts.box && graphUsesBox(opts.graph) ? `_x${opts.box}` : '')
             // (the curves drawn on the page, for a graph with a Curve Control)
             + ((type === 'athanor' || type === 'athanorsteps') && Array.isArray(opts.curves) && opts.curves.some(Boolean) && graphUsesCurves(opts.graph) ? `_cv${layoutHash(opts.curves.join('|'))}` : '')
+            + (type === 'athanor' && ATHANOR_CHANNELS.includes(opts.channel) && opts.channel !== 'final' ? `_ch${opts.channel}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
@@ -20371,7 +20395,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      channel: ATHANOR_CHANNELS.includes(extra.channel) && extra.channel !== 'final' ? extra.channel : null, aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -20488,7 +20512,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -21869,6 +21893,13 @@ but bear with me, dear}]/jitter:200
         <canvas class="forge-preview" id="forgePreview" width="320" height="320" title="What the graph makes. Click or tap to enlarge or shrink."></canvas>
         <div class="forge-dock-row">
           <span class="forge-status" id="forgeStatus"></span>
+          <select class="forge-channel" id="forgeChannel" aria-label="Which channel the preview shows" title="Look at one thing the Surface is made of: Height (gray), Normal (the slopes as colors), Occlusion (shade in the hollows), Specular (the shine). View only: the page always shows the final picture.">
+            <option value="final" data-str="option.channel_final">Final</option>
+            <option value="height" data-str="option.channel_height">Height</option>
+            <option value="normal" data-str="option.channel_normal">Normal</option>
+            <option value="occlusion" data-str="option.channel_occlusion">Occlusion</option>
+            <option value="specular" data-str="option.channel_specular">Specular</option>
+          </select>
           <label class="forge-check" title="Show a small preview of each part's result"><input type="checkbox" id="forgeSteps"> Steps</label>
           <button type="button" class="forge-seed-btn" id="forgeSeedBtn" title="New texture seed (shared with the page); every part that uses chance changes">⟳ Seed</button>
           <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeDoc" title="Show or hide the wiki: how the Athanor works, and a page for every part">?</button>
@@ -22282,6 +22313,11 @@ const UI_STRINGS = {
   'option.first_snow':                         "First Snow",
   'option.aurora_veil':                        "Silk Ribbons",   // (was Aurora Veil: it looks like combed silk, not a sky; the id stays 'aurora')
   'option.aurora':                             "Aurora",
+  'option.channel_final':                      "Final",
+  'option.channel_height':                     "Height",
+  'option.channel_normal':                     "Normal",
+  'option.channel_occlusion':                  "Occlusion",
+  'option.channel_specular':                   "Specular",
   'option.veins_of_light':                     "Veins of Light",
   'option.circuit_board':                      "Circuit Board",
   'option.knotwork':                           "Knotwork",
@@ -34422,8 +34458,8 @@ const ltWhite = c => !c || (c[0] > 0.98 && c[1] > 0.98 && c[2] > 0.98);
 /** The material: wired hues (colours 0..1) where given, else the page's own (ctx.mat); null when there is none. */
 function ltMaterial(E, n){
   const pick = (port, key) => { const v = E.input(n, port); return Array.isArray(v) ? (ltWhite(v) ? null : ltHue(v)) : (E.ctx.mat && E.ctx.mat[key]) || null; };
-  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di');
-  return (sh || hi || di) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di } : null;
+  const sh = pick(4, 'sh'), hi = pick(5, 'hi'), di = pick(6, 'di'), am = pick(8, 'am');
+  return (sh || hi || di || am) ? { sh: sh || [1, 1, 1], hi: hi || [1, 1, 1], di, am } : null;
 }
 /** The light a pixel gets in channel c, k being its light over open flat ground's (1: flat ground) — as texCore's litK. */
 function ltK(k, M, c){
@@ -34440,15 +34476,17 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   const unit = Math.min(gw, gh), Hs = new Float32Array(gw*gh), rel = o.relief*unit*0.03, RM = o.reliefMap;
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   // (a light at its own height, whatever the page's dial says: Ringworld's dial is its camera, and its star its own light)
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap });
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
+  // (the AMBIENT share, for an Ambient Hue (ROADMAP C1): the light from everywhere, less what the hollows keep out)
+  const A = o.amb ? new Float32Array(K.length) : null; if(A) for(let i = 0; i < A.length; i++) A[i] = o.ambient*(1 - L.occl[i])/f;
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
   if(o.sss > 0){ const r = Math.max(1, Math.round(unit*0.006*(0.5 + o.sss))), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
     for(let i = 0; i < K.length; i++){ const k = K[i] + (B[i] - K[i])*o.sss*0.85; K[i] = k + (1 - Math.min(1, k))*0.22*o.sss; S[i] = S[i]*(1 - o.sss*0.5) + SB[i]*o.sss*0.6; } }
-  return { K, S };
+  return { K, S, A };
 }
 // a box blur on a gw×gh grid (rows, then columns)
 function ltBlur(F, gw, gh, r){
@@ -34809,39 +34847,40 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
-    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value'], outs: ['image', 'field', 'field'] },
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130)],
     cost: () => 10,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){
-      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2);
+      const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2); if(M && M.am) o.amb = M.am;
       const [pc, px] = kitPicture(E.input(n, 1), w, h);
       if(hv == null) return [pc, kitFieldCanvas(new Float32Array(4).fill(0.5), 2, 2), kitFieldCanvas(new Float32Array(4), 2, 2)];
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
       const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
-      const { K, S } = ltLight(H, gw, gh, o.deg, o, G);
+      const { K, S, A } = ltLight(H, gw, gh, o.deg, o, G);
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
         for(let x = 0; x < w; x++){ const gx = Math.min(gw - 1.001, (x + 0.5)/dv - 0.5), x0 = Math.max(0, gx|0), fx = Math.max(0, gx - x0), x1 = Math.min(gw - 1, x0 + 1);
           const k = (K[r0 + x0]*(1 - fx) + K[r0 + x1]*fx)*(1 - fy) + (K[r1 + x0]*(1 - fx) + K[r1 + x1]*fx)*fy;
           const s = ((S[r0 + x0]*(1 - fx) + S[r0 + x1]*fx)*(1 - fy) + (S[r1 + x0]*(1 - fx) + S[r1 + x1]*fx)*fy)*sk, q = (y*w + x)*4;
-          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*ltK(k, M, c) + s*(M ? M.hi[c] : 1); } }
+          const am = A ? (A[r0 + x0]*(1 - fx) + A[r0 + x1]*fx)*(1 - fy) + (A[r1 + x0]*(1 - fx) + A[r1 + x1]*fx)*fy : 0;
+          for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); } }
       px.putImageData(im, 0, 0);
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
       return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
     run(E, n){
-      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n);
+      const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n); if(M && M.am) o.amb = M.am;
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
       // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
-      const { K, S } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
+      const { K, S, A } = ltLight(H, ww, wh, o.deg, o, G), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
-        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*ltK(K[i], M, c) + s*(M ? M.hi[c] : 1); }
+        for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); }
       return [out, lf, S]; } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),
@@ -39003,6 +39042,22 @@ const STEP_RUN = {
   },
   surface(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
     const img = asImage(input(n, 1) ?? 0.5), h0 = asField(input(n, 2));
+    // ONE CHANNEL for the preview (ROADMAP B2; view only): the height as gray, the normals it makes (a normal map's colors:
+    // flat is (0.5, 0.5, 1), green up), the light that reaches into its hollows (occlusion), its shine (specular). Each but
+    // the height is drawn at full contrast, so you see WHERE it falls (gentle slopes steepened until the usual one reads at
+    // about 35°; the deepest hollow black, the brightest shine white): Final shows how strong it really is.
+    if(ctx.channel && ctx.channel !== 'final'){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, put = (i, r, g, b) => { o.r[i] = r; o.g[i] = g; o.b[i] = b; };
+      const { ww, wh } = E, H = new Float32Array(N); if(h0) for(let i = 0; i < N; i++) H[i] = h0[i]*unit*0.01;
+      if(ctx.channel === 'height'){ for(let i = 0; i < N; i++){ const v = h0 ? Math.max(0, Math.min(1, h0[i])) : 0.5; put(i, v, v, v); } return [o]; }
+      if(ctx.channel === 'normal'){ const GX = new Float32Array(N), GY = new Float32Array(N), mags = [];
+        for(let y = 0, i = 0; y < wh; y++) for(let x = 0; x < ww; x++, i++){ GX[i] = (H[y*ww + Math.min(ww - 1, x + 1)] - H[y*ww + Math.max(0, x - 1)])*0.5; GY[i] = (H[Math.min(wh - 1, y + 1)*ww + x] - H[Math.max(0, y - 1)*ww + x])*0.5;
+          if(i % Math.max(1, N >> 12) === 0) mags.push(Math.hypot(GX[i], GY[i])); }
+        mags.sort((a, b) => a - b); const p90 = mags[Math.floor(mags.length*0.9)] || 0, k = p90 > 1e-9 ? Math.max(1, Math.min(32, 0.7/p90)) : 1;
+        for(let i = 0; i < N; i++){ const gx = GX[i]*k, gy = GY[i]*k, nl = Math.hypot(gx, gy, 1); put(i, 0.5 - gx/nl*0.5, 0.5 + gy/nl*0.5, 0.5 + 0.5/nl); } return [o]; }
+      const L = lightOf(H, ctx.light ?? 315, 1, 0.3, 0.6, { components: true }), A = ctx.channel === 'occlusion' ? L.occl : L.spec;
+      let top = 0; for(let i = 0; i < N; i++) if(A[i] > top) top = A[i];
+      for(let i = 0; i < N; i++){ const t = h0 && top > 1e-6 ? Math.max(0, Math.min(1, A[i]/top)) : 0, v = ctx.channel === 'occlusion' ? 1 - t : t; put(i, v, v, v); }
+      return [o]; }
     // THE LIT SURFACE (B1): only when one of its material maps is wired, so every older graph draws as it did
     const RF = asField(input(n, 3)), BL = asField(input(n, 4)), MT = asField(input(n, 5)), EM = asField(input(n, 6));
     if(RF || BL || MT || EM){
@@ -41190,7 +41245,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -41370,6 +41425,9 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   return img && athanorAA(flatG) !== 'off' ? fxaaImage(img, ww, wh) : img;
 }
 /** The Surface's Anti-aliasing: 'off' (absent, as every graph drew before it), 'edges only' or 'all pixels'. */
+// THE PREVIEW'S CHANNELS (ROADMAP B2; Filter Forge's own): what the Surface is made of, one at a time, for understanding a
+// surface (view only: the page always draws the final picture). The Surface hands the one asked for (ctx.channel).
+const ATHANOR_CHANNELS = ['final', 'height', 'normal', 'occlusion', 'specular'];
 function athanorAA(graph){
   const s = Object.values(graph && graph.nodes ? graph.nodes : athanorFlat(graph).nodes).find(n => n.name === 'surface'), v = s && (s.data || {}).aa;
   return v === 'edges only' || v === 'all pixels' ? v : 'off';
@@ -42662,6 +42720,7 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps') && opts.box && graphUsesBox(opts.graph) ? `_x${opts.box}` : '')
             // (the curves drawn on the page, for a graph with a Curve Control)
             + ((type === 'athanor' || type === 'athanorsteps') && Array.isArray(opts.curves) && opts.curves.some(Boolean) && graphUsesCurves(opts.graph) ? `_cv${layoutHash(opts.curves.join('|'))}` : '')
+            + (type === 'athanor' && ATHANOR_CHANNELS.includes(opts.channel) && opts.channel !== 'final' ? `_ch${opts.channel}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
@@ -42688,7 +42747,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
     { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
+      channel: ATHANOR_CHANNELS.includes(extra.channel) && extra.channel !== 'final' ? extra.channel : null, aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -42805,7 +42864,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -43514,7 +43573,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Tarqeq';
+const RELEASE = 'Saturn–Greip';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -44351,7 +44410,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · ffaa192";
+const STAMP = "2026-10-18 · 715bd09";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -48851,7 +48910,7 @@ const WIKI_PARTS = {
   material: {
     line: 'The full lighting engine: lights a picture by a height map from the dial, with shadows, shine and soft occlusion.',
     about: 'The Light Engine is what makes surfaces look physical. Give it a picture (the color) and a height map (the shape), and it lights the shape from the dial as a game engine would: slopes facing the light brighten, shadows fall behind raised parts, crevices darken (ambient occlusion), and shiny areas catch highlights.',
-    ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).' },
+    ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).', 'ambient hue': 'The color of the light that comes from everywhere (the sky’s, a room’s): it tints the whole surface by Ambient’s share, and the shaded sides most, where little else reaches. Empty or white: neutral, as before. For a subtle cast, lower Ambient or pick a paler hue.' },
     outs: { image: 'The lit picture.', light: 'The lighting alone, as gray.', highlight: 'The shine alone.' },
     set: { relief: 'How tall the heights are (a map on its ⚙: taller in some places than others).', gloss: 'How tight the highlights are (a map on its ⚙ works as the gloss map does).', shine: 'How bright the highlights are.', shadow: 'How dark cast shadows are.', occlusion: 'How dark crevices get.', ambient: 'Light that reaches everywhere, filling the shadows.', translucency: 'Light passing into the surface and back out (wax, skin).', from: 'Where the light’s height comes from: the page’s dial (as every lit surface takes it), or its own Light Height, for a graph whose dial does something else (Ringworld’s is its camera).', height: 'The light’s own height, when Light Height From says so: 0 straight overhead, 100 at the horizon, past that lower still, with long shadows.' },
     tips: ['Don’t also wire the height into the Surface: it would be lit twice.'],
@@ -49733,7 +49792,18 @@ const WIKI_ARTICLES = [
 <li><b>Relief</b> on the Light Engine sets how tall the heights stand.</li>
 <li><b>High Pass</b> keeps only fine detail, for grain without big hills.</li>
 <li>Add maps together (Math › Add) to put small detail on top of big shapes.</li>
-</ul>` },
+</ul>
+<h3>Seeing the channels</h3>
+<p>The menu under the preview shows one thing the Surface is made of at a time, as Filter Forge’s channels do. It is only a view: the page always shows the final picture.</p>
+<ul>
+<li><b>Final</b>: the finished picture, lit.</li>
+<li><b>Height</b>: what is wired into the Surface’s Height, as gray (white high). Flat gray means nothing is wired there.</li>
+<li><b>Normal</b>: the slopes the heights make, as colors, the way games store them in a normal map: flat ground is a soft blue (half red, half green, full blue), a slope facing right is redder and one facing up is greener. Hard steps show as bright seams.</li>
+<li><b>Occlusion</b>: how much light reaches into the hollows: white where open, darker in the creases between bumps.</li>
+<li><b>Specular</b>: the shine, where the dial’s light glances off a slope toward you.</li>
+</ul>
+<p>Normal, Occlusion and Specular are drawn at full contrast, gentle slopes steepened and the faintest shade stretched, so you see where each one falls; Final shows how strong it really is.</p>
+<p>Try: a Cells into the Surface’s Height, then look at Normal while you Blur it, to watch the hard steps turn into slopes.</p>` },
   { id: 'seeds', group: 'Building techniques', title: 'Seeds, Variation and chance', body: `
 <p>Random parts (noise, cells, scattered marks) aren’t truly random: they follow a <b>seed</b>, a number that decides the pattern. The same seed always gives the same picture, so a look can be saved and shared exactly.</p>
 {{fig:seeds}}
@@ -50411,7 +50481,7 @@ async function openForge(deps){
     // ---- saving, the previews ----
     let thumbT = 0, stepsT = 0;
     const previews = () => {
-      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c); } catch(e){} }, 250);
+      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c, ($('forgeChannel') || {}).value || 'final'); } catch(e){} }, 250);
       clearTimeout(stepsT);
       if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
     };
@@ -51369,6 +51439,8 @@ async function openForge(deps){
     if(sp){ try { sp.checked = localStorage.getItem('uv.forge.steps') !== '0'; } catch(e){ sp.checked = true; }
       area.classList.toggle('steps-on', sp.checked);
       sp.addEventListener('change', () => { area.classList.toggle('steps-on', sp.checked); try { localStorage.setItem('uv.forge.steps', sp.checked ? '1' : '0'); } catch(e){} previews(); }); }
+    // the preview's channel (ROADMAP B2): one thing the Surface is made of at a time; view only, Final when it opens again
+    const ch = $('forgeChannel'); if(ch && ch.addEventListener) ch.addEventListener('change', () => previews());
     // the preview: tap for large, tap again for small
     const pv = $('forgePreview'); if(pv) pv.addEventListener('click', () => { const d = $('forgeDock'); if(d) d.classList.toggle('big'); });
     // the help: what each colour carries, and the few things worth knowing
@@ -54890,9 +54962,9 @@ function whenTexture(slot, type, w, h, opts, done){
   setTimeout(off, 20000);
 }
 /** The Athanor's large preview: what the graph makes, made off the page's thread. */
-function previewAthanor(json, cv){
+function previewAthanor(json, cv, channel){
   const n = cv.width || 320;
-  whenTexture('athanorPreview', 'athanor', n, n, athanorOpts(json, n), tex => {
+  whenTexture('athanorPreview', 'athanor', n, n, { ...athanorOpts(json, n), channel: channel || 'final' }, tex => {
     const x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(tex, 0, 0, cv.width, cv.height); });
 }
 /** The STEP PREVIEWS: every node's own result, as one sheet of tiles made in the worker. */

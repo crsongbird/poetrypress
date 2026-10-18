@@ -335,7 +335,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, ctx.channel || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -515,6 +515,9 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   return img && athanorAA(flatG) !== 'off' ? fxaaImage(img, ww, wh) : img;
 }
 /** The Surface's Anti-aliasing: 'off' (absent, as every graph drew before it), 'edges only' or 'all pixels'. */
+// THE PREVIEW'S CHANNELS (ROADMAP B2; Filter Forge's own): what the Surface is made of, one at a time, for understanding a
+// surface (view only: the page always draws the final picture). The Surface hands the one asked for (ctx.channel).
+export const ATHANOR_CHANNELS = ['final', 'height', 'normal', 'occlusion', 'specular'];
 export function athanorAA(graph){
   const s = Object.values(graph && graph.nodes ? graph.nodes : athanorFlat(graph).nodes).find(n => n.name === 'surface'), v = s && (s.data || {}).aa;
   return v === 'edges only' || v === 'all pixels' ? v : 'off';

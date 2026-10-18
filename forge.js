@@ -328,7 +328,7 @@ export async function openForge(deps){
     // ---- saving, the previews ----
     let thumbT = 0, stepsT = 0;
     const previews = () => {
-      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c); } catch(e){} }, 250);
+      clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c, ($('forgeChannel') || {}).value || 'final'); } catch(e){} }, 250);
       clearTimeout(stepsT);
       if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
     };
@@ -1286,6 +1286,8 @@ export async function openForge(deps){
     if(sp){ try { sp.checked = localStorage.getItem('uv.forge.steps') !== '0'; } catch(e){ sp.checked = true; }
       area.classList.toggle('steps-on', sp.checked);
       sp.addEventListener('change', () => { area.classList.toggle('steps-on', sp.checked); try { localStorage.setItem('uv.forge.steps', sp.checked ? '1' : '0'); } catch(e){} previews(); }); }
+    // the preview's channel (ROADMAP B2): one thing the Surface is made of at a time; view only, Final when it opens again
+    const ch = $('forgeChannel'); if(ch && ch.addEventListener) ch.addEventListener('change', () => previews());
     // the preview: tap for large, tap again for small
     const pv = $('forgePreview'); if(pv) pv.addEventListener('click', () => { const d = $('forgeDock'); if(d) d.classList.toggle('big'); });
     // the help: what each colour carries, and the few things worth knowing
