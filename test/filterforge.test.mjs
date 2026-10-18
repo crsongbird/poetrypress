@@ -36,6 +36,19 @@ check('a fifth kind of wire: the curve, with its own color, name and help', S.VA
   check('Profile Gradient: a radial impulse is a ring, bright halfway out', px(pr, 20, 20) < 0.2 && px(pr, 30, 20) > 0.8);
   const ops = preview([node(1, 'curve', { shape: 'linear' }), node(2, 'curveops', { op: 'reverse' }, { 1: [1, 1] })], 2);
   check('Curve Ops changes a curve (Reverse: a falling line)', !!ops); }
+// ---- the Curve Control (D4): a curve drawn by hand on the page ----
+{ const c = S.curveFromPoints('0,0;30,80;60,85;100,100'), at = t => S.curveAt(c, t);
+  let peak = 0; for(let t = 0.3; t <= 0.6; t += 0.01) peak = Math.max(peak, at(t));
+  check('a drawn curve runs through its points and never bulges past them between two (a monotone cubic)',
+    Math.abs(at(0.3) - 0.8) < 0.01 && Math.abs(at(0.6) - 0.85) < 0.01 && Math.abs(at(1) - 1) < 1e-6 && peak <= 0.851);
+  check('its points are read forgivingly: sorted, kept inside the square, and a straight rise when there are too few',
+    JSON.stringify(S.curvePoints('100,120;0,-5;50,50')) === '[[0,0],[50,50],[100,100]]' && JSON.stringify(S.curvePoints('nonsense')) === '[[0,0],[100,100]]');
+  const graded = (ctx = {}) => C.evalAthanor(graph([node(1, 'gradient', { shape: 'linear', angle: 0 }), node(2, 'curvectl', { slot: '1', name: 'Tone', points: '0,100;100,0' }),
+    node(3, 'tonecurve', { mix: 100 }, { 1: [1, 1], 2: [2, 1] }), node(99, 'surface', { ground: 'grey' }, { 1: [3, 1] })]), W, H, { seed: 3, knobs: [], tints: [], ...ctx }, {});
+  const own = graded(), drawn = graded({ curves: ['0,0;100,100', ''] });
+  check('a Curve Control gives its Default, and the curve drawn on the page in its place (here: falling, then rising)', px(own, 2, 20) > 0.9 && px(own, 37, 20) < 0.1 && px(drawn, 2, 20) < 0.1 && px(drawn, 37, 20) > 0.9);
+  const g = graph([node(1, 'curvectl', { slot: '2', name: 'Shape' }), node(2, 'curvectl', { slot: '1', name: 'Loose' }), node(3, 'gradient', {}), node(4, 'tonecurve', {}, { 1: [3, 1], 2: [1, 1] }), node(99, 'surface', {}, { 1: [4, 1] })]);
+  check('only the Curve Controls that reach the Surface get a pad on the page', JSON.stringify(C.athanorCurves(g).map(k => [k.slot, k.label])) === '[[2,"Shape"]]'); }
 
 // ---- primitives ----
 check('Filter Forge\'s missing primitives are parts, each with its doc', ['bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'perlin', 'bricks', 'curve', 'curveops', 'tonecurve', 'profile', 'note'].every(k => S.STEPS[k] && S.STEPS[k].doc.length > 40));

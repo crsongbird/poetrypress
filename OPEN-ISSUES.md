@@ -6,7 +6,7 @@ release.js (`node build.mjs --next`). Timings: PERFORMANCE-AUDIT.md. How the
 systems work: AGENTS.md. Prior art: Ruby's doc "Unfixable Vellum — Prior Art &
 Recommendations".
 
-## 1 · Ruby to judge (new in Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
+## 1 · Ruby to judge (new in Saturn–Erriapus, Saturn–Bebhionn, Saturn–Albiorix, Saturn–Skathi, Saturn–Paaliaq, Saturn–Phoebe, Saturn–Ijiraq, Saturn–Kiviuq, Saturn–Iapetus, Saturn–Hyperion, Saturn–Titan, Saturn–Rhea, Saturn–Polydeuces, Saturn–Helene, Saturn–Dione, Saturn–Calypso, Saturn–Telesto, Saturn–Tethys, Saturn–Enceladus, Saturn–Pallene, Saturn–Anthe, Saturn–Methone, Saturn–Mimas and Saturn–Aegaeon)
 - THE PAINTED RINGWORLD (sheets sent): the view from the floor, flat shapes in a painter's curved perspective, the
   arch through its star; World (By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed), Life, Works,
   Altitude, Paint and Brush; the day on the light dial, the lights in the page's accents. Is the arch wide enough at
@@ -22,6 +22,9 @@ Recommendations".
   starter (growth by steps)?
 - THE LIT SURFACE: Reflectivity, Reflection Blur, Metallic and Emission maps. Metals look plain until there is an
   environment to reflect (ROADMAP C4); should C4 come next, or a fake sky reflection now?
+- THE CURVE CONTROL (Hand-Drawn Tones shows it): a pad under the sliders, its points dragged, added by a tap, taken
+  away by a double-tap or a hold. Is it easy on the phone? Should a point get handles (ROADMAP F10, Bezier)?
+- THE ANGLE DIAL beside an Angle knob (Dot Grid's Turn), and the WIRE RANGE's two handles: clearer than before?
 - ANTI-ALIASING (the Surface's setting; sheet sent): edges only is FXAA, a smoothing of the steps along hard edges,
   cheap but a touch soft; all pixels is the real thing at four times the work. Should a new graph start at edges
   only (as now), or at all pixels where the budget allows? And should the menu's hard-edged textures get it

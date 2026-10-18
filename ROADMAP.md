@@ -59,7 +59,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 |---|---|---|
 | Map / Curve / Numeric components; ports colored by type | Five wire kinds: gray map, picture, color, number, **curve** (green, dotted) | ✅ (curves added in Jupiter–Hegemone) |
 | Parameter mapping (a picture on a setting varies it point by point) | ⚙ ports. In v3 graphs a map is per point for the settings a part declares (`maps`; the wiki marks them "by point"); v2 graphs average it | ✅ (a setting that can't vary, such as a count of octaves, takes the average) |
-| Remappers (limit or reverse a control's range per target; one slider, many ranges) | `'~key': 'lo,hi'` per wired ⚙ (lo > hi reverses) | ✅ engine; ⇄ Reverse in the menu; **D3** two handles |
+| Remappers (limit or reverse a control's range per target; one slider, many ranges) | `'~key': 'lo,hi'` per wired ⚙ (lo > hi reverses) | ✅ engine; ⇄ Reverse and two handles in the menu (Saturn–Erriapus) |
 | Required inputs (red; a stand-in image keeps the rest working) | `STEP_REQUIRED`: a red port with "!", and a "!"-in-a-circle stand-in in step previews only | ✅ |
 | Result: Simple vs Surface (lit by Surface Color, Height, Reflectivity, Reflection Blur, Metallic) | Surface: picture, height, reflectivity, reflection blur, metallic and emission (Saturn–Albiorix); the Light Engine as a part | ✅ (environment reflections: C4) |
 | Render channels (Final, Diffuse, Bump, Normal, Specular, Metallic, Occlusion) | Step previews show each part's first output | **B2** |
@@ -68,7 +68,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Seamless Tiling | Not needed: a page is not tiled | parked |
 | Anti-aliasing: supersampling, "edges only" by AA zones | The Surface's Anti-aliasing: edges only (FXAA on the grid), all pixels (a grid twice as fine, within the budget) | ✅ (Saturn–Bebhionn) |
 | Lighting tab: HDRI environment, ambient color, any number of area lights (color, negative light, backlight, angular width, diffuse/specular influence), ambient and reflective occlusion with a quality setting | One dial light, ambient, materials (Highlight, Shade, Diffuse hues), soft shadows, AO | **C1–C4** |
-| Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (6 slots), Hue (2), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ reach rule, Knob kinds (slider, steps, angle, switch), Order of the sliders; **D1** a dial |
+| Control components (Slider, IntSlider, Angle, Checkbox, Value, Color, Grayscale, Curve control); only those reaching the Result are shown; order of controls | Knob (8 slots), Hue (2), Curve Control (2 pads), Accent, Number, Random Number, Light Dial. Only controls reaching the Surface are offered | ✅ (the Angle's dial, the Curve Control: Saturn–Erriapus) |
 | Groups (control components inside a group define its inputs) | **Group** parts: their insides a module of the editor's; each Group Input and Knob inside an input, the Group Result its outputs; laid out flat before drawing | ✅ (Saturn–Paaliaq) |
 | Loop and its slaves (Iteration, Accumulated, Randomizer); Bitmap Cache; Lua script components | A group's Repeats (the first result fed back as Accumulated; an Iteration part); results kept automatically (ATHANOR_KEPT) | ✅ (Saturn–Albiorix); scripts parked (security) |
 | Note component | **Note** part | ✅ |
@@ -128,18 +128,6 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
     light dial's line): a pan, perhaps, if it stays intuitive.
   - Prove: at the old knob's values the picture is unchanged (fingerprints).
 
-### D · Controls (Filter Forge's control components and remappers)
-
-- **D1's dial.** A Knob of the Angle kind reads in degrees with 45° marks;
-  drawing it as a dial on the page is still to do. (Kinds, D2's Order of the
-  sliders and D3's ⇄ Reverse the wire are done.)
-- **D3 · Remapper UI.** A wired ⚙'s range as two handles in its menu (it is a
-  typed pair today).
-- **D4 · A Curve control.** A curve the person draws (a small curve editor
-  on the page), feeding curve ports.
-  - Depends on: D1.
-  - The hard part is the editor on a phone: test on the baseline phone.
-
 ### E · The randomizer
 
 - **E4 · An author's default locks.** A preset or graph can ship with locks
@@ -155,7 +143,8 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   per-pixel blends, are fast and versatile): more parts run as fragment
   shaders on the GPU, with the CPU path beside each (AGENTS §5.5), and a way
   to make new ones from shader parts.
-- **F10 · Bezier curves** (needs D4's editor).
+- **F10 · Bezier curves**: handles on the Curve Control's points (its pad is
+  the editor), for curves a monotone cubic can't make.
 
 ### G · The poem as an input (Ruby's future-directions doc)
 
@@ -264,7 +253,6 @@ superseded) wait for Stage 4.
 ### Stage 2 · Features: the engine, the controls, the poem
 - **B2** channels view.
 - **C1–C4** lighting; **C5** the camera dial on more textures.
-- **D1**'s dial, **D3**'s two handles, **D4** curve control.
 - **G2** punctuation, **G4** Emotional Seed.
 
 ### Stage 3 · Textures: built from the parts
@@ -310,20 +298,19 @@ superseded) wait for Stage 4.
  A7 AA for textures                                            Deep Field (layers)   ───┼─► H2 PRESETS AS GRAPHS
  (groups, loops) ─┬───────                                                              │      ├─► H3 Crossbreed
                  └──────────► G4 Emotional Seed                                          │      ├─► H4 Bind to Ink
-                              D1 dial · D3 two handles ─► D4 curve control ──────────────┘      ├─► E4 author locks
+                              (controls: dial, two handles, curves) ─────────────────────┘      ├─► E4 author locks
                                                                                                 └─► THE PRESETS PASS
                               B2 channels ─► C1 ─► C2 ─► C4; C3
 ```
 
 **Suggested passes** (one release each, AGENTS' recipe):
 
-1. Stage 2: D1's dial, D3's two handles, D4 the curve control.
-2. Stage 2: B2 channels; then C1–C4.
-3. Stage 2: G2, G4.
-4. Stage 1: F7 Refraction (with F1), F10 Bezier curves (with D4's editor).
-5. Stage 3: the Surface Studies become textures, a few per pass; black boxes
+1. Stage 2: B2 channels; then C1–C4.
+2. Stage 2: G2, G4.
+3. Stage 1: F7 Refraction (with F1), F10 Bezier curves.
+4. Stage 3: the Surface Studies become textures, a few per pass; black boxes
    taken apart and the rest rebuilt as chains, two or three per pass.
-6. Stage 4: H2, H3, H4, E4, then the presets pass.
+5. Stage 4: H2, H3, H4, E4, then the presets pass.
 
 The stages overlap at their edges: a texture whose parts all exist may be
 built while the next part is being written. The order that matters is that

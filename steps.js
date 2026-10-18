@@ -74,6 +74,8 @@ const STEP_PARTS = {
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
   camdial:  { cat: 'Inputs', label: 'Camera Dial', ins: [], outs: ['turn', 'view', 'zoom'], params: [] },
+  // THE CURVE CONTROL (ROADMAP D4, Filter Forge's Curve control): a curve drawn by hand on the page, under Surface
+  curvectl: { cat: 'Inputs', label: 'Curve Control', ins: [], outs: ['curve'], params: [STEP_SEL('slot', 'Curve', ['1', '2']), ['name', 'Name', 'text', 'Curve'], ['points', 'Default', 'text', '0,0;100,100']] },
   seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
@@ -186,6 +188,27 @@ const STEP_PARTS = {
 /** A curve's value at t (0..1), between its samples ({ curve: Float32Array(257) }). */
 export function curveAt(c, t){ const s = c.curve, n = s.length - 1, x = Math.max(0, Math.min(1, t))*n, i = Math.min(n - 1, Math.floor(x)), f = x - i; return s[i] + (s[i + 1] - s[i])*f; }
 const stepCurve = fn => { const s = new Float32Array(257); for(let i = 0; i <= 256; i++) s[i] = Math.max(-1, Math.min(2, fn(i/256))); return { curve: s }; };
+/** A curve's points as written ("x,y;x,y", each 0–100), read: sorted by x, inside the square, at least the two ends. */
+export function curvePoints(text){
+  const pts = String(text || '').split(';').map(p => p.split(',').map(Number)).filter(p => p.length === 2 && p.every(isFinite))
+    .map(([x, y]) => [Math.max(0, Math.min(100, x)), Math.max(0, Math.min(100, y))]).sort((a, b) => a[0] - b[0])
+    .filter((p, i, a) => i === 0 || p[0] > a[i - 1][0]).slice(0, 16);
+  return pts.length >= 2 ? pts : [[0, 0], [100, 100]];
+}
+/** The curve through those points, smooth and never overshooting them (a monotone cubic: Fritsch and Carlson, 1980,
+ *  as curve editors use, so a hand-set point is where the curve goes and no bump appears between two), flat past the
+ *  first and the last. */
+export function curveFromPoints(text){
+  const P = curvePoints(text), n = P.length, x = P.map(p => p[0]/100), y = P.map(p => p[1]/100);
+  const d = x.slice(0, -1).map((_, i) => (y[i + 1] - y[i])/Math.max(1e-6, x[i + 1] - x[i]));
+  const m = y.map((_, i) => i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1]*d[i] <= 0 ? 0 : (d[i - 1] + d[i])/2);
+  for(let i = 0; i < n - 1; i++){ if(d[i] === 0){ m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i]/d[i], b = m[i + 1]/d[i], h = a*a + b*b; if(h > 9){ const t = 3/Math.sqrt(h); m[i] = t*a*d[i]; m[i + 1] = t*b*d[i]; } }
+  return stepCurve(t => { if(t <= x[0]) return y[0]; if(t >= x[n - 1]) return y[n - 1];
+    let i = 0; while(i < n - 2 && t > x[i + 1]) i++;
+    const h = x[i + 1] - x[i], u = (t - x[i])/h, u2 = u*u, u3 = u2*u;
+    return (2*u3 - 3*u2 + 1)*y[i] + (u3 - 2*u2 + u)*h*m[i] + (-2*u3 + 3*u2)*y[i + 1] + (u3 - u2)*h*m[i + 1]; });
+}
 // Perlin's bias and gain (Perlin & Hoffert 1989), the curves Filter Forge names after them
 const stepBias = (t, b) => { b = Math.max(0.001, Math.min(0.999, b)); return Math.pow(Math.max(0, t), Math.log(b)/Math.log(0.5)); };
 const stepGain = (t, g) => t < 0.5 ? stepBias(2*t, 1 - g)/2 : 1 - stepBias(2 - 2*t, 1 - g)/2;
@@ -231,6 +254,7 @@ export const STEP_DOCS = {
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
   camdial: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
+  curvectl: 'A curve you draw on the page, under Surface: wire it where a curve goes to shape the surface by hand.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
@@ -418,6 +442,11 @@ const STEP_RUN = {
   // the CAMERA DIAL (Ruby: a second dial, for the camera, so the light dial is the light's alone): its turn as 0–1 round
   // the dial, its view as how far the handle is drawn out (0 overhead, 1 at the rim, up to 1.3 past it), its zoom as
   // where it sits from 25% (0) to 400% (1) — wire each into a setting with a range ('~lens': '25,400')
+  curvectl(E, n){ const { ctx, P } = E, sl = Math.max(1, Math.min(2, parseInt(P(n, 'slot', '1'), 10) || 1));
+    // (the curve drawn on the page when the graph is the page's surface; else the part's own Default)
+    const drawn = (ctx.curves || [])[sl - 1];
+    return [curveFromPoints(drawn || P(n, 'points', '0,0;100,100'))];
+  },
   camdial(E, n){ const c = E.ctx.camera || {}, z = c.zoom ?? 100;
     return [((c.turn ?? 0) % 360 + 360) % 360/360, Math.max(0, Math.min(1.3, (c.view ?? 0)/100)), Math.max(0, Math.min(1, (z - 25)/375))]; },
   dial(E, n){ const { ctx } = E;
@@ -1105,7 +1134,7 @@ const STEP_IO = {
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   smudge: { ins: ['image', 'field'], outs: ['image'] }, multiblend: { ins: ['image', 'image', 'image', 'image', 'image'], outs: ['image'] },
-  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, seed: { outs: ['value'] },
+  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, curvectl: { outs: ['curve'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },

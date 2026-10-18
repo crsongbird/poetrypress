@@ -225,6 +225,15 @@ export function athanorReach(graph){
   if(s) walk(String(s.id));
   return seen;
 }
+/** The curves a graph offers on the page (D4): its Curve Controls that reach the Surface, by slot (1–2), each with its
+ *  name and its Default points; two on one slot are one curve, the first one's name and default. */
+export function athanorCurves(graph){
+  const all = athanorFlat(graph).nodes, reach = athanorReach(graph), out = [];
+  for(const n of Object.values(all)){ if(n.name !== 'curvectl' || !reach.has(String(n.id))) continue;
+    const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
+    if(!out.some(c => c.slot === slot)) out.push({ slot, label: String(d.name || 'Curve').slice(0, 32), def: String(d.points || '0,0;100,100').slice(0, 200) }); }
+  return out.sort((a, b) => a.slot - b.slot);
+}
 /** Whether a graph's Camera Dial reaches its Surface: then the page shows the camera dial for it, as for a menu
  *  texture with a camera (Ruby: on a graph from the Athanor the dial never appeared). */
 export function athanorCamera(graph){
@@ -326,7 +335,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -605,6 +614,12 @@ export const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Block Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
       ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'screen', opacity: 100 }, 540, 60], ['surface', { name: 'Techno Blocks', ground: 'colour', aa: 'edges only' }, 780, 100]],
     wires: [[1, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1], [1, 2, 6, 2], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('blocks', 'fill')]] },
+  // the Curve Control (D4): a curve drawn by hand on the page
+  tones: { label: 'Hand-Drawn Tones', teach: 'Clouds whose light and dark you draw by hand. A Perlin Noise makes soft clouds; Tone Curve runs every gray of them through a curve, as a photo editor\'s Curves does; and the curve comes from a Curve Control, which becomes a pad under the sliders when this is the page\'s surface. A Color Ramp colors the result between your two Hues. Try: on the page, drag the curve\'s middle points apart for hard-edged islands, or add a dip for rings.', nodes: [
+      ['perlin', { scale: 8, details: 4, rough: 50, contrast: 40 }, 40, 60], ['curvectl', { slot: '1', name: 'Tones', points: '0,0;35,12;65,88;100,100' }, 40, 360],
+      ['tonecurve', { mix: 100 }, 300, 140], ['hue', { slot: '1', name: 'Light Hue' }, 300, 360], ['hue', { slot: '2', name: 'Dark Hue' }, 300, 480],
+      ['ramp', { mid: 50 }, 540, 140], ['surface', { name: 'Hand-Drawn Tones', ground: 'colour', aa: 'edges only' }, 780, 160]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 export function athanorStarter(name){

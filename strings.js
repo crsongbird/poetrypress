@@ -432,6 +432,13 @@ export const PRESET_ACTS = {
   freezeLabel: '❄︎ Freeze This Seed',
   thawLabel: '❄︎ Seed Frozen · Thaw',
 };
+/** The dialog's two handles for a range (the Athanor's wire ranges). */
+export const MODAL_RANGE = {
+  low: 'At the low end',
+  high: 'At the high end',
+  reversed: 'Reversed: the setting falls as the wire rises.',
+  still: 'Both ends the same: the setting won’t move.',
+};
 /** The fifth hue's hint, by its job ({name}: the texture's own words for it, textureGenerators.js hue5.why). */
 export const HUE5_HINTS = {
   glow: 'Color of light from inside the surface: {name}. Black is none.',

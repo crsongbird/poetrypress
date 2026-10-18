@@ -153,7 +153,8 @@ export const WIKI_ARTICLES = [
 <li><b>Tone Curve</b> runs every value of a picture through a curve: Stairs posterizes softly, Wave makes bands.</li>
 <li><b>Profile Gradient</b> shapes a gradient with a curve: an Impulse curve laid radially makes a raised ring; a Wave makes ripples.</li>
 </ul>
-<p><b>Curve</b> makes the basic shapes; <b>Curve Ops</b> repeats, flips, shifts or combines them. A curve wired where a gray map goes is laid across the page from left to right.</p>` },
+<p><b>Curve</b> makes the basic shapes; <b>Curve Ops</b> repeats, flips, shifts or combines them. A curve wired where a gray map goes is laid across the page from left to right.</p>
+<p>To draw a curve by hand, use a <b>Curve Control</b> (in Inputs). When your graph is the page’s surface, it becomes a small pad under the sliders: drag its points and the surface follows. See [[part:curvectl]].</p>` },
   { id: 'convert', group: 'Data and wires', title: 'When kinds don’t match', body: `
 <p>You can wire any output into any input. When the kinds differ, the Athanor converts the value as it passes:</p>
 <table class="wk-table"><tr><th>From</th><th>Into</th><th>Becomes</th></tr>
@@ -196,8 +197,8 @@ export const WIKI_ARTICLES = [
 <p>A wire into a ⚙ port normally sweeps the setting’s whole range. Often you want less, or want it reversed. A <b>wire range</b> sets the two values the setting takes at the wire’s lowest (0) and highest (1).</p>
 {{fig:ranges}}
 <h3>An example</h3>
-<p>You put a Knob on the page and wire it into Perlin Noise’s <b>Roughness</b> (0–100). Above 50 the noise looks harsh, so half the slider is wasted. Open Roughness’s menu and choose <b>Set wire range…</b>, then enter <b>0, 50</b>. Now the whole slider sweeps 0 to 50.</p>
-<p>Want the slider called “Smoothness” instead? Rename the Knob and enter the range backwards, <b>50, 0</b>: the slider at 0 now gives Roughness 50, and the slider at 100 gives Roughness 0.</p>
+<p>You put a Knob on the page and wire it into Perlin Noise’s <b>Roughness</b> (0–100). Above 50 the noise looks harsh, so half the slider is wasted. Open Roughness’s menu and choose <b>Set wire range…</b>: two sliders set what Roughness is with the wire at 0 and at 1. Leave the first at 0 and drag the second to 50. Now the whole slider sweeps 0 to 50.</p>
+<p>Want the slider called “Smoothness” instead? Rename the Knob and set the range the other way round, 50 at 0 and 0 at 1 (or choose <b>Reverse the wire</b>): the slider at 0 now gives Roughness 50, and the slider at 100 gives Roughness 0.</p>
 <p>One Knob can feed several settings, each with its own range, so a single slider moves them all by different amounts. The app’s textures do this often: open one from <b>Open</b> and look at the Knobs.</p>` },
 
   // ------------------------------------------------------------------ Building techniques
@@ -274,8 +275,9 @@ export const WIKI_ARTICLES = [
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
 <p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Apply</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app asks whether to). The page shows only the controls you give it:</p>
 <ul>
-<li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees, or a <b>switch</b>, off or on.</li>
+<li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees and turned on a small dial beside the slider, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
+<li>Each <b>Curve Control</b> becomes a pad under the sliders, where its curve is drawn by hand (two at most).</li>
 <li>The <b>light dial</b> is always there for anything lit.</li>
 </ul>
 <h3>Key facts</h3>

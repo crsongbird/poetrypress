@@ -816,6 +816,20 @@ but bear with me, dear}]/jitter:200
             <input type="range" id="texP8" min="0" max="100" value="0">
             <span class="range-val" id="texP8Val"></span>
           </div>
+          <!-- THE CURVE CONTROLS (ROADMAP D4): a graph's Curve Control parts, drawn by hand here. Drag a point; tap or click
+               the empty pad to add one; double-click or hold a point to remove it; ↺ puts back the graph's own curve -->
+          <div class="field full curve-row tool-hidden" id="texCurve1Row">
+            <div class="curve-head"><label id="texCurve1Label" for="texCurve1Pad">Curve</label>
+              <button type="button" class="snap-btn curve-reset" id="texCurve1Reset" title="Put back the graph's own curve">↺</button></div>
+            <div class="curve-pad"><canvas id="texCurve1Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+            <input type="hidden" id="textureCurve1" value="">
+          </div>
+          <div class="field full curve-row tool-hidden" id="texCurve2Row">
+            <div class="curve-head"><label id="texCurve2Label" for="texCurve2Pad">Curve</label>
+              <button type="button" class="snap-btn curve-reset" id="texCurve2Reset" title="Put back the graph's own curve">↺</button></div>
+            <div class="curve-pad"><canvas id="texCurve2Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+            <input type="hidden" id="textureCurve2" value="">
+          </div>
           <div class="field full">
             <label data-str="label.opacity">Opacity</label>
             <input type="range" id="textureOpacity" min="0" max="100" value="60" data-moon>
@@ -1375,6 +1389,12 @@ but bear with me, dear}]/jitter:200
     <p class="modal-title" id="modalTitle"></p>
     <p class="modal-body" id="modalBody"></p>
     <textarea class="modal-input" id="modalInput" rows="1" hidden></textarea>
+    <!-- a range by two handles (the Athanor's wire ranges, ROADMAP D3): the value at the low end and at the high end -->
+    <div class="modal-range" id="modalRange" hidden>
+      <div class="mr-row"><label for="modalRangeA" id="modalRangeALabel"></label><input type="range" id="modalRangeA"><output id="modalRangeAVal"></output></div>
+      <div class="mr-row"><label for="modalRangeB" id="modalRangeBLabel"></label><input type="range" id="modalRangeB"><output id="modalRangeBVal"></output></div>
+      <p class="mr-note" id="modalRangeNote"></p>
+    </div>
     <div class="btn-row">
       <button class="btn-major" id="modalConfirm" type="button" data-str="button.modalConfirm">OK</button>
       <button class="ghost" id="modalCancel" type="button" data-str="button.modalCancel">Cancel</button>

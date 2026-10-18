@@ -4,6 +4,30 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Erriapus (2026-10-17)
+
+- **Draw a curve on the page.** A new Athanor part, **Curve Control**
+  (Inputs), becomes a pad under the Surface's sliders when its graph is on
+  the page:
+  - Drag a point to shape the curve.
+  - Tap or click the empty pad to add a point; double-click, double-tap or
+    hold a point to take it away.
+  - ↺ puts back the graph's own curve.
+  - The curve runs smoothly through every point and never bulges past them.
+  - It's saved with the look, as a knob is. Up to two per graph.
+  - New starter, **Hand-Drawn Tones**: clouds whose light and dark you draw.
+- **Angles on a dial.** A Knob of the Angle kind now has a small dial beside
+  its slider. Drag round it to turn it; 0° is up.
+- **Wire ranges by two handles.** Set wire range… and a binding's Set its
+  range… now show two sliders, one for each end, instead of a box to type
+  two numbers in. Setting the first above the second reverses the wire, and
+  the dialog says so.
+- **Fixed:**
+  - The surface menu said "The Athanor (empty)" just after Apply; it now names
+    the graph.
+  - A graph with no Knob showed a "Knob 1" slider that moved nothing. It's
+    gone.
+
 ## Saturn–Bebhionn (2026-10-17)
 
 - **Anti-aliasing in the Athanor.** The Surface has Filter Forge's

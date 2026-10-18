@@ -499,6 +499,13 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
   border:1px solid var(--line); border-radius:2px; resize:vertical;
 }
 .modal-input[hidden]{ display:none; }
+/* a range by two handles: the value at each end, its own slider and readout (the Athanor's wire ranges) */
+.modal-range[hidden]{ display:none; }
+.modal-range .mr-row{ display:grid; grid-template-columns:minmax(0, 9em) 1fr 3.5em; align-items:center; gap:8px; margin:0 0 8px; }
+.modal-range label{ font-size:12.5px; color:var(--text-dim); }
+.modal-range output{ font:13px var(--ui-sans); text-align:right; color:var(--text-main); }
+.modal-range .mr-note{ min-height:1.3em; margin:0 0 8px; font-size:12px; color:var(--accent); }
+body.is-mobile .modal-range .mr-row{ grid-template-columns:1fr 3.5em; } body.is-mobile .modal-range label{ grid-column:1 / -1; }
 body.is-mobile .modal{ width:100%; }
 body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }
 
@@ -1423,6 +1430,21 @@ body.is-mobile #undoBtn{ left:6px; bottom:138px; } body.is-mobile #redoBtn{ left
 .snap-btn{ border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:6px;
   padding:0 6px; margin-left:6px; font-size:14px; line-height:22px; cursor:pointer; }
 .snap-btn[aria-pressed="true"]{ color:var(--accent); border-color:var(--accent); }
+/* an Angle knob's dial (ROADMAP D1): beside its slider, turned by dragging round it (0° up, clockwise) */
+.knob-dial{ width:30px; height:30px; flex:0 0 30px; margin-right:8px; cursor:grab; touch-action:none; overflow:visible; }
+body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
+.knob-dial .kd-rim{ fill:var(--bg-panel-2, transparent); stroke:var(--line); stroke-width:1.5; }
+.knob-dial .kd-tick{ stroke:var(--text-dim); stroke-width:1.2; opacity:.7; }
+.knob-dial .kd-hand line{ stroke:var(--accent); stroke-width:2.2; stroke-linecap:round; } .knob-dial .kd-hand circle{ fill:var(--accent); }
+.knob-dial .kd-hub{ fill:var(--text-dim); }
+.field.full.has-dial{ display:flex; flex-wrap:wrap; align-items:center; }
+.field.full.has-dial > label{ flex:1 0 100%; }
+.field.full.has-dial > input[type="range"]{ flex:1 1 auto; width:auto; min-width:0; }
+.field.full.has-dial > .range-val{ flex:0 0 auto; margin-left:8px; }
+/* a Curve Control's pad (ROADMAP D4): the curve drawn by hand, its points dragged; ↺ in its corner */
+.curve-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.curve-pad canvas{ display:block; width:100%; height:auto; aspect-ratio:2 / 1; max-height:170px; background:var(--bg-panel-2, rgba(0,0,0,.2)); border:1px solid var(--line); touch-action:none; cursor:crosshair; }
+.curve-head .curve-reset{ margin:0; }
 
 /* the light dial: drag from the centre (light overhead) toward where the light
    comes from; at the rim it is low and raking. Eight ticks snap to 45°. */

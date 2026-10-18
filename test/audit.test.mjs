@@ -80,6 +80,9 @@ const ENUM = {
   baseLayer: v => ({ ...v, textureType: 'linen', texP1: '83', texP2: '77', textureOpacity: 61, textureBlend: 'difference', textureTint1: '#123456', textureSeed: 4321 }),
   baseLocks: () => ['texP2', 'textureBlend'],
   forgeGraph: v => v === '{"drawflow":{"Home":{"data":{}}},"audit":1}' ? '{"drawflow":{"Home":{"data":{}}},"audit":2}' : '{"drawflow":{"Home":{"data":{}}},"audit":1}',
+  // a Curve Control's curve as drawn on the page (points 0–100)
+  textureCurve1: v => v === '0,10;50,80;100,30' ? '0,0;100,100' : '0,10;50,80;100,30',
+  textureCurve2: v => v === '0,90;100,20' ? '0,0;100,100' : '0,90;100,20',
   fx1Type: v => v === 'glow' ? 'outline' : 'glow', fx2Type: v => v === 'bevel' ? 'chromatic' : 'bevel', fx3Type: v => v === 'erosion' ? 'shadow' : 'erosion',
   underAll: v => v === 'wave' ? 'double' : 'wave',
 };

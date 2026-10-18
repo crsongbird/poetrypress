@@ -930,8 +930,10 @@ export async function openForge(deps){
         const lo = x.min, hi = x.max;
         if(wired){
           items.push({ glyph: '↔', label: 'Set wire range…', hint: 'how much of the setting’s range the wire sweeps: ' + (n.data['~' + key] ? String(n.data['~' + key]).replace(',', ' to ') : `now all of it, ${lo} to ${hi}`), act: async () => {
-            const r = await promptFor({ title: `${label}: wire range`, body: `Two values between ${lo} and ${hi}: the setting when the wire is at its lowest (0), then at its highest (1). Enter the higher value first to reverse it.`, input: true, defaultValue: String(n.data['~' + key] || `${lo}, ${hi}`), confirmLabel: 'Set' });
-            const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return; const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
+            // (two handles, ROADMAP D3: where the setting is with the wire at 0, and at 1; the first above the second reverses it)
+            const cur = n.data['~' + key] ? String(n.data['~' + key]).split(',').map(Number) : [lo, hi];
+            const r = await promptFor({ title: `${label}: wire range`, body: `What the setting is when the wire is at its lowest (0) and at its highest (1).`, range: { lo, hi, a: cur[0], b: cur[1], low: 'Wire at 0', high: 'Wire at 1' }, confirmLabel: 'Set' });
+            if(!Array.isArray(r)) return; const a = Math.max(lo, Math.min(hi, r[0])), b = Math.max(lo, Math.min(hi, r[1]));
             setData(id, { ['~' + key]: (a === lo && b === hi) ? undefined : `${a},${b}` }); } });
           // ⇄ (ROADMAP D3, Filter Forge's remapper): the same wire, the other way round
           { const cur = n.data['~' + key] ? String(n.data['~' + key]).split(',').map(Number) : [lo, hi];
@@ -953,9 +955,10 @@ export async function openForge(deps){
           }
           if(bound){
             items.push({ glyph: '↔', label: 'Set its range…', hint: 'the values at the slider\'s two ends: ' + (curRange ? curRange.replace(',', ' to ') : `now ${lo} to ${hi}`), act: async () => {
-              const r = await promptFor({ title: `${label}: range`, body: `Two values between ${lo} and ${hi}: the setting with the slider (or dial) at its lowest, and at its highest.`, input: true, defaultValue: curRange || `${lo}, ${hi}`, confirmLabel: 'Set' });
-              const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return;
-              const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
+              const cur = curRange ? curRange.split(',').map(Number) : [lo, hi];
+              const r = await promptFor({ title: `${label}: range`, body: `What the setting is with the slider (or dial) at its lowest and at its highest.`, range: { lo, hi, a: cur[0], b: cur[1], low: 'Slider at its lowest', high: 'Slider at its highest' }, confirmLabel: 'Set' });
+              if(!Array.isArray(r)) return;
+              const a = Math.max(lo, Math.min(hi, r[0])), b = Math.max(lo, Math.min(hi, r[1]));
               setData(id, { [key]: v.replace(/\[.*$/, '') + `[${a},${b}]` }); } });
             items.push({ glyph: '⊘', label: 'Unbind', hint: 'a plain setting again', act: () => setData(id, { [key]: def }) });
           }

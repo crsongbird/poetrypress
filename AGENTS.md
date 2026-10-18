@@ -797,6 +797,16 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   test/studies.test.mjs checks them.
 - **The reach rule** (`athanorReach`): only Knobs and Hues that reach the
   Surface are offered on the page. A slot bound by `'@kN'` counts.
+  - A Knob of the **Angle** kind is drawn with a dial beside its slider
+    (`knobDial`, 0° up and clockwise, as the light dial reads).
+  - **Curve Controls** (`curvectl`, `athanorCurves`, two slots) become pads
+    under the sliders (`syncCurveControls`), drawn by hand. Their points live in
+    hidden fields `textureCurve1/2` ("x,y;x,y", 0–100; '' is the graph's own
+    Default), saved per layer like the knobs; the request carries them as
+    `curves` (keyed `_cv`, only for a graph with one) → `ctx.curves`.
+    `curveFromPoints` is a monotone cubic (it never overshoots a point).
+  - A wired ⚙'s range and a binding's range are set with two handles
+    (`modalPrompt({ range })`).
 - **The poem as input:** the **The Poem** part (words, distance, lines,
   stanzas, rhymes, and two numbers: aware, in the letters) gets the layout as
   `ctx.text`, and only when its graph contains it (`graphUsesPoem`) and the

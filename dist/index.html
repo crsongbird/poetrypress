@@ -532,6 +532,13 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
   border:1px solid var(--line); border-radius:2px; resize:vertical;
 }
 .modal-input[hidden]{ display:none; }
+/* a range by two handles: the value at each end, its own slider and readout (the Athanor's wire ranges) */
+.modal-range[hidden]{ display:none; }
+.modal-range .mr-row{ display:grid; grid-template-columns:minmax(0, 9em) 1fr 3.5em; align-items:center; gap:8px; margin:0 0 8px; }
+.modal-range label{ font-size:12.5px; color:var(--text-dim); }
+.modal-range output{ font:13px var(--ui-sans); text-align:right; color:var(--text-main); }
+.modal-range .mr-note{ min-height:1.3em; margin:0 0 8px; font-size:12px; color:var(--accent); }
+body.is-mobile .modal-range .mr-row{ grid-template-columns:1fr 3.5em; } body.is-mobile .modal-range label{ grid-column:1 / -1; }
 body.is-mobile .modal{ width:100%; }
 body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }
 
@@ -1456,6 +1463,21 @@ body.is-mobile #undoBtn{ left:6px; bottom:138px; } body.is-mobile #redoBtn{ left
 .snap-btn{ border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:6px;
   padding:0 6px; margin-left:6px; font-size:14px; line-height:22px; cursor:pointer; }
 .snap-btn[aria-pressed="true"]{ color:var(--accent); border-color:var(--accent); }
+/* an Angle knob's dial (ROADMAP D1): beside its slider, turned by dragging round it (0° up, clockwise) */
+.knob-dial{ width:30px; height:30px; flex:0 0 30px; margin-right:8px; cursor:grab; touch-action:none; overflow:visible; }
+body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
+.knob-dial .kd-rim{ fill:var(--bg-panel-2, transparent); stroke:var(--line); stroke-width:1.5; }
+.knob-dial .kd-tick{ stroke:var(--text-dim); stroke-width:1.2; opacity:.7; }
+.knob-dial .kd-hand line{ stroke:var(--accent); stroke-width:2.2; stroke-linecap:round; } .knob-dial .kd-hand circle{ fill:var(--accent); }
+.knob-dial .kd-hub{ fill:var(--text-dim); }
+.field.full.has-dial{ display:flex; flex-wrap:wrap; align-items:center; }
+.field.full.has-dial > label{ flex:1 0 100%; }
+.field.full.has-dial > input[type="range"]{ flex:1 1 auto; width:auto; min-width:0; }
+.field.full.has-dial > .range-val{ flex:0 0 auto; margin-left:8px; }
+/* a Curve Control's pad (ROADMAP D4): the curve drawn by hand, its points dragged; ↺ in its corner */
+.curve-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.curve-pad canvas{ display:block; width:100%; height:auto; aspect-ratio:2 / 1; max-height:170px; background:var(--bg-panel-2, rgba(0,0,0,.2)); border:1px solid var(--line); touch-action:none; cursor:crosshair; }
+.curve-head .curve-reset{ margin:0; }
 
 /* the light dial: drag from the centre (light overhead) toward where the light
    comes from; at the rim it is low and raking. Eight ticks snap to 45°. */
@@ -15860,6 +15882,8 @@ const STEP_PARTS = {
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
   camdial:  { cat: 'Inputs', label: 'Camera Dial', ins: [], outs: ['turn', 'view', 'zoom'], params: [] },
+  // THE CURVE CONTROL (ROADMAP D4, Filter Forge's Curve control): a curve drawn by hand on the page, under Surface
+  curvectl: { cat: 'Inputs', label: 'Curve Control', ins: [], outs: ['curve'], params: [STEP_SEL('slot', 'Curve', ['1', '2']), ['name', 'Name', 'text', 'Curve'], ['points', 'Default', 'text', '0,0;100,100']] },
   seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
@@ -15972,6 +15996,27 @@ const STEP_PARTS = {
 /** A curve's value at t (0..1), between its samples ({ curve: Float32Array(257) }). */
 function curveAt(c, t){ const s = c.curve, n = s.length - 1, x = Math.max(0, Math.min(1, t))*n, i = Math.min(n - 1, Math.floor(x)), f = x - i; return s[i] + (s[i + 1] - s[i])*f; }
 const stepCurve = fn => { const s = new Float32Array(257); for(let i = 0; i <= 256; i++) s[i] = Math.max(-1, Math.min(2, fn(i/256))); return { curve: s }; };
+/** A curve's points as written ("x,y;x,y", each 0–100), read: sorted by x, inside the square, at least the two ends. */
+function curvePoints(text){
+  const pts = String(text || '').split(';').map(p => p.split(',').map(Number)).filter(p => p.length === 2 && p.every(isFinite))
+    .map(([x, y]) => [Math.max(0, Math.min(100, x)), Math.max(0, Math.min(100, y))]).sort((a, b) => a[0] - b[0])
+    .filter((p, i, a) => i === 0 || p[0] > a[i - 1][0]).slice(0, 16);
+  return pts.length >= 2 ? pts : [[0, 0], [100, 100]];
+}
+/** The curve through those points, smooth and never overshooting them (a monotone cubic: Fritsch and Carlson, 1980,
+ *  as curve editors use, so a hand-set point is where the curve goes and no bump appears between two), flat past the
+ *  first and the last. */
+function curveFromPoints(text){
+  const P = curvePoints(text), n = P.length, x = P.map(p => p[0]/100), y = P.map(p => p[1]/100);
+  const d = x.slice(0, -1).map((_, i) => (y[i + 1] - y[i])/Math.max(1e-6, x[i + 1] - x[i]));
+  const m = y.map((_, i) => i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1]*d[i] <= 0 ? 0 : (d[i - 1] + d[i])/2);
+  for(let i = 0; i < n - 1; i++){ if(d[i] === 0){ m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i]/d[i], b = m[i + 1]/d[i], h = a*a + b*b; if(h > 9){ const t = 3/Math.sqrt(h); m[i] = t*a*d[i]; m[i + 1] = t*b*d[i]; } }
+  return stepCurve(t => { if(t <= x[0]) return y[0]; if(t >= x[n - 1]) return y[n - 1];
+    let i = 0; while(i < n - 2 && t > x[i + 1]) i++;
+    const h = x[i + 1] - x[i], u = (t - x[i])/h, u2 = u*u, u3 = u2*u;
+    return (2*u3 - 3*u2 + 1)*y[i] + (u3 - 2*u2 + u)*h*m[i] + (-2*u3 + 3*u2)*y[i + 1] + (u3 - u2)*h*m[i + 1]; });
+}
 // Perlin's bias and gain (Perlin & Hoffert 1989), the curves Filter Forge names after them
 const stepBias = (t, b) => { b = Math.max(0.001, Math.min(0.999, b)); return Math.pow(Math.max(0, t), Math.log(b)/Math.log(0.5)); };
 const stepGain = (t, g) => t < 0.5 ? stepBias(2*t, 1 - g)/2 : 1 - stepBias(2 - 2*t, 1 - g)/2;
@@ -16017,6 +16062,7 @@ const STEP_DOCS = {
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
   camdial: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
+  curvectl: 'A curve you draw on the page, under Surface: wire it where a curve goes to shape the surface by hand.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
@@ -16204,6 +16250,11 @@ const STEP_RUN = {
   // the CAMERA DIAL (Ruby: a second dial, for the camera, so the light dial is the light's alone): its turn as 0–1 round
   // the dial, its view as how far the handle is drawn out (0 overhead, 1 at the rim, up to 1.3 past it), its zoom as
   // where it sits from 25% (0) to 400% (1) — wire each into a setting with a range ('~lens': '25,400')
+  curvectl(E, n){ const { ctx, P } = E, sl = Math.max(1, Math.min(2, parseInt(P(n, 'slot', '1'), 10) || 1));
+    // (the curve drawn on the page when the graph is the page's surface; else the part's own Default)
+    const drawn = (ctx.curves || [])[sl - 1];
+    return [curveFromPoints(drawn || P(n, 'points', '0,0;100,100'))];
+  },
   camdial(E, n){ const c = E.ctx.camera || {}, z = c.zoom ?? 100;
     return [((c.turn ?? 0) % 360 + 360) % 360/360, Math.max(0, Math.min(1.3, (c.view ?? 0)/100)), Math.max(0, Math.min(1, (z - 25)/375))]; },
   dial(E, n){ const { ctx } = E;
@@ -16891,7 +16942,7 @@ const STEP_IO = {
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   smudge: { ins: ['image', 'field'], outs: ['image'] }, multiblend: { ins: ['image', 'image', 'image', 'image', 'image'], outs: ['image'] },
-  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, seed: { outs: ['value'] },
+  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, curvectl: { outs: ['curve'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
@@ -18492,6 +18543,15 @@ function athanorReach(graph){
   if(s) walk(String(s.id));
   return seen;
 }
+/** The curves a graph offers on the page (D4): its Curve Controls that reach the Surface, by slot (1–2), each with its
+ *  name and its Default points; two on one slot are one curve, the first one's name and default. */
+function athanorCurves(graph){
+  const all = athanorFlat(graph).nodes, reach = athanorReach(graph), out = [];
+  for(const n of Object.values(all)){ if(n.name !== 'curvectl' || !reach.has(String(n.id))) continue;
+    const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
+    if(!out.some(c => c.slot === slot)) out.push({ slot, label: String(d.name || 'Curve').slice(0, 32), def: String(d.points || '0,0;100,100').slice(0, 200) }); }
+  return out.sort((a, b) => a.slot - b.slot);
+}
 /** Whether a graph's Camera Dial reaches its Surface: then the page shows the camera dial for it, as for a menu
  *  texture with a camera (Ruby: on a graph from the Athanor the dial never appeared). */
 function athanorCamera(graph){
@@ -18593,7 +18653,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -18872,6 +18932,12 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Block Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
       ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'screen', opacity: 100 }, 540, 60], ['surface', { name: 'Techno Blocks', ground: 'colour', aa: 'edges only' }, 780, 100]],
     wires: [[1, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1], [1, 2, 6, 2], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('blocks', 'fill')]] },
+  // the Curve Control (D4): a curve drawn by hand on the page
+  tones: { label: 'Hand-Drawn Tones', teach: 'Clouds whose light and dark you draw by hand. A Perlin Noise makes soft clouds; Tone Curve runs every gray of them through a curve, as a photo editor\'s Curves does; and the curve comes from a Curve Control, which becomes a pad under the sliders when this is the page\'s surface. A Color Ramp colors the result between your two Hues. Try: on the page, drag the curve\'s middle points apart for hard-edged islands, or add a dip for rings.', nodes: [
+      ['perlin', { scale: 8, details: 4, rough: 50, contrast: 40 }, 40, 60], ['curvectl', { slot: '1', name: 'Tones', points: '0,0;35,12;65,88;100,100' }, 40, 360],
+      ['tonecurve', { mix: 100 }, 300, 140], ['hue', { slot: '1', name: 'Light Hue' }, 300, 360], ['hue', { slot: '2', name: 'Dark Hue' }, 300, 480],
+      ['ramp', { mid: 50 }, 540, 140], ['surface', { name: 'Hand-Drawn Tones', ground: 'colour', aa: 'edges only' }, 780, 160]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -19986,6 +20052,8 @@ function pageOf(type, w, h, opts){
 // (and a graph's working grid, as the export makes it: the page over the grid's divisor there)
 const gridAtExport = (page, d) => page ? [Math.ceil(page[0]/Math.max(1, d)), Math.ceil(page[1]/Math.max(1, d))] : null;
 /** Whether a graph reads the inset box (an Inset Box part, or a Border Mask from it): it is then made with the box's place. */
+/** Whether a graph draws with a Curve Control (D4): only then does a curve drawn on the page key it. */
+function graphUsesCurves(graph){ return /"name":\s*"curvectl"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function graphUsesBox(graph){ return /"name":\s*"insetbox"|"shape":\s*"inset box"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function graphUsesBackdrop(graph){ return /"name":\s*"(?:backdrop|glassrain)"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 /** The poem's layout as whole LINES, each box rounded out to 1/64 of the page (a chain with `poem: 'lines'` reads
@@ -20051,6 +20119,8 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
             // (the inset box's place, for a graph that reads it)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.box && graphUsesBox(opts.graph) ? `_x${opts.box}` : '')
+            // (the curves drawn on the page, for a graph with a Curve Control)
+            + ((type === 'athanor' || type === 'athanorsteps') && Array.isArray(opts.curves) && opts.curves.some(Boolean) && graphUsesCurves(opts.graph) ? `_cv${layoutHash(opts.curves.join('|'))}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
@@ -20076,7 +20146,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null,
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -20101,7 +20171,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -20194,7 +20264,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -21034,6 +21104,20 @@ but bear with me, dear}]/jitter:200
             <label id="texP8Label">Knob 8</label>
             <input type="range" id="texP8" min="0" max="100" value="0">
             <span class="range-val" id="texP8Val"></span>
+          </div>
+          <!-- THE CURVE CONTROLS (ROADMAP D4): a graph's Curve Control parts, drawn by hand here. Drag a point; tap or click
+               the empty pad to add one; double-click or hold a point to remove it; ↺ puts back the graph's own curve -->
+          <div class="field full curve-row tool-hidden" id="texCurve1Row">
+            <div class="curve-head"><label id="texCurve1Label" for="texCurve1Pad">Curve</label>
+              <button type="button" class="snap-btn curve-reset" id="texCurve1Reset" title="Put back the graph's own curve">↺</button></div>
+            <div class="curve-pad"><canvas id="texCurve1Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+            <input type="hidden" id="textureCurve1" value="">
+          </div>
+          <div class="field full curve-row tool-hidden" id="texCurve2Row">
+            <div class="curve-head"><label id="texCurve2Label" for="texCurve2Pad">Curve</label>
+              <button type="button" class="snap-btn curve-reset" id="texCurve2Reset" title="Put back the graph's own curve">↺</button></div>
+            <div class="curve-pad"><canvas id="texCurve2Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+            <input type="hidden" id="textureCurve2" value="">
           </div>
           <div class="field full">
             <label data-str="label.opacity">Opacity</label>
@@ -22131,6 +22215,13 @@ const PRESET_ACTS = {
   noSurface: 'No surface is on, so there is nothing to vary. Turn on Customize Surface first.',
   freezeLabel: '❄︎ Freeze This Seed',
   thawLabel: '❄︎ Seed Frozen · Thaw',
+};
+/** The dialog's two handles for a range (the Athanor's wire ranges). */
+const MODAL_RANGE = {
+  low: 'At the low end',
+  high: 'At the high end',
+  reversed: 'Reversed: the setting falls as the wire rises.',
+  still: 'Both ends the same: the setting won’t move.',
 };
 /** The fifth hue's hint, by its job ({name}: the texture's own words for it, textureGenerators.js hue5.why). */
 const HUE5_HINTS = {
@@ -37876,6 +37967,8 @@ const STEP_PARTS = {
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
   camdial:  { cat: 'Inputs', label: 'Camera Dial', ins: [], outs: ['turn', 'view', 'zoom'], params: [] },
+  // THE CURVE CONTROL (ROADMAP D4, Filter Forge's Curve control): a curve drawn by hand on the page, under Surface
+  curvectl: { cat: 'Inputs', label: 'Curve Control', ins: [], outs: ['curve'], params: [STEP_SEL('slot', 'Curve', ['1', '2']), ['name', 'Name', 'text', 'Curve'], ['points', 'Default', 'text', '0,0;100,100']] },
   seed:     { cat: 'Inputs', label: 'Seed', ins: [], outs: ['seed'], params: [] },
   page:     { cat: 'Inputs', label: 'Page Coordinates', ins: [], outs: ['x', 'y', 'radius'], params: [] },
   // makers
@@ -37988,6 +38081,27 @@ const STEP_PARTS = {
 /** A curve's value at t (0..1), between its samples ({ curve: Float32Array(257) }). */
 function curveAt(c, t){ const s = c.curve, n = s.length - 1, x = Math.max(0, Math.min(1, t))*n, i = Math.min(n - 1, Math.floor(x)), f = x - i; return s[i] + (s[i + 1] - s[i])*f; }
 const stepCurve = fn => { const s = new Float32Array(257); for(let i = 0; i <= 256; i++) s[i] = Math.max(-1, Math.min(2, fn(i/256))); return { curve: s }; };
+/** A curve's points as written ("x,y;x,y", each 0–100), read: sorted by x, inside the square, at least the two ends. */
+function curvePoints(text){
+  const pts = String(text || '').split(';').map(p => p.split(',').map(Number)).filter(p => p.length === 2 && p.every(isFinite))
+    .map(([x, y]) => [Math.max(0, Math.min(100, x)), Math.max(0, Math.min(100, y))]).sort((a, b) => a[0] - b[0])
+    .filter((p, i, a) => i === 0 || p[0] > a[i - 1][0]).slice(0, 16);
+  return pts.length >= 2 ? pts : [[0, 0], [100, 100]];
+}
+/** The curve through those points, smooth and never overshooting them (a monotone cubic: Fritsch and Carlson, 1980,
+ *  as curve editors use, so a hand-set point is where the curve goes and no bump appears between two), flat past the
+ *  first and the last. */
+function curveFromPoints(text){
+  const P = curvePoints(text), n = P.length, x = P.map(p => p[0]/100), y = P.map(p => p[1]/100);
+  const d = x.slice(0, -1).map((_, i) => (y[i + 1] - y[i])/Math.max(1e-6, x[i + 1] - x[i]));
+  const m = y.map((_, i) => i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1]*d[i] <= 0 ? 0 : (d[i - 1] + d[i])/2);
+  for(let i = 0; i < n - 1; i++){ if(d[i] === 0){ m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i]/d[i], b = m[i + 1]/d[i], h = a*a + b*b; if(h > 9){ const t = 3/Math.sqrt(h); m[i] = t*a*d[i]; m[i + 1] = t*b*d[i]; } }
+  return stepCurve(t => { if(t <= x[0]) return y[0]; if(t >= x[n - 1]) return y[n - 1];
+    let i = 0; while(i < n - 2 && t > x[i + 1]) i++;
+    const h = x[i + 1] - x[i], u = (t - x[i])/h, u2 = u*u, u3 = u2*u;
+    return (2*u3 - 3*u2 + 1)*y[i] + (u3 - 2*u2 + u)*h*m[i] + (-2*u3 + 3*u2)*y[i + 1] + (u3 - u2)*h*m[i + 1]; });
+}
 // Perlin's bias and gain (Perlin & Hoffert 1989), the curves Filter Forge names after them
 const stepBias = (t, b) => { b = Math.max(0.001, Math.min(0.999, b)); return Math.pow(Math.max(0, t), Math.log(b)/Math.log(0.5)); };
 const stepGain = (t, g) => t < 0.5 ? stepBias(2*t, 1 - g)/2 : 1 - stepBias(2 - 2*t, 1 - g)/2;
@@ -38033,6 +38147,7 @@ const STEP_DOCS = {
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
   dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
   camdial: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
+  curvectl: 'A curve you draw on the page, under Surface: wire it where a curve goes to shape the surface by hand.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
@@ -38220,6 +38335,11 @@ const STEP_RUN = {
   // the CAMERA DIAL (Ruby: a second dial, for the camera, so the light dial is the light's alone): its turn as 0–1 round
   // the dial, its view as how far the handle is drawn out (0 overhead, 1 at the rim, up to 1.3 past it), its zoom as
   // where it sits from 25% (0) to 400% (1) — wire each into a setting with a range ('~lens': '25,400')
+  curvectl(E, n){ const { ctx, P } = E, sl = Math.max(1, Math.min(2, parseInt(P(n, 'slot', '1'), 10) || 1));
+    // (the curve drawn on the page when the graph is the page's surface; else the part's own Default)
+    const drawn = (ctx.curves || [])[sl - 1];
+    return [curveFromPoints(drawn || P(n, 'points', '0,0;100,100'))];
+  },
   camdial(E, n){ const c = E.ctx.camera || {}, z = c.zoom ?? 100;
     return [((c.turn ?? 0) % 360 + 360) % 360/360, Math.max(0, Math.min(1.3, (c.view ?? 0)/100)), Math.max(0, Math.min(1, (z - 25)/375))]; },
   dial(E, n){ const { ctx } = E;
@@ -38907,7 +39027,7 @@ const STEP_IO = {
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   smudge: { ins: ['image', 'field'], outs: ['image'] }, multiblend: { ins: ['image', 'image', 'image', 'image', 'image'], outs: ['image'] },
-  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, seed: { outs: ['value'] },
+  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, curvectl: { outs: ['curve'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
@@ -40508,6 +40628,15 @@ function athanorReach(graph){
   if(s) walk(String(s.id));
   return seen;
 }
+/** The curves a graph offers on the page (D4): its Curve Controls that reach the Surface, by slot (1–2), each with its
+ *  name and its Default points; two on one slot are one curve, the first one's name and default. */
+function athanorCurves(graph){
+  const all = athanorFlat(graph).nodes, reach = athanorReach(graph), out = [];
+  for(const n of Object.values(all)){ if(n.name !== 'curvectl' || !reach.has(String(n.id))) continue;
+    const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
+    if(!out.some(c => c.slot === slot)) out.push({ slot, label: String(d.name || 'Curve').slice(0, 32), def: String(d.points || '0,0;100,100').slice(0, 200) }); }
+  return out.sort((a, b) => a.slot - b.slot);
+}
 /** Whether a graph's Camera Dial reaches its Surface: then the page shows the camera dial for it, as for a menu
  *  texture with a camera (Ruby: on a graph from the Athanor the dial never appeared). */
 function athanorCamera(graph){
@@ -40609,7 +40738,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const gv = athanorVersion(graph), v2 = gv >= 2, v3 = gv >= 3;
   // the Surface's SIZE (Filter Forge's global Size): every distance in the graph is measured against it (100: as it always was)
   const sizeK = surface ? Math.max(0.25, Math.min(4, (parseFloat((surface.data || {}).size) || 100)/100)) : 1;
-  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
+  const ctxSig = JSON.stringify([ww, wh, ctx.seed, ctx.knobs, ctx.tints, ctx.light, ctx.lightTilt, ctx.scale, ctx.mat || null, ctx.glow || null, ctx.accents || null, ctx.base || null, ctx.text || null, ctx.box || null, ctx.env || null, ctx.camera || null, ctx.curves || null, sizeK, +ctx.fill || 0, +ctx.around || 0, ctx.aware === false ? 0 : 1, ctx.page || null]);
   // a node's upstream, as a signature (loops cut)
   const sigs = new Map(), sigBusy = new Set();
   const sigOf = id => {
@@ -40888,6 +41017,12 @@ const ATHANOR_STARTERS = {
       ['hue', { slot: '1', name: 'Block Hue' }, 300, 260], ['hue', { slot: '2', name: 'Ground Hue' }, 300, 380],
       ['ramp', { mid: 50 }, 300, 60], ['blend', { mode: 'screen', opacity: 100 }, 540, 60], ['surface', { name: 'Techno Blocks', ground: 'colour', aa: 'edges only' }, 780, 100]],
     wires: [[1, 1, 5, 1], [3, 1, 5, 2], [4, 1, 5, 3], [5, 1, 6, 1], [1, 2, 6, 2], [6, 1, 7, 1], [1, 1, 7, 2], [2, 1, 1, paramPort('blocks', 'fill')]] },
+  // the Curve Control (D4): a curve drawn by hand on the page
+  tones: { label: 'Hand-Drawn Tones', teach: 'Clouds whose light and dark you draw by hand. A Perlin Noise makes soft clouds; Tone Curve runs every gray of them through a curve, as a photo editor\'s Curves does; and the curve comes from a Curve Control, which becomes a pad under the sliders when this is the page\'s surface. A Color Ramp colors the result between your two Hues. Try: on the page, drag the curve\'s middle points apart for hard-edged islands, or add a dip for rings.', nodes: [
+      ['perlin', { scale: 8, details: 4, rough: 50, contrast: 40 }, 40, 60], ['curvectl', { slot: '1', name: 'Tones', points: '0,0;35,12;65,88;100,100' }, 40, 360],
+      ['tonecurve', { mix: 100 }, 300, 140], ['hue', { slot: '1', name: 'Light Hue' }, 300, 360], ['hue', { slot: '2', name: 'Dark Hue' }, 300, 480],
+      ['ramp', { mid: 50 }, 540, 140], ['surface', { name: 'Hand-Drawn Tones', ground: 'colour', aa: 'edges only' }, 780, 160]],
+    wires: [[1, 1, 3, 1], [2, 1, 3, 2], [3, 1, 6, 1], [5, 1, 6, 2], [4, 1, 6, 3], [6, 1, 7, 1]] },
 };
 /** A starter as a graph (Drawflow's export form, without node faces). */
 function athanorStarter(name){
@@ -42002,6 +42137,8 @@ function pageOf(type, w, h, opts){
 // (and a graph's working grid, as the export makes it: the page over the grid's divisor there)
 const gridAtExport = (page, d) => page ? [Math.ceil(page[0]/Math.max(1, d)), Math.ceil(page[1]/Math.max(1, d))] : null;
 /** Whether a graph reads the inset box (an Inset Box part, or a Border Mask from it): it is then made with the box's place. */
+/** Whether a graph draws with a Curve Control (D4): only then does a curve drawn on the page key it. */
+function graphUsesCurves(graph){ return /"name":\s*"curvectl"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function graphUsesBox(graph){ return /"name":\s*"insetbox"|"shape":\s*"inset box"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 function graphUsesBackdrop(graph){ return /"name":\s*"(?:backdrop|glassrain)"/.test(typeof graph === 'string' ? graph : JSON.stringify(graph || '')); }
 /** The poem's layout as whole LINES, each box rounded out to 1/64 of the page (a chain with `poem: 'lines'` reads
@@ -42067,6 +42204,8 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
             // (the inset box's place, for a graph that reads it)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.box && graphUsesBox(opts.graph) ? `_x${opts.box}` : '')
+            // (the curves drawn on the page, for a graph with a Curve Control)
+            + ((type === 'athanor' || type === 'athanorsteps') && Array.isArray(opts.curves) && opts.curves.some(Boolean) && graphUsesCurves(opts.graph) ? `_cv${layoutHash(opts.curves.join('|'))}` : '')
             // the poem's layout, for a graph with The Poem in it (and only then: any other surface never changes with the text)
             + ((type === 'athanor' || type === 'athanorsteps') && opts.text ? `_q${layoutHash(String(opts.text))}` : '')
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
@@ -42092,7 +42231,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null,
+    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -42117,7 +42256,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, env: extra.env || null, camera: extra.camera || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -42210,7 +42349,7 @@ function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] })))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -42919,7 +43058,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Bebhionn';
+const RELEASE = 'Saturn–Erriapus';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -43756,7 +43895,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · 64fd4f0";
+const STAMP = "2026-10-18 · 4cb751d";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -45177,6 +45316,7 @@ function surfaceFromDom(){
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
+    textureCurve1: v('textureCurve1') || '', textureCurve2: v('textureCurve2') || '',
     textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
     ...(ground ? { textureGround: ground } : {}) };
 }
@@ -45252,7 +45392,9 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type, fill || around)) && (aware || fill) ? TEXT_LAYOUT : undefined;
     // (the inset box's place, for a graph that reads it)
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    // (the curves drawn under Surface, for a graph with a Curve Control: '' is the control's own Default)
+    const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -47514,10 +47656,10 @@ const WIKI_PARTS = {
   // ================= INPUTS: values from the page =================
   knob: {
     line: 'One of the 8 surface sliders on the page, as a number: wire it into a setting to move that setting from the page.',
-    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the eight sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts. Its Kind decides what the slider is: a plain slider; Steps, a few marks it locks to (Filter Forge’s IntSlider), named or numbered; an Angle, read in degrees and marked every 45°; or a Switch, off or on. The Surface’s menu has Order of the sliders, to move them.',
+    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the eight sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts. Its Kind decides what the slider is: a plain slider; Steps, a few marks it locks to (Filter Forge’s IntSlider), named or numbered; an Angle, read in degrees, marked every 45° and turned on a small dial beside the slider (drag round it; 0° is up); or a Switch, off or on. The Surface’s menu has Order of the sliders, to move them.',
     outs: { value: 'The slider’s position as a number from 0 (far left) to 1 (far right); for Steps, only its marks; for a Switch, 0 or 1. Wire it into a setting’s ⚙ port.' },
     set: { slot: 'Which of the eight sliders this Knob is. Two Knobs on the same slider move together.', name: 'The label the slider shows on the page.', def: 'Where the slider sits when the surface is first chosen (0–100).',
-      kind: 'What the slider is: a plain slider, Steps (marks it locks to), an Angle (read in degrees) or a Switch (off or on).', steps: 'For Steps: how many marks.', names: 'For Steps or a Switch: the marks’ names, separated by commas (empty: numbers, or Off and On).' },
+      kind: 'What the slider is: a plain slider, Steps (marks it locks to), an Angle (read in degrees, with a dial beside it to turn) or a Switch (off or on).', steps: 'For Steps: how many marks.', names: 'For Steps or a Switch: the marks’ names, separated by commas (empty: numbers, or Off and On).' },
     tips: ['Wire one Knob into two settings to move them together; give each wire its own range (see Wire ranges) so they move by different amounts.', 'A Knob of 3 Steps named “Calm, Restless, Storm” into a Perlin Noise’s Roughness: three moods, one slider.'],
     see: ['controls', 'ranges', 'part:number'],
   },
@@ -47534,6 +47676,15 @@ const WIKI_PARTS = {
     about: 'Glow is light a surface gives off rather than reflects: a candle inside wax, embers in a burn. The Glow Hue picker is black by default, which means no glow. Blend it in with Screen through a mask, so it only appears where you want it, and black stays harmless.',
     outs: { colour: 'The Glow Hue (black when switched off).' },
     see: ['blendmodes', 'masks'],
+  },
+  curvectl: {
+    line: 'A curve you draw on the page, under Surface: wire it where a curve goes to shape the surface by hand.',
+    about: 'A Curve Control is a Knob for curves (Filter Forge’s Curve control). When your graph is the page’s surface, each Curve Control that reaches the Surface becomes a small pad under the sliders, named for it, where the curve is drawn by hand: drag a point to move it, tap or click the empty pad to add one, and double-click, double-tap or hold a point to take it away. The curve runs smoothly through every point and never bulges past them. ↺ puts back the Default. In the Athanor, and wherever the graph is not the page’s surface, the Default is used.',
+    outs: { curve: 'The curve, from 0 at the left to 1 at the right. Wire it into Tone Curve to remap a picture’s tones, into Profile to shape a map, or anywhere a curve goes.' },
+    set: { slot: 'Which of the two curve pads under Surface this is. Two Curve Controls on the same pad draw the same curve.', name: 'The name the pad shows on the page.',
+      points: 'The curve before anyone draws it: points as x,y pairs from 0 to 100, separated by semicolons (0,0;100,100 is a straight rise).' },
+    tips: ['Wire a Curve Control into Tone Curve after your picture, then shape its tones on the page as you would in a photo editor.'],
+    see: ['curve', 'part:tonecurve', 'part:curve', 'controls'],
   },
   camdial: {
     line: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
@@ -49032,7 +49183,8 @@ const WIKI_ARTICLES = [
 <li><b>Tone Curve</b> runs every value of a picture through a curve: Stairs posterizes softly, Wave makes bands.</li>
 <li><b>Profile Gradient</b> shapes a gradient with a curve: an Impulse curve laid radially makes a raised ring; a Wave makes ripples.</li>
 </ul>
-<p><b>Curve</b> makes the basic shapes; <b>Curve Ops</b> repeats, flips, shifts or combines them. A curve wired where a gray map goes is laid across the page from left to right.</p>` },
+<p><b>Curve</b> makes the basic shapes; <b>Curve Ops</b> repeats, flips, shifts or combines them. A curve wired where a gray map goes is laid across the page from left to right.</p>
+<p>To draw a curve by hand, use a <b>Curve Control</b> (in Inputs). When your graph is the page’s surface, it becomes a small pad under the sliders: drag its points and the surface follows. See [[part:curvectl]].</p>` },
   { id: 'convert', group: 'Data and wires', title: 'When kinds don’t match', body: `
 <p>You can wire any output into any input. When the kinds differ, the Athanor converts the value as it passes:</p>
 <table class="wk-table"><tr><th>From</th><th>Into</th><th>Becomes</th></tr>
@@ -49075,8 +49227,8 @@ const WIKI_ARTICLES = [
 <p>A wire into a ⚙ port normally sweeps the setting’s whole range. Often you want less, or want it reversed. A <b>wire range</b> sets the two values the setting takes at the wire’s lowest (0) and highest (1).</p>
 {{fig:ranges}}
 <h3>An example</h3>
-<p>You put a Knob on the page and wire it into Perlin Noise’s <b>Roughness</b> (0–100). Above 50 the noise looks harsh, so half the slider is wasted. Open Roughness’s menu and choose <b>Set wire range…</b>, then enter <b>0, 50</b>. Now the whole slider sweeps 0 to 50.</p>
-<p>Want the slider called “Smoothness” instead? Rename the Knob and enter the range backwards, <b>50, 0</b>: the slider at 0 now gives Roughness 50, and the slider at 100 gives Roughness 0.</p>
+<p>You put a Knob on the page and wire it into Perlin Noise’s <b>Roughness</b> (0–100). Above 50 the noise looks harsh, so half the slider is wasted. Open Roughness’s menu and choose <b>Set wire range…</b>: two sliders set what Roughness is with the wire at 0 and at 1. Leave the first at 0 and drag the second to 50. Now the whole slider sweeps 0 to 50.</p>
+<p>Want the slider called “Smoothness” instead? Rename the Knob and set the range the other way round, 50 at 0 and 0 at 1 (or choose <b>Reverse the wire</b>): the slider at 0 now gives Roughness 50, and the slider at 100 gives Roughness 0.</p>
 <p>One Knob can feed several settings, each with its own range, so a single slider moves them all by different amounts. The app’s textures do this often: open one from <b>Open</b> and look at the Knobs.</p>` },
 
   // ------------------------------------------------------------------ Building techniques
@@ -49153,8 +49305,9 @@ const WIKI_ARTICLES = [
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
 <p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Apply</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app asks whether to). The page shows only the controls you give it:</p>
 <ul>
-<li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees, or a <b>switch</b>, off or on.</li>
+<li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees and turned on a small dial beside the slider, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
+<li>Each <b>Curve Control</b> becomes a pad under the sliders, where its curve is drawn by hand (two at most).</li>
 <li>The <b>light dial</b> is always there for anything lit.</li>
 </ul>
 <h3>Key facts</h3>
@@ -50403,8 +50556,10 @@ async function openForge(deps){
         const lo = x.min, hi = x.max;
         if(wired){
           items.push({ glyph: '↔', label: 'Set wire range…', hint: 'how much of the setting’s range the wire sweeps: ' + (n.data['~' + key] ? String(n.data['~' + key]).replace(',', ' to ') : `now all of it, ${lo} to ${hi}`), act: async () => {
-            const r = await promptFor({ title: `${label}: wire range`, body: `Two values between ${lo} and ${hi}: the setting when the wire is at its lowest (0), then at its highest (1). Enter the higher value first to reverse it.`, input: true, defaultValue: String(n.data['~' + key] || `${lo}, ${hi}`), confirmLabel: 'Set' });
-            const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return; const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
+            // (two handles, ROADMAP D3: where the setting is with the wire at 0, and at 1; the first above the second reverses it)
+            const cur = n.data['~' + key] ? String(n.data['~' + key]).split(',').map(Number) : [lo, hi];
+            const r = await promptFor({ title: `${label}: wire range`, body: `What the setting is when the wire is at its lowest (0) and at its highest (1).`, range: { lo, hi, a: cur[0], b: cur[1], low: 'Wire at 0', high: 'Wire at 1' }, confirmLabel: 'Set' });
+            if(!Array.isArray(r)) return; const a = Math.max(lo, Math.min(hi, r[0])), b = Math.max(lo, Math.min(hi, r[1]));
             setData(id, { ['~' + key]: (a === lo && b === hi) ? undefined : `${a},${b}` }); } });
           // ⇄ (ROADMAP D3, Filter Forge's remapper): the same wire, the other way round
           { const cur = n.data['~' + key] ? String(n.data['~' + key]).split(',').map(Number) : [lo, hi];
@@ -50426,9 +50581,10 @@ async function openForge(deps){
           }
           if(bound){
             items.push({ glyph: '↔', label: 'Set its range…', hint: 'the values at the slider\'s two ends: ' + (curRange ? curRange.replace(',', ' to ') : `now ${lo} to ${hi}`), act: async () => {
-              const r = await promptFor({ title: `${label}: range`, body: `Two values between ${lo} and ${hi}: the setting with the slider (or dial) at its lowest, and at its highest.`, input: true, defaultValue: curRange || `${lo}, ${hi}`, confirmLabel: 'Set' });
-              const m = r && /(-?[\d.]+)\D+(-?[\d.]+)/.exec(r); if(!m) return;
-              const a = Math.max(lo, Math.min(hi, +m[1])), b = Math.max(lo, Math.min(hi, +m[2]));
+              const cur = curRange ? curRange.split(',').map(Number) : [lo, hi];
+              const r = await promptFor({ title: `${label}: range`, body: `What the setting is with the slider (or dial) at its lowest and at its highest.`, range: { lo, hi, a: cur[0], b: cur[1], low: 'Slider at its lowest', high: 'Slider at its highest' }, confirmLabel: 'Set' });
+              if(!Array.isArray(r)) return;
+              const a = Math.max(lo, Math.min(hi, r[0])), b = Math.max(lo, Math.min(hi, r[1]));
               setData(id, { [key]: v.replace(/\[.*$/, '') + `[${a},${b}]` }); } });
             items.push({ glyph: '⊘', label: 'Unbind', hint: 'a plain setting again', act: () => setData(id, { [key]: def }) });
           }
@@ -50890,6 +51046,7 @@ function closeForge(deps){
 
 
 
+
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -51130,6 +51287,8 @@ function refreshUi(){
   run(() => syncSeedWords(false));
   run(() => { for(const ch of CHOOSERS) ch.refresh(); });
   run(refreshHints);
+  run(() => { for(let i = 1; i <= 8; i++) paintKnobDial($('texP' + i)); });
+  run(paintCurves);
 }
 // the surface menus as tiles (chooser.js), filled in below once the swatch source is set
 const CHOOSERS = [];
@@ -51185,7 +51344,7 @@ toggleSubblock('textureToggle','textureBlock');
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
-  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength'];
+  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
   'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
@@ -51712,6 +51871,8 @@ const PERSISTED = [
   ['cardFxAmount',         'cardFxAmount',         'text', ''],
   ['cardFxScale',          'cardFxScale',          'text', ''],
   ['forgeGraph',           'forgeGraph',           'text'],      // the Athanor's graph (Drawflow's JSON)
+  ['textureCurve1',        'textureCurve1',        'text', ''],  // the graph's Curve Controls as drawn on the page ('': the graph's own)
+  ['textureCurve2',        'textureCurve2',        'text', ''],
   ['baseToggle',           'baseToggle',           'check'],     // Two Surfaces: the lower one drawn (its settings are the look's baseLayer)
   ['borderBlend',          'borderBlend',          'text'],
   ['borderGradientAngle',  'borderGradientAngle',  'text', '°'],
@@ -52072,6 +52233,7 @@ function restoreSurfaceDetails(s){
   if(s.texP6 !== undefined) $('texP6').value = s.texP6;
   if(s.texP7 !== undefined) $('texP7').value = s.texP7;
   if(s.texP8 !== undefined) $('texP8').value = s.texP8;
+  for(const k of [1, 2]) if($('textureCurve' + k)) $('textureCurve' + k).value = s['textureCurve' + k] || '';
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
@@ -52930,7 +53092,7 @@ function syncTextureParams(useDefaults){
       if(row) row.style.display = 'none';
       return;
     }
-    if(row) row.style.display = '';
+    if(row) row.style.display = def.hidden ? 'none' : '';
     slider.min = def.min; slider.max = def.max;
     // a knob that is an angle gets 45° ticks and ∡; a knob with its own ticks
     // (Lotus's species, Linen's weaves, bokeh shapes) gets those and ⊹, which
@@ -52942,6 +53104,65 @@ function syncTextureParams(useDefaults){
     setLabelText(label, def.label);            // (never textContent: it wiped the knob's padlock)
     out.textContent = paramReadout(def, +slider.value);
   });
+  syncCurveControls();
+}
+// THE CURVE CONTROLS (ROADMAP D4, Filter Forge's Curve control): a graph's Curve Control parts that reach its Surface,
+// each a small pad under the sliders where the curve is drawn by hand. Its points are kept as "x,y;x,y" (0–100) in a
+// hidden field, saved with the look like a knob ('' is the graph's own curve). Drag a point; tap or click the empty
+// pad to add one; double-click, double-tap or hold a point to take it away (two always stay); ↺ the graph's own.
+let curveDefs = [];
+function syncCurveControls(){
+  const g = ($('textureType') || {}).value === 'athanor' ? (($('forgeGraph') || {}).value || '') : '';
+  curveDefs = g ? athanorCurves(g) : [];
+  for(const k of [1, 2]){ const row = $('texCurve' + k + 'Row'), d = curveDefs.find(c => c.slot === k);
+    if(row && row.classList) row.classList.toggle('tool-hidden', !d);
+    if(d && $('texCurve' + k + 'Label')) $('texCurve' + k + 'Label').textContent = d.label;
+    paintCurvePad(k); }
+}
+const curveOf = k => { const d = curveDefs.find(c => c.slot === k); return curvePoints((($('textureCurve' + k) || {}).value) || (d ? d.def : '')); };
+function paintCurvePad(k){
+  const cv = $('texCurve' + k + 'Pad'); if(!cv || !cv.getContext || !curveDefs.some(c => c.slot === k)) return;
+  const x = cv.getContext('2d'); if(!x) return;
+  const W = cv.width, H = cv.height, pad = 14, cs = getComputedStyle(document.body), col = n => (cs.getPropertyValue(n) || '').trim();
+  const accent = col('--accent') || '#E7A0B8', dim = col('--text-dim') || '#888', line = col('--line') || '#444';
+  const X = v => pad + v/100*(W - 2*pad), Y = v => H - pad - v/100*(H - 2*pad);
+  x.clearRect(0, 0, W, H);
+  x.strokeStyle = line; x.lineWidth = 1; for(const q of [0, 25, 50, 75, 100]){ x.beginPath(); x.moveTo(X(q), Y(0)); x.lineTo(X(q), Y(100)); x.moveTo(X(0), Y(q)); x.lineTo(X(100), Y(q)); x.stroke(); }
+  const pts = curveOf(k), c = curveFromPoints(pts.map(p => p.join(',')).join(';'));
+  x.strokeStyle = accent; x.lineWidth = 3; x.beginPath();
+  for(let i = 0; i <= 96; i++){ const t = i/96, v = curveAt(c, t)*100; i ? x.lineTo(X(t*100), Y(Math.max(-2, Math.min(102, v)))) : x.moveTo(X(t*100), Y(v)); }
+  x.stroke();
+  for(const [px, py] of pts){ x.beginPath(); x.arc(X(px), Y(py), 7, 0, Math.PI*2); x.fillStyle = accent; x.fill(); x.lineWidth = 2; x.strokeStyle = dim; x.stroke(); }
+}
+function paintCurves(){ for(const k of [1, 2]) paintCurvePad(k); }
+function setCurvePoints(k, pts, commit){
+  const el = $('textureCurve' + k); if(!el) return;
+  el.value = pts.map(p => Math.round(p[0]) + ',' + Math.round(p[1])).join(';');
+  paintCurvePad(k); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
+}
+for(const k of [1, 2]){
+  const cv = $('texCurve' + k + 'Pad'); if(!cv || !cv.addEventListener) continue;
+  let drag = -1, pts = null, held = 0, lastTap = { t: 0, i: -1 };
+  const at = e => { const r = cv.getBoundingClientRect(), pad = 14*r.width/cv.width;
+    return [Math.max(0, Math.min(100, (e.clientX - r.left - pad)/(r.width - 2*pad)*100)), Math.max(0, Math.min(100, (r.bottom - pad - e.clientY)/(r.height - 2*pad)*100))]; };
+  const near = (p, e) => { const r = cv.getBoundingClientRect(), sx = (r.width - 28*r.width/cv.width)/100, sy = (r.height - 28*r.height/cv.height)/100, reach = e.pointerType === 'mouse' ? 10 : 20;
+    let best = -1, bd = Infinity; pts.forEach(([px, py], i) => { const d = Math.hypot((px - p[0])*sx, (py - p[1])*sy); if(d < bd){ bd = d; best = i; } }); return bd <= reach ? best : -1; };
+  const remove = i => { if(pts.length <= 2 || i < 0) return; pts.splice(i, 1); drag = -1; setCurvePoints(k, pts, true); };
+  cv.addEventListener('pointerdown', e => {
+    e.preventDefault(); pts = curveOf(k).map(p => [...p]); const p = at(e); let i = near(p, e);
+    // (a second tap on the same point, quickly: it goes)
+    if(i >= 0 && Date.now() - lastTap.t < 380 && lastTap.i === i){ remove(i); lastTap = { t: 0, i: -1 }; return; }
+    lastTap = { t: Date.now(), i };
+    if(i < 0){ pts.push(p); pts.sort((a, b) => a[0] - b[0]); i = pts.indexOf(p); }
+    drag = i; try { cv.setPointerCapture(e.pointerId); } catch(err){}
+    clearTimeout(held); held = setTimeout(() => { if(drag === i && pts.length > 2) remove(i); }, 650);
+    setCurvePoints(k, pts, false); });
+  cv.addEventListener('pointermove', e => { if(drag < 0) return; clearTimeout(held);
+    const p = at(e), lo = drag > 0 ? pts[drag - 1][0] + 1 : 0, hi = drag < pts.length - 1 ? pts[drag + 1][0] - 1 : 100;
+    pts[drag] = [Math.max(lo, Math.min(hi, p[0])), p[1]]; draftWhileDragging(); setCurvePoints(k, pts, false); });
+  for(const ev of ['pointerup', 'pointercancel']) cv.addEventListener(ev, () => { clearTimeout(held); if(drag < 0) return; drag = -1; setCurvePoints(k, pts, true); });
+  const reset = $('texCurve' + k + 'Reset');
+  if(reset && reset.addEventListener) reset.addEventListener('click', () => { $('textureCurve' + k).value = ''; paintCurvePad(k); scheduleRender(); commitSoon(); });
 }
 
 // While a texture knob (or the light) is being dragged, slow textures are
@@ -53970,7 +54191,38 @@ function setKnobTicks(slider, i, def){
     slider.parentNode.insertBefore(d, (slider._snapBtn && slider._snapBtn.nextSibling) || slider.nextSibling); slider._dice = d;
   }
   if(slider._dice && slider._dice.style) slider._dice.style.display = def.dice ? '' : 'none';
+  // an Angle knob is turned on a dial (D1); any other knob has none
+  const dial = def.deg ? knobDial(slider) : slider._knobDial;
+  if(dial && dial.style) dial.style.display = def.deg ? '' : 'none';
+  if(slider.parentNode && slider.parentNode.classList) slider.parentNode.classList.toggle('has-dial', !!def.deg);
+  paintKnobDial(slider);
 }
+// AN ANGLE IS A DIAL (ROADMAP D1, Filter Forge's Angle control): beside an Angle knob's slider, a small dial whose hand
+// is the angle (0° up, turning clockwise, as the light dial reads); drag round it to turn it. The slider stays: the
+// keyboard, the lock, the saving and the 45° marks are its.
+function knobDial(slider){
+  if(slider._knobDial) return slider._knobDial;
+  if(typeof document.createElementNS !== 'function' || !slider.parentNode || !slider.parentNode.insertBefore) return null;
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '-20 -20 40 40'); svg.setAttribute('class', 'knob-dial'); svg.setAttribute('aria-hidden', 'true');
+  const ticks = [0, 45, 90, 135, 180, 225, 270, 315].map(a => { const r = a*Math.PI/180, x = Math.sin(r), y = -Math.cos(r);
+    return `<line class="kd-tick" x1="${(x*15).toFixed(2)}" y1="${(y*15).toFixed(2)}" x2="${(x*18).toFixed(2)}" y2="${(y*18).toFixed(2)}"/>`; }).join('');
+  svg.innerHTML = `<circle class="kd-rim" r="17"/>${ticks}<g class="kd-hand"><line x1="0" y1="0" x2="0" y2="-13"/><circle cx="0" cy="-13" r="3"/></g><circle class="kd-hub" r="2"/>`;
+  slider.parentNode.insertBefore(svg, slider);
+  const turn = e => { const r = svg.getBoundingClientRect(), dx = e.clientX - (r.left + r.width/2), dy = e.clientY - (r.top + r.height/2);
+    let deg = (Math.atan2(dx, -dy)*180/Math.PI + 360) % 360;
+    // (with ∡ or ⊹ pressed it settles on the marks, as the slider does)
+    if(slider.dataset && slider.dataset.snapTicks === '1') deg = Math.round(deg/45)*45 % 360;
+    slider.value = String(Math.round(deg/3.6*2)/2); slider.dispatchEvent(new Event('input', { bubbles: true })); };
+  svg.addEventListener('pointerdown', e => { if(state.locks.has(slider.id)) return; e.preventDefault(); try { svg.setPointerCapture(e.pointerId); } catch(err){} svg._turning = true; turn(e); });
+  svg.addEventListener('pointermove', e => { if(svg._turning) turn(e); });
+  for(const ev of ['pointerup', 'pointercancel']) svg.addEventListener(ev, () => { if(!svg._turning) return; svg._turning = false; slider.dispatchEvent(new Event('change', { bubbles: true })); });
+  slider.addEventListener('input', () => paintKnobDial(slider));
+  slider._knobDial = svg;
+  return svg;
+}
+function paintKnobDial(slider){ const d = slider && slider._knobDial; if(!d || !d.querySelector) return;
+  const h = d.querySelector('.kd-hand'); if(h) h.setAttribute('transform', `rotate(${((+slider.value || 0)*3.6).toFixed(1)})`); }
 
 // ---------- text effects: three slots (effects.js) ----------
 // Each slot is a type, a colour, two knobs whose labels follow the type (like
@@ -54117,7 +54369,9 @@ function applyAthanorGraph(redraw = true){
   const knobs = athanorKnobs(g), hues = athanorHues(g), name = athanorName(g);
   const top = knobs.reduce((m, k) => Math.max(m, k.slot), 0);
   TEXTURE_PARAMS.athanor = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
-    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}) }; });
+    // (a graph with no Knob keeps one slot, as every surface has a first knob, but hidden: a slider that moves nothing
+    //  only puzzles — the usability review)
+    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}), ...(top ? {} : { hidden: true }) }; });
   const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
     caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue'));
@@ -54128,6 +54382,8 @@ function applyAthanorGraph(redraw = true){
       caps.camera = { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100, guide: !from || c.guide === 'plane' ? 'plane' : null }; }
     else delete caps.camera; }
   if($('athanorOption')) $('athanorOption').textContent = athanorTitleOf(g);
+  // (the surface menu's face names the graph: it said "(empty)" after Apply until something else refreshed it)
+  for(const ch of CHOOSERS){ try { ch.refresh(); } catch(e){} }
   if(redraw && $('textureType') && $('textureType').value === 'athanor'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
 }
 /** What the Athanor's pictures are made with: the page's seed, dial and hues;
@@ -54139,7 +54395,8 @@ function athanorOpts(json, n){
     tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined,   // (the page's backdrop, for a graph with a Page Backdrop)
-    box: graphUsesBox(json) ? boxNow() : undefined };   // (the inset box's place, for a graph that reads it)
+    box: graphUsesBox(json) ? boxNow() : undefined,   // (the inset box's place, for a graph that reads it)
+    curves: own ? [1, 2].map(i => (($('textureCurve' + i) || {}).value) || '') : undefined };   // (the curves drawn on the page)
 }
 /** A texture made in the worker, handed to `done` when it is ready (the newest wish per slot wins). */
 const workerWish = new Map();
@@ -54220,7 +54477,8 @@ const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept,
   // whether the page's surface is this graph, and putting it there (the bar says which, and does it)
   onPage: () => benchOnPage(),
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
-    $('forgeGraph').value = bench(); t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); applyAthanorGraph(true); paintForgeSummary(); scheduleRender(); commitSoon(); } });
+    $('forgeGraph').value = bench(); for(const k of [1, 2]) if($('textureCurve' + k)) $('textureCurve' + k).value = '';
+    t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); applyAthanorGraph(true); paintForgeSummary(); scheduleRender(); commitSoon(); } });
 // THE ATHANOR opens from the top bar, on every device
 function openAthanorNow(){ return openForge(forgeDeps()); }
 // REVEAL (ROADMAP H1, Reveal Spell Graph): the page's surface opened in the Athanor as the graph it is made of,
@@ -54448,7 +54706,18 @@ function modalPrompt(opts){
     const titleEl = $('modalTitle'), bodyEl = $('modalBody'), input = $('modalInput');
     const ok = $('modalConfirm'), cancel = $('modalCancel');
     const wantsInput = !!opts.input;
-
+    // A RANGE BY TWO HANDLES (opts.range { lo, hi, a, b, step, low, high }: ROADMAP D3, Filter Forge's remapper drawn
+    // as two sliders): the answer is [a, b]; the first may sit above the second, which reverses the sweep
+    const R = opts.range || null, rb = $('modalRange');
+    if(rb) rb.hidden = !R;
+    if(R && rb){
+      const step = R.step || ((R.hi - R.lo) > 20 ? 1 : 0.01), fmt = v => String(Math.round(v/step)*step).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+      const say = () => { $('modalRangeAVal').textContent = fmt(+$('modalRangeA').value); $('modalRangeBVal').textContent = fmt(+$('modalRangeB').value);
+        $('modalRangeNote').textContent = +$('modalRangeA').value > +$('modalRangeB').value ? MODAL_RANGE.reversed : +$('modalRangeA').value === +$('modalRangeB').value ? MODAL_RANGE.still : ''; };
+      for(const [id, v, lab] of [['modalRangeA', R.a, R.low || MODAL_RANGE.low], ['modalRangeB', R.b, R.high || MODAL_RANGE.high]]){
+        const el = $(id); el.min = String(R.lo); el.max = String(R.hi); el.step = String(step); el.value = String(v); el.oninput = say; $(id + 'Label').textContent = lab; }
+      say();
+    }
     titleEl.textContent = opts.title || '';
     bodyEl.textContent = opts.body || '';
     input.hidden = !wantsInput;
@@ -54469,7 +54738,7 @@ function modalPrompt(opts){
       cancel.removeEventListener('click', onCancel);
       resolve(val);
     };
-    const onOk = ()=> finish(wantsInput ? input.value : true);
+    const onOk = ()=> finish(R ? [+$('modalRangeA').value, +$('modalRangeB').value] : wantsInput ? input.value : true);
     const onCancel = ()=> finish(null);
     // Escape cancels, Enter confirms (outside a text box); the safe choice has the focus
     const onKey = e => { if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); finish(opts.alert ? true : null); }
@@ -54477,7 +54746,7 @@ function modalPrompt(opts){
     document.addEventListener('keydown', onKey, true);
     ok.addEventListener('click', onOk);
     cancel.addEventListener('click', onCancel);
-    setTimeout(() => { try { (wantsInput ? input : (opts.danger && !opts.alert ? cancel : ok)).focus(); } catch(e){} }, 0);
+    setTimeout(() => { try { (R ? $('modalRangeA') : wantsInput ? input : (opts.danger && !opts.alert ? cancel : ok)).focus(); } catch(e){} }, 0);
   });
 }
 
@@ -55081,6 +55350,12 @@ function openTileStamp(value){
     <p class="modal-title" id="modalTitle"></p>
     <p class="modal-body" id="modalBody"></p>
     <textarea class="modal-input" id="modalInput" rows="1" hidden></textarea>
+    <!-- a range by two handles (the Athanor's wire ranges, ROADMAP D3): the value at the low end and at the high end -->
+    <div class="modal-range" id="modalRange" hidden>
+      <div class="mr-row"><label for="modalRangeA" id="modalRangeALabel"></label><input type="range" id="modalRangeA"><output id="modalRangeAVal"></output></div>
+      <div class="mr-row"><label for="modalRangeB" id="modalRangeBLabel"></label><input type="range" id="modalRangeB"><output id="modalRangeBVal"></output></div>
+      <p class="mr-note" id="modalRangeNote"></p>
+    </div>
     <div class="btn-row">
       <button class="btn-major" id="modalConfirm" type="button" data-str="button.modalConfirm">OK</button>
       <button class="ghost" id="modalCancel" type="button" data-str="button.modalCancel">Cancel</button>

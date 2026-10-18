@@ -28,7 +28,8 @@ import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './
 import { STITCH_STYLES, STITCH_LABELS, stitchSided } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
 import { forgeShelf, forgeShelfPut, forgeShelfWrite, forgeNameSurface, forgeWiringText, forgeCopy, openForge, closeForge, describeForge } from './forge.js';
-import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds, athanorCamera } from './athanor.js';
+import { athanorKnobs, athanorHues, athanorName, athanorNodes, athanorStarter, athanorStarterAt, validateGraph, athanorStepIds, athanorCamera, athanorCurves } from './athanor.js';
+import { curvePoints, curveFromPoints, curveAt } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { cameraGuide } from './stepsGenerative.js';
 import { graphScattersGlyphs } from './stepsPatterns.js';
@@ -54,7 +55,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS, READABLE } from './tunables.js';
-import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS } from './strings.js';
+import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS, MODAL_RANGE } from './strings.js';
 // soft interface sounds (murmur.js); made here so every handler below can use it
 const murmur = createMurmur({ enabled: false });
 
@@ -295,6 +296,8 @@ function refreshUi(){
   run(() => syncSeedWords(false));
   run(() => { for(const ch of CHOOSERS) ch.refresh(); });
   run(refreshHints);
+  run(() => { for(let i = 1; i <= 8; i++) paintKnobDial($('texP' + i)); });
+  run(paintCurves);
 }
 // the surface menus as tiles (chooser.js), filled in below once the swatch source is set
 const CHOOSERS = [];
@@ -350,7 +353,7 @@ toggleSubblock('textureToggle','textureBlock');
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
-  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength'];
+  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
   'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
@@ -877,6 +880,8 @@ const PERSISTED = [
   ['cardFxAmount',         'cardFxAmount',         'text', ''],
   ['cardFxScale',          'cardFxScale',          'text', ''],
   ['forgeGraph',           'forgeGraph',           'text'],      // the Athanor's graph (Drawflow's JSON)
+  ['textureCurve1',        'textureCurve1',        'text', ''],  // the graph's Curve Controls as drawn on the page ('': the graph's own)
+  ['textureCurve2',        'textureCurve2',        'text', ''],
   ['baseToggle',           'baseToggle',           'check'],     // Two Surfaces: the lower one drawn (its settings are the look's baseLayer)
   ['borderBlend',          'borderBlend',          'text'],
   ['borderGradientAngle',  'borderGradientAngle',  'text', '°'],
@@ -1237,6 +1242,7 @@ function restoreSurfaceDetails(s){
   if(s.texP6 !== undefined) $('texP6').value = s.texP6;
   if(s.texP7 !== undefined) $('texP7').value = s.texP7;
   if(s.texP8 !== undefined) $('texP8').value = s.texP8;
+  for(const k of [1, 2]) if($('textureCurve' + k)) $('textureCurve' + k).value = s['textureCurve' + k] || '';
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
   if(s.textureSeed!==undefined) $('textureSeedValue').value = s.textureSeed;
@@ -2095,7 +2101,7 @@ function syncTextureParams(useDefaults){
       if(row) row.style.display = 'none';
       return;
     }
-    if(row) row.style.display = '';
+    if(row) row.style.display = def.hidden ? 'none' : '';
     slider.min = def.min; slider.max = def.max;
     // a knob that is an angle gets 45° ticks and ∡; a knob with its own ticks
     // (Lotus's species, Linen's weaves, bokeh shapes) gets those and ⊹, which
@@ -2107,6 +2113,65 @@ function syncTextureParams(useDefaults){
     setLabelText(label, def.label);            // (never textContent: it wiped the knob's padlock)
     out.textContent = paramReadout(def, +slider.value);
   });
+  syncCurveControls();
+}
+// THE CURVE CONTROLS (ROADMAP D4, Filter Forge's Curve control): a graph's Curve Control parts that reach its Surface,
+// each a small pad under the sliders where the curve is drawn by hand. Its points are kept as "x,y;x,y" (0–100) in a
+// hidden field, saved with the look like a knob ('' is the graph's own curve). Drag a point; tap or click the empty
+// pad to add one; double-click, double-tap or hold a point to take it away (two always stay); ↺ the graph's own.
+let curveDefs = [];
+function syncCurveControls(){
+  const g = ($('textureType') || {}).value === 'athanor' ? (($('forgeGraph') || {}).value || '') : '';
+  curveDefs = g ? athanorCurves(g) : [];
+  for(const k of [1, 2]){ const row = $('texCurve' + k + 'Row'), d = curveDefs.find(c => c.slot === k);
+    if(row && row.classList) row.classList.toggle('tool-hidden', !d);
+    if(d && $('texCurve' + k + 'Label')) $('texCurve' + k + 'Label').textContent = d.label;
+    paintCurvePad(k); }
+}
+const curveOf = k => { const d = curveDefs.find(c => c.slot === k); return curvePoints((($('textureCurve' + k) || {}).value) || (d ? d.def : '')); };
+function paintCurvePad(k){
+  const cv = $('texCurve' + k + 'Pad'); if(!cv || !cv.getContext || !curveDefs.some(c => c.slot === k)) return;
+  const x = cv.getContext('2d'); if(!x) return;
+  const W = cv.width, H = cv.height, pad = 14, cs = getComputedStyle(document.body), col = n => (cs.getPropertyValue(n) || '').trim();
+  const accent = col('--accent') || '#E7A0B8', dim = col('--text-dim') || '#888', line = col('--line') || '#444';
+  const X = v => pad + v/100*(W - 2*pad), Y = v => H - pad - v/100*(H - 2*pad);
+  x.clearRect(0, 0, W, H);
+  x.strokeStyle = line; x.lineWidth = 1; for(const q of [0, 25, 50, 75, 100]){ x.beginPath(); x.moveTo(X(q), Y(0)); x.lineTo(X(q), Y(100)); x.moveTo(X(0), Y(q)); x.lineTo(X(100), Y(q)); x.stroke(); }
+  const pts = curveOf(k), c = curveFromPoints(pts.map(p => p.join(',')).join(';'));
+  x.strokeStyle = accent; x.lineWidth = 3; x.beginPath();
+  for(let i = 0; i <= 96; i++){ const t = i/96, v = curveAt(c, t)*100; i ? x.lineTo(X(t*100), Y(Math.max(-2, Math.min(102, v)))) : x.moveTo(X(t*100), Y(v)); }
+  x.stroke();
+  for(const [px, py] of pts){ x.beginPath(); x.arc(X(px), Y(py), 7, 0, Math.PI*2); x.fillStyle = accent; x.fill(); x.lineWidth = 2; x.strokeStyle = dim; x.stroke(); }
+}
+function paintCurves(){ for(const k of [1, 2]) paintCurvePad(k); }
+function setCurvePoints(k, pts, commit){
+  const el = $('textureCurve' + k); if(!el) return;
+  el.value = pts.map(p => Math.round(p[0]) + ',' + Math.round(p[1])).join(';');
+  paintCurvePad(k); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
+}
+for(const k of [1, 2]){
+  const cv = $('texCurve' + k + 'Pad'); if(!cv || !cv.addEventListener) continue;
+  let drag = -1, pts = null, held = 0, lastTap = { t: 0, i: -1 };
+  const at = e => { const r = cv.getBoundingClientRect(), pad = 14*r.width/cv.width;
+    return [Math.max(0, Math.min(100, (e.clientX - r.left - pad)/(r.width - 2*pad)*100)), Math.max(0, Math.min(100, (r.bottom - pad - e.clientY)/(r.height - 2*pad)*100))]; };
+  const near = (p, e) => { const r = cv.getBoundingClientRect(), sx = (r.width - 28*r.width/cv.width)/100, sy = (r.height - 28*r.height/cv.height)/100, reach = e.pointerType === 'mouse' ? 10 : 20;
+    let best = -1, bd = Infinity; pts.forEach(([px, py], i) => { const d = Math.hypot((px - p[0])*sx, (py - p[1])*sy); if(d < bd){ bd = d; best = i; } }); return bd <= reach ? best : -1; };
+  const remove = i => { if(pts.length <= 2 || i < 0) return; pts.splice(i, 1); drag = -1; setCurvePoints(k, pts, true); };
+  cv.addEventListener('pointerdown', e => {
+    e.preventDefault(); pts = curveOf(k).map(p => [...p]); const p = at(e); let i = near(p, e);
+    // (a second tap on the same point, quickly: it goes)
+    if(i >= 0 && Date.now() - lastTap.t < 380 && lastTap.i === i){ remove(i); lastTap = { t: 0, i: -1 }; return; }
+    lastTap = { t: Date.now(), i };
+    if(i < 0){ pts.push(p); pts.sort((a, b) => a[0] - b[0]); i = pts.indexOf(p); }
+    drag = i; try { cv.setPointerCapture(e.pointerId); } catch(err){}
+    clearTimeout(held); held = setTimeout(() => { if(drag === i && pts.length > 2) remove(i); }, 650);
+    setCurvePoints(k, pts, false); });
+  cv.addEventListener('pointermove', e => { if(drag < 0) return; clearTimeout(held);
+    const p = at(e), lo = drag > 0 ? pts[drag - 1][0] + 1 : 0, hi = drag < pts.length - 1 ? pts[drag + 1][0] - 1 : 100;
+    pts[drag] = [Math.max(lo, Math.min(hi, p[0])), p[1]]; draftWhileDragging(); setCurvePoints(k, pts, false); });
+  for(const ev of ['pointerup', 'pointercancel']) cv.addEventListener(ev, () => { clearTimeout(held); if(drag < 0) return; drag = -1; setCurvePoints(k, pts, true); });
+  const reset = $('texCurve' + k + 'Reset');
+  if(reset && reset.addEventListener) reset.addEventListener('click', () => { $('textureCurve' + k).value = ''; paintCurvePad(k); scheduleRender(); commitSoon(); });
 }
 
 // While a texture knob (or the light) is being dragged, slow textures are
@@ -3135,7 +3200,38 @@ function setKnobTicks(slider, i, def){
     slider.parentNode.insertBefore(d, (slider._snapBtn && slider._snapBtn.nextSibling) || slider.nextSibling); slider._dice = d;
   }
   if(slider._dice && slider._dice.style) slider._dice.style.display = def.dice ? '' : 'none';
+  // an Angle knob is turned on a dial (D1); any other knob has none
+  const dial = def.deg ? knobDial(slider) : slider._knobDial;
+  if(dial && dial.style) dial.style.display = def.deg ? '' : 'none';
+  if(slider.parentNode && slider.parentNode.classList) slider.parentNode.classList.toggle('has-dial', !!def.deg);
+  paintKnobDial(slider);
 }
+// AN ANGLE IS A DIAL (ROADMAP D1, Filter Forge's Angle control): beside an Angle knob's slider, a small dial whose hand
+// is the angle (0° up, turning clockwise, as the light dial reads); drag round it to turn it. The slider stays: the
+// keyboard, the lock, the saving and the 45° marks are its.
+function knobDial(slider){
+  if(slider._knobDial) return slider._knobDial;
+  if(typeof document.createElementNS !== 'function' || !slider.parentNode || !slider.parentNode.insertBefore) return null;
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '-20 -20 40 40'); svg.setAttribute('class', 'knob-dial'); svg.setAttribute('aria-hidden', 'true');
+  const ticks = [0, 45, 90, 135, 180, 225, 270, 315].map(a => { const r = a*Math.PI/180, x = Math.sin(r), y = -Math.cos(r);
+    return `<line class="kd-tick" x1="${(x*15).toFixed(2)}" y1="${(y*15).toFixed(2)}" x2="${(x*18).toFixed(2)}" y2="${(y*18).toFixed(2)}"/>`; }).join('');
+  svg.innerHTML = `<circle class="kd-rim" r="17"/>${ticks}<g class="kd-hand"><line x1="0" y1="0" x2="0" y2="-13"/><circle cx="0" cy="-13" r="3"/></g><circle class="kd-hub" r="2"/>`;
+  slider.parentNode.insertBefore(svg, slider);
+  const turn = e => { const r = svg.getBoundingClientRect(), dx = e.clientX - (r.left + r.width/2), dy = e.clientY - (r.top + r.height/2);
+    let deg = (Math.atan2(dx, -dy)*180/Math.PI + 360) % 360;
+    // (with ∡ or ⊹ pressed it settles on the marks, as the slider does)
+    if(slider.dataset && slider.dataset.snapTicks === '1') deg = Math.round(deg/45)*45 % 360;
+    slider.value = String(Math.round(deg/3.6*2)/2); slider.dispatchEvent(new Event('input', { bubbles: true })); };
+  svg.addEventListener('pointerdown', e => { if(state.locks.has(slider.id)) return; e.preventDefault(); try { svg.setPointerCapture(e.pointerId); } catch(err){} svg._turning = true; turn(e); });
+  svg.addEventListener('pointermove', e => { if(svg._turning) turn(e); });
+  for(const ev of ['pointerup', 'pointercancel']) svg.addEventListener(ev, () => { if(!svg._turning) return; svg._turning = false; slider.dispatchEvent(new Event('change', { bubbles: true })); });
+  slider.addEventListener('input', () => paintKnobDial(slider));
+  slider._knobDial = svg;
+  return svg;
+}
+function paintKnobDial(slider){ const d = slider && slider._knobDial; if(!d || !d.querySelector) return;
+  const h = d.querySelector('.kd-hand'); if(h) h.setAttribute('transform', `rotate(${((+slider.value || 0)*3.6).toFixed(1)})`); }
 
 // ---------- text effects: three slots (effects.js) ----------
 // Each slot is a type, a colour, two knobs whose labels follow the type (like
@@ -3282,7 +3378,9 @@ function applyAthanorGraph(redraw = true){
   const knobs = athanorKnobs(g), hues = athanorHues(g), name = athanorName(g);
   const top = knobs.reduce((m, k) => Math.max(m, k.slot), 0);
   TEXTURE_PARAMS.athanor = Array.from({ length: Math.max(1, top) }, (_, i) => { const k = knobs.find(k2 => k2.slot === i + 1);
-    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}) }; });
+    // (a graph with no Knob keeps one slot, as every surface has a first knob, but hidden: a slider that moves nothing
+    //  only puzzles — the usability review)
+    return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}), ...(top ? {} : { hidden: true }) }; });
   const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
     caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue'));
@@ -3293,6 +3391,8 @@ function applyAthanorGraph(redraw = true){
       caps.camera = { turn: c.turn ?? 0, view: c.view ?? 0, zoom: c.zoom ?? 100, guide: !from || c.guide === 'plane' ? 'plane' : null }; }
     else delete caps.camera; }
   if($('athanorOption')) $('athanorOption').textContent = athanorTitleOf(g);
+  // (the surface menu's face names the graph: it said "(empty)" after Apply until something else refreshed it)
+  for(const ch of CHOOSERS){ try { ch.refresh(); } catch(e){} }
   if(redraw && $('textureType') && $('textureType').value === 'athanor'){ syncTextureParams(false); syncTextureTools(false); scheduleRender(); }
 }
 /** What the Athanor's pictures are made with: the page's seed, dial and hues;
@@ -3304,7 +3404,8 @@ function athanorOpts(json, n){
     tint1: ($('textureTint1Hex') || {}).value, tint2: ($('textureTint2Hex') || {}).value, accent1: ($('accent1ColorHex') || {}).value, accent2: ($('accent2ColorHex') || {}).value, ink: ($('textColorHex') || {}).value, p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8),
     text: graphUsesPoem(json) ? textLayoutNow() : undefined,   // (the poem's layout, for a graph that reads it)
     env: graphUsesBackdrop(json) ? pageEnvNow() : undefined,   // (the page's backdrop, for a graph with a Page Backdrop)
-    box: graphUsesBox(json) ? boxNow() : undefined };   // (the inset box's place, for a graph that reads it)
+    box: graphUsesBox(json) ? boxNow() : undefined,   // (the inset box's place, for a graph that reads it)
+    curves: own ? [1, 2].map(i => (($('textureCurve' + i) || {}).value) || '') : undefined };   // (the curves drawn on the page)
 }
 /** A texture made in the worker, handed to `done` when it is ready (the newest wish per slot wins). */
 const workerWish = new Map();
@@ -3385,7 +3486,8 @@ const forgeDeps = () => ({ $, bench, setBench, unkept: benchUnkept,
   // whether the page's surface is this graph, and putting it there (the bar says which, and does it)
   onPage: () => benchOnPage(),
   use: () => { const t = $('textureType'); if(!t) return; $('textureToggle').checked = true; if($('textureBlock')) $('textureBlock').classList.add('open');
-    $('forgeGraph').value = bench(); t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); applyAthanorGraph(true); paintForgeSummary(); scheduleRender(); commitSoon(); } });
+    $('forgeGraph').value = bench(); for(const k of [1, 2]) if($('textureCurve' + k)) $('textureCurve' + k).value = '';
+    t.value = 'athanor'; t.dispatchEvent(new Event('change', { bubbles: true })); applyAthanorGraph(true); paintForgeSummary(); scheduleRender(); commitSoon(); } });
 // THE ATHANOR opens from the top bar, on every device
 function openAthanorNow(){ return openForge(forgeDeps()); }
 // REVEAL (ROADMAP H1, Reveal Spell Graph): the page's surface opened in the Athanor as the graph it is made of,
@@ -3613,7 +3715,18 @@ function modalPrompt(opts){
     const titleEl = $('modalTitle'), bodyEl = $('modalBody'), input = $('modalInput');
     const ok = $('modalConfirm'), cancel = $('modalCancel');
     const wantsInput = !!opts.input;
-
+    // A RANGE BY TWO HANDLES (opts.range { lo, hi, a, b, step, low, high }: ROADMAP D3, Filter Forge's remapper drawn
+    // as two sliders): the answer is [a, b]; the first may sit above the second, which reverses the sweep
+    const R = opts.range || null, rb = $('modalRange');
+    if(rb) rb.hidden = !R;
+    if(R && rb){
+      const step = R.step || ((R.hi - R.lo) > 20 ? 1 : 0.01), fmt = v => String(Math.round(v/step)*step).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+      const say = () => { $('modalRangeAVal').textContent = fmt(+$('modalRangeA').value); $('modalRangeBVal').textContent = fmt(+$('modalRangeB').value);
+        $('modalRangeNote').textContent = +$('modalRangeA').value > +$('modalRangeB').value ? MODAL_RANGE.reversed : +$('modalRangeA').value === +$('modalRangeB').value ? MODAL_RANGE.still : ''; };
+      for(const [id, v, lab] of [['modalRangeA', R.a, R.low || MODAL_RANGE.low], ['modalRangeB', R.b, R.high || MODAL_RANGE.high]]){
+        const el = $(id); el.min = String(R.lo); el.max = String(R.hi); el.step = String(step); el.value = String(v); el.oninput = say; $(id + 'Label').textContent = lab; }
+      say();
+    }
     titleEl.textContent = opts.title || '';
     bodyEl.textContent = opts.body || '';
     input.hidden = !wantsInput;
@@ -3634,7 +3747,7 @@ function modalPrompt(opts){
       cancel.removeEventListener('click', onCancel);
       resolve(val);
     };
-    const onOk = ()=> finish(wantsInput ? input.value : true);
+    const onOk = ()=> finish(R ? [+$('modalRangeA').value, +$('modalRangeB').value] : wantsInput ? input.value : true);
     const onCancel = ()=> finish(null);
     // Escape cancels, Enter confirms (outside a text box); the safe choice has the focus
     const onKey = e => { if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); finish(opts.alert ? true : null); }
@@ -3642,7 +3755,7 @@ function modalPrompt(opts){
     document.addEventListener('keydown', onKey, true);
     ok.addEventListener('click', onOk);
     cancel.addEventListener('click', onCancel);
-    setTimeout(() => { try { (wantsInput ? input : (opts.danger && !opts.alert ? cancel : ok)).focus(); } catch(e){} }, 0);
+    setTimeout(() => { try { (R ? $('modalRangeA') : wantsInput ? input : (opts.danger && !opts.alert ? cancel : ok)).focus(); } catch(e){} }, 0);
   });
 }
 

@@ -16,10 +16,10 @@ export const WIKI_PARTS = {
   // ================= INPUTS: values from the page =================
   knob: {
     line: 'One of the 8 surface sliders on the page, as a number: wire it into a setting to move that setting from the page.',
-    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the eight sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts. Its Kind decides what the slider is: a plain slider; Steps, a few marks it locks to (Filter Forge’s IntSlider), named or numbered; an Angle, read in degrees and marked every 45°; or a Switch, off or on. The Surface’s menu has Order of the sliders, to move them.',
+    about: 'A Knob is how a graph gets controls. When your surface is used on the page, the eight sliders under Surface become your Knobs: whatever a Knob is wired into moves when its slider moves. Its Name becomes that slider’s label, and its Default is where the slider starts. Its Kind decides what the slider is: a plain slider; Steps, a few marks it locks to (Filter Forge’s IntSlider), named or numbered; an Angle, read in degrees, marked every 45° and turned on a small dial beside the slider (drag round it; 0° is up); or a Switch, off or on. The Surface’s menu has Order of the sliders, to move them.',
     outs: { value: 'The slider’s position as a number from 0 (far left) to 1 (far right); for Steps, only its marks; for a Switch, 0 or 1. Wire it into a setting’s ⚙ port.' },
     set: { slot: 'Which of the eight sliders this Knob is. Two Knobs on the same slider move together.', name: 'The label the slider shows on the page.', def: 'Where the slider sits when the surface is first chosen (0–100).',
-      kind: 'What the slider is: a plain slider, Steps (marks it locks to), an Angle (read in degrees) or a Switch (off or on).', steps: 'For Steps: how many marks.', names: 'For Steps or a Switch: the marks’ names, separated by commas (empty: numbers, or Off and On).' },
+      kind: 'What the slider is: a plain slider, Steps (marks it locks to), an Angle (read in degrees, with a dial beside it to turn) or a Switch (off or on).', steps: 'For Steps: how many marks.', names: 'For Steps or a Switch: the marks’ names, separated by commas (empty: numbers, or Off and On).' },
     tips: ['Wire one Knob into two settings to move them together; give each wire its own range (see Wire ranges) so they move by different amounts.', 'A Knob of 3 Steps named “Calm, Restless, Storm” into a Perlin Noise’s Roughness: three moods, one slider.'],
     see: ['controls', 'ranges', 'part:number'],
   },
@@ -36,6 +36,15 @@ export const WIKI_PARTS = {
     about: 'Glow is light a surface gives off rather than reflects: a candle inside wax, embers in a burn. The Glow Hue picker is black by default, which means no glow. Blend it in with Screen through a mask, so it only appears where you want it, and black stays harmless.',
     outs: { colour: 'The Glow Hue (black when switched off).' },
     see: ['blendmodes', 'masks'],
+  },
+  curvectl: {
+    line: 'A curve you draw on the page, under Surface: wire it where a curve goes to shape the surface by hand.',
+    about: 'A Curve Control is a Knob for curves (Filter Forge’s Curve control). When your graph is the page’s surface, each Curve Control that reaches the Surface becomes a small pad under the sliders, named for it, where the curve is drawn by hand: drag a point to move it, tap or click the empty pad to add one, and double-click, double-tap or hold a point to take it away. The curve runs smoothly through every point and never bulges past them. ↺ puts back the Default. In the Athanor, and wherever the graph is not the page’s surface, the Default is used.',
+    outs: { curve: 'The curve, from 0 at the left to 1 at the right. Wire it into Tone Curve to remap a picture’s tones, into Profile to shape a map, or anywhere a curve goes.' },
+    set: { slot: 'Which of the two curve pads under Surface this is. Two Curve Controls on the same pad draw the same curve.', name: 'The name the pad shows on the page.',
+      points: 'The curve before anyone draws it: points as x,y pairs from 0 to 100, separated by semicolons (0,0;100,100 is a straight rise).' },
+    tips: ['Wire a Curve Control into Tone Curve after your picture, then shape its tones on the page as you would in a photo editor.'],
+    see: ['curve', 'part:tonecurve', 'part:curve', 'controls'],
   },
   camdial: {
     line: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
