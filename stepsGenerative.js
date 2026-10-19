@@ -2002,6 +2002,34 @@ function orbFrame(R, aw, ah, o){
   else { const n = 2 + Math.floor(R()*3); for(let i = 0; i < n; i++){ const r = rnd(0.04, 0.16)*S; B.push(withRing(body(rnd(0.1, 0.9)*aw, rnd(0.1, 0.9)*ah, r, i ? pick(W) : world()))); } B.sort((p, q) => p.r - q.r); }
   return { frame, bodies: B };
 }
+// ---- DIFFRACTION SPIKES (Webb's one process part; docs/prior-art/space-scenes.md B.1): a starfield as a space telescope
+// sees it. Webb's eighteen hexagonal mirror segments diffract six long spikes (at 90°, 30° and 150°, each with its
+// opposite), and the strut that holds its secondary mirror two short horizontal ones; Hubble's four struts give four. A
+// spike is bright near the star and fades as 1/r, beaded where the segment gaps break it; its length grows with the
+// star's brightness; only the brightest few stars have them. Three populations: the spiked few, soft stars, pinpoints.
+const SPIKE_STYLES = ['webb', 'hubble'];
+function genSpikes(ww, wh, unit, o){
+  const R = mulberry32(o.seed), N = ww*wh, stars = new Float32Array(N), spikes = new Float32Array(N), tips = new Float32Array(N);
+  const add = (F, x, y, v) => { if(x < 0 || y < 0 || x >= ww || y >= wh) return; const q = (y | 0)*ww + (x | 0); F[q] = Math.min(1.5, F[q] + v); };
+  const where = o.where, placeOk = (x, y) => !where || R() < where[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))];
+  const place = () => { for(let k = 0; k < 14; k++){ const x = R()*ww, y = R()*wh; if(placeOk(x, y)) return [x, y]; } return null; };
+  // pinpoints and soft stars
+  const nDots = Math.round(o.dots*2400*ww*wh/(unit*unit)*0.6);
+  for(let i = 0; i < nDots; i++){ const p = place(); if(!p) continue; const b = Math.pow(R(), 3)*0.9 + 0.1, r = R() < 0.12 ? 0.8 + R()*1.6 : 0;
+    if(!r){ add(stars, p[0], p[1], b); continue; }
+    const rp = r*unit/600, Rr = Math.ceil(rp*2.5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(rp*rp + 1e-6); if(d2 < 6.25) add(stars, p[0] + dx, p[1] + dy, b*Math.exp(-d2)); } }
+  // the spiked few
+  const nBig = Math.round(1 + o.count*24), webb = o.style === 'webb';
+  const dirs = webb ? [90, 30, 150, 270, 210, 330].map(a => [a, 1]).concat([[0, 0.5], [180, 0.5]]) : [45, 135, 225, 315].map(a => [a, 1]);
+  for(let i = 0; i < nBig; i++){ const p = place(); if(!p) continue; const br = 0.35 + 0.65*Math.pow(R(), 1.8);
+    const L = unit*(0.04 + 0.26*o.length)*Math.sqrt(br), core = Math.max(1, unit*0.006*(0.5 + br)), beads = 0.6 + R()*0.6, turn = o.turn;
+    // the core and its halo
+    const Rr = Math.ceil(core*5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(core*core); add(stars, p[0] + dx, p[1] + dy, br*(Math.exp(-d2*1.5) + 0.25*Math.exp(-d2*0.15))); }
+    for(const [deg, k] of dirs){ const a = (deg + turn)*Math.PI/180, cx = Math.cos(a), cy = -Math.sin(a), len = L*k, w = Math.max(0.5, core*0.35);
+      for(let t = core*0.6; t < len; t += 0.5){ const f = br*k*(1 - t/len)*Math.min(1, core*2/t)*(0.72 + 0.28*Math.sin(t/core*beads*2.1)), x = p[0] + cx*t, y = p[1] + cy*t;
+        for(let pp = -1; pp <= 1; pp++){ const v = f*(pp ? 0.35 : 1)*0.5, xx = x - cy*pp*w, yy = y + cx*pp*w; add(spikes, xx, yy, v); add(stars, xx, yy, v); if(t > len*0.45) add(tips, xx, yy, v*(t/len)); } } } }
+  return [stars, spikes, tips];
+}
 /** Orbs: bodies, shade, surface, rings, glow, height and each body (fields on the grid). */
 function genOrbs(ww, wh, unit, o){
   const R = mulberry32(o.seed), N = ww*wh, { bodies, frame } = orbFrame(R, ww/unit, wh/unit, o);
@@ -2076,6 +2104,14 @@ function genOrbs(ww, wh, unit, o){
 }
 
 export const GEN_STEPS = {
+  // DIFFRACTION SPIKES (Webb's process part): a telescope's stars, six and two spikes or four
+  spikes: { cat: 'Marks', label: 'Diffraction Spikes', ins: ['where'], outs: ['stars', 'spikes', 'tips'], io: { ins: ['field'], outs: ['field', 'field', 'field'] },
+    params: [GEN_R('style', 'Telescope: Webb · Hubble', 0), GEN_R('count', 'Spiked Stars', 30), GEN_R('length', 'Spike Length', 50), GEN_R('dots', 'Other Stars', 50), GEN_R('turn', 'Turn', 0, -30, 30), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
+    doc: 'A starfield as a space telescope sees it: the brightest few with diffraction spikes (Webb’s six and two, or Hubble’s four), soft stars and pinpoints; the spikes alone, and their outer parts, to colour apart.',
+    run(E, n){ const { ww, wh, unit, num } = E, w = E.input(n, 1);
+      const o = { seed: genSeed(E, n) ^ 0x5b1c, style: SPIKE_STYLES[Math.min(1, Math.floor(num(n, 'style', 0)/50))], count: num(n, 'count', 30)/100, length: num(n, 'length', 50)/100, dots: num(n, 'dots', 50)/100,
+        turn: num(n, 'turn', 0), where: w == null ? null : E.asField(w) };
+      return genSpikes(ww, wh, unit, o); } },
   // ORBS (Pixel Space's process part): worlds in the dial's light, framed by the seed
   orbs: { cat: 'Marks', label: 'Orbs', ins: ['light from', 'light height'], outs: ['bodies', 'shade', 'surface', 'rings', 'glow', 'height', 'each body'],
     io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },

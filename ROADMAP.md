@@ -275,13 +275,17 @@ Easter eggs).
   up nearest-neighbour), dithered edges between bands. To do: a large variety of space scenes by the seed (nebula
   bands, ring and bubble nebulae, galaxies spiral and elliptical, planets and moons and rings, comets, star clusters,
   dark clouds, starfields alone); every colour from the hue inputs (ground, deep sky, nebula heart, rim, clouds, stars),
-  defaults Ruby's palette; no frame.
+  defaults Ruby's palette; no frame. DRAFTED (branch `space`, waiting on Ruby's sheet). Ruby, on the drafts: the
+  nebula band is good, just not the only kind; no white in cloud layers (white was for the galaxy's heart in her
+  piece); more nebulae, black holes, pulsars and galaxies in pixel art.
+- **L1b · A pixel-art category** (Ruby, 2026-10-18, an idea for later): pixel-art filters (pixelate, dither, palette
+  reduction over any surface or picture) and more pixel-art surfaces, gathered in a group of their own.
 - **L2 · James Webb false colour** ("a large variety controlled by the seed"). The reference: amber and burnt-orange
   dust in clumps and streaks like rising embers or pillars, thick toward the bottom and a corner, thinning into a
   near-black blue sky; a few bright blue stars with JWST's diffraction spikes (six long, two short across), many tiny
   white and blue stars, little smudged galaxies. To do, by the seed: pillars, cosmic cliffs (Carina), ring and bubble
   nebulae (Southern Ring), deep fields of galaxies with lensing arcs, dust lanes; the light dial where the carving
-  light comes from. Not Deep Field.
+  light comes from. Not Deep Field. DRAFTED as Webb Sky (branch `space`, waiting on Ruby's sheet).
 - **L3 · Liminal spaces** ("a good start"). The reference: a bare room seen straight on, teal-grey walls and ceiling, a
   square fluorescent ceiling panel the only light, a doorway in the far wall onto a darker corridor receding to black, a
   closed door on one side wall, a dark opening on the other, baseboards, a faint sheen on the floor, film grain. To do:

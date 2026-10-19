@@ -12855,6 +12855,34 @@ function orbFrame(R, aw, ah, o){
   else { const n = 2 + Math.floor(R()*3); for(let i = 0; i < n; i++){ const r = rnd(0.04, 0.16)*S; B.push(withRing(body(rnd(0.1, 0.9)*aw, rnd(0.1, 0.9)*ah, r, i ? pick(W) : world()))); } B.sort((p, q) => p.r - q.r); }
   return { frame, bodies: B };
 }
+// ---- DIFFRACTION SPIKES (Webb's one process part; docs/prior-art/space-scenes.md B.1): a starfield as a space telescope
+// sees it. Webb's eighteen hexagonal mirror segments diffract six long spikes (at 90°, 30° and 150°, each with its
+// opposite), and the strut that holds its secondary mirror two short horizontal ones; Hubble's four struts give four. A
+// spike is bright near the star and fades as 1/r, beaded where the segment gaps break it; its length grows with the
+// star's brightness; only the brightest few stars have them. Three populations: the spiked few, soft stars, pinpoints.
+const SPIKE_STYLES = ['webb', 'hubble'];
+function genSpikes(ww, wh, unit, o){
+  const R = mulberry32(o.seed), N = ww*wh, stars = new Float32Array(N), spikes = new Float32Array(N), tips = new Float32Array(N);
+  const add = (F, x, y, v) => { if(x < 0 || y < 0 || x >= ww || y >= wh) return; const q = (y | 0)*ww + (x | 0); F[q] = Math.min(1.5, F[q] + v); };
+  const where = o.where, placeOk = (x, y) => !where || R() < where[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))];
+  const place = () => { for(let k = 0; k < 14; k++){ const x = R()*ww, y = R()*wh; if(placeOk(x, y)) return [x, y]; } return null; };
+  // pinpoints and soft stars
+  const nDots = Math.round(o.dots*2400*ww*wh/(unit*unit)*0.6);
+  for(let i = 0; i < nDots; i++){ const p = place(); if(!p) continue; const b = Math.pow(R(), 3)*0.9 + 0.1, r = R() < 0.12 ? 0.8 + R()*1.6 : 0;
+    if(!r){ add(stars, p[0], p[1], b); continue; }
+    const rp = r*unit/600, Rr = Math.ceil(rp*2.5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(rp*rp + 1e-6); if(d2 < 6.25) add(stars, p[0] + dx, p[1] + dy, b*Math.exp(-d2)); } }
+  // the spiked few
+  const nBig = Math.round(1 + o.count*24), webb = o.style === 'webb';
+  const dirs = webb ? [90, 30, 150, 270, 210, 330].map(a => [a, 1]).concat([[0, 0.5], [180, 0.5]]) : [45, 135, 225, 315].map(a => [a, 1]);
+  for(let i = 0; i < nBig; i++){ const p = place(); if(!p) continue; const br = 0.35 + 0.65*Math.pow(R(), 1.8);
+    const L = unit*(0.04 + 0.26*o.length)*Math.sqrt(br), core = Math.max(1, unit*0.006*(0.5 + br)), beads = 0.6 + R()*0.6, turn = o.turn;
+    // the core and its halo
+    const Rr = Math.ceil(core*5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(core*core); add(stars, p[0] + dx, p[1] + dy, br*(Math.exp(-d2*1.5) + 0.25*Math.exp(-d2*0.15))); }
+    for(const [deg, k] of dirs){ const a = (deg + turn)*Math.PI/180, cx = Math.cos(a), cy = -Math.sin(a), len = L*k, w = Math.max(0.5, core*0.35);
+      for(let t = core*0.6; t < len; t += 0.5){ const f = br*k*(1 - t/len)*Math.min(1, core*2/t)*(0.72 + 0.28*Math.sin(t/core*beads*2.1)), x = p[0] + cx*t, y = p[1] + cy*t;
+        for(let pp = -1; pp <= 1; pp++){ const v = f*(pp ? 0.35 : 1)*0.5, xx = x - cy*pp*w, yy = y + cx*pp*w; add(spikes, xx, yy, v); add(stars, xx, yy, v); if(t > len*0.45) add(tips, xx, yy, v*(t/len)); } } } }
+  return [stars, spikes, tips];
+}
 /** Orbs: bodies, shade, surface, rings, glow, height and each body (fields on the grid). */
 function genOrbs(ww, wh, unit, o){
   const R = mulberry32(o.seed), N = ww*wh, { bodies, frame } = orbFrame(R, ww/unit, wh/unit, o);
@@ -12929,6 +12957,14 @@ function genOrbs(ww, wh, unit, o){
 }
 
 const GEN_STEPS = {
+  // DIFFRACTION SPIKES (Webb's process part): a telescope's stars, six and two spikes or four
+  spikes: { cat: 'Marks', label: 'Diffraction Spikes', ins: ['where'], outs: ['stars', 'spikes', 'tips'], io: { ins: ['field'], outs: ['field', 'field', 'field'] },
+    params: [GEN_R('style', 'Telescope: Webb · Hubble', 0), GEN_R('count', 'Spiked Stars', 30), GEN_R('length', 'Spike Length', 50), GEN_R('dots', 'Other Stars', 50), GEN_R('turn', 'Turn', 0, -30, 30), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
+    doc: 'A starfield as a space telescope sees it: the brightest few with diffraction spikes (Webb’s six and two, or Hubble’s four), soft stars and pinpoints; the spikes alone, and their outer parts, to colour apart.',
+    run(E, n){ const { ww, wh, unit, num } = E, w = E.input(n, 1);
+      const o = { seed: genSeed(E, n) ^ 0x5b1c, style: SPIKE_STYLES[Math.min(1, Math.floor(num(n, 'style', 0)/50))], count: num(n, 'count', 30)/100, length: num(n, 'length', 50)/100, dots: num(n, 'dots', 50)/100,
+        turn: num(n, 'turn', 0), where: w == null ? null : E.asField(w) };
+      return genSpikes(ww, wh, unit, o); } },
   // ORBS (Pixel Space's process part): worlds in the dial's light, framed by the seed
   orbs: { cat: 'Marks', label: 'Orbs', ins: ['light from', 'light height'], outs: ['bodies', 'shade', 'surface', 'rings', 'glow', 'height', 'each body'],
     io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
@@ -16149,7 +16185,10 @@ const PATTERN_STEPS = {
       // (F2: glyphs, which mark lies on top, and each mark's own color — after the old settings, so no ⚙ port moves)
       ['glyphs', 'Glyphs', 'select', 'mixed', { options: Object.keys(PAT_GLYPH_SETS), when: 'shape:glyph' }],
       PAT_SEL('layers', 'On Top', ['brightest', 'last thrown', 'largest', 'smallest']),
-      PAT_SEL('color', 'Mark Colors', ['white', 'from the picture'])],
+      PAT_SEL('color', 'Mark Colors', ['white', 'from the picture']),
+      // (COUNT FOR THE PAGE: Count marks on the whole page, however large it is drawn — stars in a sky, a few sparkles —
+      //  where per area, as it always was, a bigger page holds more of them)
+      PAT_SEL('per', 'Count Is', ['per area', 'for the page'])],
     cost: () => 3,
     doc: 'Scatters copies of a mark across the page (dots, stars, sigils, glyphs or any picture), each with its own size, turn, brightness and, if you like, color.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
@@ -16157,7 +16196,7 @@ const PATTERN_STEPS = {
       const tinted = P(n, 'color', 'white') === 'from the picture', layers = P(n, 'layers', 'brightest');
       const pic = shape === 'picture' || tinted ? asImage(input(n, 1)) : null, glyphs = shape === 'glyph' ? (PAT_GLYPHS[P(n, 'glyphs', 'mixed')] || PAT_GLYPHS.mixed) : null;
       // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
-      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
+      const count = P(n, 'per', 'per area') === 'for the page' ? Math.round(num(n, 'count', 60)) : Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
       const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
@@ -19011,9 +19050,9 @@ const TEXTURE_CHAINS = {
       ['blend', { opacity: 100 }, 4220, 260],                                                                                                         // 112
       ['blend', { opacity: 100 }, 4440, 40],                                                                                                          // 113
       ['blend', { opacity: 55 }, 4660, 40],                                                                                                           // 114
-      ['scatter', { shape: 'dot', count: 160, '~count': '30,400', size: 3, vary: 60, fade: 75, clump: 30 }, 260, 1470],                               // 115
+      ['scatter', { shape: 'dot', count: 120, '~count': '20,400', size: 3, vary: 60, fade: 75, clump: 30, per: 'for the page' }, 260, 1470],          // 115
       ['random', { lo: 0, hi: 100 }, 40, 4880],                                                                                                       // 116
-      ['scatter', { shape: 'cross', count: 10, '~count': '2,36', size: 24, vary: 75, turn: 0, fade: 30 }, 260, 1580],                                 // 117
+      ['scatter', { shape: 'cross', count: 8, '~count': '1,24', size: 24, vary: 75, turn: 0, fade: 30, per: 'for the page' }, 260, 1580],             // 117
       ['threshold', { at: 30, soft: 0 }, 700, 920],                                                                                                   // 118
       ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1140],                                                                  // 119
       ['threshold', { at: 40, soft: 0 }, 700, 1030],                                                                                                  // 120
@@ -19085,6 +19124,186 @@ const TEXTURE_CHAINS = {
       [145, 1, 146, 1], [11, 1, 146, 2], [13, 1, 146, 3], [15, 1, 146, 4], [145, 1, 147, 1], [133, 1, 148, 1], [146, 1, 148, 2], [147, 1, 148, 3],
       [136, 1, 150, 1], [136, 4, 150, 2], [150, 1, 151, 1], [1, 1, 151, paramPort('pixelate', 'size')], [151, 1, 149, 1], [148, 1, 152, 1], [141, 1, 152, 2],
       [149, 1, 152, 3], [152, 1, 153, 1]] },
+  // ── Webb Sky (ROADMAP §2 L1): JWST false colour, general parts and Diffraction Spikes; docs/prior-art/space-scenes.md ──
+  webb: { label: 'Webb Sky', div: 2, teach: 'Deep space as the Webb telescope sees it, in infrared made visible: dust lit by the stars inside it, telescope stars with six long spikes and two short ones, galaxies everywhere behind; every colour from the six hues, the seed choosing the scene. The seed picks the dust (Random Numbers into a Map Switch): globules streaming away from the light (soft blobs Scattered where a broad noise allows, each Smudged into a tail away from the dial’s handle), cosmic cliffs (a Gradient at the seed’s angle raised by the ridges of a Perlin Noise, steam drifting off them along the light), a shell round a dying star (an Ellipse’s rim torn by the noise’s ridges), soft smoke, or a deep field with hardly any dust, a cluster of galaxies and the arcs of light it lenses round itself. A fine noise breaks all of it into clumps. Simple Lighting from the Light Dial shades the dust; a Gradient Map colours it smooth from the Deep Sky through the Dust Shadow and Dust Hues to Dust Light, its lit edges screened brighter; a blue haze of ionized gas (the last hue) glows where it thins. Diffraction Spikes makes the stars, seen through the dust as Webb sees into it; their spikes’ outer halves redden, and a Glow blooms round them. Try: Spiked Stars low and Spike Length high for a few great stars over the dust.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Dust', def: 55 }, 40, 40],                                                                                         // 1
+      ['knob', { slot: '2', name: 'Streaming', def: 45 }, 40, 150],                                                                                   // 2
+      ['knob', { slot: '3', name: 'Stars', def: 50 }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4', name: 'Spiked Stars', def: 30 }, 40, 370],                                                                                // 4
+      ['knob', { slot: '5', name: 'Spike Length', def: 50 }, 40, 480],                                                                                // 5
+      ['knob', { slot: '6', name: 'Galaxies', def: 40 }, 40, 590],                                                                                    // 6
+      ['knob', { slot: '7', name: 'Glow', def: 50 }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8', name: 'Detail', def: 50 }, 40, 810],                                                                                      // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Deep Sky' }, 40, 1030],                                                                                             // 10
+      ['hue', { slot: '2', name: 'Dust Shadow' }, 40, 1140],                                                                                          // 11
+      ['hue', { slot: '3', name: 'Dust' }, 40, 1250],                                                                                                 // 12
+      ['hue', { slot: '4', name: 'Dust Light' }, 40, 1360],                                                                                           // 13
+      ['hue', { slot: '5', name: 'Starlight' }, 40, 1470],                                                                                            // 14
+      ['hue', { slot: '6', name: 'Ionized Gas' }, 40, 1580],                                                                                          // 15
+      ['number', { value: 25 }, 40, 1690],                                                                                                            // 16
+      ['math', { op: 'subtract' }, 260, 40],                                                                                                          // 17
+      ['math', { op: 'less' }, 260, 150],                                                                                                             // 18
+      ['number', { value: 75 }, 40, 1800],                                                                                                            // 19
+      ['math', { op: 'add' }, 260, 260],                                                                                                              // 20
+      ['math', { op: 'multiply' }, 480, 40],                                                                                                          // 21
+      ['math', { op: 'add' }, 700, 40],                                                                                                               // 22
+      ['math', { op: 'subtract' }, 260, 370],                                                                                                         // 23
+      ['math', { op: 'less' }, 260, 480],                                                                                                             // 24
+      ['math', { op: 'add' }, 260, 590],                                                                                                              // 25
+      ['math', { op: 'multiply' }, 480, 150],                                                                                                         // 26
+      ['math', { op: 'add' }, 700, 150],                                                                                                              // 27
+      ['perlin', { scale: 40, '~scale': '20,90', details: 5, rough: 55, contrast: 30 }, 260, 700],                                                    // 28
+      ['perlin', { scale: 14, details: 2, contrast: 40 }, 40, 1910],                                                                                  // 29
+      ['number', { value: 50 }, 40, 2020],                                                                                                            // 30
+      ['math', { op: 'difference' }, 480, 260],                                                                                                       // 31
+      ['maprange', { inLo: 0, inHi: 50, outLo: 100, outHi: 0 }, 700, 260],                                                                            // 32
+      ['ellipse', { size: 90, height: 80, soft: 100 }, 40, 2130],                                                                                     // 33
+      ['perlin', { scale: 10, details: 2, contrast: 60 }, 40, 2240],                                                                                  // 34
+      ['maprange', { inLo: 25, inHi: 60, outLo: 0, outHi: 100 }, 260, 810],                                                                           // 35
+      ['scatter', { shape: 'picture', count: 360, '~count': '260,400', size: 10, '~size': '6,16', vary: 80, turn: 100, clump: 40, fade: 45, per: 'for the page' }, 480, 370],// 36
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 37
+      ['smudge', { length: 30, '~length': '5,70', strength: 100, trail: 65 }, 920, 40],                                                               // 38
+      ['maprange', { inLo: 0, inHi: 30, outLo: 0, outHi: 90 }, 1140, 40],                                                                             // 39
+      ['math', { op: 'max' }, 1360, 40],                                                                                                              // 40
+      ['number', { value: 85 }, 40, 2460],                                                                                                            // 41
+      ['math', { op: 'multiply' }, 480, 480],                                                                                                         // 42
+      ['math', { op: 'multiply' }, 700, 370],                                                                                                         // 43
+      ['math', { op: 'max' }, 1580, 40],                                                                                                              // 44
+      ['gradient', { shape: 'linear', angle: 90 }, 260, 920],                                                                                         // 45
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 46
+      ['levels', { lo: 45, '~lo': '30,60', hi: 70, '~hi': '55,80', gamma: 50 }, 1360, 150],                                                           // 47
+      ['number', { value: 70 }, 40, 2680],                                                                                                            // 48
+      ['math', { op: 'multiply' }, 480, 590],                                                                                                         // 49
+      ['number', { value: 45 }, 40, 2790],                                                                                                            // 50
+      ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 51
+      ['math', { op: 'add' }, 1140, 150],                                                                                                             // 52
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 53
+      ['maprange', { outLo: 40, outHi: 100 }, 480, 700],                                                                                              // 54
+      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 55
+      ['math', { op: 'multiply' }, 1580, 260],                                                                                                        // 56
+      ['math', { op: 'max' }, 1800, 40],                                                                                                              // 57
+      ['random', { lo: 25, hi: 75 }, 40, 3010],                                                                                                       // 58
+      ['random', { lo: 25, hi: 75 }, 40, 3120],                                                                                                       // 59
+      ['ellipse', { size: 100, '~size': '60,150', height: 75, '~height': '40,100', soft: 100 }, 260, 1030],                                           // 60
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 61
+      ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 62
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 63
+      ['number', { value: 62 }, 40, 3560],                                                                                                            // 64
+      ['math', { op: 'difference' }, 480, 810],                                                                                                       // 65
+      ['maprange', { inLo: 0, inHi: 25, '~inHi': '12,35', outLo: 100, outHi: 0 }, 700, 480],                                                          // 66
+      ['maprange', { inLo: 0, inHi: 65, outLo: 35, outHi: 0 }, 480, 920],                                                                             // 67
+      ['maprange', { outLo: 0, outHi: 60 }, 480, 1030],                                                                                               // 68
+      ['math', { op: 'screen' }, 920, 260],                                                                                                           // 69
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 70
+      ['warp', { amount: 35, '~amount': '10,70' }, 1360, 260],                                                                                        // 71
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 72
+      ['math', { op: 'multiply' }, 700, 590],                                                                                                         // 73
+      ['math', { op: 'max' }, 1580, 370],                                                                                                             // 74
+      ['warp', { amount: 35, '~amount': '10,70' }, 480, 1140],                                                                                        // 75
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 76
+      ['maprange', { outLo: 30, outHi: 100 }, 480, 1250],                                                                                             // 77
+      ['math', { op: 'multiply' }, 700, 700],                                                                                                         // 78
+      ['number', { value: 18 }, 40, 3890],                                                                                                            // 79
+      ['math', { op: 'multiply' }, 480, 1360],                                                                                                        // 80
+      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 81
+      ['mapswitch', { soft: 0 }, 920, 370],                                                                                                           // 82
+      ['random', { lo: 0, hi: 100 }, 40, 4110],                                                                                                       // 83
+      ['mapswitch', { soft: 0 }, 2020, 40],                                                                                                           // 84
+      ['math', { op: 'greater' }, 260, 1140],                                                                                                         // 85
+      ['math', { op: 'greater' }, 260, 1250],                                                                                                         // 86
+      ['math', { op: 'multiply' }, 480, 1470],                                                                                                        // 87
+      ['perlin', { scale: 200, details: 3, rough: 65, contrast: 60 }, 40, 4220],                                                                      // 88
+      ['maprange', { outLo: 20, outHi: 100 }, 260, 1360],                                                                                             // 89
+      ['math', { op: 'multiply' }, 2240, 40],                                                                                                         // 90
+      ['motionblur', { length: 20, '~length': '0,60' }, 2460, 40],                                                                                    // 91
+      ['maprange', { inLo: 0, inHi: 70, outLo: 0, outHi: 80 }, 2680, 40],                                                                             // 92
+      ['math', { op: 'max' }, 2900, 40],                                                                                                              // 93
+      ['levels', { lo: 30, '~lo': '70,0', hi: 90, gamma: 50 }, 3120, 40],                                                                             // 94
+      ['blur', { radius: 5 }, 3340, 40],                                                                                                              // 95
+      ['light', { relief: 70, gloss: 20, shadow: 40 }, 3560, 40],                                                                                     // 96
+      ['maprange', { inLo: 20, inHi: 80, outLo: 30, outHi: 100 }, 3780, 40],                                                                          // 97
+      ['math', { op: 'multiply' }, 4000, 40],                                                                                                         // 98
+      ['maprange', { inLo: 0, inHi: 62, outLo: 0, outHi: 100 }, 4220, 40],                                                                            // 99
+      ['gradmap', { stops: 4 }, 4440, 40],                                                                                                            // 100
+      ['blend', { mode: 'screen', opacity: 70 }, 4660, 40],                                                                                           // 101
+      ['math', { op: 'multiply' }, 3780, 150],                                                                                                        // 102
+      ['blur', { radius: 30 }, 3340, 150],                                                                                                            // 103
+      ['perlin', { scale: 8, details: 3, contrast: 30 }, 40, 4330],                                                                                   // 104
+      ['maprange', { inLo: 30, inHi: 80, outLo: 0, outHi: 100 }, 260, 1470],                                                                          // 105
+      ['maprange', { inLo: 0, inHi: 40, outLo: 0, outHi: 100 }, 3560, 150],                                                                           // 106
+      ['maprange', { outLo: 100, outHi: 0 }, 3340, 260],                                                                                              // 107
+      ['math', { op: 'multiply' }, 3780, 260],                                                                                                        // 108
+      ['math', { op: 'multiply' }, 4000, 150],                                                                                                        // 109
+      ['blend', { mode: 'screen', opacity: 45 }, 4880, 40],                                                                                           // 110
+      ['ellipse', { size: 100, height: 38, soft: 100 }, 40, 4440],                                                                                    // 111
+      ['levels', { lo: 0, hi: 100, gamma: 25 }, 480, 1580],                                                                                           // 112
+      ['maprange', { outLo: 100, outHi: 0 }, 260, 1580],                                                                                              // 113
+      ['mix', { t: 0 }, 700, 810],                                                                                                                    // 114
+      ['number', { value: 100 }, 40, 4550],                                                                                                           // 115
+      ['maprange', { outLo: 100, outHi: 0 }, 480, 1690],                                                                                              // 116
+      ['scatter', { shape: 'picture', count: 40, '~count': '0,140', size: 10, '~size': '9,22', vary: 85, turn: 100, fade: 50, per: 'for the page' }, 920, 480],// 117
+      ['threshold', { at: 55, soft: 0 }, 1140, 370],                                                                                                  // 118
+      ['blur', { radius: 3 }, 1140, 480],                                                                                                             // 119
+      ['math', { op: 'multiply' }, 1360, 370],                                                                                                        // 120
+      ['number', { value: 60 }, 40, 4660],                                                                                                            // 121
+      ['math', { op: 'multiply' }, 1140, 590],                                                                                                        // 122
+      ['math', { op: 'multiply' }, 1360, 480],                                                                                                        // 123
+      ['math', { op: 'screen' }, 1580, 480],                                                                                                          // 124
+      ['blend', { mode: 'screen', opacity: 90 }, 5100, 40],                                                                                           // 125
+      ['math', { op: 'multiply' }, 1800, 150],                                                                                                        // 126
+      ['blend', { mode: 'screen', opacity: 90 }, 5320, 40],                                                                                           // 127
+      ['math', { op: 'subtract' }, 1360, 590],                                                                                                        // 128
+      ['math', { op: 'multiply' }, 1800, 260],                                                                                                        // 129
+      ['number', { value: 0 }, 40, 4770],                                                                                                             // 130
+      ['math', { op: 'add' }, 480, 1800],                                                                                                             // 131
+      ['math', { op: 'subtract' }, 700, 920],                                                                                                         // 132
+      ['math', { op: 'less' }, 480, 1910],                                                                                                            // 133
+      ['math', { op: 'add' }, 480, 2020],                                                                                                             // 134
+      ['math', { op: 'multiply' }, 700, 1030],                                                                                                        // 135
+      ['math', { op: 'add' }, 920, 590],                                                                                                              // 136
+      ['math', { op: 'difference' }, 480, 2130],                                                                                                      // 137
+      ['maprange', { inLo: 0, inHi: 15, outLo: 100, outHi: 0 }, 700, 1140],                                                                           // 138
+      ['scatter', { shape: 'dash', count: 16, '~count': '5,36', size: 16, vary: 70, turn: 8, fade: 40, per: 'for the page' }, 1140, 700],             // 139
+      ['random', { lo: 0, hi: 100 }, 40, 4880],                                                                                                       // 140
+      ['blur', { radius: 1 }, 1360, 700],                                                                                                             // 141
+      ['blend', { mode: 'screen', opacity: 100 }, 5540, 40],                                                                                          // 142
+      ['math', { op: 'multiply' }, 1580, 590],                                                                                                        // 143
+      ['spikes', { count: 30, length: 50, dots: 50 }, 260, 1690],                                                                                     // 144
+      ['blend', { mode: 'screen', opacity: 100 }, 5760, 40],                                                                                          // 145
+      ['blend', { mode: 'screen', opacity: 60 }, 5980, 40],                                                                                           // 146
+      ['glow', { radius: 20, aura: 60, strength: 70, auraK: 40, core: 40 }, 6200, 40],                                                                // 147
+      ['surface', { name: 'Webb Sky', ground: 'colour' }, 6420, 40]],                                                                                 // 148
+    wires: [[9, 1, 17, 1], [16, 1, 17, 2], [9, 1, 18, 1], [16, 1, 18, 2], [9, 1, 20, 1], [19, 1, 20, 2], [18, 1, 21, 1], [20, 1, 21, 2], [17, 1, 22, 1],
+      [21, 1, 22, 2], [9, 1, 23, 1], [19, 1, 23, 2], [9, 1, 24, 1], [19, 1, 24, 2], [9, 1, 25, 1], [16, 1, 25, 2], [24, 1, 26, 1], [25, 1, 26, 2],
+      [23, 1, 27, 1], [26, 1, 27, 2], [8, 1, 28, paramPort('perlin', 'scale')], [28, 1, 31, 1], [30, 1, 31, 2], [31, 1, 32, 1], [34, 1, 35, 1], [33, 1, 36, 1],
+      [35, 1, 36, 2], [37, 1, 36, paramPort('scatter', 'count')], [8, 1, 36, paramPort('scatter', 'size')], [36, 1, 38, 1], [27, 1, 38, 2],
+      [2, 1, 38, paramPort('smudge', 'length')], [38, 1, 39, 1], [36, 1, 40, 1], [39, 1, 40, 2], [28, 1, 42, 1], [41, 1, 42, 2], [35, 1, 43, 1],
+      [42, 1, 43, 2], [40, 1, 44, 1], [43, 1, 44, 2], [46, 1, 45, paramPort('gradient', 'angle')], [45, 1, 49, 1], [48, 1, 49, 2], [32, 1, 51, 1],
+      [50, 1, 51, 2], [49, 1, 52, 1], [51, 1, 52, 2], [52, 1, 47, 1], [53, 1, 47, paramPort('levels', 'lo')], [28, 1, 54, 1], [47, 1, 55, 1], [54, 1, 55, 2],
+      [47, 1, 56, 1], [32, 1, 56, 2], [55, 1, 57, 1], [56, 1, 57, 2], [58, 1, 60, paramPort('ellipse', 'x')], [59, 1, 60, paramPort('ellipse', 'y')],
+      [61, 1, 60, paramPort('ellipse', 'size')], [62, 1, 60, paramPort('ellipse', 'height')], [63, 1, 60, paramPort('ellipse', 'angle')], [60, 2, 65, 1],
+      [64, 1, 65, 2], [65, 1, 66, 1], [60, 2, 67, 1], [28, 1, 68, 1], [32, 1, 69, 1], [68, 1, 69, 2], [66, 1, 70, 1], [69, 1, 70, 2], [70, 1, 71, 1],
+      [29, 1, 71, 2], [72, 1, 71, paramPort('warp', 'amount')], [67, 1, 73, 1], [28, 1, 73, 2], [71, 1, 74, 1], [73, 1, 74, 2], [28, 1, 75, 1], [29, 1, 75, 2],
+      [76, 1, 75, paramPort('warp', 'amount')], [35, 1, 77, 1], [75, 1, 78, 1], [77, 1, 78, 2], [28, 1, 80, 1], [79, 1, 80, 2], [81, 1, 82, 1], [78, 1, 82, 2],
+      [80, 1, 82, 3], [83, 1, 84, 1], [44, 1, 84, 2], [57, 1, 84, 3], [74, 1, 84, 4], [82, 1, 84, 5], [83, 1, 85, 1], [19, 1, 85, 2], [81, 1, 86, 1],
+      [30, 1, 86, 2], [85, 1, 87, 1], [86, 1, 87, 2], [88, 1, 89, 1], [84, 1, 90, 1], [89, 1, 90, 2], [90, 1, 91, 1],
+      [22, 1, 91, paramPort('motionblur', 'angle')], [2, 1, 91, paramPort('motionblur', 'length')], [91, 1, 92, 1], [90, 1, 93, 1], [92, 1, 93, 2],
+      [93, 1, 94, 1], [1, 1, 94, paramPort('levels', 'lo')], [94, 1, 95, 1], [95, 1, 96, 1], [9, 1, 96, 2], [96, 1, 97, 1], [94, 1, 98, 1], [97, 1, 98, 2],
+      [98, 1, 99, 1], [99, 1, 100, 1], [10, 1, 100, 2], [11, 1, 100, 3], [12, 1, 100, 4], [13, 1, 100, 5], [100, 1, 101, 1], [13, 1, 101, 2], [96, 2, 102, 1],
+      [94, 1, 102, 2], [102, 1, 101, 3], [94, 1, 103, 1], [104, 1, 105, 1], [103, 1, 106, 1], [94, 1, 107, 1], [106, 1, 108, 1], [107, 1, 108, 2],
+      [105, 1, 109, 1], [108, 1, 109, 2], [101, 1, 110, 1], [15, 1, 110, 2], [109, 1, 110, 3], [111, 2, 113, 1], [113, 1, 112, 1], [115, 1, 114, 1],
+      [60, 2, 116, 1], [116, 1, 114, 2], [87, 1, 114, 3], [112, 1, 117, 1], [114, 1, 117, 2], [6, 1, 117, paramPort('scatter', 'count')],
+      [87, 1, 117, paramPort('scatter', 'size')], [117, 3, 118, 1], [117, 1, 119, 1], [119, 1, 120, 1], [41, 1, 120, 2], [117, 1, 122, 1], [121, 1, 122, 2],
+      [117, 1, 123, 1], [122, 1, 123, 2], [120, 1, 124, 1], [123, 1, 124, 2], [110, 1, 125, 1], [15, 1, 125, 2], [124, 1, 126, 1], [118, 1, 126, 2],
+      [126, 1, 125, 3], [125, 1, 127, 1], [12, 1, 127, 2], [115, 1, 128, 1], [118, 1, 128, 2], [124, 1, 129, 1], [128, 1, 129, 2], [129, 1, 127, 3],
+      [60, 3, 131, 1], [130, 1, 131, 2], [131, 1, 132, 1], [16, 1, 132, 2], [60, 3, 133, 1], [16, 1, 133, 2], [60, 3, 134, 1], [19, 1, 134, 2],
+      [133, 1, 135, 1], [134, 1, 135, 2], [132, 1, 136, 1], [135, 1, 136, 2], [60, 2, 137, 1], [50, 1, 137, 2], [137, 1, 138, 1], [138, 1, 139, 2],
+      [136, 1, 139, 3], [140, 1, 139, paramPort('scatter', 'count')], [139, 1, 141, 1], [127, 1, 142, 1], [15, 1, 142, 2], [141, 1, 143, 1], [87, 1, 143, 2],
+      [143, 1, 142, 3], [3, 1, 144, paramPort('spikes', 'dots')], [4, 1, 144, paramPort('spikes', 'count')], [5, 1, 144, paramPort('spikes', 'length')],
+      [142, 1, 145, 1], [14, 1, 145, 2], [144, 1, 145, 3], [145, 1, 146, 1], [12, 1, 146, 2], [144, 3, 146, 3], [146, 1, 147, 1], [144, 1, 147, 2],
+      [14, 1, 147, 3], [7, 1, 147, paramPort('glow', 'strength')], [147, 1, 148, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
@@ -20492,6 +20711,14 @@ const TEXTURE_PARAMS = {
                   {key:'dither', label:'Dither', min:0, max:100, def:40, unit:''},
                   {key:'swirl', label:'Swirl', min:0, max:100, def:50, unit:''},
                   {key:'bands', label:'Bands', min:0, max:100, def:45, unit:''}],
+  webb:           [{key:'amount', label:'Dust', min:0, max:100, def:55, unit:''},
+                  {key:'streaming', label:'Streaming', min:0, max:100, def:45, unit:''},
+                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
+                  {key:'spiked', label:'Spiked Stars', min:0, max:100, def:30, unit:''},
+                  {key:'length', label:'Spike Length', min:0, max:100, def:50, unit:''},
+                  {key:'galaxies', label:'Galaxies', min:0, max:100, def:40, unit:''},
+                  {key:'glow', label:'Glow', min:0, max:100, def:50, unit:''},
+                  {key:'detail', label:'Detail', min:0, max:100, def:50, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -20993,6 +21220,9 @@ const TEXTURE_CAPS = {
   // (pixel-art space: every colour a hue, defaults those of Ruby's own pixel nebula; the light dial lights the rims and the worlds)
   pixelspace:    { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
                    tintLabels:['Deep Sky Hue','Mid Sky Hue','Nebula Hue','Rim Hue','World Hue','Starlight Hue'], tintDefaults:['#0E0726','#3A1C78','#E2367F','#46A8E6','#9A6BE0','#FFF4FA'] },
+  // (Webb's false colour: every colour a hue, defaults its orange dust and blue stars; the light dial lights the dust and streams it)
+  webb:          { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
+                   tintLabels:['Deep Sky Hue','Dust Shadow Hue','Dust Hue','Dust Light Hue','Starlight Hue','Ionized Gas Hue'], tintDefaults:['#04050E','#3A1406','#C2581A','#FFC774','#A9C4FF','#3E5CC8'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -21221,6 +21451,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'corvids'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'webb'){
+    result = genChain(type, w, h, light, extra, tint1 || '#04050E', tint2 || '#3A1406');   // (chains.js)
   } else if(type === 'pixelspace'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0726', tint2 || '#3A1C78');   // (chains.js)
   } else if(type === 'dappled'){
@@ -22423,6 +22655,7 @@ but bear with me, dear}]/jitter:200
                 <option value="pixelspace" data-str="option.pixelspace">Pixel Space</option>
                 <option value="skyring" data-str="option.ring_in_the_sky">Ring in the Sky</option>
                 <option value="ringworld" data-str="option.ringworld">Ringworld</option>
+                <option value="webb" data-str="option.webb">Webb Sky</option>
               </optgroup>
               <optgroup label="🜥 Places &amp; Scenes">
                 <option value="contour" data-str="option.contour">Contour Map</option>
@@ -23558,6 +23791,7 @@ const UI_STRINGS = {
   'option.cityscape':                         "Night City",
   'option.blackhole':                         "Black Hole",
   'option.pixelspace':                        "Pixel Space",
+  'option.webb':                              "Webb Sky",
   'option.scrying_pool':                      "Scrying Pool",
   'option.fractal_moon':                      "Fractal Moon",
   'option.bottom_left':                        "Bottom Left",
@@ -24698,7 +24932,7 @@ const TEXTURE_GROUPS = [
   { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'corvids', 'feathers', 'magicparticles', 'clouds', 'embers', 'aurora'] },
   { glyph: 'ᕕ', name: 'Light to Lay Over', types: ['dappled', 'lightleaks', 'caustics', 'windowlight'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
-  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'pixelspace', 'skyring', 'ringworld'] },
+  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'pixelspace', 'skyring', 'ringworld', 'webb'] },
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
   { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackle', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass', 'underglass', 'brokenglass'] },
@@ -36432,6 +36666,34 @@ function orbFrame(R, aw, ah, o){
   else { const n = 2 + Math.floor(R()*3); for(let i = 0; i < n; i++){ const r = rnd(0.04, 0.16)*S; B.push(withRing(body(rnd(0.1, 0.9)*aw, rnd(0.1, 0.9)*ah, r, i ? pick(W) : world()))); } B.sort((p, q) => p.r - q.r); }
   return { frame, bodies: B };
 }
+// ---- DIFFRACTION SPIKES (Webb's one process part; docs/prior-art/space-scenes.md B.1): a starfield as a space telescope
+// sees it. Webb's eighteen hexagonal mirror segments diffract six long spikes (at 90°, 30° and 150°, each with its
+// opposite), and the strut that holds its secondary mirror two short horizontal ones; Hubble's four struts give four. A
+// spike is bright near the star and fades as 1/r, beaded where the segment gaps break it; its length grows with the
+// star's brightness; only the brightest few stars have them. Three populations: the spiked few, soft stars, pinpoints.
+const SPIKE_STYLES = ['webb', 'hubble'];
+function genSpikes(ww, wh, unit, o){
+  const R = mulberry32(o.seed), N = ww*wh, stars = new Float32Array(N), spikes = new Float32Array(N), tips = new Float32Array(N);
+  const add = (F, x, y, v) => { if(x < 0 || y < 0 || x >= ww || y >= wh) return; const q = (y | 0)*ww + (x | 0); F[q] = Math.min(1.5, F[q] + v); };
+  const where = o.where, placeOk = (x, y) => !where || R() < where[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))];
+  const place = () => { for(let k = 0; k < 14; k++){ const x = R()*ww, y = R()*wh; if(placeOk(x, y)) return [x, y]; } return null; };
+  // pinpoints and soft stars
+  const nDots = Math.round(o.dots*2400*ww*wh/(unit*unit)*0.6);
+  for(let i = 0; i < nDots; i++){ const p = place(); if(!p) continue; const b = Math.pow(R(), 3)*0.9 + 0.1, r = R() < 0.12 ? 0.8 + R()*1.6 : 0;
+    if(!r){ add(stars, p[0], p[1], b); continue; }
+    const rp = r*unit/600, Rr = Math.ceil(rp*2.5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(rp*rp + 1e-6); if(d2 < 6.25) add(stars, p[0] + dx, p[1] + dy, b*Math.exp(-d2)); } }
+  // the spiked few
+  const nBig = Math.round(1 + o.count*24), webb = o.style === 'webb';
+  const dirs = webb ? [90, 30, 150, 270, 210, 330].map(a => [a, 1]).concat([[0, 0.5], [180, 0.5]]) : [45, 135, 225, 315].map(a => [a, 1]);
+  for(let i = 0; i < nBig; i++){ const p = place(); if(!p) continue; const br = 0.35 + 0.65*Math.pow(R(), 1.8);
+    const L = unit*(0.04 + 0.26*o.length)*Math.sqrt(br), core = Math.max(1, unit*0.006*(0.5 + br)), beads = 0.6 + R()*0.6, turn = o.turn;
+    // the core and its halo
+    const Rr = Math.ceil(core*5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(core*core); add(stars, p[0] + dx, p[1] + dy, br*(Math.exp(-d2*1.5) + 0.25*Math.exp(-d2*0.15))); }
+    for(const [deg, k] of dirs){ const a = (deg + turn)*Math.PI/180, cx = Math.cos(a), cy = -Math.sin(a), len = L*k, w = Math.max(0.5, core*0.35);
+      for(let t = core*0.6; t < len; t += 0.5){ const f = br*k*(1 - t/len)*Math.min(1, core*2/t)*(0.72 + 0.28*Math.sin(t/core*beads*2.1)), x = p[0] + cx*t, y = p[1] + cy*t;
+        for(let pp = -1; pp <= 1; pp++){ const v = f*(pp ? 0.35 : 1)*0.5, xx = x - cy*pp*w, yy = y + cx*pp*w; add(spikes, xx, yy, v); add(stars, xx, yy, v); if(t > len*0.45) add(tips, xx, yy, v*(t/len)); } } } }
+  return [stars, spikes, tips];
+}
 /** Orbs: bodies, shade, surface, rings, glow, height and each body (fields on the grid). */
 function genOrbs(ww, wh, unit, o){
   const R = mulberry32(o.seed), N = ww*wh, { bodies, frame } = orbFrame(R, ww/unit, wh/unit, o);
@@ -36506,6 +36768,14 @@ function genOrbs(ww, wh, unit, o){
 }
 
 const GEN_STEPS = {
+  // DIFFRACTION SPIKES (Webb's process part): a telescope's stars, six and two spikes or four
+  spikes: { cat: 'Marks', label: 'Diffraction Spikes', ins: ['where'], outs: ['stars', 'spikes', 'tips'], io: { ins: ['field'], outs: ['field', 'field', 'field'] },
+    params: [GEN_R('style', 'Telescope: Webb · Hubble', 0), GEN_R('count', 'Spiked Stars', 30), GEN_R('length', 'Spike Length', 50), GEN_R('dots', 'Other Stars', 50), GEN_R('turn', 'Turn', 0, -30, 30), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
+    doc: 'A starfield as a space telescope sees it: the brightest few with diffraction spikes (Webb’s six and two, or Hubble’s four), soft stars and pinpoints; the spikes alone, and their outer parts, to colour apart.',
+    run(E, n){ const { ww, wh, unit, num } = E, w = E.input(n, 1);
+      const o = { seed: genSeed(E, n) ^ 0x5b1c, style: SPIKE_STYLES[Math.min(1, Math.floor(num(n, 'style', 0)/50))], count: num(n, 'count', 30)/100, length: num(n, 'length', 50)/100, dots: num(n, 'dots', 50)/100,
+        turn: num(n, 'turn', 0), where: w == null ? null : E.asField(w) };
+      return genSpikes(ww, wh, unit, o); } },
   // ORBS (Pixel Space's process part): worlds in the dial's light, framed by the seed
   orbs: { cat: 'Marks', label: 'Orbs', ins: ['light from', 'light height'], outs: ['bodies', 'shade', 'surface', 'rings', 'glow', 'height', 'each body'],
     io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
@@ -39515,7 +39785,10 @@ const PATTERN_STEPS = {
       // (F2: glyphs, which mark lies on top, and each mark's own color — after the old settings, so no ⚙ port moves)
       ['glyphs', 'Glyphs', 'select', 'mixed', { options: Object.keys(PAT_GLYPH_SETS), when: 'shape:glyph' }],
       PAT_SEL('layers', 'On Top', ['brightest', 'last thrown', 'largest', 'smallest']),
-      PAT_SEL('color', 'Mark Colors', ['white', 'from the picture'])],
+      PAT_SEL('color', 'Mark Colors', ['white', 'from the picture']),
+      // (COUNT FOR THE PAGE: Count marks on the whole page, however large it is drawn — stars in a sky, a few sparkles —
+      //  where per area, as it always was, a bigger page holds more of them)
+      PAT_SEL('per', 'Count Is', ['per area', 'for the page'])],
     cost: () => 3,
     doc: 'Scatters copies of a mark across the page (dots, stars, sigils, glyphs or any picture), each with its own size, turn, brightness and, if you like, color.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
@@ -39523,7 +39796,7 @@ const PATTERN_STEPS = {
       const tinted = P(n, 'color', 'white') === 'from the picture', layers = P(n, 'layers', 'brightest');
       const pic = shape === 'picture' || tinted ? asImage(input(n, 1)) : null, glyphs = shape === 'glyph' ? (PAT_GLYPHS[P(n, 'glyphs', 'mixed')] || PAT_GLYPHS.mixed) : null;
       // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
-      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
+      const count = P(n, 'per', 'per area') === 'for the page' ? Math.round(num(n, 'count', 60)) : Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
       const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
@@ -42588,9 +42861,9 @@ const TEXTURE_CHAINS = {
       ['blend', { opacity: 100 }, 4220, 260],                                                                                                         // 112
       ['blend', { opacity: 100 }, 4440, 40],                                                                                                          // 113
       ['blend', { opacity: 55 }, 4660, 40],                                                                                                           // 114
-      ['scatter', { shape: 'dot', count: 160, '~count': '30,400', size: 3, vary: 60, fade: 75, clump: 30 }, 260, 1470],                               // 115
+      ['scatter', { shape: 'dot', count: 120, '~count': '20,400', size: 3, vary: 60, fade: 75, clump: 30, per: 'for the page' }, 260, 1470],          // 115
       ['random', { lo: 0, hi: 100 }, 40, 4880],                                                                                                       // 116
-      ['scatter', { shape: 'cross', count: 10, '~count': '2,36', size: 24, vary: 75, turn: 0, fade: 30 }, 260, 1580],                                 // 117
+      ['scatter', { shape: 'cross', count: 8, '~count': '1,24', size: 24, vary: 75, turn: 0, fade: 30, per: 'for the page' }, 260, 1580],             // 117
       ['threshold', { at: 30, soft: 0 }, 700, 920],                                                                                                   // 118
       ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1140],                                                                  // 119
       ['threshold', { at: 40, soft: 0 }, 700, 1030],                                                                                                  // 120
@@ -42662,6 +42935,186 @@ const TEXTURE_CHAINS = {
       [145, 1, 146, 1], [11, 1, 146, 2], [13, 1, 146, 3], [15, 1, 146, 4], [145, 1, 147, 1], [133, 1, 148, 1], [146, 1, 148, 2], [147, 1, 148, 3],
       [136, 1, 150, 1], [136, 4, 150, 2], [150, 1, 151, 1], [1, 1, 151, paramPort('pixelate', 'size')], [151, 1, 149, 1], [148, 1, 152, 1], [141, 1, 152, 2],
       [149, 1, 152, 3], [152, 1, 153, 1]] },
+  // ── Webb Sky (ROADMAP §2 L1): JWST false colour, general parts and Diffraction Spikes; docs/prior-art/space-scenes.md ──
+  webb: { label: 'Webb Sky', div: 2, teach: 'Deep space as the Webb telescope sees it, in infrared made visible: dust lit by the stars inside it, telescope stars with six long spikes and two short ones, galaxies everywhere behind; every colour from the six hues, the seed choosing the scene. The seed picks the dust (Random Numbers into a Map Switch): globules streaming away from the light (soft blobs Scattered where a broad noise allows, each Smudged into a tail away from the dial’s handle), cosmic cliffs (a Gradient at the seed’s angle raised by the ridges of a Perlin Noise, steam drifting off them along the light), a shell round a dying star (an Ellipse’s rim torn by the noise’s ridges), soft smoke, or a deep field with hardly any dust, a cluster of galaxies and the arcs of light it lenses round itself. A fine noise breaks all of it into clumps. Simple Lighting from the Light Dial shades the dust; a Gradient Map colours it smooth from the Deep Sky through the Dust Shadow and Dust Hues to Dust Light, its lit edges screened brighter; a blue haze of ionized gas (the last hue) glows where it thins. Diffraction Spikes makes the stars, seen through the dust as Webb sees into it; their spikes’ outer halves redden, and a Glow blooms round them. Try: Spiked Stars low and Spike Length high for a few great stars over the dust.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Dust', def: 55 }, 40, 40],                                                                                         // 1
+      ['knob', { slot: '2', name: 'Streaming', def: 45 }, 40, 150],                                                                                   // 2
+      ['knob', { slot: '3', name: 'Stars', def: 50 }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4', name: 'Spiked Stars', def: 30 }, 40, 370],                                                                                // 4
+      ['knob', { slot: '5', name: 'Spike Length', def: 50 }, 40, 480],                                                                                // 5
+      ['knob', { slot: '6', name: 'Galaxies', def: 40 }, 40, 590],                                                                                    // 6
+      ['knob', { slot: '7', name: 'Glow', def: 50 }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8', name: 'Detail', def: 50 }, 40, 810],                                                                                      // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Deep Sky' }, 40, 1030],                                                                                             // 10
+      ['hue', { slot: '2', name: 'Dust Shadow' }, 40, 1140],                                                                                          // 11
+      ['hue', { slot: '3', name: 'Dust' }, 40, 1250],                                                                                                 // 12
+      ['hue', { slot: '4', name: 'Dust Light' }, 40, 1360],                                                                                           // 13
+      ['hue', { slot: '5', name: 'Starlight' }, 40, 1470],                                                                                            // 14
+      ['hue', { slot: '6', name: 'Ionized Gas' }, 40, 1580],                                                                                          // 15
+      ['number', { value: 25 }, 40, 1690],                                                                                                            // 16
+      ['math', { op: 'subtract' }, 260, 40],                                                                                                          // 17
+      ['math', { op: 'less' }, 260, 150],                                                                                                             // 18
+      ['number', { value: 75 }, 40, 1800],                                                                                                            // 19
+      ['math', { op: 'add' }, 260, 260],                                                                                                              // 20
+      ['math', { op: 'multiply' }, 480, 40],                                                                                                          // 21
+      ['math', { op: 'add' }, 700, 40],                                                                                                               // 22
+      ['math', { op: 'subtract' }, 260, 370],                                                                                                         // 23
+      ['math', { op: 'less' }, 260, 480],                                                                                                             // 24
+      ['math', { op: 'add' }, 260, 590],                                                                                                              // 25
+      ['math', { op: 'multiply' }, 480, 150],                                                                                                         // 26
+      ['math', { op: 'add' }, 700, 150],                                                                                                              // 27
+      ['perlin', { scale: 40, '~scale': '20,90', details: 5, rough: 55, contrast: 30 }, 260, 700],                                                    // 28
+      ['perlin', { scale: 14, details: 2, contrast: 40 }, 40, 1910],                                                                                  // 29
+      ['number', { value: 50 }, 40, 2020],                                                                                                            // 30
+      ['math', { op: 'difference' }, 480, 260],                                                                                                       // 31
+      ['maprange', { inLo: 0, inHi: 50, outLo: 100, outHi: 0 }, 700, 260],                                                                            // 32
+      ['ellipse', { size: 90, height: 80, soft: 100 }, 40, 2130],                                                                                     // 33
+      ['perlin', { scale: 10, details: 2, contrast: 60 }, 40, 2240],                                                                                  // 34
+      ['maprange', { inLo: 25, inHi: 60, outLo: 0, outHi: 100 }, 260, 810],                                                                           // 35
+      ['scatter', { shape: 'picture', count: 360, '~count': '260,400', size: 10, '~size': '6,16', vary: 80, turn: 100, clump: 40, fade: 45, per: 'for the page' }, 480, 370],// 36
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 37
+      ['smudge', { length: 30, '~length': '5,70', strength: 100, trail: 65 }, 920, 40],                                                               // 38
+      ['maprange', { inLo: 0, inHi: 30, outLo: 0, outHi: 90 }, 1140, 40],                                                                             // 39
+      ['math', { op: 'max' }, 1360, 40],                                                                                                              // 40
+      ['number', { value: 85 }, 40, 2460],                                                                                                            // 41
+      ['math', { op: 'multiply' }, 480, 480],                                                                                                         // 42
+      ['math', { op: 'multiply' }, 700, 370],                                                                                                         // 43
+      ['math', { op: 'max' }, 1580, 40],                                                                                                              // 44
+      ['gradient', { shape: 'linear', angle: 90 }, 260, 920],                                                                                         // 45
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 46
+      ['levels', { lo: 45, '~lo': '30,60', hi: 70, '~hi': '55,80', gamma: 50 }, 1360, 150],                                                           // 47
+      ['number', { value: 70 }, 40, 2680],                                                                                                            // 48
+      ['math', { op: 'multiply' }, 480, 590],                                                                                                         // 49
+      ['number', { value: 45 }, 40, 2790],                                                                                                            // 50
+      ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 51
+      ['math', { op: 'add' }, 1140, 150],                                                                                                             // 52
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 53
+      ['maprange', { outLo: 40, outHi: 100 }, 480, 700],                                                                                              // 54
+      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 55
+      ['math', { op: 'multiply' }, 1580, 260],                                                                                                        // 56
+      ['math', { op: 'max' }, 1800, 40],                                                                                                              // 57
+      ['random', { lo: 25, hi: 75 }, 40, 3010],                                                                                                       // 58
+      ['random', { lo: 25, hi: 75 }, 40, 3120],                                                                                                       // 59
+      ['ellipse', { size: 100, '~size': '60,150', height: 75, '~height': '40,100', soft: 100 }, 260, 1030],                                           // 60
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 61
+      ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 62
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 63
+      ['number', { value: 62 }, 40, 3560],                                                                                                            // 64
+      ['math', { op: 'difference' }, 480, 810],                                                                                                       // 65
+      ['maprange', { inLo: 0, inHi: 25, '~inHi': '12,35', outLo: 100, outHi: 0 }, 700, 480],                                                          // 66
+      ['maprange', { inLo: 0, inHi: 65, outLo: 35, outHi: 0 }, 480, 920],                                                                             // 67
+      ['maprange', { outLo: 0, outHi: 60 }, 480, 1030],                                                                                               // 68
+      ['math', { op: 'screen' }, 920, 260],                                                                                                           // 69
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 70
+      ['warp', { amount: 35, '~amount': '10,70' }, 1360, 260],                                                                                        // 71
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 72
+      ['math', { op: 'multiply' }, 700, 590],                                                                                                         // 73
+      ['math', { op: 'max' }, 1580, 370],                                                                                                             // 74
+      ['warp', { amount: 35, '~amount': '10,70' }, 480, 1140],                                                                                        // 75
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 76
+      ['maprange', { outLo: 30, outHi: 100 }, 480, 1250],                                                                                             // 77
+      ['math', { op: 'multiply' }, 700, 700],                                                                                                         // 78
+      ['number', { value: 18 }, 40, 3890],                                                                                                            // 79
+      ['math', { op: 'multiply' }, 480, 1360],                                                                                                        // 80
+      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 81
+      ['mapswitch', { soft: 0 }, 920, 370],                                                                                                           // 82
+      ['random', { lo: 0, hi: 100 }, 40, 4110],                                                                                                       // 83
+      ['mapswitch', { soft: 0 }, 2020, 40],                                                                                                           // 84
+      ['math', { op: 'greater' }, 260, 1140],                                                                                                         // 85
+      ['math', { op: 'greater' }, 260, 1250],                                                                                                         // 86
+      ['math', { op: 'multiply' }, 480, 1470],                                                                                                        // 87
+      ['perlin', { scale: 200, details: 3, rough: 65, contrast: 60 }, 40, 4220],                                                                      // 88
+      ['maprange', { outLo: 20, outHi: 100 }, 260, 1360],                                                                                             // 89
+      ['math', { op: 'multiply' }, 2240, 40],                                                                                                         // 90
+      ['motionblur', { length: 20, '~length': '0,60' }, 2460, 40],                                                                                    // 91
+      ['maprange', { inLo: 0, inHi: 70, outLo: 0, outHi: 80 }, 2680, 40],                                                                             // 92
+      ['math', { op: 'max' }, 2900, 40],                                                                                                              // 93
+      ['levels', { lo: 30, '~lo': '70,0', hi: 90, gamma: 50 }, 3120, 40],                                                                             // 94
+      ['blur', { radius: 5 }, 3340, 40],                                                                                                              // 95
+      ['light', { relief: 70, gloss: 20, shadow: 40 }, 3560, 40],                                                                                     // 96
+      ['maprange', { inLo: 20, inHi: 80, outLo: 30, outHi: 100 }, 3780, 40],                                                                          // 97
+      ['math', { op: 'multiply' }, 4000, 40],                                                                                                         // 98
+      ['maprange', { inLo: 0, inHi: 62, outLo: 0, outHi: 100 }, 4220, 40],                                                                            // 99
+      ['gradmap', { stops: 4 }, 4440, 40],                                                                                                            // 100
+      ['blend', { mode: 'screen', opacity: 70 }, 4660, 40],                                                                                           // 101
+      ['math', { op: 'multiply' }, 3780, 150],                                                                                                        // 102
+      ['blur', { radius: 30 }, 3340, 150],                                                                                                            // 103
+      ['perlin', { scale: 8, details: 3, contrast: 30 }, 40, 4330],                                                                                   // 104
+      ['maprange', { inLo: 30, inHi: 80, outLo: 0, outHi: 100 }, 260, 1470],                                                                          // 105
+      ['maprange', { inLo: 0, inHi: 40, outLo: 0, outHi: 100 }, 3560, 150],                                                                           // 106
+      ['maprange', { outLo: 100, outHi: 0 }, 3340, 260],                                                                                              // 107
+      ['math', { op: 'multiply' }, 3780, 260],                                                                                                        // 108
+      ['math', { op: 'multiply' }, 4000, 150],                                                                                                        // 109
+      ['blend', { mode: 'screen', opacity: 45 }, 4880, 40],                                                                                           // 110
+      ['ellipse', { size: 100, height: 38, soft: 100 }, 40, 4440],                                                                                    // 111
+      ['levels', { lo: 0, hi: 100, gamma: 25 }, 480, 1580],                                                                                           // 112
+      ['maprange', { outLo: 100, outHi: 0 }, 260, 1580],                                                                                              // 113
+      ['mix', { t: 0 }, 700, 810],                                                                                                                    // 114
+      ['number', { value: 100 }, 40, 4550],                                                                                                           // 115
+      ['maprange', { outLo: 100, outHi: 0 }, 480, 1690],                                                                                              // 116
+      ['scatter', { shape: 'picture', count: 40, '~count': '0,140', size: 10, '~size': '9,22', vary: 85, turn: 100, fade: 50, per: 'for the page' }, 920, 480],// 117
+      ['threshold', { at: 55, soft: 0 }, 1140, 370],                                                                                                  // 118
+      ['blur', { radius: 3 }, 1140, 480],                                                                                                             // 119
+      ['math', { op: 'multiply' }, 1360, 370],                                                                                                        // 120
+      ['number', { value: 60 }, 40, 4660],                                                                                                            // 121
+      ['math', { op: 'multiply' }, 1140, 590],                                                                                                        // 122
+      ['math', { op: 'multiply' }, 1360, 480],                                                                                                        // 123
+      ['math', { op: 'screen' }, 1580, 480],                                                                                                          // 124
+      ['blend', { mode: 'screen', opacity: 90 }, 5100, 40],                                                                                           // 125
+      ['math', { op: 'multiply' }, 1800, 150],                                                                                                        // 126
+      ['blend', { mode: 'screen', opacity: 90 }, 5320, 40],                                                                                           // 127
+      ['math', { op: 'subtract' }, 1360, 590],                                                                                                        // 128
+      ['math', { op: 'multiply' }, 1800, 260],                                                                                                        // 129
+      ['number', { value: 0 }, 40, 4770],                                                                                                             // 130
+      ['math', { op: 'add' }, 480, 1800],                                                                                                             // 131
+      ['math', { op: 'subtract' }, 700, 920],                                                                                                         // 132
+      ['math', { op: 'less' }, 480, 1910],                                                                                                            // 133
+      ['math', { op: 'add' }, 480, 2020],                                                                                                             // 134
+      ['math', { op: 'multiply' }, 700, 1030],                                                                                                        // 135
+      ['math', { op: 'add' }, 920, 590],                                                                                                              // 136
+      ['math', { op: 'difference' }, 480, 2130],                                                                                                      // 137
+      ['maprange', { inLo: 0, inHi: 15, outLo: 100, outHi: 0 }, 700, 1140],                                                                           // 138
+      ['scatter', { shape: 'dash', count: 16, '~count': '5,36', size: 16, vary: 70, turn: 8, fade: 40, per: 'for the page' }, 1140, 700],             // 139
+      ['random', { lo: 0, hi: 100 }, 40, 4880],                                                                                                       // 140
+      ['blur', { radius: 1 }, 1360, 700],                                                                                                             // 141
+      ['blend', { mode: 'screen', opacity: 100 }, 5540, 40],                                                                                          // 142
+      ['math', { op: 'multiply' }, 1580, 590],                                                                                                        // 143
+      ['spikes', { count: 30, length: 50, dots: 50 }, 260, 1690],                                                                                     // 144
+      ['blend', { mode: 'screen', opacity: 100 }, 5760, 40],                                                                                          // 145
+      ['blend', { mode: 'screen', opacity: 60 }, 5980, 40],                                                                                           // 146
+      ['glow', { radius: 20, aura: 60, strength: 70, auraK: 40, core: 40 }, 6200, 40],                                                                // 147
+      ['surface', { name: 'Webb Sky', ground: 'colour' }, 6420, 40]],                                                                                 // 148
+    wires: [[9, 1, 17, 1], [16, 1, 17, 2], [9, 1, 18, 1], [16, 1, 18, 2], [9, 1, 20, 1], [19, 1, 20, 2], [18, 1, 21, 1], [20, 1, 21, 2], [17, 1, 22, 1],
+      [21, 1, 22, 2], [9, 1, 23, 1], [19, 1, 23, 2], [9, 1, 24, 1], [19, 1, 24, 2], [9, 1, 25, 1], [16, 1, 25, 2], [24, 1, 26, 1], [25, 1, 26, 2],
+      [23, 1, 27, 1], [26, 1, 27, 2], [8, 1, 28, paramPort('perlin', 'scale')], [28, 1, 31, 1], [30, 1, 31, 2], [31, 1, 32, 1], [34, 1, 35, 1], [33, 1, 36, 1],
+      [35, 1, 36, 2], [37, 1, 36, paramPort('scatter', 'count')], [8, 1, 36, paramPort('scatter', 'size')], [36, 1, 38, 1], [27, 1, 38, 2],
+      [2, 1, 38, paramPort('smudge', 'length')], [38, 1, 39, 1], [36, 1, 40, 1], [39, 1, 40, 2], [28, 1, 42, 1], [41, 1, 42, 2], [35, 1, 43, 1],
+      [42, 1, 43, 2], [40, 1, 44, 1], [43, 1, 44, 2], [46, 1, 45, paramPort('gradient', 'angle')], [45, 1, 49, 1], [48, 1, 49, 2], [32, 1, 51, 1],
+      [50, 1, 51, 2], [49, 1, 52, 1], [51, 1, 52, 2], [52, 1, 47, 1], [53, 1, 47, paramPort('levels', 'lo')], [28, 1, 54, 1], [47, 1, 55, 1], [54, 1, 55, 2],
+      [47, 1, 56, 1], [32, 1, 56, 2], [55, 1, 57, 1], [56, 1, 57, 2], [58, 1, 60, paramPort('ellipse', 'x')], [59, 1, 60, paramPort('ellipse', 'y')],
+      [61, 1, 60, paramPort('ellipse', 'size')], [62, 1, 60, paramPort('ellipse', 'height')], [63, 1, 60, paramPort('ellipse', 'angle')], [60, 2, 65, 1],
+      [64, 1, 65, 2], [65, 1, 66, 1], [60, 2, 67, 1], [28, 1, 68, 1], [32, 1, 69, 1], [68, 1, 69, 2], [66, 1, 70, 1], [69, 1, 70, 2], [70, 1, 71, 1],
+      [29, 1, 71, 2], [72, 1, 71, paramPort('warp', 'amount')], [67, 1, 73, 1], [28, 1, 73, 2], [71, 1, 74, 1], [73, 1, 74, 2], [28, 1, 75, 1], [29, 1, 75, 2],
+      [76, 1, 75, paramPort('warp', 'amount')], [35, 1, 77, 1], [75, 1, 78, 1], [77, 1, 78, 2], [28, 1, 80, 1], [79, 1, 80, 2], [81, 1, 82, 1], [78, 1, 82, 2],
+      [80, 1, 82, 3], [83, 1, 84, 1], [44, 1, 84, 2], [57, 1, 84, 3], [74, 1, 84, 4], [82, 1, 84, 5], [83, 1, 85, 1], [19, 1, 85, 2], [81, 1, 86, 1],
+      [30, 1, 86, 2], [85, 1, 87, 1], [86, 1, 87, 2], [88, 1, 89, 1], [84, 1, 90, 1], [89, 1, 90, 2], [90, 1, 91, 1],
+      [22, 1, 91, paramPort('motionblur', 'angle')], [2, 1, 91, paramPort('motionblur', 'length')], [91, 1, 92, 1], [90, 1, 93, 1], [92, 1, 93, 2],
+      [93, 1, 94, 1], [1, 1, 94, paramPort('levels', 'lo')], [94, 1, 95, 1], [95, 1, 96, 1], [9, 1, 96, 2], [96, 1, 97, 1], [94, 1, 98, 1], [97, 1, 98, 2],
+      [98, 1, 99, 1], [99, 1, 100, 1], [10, 1, 100, 2], [11, 1, 100, 3], [12, 1, 100, 4], [13, 1, 100, 5], [100, 1, 101, 1], [13, 1, 101, 2], [96, 2, 102, 1],
+      [94, 1, 102, 2], [102, 1, 101, 3], [94, 1, 103, 1], [104, 1, 105, 1], [103, 1, 106, 1], [94, 1, 107, 1], [106, 1, 108, 1], [107, 1, 108, 2],
+      [105, 1, 109, 1], [108, 1, 109, 2], [101, 1, 110, 1], [15, 1, 110, 2], [109, 1, 110, 3], [111, 2, 113, 1], [113, 1, 112, 1], [115, 1, 114, 1],
+      [60, 2, 116, 1], [116, 1, 114, 2], [87, 1, 114, 3], [112, 1, 117, 1], [114, 1, 117, 2], [6, 1, 117, paramPort('scatter', 'count')],
+      [87, 1, 117, paramPort('scatter', 'size')], [117, 3, 118, 1], [117, 1, 119, 1], [119, 1, 120, 1], [41, 1, 120, 2], [117, 1, 122, 1], [121, 1, 122, 2],
+      [117, 1, 123, 1], [122, 1, 123, 2], [120, 1, 124, 1], [123, 1, 124, 2], [110, 1, 125, 1], [15, 1, 125, 2], [124, 1, 126, 1], [118, 1, 126, 2],
+      [126, 1, 125, 3], [125, 1, 127, 1], [12, 1, 127, 2], [115, 1, 128, 1], [118, 1, 128, 2], [124, 1, 129, 1], [128, 1, 129, 2], [129, 1, 127, 3],
+      [60, 3, 131, 1], [130, 1, 131, 2], [131, 1, 132, 1], [16, 1, 132, 2], [60, 3, 133, 1], [16, 1, 133, 2], [60, 3, 134, 1], [19, 1, 134, 2],
+      [133, 1, 135, 1], [134, 1, 135, 2], [132, 1, 136, 1], [135, 1, 136, 2], [60, 2, 137, 1], [50, 1, 137, 2], [137, 1, 138, 1], [138, 1, 139, 2],
+      [136, 1, 139, 3], [140, 1, 139, paramPort('scatter', 'count')], [139, 1, 141, 1], [127, 1, 142, 1], [15, 1, 142, 2], [141, 1, 143, 1], [87, 1, 143, 2],
+      [143, 1, 142, 3], [3, 1, 144, paramPort('spikes', 'dots')], [4, 1, 144, paramPort('spikes', 'count')], [5, 1, 144, paramPort('spikes', 'length')],
+      [142, 1, 145, 1], [14, 1, 145, 2], [144, 1, 145, 3], [145, 1, 146, 1], [12, 1, 146, 2], [144, 3, 146, 3], [146, 1, 147, 1], [144, 1, 147, 2],
+      [14, 1, 147, 3], [7, 1, 147, paramPort('glow', 'strength')], [147, 1, 148, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
@@ -44069,6 +44522,14 @@ const TEXTURE_PARAMS = {
                   {key:'dither', label:'Dither', min:0, max:100, def:40, unit:''},
                   {key:'swirl', label:'Swirl', min:0, max:100, def:50, unit:''},
                   {key:'bands', label:'Bands', min:0, max:100, def:45, unit:''}],
+  webb:           [{key:'amount', label:'Dust', min:0, max:100, def:55, unit:''},
+                  {key:'streaming', label:'Streaming', min:0, max:100, def:45, unit:''},
+                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
+                  {key:'spiked', label:'Spiked Stars', min:0, max:100, def:30, unit:''},
+                  {key:'length', label:'Spike Length', min:0, max:100, def:50, unit:''},
+                  {key:'galaxies', label:'Galaxies', min:0, max:100, def:40, unit:''},
+                  {key:'glow', label:'Glow', min:0, max:100, def:50, unit:''},
+                  {key:'detail', label:'Detail', min:0, max:100, def:50, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -44570,6 +45031,9 @@ const TEXTURE_CAPS = {
   // (pixel-art space: every colour a hue, defaults those of Ruby's own pixel nebula; the light dial lights the rims and the worlds)
   pixelspace:    { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
                    tintLabels:['Deep Sky Hue','Mid Sky Hue','Nebula Hue','Rim Hue','World Hue','Starlight Hue'], tintDefaults:['#0E0726','#3A1C78','#E2367F','#46A8E6','#9A6BE0','#FFF4FA'] },
+  // (Webb's false colour: every colour a hue, defaults its orange dust and blue stars; the light dial lights the dust and streams it)
+  webb:          { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
+                   tintLabels:['Deep Sky Hue','Dust Shadow Hue','Dust Hue','Dust Light Hue','Starlight Hue','Ionized Gas Hue'], tintDefaults:['#04050E','#3A1406','#C2581A','#FFC774','#A9C4FF','#3E5CC8'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -44798,6 +45262,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'corvids'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'webb'){
+    result = genChain(type, w, h, light, extra, tint1 || '#04050E', tint2 || '#3A1406');   // (chains.js)
   } else if(type === 'pixelspace'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0726', tint2 || '#3A1C78');   // (chains.js)
   } else if(type === 'dappled'){
@@ -45452,6 +45918,10 @@ const TEXTURE_ELEMENTS = {
     fire:  { name: 'Blue Jay',        k: [100, 90, 30, 10, 30, 35, 40, 60], t: ['#3A6AD8', '#2A4AA8', '#8AB8FF', '#B8D8FF', '#F6F8FF', '#101420'] },
     wind:  { name: 'Magpie',          k: [75, 110, 25, 10, 30, 80, 40, 60], t: ['#0E1012', '#0A0C0E', '#2A9A6A', '#4A4AC8', '#F4F4F2', '#060608'] },
     earth: { name: 'Crow',            k: [25, 90, 30, 15, 35, 35, 40, 55], t: ['#1A1A1E', '#121216', '#3A3A8A', '#2A6A6A', '#E8E6E0', '#08080A'] } },
+  webb: { def: 'fire', fire: { name: 'Infrared Dust' },
+    water: { name: 'Near Infrared',   k: [45, 30, 70, 25, 40, 70, 60, 60], t: ['#020611', '#0E2A4A', '#3A8AC8', '#BFE8FF', '#FFF2D6', '#C84A9A'] },
+    wind:  { name: 'Pillars',         k: [75, 70, 40, 20, 70, 30, 45, 35], t: ['#06040A', '#2A1A3A', '#A0582A', '#F2C890', '#CFE0FF', '#5A7AE0'], light: [0, 100] },
+    earth: { name: 'Deep Field',      k: [15, 30, 60, 15, 60, 100, 50, 70], t: ['#030308', '#20140C', '#B8783A', '#F8D8A0', '#E8F0FF', '#6A5AE0'] } },
   pixelspace: { def: 'water', water: { name: 'Pink Nebula' },
     fire:  { name: 'Red Giant',       k: [35, 65, 45, 50, 70, 30, 60, 55], t: ['#140608', '#4A1020', '#F2603A', '#FFC24A', '#C86A3A', '#FFF2DC'], light: [250, 100] },
     wind:  { name: 'Pocket Green',    k: [70, 50, 40, 30, 50, 55, 40, 20], t: ['#0F380F', '#306230', '#8BAC0F', '#9BBC0F', '#8BAC0F', '#E0F8D0'] },
@@ -46017,7 +46487,7 @@ const RELEASE = 'Saturn–Kari';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_iSVcV3E","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","linen":"R8benyFh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"YtNY3Szl","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","windowlight":"LRspq7Ga"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_iSVcV3E","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","linen":"R8benyFh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"YtNY3Szl","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"1-cFgHxL","windowlight":"LRspq7Ga"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -46055,7 +46525,7 @@ const TEXTURE_LOOKS = {
   stainedglass: 'panes of stained glass held in lead', brokenglass: 'broken glass scattered on the page, its shards catching the light and casting bright caustics', dewwebs: 'spider webs beaded with dew, glinting in the light', underglass: 'a sheet of glass over the page, catching the light: a window\'s reflection, scratches, fingerprints and dust', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
   crackedglaze: 'cracked and crazed ceramic glaze', crackle: 'a glaze crackled by cracks spreading across it', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, sometimes coins, and often other things left there: a candle, a cup, a letter)',
-  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', turing: 'organic spots and stripes, like animal skin or coral',
+  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', webb: 'deep space in infrared: glowing dust and stars with six-pointed spikes', turing: 'organic spots and stripes, like animal skin or coral',
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolor paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
   ash: 'charred paper, ash and embers', wax: 'pools of sealing wax', dunes: 'wind-rippled sand dunes', kintsugi: 'pottery mended with seams of gold',
@@ -46850,7 +47320,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · 76f7e65";
+const STAMP = "2026-10-19 · 6156cc7";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -51464,7 +51934,7 @@ const WIKI_PARTS = {
     ins: { picture: 'A picture to use as the mark (Shape: picture), or to color the marks from (Mark Colors: from the picture).', where: 'Where marks may fall: they land only on light areas.', 'which way': 'Turns each mark to the map’s value at that point.' },
     outs: { marks: 'All the marks, white on black.', heights: 'The marks as heights.', 'each mark': 'A different gray per mark.', 'in color': 'The marks in their colors, on black: the picture’s color where each lands, or the stamped picture itself.' },
     set: { shape: 'The mark.', count: 'How many.', size: 'Their size (a map on its ⚙: each mark sized by the map where it lands).', vary: 'How much sizes differ.', turn: 'How randomly each is rotated.', clump: 'Gathers them into clusters.', fade: 'How much their brightness varies.', variation: 'Another arrangement.',
-      glyphs: 'Which symbols the Glyph shape throws.', layers: 'Where marks overlap: the brightest shows, or the last thrown, the largest or the smallest lies on top.', color: 'White marks, or each in the picture’s color where it lands (the In Color output).' },
+      glyphs: 'Which symbols the Glyph shape throws.', layers: 'Where marks overlap: the brightest shows, or the last thrown, the largest or the smallest lies on top.', color: 'White marks, or each in the picture’s color where it lands (the In Color output).', per: 'Per area: Count is how thickly they lie, so a bigger page holds more. For the page: Count is how many there are on the whole page, however large it is drawn (stars in a sky, a few sparkles).' },
     tips: ['Shape: glyph, Glyphs: alchemy, Mark Colors: from the picture with a Spectrum in Picture: a rain of colored sigils.', 'On Top: largest, with Size Variety high: big marks cover the small, like leaves.'],
     see: ['mapping', 'masks'],
   },
@@ -52047,6 +52517,15 @@ const WIKI_PARTS = {
     set: { webs: 'How many webs (one at 0).', size: 'How big.', dew: 'How much dew: none (0) to heavy beading.', drops: 'How big the drops.', torn: 'How much of the spiral is torn away.', sag: 'How much the spiral sags between spokes.', irid: 'White glints (0) or the colours thin silk splits the light into (100).', threads: 'How close the spiral is wound.', width: 'How thick the silk is drawn.', variant: 'Other webs.' },
     tips: ['Screen the glints through a Blur for the soft bloom of a web in morning sun.', 'Turn Dew to 0 and Iridescence up for a dry web shimmering in colours.'],
     see: ['part:shards', 'part:dial'],
+  },
+  spikes: {
+    line: 'A starfield as a space telescope sees it: the brightest few with diffraction spikes (Webb’s six and two, or Hubble’s four), soft stars and pinpoints; the spikes alone, and their outer parts, to colour apart.',
+    about: 'A telescope’s mirror and the struts that hold its second mirror spread a bright star’s light into spikes. Webb’s eighteen hexagonal segments give six long spikes (at 90°, 30° and 150°, each with its opposite) and its vertical strut two short horizontal ones; Hubble’s four struts give four. A spike fades as it goes out, beaded where the gaps between segments break it, and a brighter star throws longer spikes. Only the brightest few have them: the rest are soft stars and pinpoints (docs/prior-art/space-scenes.md B.1).',
+    ins: { where: 'Where stars may fall (white: anywhere). Unwired: anywhere.' },
+    outs: { stars: 'Every star, spikes and all.', spikes: 'The spikes alone.', tips: 'The outer half of each spike, to tint (a longer wavelength spreads wider, so a spike reddens toward its tip).' },
+    set: { style: 'Webb (six and two spikes) or Hubble (four).', count: 'How many stars have spikes.', length: 'How long the spikes are.', dots: 'How many other stars.', turn: 'Turns every spike a little (a telescope that rolled).', variant: 'Another sky on the same seed.' },
+    tips: ['Screen the stars through a Glow over dust for a Webb picture.', 'Gradient Map the tips toward red: Webb’s spikes redden outward.'],
+    see: ['part:scatter', 'part:glow'],
   },
   orbs: {
     line: 'Worlds in the light: a planet’s disc, its terminator from the dial, bands or continents or craters wrapped round it, rings with a near and a far half and their shadows, the air at its rim; framed by the seed.',
@@ -58650,7 +59129,7 @@ const WORKING_WORDS = {
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
-  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', turing: 'Letting the reaction diffuse',
+  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',
