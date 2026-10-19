@@ -459,6 +459,14 @@ export const HUE5_HINTS = {
   base: 'Sets {name}. White leaves it unchanged.',
 };
 /** Short notes the page gives as it works, and the padlocks' hints. */
+/** A section switched off by the eye in its heading (Surface, Border, Inset Box, Vignette): its controls stay in view,
+ *  faded, under this line (Ruby: Border Options and Inset Box opened empty), and changing one switches it on. */
+export const EYE_OFF = {
+  textureToggle: 'The surface is off. Change anything here to switch it on, or tap the eye.',
+  borderToggle: 'The border is off. Change anything here to switch it on, or tap the eye.',
+  cardToggle: 'The inset box is off. Change anything here to switch it on, or tap the eye.',
+  vignetteToggle: 'The vignette is off. Change anything here to switch it on, or tap the eye.',
+};
 export const PAGE_SAYS = {
   sizeClamped: 'Page size set to {name} px. Each side can be 256 to 4096 px.',
   poemCut: 'Most of the poem was removed.',

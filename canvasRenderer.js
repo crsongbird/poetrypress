@@ -1387,7 +1387,10 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     //  letters Shape Aware; `fill` tells it it is inside them)
     // (Shape Aware on a surface drawn on the page, `around`: it shapes itself round the words — keeps off them, flows round
     //  them — Ruby: "the option to make it avoid the text or highlight the text or interact with the text")
-    const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware ? strength : 0, aware = L.textureTextAware !== false, around = !fill && aware && !!L.textureShapeAware ? strength : 0;
+    // (`around` stays above 0 while Shape Aware is on, even at a Shape Strength of 0: The Poem keeps no margin then, where
+    //  Shape Aware off leaves a graph its own)
+    const filling = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware, fill = filling ? strength : 0, aware = L.textureTextAware !== false;
+    const around = !filling && aware && !!L.textureShapeAware ? Math.max(strength, 0.001) : 0;
     const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type, fill || around)) && (aware || fill) ? TEXT_LAYOUT : undefined;
     // (the inset box's place, for a graph that reads it)
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;

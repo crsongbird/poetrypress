@@ -1099,13 +1099,20 @@ Object.assign(STEP_RUN, {
     const want = P(n, 'rhyme', 'every rhyme'), wantN = want === 'every rhyme' ? -1 : want.charCodeAt(0) - 64, rhymeHard = new Float32Array(N);
     const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
     const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
-    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
+    // SHAPE STRENGTH (Ruby: it should move "the threshold" of a graph built on The Poem): under Shape Aware on the page, how
+    // far the surface keeps clear of the words. The Words (and Rhymes) masks spread by the Padding times it, fading out
+    // over its last tenth; the Distance is measured from that margin and reads farther near the words by the same measure
+    // (a margin read off it shrinks by it). Shape Aware off: the graph's own margin, as it always was.
+    const keep = around > 0 ? around : 1, keepFade = Math.min(1, keep*10);
+    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N), hardK = keep < 1 ? new Float32Array(N) : hard;
     const nLines = Math.max(...runs.map(r => r[4])) + 1, nSt = Math.max(...runs.map(r => r[5])) + 1;
     for(const r of runs){
       const h = (r[3] - r[1])*wh, p = h*pad;
       const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
       const rh = r[6] || 0, isRhyme = rh > 0 && (wantN < 0 || rh === wantN);
-      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++){ hard[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      const pk = p*keep, kx0 = Math.max(0, Math.floor(r[0]*ww - pk)), kx1 = Math.min(ww, Math.ceil(r[2]*ww + pk)), ky0 = Math.max(0, Math.floor(r[1]*wh - pk)), ky1 = Math.min(wh, Math.ceil(r[3]*wh + pk));
+      for(let y = ky0; y < ky1; y++) for(let x = kx0; x < kx1; x++){ hardK[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
       // a line is a band across the whole page at the line's own height, its gray rising line by line
       const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
       for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
@@ -1114,9 +1121,12 @@ Object.assign(STEP_RUN, {
     const span = []; for(const r of runs){ const s = span[r[5]] || (span[r[5]] = [Infinity, -Infinity]); s[0] = Math.min(s[0], r[1]); s[1] = Math.max(s[1], r[3]); }
     const cuts = []; for(let i = 0; i + 1 < span.length; i++) if(span[i] && span[i + 1]) cuts.push((span[i][1] + span[i + 1][0])/2*wh);
     for(let y = 0; y < wh; y++){ let k = 0; while(k < cuts.length && y >= cuts[k]) k++; const sv = (k + 1)/nSt; for(let x = 0; x < ww; x++) stanzas[y*ww + x] = sv; }
-    const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
-    for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
-    const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
+    // (the Distance from the margin as Shape Strength spreads it; its first quarter, where a graph takes its margin, drawn in
+    //  by the strength, and the rest moved in by what that saves, so rings and fades farther out keep their spacing)
+    const dist = stepDistance(hardK, ww, wh), far = reach*Math.max(ww, wh), T0 = 0.25, kk = Math.max(keep, 1e-6);
+    for(let i = 0; i < N; i++){ const d = Math.min(1, dist[i]/far); dist[i] = keep >= 1 ? d : d < kk*T0 ? d/kk : Math.min(1, d + T0*(1 - keep)); }
+    const words = soft > 0 ? boxBlur(hardK, lh*soft*0.8) : hardK;
+    if(keepFade < 1){ for(let i = 0; i < N; i++){ words[i] *= keepFade; rhymeHard[i] *= keepFade; } }
     // PUNCTUATION (G2): each mark a soft round glow, 1 at the mark, gone a Glow's line heights away (the brightest wins)
     const pick = POEM_MARK_SETS[P(n, 'marks', 'every mark')], R = Math.max(1, num(n, 'glow', 100)/100*lh*0.75), punct = new Float32Array(N);
     for(const [mx, my, m] of poemMarks(ctx.text)){ if(pick && !pick.includes(m)) continue;

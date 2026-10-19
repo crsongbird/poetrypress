@@ -159,6 +159,18 @@ check('a preset turns the lower surface off (it never leaks from one look to the
   check('…overhead at the middle, near the page\'s edge at the dial\'s rim, and further out as the handle goes out',
     Math.abs(mid.x - 0.5) < 1e-9 && Math.abs(mid.y - aspY/2) < 1e-9 && rim.x > 0.94 && rim.x < 1 && pageSunAt(327, 30, aspX, aspY).y > at(327).y); }
 
+// A SECTION SWITCHED OFF (Ruby: Border Options and Inset Box opened empty): its controls stay in view, faded, and the first
+// change made there by hand switches it on; the dice's and a loaded look's changes (not the person's) never do
+{ const { eyeBlock } = await import('../appEvents.js'), box = reg['borderToggle'], block = reg['borderBlock'], card = { contains: () => true };
+  eyeBlock(box, card); eyeBlock(reg['cardToggle'], card);
+  const ctl = { closest: sel => /input/.test(sel) && !/eye-off-note/.test(sel) ? {} : null };
+  box.checked = false; let woke = 0; box.addEventListener('change', () => woke++);
+  block.dispatchEvent({ type: 'input', isTrusted: false, target: ctl });
+  const still = box.checked === false && woke === 0;
+  block.dispatchEvent({ type: 'input', isTrusted: true, target: ctl });
+  check('a switched-off section keeps its controls in view (faded), and a change made there by hand switches it on; a roll\'s does not',
+    block.classList.contains('eye-block') && reg['cardBlock'].classList.contains('eye-block') && still && box.checked === true && woke === 1); }
+
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);

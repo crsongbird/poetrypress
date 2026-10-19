@@ -19,11 +19,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   apostrophes inside words (don't, it's) count as marks? They do now, with the quotes.
 - THE PAINTED RINGWORLD'S SUN follows the dial now. Should the Painted Landscape's sun follow it too (it is the seed's
   now, with its time of day)? The 3D Ringworld's star stays at the ring's middle, as a real ringworld's does: right?
-
-- RING IN THE SKY WITH DEPTH (sheets sent: before and after, four views): a solid band, land inside between rim walls,
-  the hull across the near side, a gentle perspective. Not shipped until Ruby says yes.
 - THE LIGHT GUIDE on Crystal "seems off": its direction is now the dial's exactly on a tall page. Was that it, or that
   Crystal's facets don't look lit from where the sun is (then the guide should skip Crystal)?
+- SHAPE STRENGTH on a surface built on The Poem (Ripples from the Words, Circuit Board, the starters): it now sets how
+  far the surface keeps clear of the words. Does the slider feel right on them?
 
 ## 2 · Ruby's notes to act on
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
@@ -99,6 +98,3 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   poem.test's renderer checks (the layout record, Text Clearing) as behavior; mobileCss's phone invariants into
   invariants.test (§7 Phones) and the rest as behavior in mobileLayout.
 
-## 7 · Check on a phone
-- Firefox: a tap on a section's name (Border Options, Inset Box, Vignette) opens and folds it. Fixed without a
-  Firefox to try it in.

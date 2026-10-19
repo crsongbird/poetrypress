@@ -111,6 +111,12 @@ textarea{
 .subblock{ display:none; border-left:none; padding:1px 0 1px 7px; margin:1px 0 2px 2px; box-shadow:inset 2px 0 0 color-mix(in srgb, var(--accent-dim) 55%, transparent); }
 .subblock.open{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
 .subblock.open > .full{ grid-column:1/-1; }
+/* a section switched off by its heading's eye shows its controls faded, under a line that says so (appEvents eyeBlock) */
+.subblock.eye-block{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
+.subblock.eye-block > .full, .subblock.eye-block > .tool-row{ grid-column:1/-1; }
+.subblock.eye-block:not(.open) > :not(.eye-off-note){ opacity:.42; transition:opacity .2s; }
+.eye-off-note{ display:none; grid-column:1/-1; margin:2px 0 4px; font-size:12px; color:var(--text-dim); font-style:italic; }
+.subblock.eye-block:not(.open) > .eye-off-note{ display:block; }
 
 .angle-wrap{display:flex; align-items:center; gap:6px;}
 input[type="range"]{ flex:1; accent-color:var(--accent); }

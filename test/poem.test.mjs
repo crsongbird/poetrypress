@@ -63,6 +63,19 @@ check('the Ripples from the Words starter teaches with The Poem', /"name":"poem"
     STEPS.poem.outs[8] === 'punctuation' && every[47*100 + 30] > 0.9 && every[47*100 + 85] > 0.9 && every[10*100 + 10] === 0 && pauses[47*100 + 30] > 0.9 && pauses[47*100 + 85] === 0);
   check('…and its Glow reaches further when turned up', wide[47*100 + 40] > every[47*100 + 40]); }
 
+// SHAPE STRENGTH moves how far a graph built on The Poem keeps clear (Ruby: "the threshold"): under Shape Aware (`around`),
+// the Words mask spreads by Padding × strength and the Distance reads farther near the words; Shape Aware off, as always
+{ const lay = '0.3,0.45,0.7,0.55,0,0,0', P = (around, out) => STEPS.poem.run({ ctx: { text: lay, around }, ww: 100, wh: 100, N: 10000,
+    num: (n, k, d) => ({ padding: 100, softness: 0, reach: 35 })[k] ?? d, P: (n, k, d) => d, boxBlur: f => f }, {})[out];
+  const wordsAt = (a, y) => P(a, 0)[y*100 + 50], distAt = (a, y) => P(a, 1)[y*100 + 50];
+  check('Shape Aware at full strength (or off) keeps the graph\'s own margin: the Words mask reaches a Padding beyond the line',
+    wordsAt(0, 62) === 1 && wordsAt(1, 62) === 1 && distAt(0, 70) === distAt(1, 70));
+  const ringGap = a => distAt(a, 74) - distAt(a, 70);
+  check('…at half strength the margin is half as wide, and the Distance near the words reads farther; farther out its steps keep their spacing',
+    wordsAt(0.5, 62) === 0 && wordsAt(0.5, 58) === 1 && distAt(0.5, 66) > distAt(1, 66)*1.6 && Math.abs(ringGap(0.5) - ringGap(1)) < 1e-4);
+  check('…and at 0 (Shape Aware on) nothing is kept clear: the Distance starts a quarter out at the letters, its steps beyond unchanged',
+    wordsAt(0.001, 50) < 0.02 && distAt(0.001, 57) >= 0.25 && distAt(0.001, 57) < 0.35 && Math.abs(ringGap(0.001) - ringGap(1)) < 1e-4); }
+
 // the cache: the layout is part of a graph's key only when the graph asks for it
 { const g = JSON.stringify(athanorStarter('ripples'));
   const a = textureKeyFor('athanor', 300, 400, { graph: g, text: 'a' }), b = textureKeyFor('athanor', 300, 400, { graph: g, text: 'b' }), c = textureKeyFor('linen', 300, 400, { text: 'a' }), d = textureKeyFor('linen', 300, 400, {});

@@ -56,7 +56,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS, READABLE } from './tunables.js';
-import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS, MODAL_RANGE } from './strings.js';
+import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS, MODAL_RANGE, EYE_OFF } from './strings.js';
 // (a starter's or a Surface Study's place in the surface menu: 'starter:agate', 'study:fibers'; see paintTryOptions)
 const TRY_GRAPH = /^(starter|study):/;
 // soft interface sounds (murmur.js); made here so every handler below can use it
@@ -3063,6 +3063,23 @@ export function headingTaps(root){   // test hook: interface.test taps a heading
     });
   }
 }
+// A SECTION SWITCHED OFF still shows what it holds (Ruby, on a phone: Border Options and Inset Box "flicker" and open
+// empty: all their controls live in the block their eye shows): faded under a line that says it is off, and the first
+// change made there by hand (a tap, a slide, a choice; never the dice or a loaded look, whose events aren't the
+// person's) switches it on, as moving the rim light does
+const EYE_BLOCKS = { textureToggle: 'textureBlock', borderToggle: 'borderBlock', cardToggle: 'cardBlock', vignetteToggle: 'vignetteBlock' };
+export function eyeBlock(box, card){   // test hook: textureLayers.test wakes a section that is off (the mock has no headings to install)
+  const block = $(EYE_BLOCKS[box.id]); if(!block || !block.classList || !card.contains || !card.contains(block)) return;
+  block.classList.add('eye-block');
+  if(EYE_OFF[box.id] && typeof document.createElement === 'function' && block.insertBefore){
+    const note = document.createElement('p'); note.className = 'eye-off-note'; note.textContent = EYE_OFF[box.id]; block.insertBefore(note, block.firstChild); }
+  const wake = e => {
+    if(box.checked || !e.isTrusted) return;
+    const t = e.target; if(!t || !t.closest || !t.closest('input, select, textarea, button, label, .clr-field') || t.closest('.eye-off-note')) return;
+    box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  for(const ev of ['click', 'input', 'change']) block.addEventListener(ev, wake, true);
+}
 function installHeadings(){
   if(typeof document.querySelectorAll !== 'function') return;
   headingTaps(document);
@@ -3075,6 +3092,7 @@ function installHeadings(){
     box.addEventListener('click', e => { e.stopPropagation(); const was = card.open; setTimeout(() => { if(card.open !== was) card.open = was; }, 0); });
     headTools(head).appendChild(box);
     if(row) row.hidden = true;
+    eyeBlock(box, card);
   }
   for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
   for(const id of SWITCHES){ const box = $(id); if(box && box.classList) box.classList.add('switch'); }

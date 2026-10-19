@@ -884,7 +884,13 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   stanzas, rhymes, punctuation, and three numbers: aware, in the letters,
   round the words) gets the layout as
   `ctx.text`, and only when its graph contains it (`graphUsesPoem`) and the
-  surface is Text Aware or fills the letters. The cache key carries it then
+  surface is Text Aware or fills the letters. Under Shape Aware on the page,
+  `around` is the Shape Strength (kept above 0 while Shape Aware is on, so 0%
+  is told from off), and The Poem keeps clear by it: Words and Rhymes spread
+  by Padding × strength; Distance is measured from that margin, its first
+  quarter (where graphs take their margins) drawn in by the strength and the
+  rest moved in by what that saves, so rings farther out keep their spacing.
+  Off: the graph's own margin. The cache key carries it then
   (`_q`, with `_F` and `_A0`), never otherwise.
 
 ### 6.4 · What the Athanor took from Filter Forge

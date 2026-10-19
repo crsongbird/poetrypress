@@ -144,6 +144,12 @@ textarea{
 .subblock{ display:none; border-left:none; padding:1px 0 1px 7px; margin:1px 0 2px 2px; box-shadow:inset 2px 0 0 color-mix(in srgb, var(--accent-dim) 55%, transparent); }
 .subblock.open{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
 .subblock.open > .full{ grid-column:1/-1; }
+/* a section switched off by its heading's eye shows its controls faded, under a line that says so (appEvents eyeBlock) */
+.subblock.eye-block{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
+.subblock.eye-block > .full, .subblock.eye-block > .tool-row{ grid-column:1/-1; }
+.subblock.eye-block:not(.open) > :not(.eye-off-note){ opacity:.42; transition:opacity .2s; }
+.eye-off-note{ display:none; grid-column:1/-1; margin:2px 0 4px; font-size:12px; color:var(--text-dim); font-style:italic; }
+.subblock.eye-block:not(.open) > .eye-off-note{ display:block; }
 
 .angle-wrap{display:flex; align-items:center; gap:6px;}
 input[type="range"]{ flex:1; accent-color:var(--accent); }
@@ -17392,13 +17398,20 @@ Object.assign(STEP_RUN, {
     const want = P(n, 'rhyme', 'every rhyme'), wantN = want === 'every rhyme' ? -1 : want.charCodeAt(0) - 64, rhymeHard = new Float32Array(N);
     const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
     const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
-    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
+    // SHAPE STRENGTH (Ruby: it should move "the threshold" of a graph built on The Poem): under Shape Aware on the page, how
+    // far the surface keeps clear of the words. The Words (and Rhymes) masks spread by the Padding times it, fading out
+    // over its last tenth; the Distance is measured from that margin and reads farther near the words by the same measure
+    // (a margin read off it shrinks by it). Shape Aware off: the graph's own margin, as it always was.
+    const keep = around > 0 ? around : 1, keepFade = Math.min(1, keep*10);
+    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N), hardK = keep < 1 ? new Float32Array(N) : hard;
     const nLines = Math.max(...runs.map(r => r[4])) + 1, nSt = Math.max(...runs.map(r => r[5])) + 1;
     for(const r of runs){
       const h = (r[3] - r[1])*wh, p = h*pad;
       const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
       const rh = r[6] || 0, isRhyme = rh > 0 && (wantN < 0 || rh === wantN);
-      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++){ hard[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      const pk = p*keep, kx0 = Math.max(0, Math.floor(r[0]*ww - pk)), kx1 = Math.min(ww, Math.ceil(r[2]*ww + pk)), ky0 = Math.max(0, Math.floor(r[1]*wh - pk)), ky1 = Math.min(wh, Math.ceil(r[3]*wh + pk));
+      for(let y = ky0; y < ky1; y++) for(let x = kx0; x < kx1; x++){ hardK[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
       // a line is a band across the whole page at the line's own height, its gray rising line by line
       const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
       for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
@@ -17407,9 +17420,12 @@ Object.assign(STEP_RUN, {
     const span = []; for(const r of runs){ const s = span[r[5]] || (span[r[5]] = [Infinity, -Infinity]); s[0] = Math.min(s[0], r[1]); s[1] = Math.max(s[1], r[3]); }
     const cuts = []; for(let i = 0; i + 1 < span.length; i++) if(span[i] && span[i + 1]) cuts.push((span[i][1] + span[i + 1][0])/2*wh);
     for(let y = 0; y < wh; y++){ let k = 0; while(k < cuts.length && y >= cuts[k]) k++; const sv = (k + 1)/nSt; for(let x = 0; x < ww; x++) stanzas[y*ww + x] = sv; }
-    const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
-    for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
-    const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
+    // (the Distance from the margin as Shape Strength spreads it; its first quarter, where a graph takes its margin, drawn in
+    //  by the strength, and the rest moved in by what that saves, so rings and fades farther out keep their spacing)
+    const dist = stepDistance(hardK, ww, wh), far = reach*Math.max(ww, wh), T0 = 0.25, kk = Math.max(keep, 1e-6);
+    for(let i = 0; i < N; i++){ const d = Math.min(1, dist[i]/far); dist[i] = keep >= 1 ? d : d < kk*T0 ? d/kk : Math.min(1, d + T0*(1 - keep)); }
+    const words = soft > 0 ? boxBlur(hardK, lh*soft*0.8) : hardK;
+    if(keepFade < 1){ for(let i = 0; i < N; i++){ words[i] *= keepFade; rhymeHard[i] *= keepFade; } }
     // PUNCTUATION (G2): each mark a soft round glow, 1 at the mark, gone a Glow's line heights away (the brightest wins)
     const pick = POEM_MARK_SETS[P(n, 'marks', 'every mark')], R = Math.max(1, num(n, 'glow', 100)/100*lh*0.75), punct = new Float32Array(N);
     for(const [mx, my, m] of poemMarks(ctx.text)){ if(pick && !pick.includes(m)) continue;
@@ -21678,7 +21694,7 @@ but bear with me, dear}]/jitter:200
                 </div>
               </div>
               <div class="field full words-strength">
-                <label for="textureShapeStrength" data-str="label.shape_strength" title="How fully Shape Aware works. At 100% the surface clears the words completely; lower values only thin it near the lines.">Shape Strength</label>
+                <label for="textureShapeStrength" data-str="label.shape_strength" title="How fully Shape Aware works. At 100% the surface clears the words completely; lower values only thin it near the lines. A surface built on The Poem keeps clear of the words by its own margin at 100%, less as this goes down, and not at all at 0%.">Shape Strength</label>
                 <input type="range" id="textureShapeStrength" min="0" max="100" value="100">
                 <span class="range-val" id="textureShapeStrengthVal">100%</span>
               </div>
@@ -22905,6 +22921,14 @@ const HUE5_HINTS = {
   base: 'Sets {name}. White leaves it unchanged.',
 };
 /** Short notes the page gives as it works, and the padlocks' hints. */
+/** A section switched off by the eye in its heading (Surface, Border, Inset Box, Vignette): its controls stay in view,
+ *  faded, under this line (Ruby: Border Options and Inset Box opened empty), and changing one switches it on. */
+const EYE_OFF = {
+  textureToggle: 'The surface is off. Change anything here to switch it on, or tap the eye.',
+  borderToggle: 'The border is off. Change anything here to switch it on, or tap the eye.',
+  cardToggle: 'The inset box is off. Change anything here to switch it on, or tap the eye.',
+  vignetteToggle: 'The vignette is off. Change anything here to switch it on, or tap the eye.',
+};
 const PAGE_SAYS = {
   sizeClamped: 'Page size set to {name} px. Each side can be 256 to 4096 px.',
   poemCut: 'Most of the poem was removed.',
@@ -40102,13 +40126,20 @@ Object.assign(STEP_RUN, {
     const want = P(n, 'rhyme', 'every rhyme'), wantN = want === 'every rhyme' ? -1 : want.charCodeAt(0) - 64, rhymeHard = new Float32Array(N);
     const pad = num(n, 'padding', 40)/100, soft = num(n, 'softness', 40)/100, reach = Math.max(0.05, num(n, 'reach', 35)/100);
     const heights = runs.map(r => (r[3] - r[1])*wh).sort((a, b) => a - b), lh = Math.max(1, heights[heights.length >> 1]);
-    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N);
+    // SHAPE STRENGTH (Ruby: it should move "the threshold" of a graph built on The Poem): under Shape Aware on the page, how
+    // far the surface keeps clear of the words. The Words (and Rhymes) masks spread by the Padding times it, fading out
+    // over its last tenth; the Distance is measured from that margin and reads farther near the words by the same measure
+    // (a margin read off it shrinks by it). Shape Aware off: the graph's own margin, as it always was.
+    const keep = around > 0 ? around : 1, keepFade = Math.min(1, keep*10);
+    const lines = new Float32Array(N), stanzas = new Float32Array(N), hard = new Float32Array(N), hardK = keep < 1 ? new Float32Array(N) : hard;
     const nLines = Math.max(...runs.map(r => r[4])) + 1, nSt = Math.max(...runs.map(r => r[5])) + 1;
     for(const r of runs){
       const h = (r[3] - r[1])*wh, p = h*pad;
       const x0 = Math.max(0, Math.floor(r[0]*ww - p)), x1 = Math.min(ww, Math.ceil(r[2]*ww + p)), y0 = Math.max(0, Math.floor(r[1]*wh - p)), y1 = Math.min(wh, Math.ceil(r[3]*wh + p));
       const rh = r[6] || 0, isRhyme = rh > 0 && (wantN < 0 || rh === wantN);
-      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++){ hard[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
+      for(let y = y0; y < y1; y++) for(let x = x0; x < x1; x++) hard[y*ww + x] = 1;
+      const pk = p*keep, kx0 = Math.max(0, Math.floor(r[0]*ww - pk)), kx1 = Math.min(ww, Math.ceil(r[2]*ww + pk)), ky0 = Math.max(0, Math.floor(r[1]*wh - pk)), ky1 = Math.min(wh, Math.ceil(r[3]*wh + pk));
+      for(let y = ky0; y < ky1; y++) for(let x = kx0; x < kx1; x++){ hardK[y*ww + x] = 1; if(isRhyme) rhymeHard[y*ww + x] = 1; }
       // a line is a band across the whole page at the line's own height, its gray rising line by line
       const ly0 = Math.max(0, Math.floor(r[1]*wh)), ly1 = Math.min(wh, Math.ceil(r[3]*wh)), lv = (r[4] + 1)/nLines;
       for(let y = ly0; y < ly1; y++) for(let x = 0; x < ww; x++) lines[y*ww + x] = Math.max(lines[y*ww + x], lv);
@@ -40117,9 +40148,12 @@ Object.assign(STEP_RUN, {
     const span = []; for(const r of runs){ const s = span[r[5]] || (span[r[5]] = [Infinity, -Infinity]); s[0] = Math.min(s[0], r[1]); s[1] = Math.max(s[1], r[3]); }
     const cuts = []; for(let i = 0; i + 1 < span.length; i++) if(span[i] && span[i + 1]) cuts.push((span[i][1] + span[i + 1][0])/2*wh);
     for(let y = 0; y < wh; y++){ let k = 0; while(k < cuts.length && y >= cuts[k]) k++; const sv = (k + 1)/nSt; for(let x = 0; x < ww; x++) stanzas[y*ww + x] = sv; }
-    const dist = stepDistance(hard, ww, wh), far = reach*Math.max(ww, wh);
-    for(let i = 0; i < N; i++) dist[i] = Math.min(1, dist[i]/far);
-    const words = soft > 0 ? boxBlur(hard, lh*soft*0.8) : hard;
+    // (the Distance from the margin as Shape Strength spreads it; its first quarter, where a graph takes its margin, drawn in
+    //  by the strength, and the rest moved in by what that saves, so rings and fades farther out keep their spacing)
+    const dist = stepDistance(hardK, ww, wh), far = reach*Math.max(ww, wh), T0 = 0.25, kk = Math.max(keep, 1e-6);
+    for(let i = 0; i < N; i++){ const d = Math.min(1, dist[i]/far); dist[i] = keep >= 1 ? d : d < kk*T0 ? d/kk : Math.min(1, d + T0*(1 - keep)); }
+    const words = soft > 0 ? boxBlur(hardK, lh*soft*0.8) : hardK;
+    if(keepFade < 1){ for(let i = 0; i < N; i++){ words[i] *= keepFade; rhymeHard[i] *= keepFade; } }
     // PUNCTUATION (G2): each mark a soft round glow, 1 at the mark, gone a Glow's line heights away (the brightest wins)
     const pick = POEM_MARK_SETS[P(n, 'marks', 'every mark')], R = Math.max(1, num(n, 'glow', 100)/100*lh*0.75), punct = new Float32Array(N);
     for(const [mx, my, m] of poemMarks(ctx.text)){ if(pick && !pick.includes(m)) continue;
@@ -44289,7 +44323,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Narvi';
+const RELEASE = 'Saturn–Suttungr';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-18';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -45126,7 +45160,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-18 · 6826505";
+const STAMP = "2026-10-19 · a3e7b04";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -46641,7 +46675,10 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     //  letters Shape Aware; `fill` tells it it is inside them)
     // (Shape Aware on a surface drawn on the page, `around`: it shapes itself round the words — keeps off them, flows round
     //  them — Ruby: "the option to make it avoid the text or highlight the text or interact with the text")
-    const fill = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware ? strength : 0, aware = L.textureTextAware !== false, around = !fill && aware && !!L.textureShapeAware ? strength : 0;
+    // (`around` stays above 0 while Shape Aware is on, even at a Shape Strength of 0: The Poem keeps no margin then, where
+    //  Shape Aware off leaves a graph its own)
+    const filling = slot === 'base' && !!L.textureTextBlend && !!L.textureShapeAware, fill = filling ? strength : 0, aware = L.textureTextAware !== false;
+    const around = !filling && aware && !!L.textureShapeAware ? Math.max(strength, 0.001) : 0;
     const text = ((graph && graphUsesPoem(graph)) || chainReadsPoem(type, fill || around)) && (aware || fill) ? TEXT_LAYOUT : undefined;
     // (the inset box's place, for a graph that reads it)
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
@@ -49027,7 +49064,7 @@ const WIKI_PARTS = {
   },
   poem: {
     line: 'Hands the graph the poem’s layout: where the words, lines, stanzas, rhymes and punctuation sit on the page.',
-    about: 'The Poem lets a surface know where the text is, so it can react to it: quiet down near the words, ripple outward from them, grow toward them. The maps update as the poem is edited. Two numbers say how the surface is being used: Aware is 1 while its Text Aware box is ticked (untick it and the surface is handed no words at all, as if the page had none), In the Letters is 1 when the surface is the second one, blended into the letters with Shape Aware ticked, so a graph can shape itself to the words it fills instead of keeping clear of them; and Round the Words is 1 when Shape Aware is ticked on a surface drawn on the page, asking it to give way round the words.',
+    about: 'The Poem lets a surface know where the text is, so it can react to it: quiet down near the words, ripple outward from them, grow toward them. The maps update as the poem is edited. Two numbers say how the surface is being used: Aware is 1 while its Text Aware box is ticked (untick it and the surface is handed no words at all, as if the page had none), In the Letters is 1 when the surface is the second one, blended into the letters with Shape Aware ticked, so a graph can shape itself to the words it fills instead of keeping clear of them; and Round the Words is 1 when Shape Aware is ticked on a surface drawn on the page, asking it to give way round the words. Under Shape Aware, the page’s Shape Strength also sets how far the surface keeps clear: the Words and Rhymes masks spread by the Padding times the strength, and the Distance reads farther near the words by the same measure, so a margin taken from it (a Threshold or Levels on the Distance) shrinks with the slider, and at 0% nothing is kept clear. With Shape Aware off, the graph keeps its own margin.',
     outs: { words: 'White where words are, black elsewhere (a text mask).', distance: '0 right at the words, rising to 1 far away from them. The most useful output: feed it to a Mix’s Amount to fade a texture near the text.', lines: 'Each line of the poem in its own shade of gray.', stanzas: 'Each stanza in its own shade of gray.', rhymes: 'White on lines that rhyme (marked ~A, ~B… in the poem).', aware: 'A number: 1 while the surface is Text Aware, 0 when it is not.', 'in the letters': 'A number: as strong as Shape Strength while the surface fills the letters (Blend with Text, Shape Aware; 1 at full strength), else 0. Into a Map Switch or a Mix’s Amount, it chooses what the graph does inside the words.', 'round the words': 'A number: as strong as Shape Strength while Shape Aware is ticked on a surface drawn on the page (it should give way round the words; 1 at full strength), else 0. Multiply it by The Poem’s Distance, flipped, to clear a margin round the lines only then, and only as far as the slider says.',
       punctuation: 'A soft round glow on each punctuation mark, white at the mark and fading out (the Punctuation setting picks which marks). Into a Scatter’s Where, marks are thrown from the poem’s commas and full stops.' },
     set: { padding: 'How far the Words mask spreads beyond the letters.', softness: 'How soft the mask’s edges are.', reach: 'How far Distance travels before it reaches 1.', rhyme: 'Every rhyme, or only lines with one rhyme letter.',
@@ -55339,6 +55376,23 @@ function headingTaps(root){   // test hook: interface.test taps a heading and it
     });
   }
 }
+// A SECTION SWITCHED OFF still shows what it holds (Ruby, on a phone: Border Options and Inset Box "flicker" and open
+// empty: all their controls live in the block their eye shows): faded under a line that says it is off, and the first
+// change made there by hand (a tap, a slide, a choice; never the dice or a loaded look, whose events aren't the
+// person's) switches it on, as moving the rim light does
+const EYE_BLOCKS = { textureToggle: 'textureBlock', borderToggle: 'borderBlock', cardToggle: 'cardBlock', vignetteToggle: 'vignetteBlock' };
+function eyeBlock(box, card){   // test hook: textureLayers.test wakes a section that is off (the mock has no headings to install)
+  const block = $(EYE_BLOCKS[box.id]); if(!block || !block.classList || !card.contains || !card.contains(block)) return;
+  block.classList.add('eye-block');
+  if(EYE_OFF[box.id] && typeof document.createElement === 'function' && block.insertBefore){
+    const note = document.createElement('p'); note.className = 'eye-off-note'; note.textContent = EYE_OFF[box.id]; block.insertBefore(note, block.firstChild); }
+  const wake = e => {
+    if(box.checked || !e.isTrusted) return;
+    const t = e.target; if(!t || !t.closest || !t.closest('input, select, textarea, button, label, .clr-field') || t.closest('.eye-off-note')) return;
+    box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  for(const ev of ['click', 'input', 'change']) block.addEventListener(ev, wake, true);
+}
 function installHeadings(){
   if(typeof document.querySelectorAll !== 'function') return;
   headingTaps(document);
@@ -55351,6 +55405,7 @@ function installHeadings(){
     box.addEventListener('click', e => { e.stopPropagation(); const was = card.open; setTimeout(() => { if(card.open !== was) card.open = was; }, 0); });
     headTools(head).appendChild(box);
     if(row) row.hidden = true;
+    eyeBlock(box, card);
   }
   for(const id of EYES){ const box = $(id); if(box && box.classList){ box.classList.add('eye'); if(!box.title) box.title = 'Show or hide'; } }
   for(const id of SWITCHES){ const box = $(id); if(box && box.classList) box.classList.add('switch'); }
