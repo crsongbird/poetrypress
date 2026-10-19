@@ -289,9 +289,9 @@ Easter eggs).
   - **Where they live:** what is plainly a console's or a machine's look (a handheld's four greens, a CRT arcade, PS1
     wobble) goes in a new **Video Games** group (its own Runology rune); what could live elsewhere hides in its natural
     group and only nods (the Meadow already reads as a famous green field).
-  - **First: cel-shaded worlds** (Wind Waker, Okami, Breath of the Wild): toon light in steps from the Light Engine (its
-    light posterized into two or three bands, a rim of light), painted skies with swirling cel clouds, a stylized sea
-    with white wave curls and foam, wind-swept toon grass, ink-and-brush outlines (Okami's sumi-e).
+  - **First: cel-shaded worlds** (Wind Waker, Okami, Breath of the Wild; docs/prior-art/cel-shaded.md). The sea and
+    sky is built (Windward Sea, on branch `cel`, with Ruby). Next: wind-swept toon grass and hills, ink-and-brush
+    outlines (Okami's sumi-e, on parchment).
   - **Then:** painted 2D (Hollow Knight, Ori, Gris: layered parallax caverns and forests, glowing motes, watercolour);
     retro hardware (PS1 low-poly with affine wobble, dithering and fog; a handheld's greens; CRT arcade glow; 16-bit
     parallax) — with the pixel-art category, L1b; atmospheric journeys (Journey's glittering dunes, Shadow of the

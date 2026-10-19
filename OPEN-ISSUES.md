@@ -15,6 +15,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   are little lenses: a dark rim, a highlight, a bright tail beyond them. A blade of grass or leaves between the sun and
   the flower cast a soft shadow along the light, and now and then cross the frame near the lens. Other visitors wanted
   (a bee, a snail, a caterpillar, a damselfly)?
+- WINDWARD SEA (branch `cel`, sheets sent; not on main): the first love letter to a video game, a sea and sky in the
+  cel-shaded sailing look. Light in two to four flat bands (Toon Bands), heaped clouds curled by Swirls, long white
+  wind streams, foam in flattened rounds and the waves' white lines receding to the horizon, islands, and a sun the
+  dial places (it sets into the sea as the light's height sinks). Readings: Fair Wind, Sunset Sail, Squall, Morning
+  Breeze. In Places & Scenes. Merge it? What to change?
 - THE SURFACE MENU'S GROUPS, REARRANGED: Burnt Letter and Cup Ring to Paper & Grounds; Veins of Light and Moss on Stone
   to Grown & Generated; Knotwork to Pattern & Order; Light, Sparks & Dust is now Light, Dust & Feathers (the two
   feathers were there); the Paving Stones and Brick Wall starters to Materials & Craft; the Packet Rain study to Screens

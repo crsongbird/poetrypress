@@ -17893,6 +17893,149 @@ const NETWORK_STEPS = {
 };
 
 
+/* ==== stepsStreamers.js ==== */
+/**
+ * STREAMERS (Windward Sea's process part): ribbons swept along curves in 3D space and seen through a camera, so
+ * they stand in the scene, near ones large and far ones small, turning their two faces to the light. Prior art:
+ * docs/prior-art/cel-shaded.md §5.
+ *
+ *   1. Each gust is placed in the world: a point on the page where `where` allows, at a depth (far ones more
+ *      often), never below the sea (a point under the horizon can only be near).
+ *   2. Its path (Shape): a Gust runs along the wind and ends in a curl that tightens, the radius falling fast
+ *      at first and slower after (as the sailing game's wind was rebuilt: Gordon); a Spiral coils round an
+ *      upright axis; a Loop loops once and runs on; a Wave rises and falls.
+ *   3. Each path is a ribbon: every point doubled into two, spread across the curve in the plane it bends in,
+ *      and turned round the curve by Twist, so it shows its back face now and then. It is widest in its middle,
+ *      thins into the curl, and its ends fade (as the game's did, so the strip never ends square).
+ *   4. A gust is a few strands (Strands), side by side and each a little different in length, as the game
+ *      duplicated one curve, offset.
+ *   5. Light: how squarely each point faces the light (half-Lambert of the face turned to the eye), the light
+ *      where the dial lays the sun: across by its way, as high as its height.
+ *
+ * Outputs maps, never colour: the ribbons (with faded ends), Facing, Side (front face light, back face dark) and
+ * Depth (near light). A graph lights them in bands (Posterize and a Gradient Map), so they are cel-shaded.
+ * Everything is placed in page units (the page's shorter side is 1), so a preview and its export match.
+ */
+
+const ST_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+const STREAMER_SHAPES = ['Gust', 'Spiral', 'Loop', 'Wave', 'Mixed'];
+
+// ---- small vector helpers (world: x right, y up, z away from the eye)
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, k) => [a[0]*k, a[1]*k, a[2]*k];
+const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+const cross = (a, b) => [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+const norm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+/** Turn v round the unit axis k by angle t (Rodrigues). */
+const turn = (v, k, t) => { const c = Math.cos(t), s = Math.sin(t); return add(add(mul(v, c), mul(cross(k, v), s)), mul(k, dot(k, v)*(1 - c))); };
+
+/**
+ * One path, in world units from its start: shape 0 Gust, 1 Spiral, 2 Loop, 3 Wave. d is the wind's way on the
+ * ground, up is up; L its length; curl how many turns at the end; R a seeded random. Returns { pts, bend } where
+ * bend is the unit normal of the plane each point bends in (the ribbon spreads in that plane).
+ */
+function streamPath(shape, d, L, curl, R, down){
+  const up = [0, down ? -1 : 1, 0], side = norm(cross([0, 1, 0], d)), pts = [], plane = [];
+  const K = 140, drift = (R() - 0.5)*0.25;
+  if(shape === 1){                                    // SPIRAL: a coil round an upright axis, tightening as it rises
+    const r0 = L*0.32, turns = 1.2 + curl*2.4, rise = L*(0.25 + R()*0.35)*(down ? -1 : 1);
+    for(let i = 0; i <= K; i++){ const s = i/K, a = s*turns*Math.PI*2, r = r0*(0.22 + 0.78*Math.exp(-2.2*s));
+      pts.push(add(add(mul(side, Math.cos(a)*r), mul(d, Math.sin(a)*r)), [0, rise*s, 0])); plane.push([0, 1, 0]); }
+    return { pts, plane };
+  }
+  // a run along the wind, with a gentle rise and fall, then (Gust, Loop) a curl in the upright plane of the wind
+  const run = shape === 3 ? 1 : shape === 2 ? 0.62 : Math.max(0.3, 1 - 0.18 - curl*0.32), wav = shape === 3 ? 0.08 + R()*0.06 : 0.025 + R()*0.03;
+  const waves = shape === 3 ? 1.5 + R()*2 : 0.6 + R()*0.8, ph = R()*Math.PI*2, Kr = Math.round(K*run);
+  const at = s => add(add(mul(d, s*L), mul(up, Math.sin(ph + s*waves*Math.PI*2)*wav*L - Math.sin(ph)*wav*L)), mul(side, drift*s*L));
+  for(let i = 0; i <= Kr; i++){ pts.push(at(i/K)); plane.push(side); }
+  if(shape === 3) return { pts, plane };
+  // the curl starts where the run ends, heading on along the run's own direction
+  const E = pts[pts.length - 1], T0 = norm(sub(E, pts[pts.length - 2])), U = norm(sub(up, mul(T0, dot(up, T0))));
+  const turns = shape === 2 ? 1 : 0.6 + curl*1.9, r0 = L*(shape === 2 ? 0.1 : 0.07 + curl*0.06), Kc = K - Kr;
+  const C = add(E, mul(U, r0));
+  for(let i = 1; i <= Kc; i++){ const s = i/Kc, a = s*turns*Math.PI*2;
+    // (Gust: the radius falls fast at first, slower after — Gordon's spiral; Loop: a round loop, then on along the wind)
+    const r = shape === 2 ? r0 : r0*(0.12 + 0.88*Math.exp(-2.6*s*turns/1.6));
+    const p = add(add(C, add(mul(T0, Math.sin(a)*r), mul(U, -Math.cos(a)*r))), mul(side, s*r0*0.9*(drift > 0 ? 1 : -1)));
+    pts.push(p); plane.push(side); }
+  if(shape === 2){ const last = pts[pts.length - 1]; for(let i = 1; i <= 40; i++) { pts.push(add(last, mul(T0, i/40*L*0.35))); plane.push(side); } }
+  return { pts, plane };
+}
+
+const STREAMER_STEPS = {
+  streamers: { cat: 'Marks', label: 'Streamers', ins: ['where', 'blow from', 'light from'], outs: ['ribbons', 'facing', 'side', 'depth'],
+    io: { ins: ['field', 'value', 'value'], outs: ['field', 'field', 'field', 'field'] },
+    params: [ST_R('shape', 'Shape: ' + STREAMER_SHAPES.join(' · '), 0), ST_R('count', 'Gusts', 6, 0, 40), ST_R('strands', 'Strands', 3, 1, 8), ST_R('length', 'Length', 50),
+      ST_R('curl', 'Curl', 50), ST_R('width', 'Width', 100, 20, 300), ST_R('twist', 'Twist', 30), ST_R('depth', 'Depth', 60), ST_R('horizon', 'Horizon', 45), ST_R('variant', 'Variation', 0, 0, 99)],
+    cost: () => 4,
+    doc: 'Ribbons swept along curves in 3D space and seen through a camera: gusts that run with the wind and end in a tightening curl, spirals, loops or waves, near ones large and far ones small, twisting to show both faces. Maps only (the ribbons, how they face the light, which face, how near), for a graph to light in bands.',
+    run(E, n){ const { ww, wh, num } = E, N = ww*wh, mn = Math.min(ww, wh), W = ww/mn, H = wh/mn;
+      // (a way wired as a map, as Math hands on, counts by its mean)
+      const valOf = v => typeof v === 'number' ? v : v && v.length ? v.reduce((a, b) => a + b, 0)/v.length : null;
+      const whereF = E.asField(E.input(n, 1)), bv = valOf(E.input(n, 2)), lv = valOf(E.input(n, 3));
+      const fieldAt = (x, y) => whereF ? whereF[Math.min(wh - 1, Math.max(0, y*mn | 0))*ww + Math.min(ww - 1, Math.max(0, x*mn | 0))] : 1;
+      const seed = ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0) ^ 0x57a3) >>> 0, R = mulberry32(seed);
+      const shapeK = Math.min(4, Math.floor(num(n, 'shape', 0)/100*5)), count = Math.round(num(n, 'count', 6)), strands = Math.round(num(n, 'strands', 3));
+      const lenK = num(n, 'length', 50)/100, curl = num(n, 'curl', 50)/100, widK = num(n, 'width', 100)/100, twist = num(n, 'twist', 30)/100, depthK = num(n, 'depth', 60)/100;
+      const hz = num(n, 'horizon', 45)/100*H;
+      // ---- the camera: the eye 1 above the sea, looking level at the horizon
+      const f = 1.15*Math.max(W, H), eye = 1, proj = p => [W/2 + f*p[0]/p[2], hz - f*p[1]/p[2]];
+      // ---- the wind's way on the ground (the dial's way: up the page is away from the eye), the sun's direction
+      const bdeg = typeof bv === 'number' ? bv*360 : (E.ctx.light ?? 315), ba = bdeg*Math.PI/180;
+      const d = norm([Math.sin(ba), 0, Math.cos(ba)*0.7]);
+      const ldeg = typeof lv === 'number' ? lv*360 : (E.ctx.light ?? 315), la = ldeg*Math.PI/180, tilt = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
+      const el = tilt*tilt*1.2, Ls = norm([Math.sin(la)*0.9*Math.cos(el), Math.sin(el), Math.cos(el)*0.6]);
+      // ---- the gusts: placed, pathed, made ribbons, cut into quads
+      const quads = [], zNear = 1.6, zFar = zNear + 4 + depthK*36;
+      for(let g = 0; g < count; g++){
+        let sx = 0, sy = 0, ok = false;
+        for(let t = 0; t < 40 && !ok; t++){ sx = R()*W; sy = R()*H; ok = R() < fieldAt(sx, sy); }
+        if(!ok) continue;
+        let z = zNear*Math.pow(zFar/zNear, Math.pow(R(), 0.8));
+        const yAt = z => (hz - sy)*z/f;
+        // (never below the sea: a point under the horizon can only be near)
+        if(sy > hz){ const zMax = (eye - 0.12)*f/(sy - hz); if(zMax < zNear*0.7) continue; z = Math.min(z, zMax); }
+        // (and never far above it: a point high on the page lies far away)
+        else if(sy < hz){ const zMin = (hz - sy)*f/(eye*2.2); if(zMin > zFar*1.6) continue; z = Math.max(z, zMin); }
+        const start = [(sx - W/2)*z/f, yAt(z), z];
+        const shape = shapeK === 4 ? [0, 0, 0, 1, 2, 3][Math.floor(R()*6)] : shapeK;
+        const L = (0.6 + lenK*3.2)*(0.7 + R()*0.6)*Math.max(1, z*0.12), dg = norm(add(d, [0, 0, (R() - 0.5)*0.4]));
+        // (begin back along the wind, so the gust passes through the chosen point; a curl heads down only with room)
+        const down = start[1] > 0.6 && R() < 0.3, hw0 = (0.006 + 0.022*widK)*(0.75 + R()*0.5)*Math.max(1, z*0.06);
+        const ns = Math.max(1, Math.min(strands, 1 + Math.floor(R()*strands*1.3)));
+        for(let k = 0; k < ns; k++){
+          const { pts, plane } = streamPath(shape, dg, L*(1 - k*0.13 - R()*0.08), curl*(0.85 + R()*0.3), mulberry32((seed + g*131 + k*17) >>> 0), down);
+          const off = add(mul([0, 1, 0], (k - (ns - 1)/2)*hw0*3.2), mul(norm(cross([0, 1, 0], dg)), (R() - 0.5)*hw0*4));
+          const o = add(sub(start, mul(dg, L*0.35)), off), P = pts.map(p => add(p, o)), K = P.length - 1;
+          if(P.some(p => p[2] < 0.35 || p[1] < -eye + 0.04)) continue;
+          const tw0 = R()*Math.PI*2, tws = (R() < 0.5 ? -1 : 1)*twist*Math.PI*(1 + R()*1.5);
+          const edges = P.map((p, i) => { const s = i/K, T = norm(sub(P[Math.min(K, i + 1)], P[Math.max(0, i - 1)]));
+            // the ribbon spreads across the curve, in the plane it bends in, turned by Twist
+            let w = norm(cross(T, plane[i])); w = turn(w, T, tw0*twist + tws*s);
+            const hw = hw0*Math.pow(Math.min(1, s/0.08), 0.5)*(1 - 0.75*Math.pow(s, 1.6));
+            const nrm = norm(cross(T, w)), toEye = norm(mul(p, -1)), face = dot(nrm, toEye) >= 0 ? nrm : mul(nrm, -1);
+            const lit = 0.5 + 0.5*dot(face, Ls), side = dot(nrm, toEye) >= 0 ? 1 : 0;
+            const fade = Math.min(1, s/0.14, (1 - s)/0.05);
+            return { a: proj(add(p, mul(w, hw))), b: proj(add(p, mul(w, -hw))), z: p[2], lit, side, fade: Math.max(0, fade) }; });
+          for(let i = 0; i < K; i++){ const e0 = edges[i], e1 = edges[i + 1];
+            quads.push({ q: [e0.a, e1.a, e1.b, e0.b], z: (e0.z + e1.z)/2, lit: (e0.lit + e1.lit)/2, side: e0.side, fade: (e0.fade + e1.fade)/2 }); }
+        }
+      }
+      quads.sort((a, b) => b.z - a.z);
+      // ---- drawing, far to near, at the grid's resolution
+      const S = mn, lnZ = Math.log(zFar/zNear);
+      const paint = (x, grey, mode) => { if(mode) x.globalCompositeOperation = mode; x.lineJoin = 'round'; x.lineWidth = 0.8;
+        for(const Q of quads){ const g = Math.round(255*Math.max(0, Math.min(1, grey(Q)))), c = `rgb(${g},${g},${g})`; x.fillStyle = c; x.strokeStyle = c;
+          x.beginPath(); Q.q.forEach(([X, Y], i) => i ? x.lineTo(X*S, Y*S) : x.moveTo(X*S, Y*S)); x.closePath(); x.fill(); x.stroke(); } };
+      const ribF = E.marks(null, 0, x => paint(x, Q => Q.fade, 'lighten'));
+      const faceF = E.marks(null, 0, x => paint(x, Q => Q.lit));
+      const sideF = E.marks(null, 0, x => paint(x, Q => Q.side));
+      const depthF = E.marks(null, 0, x => paint(x, Q => 1 - Math.log(Math.max(zNear, Q.z)/zNear)/lnZ));
+      return [ribF, faceF, sideF, depthF]; } },
+};
+
+
 /* ==== steps.js ==== */
 /**
  * steps.js — THE STEPS: the small operations Vellum's surfaces are made of,
@@ -17928,6 +18071,7 @@ const NETWORK_STEPS = {
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
+
 
 
 
@@ -19135,7 +19279,7 @@ const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...PATTERN_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...STREAMER_STEPS, ...PATTERN_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
@@ -21314,6 +21458,193 @@ const TEXTURE_CHAINS = {
       [5, 1, 33, paramPort('maprange', 'outHi')], [18, 1, 34, 1], [22, 4, 34, 2], [33, 1, 34, 3], [22, 4, 35, 1], [35, 1, 37, 1], [35, 2, 38, 1],
       [37, 1, 39, 1], [38, 1, 39, 2], [39, 1, 36, 1], [34, 1, 40, 1], [11, 1, 40, 2], [30, 1, 40, 3], [30, 1, 41, 1], [36, 1, 41, 2], [40, 1, 42, 1],
       [15, 1, 42, 2], [41, 1, 42, 3], [42, 1, 43, 1]] },
+  windsea: { label: 'Windward Sea', div: 2, v: 5, teach: 'A sea and sky in the cel-shaded look of the great sailing games (docs/prior-art/cel-shaded.md): light in a few flat bands, never a gradient. The seed picks the weather (clear, fair, overcast, now and then a storm: a slate sky, a choppy sea, wind everywhere); Weather leans it fairer or stormier. The Light Engine lights the clouds’ and islands’ heights from the dial, and a Posterize of its light (Toon Bands) with a Gradient Map gives each band a hue: shadow, key, bright edge. The clouds are Scatter’s domes heaped above the horizon, curled by two Twirls (Swirls). The wind is not painted on the sky: Streamers sweeps ribbons through the scene, gusts that end in tightening curls, near ones large and far ones small, lit in the same bands, their back faces a shade darker (Wind). The sea is three colours: a Gradient Map of the depth, and foam in flattened rounds and the waves’ long lines, thrown smaller the farther they lie (Foam, Waves). Islands rise where a Perlin reaches above the horizon (Islands). The sun stands where the dial lays it, and sets into the sea as its height sinks. Try: the dial low and behind, the Sky Hue orange.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Horizon', def: 45 }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2', name: 'Weather', def: 50 }, 40, 150],                                                                                     // 2
+      ['knob', { slot: '3', name: 'Swirls', def: 45 }, 40, 260],                                                                                      // 3
+      ['knob', { slot: '4', name: 'Waves', def: 50 }, 40, 370],                                                                                       // 4
+      ['knob', { slot: '5', name: 'Foam', def: 45 }, 40, 480],                                                                                        // 5
+      ['knob', { slot: '6', name: 'Wind', def: 35 }, 40, 590],                                                                                        // 6
+      ['knob', { slot: '7', name: 'Islands', def: 40 }, 40, 700],                                                                                     // 7
+      ['knob', { slot: '8', name: 'Toon Bands', def: 30 }, 40, 810],                                                                                  // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Sky Hue' }, 40, 1030],                                                                                              // 10
+      ['hue', { slot: '2', name: 'Sea Hue' }, 40, 1140],                                                                                              // 11
+      ['hue', { slot: '3', name: 'Deep Sea Hue' }, 40, 1250],                                                                                         // 12
+      ['hue', { slot: '4', name: 'Foam Hue' }, 40, 1360],                                                                                             // 13
+      ['hue', { slot: '5', name: 'Island Hue' }, 40, 1470],                                                                                           // 14
+      ['hue', { slot: '6', name: 'Sun Hue' }, 40, 1580],                                                                                              // 15
+      ['maprange', { outLo: 0, outHi: 100 }, 480, 40],                                                                                                // 16
+      ['random', { lo: 0, hi: 100 }, 40, 1690],                                                                                                       // 17
+      ['maprange', { inLo: 50, inHi: 100, outLo: 0, outHi: 45 }, 260, 40],                                                                            // 18
+      ['maprange', { inLo: 0, inHi: 50, outLo: 55, outHi: 100 }, 260, 150],                                                                           // 19
+      ['maprange', { inLo: 76, inHi: 96, outLo: 0, outHi: 100 }, 700, 40],                                                                            // 20
+      ['gradient', { shape: 'linear', angle: 90 }, 40, 1800],                                                                                         // 21
+      ['threshold', { at: 45, '~at': '62,30', soft: 0 }, 260, 260],                                                                                   // 22
+      ['levels', { lo: 45, '~lo': '62,30', hi: 100, gamma: 50 }, 260, 370],                                                                           // 23
+      ['gradmap', { stops: 3 }, 480, 150],                                                                                                            // 24
+      ['mix', { t: 45 }, 260, 480],                                                                                                                   // 25
+      ['mix', { t: 70 }, 260, 590],                                                                                                                   // 26
+      ['math', { op: 'sine' }, 260, 700],                                                                                                             // 27
+      ['dial', {}, 40, 1910],                                                                                                                         // 28
+      ['number', { value: 100 }, 40, 2020],                                                                                                           // 29
+      ['math', { op: 'min' }, 260, 810],                                                                                                              // 30
+      ['maprange', { outLo: 62, outHi: 30 }, 260, 920],                                                                                               // 31
+      ['math', { op: 'multiply' }, 480, 260],                                                                                                         // 32
+      ['number', { value: 12 }, 40, 2130],                                                                                                            // 33
+      ['math', { op: 'subtract' }, 480, 370],                                                                                                         // 34
+      ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 35
+      ['math', { op: 'subtract' }, 920, 40],                                                                                                          // 36
+      ['number', { value: 4 }, 40, 2240],                                                                                                             // 37
+      ['math', { op: 'subtract' }, 1140, 40],                                                                                                         // 38
+      ['ellipse', { size: 9, height: 100, soft: 1 }, 1360, 40],                                                                                       // 39
+      ['ellipse', { size: 16, height: 100, soft: 1, rings: 1, line: 6 }, 1360, 150],                                                                  // 40
+      ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 41
+      ['mix', { t: 40 }, 260, 1030],                                                                                                                  // 42
+      ['blend', { mode: 'normal', opacity: 70 }, 1800, 40],                                                                                           // 43
+      ['maprange', { inLo: 30, inHi: 45, outLo: 100, outHi: 0 }, 480, 480],                                                                           // 44
+      ['maprange', { outLo: 50, outHi: 18 }, 260, 1140],                                                                                              // 45
+      ['maprange', { outLo: 62, outHi: 30 }, 260, 1250],                                                                                              // 46
+      ['threshold', { at: 18, soft: 4 }, 700, 260],                                                                                                   // 47
+      ['threshold', { at: 75, soft: 25 }, 700, 370],                                                                                                  // 48
+      ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 49
+      ['maprange', { inLo: 15, inHi: 100, outLo: 100, outHi: 30 }, 700, 480],                                                                         // 50
+      ['math', { op: 'multiply' }, 1140, 150],                                                                                                        // 51
+      ['scatter', { shape: 'dot', count: 40, '~count': '4,110', size: 30, '~size': '16,46', vary: 60, turn: 0, clump: 70, fade: 0, layers: 'largest', per: 'for the page' }, 1360, 260],// 52
+      ['maprange', { inLo: 0, inHi: 90, outLo: 3, outHi: 100 }, 700, 590],                                                                            // 53
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 54
+      ['maprange', { inLo: 10, inHi: 90, outLo: 0, outHi: 100 }, 700, 700],                                                                           // 55
+      ['math', { op: 'average' }, 920, 260],                                                                                                          // 56
+      ['threshold', { at: 16, soft: 2 }, 700, 810],                                                                                                   // 57
+      ['twirl', { angle: 120, '~angle': '0,220', radius: 30, '~radius': '18,50', x: 50, '~x': '10,90', y: 30, '~y': '15,40' }, 1800, 150],            // 58
+      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 59
+      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 60
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 61
+      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 62
+      ['twirl', { angle: -120, '~angle': '0,-220', radius: 26, '~radius': '14,44', x: 50, '~x': '10,90', y: 25, '~y': '10,40' }, 2020, 40],           // 63
+      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 64
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 65
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 66
+      ['threshold', { at: 30, soft: 3 }, 2240, 40],                                                                                                   // 67
+      ['math', { op: 'subtract' }, 480, 590],                                                                                                         // 68
+      ['math', { op: 'multiply' }, 2460, 40],                                                                                                         // 69
+      ['blur', { radius: 14 }, 2240, 150],                                                                                                            // 70
+      ['mix', { t: 38 }, 260, 1360],                                                                                                                  // 71
+      ['mix', { t: 14 }, 260, 1470],                                                                                                                  // 72
+      ['material', { relief: 120, gloss: 10, shine: 0, shadow: 70, occlusion: 20, ambient: 30 }, 2460, 150],                                          // 73
+      ['number', { value: 50 }, 40, 3120],                                                                                                            // 74
+      ['posterize', { steps: 3, '~steps': '2,5' }, 2680, 40],                                                                                         // 75
+      ['gradmap', { stops: 3, blend: 'bands' }, 3120, 40],                                                                                            // 76
+      ['maprange', { inLo: 15, inHi: 75, outLo: 0, outHi: 100 }, 2900, 40],                                                                           // 77
+      ['blend', { mode: 'normal', opacity: 100 }, 3340, 40],                                                                                          // 78
+      ['perlin', { scale: 7, '~scale': '4,12', details: 3, contrast: 50 }, 260, 1580],                                                                // 79
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 80
+      ['maprange', { outLo: 0, outHi: 40, '~outHi': '0,100' }, 480, 700],                                                                             // 81
+      ['math', { op: 'subtract' }, 700, 920],                                                                                                         // 82
+      ['threshold', { at: 1, soft: 0 }, 920, 370],                                                                                                    // 83
+      ['math', { op: 'subtract' }, 480, 810],                                                                                                         // 84
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 85
+      ['blur', { radius: 8 }, 1360, 370],                                                                                                             // 86
+      ['mix', { t: 45 }, 260, 1690],                                                                                                                  // 87
+      ['mix', { t: 40 }, 260, 1800],                                                                                                                  // 88
+      ['material', { relief: 140, gloss: 10, shine: 0, shadow: 70, occlusion: 20, ambient: 30 }, 1580, 260],                                          // 89
+      ['number', { value: 50 }, 40, 3340],                                                                                                            // 90
+      ['posterize', { steps: 3, '~steps': '2,5' }, 1800, 260],                                                                                        // 91
+      ['gradmap', { stops: 3, blend: 'bands' }, 2240, 260],                                                                                           // 92
+      ['maprange', { inLo: 15, inHi: 75, outLo: 0, outHi: 100 }, 2020, 150],                                                                          // 93
+      ['blend', { mode: 'normal', opacity: 18 }, 2460, 260],                                                                                          // 94
+      ['blend', { mode: 'normal', opacity: 100 }, 3560, 40],                                                                                          // 95
+      ['gradmap', { stops: 3 }, 480, 920],                                                                                                            // 96
+      ['mix', { t: 45 }, 260, 1910],                                                                                                                  // 97
+      ['maprange', { inLo: 0, inHi: 100, outLo: 6, outHi: 100 }, 480, 1030],                                                                          // 98
+      ['perlin', { scale: 4, '~scale': '2,7', details: 3, contrast: 50 }, 40, 3450],                                                                  // 99
+      ['threshold', { at: 58, soft: 10 }, 260, 2020],                                                                                                 // 100
+      ['scatter', { shape: 'dot', count: 160, '~count': '20,420', size: 9, '~size': '1,18', vary: 70, turn: 0, clump: 55, fade: 0, per: 'for the page' }, 920, 480],// 101
+      ['math', { op: 'multiply' }, 480, 1140],                                                                                                        // 102
+      ['maprange', { outLo: 100, outHi: 40 }, 480, 1250],                                                                                             // 103
+      ['math', { op: 'multiply' }, 700, 1030],                                                                                                        // 104
+      ['scale', { scale: 100, stretch: 55, cx: 50, cy: 100, edges: 'repeat' }, 1140, 370],                                                            // 105
+      ['warp', { amount: 18 }, 1360, 480],                                                                                                            // 106
+      ['perlin', { scale: 10, details: 3 }, 40, 3560],                                                                                                // 107
+      ['scatter', { shape: 'dash', count: 60, '~count': '0,180', size: 22, '~size': '2,40', vary: 60, turn: 3, clump: 30, fade: 0, per: 'for the page' }, 1360, 590],// 108
+      ['maprange', { outLo: 0, outHi: 45 }, 920, 590],                                                                                                // 109
+      ['math', { op: 'add' }, 1140, 480],                                                                                                             // 110
+      ['warp', { amount: 25 }, 1580, 370],                                                                                                            // 111
+      ['perlin', { scale: 6, details: 3 }, 40, 3670],                                                                                                 // 112
+      ['threshold', { at: 40, soft: 6 }, 1580, 480],                                                                                                  // 113
+      ['blend', { mode: 'normal', opacity: 90 }, 1800, 370],                                                                                          // 114
+      ['threshold', { at: 40, soft: 6 }, 1800, 480],                                                                                                  // 115
+      ['blend', { mode: 'normal', opacity: 100 }, 2020, 260],                                                                                         // 116
+      ['ellipse', { size: 40, height: 100, soft: 30 }, 480, 1360],                                                                                    // 117
+      ['scatter', { shape: 'dash', count: 60, '~count': '20,140', size: 6, vary: 60, turn: 4, clump: 0, fade: 0, per: 'for the page' }, 920, 700],    // 118
+      ['math', { op: 'multiply' }, 700, 1140],                                                                                                        // 119
+      ['mix', { t: 30 }, 260, 2130],                                                                                                                  // 120
+      ['blend', { mode: 'normal', opacity: 100 }, 2240, 370],                                                                                         // 121
+      ['blend', { mode: 'normal', opacity: 100 }, 3780, 40],                                                                                          // 122
+      ['maprange', { inLo: 0, inHi: 12, outLo: 55, outHi: 0 }, 480, 1470],                                                                            // 123
+      ['mix', { t: 55 }, 260, 2240],                                                                                                                  // 124
+      ['math', { op: 'multiply' }, 700, 1250],                                                                                                        // 125
+      ['blend', { mode: 'normal', opacity: 100 }, 4000, 40],                                                                                          // 126
+      ['mix', { t: 18 }, 260, 2350],                                                                                                                  // 127
+      ['maprange', { outLo: 100, outHi: 55 }, 480, 1580],                                                                                             // 128
+      ['math', { op: 'multiply' }, 920, 810],                                                                                                         // 129
+      ['blend', { mode: 'normal', opacity: 84 }, 4220, 40],                                                                                           // 130
+      ['streamers', { shape: 0, count: 5, '~count': '0,16', strands: 3, length: 50, '~length': '30,80', curl: 50, '~curl': '25,85', width: 100, twist: 30, depth: 60, horizon: 45, '~horizon': '62,30' }, 1360, 700],// 131
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 132
+      ['maprange', { outLo: 19, outHi: 31 }, 260, 2460],                                                                                              // 133
+      ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 134
+      ['threshold', { at: 50, soft: 0 }, 260, 2570],                                                                                                  // 135
+      ['number', { value: 50 }, 40, 4000],                                                                                                            // 136
+      ['math', { op: 'multiply' }, 480, 1690],                                                                                                        // 137
+      ['math', { op: 'add' }, 700, 1360],                                                                                                             // 138
+      ['maprange', { outLo: 0, outHi: 30 }, 920, 920],                                                                                                // 139
+      ['math', { op: 'add' }, 1140, 590],                                                                                                             // 140
+      ['random', { lo: 0, hi: 100 }, 40, 4110],                                                                                                       // 141
+      ['random', { lo: 0, hi: 100 }, 40, 4220],                                                                                                       // 142
+      ['posterize', { steps: 3, '~steps': '2,5' }, 1580, 590],                                                                                        // 143
+      ['gradmap', { stops: 3, blend: 'bands' }, 2020, 370],                                                                                           // 144
+      ['maprange', { inLo: 20, inHi: 85, outLo: 0, outHi: 100 }, 1800, 590],                                                                          // 145
+      ['mix', { t: 30 }, 260, 2680],                                                                                                                  // 146
+      ['mix', { t: 9 }, 260, 2790],                                                                                                                   // 147
+      ['invert', {}, 1580, 700],                                                                                                                      // 148
+      ['mix', { t: 22 }, 260, 2900],                                                                                                                  // 149
+      ['blend', { mode: 'normal', opacity: 50 }, 2240, 480],                                                                                          // 150
+      ['blend', { mode: 'normal', opacity: 96 }, 4440, 40],                                                                                           // 151
+      ['surface', { name: 'Windward Sea', ground: 'colour' }, 4660, 40]],                                                                             // 152
+    wires: [[17, 1, 16, 1], [2, 1, 18, 1], [18, 1, 16, paramPort('maprange', 'outLo')], [2, 1, 19, 1], [19, 1, 16, paramPort('maprange', 'outHi')], [16, 1, 20, 1],
+      [21, 1, 22, 1], [1, 1, 22, paramPort('threshold', 'at')], [21, 1, 23, 1], [1, 1, 23, paramPort('levels', 'lo')], [21, 1, 24, 1], [10, 1, 24, 2],
+      [10, 1, 25, 1], [13, 1, 25, 2], [25, 1, 24, 3], [10, 1, 26, 1], [13, 1, 26, 2], [26, 1, 24, 4], [9, 1, 27, 1], [28, 2, 30, 1], [29, 1, 30, 2],
+      [1, 1, 31, 1], [30, 1, 32, 1], [30, 1, 32, 2], [31, 1, 34, 1], [33, 1, 34, 2], [32, 1, 35, 1], [34, 1, 35, 2], [31, 1, 36, 1], [35, 1, 36, 2],
+      [36, 1, 38, 1], [37, 1, 38, 2], [27, 1, 39, paramPort('ellipse', 'x')], [38, 1, 39, paramPort('ellipse', 'y')], [27, 1, 40, paramPort('ellipse', 'x')],
+      [38, 1, 40, paramPort('ellipse', 'y')], [24, 1, 41, 1], [15, 1, 41, 2], [39, 1, 41, 3], [15, 1, 42, 1], [13, 1, 42, 2], [41, 1, 43, 1], [42, 1, 43, 2],
+      [40, 1, 43, 3], [21, 1, 44, 1], [1, 1, 45, 1], [45, 1, 44, paramPort('maprange', 'inLo')], [1, 1, 46, 1], [46, 1, 44, paramPort('maprange', 'inHi')],
+      [44, 1, 47, 1], [44, 1, 48, 1], [47, 1, 49, 1], [48, 1, 49, 2], [44, 1, 50, 1], [50, 1, 51, 1], [49, 1, 51, 2], [51, 1, 52, 2], [16, 1, 53, 1],
+      [53, 1, 52, paramPort('scatter', 'count')], [16, 1, 55, 1], [54, 1, 56, 1], [55, 1, 56, 2], [56, 1, 52, paramPort('scatter', 'size')], [44, 1, 57, 1],
+      [52, 2, 59, 1], [57, 1, 59, 2], [59, 1, 58, 1], [3, 1, 58, paramPort('twirl', 'angle')], [60, 1, 58, paramPort('twirl', 'radius')],
+      [61, 1, 58, paramPort('twirl', 'x')], [62, 1, 58, paramPort('twirl', 'y')], [58, 1, 63, 1], [3, 1, 63, paramPort('twirl', 'angle')],
+      [64, 1, 63, paramPort('twirl', 'radius')], [65, 1, 63, paramPort('twirl', 'x')], [66, 1, 63, paramPort('twirl', 'y')], [63, 1, 67, 1], [29, 1, 68, 1],
+      [22, 1, 68, 2], [67, 1, 69, 1], [68, 1, 69, 2], [63, 1, 70, 1], [10, 1, 71, 1], [13, 1, 71, 2], [13, 1, 72, 1], [10, 1, 72, 2], [74, 1, 73, 1],
+      [70, 1, 73, 2], [9, 1, 73, 7], [73, 2, 75, 1], [8, 1, 75, paramPort('posterize', 'steps')], [75, 1, 77, 1], [77, 1, 76, 1], [71, 1, 76, 2],
+      [72, 1, 76, 3], [13, 1, 76, 4], [43, 1, 78, 1], [76, 1, 78, 2], [69, 1, 78, 3], [80, 1, 79, paramPort('perlin', 'scale')], [79, 1, 81, 1],
+      [7, 1, 81, paramPort('maprange', 'outHi')], [81, 1, 82, 1], [44, 1, 82, 2], [82, 1, 83, 1], [29, 1, 84, 1], [22, 1, 84, 2], [83, 1, 85, 1],
+      [84, 1, 85, 2], [85, 1, 86, 1], [14, 1, 87, 1], [12, 1, 87, 2], [14, 1, 88, 1], [15, 1, 88, 2], [90, 1, 89, 1], [86, 1, 89, 2], [9, 1, 89, 7],
+      [89, 2, 91, 1], [8, 1, 91, paramPort('posterize', 'steps')], [91, 1, 93, 1], [93, 1, 92, 1], [87, 1, 92, 2], [14, 1, 92, 3], [88, 1, 92, 4],
+      [92, 1, 94, 1], [10, 1, 94, 2], [78, 1, 95, 1], [94, 1, 95, 2], [85, 1, 95, 3], [23, 1, 96, 1], [11, 1, 97, 1], [10, 1, 97, 2], [97, 1, 96, 2],
+      [11, 1, 96, 3], [12, 1, 96, 4], [23, 1, 98, 1], [99, 1, 100, 1], [22, 1, 102, 1], [100, 1, 102, 2], [23, 1, 103, 1], [102, 1, 104, 1], [103, 1, 104, 2],
+      [104, 1, 101, 2], [5, 1, 101, paramPort('scatter', 'count')], [98, 1, 101, paramPort('scatter', 'size')], [101, 1, 105, 1], [105, 1, 106, 1],
+      [107, 1, 106, 2], [22, 1, 108, 2], [20, 1, 109, 1], [4, 1, 110, 1], [109, 1, 110, 2], [110, 1, 108, paramPort('scatter', 'count')],
+      [98, 1, 108, paramPort('scatter', 'size')], [108, 1, 111, 1], [112, 1, 111, 2], [106, 1, 113, 1], [96, 1, 114, 1], [13, 1, 114, 2], [113, 1, 114, 3],
+      [111, 1, 115, 1], [114, 1, 116, 1], [13, 1, 116, 2], [115, 1, 116, 3], [27, 1, 117, paramPort('ellipse', 'x')], [117, 1, 119, 1], [22, 1, 119, 2],
+      [119, 1, 118, 2], [4, 1, 118, paramPort('scatter', 'count')], [15, 1, 120, 1], [13, 1, 120, 2], [116, 1, 121, 1], [120, 1, 121, 2], [118, 1, 121, 3],
+      [95, 1, 122, 1], [121, 1, 122, 2], [22, 1, 122, 3], [23, 1, 123, 1], [10, 1, 124, 1], [13, 1, 124, 2], [123, 1, 125, 1], [22, 1, 125, 2],
+      [122, 1, 126, 1], [124, 1, 126, 2], [125, 1, 126, 3], [12, 1, 127, 1], [13, 1, 127, 2], [22, 1, 128, 1], [20, 1, 129, 1], [128, 1, 129, 2],
+      [126, 1, 130, 1], [127, 1, 130, 2], [129, 1, 130, 3], [132, 1, 133, 1], [134, 1, 135, 1], [135, 1, 137, 1], [136, 1, 137, 2], [133, 1, 138, 1],
+      [137, 1, 138, 2], [138, 1, 131, 2], [9, 1, 131, 3], [20, 1, 139, 1], [6, 1, 140, 1], [139, 1, 140, 2], [140, 1, 131, paramPort('streamers', 'count')],
+      [1, 1, 131, paramPort('streamers', 'horizon')], [141, 1, 131, paramPort('streamers', 'length')], [142, 1, 131, paramPort('streamers', 'curl')],
+      [131, 2, 143, 1], [8, 1, 143, paramPort('posterize', 'steps')], [143, 1, 145, 1], [145, 1, 144, 1], [13, 1, 146, 1], [10, 1, 146, 2], [146, 1, 144, 2],
+      [13, 1, 147, 1], [10, 1, 147, 2], [147, 1, 144, 3], [13, 1, 144, 4], [131, 3, 148, 1], [13, 1, 149, 1], [12, 1, 149, 2], [144, 1, 150, 1],
+      [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 152, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
@@ -22783,6 +23114,14 @@ const TEXTURE_PARAMS = {
                   {key:'slip', label:'Wash Slip', min:0, max:100, def:30, unit:''},
                   {key:'paper', label:'Paper', min:0, max:100, def:40, unit:''},
                   {key:'species', label:'Species', min:0, max:100, def:98, unit:''}],
+  windsea:        [{key:'horizon', label:'Horizon', min:0, max:100, def:45, unit:''},
+                  {key:'weather', label:'Weather', min:0, max:100, def:50, unit:''},
+                  {key:'swirls', label:'Swirls', min:0, max:100, def:45, unit:''},
+                  {key:'waves', label:'Waves', min:0, max:100, def:50, unit:''},
+                  {key:'foam', label:'Foam', min:0, max:100, def:45, unit:''},
+                  {key:'wind', label:'Wind', min:0, max:100, def:35, unit:''},
+                  {key:'islands', label:'Islands', min:0, max:100, def:40, unit:''},
+                  {key:'bands', label:'Toon Bands', min:0, max:100, def:30, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -23306,6 +23645,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Ground Hue', 'Flower Hue', 'Second Flower Hue', 'Third Flower Hue', 'Center Hue', 'Sprig Hue'], tintDefaults:['#F4EEE2', '#C8506A', '#5A7AC8', '#E8B21C', '#F2D27A', '#6E8A4A'] },
   botline:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
                    tintLabels:['Paper Hue', 'Ink Hue', 'Petal Wash Hue', 'Center Wash Hue', 'Leaf Wash Hue', 'Second Ink Hue'], tintDefaults:['#F4EFE4', '#2A2420', '#D88098', '#E8C040', '#8AA87A', '#4E6A3A'] },
+  windsea:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+                   tintLabels:['Sky Hue', 'Sea Hue', 'Deep Sea Hue', 'Foam Hue', 'Island Hue', 'Sun Hue'], tintDefaults:['#3A7BD5', '#1F6FB8', '#0E4A8A', '#F4F8FF', '#5FA040', '#FFF2A8'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -23554,6 +23895,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1 || '#F4EEE2', tint2 || '#C8506A');   // (chains.js)
   } else if(type === 'botline'){
     result = genChain(type, w, h, light, extra, tint1 || '#F4EFE4', tint2 || '#2A2420');   // (chains.js)
+  } else if(type === 'windsea'){
+    result = genChain(type, w, h, light, extra, tint1 || '#3A7BD5', tint2 || '#1F6FB8');   // (chains.js)
   } else if(type === 'dappled'){
     result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
   } else if(type === 'windowlight'){
@@ -24763,6 +25106,7 @@ but bear with me, dear}]/jitter:200
                 <option value="cityscape" data-str="option.cityscape">Night City</option>
                 <option value="landscape" data-str="option.landscape">Painted Landscape</option>
                 <option value="water" data-str="option.scrying_pool">Scrying Pool</option>
+                <option value="windsea" data-str="option.windsea">Windward Sea</option>
               </optgroup>
               <optgroup label="ᘓ Flowers">
                 <option value="botline" data-str="option.botline">Botanical Line</option>
@@ -25905,6 +26249,7 @@ const UI_STRINGS = {
   'option.blackhole':                         "Black Hole",
   'option.pixelspace':                        "Pixel Space",
   'option.webb':                              "Webb Sky",
+  'option.windsea':                             "Windward Sea",
   'option.botline':                             "Botanical Line",
   'option.ditsy':                               "Ditsy Print",
   'option.macro':                               "Macro Bloom",
@@ -27057,7 +27402,7 @@ const TEXTURE_GROUPS = [
   { glyph: 'ᕕ', name: 'Light to Lay Over', types: ['dappled', 'lightleaks', 'caustics', 'windowlight'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
   { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'pixelspace', 'skyring', 'ringworld', 'webb'] },
-  { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'liminal', 'cityscape', 'landscape', 'water'] },
+  { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'liminal', 'cityscape', 'landscape', 'water', 'windsea'] },
   { glyph: 'ᘓ', name: 'Flowers', types: ['botline', 'bouquets', 'ditsy', 'petals', 'imprints', 'meadow', 'flowers', 'macro'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
   { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['crystal', 'crackle', 'kintsugi', 'spangle', 'wax', 'metalleaf', 'stainedglass', 'underglass', 'brokenglass'] },
@@ -43631,6 +43976,149 @@ const NETWORK_STEPS = {
 };
 
 
+/* ==== stepsStreamers.js ==== */
+/**
+ * STREAMERS (Windward Sea's process part): ribbons swept along curves in 3D space and seen through a camera, so
+ * they stand in the scene, near ones large and far ones small, turning their two faces to the light. Prior art:
+ * docs/prior-art/cel-shaded.md §5.
+ *
+ *   1. Each gust is placed in the world: a point on the page where `where` allows, at a depth (far ones more
+ *      often), never below the sea (a point under the horizon can only be near).
+ *   2. Its path (Shape): a Gust runs along the wind and ends in a curl that tightens, the radius falling fast
+ *      at first and slower after (as the sailing game's wind was rebuilt: Gordon); a Spiral coils round an
+ *      upright axis; a Loop loops once and runs on; a Wave rises and falls.
+ *   3. Each path is a ribbon: every point doubled into two, spread across the curve in the plane it bends in,
+ *      and turned round the curve by Twist, so it shows its back face now and then. It is widest in its middle,
+ *      thins into the curl, and its ends fade (as the game's did, so the strip never ends square).
+ *   4. A gust is a few strands (Strands), side by side and each a little different in length, as the game
+ *      duplicated one curve, offset.
+ *   5. Light: how squarely each point faces the light (half-Lambert of the face turned to the eye), the light
+ *      where the dial lays the sun: across by its way, as high as its height.
+ *
+ * Outputs maps, never colour: the ribbons (with faded ends), Facing, Side (front face light, back face dark) and
+ * Depth (near light). A graph lights them in bands (Posterize and a Gradient Map), so they are cel-shaded.
+ * Everything is placed in page units (the page's shorter side is 1), so a preview and its export match.
+ */
+
+const ST_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+const STREAMER_SHAPES = ['Gust', 'Spiral', 'Loop', 'Wave', 'Mixed'];
+
+// ---- small vector helpers (world: x right, y up, z away from the eye)
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a, k) => [a[0]*k, a[1]*k, a[2]*k];
+const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+const cross = (a, b) => [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+const norm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+/** Turn v round the unit axis k by angle t (Rodrigues). */
+const turn = (v, k, t) => { const c = Math.cos(t), s = Math.sin(t); return add(add(mul(v, c), mul(cross(k, v), s)), mul(k, dot(k, v)*(1 - c))); };
+
+/**
+ * One path, in world units from its start: shape 0 Gust, 1 Spiral, 2 Loop, 3 Wave. d is the wind's way on the
+ * ground, up is up; L its length; curl how many turns at the end; R a seeded random. Returns { pts, bend } where
+ * bend is the unit normal of the plane each point bends in (the ribbon spreads in that plane).
+ */
+function streamPath(shape, d, L, curl, R, down){
+  const up = [0, down ? -1 : 1, 0], side = norm(cross([0, 1, 0], d)), pts = [], plane = [];
+  const K = 140, drift = (R() - 0.5)*0.25;
+  if(shape === 1){                                    // SPIRAL: a coil round an upright axis, tightening as it rises
+    const r0 = L*0.32, turns = 1.2 + curl*2.4, rise = L*(0.25 + R()*0.35)*(down ? -1 : 1);
+    for(let i = 0; i <= K; i++){ const s = i/K, a = s*turns*Math.PI*2, r = r0*(0.22 + 0.78*Math.exp(-2.2*s));
+      pts.push(add(add(mul(side, Math.cos(a)*r), mul(d, Math.sin(a)*r)), [0, rise*s, 0])); plane.push([0, 1, 0]); }
+    return { pts, plane };
+  }
+  // a run along the wind, with a gentle rise and fall, then (Gust, Loop) a curl in the upright plane of the wind
+  const run = shape === 3 ? 1 : shape === 2 ? 0.62 : Math.max(0.3, 1 - 0.18 - curl*0.32), wav = shape === 3 ? 0.08 + R()*0.06 : 0.025 + R()*0.03;
+  const waves = shape === 3 ? 1.5 + R()*2 : 0.6 + R()*0.8, ph = R()*Math.PI*2, Kr = Math.round(K*run);
+  const at = s => add(add(mul(d, s*L), mul(up, Math.sin(ph + s*waves*Math.PI*2)*wav*L - Math.sin(ph)*wav*L)), mul(side, drift*s*L));
+  for(let i = 0; i <= Kr; i++){ pts.push(at(i/K)); plane.push(side); }
+  if(shape === 3) return { pts, plane };
+  // the curl starts where the run ends, heading on along the run's own direction
+  const E = pts[pts.length - 1], T0 = norm(sub(E, pts[pts.length - 2])), U = norm(sub(up, mul(T0, dot(up, T0))));
+  const turns = shape === 2 ? 1 : 0.6 + curl*1.9, r0 = L*(shape === 2 ? 0.1 : 0.07 + curl*0.06), Kc = K - Kr;
+  const C = add(E, mul(U, r0));
+  for(let i = 1; i <= Kc; i++){ const s = i/Kc, a = s*turns*Math.PI*2;
+    // (Gust: the radius falls fast at first, slower after — Gordon's spiral; Loop: a round loop, then on along the wind)
+    const r = shape === 2 ? r0 : r0*(0.12 + 0.88*Math.exp(-2.6*s*turns/1.6));
+    const p = add(add(C, add(mul(T0, Math.sin(a)*r), mul(U, -Math.cos(a)*r))), mul(side, s*r0*0.9*(drift > 0 ? 1 : -1)));
+    pts.push(p); plane.push(side); }
+  if(shape === 2){ const last = pts[pts.length - 1]; for(let i = 1; i <= 40; i++) { pts.push(add(last, mul(T0, i/40*L*0.35))); plane.push(side); } }
+  return { pts, plane };
+}
+
+const STREAMER_STEPS = {
+  streamers: { cat: 'Marks', label: 'Streamers', ins: ['where', 'blow from', 'light from'], outs: ['ribbons', 'facing', 'side', 'depth'],
+    io: { ins: ['field', 'value', 'value'], outs: ['field', 'field', 'field', 'field'] },
+    params: [ST_R('shape', 'Shape: ' + STREAMER_SHAPES.join(' · '), 0), ST_R('count', 'Gusts', 6, 0, 40), ST_R('strands', 'Strands', 3, 1, 8), ST_R('length', 'Length', 50),
+      ST_R('curl', 'Curl', 50), ST_R('width', 'Width', 100, 20, 300), ST_R('twist', 'Twist', 30), ST_R('depth', 'Depth', 60), ST_R('horizon', 'Horizon', 45), ST_R('variant', 'Variation', 0, 0, 99)],
+    cost: () => 4,
+    doc: 'Ribbons swept along curves in 3D space and seen through a camera: gusts that run with the wind and end in a tightening curl, spirals, loops or waves, near ones large and far ones small, twisting to show both faces. Maps only (the ribbons, how they face the light, which face, how near), for a graph to light in bands.',
+    run(E, n){ const { ww, wh, num } = E, N = ww*wh, mn = Math.min(ww, wh), W = ww/mn, H = wh/mn;
+      // (a way wired as a map, as Math hands on, counts by its mean)
+      const valOf = v => typeof v === 'number' ? v : v && v.length ? v.reduce((a, b) => a + b, 0)/v.length : null;
+      const whereF = E.asField(E.input(n, 1)), bv = valOf(E.input(n, 2)), lv = valOf(E.input(n, 3));
+      const fieldAt = (x, y) => whereF ? whereF[Math.min(wh - 1, Math.max(0, y*mn | 0))*ww + Math.min(ww - 1, Math.max(0, x*mn | 0))] : 1;
+      const seed = ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0) ^ 0x57a3) >>> 0, R = mulberry32(seed);
+      const shapeK = Math.min(4, Math.floor(num(n, 'shape', 0)/100*5)), count = Math.round(num(n, 'count', 6)), strands = Math.round(num(n, 'strands', 3));
+      const lenK = num(n, 'length', 50)/100, curl = num(n, 'curl', 50)/100, widK = num(n, 'width', 100)/100, twist = num(n, 'twist', 30)/100, depthK = num(n, 'depth', 60)/100;
+      const hz = num(n, 'horizon', 45)/100*H;
+      // ---- the camera: the eye 1 above the sea, looking level at the horizon
+      const f = 1.15*Math.max(W, H), eye = 1, proj = p => [W/2 + f*p[0]/p[2], hz - f*p[1]/p[2]];
+      // ---- the wind's way on the ground (the dial's way: up the page is away from the eye), the sun's direction
+      const bdeg = typeof bv === 'number' ? bv*360 : (E.ctx.light ?? 315), ba = bdeg*Math.PI/180;
+      const d = norm([Math.sin(ba), 0, Math.cos(ba)*0.7]);
+      const ldeg = typeof lv === 'number' ? lv*360 : (E.ctx.light ?? 315), la = ldeg*Math.PI/180, tilt = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
+      const el = tilt*tilt*1.2, Ls = norm([Math.sin(la)*0.9*Math.cos(el), Math.sin(el), Math.cos(el)*0.6]);
+      // ---- the gusts: placed, pathed, made ribbons, cut into quads
+      const quads = [], zNear = 1.6, zFar = zNear + 4 + depthK*36;
+      for(let g = 0; g < count; g++){
+        let sx = 0, sy = 0, ok = false;
+        for(let t = 0; t < 40 && !ok; t++){ sx = R()*W; sy = R()*H; ok = R() < fieldAt(sx, sy); }
+        if(!ok) continue;
+        let z = zNear*Math.pow(zFar/zNear, Math.pow(R(), 0.8));
+        const yAt = z => (hz - sy)*z/f;
+        // (never below the sea: a point under the horizon can only be near)
+        if(sy > hz){ const zMax = (eye - 0.12)*f/(sy - hz); if(zMax < zNear*0.7) continue; z = Math.min(z, zMax); }
+        // (and never far above it: a point high on the page lies far away)
+        else if(sy < hz){ const zMin = (hz - sy)*f/(eye*2.2); if(zMin > zFar*1.6) continue; z = Math.max(z, zMin); }
+        const start = [(sx - W/2)*z/f, yAt(z), z];
+        const shape = shapeK === 4 ? [0, 0, 0, 1, 2, 3][Math.floor(R()*6)] : shapeK;
+        const L = (0.6 + lenK*3.2)*(0.7 + R()*0.6)*Math.max(1, z*0.12), dg = norm(add(d, [0, 0, (R() - 0.5)*0.4]));
+        // (begin back along the wind, so the gust passes through the chosen point; a curl heads down only with room)
+        const down = start[1] > 0.6 && R() < 0.3, hw0 = (0.006 + 0.022*widK)*(0.75 + R()*0.5)*Math.max(1, z*0.06);
+        const ns = Math.max(1, Math.min(strands, 1 + Math.floor(R()*strands*1.3)));
+        for(let k = 0; k < ns; k++){
+          const { pts, plane } = streamPath(shape, dg, L*(1 - k*0.13 - R()*0.08), curl*(0.85 + R()*0.3), mulberry32((seed + g*131 + k*17) >>> 0), down);
+          const off = add(mul([0, 1, 0], (k - (ns - 1)/2)*hw0*3.2), mul(norm(cross([0, 1, 0], dg)), (R() - 0.5)*hw0*4));
+          const o = add(sub(start, mul(dg, L*0.35)), off), P = pts.map(p => add(p, o)), K = P.length - 1;
+          if(P.some(p => p[2] < 0.35 || p[1] < -eye + 0.04)) continue;
+          const tw0 = R()*Math.PI*2, tws = (R() < 0.5 ? -1 : 1)*twist*Math.PI*(1 + R()*1.5);
+          const edges = P.map((p, i) => { const s = i/K, T = norm(sub(P[Math.min(K, i + 1)], P[Math.max(0, i - 1)]));
+            // the ribbon spreads across the curve, in the plane it bends in, turned by Twist
+            let w = norm(cross(T, plane[i])); w = turn(w, T, tw0*twist + tws*s);
+            const hw = hw0*Math.pow(Math.min(1, s/0.08), 0.5)*(1 - 0.75*Math.pow(s, 1.6));
+            const nrm = norm(cross(T, w)), toEye = norm(mul(p, -1)), face = dot(nrm, toEye) >= 0 ? nrm : mul(nrm, -1);
+            const lit = 0.5 + 0.5*dot(face, Ls), side = dot(nrm, toEye) >= 0 ? 1 : 0;
+            const fade = Math.min(1, s/0.14, (1 - s)/0.05);
+            return { a: proj(add(p, mul(w, hw))), b: proj(add(p, mul(w, -hw))), z: p[2], lit, side, fade: Math.max(0, fade) }; });
+          for(let i = 0; i < K; i++){ const e0 = edges[i], e1 = edges[i + 1];
+            quads.push({ q: [e0.a, e1.a, e1.b, e0.b], z: (e0.z + e1.z)/2, lit: (e0.lit + e1.lit)/2, side: e0.side, fade: (e0.fade + e1.fade)/2 }); }
+        }
+      }
+      quads.sort((a, b) => b.z - a.z);
+      // ---- drawing, far to near, at the grid's resolution
+      const S = mn, lnZ = Math.log(zFar/zNear);
+      const paint = (x, grey, mode) => { if(mode) x.globalCompositeOperation = mode; x.lineJoin = 'round'; x.lineWidth = 0.8;
+        for(const Q of quads){ const g = Math.round(255*Math.max(0, Math.min(1, grey(Q)))), c = `rgb(${g},${g},${g})`; x.fillStyle = c; x.strokeStyle = c;
+          x.beginPath(); Q.q.forEach(([X, Y], i) => i ? x.lineTo(X*S, Y*S) : x.moveTo(X*S, Y*S)); x.closePath(); x.fill(); x.stroke(); } };
+      const ribF = E.marks(null, 0, x => paint(x, Q => Q.fade, 'lighten'));
+      const faceF = E.marks(null, 0, x => paint(x, Q => Q.lit));
+      const sideF = E.marks(null, 0, x => paint(x, Q => Q.side));
+      const depthF = E.marks(null, 0, x => paint(x, Q => 1 - Math.log(Math.max(zNear, Q.z)/zNear)/lnZ));
+      return [ribF, faceF, sideF, depthF]; } },
+};
+
+
 /* ==== stepsSharpness.js ==== */
 /**
  * stepsSharpness.js — steps for √ SHARPNESS surfaces, each a part that works on
@@ -43877,6 +44365,7 @@ const SHARP_STEPS = {
  * working grid and read it back as a field — the generators' own way of
  * drawing, kept inside a step. Their sizes are in canonical pixels (E.px).
  */
+
 
 
 
@@ -45084,7 +45573,7 @@ const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) =>
   [k, { ...part, cost: STEP_COST[k] || (() => 1), run: STEP_RUN[k] }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...PATTERN_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...STREAMER_STEPS, ...PATTERN_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = STEP_IO[k] || s.io || {};          // (a family's part may carry its own port types)
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
@@ -47263,6 +47752,193 @@ const TEXTURE_CHAINS = {
       [5, 1, 33, paramPort('maprange', 'outHi')], [18, 1, 34, 1], [22, 4, 34, 2], [33, 1, 34, 3], [22, 4, 35, 1], [35, 1, 37, 1], [35, 2, 38, 1],
       [37, 1, 39, 1], [38, 1, 39, 2], [39, 1, 36, 1], [34, 1, 40, 1], [11, 1, 40, 2], [30, 1, 40, 3], [30, 1, 41, 1], [36, 1, 41, 2], [40, 1, 42, 1],
       [15, 1, 42, 2], [41, 1, 42, 3], [42, 1, 43, 1]] },
+  windsea: { label: 'Windward Sea', div: 2, v: 5, teach: 'A sea and sky in the cel-shaded look of the great sailing games (docs/prior-art/cel-shaded.md): light in a few flat bands, never a gradient. The seed picks the weather (clear, fair, overcast, now and then a storm: a slate sky, a choppy sea, wind everywhere); Weather leans it fairer or stormier. The Light Engine lights the clouds’ and islands’ heights from the dial, and a Posterize of its light (Toon Bands) with a Gradient Map gives each band a hue: shadow, key, bright edge. The clouds are Scatter’s domes heaped above the horizon, curled by two Twirls (Swirls). The wind is not painted on the sky: Streamers sweeps ribbons through the scene, gusts that end in tightening curls, near ones large and far ones small, lit in the same bands, their back faces a shade darker (Wind). The sea is three colours: a Gradient Map of the depth, and foam in flattened rounds and the waves’ long lines, thrown smaller the farther they lie (Foam, Waves). Islands rise where a Perlin reaches above the horizon (Islands). The sun stands where the dial lays it, and sets into the sea as its height sinks. Try: the dial low and behind, the Sky Hue orange.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Horizon', def: 45 }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2', name: 'Weather', def: 50 }, 40, 150],                                                                                     // 2
+      ['knob', { slot: '3', name: 'Swirls', def: 45 }, 40, 260],                                                                                      // 3
+      ['knob', { slot: '4', name: 'Waves', def: 50 }, 40, 370],                                                                                       // 4
+      ['knob', { slot: '5', name: 'Foam', def: 45 }, 40, 480],                                                                                        // 5
+      ['knob', { slot: '6', name: 'Wind', def: 35 }, 40, 590],                                                                                        // 6
+      ['knob', { slot: '7', name: 'Islands', def: 40 }, 40, 700],                                                                                     // 7
+      ['knob', { slot: '8', name: 'Toon Bands', def: 30 }, 40, 810],                                                                                  // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Sky Hue' }, 40, 1030],                                                                                              // 10
+      ['hue', { slot: '2', name: 'Sea Hue' }, 40, 1140],                                                                                              // 11
+      ['hue', { slot: '3', name: 'Deep Sea Hue' }, 40, 1250],                                                                                         // 12
+      ['hue', { slot: '4', name: 'Foam Hue' }, 40, 1360],                                                                                             // 13
+      ['hue', { slot: '5', name: 'Island Hue' }, 40, 1470],                                                                                           // 14
+      ['hue', { slot: '6', name: 'Sun Hue' }, 40, 1580],                                                                                              // 15
+      ['maprange', { outLo: 0, outHi: 100 }, 480, 40],                                                                                                // 16
+      ['random', { lo: 0, hi: 100 }, 40, 1690],                                                                                                       // 17
+      ['maprange', { inLo: 50, inHi: 100, outLo: 0, outHi: 45 }, 260, 40],                                                                            // 18
+      ['maprange', { inLo: 0, inHi: 50, outLo: 55, outHi: 100 }, 260, 150],                                                                           // 19
+      ['maprange', { inLo: 76, inHi: 96, outLo: 0, outHi: 100 }, 700, 40],                                                                            // 20
+      ['gradient', { shape: 'linear', angle: 90 }, 40, 1800],                                                                                         // 21
+      ['threshold', { at: 45, '~at': '62,30', soft: 0 }, 260, 260],                                                                                   // 22
+      ['levels', { lo: 45, '~lo': '62,30', hi: 100, gamma: 50 }, 260, 370],                                                                           // 23
+      ['gradmap', { stops: 3 }, 480, 150],                                                                                                            // 24
+      ['mix', { t: 45 }, 260, 480],                                                                                                                   // 25
+      ['mix', { t: 70 }, 260, 590],                                                                                                                   // 26
+      ['math', { op: 'sine' }, 260, 700],                                                                                                             // 27
+      ['dial', {}, 40, 1910],                                                                                                                         // 28
+      ['number', { value: 100 }, 40, 2020],                                                                                                           // 29
+      ['math', { op: 'min' }, 260, 810],                                                                                                              // 30
+      ['maprange', { outLo: 62, outHi: 30 }, 260, 920],                                                                                               // 31
+      ['math', { op: 'multiply' }, 480, 260],                                                                                                         // 32
+      ['number', { value: 12 }, 40, 2130],                                                                                                            // 33
+      ['math', { op: 'subtract' }, 480, 370],                                                                                                         // 34
+      ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 35
+      ['math', { op: 'subtract' }, 920, 40],                                                                                                          // 36
+      ['number', { value: 4 }, 40, 2240],                                                                                                             // 37
+      ['math', { op: 'subtract' }, 1140, 40],                                                                                                         // 38
+      ['ellipse', { size: 9, height: 100, soft: 1 }, 1360, 40],                                                                                       // 39
+      ['ellipse', { size: 16, height: 100, soft: 1, rings: 1, line: 6 }, 1360, 150],                                                                  // 40
+      ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 41
+      ['mix', { t: 40 }, 260, 1030],                                                                                                                  // 42
+      ['blend', { mode: 'normal', opacity: 70 }, 1800, 40],                                                                                           // 43
+      ['maprange', { inLo: 30, inHi: 45, outLo: 100, outHi: 0 }, 480, 480],                                                                           // 44
+      ['maprange', { outLo: 50, outHi: 18 }, 260, 1140],                                                                                              // 45
+      ['maprange', { outLo: 62, outHi: 30 }, 260, 1250],                                                                                              // 46
+      ['threshold', { at: 18, soft: 4 }, 700, 260],                                                                                                   // 47
+      ['threshold', { at: 75, soft: 25 }, 700, 370],                                                                                                  // 48
+      ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 49
+      ['maprange', { inLo: 15, inHi: 100, outLo: 100, outHi: 30 }, 700, 480],                                                                         // 50
+      ['math', { op: 'multiply' }, 1140, 150],                                                                                                        // 51
+      ['scatter', { shape: 'dot', count: 40, '~count': '4,110', size: 30, '~size': '16,46', vary: 60, turn: 0, clump: 70, fade: 0, layers: 'largest', per: 'for the page' }, 1360, 260],// 52
+      ['maprange', { inLo: 0, inHi: 90, outLo: 3, outHi: 100 }, 700, 590],                                                                            // 53
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 54
+      ['maprange', { inLo: 10, inHi: 90, outLo: 0, outHi: 100 }, 700, 700],                                                                           // 55
+      ['math', { op: 'average' }, 920, 260],                                                                                                          // 56
+      ['threshold', { at: 16, soft: 2 }, 700, 810],                                                                                                   // 57
+      ['twirl', { angle: 120, '~angle': '0,220', radius: 30, '~radius': '18,50', x: 50, '~x': '10,90', y: 30, '~y': '15,40' }, 1800, 150],            // 58
+      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 59
+      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 60
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 61
+      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 62
+      ['twirl', { angle: -120, '~angle': '0,-220', radius: 26, '~radius': '14,44', x: 50, '~x': '10,90', y: 25, '~y': '10,40' }, 2020, 40],           // 63
+      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 64
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 65
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 66
+      ['threshold', { at: 30, soft: 3 }, 2240, 40],                                                                                                   // 67
+      ['math', { op: 'subtract' }, 480, 590],                                                                                                         // 68
+      ['math', { op: 'multiply' }, 2460, 40],                                                                                                         // 69
+      ['blur', { radius: 14 }, 2240, 150],                                                                                                            // 70
+      ['mix', { t: 38 }, 260, 1360],                                                                                                                  // 71
+      ['mix', { t: 14 }, 260, 1470],                                                                                                                  // 72
+      ['material', { relief: 120, gloss: 10, shine: 0, shadow: 70, occlusion: 20, ambient: 30 }, 2460, 150],                                          // 73
+      ['number', { value: 50 }, 40, 3120],                                                                                                            // 74
+      ['posterize', { steps: 3, '~steps': '2,5' }, 2680, 40],                                                                                         // 75
+      ['gradmap', { stops: 3, blend: 'bands' }, 3120, 40],                                                                                            // 76
+      ['maprange', { inLo: 15, inHi: 75, outLo: 0, outHi: 100 }, 2900, 40],                                                                           // 77
+      ['blend', { mode: 'normal', opacity: 100 }, 3340, 40],                                                                                          // 78
+      ['perlin', { scale: 7, '~scale': '4,12', details: 3, contrast: 50 }, 260, 1580],                                                                // 79
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 80
+      ['maprange', { outLo: 0, outHi: 40, '~outHi': '0,100' }, 480, 700],                                                                             // 81
+      ['math', { op: 'subtract' }, 700, 920],                                                                                                         // 82
+      ['threshold', { at: 1, soft: 0 }, 920, 370],                                                                                                    // 83
+      ['math', { op: 'subtract' }, 480, 810],                                                                                                         // 84
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 85
+      ['blur', { radius: 8 }, 1360, 370],                                                                                                             // 86
+      ['mix', { t: 45 }, 260, 1690],                                                                                                                  // 87
+      ['mix', { t: 40 }, 260, 1800],                                                                                                                  // 88
+      ['material', { relief: 140, gloss: 10, shine: 0, shadow: 70, occlusion: 20, ambient: 30 }, 1580, 260],                                          // 89
+      ['number', { value: 50 }, 40, 3340],                                                                                                            // 90
+      ['posterize', { steps: 3, '~steps': '2,5' }, 1800, 260],                                                                                        // 91
+      ['gradmap', { stops: 3, blend: 'bands' }, 2240, 260],                                                                                           // 92
+      ['maprange', { inLo: 15, inHi: 75, outLo: 0, outHi: 100 }, 2020, 150],                                                                          // 93
+      ['blend', { mode: 'normal', opacity: 18 }, 2460, 260],                                                                                          // 94
+      ['blend', { mode: 'normal', opacity: 100 }, 3560, 40],                                                                                          // 95
+      ['gradmap', { stops: 3 }, 480, 920],                                                                                                            // 96
+      ['mix', { t: 45 }, 260, 1910],                                                                                                                  // 97
+      ['maprange', { inLo: 0, inHi: 100, outLo: 6, outHi: 100 }, 480, 1030],                                                                          // 98
+      ['perlin', { scale: 4, '~scale': '2,7', details: 3, contrast: 50 }, 40, 3450],                                                                  // 99
+      ['threshold', { at: 58, soft: 10 }, 260, 2020],                                                                                                 // 100
+      ['scatter', { shape: 'dot', count: 160, '~count': '20,420', size: 9, '~size': '1,18', vary: 70, turn: 0, clump: 55, fade: 0, per: 'for the page' }, 920, 480],// 101
+      ['math', { op: 'multiply' }, 480, 1140],                                                                                                        // 102
+      ['maprange', { outLo: 100, outHi: 40 }, 480, 1250],                                                                                             // 103
+      ['math', { op: 'multiply' }, 700, 1030],                                                                                                        // 104
+      ['scale', { scale: 100, stretch: 55, cx: 50, cy: 100, edges: 'repeat' }, 1140, 370],                                                            // 105
+      ['warp', { amount: 18 }, 1360, 480],                                                                                                            // 106
+      ['perlin', { scale: 10, details: 3 }, 40, 3560],                                                                                                // 107
+      ['scatter', { shape: 'dash', count: 60, '~count': '0,180', size: 22, '~size': '2,40', vary: 60, turn: 3, clump: 30, fade: 0, per: 'for the page' }, 1360, 590],// 108
+      ['maprange', { outLo: 0, outHi: 45 }, 920, 590],                                                                                                // 109
+      ['math', { op: 'add' }, 1140, 480],                                                                                                             // 110
+      ['warp', { amount: 25 }, 1580, 370],                                                                                                            // 111
+      ['perlin', { scale: 6, details: 3 }, 40, 3670],                                                                                                 // 112
+      ['threshold', { at: 40, soft: 6 }, 1580, 480],                                                                                                  // 113
+      ['blend', { mode: 'normal', opacity: 90 }, 1800, 370],                                                                                          // 114
+      ['threshold', { at: 40, soft: 6 }, 1800, 480],                                                                                                  // 115
+      ['blend', { mode: 'normal', opacity: 100 }, 2020, 260],                                                                                         // 116
+      ['ellipse', { size: 40, height: 100, soft: 30 }, 480, 1360],                                                                                    // 117
+      ['scatter', { shape: 'dash', count: 60, '~count': '20,140', size: 6, vary: 60, turn: 4, clump: 0, fade: 0, per: 'for the page' }, 920, 700],    // 118
+      ['math', { op: 'multiply' }, 700, 1140],                                                                                                        // 119
+      ['mix', { t: 30 }, 260, 2130],                                                                                                                  // 120
+      ['blend', { mode: 'normal', opacity: 100 }, 2240, 370],                                                                                         // 121
+      ['blend', { mode: 'normal', opacity: 100 }, 3780, 40],                                                                                          // 122
+      ['maprange', { inLo: 0, inHi: 12, outLo: 55, outHi: 0 }, 480, 1470],                                                                            // 123
+      ['mix', { t: 55 }, 260, 2240],                                                                                                                  // 124
+      ['math', { op: 'multiply' }, 700, 1250],                                                                                                        // 125
+      ['blend', { mode: 'normal', opacity: 100 }, 4000, 40],                                                                                          // 126
+      ['mix', { t: 18 }, 260, 2350],                                                                                                                  // 127
+      ['maprange', { outLo: 100, outHi: 55 }, 480, 1580],                                                                                             // 128
+      ['math', { op: 'multiply' }, 920, 810],                                                                                                         // 129
+      ['blend', { mode: 'normal', opacity: 84 }, 4220, 40],                                                                                           // 130
+      ['streamers', { shape: 0, count: 5, '~count': '0,16', strands: 3, length: 50, '~length': '30,80', curl: 50, '~curl': '25,85', width: 100, twist: 30, depth: 60, horizon: 45, '~horizon': '62,30' }, 1360, 700],// 131
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 132
+      ['maprange', { outLo: 19, outHi: 31 }, 260, 2460],                                                                                              // 133
+      ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 134
+      ['threshold', { at: 50, soft: 0 }, 260, 2570],                                                                                                  // 135
+      ['number', { value: 50 }, 40, 4000],                                                                                                            // 136
+      ['math', { op: 'multiply' }, 480, 1690],                                                                                                        // 137
+      ['math', { op: 'add' }, 700, 1360],                                                                                                             // 138
+      ['maprange', { outLo: 0, outHi: 30 }, 920, 920],                                                                                                // 139
+      ['math', { op: 'add' }, 1140, 590],                                                                                                             // 140
+      ['random', { lo: 0, hi: 100 }, 40, 4110],                                                                                                       // 141
+      ['random', { lo: 0, hi: 100 }, 40, 4220],                                                                                                       // 142
+      ['posterize', { steps: 3, '~steps': '2,5' }, 1580, 590],                                                                                        // 143
+      ['gradmap', { stops: 3, blend: 'bands' }, 2020, 370],                                                                                           // 144
+      ['maprange', { inLo: 20, inHi: 85, outLo: 0, outHi: 100 }, 1800, 590],                                                                          // 145
+      ['mix', { t: 30 }, 260, 2680],                                                                                                                  // 146
+      ['mix', { t: 9 }, 260, 2790],                                                                                                                   // 147
+      ['invert', {}, 1580, 700],                                                                                                                      // 148
+      ['mix', { t: 22 }, 260, 2900],                                                                                                                  // 149
+      ['blend', { mode: 'normal', opacity: 50 }, 2240, 480],                                                                                          // 150
+      ['blend', { mode: 'normal', opacity: 96 }, 4440, 40],                                                                                           // 151
+      ['surface', { name: 'Windward Sea', ground: 'colour' }, 4660, 40]],                                                                             // 152
+    wires: [[17, 1, 16, 1], [2, 1, 18, 1], [18, 1, 16, paramPort('maprange', 'outLo')], [2, 1, 19, 1], [19, 1, 16, paramPort('maprange', 'outHi')], [16, 1, 20, 1],
+      [21, 1, 22, 1], [1, 1, 22, paramPort('threshold', 'at')], [21, 1, 23, 1], [1, 1, 23, paramPort('levels', 'lo')], [21, 1, 24, 1], [10, 1, 24, 2],
+      [10, 1, 25, 1], [13, 1, 25, 2], [25, 1, 24, 3], [10, 1, 26, 1], [13, 1, 26, 2], [26, 1, 24, 4], [9, 1, 27, 1], [28, 2, 30, 1], [29, 1, 30, 2],
+      [1, 1, 31, 1], [30, 1, 32, 1], [30, 1, 32, 2], [31, 1, 34, 1], [33, 1, 34, 2], [32, 1, 35, 1], [34, 1, 35, 2], [31, 1, 36, 1], [35, 1, 36, 2],
+      [36, 1, 38, 1], [37, 1, 38, 2], [27, 1, 39, paramPort('ellipse', 'x')], [38, 1, 39, paramPort('ellipse', 'y')], [27, 1, 40, paramPort('ellipse', 'x')],
+      [38, 1, 40, paramPort('ellipse', 'y')], [24, 1, 41, 1], [15, 1, 41, 2], [39, 1, 41, 3], [15, 1, 42, 1], [13, 1, 42, 2], [41, 1, 43, 1], [42, 1, 43, 2],
+      [40, 1, 43, 3], [21, 1, 44, 1], [1, 1, 45, 1], [45, 1, 44, paramPort('maprange', 'inLo')], [1, 1, 46, 1], [46, 1, 44, paramPort('maprange', 'inHi')],
+      [44, 1, 47, 1], [44, 1, 48, 1], [47, 1, 49, 1], [48, 1, 49, 2], [44, 1, 50, 1], [50, 1, 51, 1], [49, 1, 51, 2], [51, 1, 52, 2], [16, 1, 53, 1],
+      [53, 1, 52, paramPort('scatter', 'count')], [16, 1, 55, 1], [54, 1, 56, 1], [55, 1, 56, 2], [56, 1, 52, paramPort('scatter', 'size')], [44, 1, 57, 1],
+      [52, 2, 59, 1], [57, 1, 59, 2], [59, 1, 58, 1], [3, 1, 58, paramPort('twirl', 'angle')], [60, 1, 58, paramPort('twirl', 'radius')],
+      [61, 1, 58, paramPort('twirl', 'x')], [62, 1, 58, paramPort('twirl', 'y')], [58, 1, 63, 1], [3, 1, 63, paramPort('twirl', 'angle')],
+      [64, 1, 63, paramPort('twirl', 'radius')], [65, 1, 63, paramPort('twirl', 'x')], [66, 1, 63, paramPort('twirl', 'y')], [63, 1, 67, 1], [29, 1, 68, 1],
+      [22, 1, 68, 2], [67, 1, 69, 1], [68, 1, 69, 2], [63, 1, 70, 1], [10, 1, 71, 1], [13, 1, 71, 2], [13, 1, 72, 1], [10, 1, 72, 2], [74, 1, 73, 1],
+      [70, 1, 73, 2], [9, 1, 73, 7], [73, 2, 75, 1], [8, 1, 75, paramPort('posterize', 'steps')], [75, 1, 77, 1], [77, 1, 76, 1], [71, 1, 76, 2],
+      [72, 1, 76, 3], [13, 1, 76, 4], [43, 1, 78, 1], [76, 1, 78, 2], [69, 1, 78, 3], [80, 1, 79, paramPort('perlin', 'scale')], [79, 1, 81, 1],
+      [7, 1, 81, paramPort('maprange', 'outHi')], [81, 1, 82, 1], [44, 1, 82, 2], [82, 1, 83, 1], [29, 1, 84, 1], [22, 1, 84, 2], [83, 1, 85, 1],
+      [84, 1, 85, 2], [85, 1, 86, 1], [14, 1, 87, 1], [12, 1, 87, 2], [14, 1, 88, 1], [15, 1, 88, 2], [90, 1, 89, 1], [86, 1, 89, 2], [9, 1, 89, 7],
+      [89, 2, 91, 1], [8, 1, 91, paramPort('posterize', 'steps')], [91, 1, 93, 1], [93, 1, 92, 1], [87, 1, 92, 2], [14, 1, 92, 3], [88, 1, 92, 4],
+      [92, 1, 94, 1], [10, 1, 94, 2], [78, 1, 95, 1], [94, 1, 95, 2], [85, 1, 95, 3], [23, 1, 96, 1], [11, 1, 97, 1], [10, 1, 97, 2], [97, 1, 96, 2],
+      [11, 1, 96, 3], [12, 1, 96, 4], [23, 1, 98, 1], [99, 1, 100, 1], [22, 1, 102, 1], [100, 1, 102, 2], [23, 1, 103, 1], [102, 1, 104, 1], [103, 1, 104, 2],
+      [104, 1, 101, 2], [5, 1, 101, paramPort('scatter', 'count')], [98, 1, 101, paramPort('scatter', 'size')], [101, 1, 105, 1], [105, 1, 106, 1],
+      [107, 1, 106, 2], [22, 1, 108, 2], [20, 1, 109, 1], [4, 1, 110, 1], [109, 1, 110, 2], [110, 1, 108, paramPort('scatter', 'count')],
+      [98, 1, 108, paramPort('scatter', 'size')], [108, 1, 111, 1], [112, 1, 111, 2], [106, 1, 113, 1], [96, 1, 114, 1], [13, 1, 114, 2], [113, 1, 114, 3],
+      [111, 1, 115, 1], [114, 1, 116, 1], [13, 1, 116, 2], [115, 1, 116, 3], [27, 1, 117, paramPort('ellipse', 'x')], [117, 1, 119, 1], [22, 1, 119, 2],
+      [119, 1, 118, 2], [4, 1, 118, paramPort('scatter', 'count')], [15, 1, 120, 1], [13, 1, 120, 2], [116, 1, 121, 1], [120, 1, 121, 2], [118, 1, 121, 3],
+      [95, 1, 122, 1], [121, 1, 122, 2], [22, 1, 122, 3], [23, 1, 123, 1], [10, 1, 124, 1], [13, 1, 124, 2], [123, 1, 125, 1], [22, 1, 125, 2],
+      [122, 1, 126, 1], [124, 1, 126, 2], [125, 1, 126, 3], [12, 1, 127, 1], [13, 1, 127, 2], [22, 1, 128, 1], [20, 1, 129, 1], [128, 1, 129, 2],
+      [126, 1, 130, 1], [127, 1, 130, 2], [129, 1, 130, 3], [132, 1, 133, 1], [134, 1, 135, 1], [135, 1, 137, 1], [136, 1, 137, 2], [133, 1, 138, 1],
+      [137, 1, 138, 2], [138, 1, 131, 2], [9, 1, 131, 3], [20, 1, 139, 1], [6, 1, 140, 1], [139, 1, 140, 2], [140, 1, 131, paramPort('streamers', 'count')],
+      [1, 1, 131, paramPort('streamers', 'horizon')], [141, 1, 131, paramPort('streamers', 'length')], [142, 1, 131, paramPort('streamers', 'curl')],
+      [131, 2, 143, 1], [8, 1, 143, paramPort('posterize', 'steps')], [143, 1, 145, 1], [145, 1, 144, 1], [13, 1, 146, 1], [10, 1, 146, 2], [146, 1, 144, 2],
+      [13, 1, 147, 1], [10, 1, 147, 2], [147, 1, 144, 3], [13, 1, 144, 4], [131, 3, 148, 1], [13, 1, 149, 1], [12, 1, 149, 2], [144, 1, 150, 1],
+      [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 152, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
@@ -48732,6 +49408,14 @@ const TEXTURE_PARAMS = {
                   {key:'slip', label:'Wash Slip', min:0, max:100, def:30, unit:''},
                   {key:'paper', label:'Paper', min:0, max:100, def:40, unit:''},
                   {key:'species', label:'Species', min:0, max:100, def:98, unit:''}],
+  windsea:        [{key:'horizon', label:'Horizon', min:0, max:100, def:45, unit:''},
+                  {key:'weather', label:'Weather', min:0, max:100, def:50, unit:''},
+                  {key:'swirls', label:'Swirls', min:0, max:100, def:45, unit:''},
+                  {key:'waves', label:'Waves', min:0, max:100, def:50, unit:''},
+                  {key:'foam', label:'Foam', min:0, max:100, def:45, unit:''},
+                  {key:'wind', label:'Wind', min:0, max:100, def:35, unit:''},
+                  {key:'islands', label:'Islands', min:0, max:100, def:40, unit:''},
+                  {key:'bands', label:'Toon Bands', min:0, max:100, def:30, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -49255,6 +49939,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Ground Hue', 'Flower Hue', 'Second Flower Hue', 'Third Flower Hue', 'Center Hue', 'Sprig Hue'], tintDefaults:['#F4EEE2', '#C8506A', '#5A7AC8', '#E8B21C', '#F2D27A', '#6E8A4A'] },
   botline:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
                    tintLabels:['Paper Hue', 'Ink Hue', 'Petal Wash Hue', 'Center Wash Hue', 'Leaf Wash Hue', 'Second Ink Hue'], tintDefaults:['#F4EFE4', '#2A2420', '#D88098', '#E8C040', '#8AA87A', '#4E6A3A'] },
+  windsea:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+                   tintLabels:['Sky Hue', 'Sea Hue', 'Deep Sea Hue', 'Foam Hue', 'Island Hue', 'Sun Hue'], tintDefaults:['#3A7BD5', '#1F6FB8', '#0E4A8A', '#F4F8FF', '#5FA040', '#FFF2A8'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -49503,6 +50189,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1 || '#F4EEE2', tint2 || '#C8506A');   // (chains.js)
   } else if(type === 'botline'){
     result = genChain(type, w, h, light, extra, tint1 || '#F4EFE4', tint2 || '#2A2420');   // (chains.js)
+  } else if(type === 'windsea'){
+    result = genChain(type, w, h, light, extra, tint1 || '#3A7BD5', tint2 || '#1F6FB8');   // (chains.js)
   } else if(type === 'dappled'){
     result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
   } else if(type === 'windowlight'){
@@ -50187,6 +50875,10 @@ const TEXTURE_ELEMENTS = {
     fire:  { name: 'Sepia Sketch',    k: [25, 65, 55, 70, 0, 0, 55, 9], t: ['#F0E4CC',  '#5A3A22',  '#C88A6A',  '#D8A850',  '#9A8A5A',  '#5A3A22'] },
     water: { name: 'Blue Ink Herbal', k: [45, 45, 35, 45, 55, 45, 35, 30], t: ['#F6F4EE',  '#22305A',  '#8AA0D8',  '#E8C24A',  '#9AB8A0',  '#22305A'] },
     wind:  { name: 'Single Stem',     k: [5, 95, 40, 80, 60, 30, 40, 51], t: ['#F4EFE4',  '#2A2420',  '#E8B8C8',  '#F2D27A',  '#A8C098',  '#3E5A30'] } },
+  windsea: { def: 'water', water: { name: 'Fair Wind' },
+    fire:  { name: 'Sunset Sail',     k: [50, 60, 50, 40, 35, 25, 55, 30], t: ['#E8805A',  '#3A4A8A',  '#1E2A5A',  '#FFE6C8',  '#4A3A5A',  '#FFD070'], light: [200, 25] },
+    earth: { name: 'Squall',          k: [40, 85, 40, 80, 75, 70, 30, 20], t: ['#5A6A80',  '#2A4A60',  '#142A3A',  '#DDE6EE',  '#3A4A40',  '#C8D0D8'], light: [45, 60] },
+    wind:  { name: 'Morning Breeze',  k: [50, 35, 55, 45, 40, 90, 70, 40], t: ['#8EC8F0',  '#3AA0C8',  '#1A6A9A',  '#FFFFFF',  '#7AC060',  '#FFF8D8'], light: [300, 90] } },
   webb: { def: 'fire', fire: { name: 'Infrared Dust' },
     water: { name: 'Near Infrared',   k: [45, 30, 70, 25, 40, 70, 60, 60], t: ['#020611', '#0E2A4A', '#3A8AC8', '#BFE8FF', '#FFF2D6', '#C84A9A'] },
     wind:  { name: 'Pillars',         k: [75, 70, 40, 20, 70, 30, 45, 35], t: ['#06040A', '#2A1A3A', '#A0582A', '#F2C890', '#CFE0FF', '#5A7AE0'], light: [0, 100] },
@@ -50756,7 +51448,7 @@ const RELEASE = 'Saturn–Gridr';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"JqjL6GRT","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"JqjL6GRT","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"R8mUh-4Z"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -50794,7 +51486,7 @@ const TEXTURE_LOOKS = {
   stainedglass: 'panes of stained glass held in lead', brokenglass: 'broken glass scattered on the page, its shards catching the light and casting bright caustics', dewwebs: 'spider webs beaded with dew, glinting in the light', underglass: 'a sheet of glass over the page, catching the light: a window\'s reflection, scratches, fingerprints and dust', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
   crackedglaze: 'cracked and crazed ceramic glaze', crackle: 'a glaze crackled by cracks spreading across it', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, sometimes coins, and often other things left there: a candle, a cup, a letter)',
-  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', webb: 'deep space in infrared: glowing dust and stars with six-pointed spikes', botline: 'flowers drawn in fine ink lines with a loose wash of colour', ditsy: 'a ditsy print: tiny flowers and sprigs of leaf scattered all over cloth', macro: 'a single flower close up against soft circles of out-of-focus light', meadow: 'a summer meadow of poppies and daisies under a high sky', petals: 'fallen flowers and scattered petals on a table', bouquets: 'a bouquet of flowers among leaves, seen from above', imprints: 'flowers printed on paper: cyanotype silhouettes, inked stamps, a crest or pressed blossoms', liminal: 'an empty corridor or room under fluorescent light, its far end lost in the dark', turing: 'organic spots and stripes, like animal skin or coral',
+  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', webb: 'deep space in infrared: glowing dust and stars with six-pointed spikes', windsea: 'a cel-shaded sea and sky: flat-lit clouds, white wind streams, foam on a receding sea', botline: 'flowers drawn in fine ink lines with a loose wash of colour', ditsy: 'a ditsy print: tiny flowers and sprigs of leaf scattered all over cloth', macro: 'a single flower close up against soft circles of out-of-focus light', meadow: 'a summer meadow of poppies and daisies under a high sky', petals: 'fallen flowers and scattered petals on a table', bouquets: 'a bouquet of flowers among leaves, seen from above', imprints: 'flowers printed on paper: cyanotype silhouettes, inked stamps, a crest or pressed blossoms', liminal: 'an empty corridor or room under fluorescent light, its far end lost in the dark', turing: 'organic spots and stripes, like animal skin or coral',
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolor paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
   ash: 'charred paper, ash and embers', wax: 'pools of sealing wax', dunes: 'wind-rippled sand dunes', kintsugi: 'pottery mended with seams of gold',
@@ -51589,7 +52281,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · cd1642c";
+const STAMP = "2026-10-19 · 0404545";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -56844,6 +57536,15 @@ const WIKI_PARTS = {
     set: { weave: 'How the nodes are joined: Tree + Loops (a tree, then the loops that save the most way round), Relative (long irregular loops), Gabriel (quads and pentagons), Slime (tubes that thicken with flow between the hubs), Streets (roads grown along the ways, closing blocks), Subdivided (faces split by thinner chords, order by order, as a leaf’s).', nodes: 'How many nodes on the page.', even: 'Clumped (0) to evenly spaced (100).', loops: 'From a tree (0) to every candidate line kept (100).', hubs: 'How many hubs the flow comes from.', order: 'How much wider the trunks are than the capillaries; for Subdivided, how many orders.', style: 'Organic (curves, tapering into the ends) to Circuit (45° and 90°, constant width, a pad at every junction and end).', wander: 'How far the curves and streets wander.', width: 'The lines’ width.', pads: 'How big the pads are (0: none).', bus: 'How many of the busiest trunks run as buses, lines side by side (at the circuit end).', pulses: 'How many pulses run along the lines.', variant: 'Another network from the same seed.' },
     tips: ['Lines into a Blend over a material, Height into the Light Engine, then Glow on Core, Nodes and Pulses: Veins of Light.', 'Loops through a Threshold as a Blend’s mask: some of the closed spaces inlaid with a second material.'],
     see: ['part:matrix', 'part:glow', 'part:material'],
+  },
+  streamers: {
+    line: 'Ribbons swept along curves in 3D space and seen through a camera: gusts that run with the wind and end in a tightening curl, spirals, loops or waves, near ones large and far ones small, twisting to show both faces. Maps only (the ribbons, how they face the light, which face, how near), for a graph to light in bands.',
+    about: 'The wind of the great cel-shaded sailing game was not painted on its sky: it was ribbons in the world, a curve whose every point was doubled into two and spread apart, most often a spiral whose radius falls fast at first and slower after, a few copies side by side, the ends faded (docs/prior-art/cel-shaded.md §5). Streamers builds them that way: each gust placed at a depth where its map allows (never under the sea), pathed by its Shape, made a ribbon that spreads in the plane it bends in and turns round itself by Twist, and seen through a camera level with the horizon. It hands on maps, not colour, so a graph lights the ribbons in bands, as cel shading does.',
+    ins: { where: 'Where gusts may start on the page (white: anywhere). Unwired: anywhere.', 'blow from': 'The wind’s way (wire the Light Dial’s Way, or a number): up the page is away from the eye. Unwired: the dial’s.', 'light from': 'Where the light comes from, across; its height is the dial’s height. Unwired: the dial’s.' },
+    outs: { ribbons: 'The ribbons, white, their ends fading.', facing: 'How squarely each point of a ribbon faces the light (the face turned to the eye): light where it does.', side: 'Which face shows: the front white, the back black (for a second tone).', depth: 'How near: near ribbons light, far ones dark.' },
+    set: { shape: 'The path: Gust (runs with the wind and ends in a curl that tightens), Spiral (coils round an upright axis), Loop (loops once and runs on), Wave (rises and falls), Mixed (the seed picks each).', count: 'How many gusts.', strands: 'Up to how many strands run side by side in a gust.', length: 'How long each gust runs.', curl: 'How many turns the curl makes, and how wide it starts.', width: 'The ribbons’ width.', twist: 'How far each ribbon turns round itself along its length (0: flat in the plane it bends in).', depth: 'How far the farthest gusts lie.', horizon: 'Where the horizon is, down the page (wire the same number the sea uses).', variant: 'Other gusts from the same seed.' },
+    tips: ['Facing through a Posterize into a Gradient Map (shadow, key, bright), its back face (Side) a shade darker, cut out by Ribbons: the wind of Windward Sea.', 'Shape Spiral, Count low, Width high: a whirlwind’s ribbons.'],
+    see: ['part:posterize', 'part:gradmap', 'part:flowlines'],
   },
   roomcaster: {
     line: 'An empty place built for passing through, cast as a ray-caster casts one: a corridor, a lobby, the poolrooms, a garage. The seed picks the kind, its layout, its lights and where the camera stands; it hands on which surface each point is, how far, the light, each surface’s pattern, the lamps, the water and the shade.',
@@ -63508,7 +64209,7 @@ const WORKING_WORDS = {
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
-  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', botline: 'Inking the stems', ditsy: 'Printing the cloth', macro: 'Focusing the lens', meadow: 'Walking into the meadow', petals: 'Letting the petals fall', bouquets: 'Gathering the flowers', imprints: 'Pressing the flowers', liminal: 'Finding the way back', turing: 'Letting the reaction diffuse',
+  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', windsea: 'Raising the sail', botline: 'Inking the stems', ditsy: 'Printing the cloth', macro: 'Focusing the lens', meadow: 'Walking into the meadow', petals: 'Letting the petals fall', bouquets: 'Gathering the flowers', imprints: 'Pressing the flowers', liminal: 'Finding the way back', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',
