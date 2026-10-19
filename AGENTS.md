@@ -1170,7 +1170,7 @@ the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
    (Ruby: "looking up prior art tends to give you ideas for what to make,
    and also how to make it unique"). Research what exists (art, photography,
    games, generators, techniques), write it up with sources in
-   docs/prior-art (one file per subject, as `docs/prior-art/liminal-spaces.md`), and design from it: the kinds the seed
+   docs/prior-art/ (one file per subject, as docs/prior-art/liminal-spaces.md), and design from it: the kinds the seed
    chooses among, what makes each recognizable, and what this app can do
    that the others don't. Never wait to be asked.
 1. Build it as a chain of parts (above), general parts with at most one new
