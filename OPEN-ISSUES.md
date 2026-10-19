@@ -8,6 +8,10 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- LIMINAL SPACES (new, branch `liminal`, sheet sent): the Room Caster ray-casts an empty place of one of eleven kinds
+  (lobby, warehouse, tunnels, poolrooms, hotel, school, hospital, subway, garage, mall, office), the seed's layout, lamps
+  and camera; general parts colour, light, haze and grain it. Six hues (walls, floor, ceiling, accent and water, light,
+  dark); the camera dial looks round. More kinds wanted (a stairwell, a playplace, an airport, an endless suburb)?
 - THE HUES IN THREE GROUPS: Light Colors (Main Light, Rim Light, Ambient Light, beside the dial), Surface Colors (the
   surface's own, up to six, named by the surface; a Ground or Snow Hue joins them), Material Colors (Glow, Shine and
   Shadow Hues), each under a small heading that hides when none of its hues shows. Names right?
@@ -25,7 +29,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   stay); a double-tap gives back the dozen lines.
 
 ## 2 · Ruby's notes to act on
-- NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): liminal spaces (docs/prior-art/liminal-spaces.md); the
+- NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): the
   florals (imprints, bouquets, wilting and petals, an idyllic meadow, macro bokeh).
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
