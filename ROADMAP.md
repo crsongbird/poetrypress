@@ -294,12 +294,6 @@ Easter eggs).
   bouquets; wilting flowers and scattered rose petals; an idyllic meadow (the field, which was good, made far more
   idyllic: wind through it, petals in the air, soft sun); macro images with soft bokeh, made from parts and using all
   of the lighting engine, stylized, a showpiece of the engine. Real species chosen by a slider.
-- **L5 · Feathers** (approved): ship as a graph (the Feathers process part + general parts), and add corvid feathers
-  (Ruby: "really want corvid feathers"): crow (matte black, faint blue-purple sheen), raven (larger, glossy, strong
-  blue-violet iridescence), magpie (black and white, the black iridescent green-blue-purple), blue jay (blue, black
-  bars, white tips).
-- **L6 · Light to lay over a page** (approved: Dappled Leaves, Window Light, Pool Caustics, Light Leaks): ship each as
-  a graph of general parts on mid-grey, so Soft Light and Overlay lay them over anything.
 
 ---
 

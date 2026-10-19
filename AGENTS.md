@@ -1266,6 +1266,19 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - No preset uses one.
   - They are quiet grounds of two or three general parts, with every slider
     a plain 0–100. They are the Athanor's easiest lessons.
+- **Feathers and Corvid Feathers** (one process part, `feathers`;
+  genFeathers in texWhimsy.js; prior art docs/prior-art/feathers-and-light.md):
+  - Bird is a setting in fifths (`FEATHER_BIRDS`: plain, crow, raven, magpie,
+    blue jay), so a Knob can drive it; it picks the feathers' kinds and their
+    patterns, never their colours.
+  - Six hues: feather, tip, two sheens, pale, dark. The sheen is structural:
+    each barb mixes between the two sheen hues by its angle to the light,
+    strongest facing it (`shk` per bird: raven 1, crow 0.4).
+- **The light to lay over a page** (Dappled Leaves, Window Light, Pool
+  Caustics, Light Leaks): graphs of general parts only (chains.js), on
+  mid-grey (Light Leaks on black, for Screen), every colour a Hue; the seed
+  reaches them through Random Numbers (panes, the window's place, the leak's
+  edge) and the Scatters' and noises' own streams.
 - **Black Hole:**
   - Ray-traced on every other working pixel; the in-between pixels are
     traced only where neighbours differ.

@@ -8,6 +8,8 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- CORVID FEATHERS (new) and the four light overlays as graphs (sheet sent): the magpie's white shows on few feathers
+  (its inner web, near the foot); the overlays are gentle on a pale page under Overlay, where Multiply shows them best.
 - SIX HUES: a surface may now ask for up to six pickers (none does yet; the new surfaces will). Their order on the page
   is the two hue pickers, then the four more, then the fifth hue and the light hues. Right?
 - THE DIAL'S REACH: the handle now rides the ring at 100% (it had stopped at about half the ring's radius), past it to
@@ -35,9 +37,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   guide over the preview with the keyboard kept up. Enough preview, enough poem?
 
 ## 2 · Ruby's notes to act on
-- NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): Feathers with corvids, the four light
-  overlays (approved: rebuild as graphs, then ship); Pixel Space and Webb (seeded variety); liminal spaces (prior art);
-  the florals (imprints, bouquets, wilting and petals, an idyllic meadow, macro bokeh).
+- NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): Pixel Space and Webb (seeded
+  variety; prior art in docs/prior-art/space-scenes.md); liminal spaces (docs/prior-art/liminal-spaces.md); the
+  florals (imprints, bouquets, wilting and petals, an idyllic meadow, macro bokeh).
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
   everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,
