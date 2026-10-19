@@ -5424,9 +5424,13 @@ function genMoon(w,h,amt,zoom,form,night){
 function genFeathers(w, h, o){
   const unit = Math.min(w, h), R = Math.random, rnd = (a, b) => a + R()*(b - a);
   const rgbOf = hx => { const c = parseHex(hx); return [c.r, c.g, c.b]; }, base = rgbOf(o.hue || '#ECE6DC'), tip = rgbOf(o.tip || '#7C6A5C');
+  // (every colour on a hue, ROADMAP L0: the sheen's two colours, the pale patches and tips, the dark bars and eyes' hearts)
+  const sheenA = rgbOf(o.sheenA || '#C9D6E8'), sheenB = rgbOf(o.sheenB || '#E8D6C9'), patch = rgbOf(o.patch || '#FFF4D6'), dark = rgbOf(o.dark || '#1E2238');
+  const kindOf = o.kind || 'plain', sheen = o.sheen ?? 0.15;
   const mix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
   const css = (c, al) => `rgba(${Math.round(Math.max(0, Math.min(255, c[0])))},${Math.round(Math.max(0, Math.min(255, c[1])))},${Math.round(Math.max(0, Math.min(255, c[2])))},${al.toFixed(3)})`;
   const lv = lightVec(o.light == null ? 315 : o.light), lm = Math.hypot(lv.lx, lv.ly), tlx = lm > 1e-4 ? -lv.lx/lm : 0, tly = lm > 1e-4 ? -lv.ly/lm : 0;   // (toward the light)
+  const lightAng = Math.atan2(tly, tlx);
   // THE COMPOSITION, by the seed: where the feathers lie and which way they point
   const comp = ['scatter', 'drift', 'fan', 'fallen'][Math.floor(R()*4)], drift = rnd(-0.9, 0.9) + Math.PI*0.5*(R() < 0.5 ? 1 : -1);
   const n = Math.max(1, Math.round(canonArea(w, h)/(unit*unit/(cpx(1)*cpx(1)))*0 + (w*h)/(unit*unit)*(4 + 26*o.count)/(o.size*o.size*0.9 + 0.1)));
@@ -5438,8 +5442,8 @@ function genFeathers(w, h, o){
     else if(comp === 'fan'){ const cx = w*rnd(0.3, 0.7), cy = h*1.08; x = cx + (R() - 0.5)*w*0.5; y = h*rnd(0.15, 1.0); ang = Math.atan2(y - cy, x - cx) + Math.PI/2 + rnd(-0.25, 0.25); }
     else if(comp === 'fallen'){ y = h*(1 - Math.pow(R(), 1.6)*0.85); ang = rnd(-Math.PI, Math.PI); }
     else ang = rnd(-Math.PI, Math.PI);
-    const kind = R() < 0.18 ? 'plume' : R() < 0.45 ? 'flight' : 'contour';
-    const L = unit*o.size*(kind === 'flight' ? rnd(0.32, 0.5) : kind === 'plume' ? rnd(0.22, 0.34) : rnd(0.18, 0.3))*(0.55 + 0.45*z);
+    const kind = kindOf === 'plain' ? (R() < 0.18 ? 'plume' : R() < 0.45 ? 'flight' : 'contour') : kindOf === 'magpie' ? (R() < 0.7 ? 'flight' : 'contour') : kindOf === 'jay' ? (R() < 0.5 ? 'flight' : 'contour') : (R() < 0.6 ? 'flight' : 'contour');
+    const L = unit*o.size*(kind === 'flight' ? rnd(0.32, 0.5)*(kindOf === 'magpie' || kindOf === 'raven' ? 1.25 : 1) : kind === 'plume' ? rnd(0.22, 0.34) : rnd(0.18, 0.3))*(0.55 + 0.45*z);
     F.push({ x, y, ang, kind, L, z, flip: R() < 0.5 ? 1 : -1, curl: (o.curl*0.6 + rnd(-0.12, 0.12))*(R() < 0.5 ? 1 : -1), tone: rnd(-0.08, 0.08), seed: R() });
   }
   F.sort((a, b) => a.z - b.z);
@@ -5496,7 +5500,7 @@ function genFeathers(w, h, o){
     // the eye near the tip (Markings past two thirds): rings of the tip's hue round a dark heart, a pale halo
     const eyeK = o.marks >= 0.66 ? Math.min(1, (o.marks - 0.66)/0.34) : 0, eyeAt = shaft(f, 0.78), eyeR = L*0.14*(0.7 + 0.3*eyeK);
     if(eyeK > 0){ const E0 = toPage(f, eyeAt, f.x, f.y);
-      for(const [rk, colr, al] of [[1, mix(base, [255, 244, 214], 0.6), 0.75], [0.78, tip, 0.9], [0.5, mix(tip, [30, 90, 110], 0.5), 0.9], [0.28, [18, 22, 48], 0.95]]){
+      for(const [rk, colr, al] of [[1, mix(base, patch, 0.6), 0.75], [0.78, tip, 0.9], [0.5, mix(tip, sheenA, 0.5), 0.9], [0.28, dark, 0.95]]){
         x.fillStyle = css(colr, al*eyeK); x.beginPath(); x.ellipse(E0[0], E0[1], eyeR*rk*0.82, eyeR*rk*1.1, f.ang, 0, Math.PI*2); x.fill(); } }
     for(const side of [1, -1]){
       const si = side > 0 ? 0 : 1;
@@ -5519,6 +5523,15 @@ function genFeathers(w, h, o){
         let tt = Math.pow(t, 1.6)*0.85;
         if(o.marks > 0.05 && o.marks < 0.66){ const band = 0.5 + 0.5*Math.sin(t*Math.PI*(5 + 6*o.marks) + f.seed*6); tt = Math.max(tt, band > 0.7 ? Math.min(1, o.marks*1.6) : 0); }
         let col = mix(base, tip, tt);
+        // THE CORVIDS (Ruby: "really want corvid feathers"): a magpie's inner web pale near the foot; a jay barred dark,
+        // its tip pale; crow and raven all dark (their hues), and each with its sheen
+        if(kindOf === 'magpie' && side === f.flip && t < 0.62) col = mix(patch, col, Math.max(0, (t - 0.5)/0.12));
+        if(kindOf === 'jay'){ const bar = 0.5 + 0.5*Math.sin(t*Math.PI*14 + f.seed*4); if(bar > 0.78 && t < 0.86) col = mix(col, dark, 0.85); if(t > 0.86) col = mix(col, patch, Math.min(1, (t - 0.86)/0.06)); }
+        // STRUCTURAL COLOUR: a barb's sheen turns with the angle between it and the light (the dial), from one sheen hue to
+        // the other, strongest where it faces the light; none on the pale patches
+        const shk = kindOf === 'raven' ? 1 : kindOf === 'crow' ? 0.4 : kindOf === 'magpie' ? 0.9 : kindOf === 'jay' ? 0.25 : 0.5;
+        if(sheen > 0 && lm > 1e-4){ const ba = f.ang - Math.PI/2 + side*lean, face = Math.cos(2*(ba - lightAng)), sc = mix(sheenA, sheenB, 0.5 + 0.5*Math.cos(ba - lightAng + t*1.5));
+          const k = sheen*shk*(0.3 + 0.7*Math.abs(face))*Math.min(1, lm*1.4)*(kindOf === 'magpie' && side === f.flip && t < 0.5 ? 0 : 1); col = mix(col, sc, Math.min(0.85, k*0.8)); }
         // (through the eye the barbs only texture it)
         const inEye = eyeK > 0 && Math.hypot((mx - eyeAt[0])/0.82, (my - eyeAt[1])/1.1) < eyeR*1.05 ? 0.3 : 1;
         col = col.map(v => v*lit*(1 + f.tone));
@@ -5533,7 +5546,7 @@ function genFeathers(w, h, o){
     // the shaft over the vanes: the quill pale and stiff at the foot, thinning to the tip
     x.lineCap = 'round';
     for(let i = 0; i < 16; i++){ const t0 = i/16, t1 = (i + 1)/16, a = toPage(f, shaft(f, t0), f.x, f.y), b = toPage(f, shaft(f, t1), f.x, f.y);
-      x.strokeStyle = css(mix(base, [255, 250, 240], 0.35).map(v => v*(1 + f.tone)), 0.85); x.lineWidth = Math.max(cpx(0.4), L*0.012*(1 - 0.8*t0));
+      x.strokeStyle = css(mix(base, patch, 0.35).map(v => v*(1 + f.tone)), 0.85); x.lineWidth = Math.max(cpx(0.4), L*0.012*(1 - 0.8*t0));
       x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.stroke(); }
     const q = toPage(f, [0, L*0.07], f.x, f.y), a0 = toPage(f, [0, 0], f.x, f.y);
     x.lineWidth = Math.max(cpx(0.5), L*0.014); x.beginPath(); x.moveTo(a0[0], a0[1]); x.lineTo(q[0], q[1]); x.stroke();   // the calamus, bare
@@ -13036,6 +13049,8 @@ const GEN_STEPS = {
 
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+/** The birds the Feathers part draws (its Bird setting, in fifths). */
+const FEATHER_BIRDS = ['plain', 'crow', 'raven', 'magpie', 'jay'];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const whimClamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
@@ -14039,11 +14054,14 @@ const WHIMSY_STEPS = {
       return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
   // Feathers (Ruby: "procedurally generated feathers in the background"), on a transparent ground, under the texture's
   // own seed + Variant
-  feathers: kitWhole({ cat: 'Marks', label: 'Feathers', ins: ['light from', 'feather hue', 'tip hue'], outs: ['feathers'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [WHIM_R('size', 'Feather Size', 100, 40, 250), WHIM_R('count', 'Feathers', 30), WHIM_R('fluff', 'Fluff', 15), WHIM_R('curl', 'Curl', 30), WHIM_R('splits', 'Splits', 30),
-      WHIM_R('marks', 'Markings', 0), WHIM_R('depth', 'Depth', 50), WHIM_R('lift', 'Lift', 50), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
-    (E, n, w, h) => { const light = wholeDial(E, n, 1), hue = wholeHex(E, n, 2), tip = wholeHex(E, n, 3), v = k => E.num(n, k, 0)/100;
-      const o = { size: Math.max(0.4, E.num(n, 'size', 100)/100), count: v('count'), fluff: v('fluff'), curl: v('curl'), splits: v('splits'), marks: v('marks'), depth: v('depth'), lift: v('lift'), light, hue, tip };
+  feathers: kitWhole({ cat: 'Marks', label: 'Feathers', ins: ['light from', 'feather hue', 'tip hue', 'sheen hue', 'second sheen hue', 'pale hue', 'dark hue'], outs: ['feathers'],
+    io: { ins: ['value', 'colour', 'colour', 'colour', 'colour', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('bird', 'Bird: Plain · Crow · Raven · Magpie · Blue Jay', 0), WHIM_R('size', 'Feather Size', 100, 40, 250), WHIM_R('count', 'Feathers', 30), WHIM_R('fluff', 'Fluff', 15),
+      WHIM_R('curl', 'Curl', 30), WHIM_R('splits', 'Splits', 30), WHIM_R('marks', 'Markings', 0), WHIM_R('sheen', 'Sheen', 15), WHIM_R('depth', 'Depth', 50), WHIM_R('lift', 'Lift', 50),
+      WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), v = k => E.num(n, k, 0)/100, kind = FEATHER_BIRDS[Math.min(4, Math.floor(E.num(n, 'bird', 0)/100*5))];
+      const o = { kind, size: Math.max(0.4, E.num(n, 'size', 100)/100), count: v('count'), fluff: v('fluff'), curl: v('curl'), splits: v('splits'), marks: v('marks'), sheen: v('sheen'), depth: v('depth'), lift: v('lift'), light,
+        hue: wholeHex(E, n, 2), tip: wholeHex(E, n, 3), sheenA: wholeHex(E, n, 4), sheenB: wholeHex(E, n, 5), patch: wholeHex(E, n, 6), dark: wholeHex(E, n, 7) };
       return () => genFeathers(w, h, o); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
@@ -18596,9 +18614,138 @@ const TEXTURE_CHAINS = {
       ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
     wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  // ── Light to lay over a page (ROADMAP §2 L6): graphs of general parts, on mid-grey (Light Leaks on black, for Screen) ──
+  dappled: { label: 'Dappled Leaves', div: 2, teach: 'Sunlight through leaves, to lay over a page: their shadows on a mid-grey ground, so Soft Light or Overlay lays them over anything. Three Scatters of a leaf (an Ellipse) make the foliage in clumps, far, middle and near; each is thrown along the light by a Motion Blur turned by the Light Dial’s direction and stretched by its height (a lower sun throws longer shadows), then softened by a Blur, the far ones most. Max gathers the shade; a Scatter of dots, blurred, makes the round spots of the sun between the leaves, kept to the gaps by the shade inverted. Map Range lays the shade below the middle and the spots above it, and a Gradient Map colours them Shade Hue, mid-grey, Light Hue. Try: Soft Light over a plain page, the dial low at one side.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Leaf Size', def: 50 }, 40, 40],           // 1
+  ['knob', { slot: '2', name: 'Leaves', def: 50 }, 40, 120],             // 2
+  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['dial', {}, 40, 280],                                                 // 4 the sun
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
+  ['ellipse', { size: 90, '~size': '60,120', height: 34, soft: 6 }, 220, 40],               // 7 a leaf
+  ['scatter', { shape: 'picture', count: 400, '~count': '150,400', size: 40, '~size': '20,70', vary: 50, turn: 100, clump: 92, fade: 0 }, 420, 40],          // 8 the far leaves
+  ['scatter', { shape: 'picture', count: 340, '~count': '120,400', size: 34, '~size': '16,60', vary: 50, turn: 100, clump: 90, fade: 0, variation: 4 }, 420, 200],   // 9 the middle
+  ['scatter', { shape: 'picture', count: 220, '~count': '60,400', size: 28, '~size': '12,50', vary: 50, turn: 100, clump: 88, fade: 0, variation: 8 }, 420, 360],   // 10 the near
+  ['motionblur', { length: 12, '~length': '0,24' }, 620, 40],            // 11 thrown along the light
+  ['motionblur', { length: 9, '~length': '0,18' }, 620, 200],           // 12
+  ['motionblur', { length: 6, '~length': '0,12' }, 620, 360],           // 13
+  ['blur', { radius: 14, '~radius': '4,30' }, 800, 40],                  // 14 far: soft
+  ['blur', { radius: 7, '~radius': '2,16' }, 800, 200],                  // 15
+  ['blur', { radius: 2, '~radius': '0,7' }, 800, 360],                   // 16 near: sharp
+  ['math', { op: 'max' }, 980, 120],                                     // 17
+  ['math', { op: 'max' }, 1160, 200],                                    // 18 all the shade
+  ['scatter', { shape: 'dot', count: 300, size: 6, vary: 50, turn: 100, clump: 0, fade: 40, variation: 12 }, 980, 360],   // 19 the sun's spots
+  ['blur', { radius: 5 }, 1160, 360],                                    // 20
+  ['invert', {}, 1160, 460],                                             // 21 where the leaves let light through
+  ['math', { op: 'multiply' }, 1340, 400],                               // 22 spots only in the gaps
+  ['maprange', { outLo: 50, outHi: 0 }, 1340, 200],                     // 23 shade: below the middle, down to the Shade Hue itself
+  ['maprange', { outLo: 0, outHi: 40 }, 1520, 400],                      // 24 spots: a little above it
+  ['math', { op: 'add' }, 1520, 240],                                    // 25
+  ['colour', { hex: '#808080' }, 1520, 520],                             // 26 the neutral
+  ['gradmap', { stops: 3 }, 1700, 240],                                  // 27 shade, neutral, light
+  ['surface', { name: 'Dappled Leaves', ground: 'grey' }, 1900, 240]],  // 28
+  wires: [[7, 1, 8, 1], [7, 1, 9, 1], [7, 1, 10, 1], [8, 1, 11, 1], [9, 1, 12, 1], [10, 1, 13, 1], [11, 1, 14, 1], [12, 1, 15, 1], [13, 1, 16, 1],
+    [14, 1, 17, 1], [15, 1, 17, 2], [17, 1, 18, 1], [16, 1, 18, 2], [19, 1, 20, 1], [18, 1, 21, 1], [20, 1, 22, 1], [21, 1, 22, 2],
+    [18, 1, 23, 1], [22, 1, 24, 1], [23, 1, 25, 1], [24, 1, 25, 2], [25, 1, 27, 1], [6, 1, 27, 2], [26, 1, 27, 3], [5, 1, 27, 4], [27, 1, 28, 1],
+    [4, 1, 11, paramPort('motionblur', 'angle')], [4, 1, 12, paramPort('motionblur', 'angle')], [4, 1, 13, paramPort('motionblur', 'angle')],
+    [4, 2, 11, paramPort('motionblur', 'length')], [4, 2, 12, paramPort('motionblur', 'length')], [4, 2, 13, paramPort('motionblur', 'length')],
+    [1, 1, 7, paramPort('ellipse', 'size')], [1, 1, 8, paramPort('scatter', 'size')], [1, 1, 9, paramPort('scatter', 'size')], [1, 1, 10, paramPort('scatter', 'size')],
+    [2, 1, 8, paramPort('scatter', 'count')], [2, 1, 9, paramPort('scatter', 'count')], [2, 1, 10, paramPort('scatter', 'count')],
+    [3, 1, 14, paramPort('blur', 'radius')], [3, 1, 15, paramPort('blur', 'radius')], [3, 1, 16, paramPort('blur', 'radius')]] },
+  windowlight: { label: 'Window Light', div: 2, teach: 'The light of a window laid across the page, to lay over it on a mid-grey ground. Grid & Dots draws the bars, inverted into panes, cut to a window by a Shape; a Scatter of leaves, kept to one corner by another Shape, is a plant on the sill. Scale stretches it as the Light Dial’s height lowers the sun, Rotate turns it to the dial’s direction, Blur softens its edges; Map Range and a Gradient Map make the room dim and the light bright in your hues. Random Numbers, by the seed, choose how many panes, where the window falls and how leafy the plant. Try: Overlay on a warm page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Window Size', def: 50 }, 40, 40],         // 1
+  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
+  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['dial', {}, 40, 280],                                                 // 4 the sun
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
+  ['grid', { kind: 'grid lines', cells: 3, '~cells': '2,6', weight: 14, soft: 0 }, 220, 40],   // 7 the bars
+  ['invert', {}, 400, 40],                                               // 8 the panes
+  ['shape', { form: 'square', size: 70, '~size': '35,110', soft: 0, x: 55, y: 45, '~x': '30,70', '~y': '30,65' }, 220, 180],   // 9 the window
+  ['math', { op: 'multiply' }, 580, 100],                                // 10 the panes in the window
+  ['ellipse', { size: 90, height: 30, soft: 8 }, 220, 320],              // 11 a leaf
+  ['scatter', { shape: 'picture', count: 70, '~count': '0,160', size: 30, vary: 50, turn: 100, clump: 95, fade: 0 }, 400, 320],   // 12 a plant on the sill
+  ['shape', { form: 'circle', size: 70, soft: 60, x: 20, y: 80 }, 220, 460],   // 13 where the plant stands
+  ['math', { op: 'multiply' }, 580, 380],                                // 14 the plant only there
+  ['invert', {}, 760, 380],                                              // 15
+  ['math', { op: 'multiply' }, 760, 160],                                // 16 its leaves' shadows in the light
+  ['scale', { scale: 100, stretch: 30, '~stretch': '0,70', edges: 'stretch the edge' }, 940, 160],   // 17 a lower sun throws it longer
+  ['rotate', { angle: 0, edges: 'stretch the edge' }, 1120, 160],        // 18 turned toward the sun's way
+  ['blur', { radius: 6, '~radius': '1,24' }, 1300, 160],                 // 19
+  ['maprange', { outLo: 32, outHi: 82, '~outHi': '62,100' }, 1480, 160],   // 20 the room dim, the light as bright as Brightness says
+  ['colour', { hex: '#808080' }, 1480, 320],                             // 21
+  ['gradmap', { stops: 3 }, 1660, 160],                                  // 22
+  ['surface', { name: 'Window Light', ground: 'grey' }, 1860, 160],     // 23
+  ['random', { lo: 0, hi: 100 }, 40, 540],                               // 24 the seed: how many panes
+  ['random', { lo: 0, hi: 100 }, 40, 620],                               // 25 …where the window falls, across
+  ['random', { lo: 0, hi: 100 }, 40, 700],                               // 26 …and down
+  ['random', { lo: 0, hi: 100 }, 40, 780]],                              // 27 …and the plant
+  wires: [[7, 1, 8, 1], [8, 1, 10, 1], [9, 1, 10, 2], [11, 1, 12, 1], [12, 1, 14, 1], [13, 1, 14, 2], [14, 1, 15, 1], [10, 1, 16, 1], [15, 1, 16, 2],
+    [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 20, 1], [20, 1, 22, 1], [6, 1, 22, 2], [21, 1, 22, 3], [5, 1, 22, 4], [22, 1, 23, 1],
+    [4, 1, 18, paramPort('rotate', 'angle')], [4, 2, 17, paramPort('scale', 'stretch')], [1, 1, 9, paramPort('shape', 'size')], [3, 1, 19, paramPort('blur', 'radius')], [2, 1, 20, paramPort('maprange', 'outHi')],
+    [24, 1, 7, paramPort('grid', 'cells')], [25, 1, 9, paramPort('shape', 'x')], [26, 1, 9, paramPort('shape', 'y')], [27, 1, 12, paramPort('scatter', 'count')]] },
+  caustics: { label: 'Pool Caustics', div: 2, teach: 'Light focused by rippling water onto the floor of a pool, to lay over a page: a bright net on a mid-grey ground. Two Cells, warped by a slow Perlin swell, give the net (their edges); Levels thin the lines and, softer, their glow, which a Blur spreads; a second, finer net is screened over fainter, so the lines are brightest where they cross. Map Range and a Gradient Map put it on mid-grey in your hues. Try: Overlay on a teal page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Net Size', def: 50 }, 40, 40],            // 1
+  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
+  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 280],                    // 4
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 360],                    // 5
+  ['perlin', { scale: 16, details: 2, rough: 40, contrast: 30, variation: 3 }, 220, 40],   // 6 the swell that bends it
+  ['cells', { scale: 45, '~scale': '80,22', jitter: 95, gap: 0 }, 220, 160],   // 7 the net
+  ['warp', { amount: 22 }, 420, 160],                                    // 8
+  ['levels', { lo: 88, hi: 100, gamma: 45, '~lo': '93,70' }, 600, 120],   // 9 its lines (Softness widens them)
+  ['levels', { lo: 55, hi: 100, gamma: 30 }, 600, 220],                  // 10 its glow
+  ['cells', { scale: 80, '~scale': '140,40', jitter: 95, gap: 0, variation: 5 }, 220, 340],   // 11 a second, finer net
+  ['warp', { amount: 16 }, 420, 340],                                    // 12
+  ['levels', { lo: 92, hi: 100, gamma: 45 }, 600, 340],                  // 13
+  ['blur', { radius: 5 }, 780, 220],                                     // 14 the glow, soft
+  ['math', { op: 'screen' }, 960, 160],                                  // 15 line over glow
+  ['maprange', { outLo: 0, outHi: 55 }, 780, 340],                       // 16 the finer net, fainter
+  ['math', { op: 'screen' }, 1140, 240],                                 // 17
+  ['maprange', { outLo: 45, outHi: 92, '~outHi': '68,100' }, 1320, 240],   // 18 on mid-grey, as bright as Brightness says
+  ['colour', { hex: '#808080' }, 1320, 400],                             // 19 the neutral the blends leave as it is
+  ['gradmap', { stops: 3 }, 1500, 240],                                  // 20 shade, neutral, light
+  ['surface', { name: 'Pool Caustics', ground: 'grey' }, 1700, 240]],   // 21
+  wires: [[7, 2, 8, 1], [6, 1, 8, 2], [8, 1, 9, 1], [8, 1, 10, 1], [11, 2, 12, 1], [6, 1, 12, 2], [12, 1, 13, 1], [10, 1, 14, 1], [9, 1, 15, 1], [14, 1, 15, 2],
+    [13, 1, 16, 1], [15, 1, 17, 1], [16, 1, 17, 2], [17, 1, 18, 1], [18, 1, 20, 1], [5, 1, 20, 2], [19, 1, 20, 3], [4, 1, 20, 4], [20, 1, 21, 1],
+    [1, 1, 7, paramPort('cells', 'scale')], [1, 1, 11, paramPort('cells', 'scale')], [3, 1, 9, paramPort('levels', 'lo')], [2, 1, 18, paramPort('maprange', 'outHi')]] },
+  lightleaks: { label: 'Light Leaks', div: 4, teach: 'The warm stains of light leaking into a film camera, on black for Screen. Soft Forms make the blooms, kept toward one edge by a Gradient whose way the seed picks; a second Gradient, folded at its middle, is the band of light dragged across. A Blur softens them all; a Gradient Map colours them from black through the Red, Orange and Gold Hues. Random Numbers choose the edge, the band’s way and how many blooms. Try: Screen over a dark page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Bloom Size', def: 50 }, 40, 40],          // 1
+  ['knob', { slot: '2', name: 'Leaks', def: 50 }, 40, 120],              // 2
+  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['hue', { slot: '1', name: 'Gold Hue' }, 40, 280],                     // 4
+  ['hue', { slot: '2', name: 'Orange Hue' }, 40, 360],                   // 5
+  ['hue', { slot: '3', name: 'Red Hue' }, 40, 440],                      // 6
+  ['forms', { count: 5, '~count': '2,10', size: 50, '~size': '25,90', noise: 60 }, 220, 40],   // 7 the blooms
+  ['gradient', { shape: 'linear', angle: 90, '~angle': '0,360' }, 220, 200],   // 8 toward one edge (the seed's)
+  ['levels', { lo: 35, hi: 100, gamma: 40 }, 400, 200],                  // 9 strongest at that edge
+  ['math', { op: 'multiply' }, 580, 120],                                // 10
+  ['gradient', { shape: 'linear', angle: 20, '~angle': '0,360' }, 220, 340],   // 11 the band across
+  ['math', { op: 'difference' }, 400, 340],                              // 12 …its middle
+  ['number', { value: 50 }, 220, 460],                                   // 13
+  ['levels', { lo: 0, hi: 18, gamma: 50 }, 580, 340],                    // 14
+  ['invert', {}, 760, 340],                                              // 15
+  ['maprange', { outLo: 0, outHi: 45, '~outHi': '0,70' }, 940, 340],     // 16 as strong as Leaks says
+  ['math', { op: 'screen' }, 1120, 200],                                 // 17
+  ['blur', { radius: 20, '~radius': '6,40' }, 1300, 200],                // 18 soft
+  ['maprange', { outLo: 0, outHi: 90, '~outHi': '50,100' }, 1480, 200],  // 19
+  ['colour', { hex: '#000000' }, 1480, 380],                             // 20 the neutral for Screen
+  ['gradmap', { stops: 4 }, 1660, 200],                                  // 21 black, red, orange, gold
+  ['surface', { name: 'Light Leaks', ground: 'colour' }, 1860, 200],    // 22
+  ['random', { lo: 0, hi: 100 }, 40, 540],                               // 23 the seed: which edge
+  ['random', { lo: 0, hi: 100 }, 40, 620],                               // 24 …the band's way
+  ['random', { lo: 0, hi: 100 }, 40, 700]],                              // 25 …how many blooms
+  wires: [[7, 1, 10, 1], [8, 1, 9, 1], [9, 1, 10, 2], [11, 1, 12, 1], [13, 1, 12, 2], [12, 1, 14, 1], [14, 1, 15, 1], [15, 1, 16, 1], [10, 1, 17, 1], [16, 1, 17, 2],
+    [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 21, 1], [20, 1, 21, 2], [6, 1, 21, 3], [5, 1, 21, 4], [4, 1, 21, 5], [21, 1, 22, 1],
+    [1, 1, 7, paramPort('forms', 'size')], [2, 1, 16, paramPort('maprange', 'outHi')], [2, 1, 19, paramPort('maprange', 'outHi')], [3, 1, 18, paramPort('blur', 'radius')],
+    [23, 1, 8, paramPort('gradient', 'angle')], [24, 1, 11, paramPort('gradient', 'angle')], [25, 1, 7, paramPort('forms', 'count')]] },
   // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
   // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
-  feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air.', nodes: [
+  feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
       ['knob', { slot: '3', name: 'Fluff', def: 15 }, 40, 200],                    // 3
@@ -18610,12 +18757,29 @@ const TEXTURE_CHAINS = {
       ['dial', {}, 40, 680],                                                       // 9
       ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760],                        // 10
       ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840],                            // 11
-      ['feathers', { size: 100, '~size': '40,250', count: 30, '~count': '0,100', fluff: 15, '~fluff': '0,100', curl: 30, '~curl': '0,100', splits: 30, '~splits': '0,100',
-        marks: 0, '~marks': '0,100', depth: 50, '~depth': '0,100', lift: 50, '~lift': '0,100' }, 320, 300],   // 12
-      ['surface', { name: 'Feathers', ground: 'colour' }, 600, 320]],              // 13
+      ['feathers', { bird: 0, size: 100, '~size': '40,250', count: 30, '~count': '0,100', fluff: 15, '~fluff': '0,100', curl: 30, '~curl': '0,100', splits: 30, '~splits': '0,100',
+        marks: 0, '~marks': '0,100', sheen: 15, depth: 50, '~depth': '0,100', lift: 50, '~lift': '0,100' }, 320, 300],   // 12
+      ['surface', { name: 'Feathers', ground: 'colour' }, 600, 320],               // 13
+      ['hue', { slot: '3', name: 'Sheen Hue' }, 40, 920],                          // 14
+      ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000],                  // 15
+      ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080],                          // 16
+      ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160]],                         // 17
     wires: [[1, 1, 12, paramPort('feathers', 'size')], [2, 1, 12, paramPort('feathers', 'count')], [3, 1, 12, paramPort('feathers', 'fluff')], [4, 1, 12, paramPort('feathers', 'curl')],
       [5, 1, 12, paramPort('feathers', 'splits')], [6, 1, 12, paramPort('feathers', 'marks')], [7, 1, 12, paramPort('feathers', 'depth')], [8, 1, 12, paramPort('feathers', 'lift')],
-      [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [12, 1, 13, 1]] },
+      [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [14, 1, 12, 4], [15, 1, 12, 5], [16, 1, 12, 6], [17, 1, 12, 7], [12, 1, 13, 1]] },
+  // 🪶 Corvid Feathers (Ruby: "really want corvid feathers"): the Feathers part, its Bird on a slider, all six hues wired
+  corvids: { label: 'Corvid Feathers', canvas: true, teach: 'The feathers of the crow family, on a transparent ground. One part makes them: Feathers, its Bird on the first slider: a crow’s, matte black with a faint sheen; a raven’s, long and glossy, its sheen strong; a magpie’s, black with a white inner web near the foot and a green-blue-purple sheen; a blue jay’s, blue, barred dark, tipped pale. Their sheen is structural colour, as a real feather’s is: it turns between the two Sheen Hues with the angle between each barb and the light, strongest where it faces the Light Dial. Every colour is a hue: Feather, Tip, the two Sheens, Pale and Dark. Try: Raven, Sheen high, and turn the light dial slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Bird', def: 50 }, 40, 40], ['knob', { slot: '2', name: 'Feather Size', def: 29 }, 40, 120], ['knob', { slot: '3', name: 'Feathers', def: 25 }, 40, 200],
+      ['knob', { slot: '4', name: 'Fluff', def: 10 }, 40, 280], ['knob', { slot: '5', name: 'Splits', def: 30 }, 40, 360], ['knob', { slot: '6', name: 'Sheen', def: 70 }, 40, 440],
+      ['knob', { slot: '7', name: 'Depth', def: 40 }, 40, 520], ['knob', { slot: '8', name: 'Lift', def: 60 }, 40, 600],                 // 1–8
+      ['dial', {}, 40, 680],                                                                                                         // 9
+      ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760], ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840], ['hue', { slot: '3', name: 'Sheen Hue' }, 40, 920],
+      ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000], ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080], ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160],   // 10–15
+      ['feathers', { bird: 50, '~bird': '0,100', size: 100, '~size': '40,250', count: 25, '~count': '0,100', fluff: 10, '~fluff': '0,100', curl: 25, splits: 30, '~splits': '0,100', sheen: 70, '~sheen': '0,100', depth: 40, '~depth': '0,100', lift: 60, '~lift': '0,100' }, 320, 300],   // 16
+      ['surface', { name: 'Corvid Feathers', ground: 'colour' }, 600, 320]],                                                         // 17
+    wires: [[1, 1, 16, paramPort('feathers', 'bird')], [2, 1, 16, paramPort('feathers', 'size')], [3, 1, 16, paramPort('feathers', 'count')], [4, 1, 16, paramPort('feathers', 'fluff')],
+      [5, 1, 16, paramPort('feathers', 'splits')], [6, 1, 16, paramPort('feathers', 'sheen')], [7, 1, 16, paramPort('feathers', 'depth')], [8, 1, 16, paramPort('feathers', 'lift')],
+      [9, 1, 16, 1], [10, 1, 16, 2], [11, 1, 16, 3], [12, 1, 16, 4], [13, 1, 16, 5], [14, 1, 16, 6], [15, 1, 16, 7], [16, 1, 17, 1]] },
   summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
       ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
       ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
@@ -19971,6 +20135,27 @@ const TEXTURE_PARAMS = {
                   {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
                   // soft speckled, noisy highlights over the flakes (0: none)
                   {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
+  // ── Corvid Feathers and the light to lay over a page (ROADMAP §2 L5, L6) ──
+  corvids:        [{key:'bird', label:'Bird', min:0, max:100, def:50, unit:'', ticks:[0,25,50,75,100], names:['Plain','Crow','Raven','Magpie','Blue Jay']},
+                  {key:'zoom', label:'Feather Size', min:40, max:250, def:100, unit:''},
+                  {key:'amt', label:'Feathers', min:0, max:100, def:25, unit:''},
+                  {key:'fluff', label:'Fluff', min:0, max:100, def:10, unit:''},
+                  {key:'splits', label:'Splits', min:0, max:100, def:30, unit:''},
+                  {key:'sheen', label:'Sheen', min:0, max:100, def:70, unit:''},
+                  {key:'depth', label:'Depth', min:0, max:100, def:40, unit:''},
+                  {key:'lift', label:'Lift', min:0, max:100, def:60, unit:''}],
+  dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
+  windowlight:    [{key:'size', label:'Window Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
+  caustics:       [{key:'size', label:'Net Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
+  lightleaks:     [{key:'size', label:'Bloom Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Leaks', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
   feathers:      [{key:'zoom',  label:'Feather Size',    min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Feathers',        min:0,  max:100, def:30,  unit:''},
                   {key:'fluff', label:'Fluff',           min:0,  max:100, def:15,  unit:''},
@@ -20454,10 +20639,19 @@ const TEXTURE_CAPS = {
   // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
   metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
+  // (the crow family: every colour a hue, defaults a raven's; Sheen turns with the light dial)
+  corvids:       { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'], light:true, tints:6,
+                   tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#0E0E14','#0A0A10','#5A3AC8','#2A8AA8','#F2F2F0','#060608'] },
+  // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
+  dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  caustics:      { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  // (light leaks on black, for Screen)
+  lightleaks:    { blends:['screen','lighten','color-dodge','soft-light','overlay','hard-light','luminosity','source-over'], tints:3, tintLabels:['Gold Hue','Orange Hue','Red Hue'], tintDefaults:['#FFD27A','#FF8A3A','#D8322E'] },
   // feathers on a transparent ground, made to lie on the page's colour or a simple surface (Ruby): Normal as painted,
   // Multiply on a pale page, Screen on a dark one, Soft Light or Overlay into another surface
   feathers:      { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'],
-                   light:true, tints:2, tintLabels:['Feather Hue','Tip Hue'], tintDefaults:['#ECE6DC','#7C6A5C'] },
+                   light:true, tints:6, tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#ECE6DC','#7C6A5C','#C9D6E8','#E8D6C9','#FFF4D6','#1E2238'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
                    light:true, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
@@ -20674,6 +20868,16 @@ function textureCacheMB(){ let px = 0; for(const c of textureCache.values()) px 
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
+  } else if(type === 'corvids'){
+    result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'dappled'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'windowlight'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'caustics'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'lightleaks'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFD27A', tint2 || '#FF8A3A');   // (chains.js)
   } else if(type === 'feathers'){
     result = genChain(type, w, h, light, extra, tint1 || '#ECE6DC', tint2 || '#7C6A5C');   // Feathers (chains.js)
   } else if(type === 'flowers'){
@@ -21833,12 +22037,19 @@ but bear with me, dear}]/jitter:200
                 <option value="grain" data-str="option.waking_grain">Waking Grain</option>
               </optgroup>
               <optgroup label="🜚 Light, Sparks &amp; Dust">
+                <option value="corvids" data-str="option.corvids">Corvid Feathers</option>
                 <option value="bokeh" data-str="option.dream_bloom">Dream Bloom</option>
                 <option value="feathers" data-str="option.feathers">Feathers</option>
                 <option value="magicparticles" data-str="option.euphoria_dust">Pixie Dust</option>
                 <option value="aurora" data-str="option.aurora_veil">Silk Ribbons</option>
                 <option value="clouds" data-str="option.sleep_haze">Sleep Haze</option>
                 <option value="embers" data-str="option.burning_mana">Sparkler</option>
+              </optgroup>
+              <optgroup label="ᕕ Light to Lay Over">
+                <option value="dappled" data-str="option.dappled">Dappled Leaves</option>
+                <option value="lightleaks" data-str="option.light_leaks">Light Leaks</option>
+                <option value="caustics" data-str="option.caustics">Pool Caustics</option>
+                <option value="windowlight" data-str="option.window_light">Window Light</option>
               </optgroup>
               <optgroup label="🜁 Weather">
                 <option value="dewwebs" data-str="option.dewy_webs">Dewy Webs</option>
@@ -23027,6 +23238,11 @@ const UI_STRINGS = {
   'label.hue_5':                                "Hue 5",
   'label.hue_6':                                "Hue 6",
   'option.feathers':                           "Feathers",
+  'option.corvids':                            "Corvid Feathers",
+  'option.dappled':                            "Dappled Leaves",
+  'option.light_leaks':                        "Light Leaks",
+  'option.caustics':                           "Pool Caustics",
+  'option.window_light':                       "Window Light",
   'option.lotus_pond':                         "Lotus Pond",
   'option.painter_s_frustration':              "Painter's Frustration",
   'option.90s_dots':                           "Retro Dots",
@@ -24114,14 +24330,16 @@ const WELCOME_POEM = "## WTF is [PoetryPress]?\n\n>  [{\"well, it's a weird art 
  * both show them: grouped by what a surface IS, each group's glyph a Runology
  * Archetype whose meaning it shares (Symbology's metadata: Earth is ground
  * and soil, Quintessence light and shimmer, Wind weather, Astral sky and
- * stars, Planar worlds and travel, Water flow, Materia crafting and matter,
+ * stars, Planar worlds and travel, Water flow, Materia crafting and matter, Amber
+ * warm light laid over the page,
  * Order order, Vitrum engraving and record, Creation what you make).
  */
 /** The Basics: quiet patterns of two or three parts, the Athanor's first lessons (Open → Basics); not in the Surface menu (Ruby). */
 const ATHANOR_BASICS = { glyph: '🜛', name: 'Basics', types: ['cells', 'checker', 'softgradient', 'plainnoise', 'polka', 'stripes'] };
 const TEXTURE_GROUPS = [
   { glyph: '🜃', name: 'Paper & Grounds', types: ['coldpress', 'grain', 'linen', 'oldpaper'] },
-  { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'feathers', 'magicparticles', 'clouds', 'embers', 'aurora'] },
+  { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'corvids', 'feathers', 'magicparticles', 'clouds', 'embers', 'aurora'] },
+  { glyph: 'ᕕ', name: 'Light to Lay Over', types: ['dappled', 'lightleaks', 'caustics', 'windowlight'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
   { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'skyring', 'ringworld'] },
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
@@ -28426,9 +28644,13 @@ function genMoon(w,h,amt,zoom,form,night){
 function genFeathers(w, h, o){
   const unit = Math.min(w, h), R = Math.random, rnd = (a, b) => a + R()*(b - a);
   const rgbOf = hx => { const c = parseHex(hx); return [c.r, c.g, c.b]; }, base = rgbOf(o.hue || '#ECE6DC'), tip = rgbOf(o.tip || '#7C6A5C');
+  // (every colour on a hue, ROADMAP L0: the sheen's two colours, the pale patches and tips, the dark bars and eyes' hearts)
+  const sheenA = rgbOf(o.sheenA || '#C9D6E8'), sheenB = rgbOf(o.sheenB || '#E8D6C9'), patch = rgbOf(o.patch || '#FFF4D6'), dark = rgbOf(o.dark || '#1E2238');
+  const kindOf = o.kind || 'plain', sheen = o.sheen ?? 0.15;
   const mix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
   const css = (c, al) => `rgba(${Math.round(Math.max(0, Math.min(255, c[0])))},${Math.round(Math.max(0, Math.min(255, c[1])))},${Math.round(Math.max(0, Math.min(255, c[2])))},${al.toFixed(3)})`;
   const lv = lightVec(o.light == null ? 315 : o.light), lm = Math.hypot(lv.lx, lv.ly), tlx = lm > 1e-4 ? -lv.lx/lm : 0, tly = lm > 1e-4 ? -lv.ly/lm : 0;   // (toward the light)
+  const lightAng = Math.atan2(tly, tlx);
   // THE COMPOSITION, by the seed: where the feathers lie and which way they point
   const comp = ['scatter', 'drift', 'fan', 'fallen'][Math.floor(R()*4)], drift = rnd(-0.9, 0.9) + Math.PI*0.5*(R() < 0.5 ? 1 : -1);
   const n = Math.max(1, Math.round(canonArea(w, h)/(unit*unit/(cpx(1)*cpx(1)))*0 + (w*h)/(unit*unit)*(4 + 26*o.count)/(o.size*o.size*0.9 + 0.1)));
@@ -28440,8 +28662,8 @@ function genFeathers(w, h, o){
     else if(comp === 'fan'){ const cx = w*rnd(0.3, 0.7), cy = h*1.08; x = cx + (R() - 0.5)*w*0.5; y = h*rnd(0.15, 1.0); ang = Math.atan2(y - cy, x - cx) + Math.PI/2 + rnd(-0.25, 0.25); }
     else if(comp === 'fallen'){ y = h*(1 - Math.pow(R(), 1.6)*0.85); ang = rnd(-Math.PI, Math.PI); }
     else ang = rnd(-Math.PI, Math.PI);
-    const kind = R() < 0.18 ? 'plume' : R() < 0.45 ? 'flight' : 'contour';
-    const L = unit*o.size*(kind === 'flight' ? rnd(0.32, 0.5) : kind === 'plume' ? rnd(0.22, 0.34) : rnd(0.18, 0.3))*(0.55 + 0.45*z);
+    const kind = kindOf === 'plain' ? (R() < 0.18 ? 'plume' : R() < 0.45 ? 'flight' : 'contour') : kindOf === 'magpie' ? (R() < 0.7 ? 'flight' : 'contour') : kindOf === 'jay' ? (R() < 0.5 ? 'flight' : 'contour') : (R() < 0.6 ? 'flight' : 'contour');
+    const L = unit*o.size*(kind === 'flight' ? rnd(0.32, 0.5)*(kindOf === 'magpie' || kindOf === 'raven' ? 1.25 : 1) : kind === 'plume' ? rnd(0.22, 0.34) : rnd(0.18, 0.3))*(0.55 + 0.45*z);
     F.push({ x, y, ang, kind, L, z, flip: R() < 0.5 ? 1 : -1, curl: (o.curl*0.6 + rnd(-0.12, 0.12))*(R() < 0.5 ? 1 : -1), tone: rnd(-0.08, 0.08), seed: R() });
   }
   F.sort((a, b) => a.z - b.z);
@@ -28498,7 +28720,7 @@ function genFeathers(w, h, o){
     // the eye near the tip (Markings past two thirds): rings of the tip's hue round a dark heart, a pale halo
     const eyeK = o.marks >= 0.66 ? Math.min(1, (o.marks - 0.66)/0.34) : 0, eyeAt = shaft(f, 0.78), eyeR = L*0.14*(0.7 + 0.3*eyeK);
     if(eyeK > 0){ const E0 = toPage(f, eyeAt, f.x, f.y);
-      for(const [rk, colr, al] of [[1, mix(base, [255, 244, 214], 0.6), 0.75], [0.78, tip, 0.9], [0.5, mix(tip, [30, 90, 110], 0.5), 0.9], [0.28, [18, 22, 48], 0.95]]){
+      for(const [rk, colr, al] of [[1, mix(base, patch, 0.6), 0.75], [0.78, tip, 0.9], [0.5, mix(tip, sheenA, 0.5), 0.9], [0.28, dark, 0.95]]){
         x.fillStyle = css(colr, al*eyeK); x.beginPath(); x.ellipse(E0[0], E0[1], eyeR*rk*0.82, eyeR*rk*1.1, f.ang, 0, Math.PI*2); x.fill(); } }
     for(const side of [1, -1]){
       const si = side > 0 ? 0 : 1;
@@ -28521,6 +28743,15 @@ function genFeathers(w, h, o){
         let tt = Math.pow(t, 1.6)*0.85;
         if(o.marks > 0.05 && o.marks < 0.66){ const band = 0.5 + 0.5*Math.sin(t*Math.PI*(5 + 6*o.marks) + f.seed*6); tt = Math.max(tt, band > 0.7 ? Math.min(1, o.marks*1.6) : 0); }
         let col = mix(base, tip, tt);
+        // THE CORVIDS (Ruby: "really want corvid feathers"): a magpie's inner web pale near the foot; a jay barred dark,
+        // its tip pale; crow and raven all dark (their hues), and each with its sheen
+        if(kindOf === 'magpie' && side === f.flip && t < 0.62) col = mix(patch, col, Math.max(0, (t - 0.5)/0.12));
+        if(kindOf === 'jay'){ const bar = 0.5 + 0.5*Math.sin(t*Math.PI*14 + f.seed*4); if(bar > 0.78 && t < 0.86) col = mix(col, dark, 0.85); if(t > 0.86) col = mix(col, patch, Math.min(1, (t - 0.86)/0.06)); }
+        // STRUCTURAL COLOUR: a barb's sheen turns with the angle between it and the light (the dial), from one sheen hue to
+        // the other, strongest where it faces the light; none on the pale patches
+        const shk = kindOf === 'raven' ? 1 : kindOf === 'crow' ? 0.4 : kindOf === 'magpie' ? 0.9 : kindOf === 'jay' ? 0.25 : 0.5;
+        if(sheen > 0 && lm > 1e-4){ const ba = f.ang - Math.PI/2 + side*lean, face = Math.cos(2*(ba - lightAng)), sc = mix(sheenA, sheenB, 0.5 + 0.5*Math.cos(ba - lightAng + t*1.5));
+          const k = sheen*shk*(0.3 + 0.7*Math.abs(face))*Math.min(1, lm*1.4)*(kindOf === 'magpie' && side === f.flip && t < 0.5 ? 0 : 1); col = mix(col, sc, Math.min(0.85, k*0.8)); }
         // (through the eye the barbs only texture it)
         const inEye = eyeK > 0 && Math.hypot((mx - eyeAt[0])/0.82, (my - eyeAt[1])/1.1) < eyeR*1.05 ? 0.3 : 1;
         col = col.map(v => v*lit*(1 + f.tone));
@@ -28535,7 +28766,7 @@ function genFeathers(w, h, o){
     // the shaft over the vanes: the quill pale and stiff at the foot, thinning to the tip
     x.lineCap = 'round';
     for(let i = 0; i < 16; i++){ const t0 = i/16, t1 = (i + 1)/16, a = toPage(f, shaft(f, t0), f.x, f.y), b = toPage(f, shaft(f, t1), f.x, f.y);
-      x.strokeStyle = css(mix(base, [255, 250, 240], 0.35).map(v => v*(1 + f.tone)), 0.85); x.lineWidth = Math.max(cpx(0.4), L*0.012*(1 - 0.8*t0));
+      x.strokeStyle = css(mix(base, patch, 0.35).map(v => v*(1 + f.tone)), 0.85); x.lineWidth = Math.max(cpx(0.4), L*0.012*(1 - 0.8*t0));
       x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.stroke(); }
     const q = toPage(f, [0, L*0.07], f.x, f.y), a0 = toPage(f, [0, 0], f.x, f.y);
     x.lineWidth = Math.max(cpx(0.5), L*0.014); x.beginPath(); x.moveTo(a0[0], a0[1]); x.lineTo(q[0], q[1]); x.stroke();   // the calamus, bare
@@ -36038,6 +36269,8 @@ const GEN_STEPS = {
 
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+/** The birds the Feathers part draws (its Bird setting, in fifths). */
+const FEATHER_BIRDS = ['plain', 'crow', 'raven', 'magpie', 'jay'];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const whimClamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
@@ -37041,11 +37274,14 @@ const WHIMSY_STEPS = {
       return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
   // Feathers (Ruby: "procedurally generated feathers in the background"), on a transparent ground, under the texture's
   // own seed + Variant
-  feathers: kitWhole({ cat: 'Marks', label: 'Feathers', ins: ['light from', 'feather hue', 'tip hue'], outs: ['feathers'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [WHIM_R('size', 'Feather Size', 100, 40, 250), WHIM_R('count', 'Feathers', 30), WHIM_R('fluff', 'Fluff', 15), WHIM_R('curl', 'Curl', 30), WHIM_R('splits', 'Splits', 30),
-      WHIM_R('marks', 'Markings', 0), WHIM_R('depth', 'Depth', 50), WHIM_R('lift', 'Lift', 50), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
-    (E, n, w, h) => { const light = wholeDial(E, n, 1), hue = wholeHex(E, n, 2), tip = wholeHex(E, n, 3), v = k => E.num(n, k, 0)/100;
-      const o = { size: Math.max(0.4, E.num(n, 'size', 100)/100), count: v('count'), fluff: v('fluff'), curl: v('curl'), splits: v('splits'), marks: v('marks'), depth: v('depth'), lift: v('lift'), light, hue, tip };
+  feathers: kitWhole({ cat: 'Marks', label: 'Feathers', ins: ['light from', 'feather hue', 'tip hue', 'sheen hue', 'second sheen hue', 'pale hue', 'dark hue'], outs: ['feathers'],
+    io: { ins: ['value', 'colour', 'colour', 'colour', 'colour', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('bird', 'Bird: Plain · Crow · Raven · Magpie · Blue Jay', 0), WHIM_R('size', 'Feather Size', 100, 40, 250), WHIM_R('count', 'Feathers', 30), WHIM_R('fluff', 'Fluff', 15),
+      WHIM_R('curl', 'Curl', 30), WHIM_R('splits', 'Splits', 30), WHIM_R('marks', 'Markings', 0), WHIM_R('sheen', 'Sheen', 15), WHIM_R('depth', 'Depth', 50), WHIM_R('lift', 'Lift', 50),
+      WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), v = k => E.num(n, k, 0)/100, kind = FEATHER_BIRDS[Math.min(4, Math.floor(E.num(n, 'bird', 0)/100*5))];
+      const o = { kind, size: Math.max(0.4, E.num(n, 'size', 100)/100), count: v('count'), fluff: v('fluff'), curl: v('curl'), splits: v('splits'), marks: v('marks'), sheen: v('sheen'), depth: v('depth'), lift: v('lift'), light,
+        hue: wholeHex(E, n, 2), tip: wholeHex(E, n, 3), sheenA: wholeHex(E, n, 4), sheenB: wholeHex(E, n, 5), patch: wholeHex(E, n, 6), dark: wholeHex(E, n, 7) };
       return () => genFeathers(w, h, o); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
@@ -41598,9 +41834,138 @@ const TEXTURE_CHAINS = {
       ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
     wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  // ── Light to lay over a page (ROADMAP §2 L6): graphs of general parts, on mid-grey (Light Leaks on black, for Screen) ──
+  dappled: { label: 'Dappled Leaves', div: 2, teach: 'Sunlight through leaves, to lay over a page: their shadows on a mid-grey ground, so Soft Light or Overlay lays them over anything. Three Scatters of a leaf (an Ellipse) make the foliage in clumps, far, middle and near; each is thrown along the light by a Motion Blur turned by the Light Dial’s direction and stretched by its height (a lower sun throws longer shadows), then softened by a Blur, the far ones most. Max gathers the shade; a Scatter of dots, blurred, makes the round spots of the sun between the leaves, kept to the gaps by the shade inverted. Map Range lays the shade below the middle and the spots above it, and a Gradient Map colours them Shade Hue, mid-grey, Light Hue. Try: Soft Light over a plain page, the dial low at one side.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Leaf Size', def: 50 }, 40, 40],           // 1
+  ['knob', { slot: '2', name: 'Leaves', def: 50 }, 40, 120],             // 2
+  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['dial', {}, 40, 280],                                                 // 4 the sun
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
+  ['ellipse', { size: 90, '~size': '60,120', height: 34, soft: 6 }, 220, 40],               // 7 a leaf
+  ['scatter', { shape: 'picture', count: 400, '~count': '150,400', size: 40, '~size': '20,70', vary: 50, turn: 100, clump: 92, fade: 0 }, 420, 40],          // 8 the far leaves
+  ['scatter', { shape: 'picture', count: 340, '~count': '120,400', size: 34, '~size': '16,60', vary: 50, turn: 100, clump: 90, fade: 0, variation: 4 }, 420, 200],   // 9 the middle
+  ['scatter', { shape: 'picture', count: 220, '~count': '60,400', size: 28, '~size': '12,50', vary: 50, turn: 100, clump: 88, fade: 0, variation: 8 }, 420, 360],   // 10 the near
+  ['motionblur', { length: 12, '~length': '0,24' }, 620, 40],            // 11 thrown along the light
+  ['motionblur', { length: 9, '~length': '0,18' }, 620, 200],           // 12
+  ['motionblur', { length: 6, '~length': '0,12' }, 620, 360],           // 13
+  ['blur', { radius: 14, '~radius': '4,30' }, 800, 40],                  // 14 far: soft
+  ['blur', { radius: 7, '~radius': '2,16' }, 800, 200],                  // 15
+  ['blur', { radius: 2, '~radius': '0,7' }, 800, 360],                   // 16 near: sharp
+  ['math', { op: 'max' }, 980, 120],                                     // 17
+  ['math', { op: 'max' }, 1160, 200],                                    // 18 all the shade
+  ['scatter', { shape: 'dot', count: 300, size: 6, vary: 50, turn: 100, clump: 0, fade: 40, variation: 12 }, 980, 360],   // 19 the sun's spots
+  ['blur', { radius: 5 }, 1160, 360],                                    // 20
+  ['invert', {}, 1160, 460],                                             // 21 where the leaves let light through
+  ['math', { op: 'multiply' }, 1340, 400],                               // 22 spots only in the gaps
+  ['maprange', { outLo: 50, outHi: 0 }, 1340, 200],                     // 23 shade: below the middle, down to the Shade Hue itself
+  ['maprange', { outLo: 0, outHi: 40 }, 1520, 400],                      // 24 spots: a little above it
+  ['math', { op: 'add' }, 1520, 240],                                    // 25
+  ['colour', { hex: '#808080' }, 1520, 520],                             // 26 the neutral
+  ['gradmap', { stops: 3 }, 1700, 240],                                  // 27 shade, neutral, light
+  ['surface', { name: 'Dappled Leaves', ground: 'grey' }, 1900, 240]],  // 28
+  wires: [[7, 1, 8, 1], [7, 1, 9, 1], [7, 1, 10, 1], [8, 1, 11, 1], [9, 1, 12, 1], [10, 1, 13, 1], [11, 1, 14, 1], [12, 1, 15, 1], [13, 1, 16, 1],
+    [14, 1, 17, 1], [15, 1, 17, 2], [17, 1, 18, 1], [16, 1, 18, 2], [19, 1, 20, 1], [18, 1, 21, 1], [20, 1, 22, 1], [21, 1, 22, 2],
+    [18, 1, 23, 1], [22, 1, 24, 1], [23, 1, 25, 1], [24, 1, 25, 2], [25, 1, 27, 1], [6, 1, 27, 2], [26, 1, 27, 3], [5, 1, 27, 4], [27, 1, 28, 1],
+    [4, 1, 11, paramPort('motionblur', 'angle')], [4, 1, 12, paramPort('motionblur', 'angle')], [4, 1, 13, paramPort('motionblur', 'angle')],
+    [4, 2, 11, paramPort('motionblur', 'length')], [4, 2, 12, paramPort('motionblur', 'length')], [4, 2, 13, paramPort('motionblur', 'length')],
+    [1, 1, 7, paramPort('ellipse', 'size')], [1, 1, 8, paramPort('scatter', 'size')], [1, 1, 9, paramPort('scatter', 'size')], [1, 1, 10, paramPort('scatter', 'size')],
+    [2, 1, 8, paramPort('scatter', 'count')], [2, 1, 9, paramPort('scatter', 'count')], [2, 1, 10, paramPort('scatter', 'count')],
+    [3, 1, 14, paramPort('blur', 'radius')], [3, 1, 15, paramPort('blur', 'radius')], [3, 1, 16, paramPort('blur', 'radius')]] },
+  windowlight: { label: 'Window Light', div: 2, teach: 'The light of a window laid across the page, to lay over it on a mid-grey ground. Grid & Dots draws the bars, inverted into panes, cut to a window by a Shape; a Scatter of leaves, kept to one corner by another Shape, is a plant on the sill. Scale stretches it as the Light Dial’s height lowers the sun, Rotate turns it to the dial’s direction, Blur softens its edges; Map Range and a Gradient Map make the room dim and the light bright in your hues. Random Numbers, by the seed, choose how many panes, where the window falls and how leafy the plant. Try: Overlay on a warm page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Window Size', def: 50 }, 40, 40],         // 1
+  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
+  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['dial', {}, 40, 280],                                                 // 4 the sun
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
+  ['grid', { kind: 'grid lines', cells: 3, '~cells': '2,6', weight: 14, soft: 0 }, 220, 40],   // 7 the bars
+  ['invert', {}, 400, 40],                                               // 8 the panes
+  ['shape', { form: 'square', size: 70, '~size': '35,110', soft: 0, x: 55, y: 45, '~x': '30,70', '~y': '30,65' }, 220, 180],   // 9 the window
+  ['math', { op: 'multiply' }, 580, 100],                                // 10 the panes in the window
+  ['ellipse', { size: 90, height: 30, soft: 8 }, 220, 320],              // 11 a leaf
+  ['scatter', { shape: 'picture', count: 70, '~count': '0,160', size: 30, vary: 50, turn: 100, clump: 95, fade: 0 }, 400, 320],   // 12 a plant on the sill
+  ['shape', { form: 'circle', size: 70, soft: 60, x: 20, y: 80 }, 220, 460],   // 13 where the plant stands
+  ['math', { op: 'multiply' }, 580, 380],                                // 14 the plant only there
+  ['invert', {}, 760, 380],                                              // 15
+  ['math', { op: 'multiply' }, 760, 160],                                // 16 its leaves' shadows in the light
+  ['scale', { scale: 100, stretch: 30, '~stretch': '0,70', edges: 'stretch the edge' }, 940, 160],   // 17 a lower sun throws it longer
+  ['rotate', { angle: 0, edges: 'stretch the edge' }, 1120, 160],        // 18 turned toward the sun's way
+  ['blur', { radius: 6, '~radius': '1,24' }, 1300, 160],                 // 19
+  ['maprange', { outLo: 32, outHi: 82, '~outHi': '62,100' }, 1480, 160],   // 20 the room dim, the light as bright as Brightness says
+  ['colour', { hex: '#808080' }, 1480, 320],                             // 21
+  ['gradmap', { stops: 3 }, 1660, 160],                                  // 22
+  ['surface', { name: 'Window Light', ground: 'grey' }, 1860, 160],     // 23
+  ['random', { lo: 0, hi: 100 }, 40, 540],                               // 24 the seed: how many panes
+  ['random', { lo: 0, hi: 100 }, 40, 620],                               // 25 …where the window falls, across
+  ['random', { lo: 0, hi: 100 }, 40, 700],                               // 26 …and down
+  ['random', { lo: 0, hi: 100 }, 40, 780]],                              // 27 …and the plant
+  wires: [[7, 1, 8, 1], [8, 1, 10, 1], [9, 1, 10, 2], [11, 1, 12, 1], [12, 1, 14, 1], [13, 1, 14, 2], [14, 1, 15, 1], [10, 1, 16, 1], [15, 1, 16, 2],
+    [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 20, 1], [20, 1, 22, 1], [6, 1, 22, 2], [21, 1, 22, 3], [5, 1, 22, 4], [22, 1, 23, 1],
+    [4, 1, 18, paramPort('rotate', 'angle')], [4, 2, 17, paramPort('scale', 'stretch')], [1, 1, 9, paramPort('shape', 'size')], [3, 1, 19, paramPort('blur', 'radius')], [2, 1, 20, paramPort('maprange', 'outHi')],
+    [24, 1, 7, paramPort('grid', 'cells')], [25, 1, 9, paramPort('shape', 'x')], [26, 1, 9, paramPort('shape', 'y')], [27, 1, 12, paramPort('scatter', 'count')]] },
+  caustics: { label: 'Pool Caustics', div: 2, teach: 'Light focused by rippling water onto the floor of a pool, to lay over a page: a bright net on a mid-grey ground. Two Cells, warped by a slow Perlin swell, give the net (their edges); Levels thin the lines and, softer, their glow, which a Blur spreads; a second, finer net is screened over fainter, so the lines are brightest where they cross. Map Range and a Gradient Map put it on mid-grey in your hues. Try: Overlay on a teal page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Net Size', def: 50 }, 40, 40],            // 1
+  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
+  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 280],                    // 4
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 360],                    // 5
+  ['perlin', { scale: 16, details: 2, rough: 40, contrast: 30, variation: 3 }, 220, 40],   // 6 the swell that bends it
+  ['cells', { scale: 45, '~scale': '80,22', jitter: 95, gap: 0 }, 220, 160],   // 7 the net
+  ['warp', { amount: 22 }, 420, 160],                                    // 8
+  ['levels', { lo: 88, hi: 100, gamma: 45, '~lo': '93,70' }, 600, 120],   // 9 its lines (Softness widens them)
+  ['levels', { lo: 55, hi: 100, gamma: 30 }, 600, 220],                  // 10 its glow
+  ['cells', { scale: 80, '~scale': '140,40', jitter: 95, gap: 0, variation: 5 }, 220, 340],   // 11 a second, finer net
+  ['warp', { amount: 16 }, 420, 340],                                    // 12
+  ['levels', { lo: 92, hi: 100, gamma: 45 }, 600, 340],                  // 13
+  ['blur', { radius: 5 }, 780, 220],                                     // 14 the glow, soft
+  ['math', { op: 'screen' }, 960, 160],                                  // 15 line over glow
+  ['maprange', { outLo: 0, outHi: 55 }, 780, 340],                       // 16 the finer net, fainter
+  ['math', { op: 'screen' }, 1140, 240],                                 // 17
+  ['maprange', { outLo: 45, outHi: 92, '~outHi': '68,100' }, 1320, 240],   // 18 on mid-grey, as bright as Brightness says
+  ['colour', { hex: '#808080' }, 1320, 400],                             // 19 the neutral the blends leave as it is
+  ['gradmap', { stops: 3 }, 1500, 240],                                  // 20 shade, neutral, light
+  ['surface', { name: 'Pool Caustics', ground: 'grey' }, 1700, 240]],   // 21
+  wires: [[7, 2, 8, 1], [6, 1, 8, 2], [8, 1, 9, 1], [8, 1, 10, 1], [11, 2, 12, 1], [6, 1, 12, 2], [12, 1, 13, 1], [10, 1, 14, 1], [9, 1, 15, 1], [14, 1, 15, 2],
+    [13, 1, 16, 1], [15, 1, 17, 1], [16, 1, 17, 2], [17, 1, 18, 1], [18, 1, 20, 1], [5, 1, 20, 2], [19, 1, 20, 3], [4, 1, 20, 4], [20, 1, 21, 1],
+    [1, 1, 7, paramPort('cells', 'scale')], [1, 1, 11, paramPort('cells', 'scale')], [3, 1, 9, paramPort('levels', 'lo')], [2, 1, 18, paramPort('maprange', 'outHi')]] },
+  lightleaks: { label: 'Light Leaks', div: 4, teach: 'The warm stains of light leaking into a film camera, on black for Screen. Soft Forms make the blooms, kept toward one edge by a Gradient whose way the seed picks; a second Gradient, folded at its middle, is the band of light dragged across. A Blur softens them all; a Gradient Map colours them from black through the Red, Orange and Gold Hues. Random Numbers choose the edge, the band’s way and how many blooms. Try: Screen over a dark page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Bloom Size', def: 50 }, 40, 40],          // 1
+  ['knob', { slot: '2', name: 'Leaks', def: 50 }, 40, 120],              // 2
+  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['hue', { slot: '1', name: 'Gold Hue' }, 40, 280],                     // 4
+  ['hue', { slot: '2', name: 'Orange Hue' }, 40, 360],                   // 5
+  ['hue', { slot: '3', name: 'Red Hue' }, 40, 440],                      // 6
+  ['forms', { count: 5, '~count': '2,10', size: 50, '~size': '25,90', noise: 60 }, 220, 40],   // 7 the blooms
+  ['gradient', { shape: 'linear', angle: 90, '~angle': '0,360' }, 220, 200],   // 8 toward one edge (the seed's)
+  ['levels', { lo: 35, hi: 100, gamma: 40 }, 400, 200],                  // 9 strongest at that edge
+  ['math', { op: 'multiply' }, 580, 120],                                // 10
+  ['gradient', { shape: 'linear', angle: 20, '~angle': '0,360' }, 220, 340],   // 11 the band across
+  ['math', { op: 'difference' }, 400, 340],                              // 12 …its middle
+  ['number', { value: 50 }, 220, 460],                                   // 13
+  ['levels', { lo: 0, hi: 18, gamma: 50 }, 580, 340],                    // 14
+  ['invert', {}, 760, 340],                                              // 15
+  ['maprange', { outLo: 0, outHi: 45, '~outHi': '0,70' }, 940, 340],     // 16 as strong as Leaks says
+  ['math', { op: 'screen' }, 1120, 200],                                 // 17
+  ['blur', { radius: 20, '~radius': '6,40' }, 1300, 200],                // 18 soft
+  ['maprange', { outLo: 0, outHi: 90, '~outHi': '50,100' }, 1480, 200],  // 19
+  ['colour', { hex: '#000000' }, 1480, 380],                             // 20 the neutral for Screen
+  ['gradmap', { stops: 4 }, 1660, 200],                                  // 21 black, red, orange, gold
+  ['surface', { name: 'Light Leaks', ground: 'colour' }, 1860, 200],    // 22
+  ['random', { lo: 0, hi: 100 }, 40, 540],                               // 23 the seed: which edge
+  ['random', { lo: 0, hi: 100 }, 40, 620],                               // 24 …the band's way
+  ['random', { lo: 0, hi: 100 }, 40, 700]],                              // 25 …how many blooms
+  wires: [[7, 1, 10, 1], [8, 1, 9, 1], [9, 1, 10, 2], [11, 1, 12, 1], [13, 1, 12, 2], [12, 1, 14, 1], [14, 1, 15, 1], [15, 1, 16, 1], [10, 1, 17, 1], [16, 1, 17, 2],
+    [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 21, 1], [20, 1, 21, 2], [6, 1, 21, 3], [5, 1, 21, 4], [4, 1, 21, 5], [21, 1, 22, 1],
+    [1, 1, 7, paramPort('forms', 'size')], [2, 1, 16, paramPort('maprange', 'outHi')], [2, 1, 19, paramPort('maprange', 'outHi')], [3, 1, 18, paramPort('blur', 'radius')],
+    [23, 1, 8, paramPort('gradient', 'angle')], [24, 1, 11, paramPort('gradient', 'angle')], [25, 1, 7, paramPort('forms', 'count')]] },
   // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
   // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
-  feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air.', nodes: [
+  feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
       ['knob', { slot: '3', name: 'Fluff', def: 15 }, 40, 200],                    // 3
@@ -41612,12 +41977,29 @@ const TEXTURE_CHAINS = {
       ['dial', {}, 40, 680],                                                       // 9
       ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760],                        // 10
       ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840],                            // 11
-      ['feathers', { size: 100, '~size': '40,250', count: 30, '~count': '0,100', fluff: 15, '~fluff': '0,100', curl: 30, '~curl': '0,100', splits: 30, '~splits': '0,100',
-        marks: 0, '~marks': '0,100', depth: 50, '~depth': '0,100', lift: 50, '~lift': '0,100' }, 320, 300],   // 12
-      ['surface', { name: 'Feathers', ground: 'colour' }, 600, 320]],              // 13
+      ['feathers', { bird: 0, size: 100, '~size': '40,250', count: 30, '~count': '0,100', fluff: 15, '~fluff': '0,100', curl: 30, '~curl': '0,100', splits: 30, '~splits': '0,100',
+        marks: 0, '~marks': '0,100', sheen: 15, depth: 50, '~depth': '0,100', lift: 50, '~lift': '0,100' }, 320, 300],   // 12
+      ['surface', { name: 'Feathers', ground: 'colour' }, 600, 320],               // 13
+      ['hue', { slot: '3', name: 'Sheen Hue' }, 40, 920],                          // 14
+      ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000],                  // 15
+      ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080],                          // 16
+      ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160]],                         // 17
     wires: [[1, 1, 12, paramPort('feathers', 'size')], [2, 1, 12, paramPort('feathers', 'count')], [3, 1, 12, paramPort('feathers', 'fluff')], [4, 1, 12, paramPort('feathers', 'curl')],
       [5, 1, 12, paramPort('feathers', 'splits')], [6, 1, 12, paramPort('feathers', 'marks')], [7, 1, 12, paramPort('feathers', 'depth')], [8, 1, 12, paramPort('feathers', 'lift')],
-      [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [12, 1, 13, 1]] },
+      [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [14, 1, 12, 4], [15, 1, 12, 5], [16, 1, 12, 6], [17, 1, 12, 7], [12, 1, 13, 1]] },
+  // 🪶 Corvid Feathers (Ruby: "really want corvid feathers"): the Feathers part, its Bird on a slider, all six hues wired
+  corvids: { label: 'Corvid Feathers', canvas: true, teach: 'The feathers of the crow family, on a transparent ground. One part makes them: Feathers, its Bird on the first slider: a crow’s, matte black with a faint sheen; a raven’s, long and glossy, its sheen strong; a magpie’s, black with a white inner web near the foot and a green-blue-purple sheen; a blue jay’s, blue, barred dark, tipped pale. Their sheen is structural colour, as a real feather’s is: it turns between the two Sheen Hues with the angle between each barb and the light, strongest where it faces the Light Dial. Every colour is a hue: Feather, Tip, the two Sheens, Pale and Dark. Try: Raven, Sheen high, and turn the light dial slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Bird', def: 50 }, 40, 40], ['knob', { slot: '2', name: 'Feather Size', def: 29 }, 40, 120], ['knob', { slot: '3', name: 'Feathers', def: 25 }, 40, 200],
+      ['knob', { slot: '4', name: 'Fluff', def: 10 }, 40, 280], ['knob', { slot: '5', name: 'Splits', def: 30 }, 40, 360], ['knob', { slot: '6', name: 'Sheen', def: 70 }, 40, 440],
+      ['knob', { slot: '7', name: 'Depth', def: 40 }, 40, 520], ['knob', { slot: '8', name: 'Lift', def: 60 }, 40, 600],                 // 1–8
+      ['dial', {}, 40, 680],                                                                                                         // 9
+      ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760], ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840], ['hue', { slot: '3', name: 'Sheen Hue' }, 40, 920],
+      ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000], ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080], ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160],   // 10–15
+      ['feathers', { bird: 50, '~bird': '0,100', size: 100, '~size': '40,250', count: 25, '~count': '0,100', fluff: 10, '~fluff': '0,100', curl: 25, splits: 30, '~splits': '0,100', sheen: 70, '~sheen': '0,100', depth: 40, '~depth': '0,100', lift: 60, '~lift': '0,100' }, 320, 300],   // 16
+      ['surface', { name: 'Corvid Feathers', ground: 'colour' }, 600, 320]],                                                         // 17
+    wires: [[1, 1, 16, paramPort('feathers', 'bird')], [2, 1, 16, paramPort('feathers', 'size')], [3, 1, 16, paramPort('feathers', 'count')], [4, 1, 16, paramPort('feathers', 'fluff')],
+      [5, 1, 16, paramPort('feathers', 'splits')], [6, 1, 16, paramPort('feathers', 'sheen')], [7, 1, 16, paramPort('feathers', 'depth')], [8, 1, 16, paramPort('feathers', 'lift')],
+      [9, 1, 16, 1], [10, 1, 16, 2], [11, 1, 16, 3], [12, 1, 16, 4], [13, 1, 16, 5], [14, 1, 16, 6], [15, 1, 16, 7], [16, 1, 17, 1]] },
   summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
       ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
       ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
@@ -42973,6 +43355,27 @@ const TEXTURE_PARAMS = {
                   {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
                   // soft speckled, noisy highlights over the flakes (0: none)
                   {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
+  // ── Corvid Feathers and the light to lay over a page (ROADMAP §2 L5, L6) ──
+  corvids:        [{key:'bird', label:'Bird', min:0, max:100, def:50, unit:'', ticks:[0,25,50,75,100], names:['Plain','Crow','Raven','Magpie','Blue Jay']},
+                  {key:'zoom', label:'Feather Size', min:40, max:250, def:100, unit:''},
+                  {key:'amt', label:'Feathers', min:0, max:100, def:25, unit:''},
+                  {key:'fluff', label:'Fluff', min:0, max:100, def:10, unit:''},
+                  {key:'splits', label:'Splits', min:0, max:100, def:30, unit:''},
+                  {key:'sheen', label:'Sheen', min:0, max:100, def:70, unit:''},
+                  {key:'depth', label:'Depth', min:0, max:100, def:40, unit:''},
+                  {key:'lift', label:'Lift', min:0, max:100, def:60, unit:''}],
+  dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
+  windowlight:    [{key:'size', label:'Window Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
+  caustics:       [{key:'size', label:'Net Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
+  lightleaks:     [{key:'size', label:'Bloom Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Leaks', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
   feathers:      [{key:'zoom',  label:'Feather Size',    min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Feathers',        min:0,  max:100, def:30,  unit:''},
                   {key:'fluff', label:'Fluff',           min:0,  max:100, def:15,  unit:''},
@@ -43456,10 +43859,19 @@ const TEXTURE_CAPS = {
   // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
   metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
+  // (the crow family: every colour a hue, defaults a raven's; Sheen turns with the light dial)
+  corvids:       { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'], light:true, tints:6,
+                   tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#0E0E14','#0A0A10','#5A3AC8','#2A8AA8','#F2F2F0','#060608'] },
+  // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
+  dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  caustics:      { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  // (light leaks on black, for Screen)
+  lightleaks:    { blends:['screen','lighten','color-dodge','soft-light','overlay','hard-light','luminosity','source-over'], tints:3, tintLabels:['Gold Hue','Orange Hue','Red Hue'], tintDefaults:['#FFD27A','#FF8A3A','#D8322E'] },
   // feathers on a transparent ground, made to lie on the page's colour or a simple surface (Ruby): Normal as painted,
   // Multiply on a pale page, Screen on a dark one, Soft Light or Overlay into another surface
   feathers:      { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'],
-                   light:true, tints:2, tintLabels:['Feather Hue','Tip Hue'], tintDefaults:['#ECE6DC','#7C6A5C'] },
+                   light:true, tints:6, tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#ECE6DC','#7C6A5C','#C9D6E8','#E8D6C9','#FFF4D6','#1E2238'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
                    light:true, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
@@ -43676,6 +44088,16 @@ function textureCacheMB(){ let px = 0; for(const c of textureCache.values()) px 
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
+  } else if(type === 'corvids'){
+    result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'dappled'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'windowlight'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'caustics'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'lightleaks'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFD27A', tint2 || '#FF8A3A');   // (chains.js)
   } else if(type === 'feathers'){
     result = genChain(type, w, h, light, extra, tint1 || '#ECE6DC', tint2 || '#7C6A5C');   // Feathers (chains.js)
   } else if(type === 'flowers'){
@@ -44314,6 +44736,26 @@ const TEXTURE_ELEMENTS = {
     fire:  { name: 'Copper Foil',   k: [140, 200, 30, 100, 60], t: ['#E0703A'], blend: 'screen' },
     water: { name: 'Abalone',       k: [90, 220, 70, 90, 60],  t: ['#5CC8D6'], blend: 'screen' },
     wind:  { name: 'Silver Leaves', k: [220, 80, 100, 60, 10], t: ['#D8E6E0'], blend: 'overlay' } },
+  corvids: { def: 'water', water: { name: 'Raven' },
+    fire:  { name: 'Blue Jay',        k: [100, 90, 30, 10, 30, 35, 40, 60], t: ['#3A6AD8', '#2A4AA8', '#8AB8FF', '#B8D8FF', '#F6F8FF', '#101420'] },
+    wind:  { name: 'Magpie',          k: [75, 110, 25, 10, 30, 80, 40, 60], t: ['#0E1012', '#0A0C0E', '#2A9A6A', '#4A4AC8', '#F4F4F2', '#060608'] },
+    earth: { name: 'Crow',            k: [25, 90, 30, 15, 35, 35, 40, 55], t: ['#1A1A1E', '#121216', '#3A3A8A', '#2A6A6A', '#E8E6E0', '#08080A'] } },
+  dappled: { def: 'earth', earth: { name: 'Dappled Leaves' },
+    fire:  { name: 'Late Sun',        k: [60, 45, 40], t: ['#FFC27A', '#3A2440'], light: [270, 100], blend: 'soft-light' },
+    water: { name: 'Shade Garden',    k: [45, 85, 70], t: ['#E6F4E0', '#1E3A40'] },
+    wind:  { name: 'Leaves Stirring', k: [35, 40, 25], t: ['#FFF6E4', '#3A4A60'] } },
+  windowlight: { def: 'fire', fire: { name: 'Window Light' },
+    water: { name: 'Blue Hour',       k: [60, 40, 70], t: ['#BFD4FF', '#1E2A48'] },
+    wind:  { name: 'Morning Sash',    k: [40, 70, 30], t: ['#FFF8E8', '#4A5470'], light: [60, 90] },
+    earth: { name: 'Low Gold',        k: [70, 60, 50], t: ['#FFC873', '#3A2A30'], light: [270, 100] } },
+  caustics: { def: 'water', water: { name: 'Pool Caustics' },
+    fire:  { name: 'Hot Spring',      k: [40, 60, 40], t: ['#FFD9A0', '#402018'] },
+    wind:  { name: 'Shallow Shimmer', k: [70, 35, 70] },
+    earth: { name: 'Deep Pool',       k: [90, 70, 30], t: ['#BFF4FF', '#082838'] } },
+  lightleaks: { def: 'fire', fire: { name: 'Light Leaks' },
+    water: { name: 'Cool Leak',       k: [60, 40, 70], t: ['#CFE6FF', '#9A7BFF', '#3A2E8A'] },
+    wind:  { name: 'Faint Flare',     k: [40, 25, 50] },
+    earth: { name: 'Burnt Edge',      k: [80, 80, 40], t: ['#FFE0A0', '#E8681E', '#8A1A10'] } },
   feathers: { def: 'wind', wind: { name: 'Drifting Down' },
     fire:  { name: 'Phoenix Plumes', k: [140, 40, 10, 45, 20, 40, 40, 60], t: ['#F2A13A', '#B2241B'], blend: 'screen' },
     water: { name: 'Heron Grey',     k: [180, 18, 5, 20, 45, 30, 30, 70], t: ['#B9C3C8', '#3E4A52'], blend: 'multiply' },
@@ -44859,7 +45301,7 @@ const RELEASE = 'Saturn–Surtur';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_iSVcV3E","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"R8benyFh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"YtNY3Szl","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_iSVcV3E","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","linen":"R8benyFh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"YtNY3Szl","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","windowlight":"LRspq7Ga"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -44891,7 +45333,7 @@ const TEXTURE_LOOKS = {
   magicparticles: 'swirling trails of sparkling dust', embers: 'flying sparks and embers', snow: 'falling snow',
   aurora: 'hanging ribbons of silky light', aurorasky: 'an aurora: curtains of green and red light over a starry sky', moon: 'a large moon among clouds', landscape: 'a painted range of hills and mountains',
   flowfield: 'flowing ink lines that never cross', suminagashi: 'marbled rings of floating ink', grain: 'fine film grain',
-  metalleaf: 'scattered flakes of metal leaf', flowers: 'lotus blossoms floating on water', feathers: 'feathers drifting across the page', brushstrokes: 'broad, expressive brushstrokes',
+  metalleaf: 'scattered flakes of metal leaf', flowers: 'lotus blossoms floating on water', feathers: 'feathers drifting across the page', corvids: 'black crow and raven feathers with an iridescent sheen', dappled: 'dappled shadows of leaves', windowlight: 'sunlight from a window falling across the page', lightleaks: 'warm light leaks', caustics: 'rippling pool light', brushstrokes: 'broad, expressive brushstrokes',
   halftone: 'a halftone dot screen', veins: 'glowing veins of light grown through stone, sand, fibre or skin', circuit: 'a circuit board: chips and buses of copper traces, some lit with current', knotwork: 'interlaced Celtic knotwork, raised from the page', lichtenberg: 'branching Lichtenberg figures burned by electricity', growth: 'a ruffled, folding line grown like coral', plainnoise: 'soft, cloudy noise', stripes: 'plain stripes', polka: 'polka dots', checker: 'a checkerboard', softgradient: 'a smooth gradient', cells: 'rounded cells, like pebbles', rainstreaks: 'slanting streaks of hard rain', hatch: 'fine hatched pencil lines',
   cityscape: 'a city skyline at night, its windows lit, over water', guilloche: 'engraved rosettes, like those on a banknote',
   stainedglass: 'panes of stained glass held in lead', brokenglass: 'broken glass scattered on the page, its shards catching the light and casting bright caustics', dewwebs: 'spider webs beaded with dew, glinting in the light', underglass: 'a sheet of glass over the page, catching the light: a window\'s reflection, scratches, fingerprints and dust', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
@@ -45692,7 +46134,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · a712159";
+const STAMP = "2026-10-19 · e0451c0";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -50694,9 +51136,9 @@ const WIKI_PARTS = {
   feathers: {
     line: 'Feathers scattered over a transparent ground: shafts and barbed vanes, splitting, fluffing to down at the foot, lit by the dial and lifted off the page by their shadows.',
     about: 'Each feather is a shaft (the rachis) with a vane on each side made of fine barbs that lean toward the tip. Where the vane is whole the barbs hold together; where it splits they part in a V, as a real feather does when it is ruffled; where it is down they are loose and wavy (always at the foot, the afterfeather, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen toward the bottom) and each one’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The ground is transparent, so the feathers lie on whatever is under them.',
-    ins: { 'light from': 'The light’s direction (wire the Light Dial): the vane facing it is brighter, and the shadows fall away from it.', 'feather hue': 'The feathers (empty: a warm white).', 'tip hue': 'Their tips, bars and eyes (empty: a soft brown).' },
+    ins: { 'light from': 'The light’s direction (wire the Light Dial): the vane facing it is brighter, the sheen turns with it, and the shadows fall away from it.', 'feather hue': 'The feathers (empty: a warm white).', 'tip hue': 'Their tips, bars and eyes (empty: a soft brown).', 'sheen hue': 'One colour of the sheen (structural colour, as a raven’s).', 'second sheen hue': 'The sheen’s other colour: it turns between the two with the angle to the light.', 'pale hue': 'The pale parts: a magpie’s white web, a jay’s tips, the quills.', 'dark hue': 'The dark parts: a jay’s bars, the hearts of the eyes.' },
     outs: { feathers: 'The feathers, on a transparent ground.' },
-    set: { size: 'Feather Size.', count: 'How many feathers.', fluff: 'From crisp vanes to soft down.', curl: 'How much the shafts bend.', splits: 'How often the vanes part into gaps.', marks: 'Plain at 0, bars across the vanes in the middle, eyes near the tips at 100, in the Tip Hue.', depth: 'How far off some feathers lie: smaller, fainter and out of focus.', lift: 'How far above the page they float: the length and strength of their shadows.', variant: 'Other feathers in other places.' },
+    set: { bird: 'Which bird: plain, crow (matte, a faint sheen), raven (glossy, a strong sheen), magpie (a white inner web, a green-blue-purple sheen), blue jay (barred, tipped pale).', sheen: 'How strong the sheen.', size: 'Feather Size.', count: 'How many feathers.', fluff: 'From crisp vanes to soft down.', curl: 'How much the shafts bend.', splits: 'How often the vanes part into gaps.', marks: 'Plain at 0, bars across the vanes in the middle, eyes near the tips at 100, in the Tip Hue.', depth: 'How far off some feathers lie: smaller, fainter and out of focus.', lift: 'How far above the page they float: the length and strength of their shadows.', variant: 'Other feathers in other places.' },
     tips: ['Their ground is transparent: on a pale page try Multiply, on a dark one Screen, and over another surface Soft Light.'],
     see: ['part:lotus', 'part:scatter'],
   },
@@ -57478,7 +57920,7 @@ const WORKING_WORDS = {
   bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
   clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',
   aurora: 'Combing the silk', aurorasky: 'Hanging the curtains of light', moon: 'Iterating the moon', landscape: 'Priming the canvas', flowfield: 'Tracing the flow lines',
-  suminagashi: 'Floating the ink', grain: 'Developing the grain', metalleaf: 'Laying the leaf', flowers: 'Opening the lotuses', feathers: 'Letting the feathers fall',
+  suminagashi: 'Floating the ink', grain: 'Developing the grain', metalleaf: 'Laying the leaf', flowers: 'Opening the lotuses', feathers: 'Letting the feathers fall', corvids: 'Gathering the crows’ feathers', dappled: 'Hanging the leaves', windowlight: 'Opening the window', lightleaks: 'Letting the light in', caustics: 'Rippling the water',
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',

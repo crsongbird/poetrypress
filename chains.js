@@ -556,9 +556,138 @@ export const TEXTURE_CHAINS = {
       ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
     wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  // ── Light to lay over a page (ROADMAP §2 L6): graphs of general parts, on mid-grey (Light Leaks on black, for Screen) ──
+  dappled: { label: 'Dappled Leaves', div: 2, teach: 'Sunlight through leaves, to lay over a page: their shadows on a mid-grey ground, so Soft Light or Overlay lays them over anything. Three Scatters of a leaf (an Ellipse) make the foliage in clumps, far, middle and near; each is thrown along the light by a Motion Blur turned by the Light Dial’s direction and stretched by its height (a lower sun throws longer shadows), then softened by a Blur, the far ones most. Max gathers the shade; a Scatter of dots, blurred, makes the round spots of the sun between the leaves, kept to the gaps by the shade inverted. Map Range lays the shade below the middle and the spots above it, and a Gradient Map colours them Shade Hue, mid-grey, Light Hue. Try: Soft Light over a plain page, the dial low at one side.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Leaf Size', def: 50 }, 40, 40],           // 1
+  ['knob', { slot: '2', name: 'Leaves', def: 50 }, 40, 120],             // 2
+  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['dial', {}, 40, 280],                                                 // 4 the sun
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
+  ['ellipse', { size: 90, '~size': '60,120', height: 34, soft: 6 }, 220, 40],               // 7 a leaf
+  ['scatter', { shape: 'picture', count: 400, '~count': '150,400', size: 40, '~size': '20,70', vary: 50, turn: 100, clump: 92, fade: 0 }, 420, 40],          // 8 the far leaves
+  ['scatter', { shape: 'picture', count: 340, '~count': '120,400', size: 34, '~size': '16,60', vary: 50, turn: 100, clump: 90, fade: 0, variation: 4 }, 420, 200],   // 9 the middle
+  ['scatter', { shape: 'picture', count: 220, '~count': '60,400', size: 28, '~size': '12,50', vary: 50, turn: 100, clump: 88, fade: 0, variation: 8 }, 420, 360],   // 10 the near
+  ['motionblur', { length: 12, '~length': '0,24' }, 620, 40],            // 11 thrown along the light
+  ['motionblur', { length: 9, '~length': '0,18' }, 620, 200],           // 12
+  ['motionblur', { length: 6, '~length': '0,12' }, 620, 360],           // 13
+  ['blur', { radius: 14, '~radius': '4,30' }, 800, 40],                  // 14 far: soft
+  ['blur', { radius: 7, '~radius': '2,16' }, 800, 200],                  // 15
+  ['blur', { radius: 2, '~radius': '0,7' }, 800, 360],                   // 16 near: sharp
+  ['math', { op: 'max' }, 980, 120],                                     // 17
+  ['math', { op: 'max' }, 1160, 200],                                    // 18 all the shade
+  ['scatter', { shape: 'dot', count: 300, size: 6, vary: 50, turn: 100, clump: 0, fade: 40, variation: 12 }, 980, 360],   // 19 the sun's spots
+  ['blur', { radius: 5 }, 1160, 360],                                    // 20
+  ['invert', {}, 1160, 460],                                             // 21 where the leaves let light through
+  ['math', { op: 'multiply' }, 1340, 400],                               // 22 spots only in the gaps
+  ['maprange', { outLo: 50, outHi: 0 }, 1340, 200],                     // 23 shade: below the middle, down to the Shade Hue itself
+  ['maprange', { outLo: 0, outHi: 40 }, 1520, 400],                      // 24 spots: a little above it
+  ['math', { op: 'add' }, 1520, 240],                                    // 25
+  ['colour', { hex: '#808080' }, 1520, 520],                             // 26 the neutral
+  ['gradmap', { stops: 3 }, 1700, 240],                                  // 27 shade, neutral, light
+  ['surface', { name: 'Dappled Leaves', ground: 'grey' }, 1900, 240]],  // 28
+  wires: [[7, 1, 8, 1], [7, 1, 9, 1], [7, 1, 10, 1], [8, 1, 11, 1], [9, 1, 12, 1], [10, 1, 13, 1], [11, 1, 14, 1], [12, 1, 15, 1], [13, 1, 16, 1],
+    [14, 1, 17, 1], [15, 1, 17, 2], [17, 1, 18, 1], [16, 1, 18, 2], [19, 1, 20, 1], [18, 1, 21, 1], [20, 1, 22, 1], [21, 1, 22, 2],
+    [18, 1, 23, 1], [22, 1, 24, 1], [23, 1, 25, 1], [24, 1, 25, 2], [25, 1, 27, 1], [6, 1, 27, 2], [26, 1, 27, 3], [5, 1, 27, 4], [27, 1, 28, 1],
+    [4, 1, 11, paramPort('motionblur', 'angle')], [4, 1, 12, paramPort('motionblur', 'angle')], [4, 1, 13, paramPort('motionblur', 'angle')],
+    [4, 2, 11, paramPort('motionblur', 'length')], [4, 2, 12, paramPort('motionblur', 'length')], [4, 2, 13, paramPort('motionblur', 'length')],
+    [1, 1, 7, paramPort('ellipse', 'size')], [1, 1, 8, paramPort('scatter', 'size')], [1, 1, 9, paramPort('scatter', 'size')], [1, 1, 10, paramPort('scatter', 'size')],
+    [2, 1, 8, paramPort('scatter', 'count')], [2, 1, 9, paramPort('scatter', 'count')], [2, 1, 10, paramPort('scatter', 'count')],
+    [3, 1, 14, paramPort('blur', 'radius')], [3, 1, 15, paramPort('blur', 'radius')], [3, 1, 16, paramPort('blur', 'radius')]] },
+  windowlight: { label: 'Window Light', div: 2, teach: 'The light of a window laid across the page, to lay over it on a mid-grey ground. Grid & Dots draws the bars, inverted into panes, cut to a window by a Shape; a Scatter of leaves, kept to one corner by another Shape, is a plant on the sill. Scale stretches it as the Light Dial’s height lowers the sun, Rotate turns it to the dial’s direction, Blur softens its edges; Map Range and a Gradient Map make the room dim and the light bright in your hues. Random Numbers, by the seed, choose how many panes, where the window falls and how leafy the plant. Try: Overlay on a warm page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Window Size', def: 50 }, 40, 40],         // 1
+  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
+  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['dial', {}, 40, 280],                                                 // 4 the sun
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
+  ['grid', { kind: 'grid lines', cells: 3, '~cells': '2,6', weight: 14, soft: 0 }, 220, 40],   // 7 the bars
+  ['invert', {}, 400, 40],                                               // 8 the panes
+  ['shape', { form: 'square', size: 70, '~size': '35,110', soft: 0, x: 55, y: 45, '~x': '30,70', '~y': '30,65' }, 220, 180],   // 9 the window
+  ['math', { op: 'multiply' }, 580, 100],                                // 10 the panes in the window
+  ['ellipse', { size: 90, height: 30, soft: 8 }, 220, 320],              // 11 a leaf
+  ['scatter', { shape: 'picture', count: 70, '~count': '0,160', size: 30, vary: 50, turn: 100, clump: 95, fade: 0 }, 400, 320],   // 12 a plant on the sill
+  ['shape', { form: 'circle', size: 70, soft: 60, x: 20, y: 80 }, 220, 460],   // 13 where the plant stands
+  ['math', { op: 'multiply' }, 580, 380],                                // 14 the plant only there
+  ['invert', {}, 760, 380],                                              // 15
+  ['math', { op: 'multiply' }, 760, 160],                                // 16 its leaves' shadows in the light
+  ['scale', { scale: 100, stretch: 30, '~stretch': '0,70', edges: 'stretch the edge' }, 940, 160],   // 17 a lower sun throws it longer
+  ['rotate', { angle: 0, edges: 'stretch the edge' }, 1120, 160],        // 18 turned toward the sun's way
+  ['blur', { radius: 6, '~radius': '1,24' }, 1300, 160],                 // 19
+  ['maprange', { outLo: 32, outHi: 82, '~outHi': '62,100' }, 1480, 160],   // 20 the room dim, the light as bright as Brightness says
+  ['colour', { hex: '#808080' }, 1480, 320],                             // 21
+  ['gradmap', { stops: 3 }, 1660, 160],                                  // 22
+  ['surface', { name: 'Window Light', ground: 'grey' }, 1860, 160],     // 23
+  ['random', { lo: 0, hi: 100 }, 40, 540],                               // 24 the seed: how many panes
+  ['random', { lo: 0, hi: 100 }, 40, 620],                               // 25 …where the window falls, across
+  ['random', { lo: 0, hi: 100 }, 40, 700],                               // 26 …and down
+  ['random', { lo: 0, hi: 100 }, 40, 780]],                              // 27 …and the plant
+  wires: [[7, 1, 8, 1], [8, 1, 10, 1], [9, 1, 10, 2], [11, 1, 12, 1], [12, 1, 14, 1], [13, 1, 14, 2], [14, 1, 15, 1], [10, 1, 16, 1], [15, 1, 16, 2],
+    [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 20, 1], [20, 1, 22, 1], [6, 1, 22, 2], [21, 1, 22, 3], [5, 1, 22, 4], [22, 1, 23, 1],
+    [4, 1, 18, paramPort('rotate', 'angle')], [4, 2, 17, paramPort('scale', 'stretch')], [1, 1, 9, paramPort('shape', 'size')], [3, 1, 19, paramPort('blur', 'radius')], [2, 1, 20, paramPort('maprange', 'outHi')],
+    [24, 1, 7, paramPort('grid', 'cells')], [25, 1, 9, paramPort('shape', 'x')], [26, 1, 9, paramPort('shape', 'y')], [27, 1, 12, paramPort('scatter', 'count')]] },
+  caustics: { label: 'Pool Caustics', div: 2, teach: 'Light focused by rippling water onto the floor of a pool, to lay over a page: a bright net on a mid-grey ground. Two Cells, warped by a slow Perlin swell, give the net (their edges); Levels thin the lines and, softer, their glow, which a Blur spreads; a second, finer net is screened over fainter, so the lines are brightest where they cross. Map Range and a Gradient Map put it on mid-grey in your hues. Try: Overlay on a teal page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Net Size', def: 50 }, 40, 40],            // 1
+  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
+  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['hue', { slot: '1', name: 'Light Hue' }, 40, 280],                    // 4
+  ['hue', { slot: '2', name: 'Shade Hue' }, 40, 360],                    // 5
+  ['perlin', { scale: 16, details: 2, rough: 40, contrast: 30, variation: 3 }, 220, 40],   // 6 the swell that bends it
+  ['cells', { scale: 45, '~scale': '80,22', jitter: 95, gap: 0 }, 220, 160],   // 7 the net
+  ['warp', { amount: 22 }, 420, 160],                                    // 8
+  ['levels', { lo: 88, hi: 100, gamma: 45, '~lo': '93,70' }, 600, 120],   // 9 its lines (Softness widens them)
+  ['levels', { lo: 55, hi: 100, gamma: 30 }, 600, 220],                  // 10 its glow
+  ['cells', { scale: 80, '~scale': '140,40', jitter: 95, gap: 0, variation: 5 }, 220, 340],   // 11 a second, finer net
+  ['warp', { amount: 16 }, 420, 340],                                    // 12
+  ['levels', { lo: 92, hi: 100, gamma: 45 }, 600, 340],                  // 13
+  ['blur', { radius: 5 }, 780, 220],                                     // 14 the glow, soft
+  ['math', { op: 'screen' }, 960, 160],                                  // 15 line over glow
+  ['maprange', { outLo: 0, outHi: 55 }, 780, 340],                       // 16 the finer net, fainter
+  ['math', { op: 'screen' }, 1140, 240],                                 // 17
+  ['maprange', { outLo: 45, outHi: 92, '~outHi': '68,100' }, 1320, 240],   // 18 on mid-grey, as bright as Brightness says
+  ['colour', { hex: '#808080' }, 1320, 400],                             // 19 the neutral the blends leave as it is
+  ['gradmap', { stops: 3 }, 1500, 240],                                  // 20 shade, neutral, light
+  ['surface', { name: 'Pool Caustics', ground: 'grey' }, 1700, 240]],   // 21
+  wires: [[7, 2, 8, 1], [6, 1, 8, 2], [8, 1, 9, 1], [8, 1, 10, 1], [11, 2, 12, 1], [6, 1, 12, 2], [12, 1, 13, 1], [10, 1, 14, 1], [9, 1, 15, 1], [14, 1, 15, 2],
+    [13, 1, 16, 1], [15, 1, 17, 1], [16, 1, 17, 2], [17, 1, 18, 1], [18, 1, 20, 1], [5, 1, 20, 2], [19, 1, 20, 3], [4, 1, 20, 4], [20, 1, 21, 1],
+    [1, 1, 7, paramPort('cells', 'scale')], [1, 1, 11, paramPort('cells', 'scale')], [3, 1, 9, paramPort('levels', 'lo')], [2, 1, 18, paramPort('maprange', 'outHi')]] },
+  lightleaks: { label: 'Light Leaks', div: 4, teach: 'The warm stains of light leaking into a film camera, on black for Screen. Soft Forms make the blooms, kept toward one edge by a Gradient whose way the seed picks; a second Gradient, folded at its middle, is the band of light dragged across. A Blur softens them all; a Gradient Map colours them from black through the Red, Orange and Gold Hues. Random Numbers choose the edge, the band’s way and how many blooms. Try: Screen over a dark page.',
+    nodes: [
+  ['knob', { slot: '1', name: 'Bloom Size', def: 50 }, 40, 40],          // 1
+  ['knob', { slot: '2', name: 'Leaks', def: 50 }, 40, 120],              // 2
+  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['hue', { slot: '1', name: 'Gold Hue' }, 40, 280],                     // 4
+  ['hue', { slot: '2', name: 'Orange Hue' }, 40, 360],                   // 5
+  ['hue', { slot: '3', name: 'Red Hue' }, 40, 440],                      // 6
+  ['forms', { count: 5, '~count': '2,10', size: 50, '~size': '25,90', noise: 60 }, 220, 40],   // 7 the blooms
+  ['gradient', { shape: 'linear', angle: 90, '~angle': '0,360' }, 220, 200],   // 8 toward one edge (the seed's)
+  ['levels', { lo: 35, hi: 100, gamma: 40 }, 400, 200],                  // 9 strongest at that edge
+  ['math', { op: 'multiply' }, 580, 120],                                // 10
+  ['gradient', { shape: 'linear', angle: 20, '~angle': '0,360' }, 220, 340],   // 11 the band across
+  ['math', { op: 'difference' }, 400, 340],                              // 12 …its middle
+  ['number', { value: 50 }, 220, 460],                                   // 13
+  ['levels', { lo: 0, hi: 18, gamma: 50 }, 580, 340],                    // 14
+  ['invert', {}, 760, 340],                                              // 15
+  ['maprange', { outLo: 0, outHi: 45, '~outHi': '0,70' }, 940, 340],     // 16 as strong as Leaks says
+  ['math', { op: 'screen' }, 1120, 200],                                 // 17
+  ['blur', { radius: 20, '~radius': '6,40' }, 1300, 200],                // 18 soft
+  ['maprange', { outLo: 0, outHi: 90, '~outHi': '50,100' }, 1480, 200],  // 19
+  ['colour', { hex: '#000000' }, 1480, 380],                             // 20 the neutral for Screen
+  ['gradmap', { stops: 4 }, 1660, 200],                                  // 21 black, red, orange, gold
+  ['surface', { name: 'Light Leaks', ground: 'colour' }, 1860, 200],    // 22
+  ['random', { lo: 0, hi: 100 }, 40, 540],                               // 23 the seed: which edge
+  ['random', { lo: 0, hi: 100 }, 40, 620],                               // 24 …the band's way
+  ['random', { lo: 0, hi: 100 }, 40, 700]],                              // 25 …how many blooms
+  wires: [[7, 1, 10, 1], [8, 1, 9, 1], [9, 1, 10, 2], [11, 1, 12, 1], [13, 1, 12, 2], [12, 1, 14, 1], [14, 1, 15, 1], [15, 1, 16, 1], [10, 1, 17, 1], [16, 1, 17, 2],
+    [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 21, 1], [20, 1, 21, 2], [6, 1, 21, 3], [5, 1, 21, 4], [4, 1, 21, 5], [21, 1, 22, 1],
+    [1, 1, 7, paramPort('forms', 'size')], [2, 1, 16, paramPort('maprange', 'outHi')], [2, 1, 19, paramPort('maprange', 'outHi')], [3, 1, 18, paramPort('blur', 'radius')],
+    [23, 1, 8, paramPort('gradient', 'angle')], [24, 1, 11, paramPort('gradient', 'angle')], [25, 1, 7, paramPort('forms', 'count')]] },
   // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
   // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
-  feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air.', nodes: [
+  feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
       ['knob', { slot: '3', name: 'Fluff', def: 15 }, 40, 200],                    // 3
@@ -570,12 +699,29 @@ export const TEXTURE_CHAINS = {
       ['dial', {}, 40, 680],                                                       // 9
       ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760],                        // 10
       ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840],                            // 11
-      ['feathers', { size: 100, '~size': '40,250', count: 30, '~count': '0,100', fluff: 15, '~fluff': '0,100', curl: 30, '~curl': '0,100', splits: 30, '~splits': '0,100',
-        marks: 0, '~marks': '0,100', depth: 50, '~depth': '0,100', lift: 50, '~lift': '0,100' }, 320, 300],   // 12
-      ['surface', { name: 'Feathers', ground: 'colour' }, 600, 320]],              // 13
+      ['feathers', { bird: 0, size: 100, '~size': '40,250', count: 30, '~count': '0,100', fluff: 15, '~fluff': '0,100', curl: 30, '~curl': '0,100', splits: 30, '~splits': '0,100',
+        marks: 0, '~marks': '0,100', sheen: 15, depth: 50, '~depth': '0,100', lift: 50, '~lift': '0,100' }, 320, 300],   // 12
+      ['surface', { name: 'Feathers', ground: 'colour' }, 600, 320],               // 13
+      ['hue', { slot: '3', name: 'Sheen Hue' }, 40, 920],                          // 14
+      ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000],                  // 15
+      ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080],                          // 16
+      ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160]],                         // 17
     wires: [[1, 1, 12, paramPort('feathers', 'size')], [2, 1, 12, paramPort('feathers', 'count')], [3, 1, 12, paramPort('feathers', 'fluff')], [4, 1, 12, paramPort('feathers', 'curl')],
       [5, 1, 12, paramPort('feathers', 'splits')], [6, 1, 12, paramPort('feathers', 'marks')], [7, 1, 12, paramPort('feathers', 'depth')], [8, 1, 12, paramPort('feathers', 'lift')],
-      [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [12, 1, 13, 1]] },
+      [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [14, 1, 12, 4], [15, 1, 12, 5], [16, 1, 12, 6], [17, 1, 12, 7], [12, 1, 13, 1]] },
+  // 🪶 Corvid Feathers (Ruby: "really want corvid feathers"): the Feathers part, its Bird on a slider, all six hues wired
+  corvids: { label: 'Corvid Feathers', canvas: true, teach: 'The feathers of the crow family, on a transparent ground. One part makes them: Feathers, its Bird on the first slider: a crow’s, matte black with a faint sheen; a raven’s, long and glossy, its sheen strong; a magpie’s, black with a white inner web near the foot and a green-blue-purple sheen; a blue jay’s, blue, barred dark, tipped pale. Their sheen is structural colour, as a real feather’s is: it turns between the two Sheen Hues with the angle between each barb and the light, strongest where it faces the Light Dial. Every colour is a hue: Feather, Tip, the two Sheens, Pale and Dark. Try: Raven, Sheen high, and turn the light dial slowly.', nodes: [
+      ['knob', { slot: '1', name: 'Bird', def: 50 }, 40, 40], ['knob', { slot: '2', name: 'Feather Size', def: 29 }, 40, 120], ['knob', { slot: '3', name: 'Feathers', def: 25 }, 40, 200],
+      ['knob', { slot: '4', name: 'Fluff', def: 10 }, 40, 280], ['knob', { slot: '5', name: 'Splits', def: 30 }, 40, 360], ['knob', { slot: '6', name: 'Sheen', def: 70 }, 40, 440],
+      ['knob', { slot: '7', name: 'Depth', def: 40 }, 40, 520], ['knob', { slot: '8', name: 'Lift', def: 60 }, 40, 600],                 // 1–8
+      ['dial', {}, 40, 680],                                                                                                         // 9
+      ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760], ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840], ['hue', { slot: '3', name: 'Sheen Hue' }, 40, 920],
+      ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000], ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080], ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160],   // 10–15
+      ['feathers', { bird: 50, '~bird': '0,100', size: 100, '~size': '40,250', count: 25, '~count': '0,100', fluff: 10, '~fluff': '0,100', curl: 25, splits: 30, '~splits': '0,100', sheen: 70, '~sheen': '0,100', depth: 40, '~depth': '0,100', lift: 60, '~lift': '0,100' }, 320, 300],   // 16
+      ['surface', { name: 'Corvid Feathers', ground: 'colour' }, 600, 320]],                                                         // 17
+    wires: [[1, 1, 16, paramPort('feathers', 'bird')], [2, 1, 16, paramPort('feathers', 'size')], [3, 1, 16, paramPort('feathers', 'count')], [4, 1, 16, paramPort('feathers', 'fluff')],
+      [5, 1, 16, paramPort('feathers', 'splits')], [6, 1, 16, paramPort('feathers', 'sheen')], [7, 1, 16, paramPort('feathers', 'depth')], [8, 1, 16, paramPort('feathers', 'lift')],
+      [9, 1, 16, 1], [10, 1, 16, 2], [11, 1, 16, 3], [12, 1, 16, 4], [13, 1, 16, 5], [14, 1, 16, 6], [15, 1, 16, 7], [16, 1, 17, 1]] },
   summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
       ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
       ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)

@@ -31,6 +31,8 @@ import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuro
 import { skyRingFrame } from './stepsGenerative.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+/** The birds the Feathers part draws (its Bird setting, in fifths). */
+const FEATHER_BIRDS = ['plain', 'crow', 'raven', 'magpie', 'jay'];
 const WHIM_SEL = (key, label, options, def) => [key, label, 'select', def || options[0], { options }];
 const whimClamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
@@ -1034,11 +1036,14 @@ export const WHIMSY_STEPS = {
       return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
   // Feathers (Ruby: "procedurally generated feathers in the background"), on a transparent ground, under the texture's
   // own seed + Variant
-  feathers: kitWhole({ cat: 'Marks', label: 'Feathers', ins: ['light from', 'feather hue', 'tip hue'], outs: ['feathers'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
-    params: [WHIM_R('size', 'Feather Size', 100, 40, 250), WHIM_R('count', 'Feathers', 30), WHIM_R('fluff', 'Fluff', 15), WHIM_R('curl', 'Curl', 30), WHIM_R('splits', 'Splits', 30),
-      WHIM_R('marks', 'Markings', 0), WHIM_R('depth', 'Depth', 50), WHIM_R('lift', 'Lift', 50), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
-    (E, n, w, h) => { const light = wholeDial(E, n, 1), hue = wholeHex(E, n, 2), tip = wholeHex(E, n, 3), v = k => E.num(n, k, 0)/100;
-      const o = { size: Math.max(0.4, E.num(n, 'size', 100)/100), count: v('count'), fluff: v('fluff'), curl: v('curl'), splits: v('splits'), marks: v('marks'), depth: v('depth'), lift: v('lift'), light, hue, tip };
+  feathers: kitWhole({ cat: 'Marks', label: 'Feathers', ins: ['light from', 'feather hue', 'tip hue', 'sheen hue', 'second sheen hue', 'pale hue', 'dark hue'], outs: ['feathers'],
+    io: { ins: ['value', 'colour', 'colour', 'colour', 'colour', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('bird', 'Bird: Plain · Crow · Raven · Magpie · Blue Jay', 0), WHIM_R('size', 'Feather Size', 100, 40, 250), WHIM_R('count', 'Feathers', 30), WHIM_R('fluff', 'Fluff', 15),
+      WHIM_R('curl', 'Curl', 30), WHIM_R('splits', 'Splits', 30), WHIM_R('marks', 'Markings', 0), WHIM_R('sheen', 'Sheen', 15), WHIM_R('depth', 'Depth', 50), WHIM_R('lift', 'Lift', 50),
+      WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), v = k => E.num(n, k, 0)/100, kind = FEATHER_BIRDS[Math.min(4, Math.floor(E.num(n, 'bird', 0)/100*5))];
+      const o = { kind, size: Math.max(0.4, E.num(n, 'size', 100)/100), count: v('count'), fluff: v('fluff'), curl: v('curl'), splits: v('splits'), marks: v('marks'), sheen: v('sheen'), depth: v('depth'), lift: v('lift'), light,
+        hue: wholeHex(E, n, 2), tip: wholeHex(E, n, 3), sheenA: wholeHex(E, n, 4), sheenB: wholeHex(E, n, 5), patch: wholeHex(E, n, 6), dark: wholeHex(E, n, 7) };
       return () => genFeathers(w, h, o); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },

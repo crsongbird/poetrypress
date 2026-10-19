@@ -90,6 +90,27 @@ export const TEXTURE_PARAMS = {
                   {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
                   // soft speckled, noisy highlights over the flakes (0: none)
                   {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
+  // ── Corvid Feathers and the light to lay over a page (ROADMAP §2 L5, L6) ──
+  corvids:        [{key:'bird', label:'Bird', min:0, max:100, def:50, unit:'', ticks:[0,25,50,75,100], names:['Plain','Crow','Raven','Magpie','Blue Jay']},
+                  {key:'zoom', label:'Feather Size', min:40, max:250, def:100, unit:''},
+                  {key:'amt', label:'Feathers', min:0, max:100, def:25, unit:''},
+                  {key:'fluff', label:'Fluff', min:0, max:100, def:10, unit:''},
+                  {key:'splits', label:'Splits', min:0, max:100, def:30, unit:''},
+                  {key:'sheen', label:'Sheen', min:0, max:100, def:70, unit:''},
+                  {key:'depth', label:'Depth', min:0, max:100, def:40, unit:''},
+                  {key:'lift', label:'Lift', min:0, max:100, def:60, unit:''}],
+  dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
+  windowlight:    [{key:'size', label:'Window Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
+  caustics:       [{key:'size', label:'Net Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
+  lightleaks:     [{key:'size', label:'Bloom Size', min:0, max:100, def:50, unit:''},
+                  {key:'amount', label:'Leaks', min:0, max:100, def:50, unit:''},
+                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
   feathers:      [{key:'zoom',  label:'Feather Size',    min:40, max:250, def:100, unit:'%'},
                   {key:'amt',   label:'Feathers',        min:0,  max:100, def:30,  unit:''},
                   {key:'fluff', label:'Fluff',           min:0,  max:100, def:15,  unit:''},
@@ -573,10 +594,19 @@ export const TEXTURE_CAPS = {
   // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
   metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
+  // (the crow family: every colour a hue, defaults a raven's; Sheen turns with the light dial)
+  corvids:       { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'], light:true, tints:6,
+                   tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#0E0E14','#0A0A10','#5A3AC8','#2A8AA8','#F2F2F0','#060608'] },
+  // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
+  dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  caustics:      { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
+  // (light leaks on black, for Screen)
+  lightleaks:    { blends:['screen','lighten','color-dodge','soft-light','overlay','hard-light','luminosity','source-over'], tints:3, tintLabels:['Gold Hue','Orange Hue','Red Hue'], tintDefaults:['#FFD27A','#FF8A3A','#D8322E'] },
   // feathers on a transparent ground, made to lie on the page's colour or a simple surface (Ruby): Normal as painted,
   // Multiply on a pale page, Screen on a dark one, Soft Light or Overlay into another surface
   feathers:      { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'],
-                   light:true, tints:2, tintLabels:['Feather Hue','Tip Hue'], tintDefaults:['#ECE6DC','#7C6A5C'] },
+                   light:true, tints:6, tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#ECE6DC','#7C6A5C','#C9D6E8','#E8D6C9','#FFF4D6','#1E2238'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
                    light:true, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
@@ -793,6 +823,16 @@ export function textureCacheMB(){ let px = 0; for(const c of textureCache.values
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
+  } else if(type === 'corvids'){
+    result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'dappled'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'windowlight'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'caustics'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
+  } else if(type === 'lightleaks'){
+    result = genChain(type, w, h, light, extra, tint1 || '#FFD27A', tint2 || '#FF8A3A');   // (chains.js)
   } else if(type === 'feathers'){
     result = genChain(type, w, h, light, extra, tint1 || '#ECE6DC', tint2 || '#7C6A5C');   // Feathers (chains.js)
   } else if(type === 'flowers'){

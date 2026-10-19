@@ -1046,9 +1046,13 @@ export function genMoon(w,h,amt,zoom,form,night){
 export function genFeathers(w, h, o){
   const unit = Math.min(w, h), R = Math.random, rnd = (a, b) => a + R()*(b - a);
   const rgbOf = hx => { const c = parseHex(hx); return [c.r, c.g, c.b]; }, base = rgbOf(o.hue || '#ECE6DC'), tip = rgbOf(o.tip || '#7C6A5C');
+  // (every colour on a hue, ROADMAP L0: the sheen's two colours, the pale patches and tips, the dark bars and eyes' hearts)
+  const sheenA = rgbOf(o.sheenA || '#C9D6E8'), sheenB = rgbOf(o.sheenB || '#E8D6C9'), patch = rgbOf(o.patch || '#FFF4D6'), dark = rgbOf(o.dark || '#1E2238');
+  const kindOf = o.kind || 'plain', sheen = o.sheen ?? 0.15;
   const mix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
   const css = (c, al) => `rgba(${Math.round(Math.max(0, Math.min(255, c[0])))},${Math.round(Math.max(0, Math.min(255, c[1])))},${Math.round(Math.max(0, Math.min(255, c[2])))},${al.toFixed(3)})`;
   const lv = lightVec(o.light == null ? 315 : o.light), lm = Math.hypot(lv.lx, lv.ly), tlx = lm > 1e-4 ? -lv.lx/lm : 0, tly = lm > 1e-4 ? -lv.ly/lm : 0;   // (toward the light)
+  const lightAng = Math.atan2(tly, tlx);
   // THE COMPOSITION, by the seed: where the feathers lie and which way they point
   const comp = ['scatter', 'drift', 'fan', 'fallen'][Math.floor(R()*4)], drift = rnd(-0.9, 0.9) + Math.PI*0.5*(R() < 0.5 ? 1 : -1);
   const n = Math.max(1, Math.round(canonArea(w, h)/(unit*unit/(cpx(1)*cpx(1)))*0 + (w*h)/(unit*unit)*(4 + 26*o.count)/(o.size*o.size*0.9 + 0.1)));
@@ -1060,8 +1064,8 @@ export function genFeathers(w, h, o){
     else if(comp === 'fan'){ const cx = w*rnd(0.3, 0.7), cy = h*1.08; x = cx + (R() - 0.5)*w*0.5; y = h*rnd(0.15, 1.0); ang = Math.atan2(y - cy, x - cx) + Math.PI/2 + rnd(-0.25, 0.25); }
     else if(comp === 'fallen'){ y = h*(1 - Math.pow(R(), 1.6)*0.85); ang = rnd(-Math.PI, Math.PI); }
     else ang = rnd(-Math.PI, Math.PI);
-    const kind = R() < 0.18 ? 'plume' : R() < 0.45 ? 'flight' : 'contour';
-    const L = unit*o.size*(kind === 'flight' ? rnd(0.32, 0.5) : kind === 'plume' ? rnd(0.22, 0.34) : rnd(0.18, 0.3))*(0.55 + 0.45*z);
+    const kind = kindOf === 'plain' ? (R() < 0.18 ? 'plume' : R() < 0.45 ? 'flight' : 'contour') : kindOf === 'magpie' ? (R() < 0.7 ? 'flight' : 'contour') : kindOf === 'jay' ? (R() < 0.5 ? 'flight' : 'contour') : (R() < 0.6 ? 'flight' : 'contour');
+    const L = unit*o.size*(kind === 'flight' ? rnd(0.32, 0.5)*(kindOf === 'magpie' || kindOf === 'raven' ? 1.25 : 1) : kind === 'plume' ? rnd(0.22, 0.34) : rnd(0.18, 0.3))*(0.55 + 0.45*z);
     F.push({ x, y, ang, kind, L, z, flip: R() < 0.5 ? 1 : -1, curl: (o.curl*0.6 + rnd(-0.12, 0.12))*(R() < 0.5 ? 1 : -1), tone: rnd(-0.08, 0.08), seed: R() });
   }
   F.sort((a, b) => a.z - b.z);
@@ -1118,7 +1122,7 @@ export function genFeathers(w, h, o){
     // the eye near the tip (Markings past two thirds): rings of the tip's hue round a dark heart, a pale halo
     const eyeK = o.marks >= 0.66 ? Math.min(1, (o.marks - 0.66)/0.34) : 0, eyeAt = shaft(f, 0.78), eyeR = L*0.14*(0.7 + 0.3*eyeK);
     if(eyeK > 0){ const E0 = toPage(f, eyeAt, f.x, f.y);
-      for(const [rk, colr, al] of [[1, mix(base, [255, 244, 214], 0.6), 0.75], [0.78, tip, 0.9], [0.5, mix(tip, [30, 90, 110], 0.5), 0.9], [0.28, [18, 22, 48], 0.95]]){
+      for(const [rk, colr, al] of [[1, mix(base, patch, 0.6), 0.75], [0.78, tip, 0.9], [0.5, mix(tip, sheenA, 0.5), 0.9], [0.28, dark, 0.95]]){
         x.fillStyle = css(colr, al*eyeK); x.beginPath(); x.ellipse(E0[0], E0[1], eyeR*rk*0.82, eyeR*rk*1.1, f.ang, 0, Math.PI*2); x.fill(); } }
     for(const side of [1, -1]){
       const si = side > 0 ? 0 : 1;
@@ -1141,6 +1145,15 @@ export function genFeathers(w, h, o){
         let tt = Math.pow(t, 1.6)*0.85;
         if(o.marks > 0.05 && o.marks < 0.66){ const band = 0.5 + 0.5*Math.sin(t*Math.PI*(5 + 6*o.marks) + f.seed*6); tt = Math.max(tt, band > 0.7 ? Math.min(1, o.marks*1.6) : 0); }
         let col = mix(base, tip, tt);
+        // THE CORVIDS (Ruby: "really want corvid feathers"): a magpie's inner web pale near the foot; a jay barred dark,
+        // its tip pale; crow and raven all dark (their hues), and each with its sheen
+        if(kindOf === 'magpie' && side === f.flip && t < 0.62) col = mix(patch, col, Math.max(0, (t - 0.5)/0.12));
+        if(kindOf === 'jay'){ const bar = 0.5 + 0.5*Math.sin(t*Math.PI*14 + f.seed*4); if(bar > 0.78 && t < 0.86) col = mix(col, dark, 0.85); if(t > 0.86) col = mix(col, patch, Math.min(1, (t - 0.86)/0.06)); }
+        // STRUCTURAL COLOUR: a barb's sheen turns with the angle between it and the light (the dial), from one sheen hue to
+        // the other, strongest where it faces the light; none on the pale patches
+        const shk = kindOf === 'raven' ? 1 : kindOf === 'crow' ? 0.4 : kindOf === 'magpie' ? 0.9 : kindOf === 'jay' ? 0.25 : 0.5;
+        if(sheen > 0 && lm > 1e-4){ const ba = f.ang - Math.PI/2 + side*lean, face = Math.cos(2*(ba - lightAng)), sc = mix(sheenA, sheenB, 0.5 + 0.5*Math.cos(ba - lightAng + t*1.5));
+          const k = sheen*shk*(0.3 + 0.7*Math.abs(face))*Math.min(1, lm*1.4)*(kindOf === 'magpie' && side === f.flip && t < 0.5 ? 0 : 1); col = mix(col, sc, Math.min(0.85, k*0.8)); }
         // (through the eye the barbs only texture it)
         const inEye = eyeK > 0 && Math.hypot((mx - eyeAt[0])/0.82, (my - eyeAt[1])/1.1) < eyeR*1.05 ? 0.3 : 1;
         col = col.map(v => v*lit*(1 + f.tone));
@@ -1155,7 +1168,7 @@ export function genFeathers(w, h, o){
     // the shaft over the vanes: the quill pale and stiff at the foot, thinning to the tip
     x.lineCap = 'round';
     for(let i = 0; i < 16; i++){ const t0 = i/16, t1 = (i + 1)/16, a = toPage(f, shaft(f, t0), f.x, f.y), b = toPage(f, shaft(f, t1), f.x, f.y);
-      x.strokeStyle = css(mix(base, [255, 250, 240], 0.35).map(v => v*(1 + f.tone)), 0.85); x.lineWidth = Math.max(cpx(0.4), L*0.012*(1 - 0.8*t0));
+      x.strokeStyle = css(mix(base, patch, 0.35).map(v => v*(1 + f.tone)), 0.85); x.lineWidth = Math.max(cpx(0.4), L*0.012*(1 - 0.8*t0));
       x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.stroke(); }
     const q = toPage(f, [0, L*0.07], f.x, f.y), a0 = toPage(f, [0, 0], f.x, f.y);
     x.lineWidth = Math.max(cpx(0.5), L*0.014); x.beginPath(); x.moveTo(a0[0], a0[1]); x.lineTo(q[0], q[1]); x.stroke();   // the calamus, bare
