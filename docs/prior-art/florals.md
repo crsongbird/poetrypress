@@ -401,6 +401,41 @@ Built: Bloom's Part: Visitor draws the seed's visitor as maps (shell gloss, eye 
 through), laid into the flower's maps before the Light Engine, so it is lit with the flower and casts its shadow on it.
 A blade, a stem or leaves out of frame cast a soft shadow along the light, now and then crossing the frame near the lens.
 
+## 8e. Through a real lens: the focal plane, the camera dial, one clear slider each (Ruby, 2026-10-19)
+
+Ruby: "view with the camera dial with a guide, slider for aperture which should control bokeh why are there two sliders
+for the same thing?; also insects should be rare … smaller? At most two insects carefully placed … Sliders appear to be
+changing different things in non-deterministic ways … It should be a physically accurate focal plane … on the GPU."
+
+Read for it:
+- A post-process depth of field derives the circle of confusion from the thin lens; "there is no upper bound on the
+  circle of confusion closer than the focal point", and it grows much faster in front of the focus than behind it. A
+  scatter-as-gather version showed ringing at sharp edges; a near (foreground) blur must spread fully over what is
+  behind its edge, D = max(D0, 2DB − D0) [src: GPU Gems 3 ch. 28].
+- Call of Duty's depth of field gathers in one 2D kernel (49 taps, a circle: separable kernels did not suit
+  scatter-as-you-gather), weights each sample by 1/(π c²) and normalises, splits background and foreground smoothly,
+  and keeps in-focus pixels from bleeding [src: Jimenez, Next Generation Post Processing, notes].
+- Macro depth of field goes as 2CNU²/f²: the closer the subject, the thinner the focus, and a wider aperture isolates
+  the subject and blurs the rest [src: Stanford CS178, Assignment 3 – Macro].
+
+Built [est]:
+- **Lens Blur**, a general part (stepsLens.js): the depth map's black to white laid on a log scale of distance; each
+  point's disc ∝ |1 − focus distance/distance| (the thin lens, for one focus); a gather on a golden-angle spiral, a
+  neighbour counting where its own disc reaches, one behind the point capped at twice the point's own disc (so sharp
+  edges stay sharp in front of blurred lights, and a blurred leaf in front spreads over them); lights brighter than
+  white before the gather, so their discs stay bright; round or 5–9 blades. On the GPU (WebGL2) where there is one;
+  measured against the CPU gather at the same sampling: a mean difference of 0.0001.
+- **Macro Bloom remade on it**: everything painted sharp beside a depth map (the wash and lights farthest, more flowers
+  behind, the flower, a flower near the lens), one Lens Blur. The camera dial frames the flower (Zoom, View, Turn, with
+  a wireframe guide of its rim and heart); the sliders are Species, Stage, Aperture (the lens alone), Focus, Lights
+  Behind, Dew, Translucency, Visitors, each one thing. Insects: rare at the default (about one seed in eight), at most
+  two, on a petal partway out from the heart, a quarter smaller than before.
+
+Sources (this section):
+- GPU Gems 3, ch. 28, "Practical Post-Process Depth of Field": https://developer.nvidia.com/gpugems/gpugems3/part-iv-image-effects/chapter-28-practical-post-process-depth-field
+- Notes on Jimenez, "Next Generation Post Processing in Call of Duty: Advanced Warfare": https://scrapbox.io/0b5vr/Next_Generation_Post_Processing_in_Call_of_Duty:_Advanced_Warfare
+- Stanford CS178, "Assignment 3 – Macro": https://graphics.stanford.edu/courses/cs178/assignments/assn3.html
+
 ## 9. Sources consulted
 
 - **Generative:**

@@ -11,7 +11,7 @@
  * the source files it runs as a module worker.
  */
 import { getTextureCanvas, clearTextureCache } from './textureGenerators.js';
-import { setGpuLight, setGpuSoftware } from './texCore.js';
+import { setGpuLight, setGpuPasses, setGpuSoftware } from './texCore.js';
 
 // the generators make canvases with document.createElement; here, OffscreenCanvas
 if(typeof document === 'undefined') globalThis.document = { createElement: () => new OffscreenCanvas(1, 1) };
@@ -21,8 +21,8 @@ self.onmessage = (e) => {
   // ?softgl in the page's address: software WebGL is allowed, so a machine without a GPU can test the GPU path
   if(softgl) setGpuSoftware(true);
   try {
-    // cpuLight: light on the CPU even where the GPU is there (to compare, or as a fallback)
-    setGpuLight(!(opts && opts.cpuLight));
+    // cpuLight: light (and run the graph's GPU passes) on the CPU even where the GPU is there (to compare, or as a fallback)
+    setGpuLight(!(opts && opts.cpuLight)); setGpuPasses(!(opts && opts.cpuLight));
     const canvas = getTextureCanvas(type, w, h, opts);
     clearTextureCache();                         // the page caches; a transferred canvas is emptied
     const bitmap = canvas.transferToImageBitmap();

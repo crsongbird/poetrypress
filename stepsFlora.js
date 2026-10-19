@@ -433,10 +433,10 @@ export function genBloom(w, h, o){
     const many = o.cells > 1, cx = many ? (i + 0.5)*cw : (o.x ?? 0.5)*w, cy = many ? (j + 0.5)*ch : (o.y ?? 0.5)*h;
     const Rad = Math.min(cw, ch)*0.42*o.size*(many ? 0.75 + R()*0.3 : 1);   // (one flower: Size of the page's shorter side; Across and Down place it)
     if(o.part === 'visitor'){ const kind = o.visitor ? FLORA_VISITORS[o.visitor - 1] : FLORA_VISITORS[Math.floor(R()*FLORA_VISITORS.length)];
-      const sz = { ladybird: 0.16, spider: 0.22, hoverfly: 0.2, ant: 0.16, aphids: 0.2, petal: 0.32, fluff: 0.3 }[kind];
+      const sz = { ladybird: 0.12, spider: 0.165, hoverfly: 0.15, ant: 0.12, aphids: 0.15, petal: 0.24, fluff: 0.22 }[kind];   // (a little smaller than first drawn: Ruby)
       flVisitor(L, R, cx, cy, Math.min(cw, ch)*0.42*o.size*sz*2, R()*6.283, kind, [cc[0], cc[2], cc[1], cc[3]], o.light); continue; }
     if(o.part === 'leaf'){ flLeaf(L, cx - Math.min(cw, ch)*0.35, cy + Math.min(cw, ch)*0.1, Math.min(cw, ch)*0.7*o.size, -0.4 + (R() - 0.5)*0.8, cc[3], R, o.stage > 0.6 ? (o.stage - 0.6)/0.4 : 0); continue; }
-    const f = { sp: S, view: flClamp(o.view + (many ? (R() - 0.5)*0.4 : 0)), stage: flClamp(o.stage + (many ? (R() - 0.5)*0.25 : 0)), spin: R()*6.283, turn: many ? (R() - 0.5)*0.6 : 0,
+    const f = { sp: S, view: flClamp(o.view + (many ? (R() - 0.5)*0.4 : 0)), stage: flClamp(o.stage + (many ? (R() - 0.5)*0.25 : 0)), spin: R()*6.283, turn: many ? (R() - 0.5)*0.6 : (o.turn || 0),
       jitter: o.jitter, flat: o.flat > 0.5, light: o.light, albedo: !!o.albedo, cols: cc, stem: o.stem && o.part === 'whole' };
     if(o.part === 'petal'){
       // one petal, lying flat (a little curled), its base toward the cell's middle
@@ -463,7 +463,7 @@ export const FLORA_STEPS = {
   bloom: { cat: 'Marks', label: 'Bloom', ins: ['light from', 'petal hue', 'tip hue', 'center hue', 'foliage hue'], outs: ['picture', 'mask', 'height', 'thickness', 'center', 'petals', 'gloss', 'facing'],
     io: { ins: ['value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [FL_R('species', FLORA_SPECIES_LABEL, 0), FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
-      FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf · Visitor', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0), FL_R('visitor', 'Visitor: Seeded · ' + ['Ladybird', 'Jumping Spider', 'Hoverfly', 'Ant', 'Aphids', 'Fallen Petal', 'Seed Fluff'].join(' · '), 0)], cost: () => 3,
+      FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf · Visitor', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0), FL_R('visitor', 'Visitor: Seeded · ' + ['Ladybird', 'Jumping Spider', 'Hoverfly', 'Ant', 'Aphids', 'Fallen Petal', 'Seed Fluff'].join(' · '), 0), FL_R('turn', 'Head Turn', 0)], cost: () => 3,
     doc: 'A flower of a real species — a daisy, a poppy, a rose, a foxglove — drawn petal by petal and lit from the dial, from bud to wilted to seed head; or a sheet of them, or one petal or leaf, for Scatter to throw.',
     run(E, n){ const { ww, wh, num } = E, k = Math.min(FLORA_KEYS.length, Math.floor(num(n, 'species', 0)/100*(FLORA_KEYS.length + 1))), d = E.input(n, 1);
       const deg = typeof d === 'number' ? d*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, t = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
@@ -471,7 +471,7 @@ export const FLORA_STEPS = {
       const sh = [1, 4, 8, 16][Math.min(3, Math.floor(num(n, 'sheet', 0)/100*4))], pv = num(n, 'part', 0), part = pv > 95 ? 'visitor' : ['whole', 'petal', 'leaf'][Math.min(2, Math.floor(pv/100*3))];
       const o = { species: k >= FLORA_KEYS.length ? 'mixed' : FLORA_KEYS[k], view: num(n, 'view', 30)/100, stage: num(n, 'stage', 45)/100, jitter: num(n, 'jitter', 40)/100, size: num(n, 'size', 100)/100,
         flat: num(n, 'flat', 0)/100, part, cells: sh, stem: num(n, 'stem', 100) > 50, light: [Math.cos(a)*t, Math.sin(a)*t, Math.sqrt(Math.max(0.05, 1 - t*t))], cols: [hue(2), hue(3), hue(4), hue(5)],
-        seed: ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0) ^ 0x6b10) >>> 0, x: num(n, 'x', 50)/100, y: num(n, 'y', 50)/100, albedo: num(n, 'lit', 0) >= 50, visitor: Math.min(FLORA_VISITORS.length, Math.floor(num(n, 'visitor', 0)/100*(FLORA_VISITORS.length + 1))) };
+        seed: ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0) ^ 0x6b10) >>> 0, x: num(n, 'x', 50)/100, y: num(n, 'y', 50)/100, albedo: num(n, 'lit', 0) >= 50, turn: num(n, 'turn', 0)/100*Math.PI*2, visitor: Math.min(FLORA_VISITORS.length, Math.floor(num(n, 'visitor', 0)/100*(FLORA_VISITORS.length + 1))) };
       const [pic, mask, height, thick, cen, ids, gloss, face] = genBloom(ww, wh, o);
       const M = E.asField(E.readCanvas(mask)), Hf = E.asField(E.readCanvas(height)), Ff = E.asField(E.readCanvas(face));
       // (Lit By the Light Engine: Facing and Height made SMOOTH, curved and tapered, never stepped at a petal's edge (Ruby:

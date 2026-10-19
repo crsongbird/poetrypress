@@ -355,7 +355,7 @@ export let GPU_LIGHT = true;
 export function setGpuLight(on){ GPU_LIGHT = !!on; }
 // for tests only: allow software-emulated WebGL (normally refused: it is slower than the CPU)
 let GPU_SOFT_OK = false;
-export function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; } }
+export function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; GK = undefined; } }
 /** What lit this texture: 'gpu', or 'cpu' (no WebGL2, an emulator, or switched off). */
 export function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }   // test hook: which path lights (Node: always the CPU)
 function gpu(){
@@ -452,6 +452,79 @@ function gpuLightHeights(H, ww, wh, P){
       res.ra = ra; res.rs = rs; }
     return res;
   } catch(e){ GPU = null; return null; }
+}
+
+// ---------- GPU KERNELS: a graph's per-pixel passes on WebGL2 (ROADMAP C9) ----------
+// One shared context (beside the lighting's own), one compiled program per kernel. A kernel is a fragment shader that
+// reads its textures with texelFetch (row 0 the grid's first row) and writes one RGBA pixel. Inputs are Float32Arrays
+// of one or four channels per pixel; the result comes back as one Float32Array of four channels (float where the
+// device can render to float, else 8-bit). No WebGL2, an emulator, or switched off: null, and the part runs its CPU path.
+let GK = undefined;
+const GK_PROGS = new Map();
+export let GPU_PASSES = true;
+/** Switch the GPU passes off (tools, tests, or to compare with the CPU). */
+export function setGpuPasses(on){ GPU_PASSES = !!on; }
+function gpuKernels(){
+  if(GK !== undefined) return GK;
+  GK = null;
+  try {
+    if(typeof OffscreenCanvas !== 'function') return null;
+    const cv = new OffscreenCanvas(1, 1), gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
+    if(!gl) return null;
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info'), renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    if(!GPU_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
+    const float = !!gl.getExtension('EXT_color_buffer_float');
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    GK = { gl, cv, buf, float };
+  } catch(e){ GK = null; }
+  return GK;
+}
+/**
+ * Runs the kernel `name` (its fragment shader's body after the header: `uniform`s, then `void main(){ … o = …; }`) over
+ * a w × h grid. textures: [{ name, data, ch: 1 | 4 }] (each w × h); uniforms: { name: number | [n, n] | [n, n, n] | int(n) }.
+ * Returns a Float32Array of w*h*4, or null (the caller then runs its CPU path).
+ */
+export function gpuKernel(name, body, w, h, textures, uniforms = {}){
+  if(!GPU_PASSES) return null;
+  const K = gpuKernels(); if(!K) return null;
+  const { gl } = K;
+  try {
+    const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE); if(w > maxTex || h > maxTex) return null;
+    let P = GK_PROGS.get(name);
+    if(!P){
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+        if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      const prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, '#version 300 es\nin vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }'));
+      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, '#version 300 es\nprecision highp float; precision highp int; precision highp sampler2D;\nout vec4 o;\n' + body));
+      gl.linkProgram(prog); if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      const vao = gl.createVertexArray(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, K.buf);
+      const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      P = { prog, vao, u: new Map() }; GK_PROGS.set(name, P);
+    }
+    const U = n => { if(!P.u.has(n)) P.u.set(n, gl.getUniformLocation(P.prog, n)); return P.u.get(n); };
+    K.cv.width = w; K.cv.height = h; gl.viewport(0, 0, w, h);
+    gl.useProgram(P.prog); gl.bindVertexArray(P.vao); gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    const made = [];
+    textures.forEach((t, i) => { const tex = gl.createTexture(); made.push(tex); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, tex);
+      if(t.ch === 4) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, t.data);
+      else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, w, h, 0, gl.RED, gl.FLOAT, t.data);
+      for(const [p, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, p, v);
+      gl.uniform1i(U(t.name), i); });
+    for(const [k, v] of Object.entries(uniforms)){ const l = U(k); if(l == null) continue;
+      if(v && v.int !== undefined) gl.uniform1i(l, v.int); else if(Array.isArray(v)) (v.length === 2 ? gl.uniform2f(l, v[0], v[1]) : gl.uniform3f(l, v[0], v[1], v[2])); else gl.uniform1f(l, v); }
+    const out = gl.createTexture(); made.push(out); gl.activeTexture(gl.TEXTURE0 + textures.length); gl.bindTexture(gl.TEXTURE_2D, out);
+    if(K.float) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
+    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, out, 0);
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('framebuffer');
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    let res;
+    if(K.float){ res = new Float32Array(w*h*4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.FLOAT, res); }
+    else { const px = new Uint8Array(w*h*4); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px); res = new Float32Array(w*h*4); for(let i = 0; i < px.length; i++) res[i] = px[i]/255; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); for(const t of made) gl.deleteTexture(t);
+    return res;
+  } catch(e){ if(typeof console !== 'undefined') console.warn('GPU kernel ' + name + ' fell back to the CPU:', e && e.message); GK_PROGS.delete(name); return null; }
 }
 
 // ---------- light, like a game engine ----------

@@ -8,6 +8,11 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- MACRO BLOOM THROUGH A REAL LENS: one Lens Blur focuses the whole picture from a depth map (in front of the focus
+  blurs fast, behind it softens to a limit, the lights behind become discs; on the GPU where there is one). The camera
+  dial frames the flower with a wireframe guide (Zoom, View, Turn); the sliders are Species, Stage, Aperture, Focus,
+  Lights Behind, Dew, Translucency, Visitors, each one thing; insects rare (about one seed in eight), at most two, on a
+  petal, a quarter smaller. Right, and is the default blur creamy enough?
 - A RELOAD KEEPS THE LOOK: an empty poem no longer starts fresh (that was the opening look, the default theme and every
   slider new); the surface and sliders come back with the page empty, and ⟲ is the fresh start. Right?
 - THE SURFACE MENU'S GROUPS, REARRANGED: Burnt Letter and Cup Ring to Paper & Grounds; Veins of Light and Moss on Stone
@@ -32,11 +37,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - A FAIRY now and then (Ruby: "both Hyrule Field and the wind waker need an occasional fairy showing up from the
   game"): small, a glowing nod and never the character itself, in the Meadow and the Windward Sea, and in Macro Bloom
   as a visitor at a 1-in-66 chance (small).
-- MACRO BLOOM (Ruby, 2026-10-19: "beautiful, but it's difficult to figure out what sliders actually do"): framed with
-  the camera dial, with a guide on the page; one Aperture slider for the bokeh (two sliders do the same thing now); a
-  physically accurate focal plane, as the other focal blur has, on the GPU; every slider one clear thing, the same each
-  time; insects rare, smaller, at most two, placed with care and lit as everything else is (and the bugs a little
-  smaller, the 1-in-66 fairy, above).
 - SUNRISE SCROLL (branch `ink`): Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a
   village of roofs and gates, fields under a great tree, a cursed land under red miasma.

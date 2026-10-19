@@ -235,6 +235,7 @@ default.
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes. Touch: also the glass (Scratches, Smudges, Window Reflection, Shatter, Glass Pane) |
 | `stepsFlora.js` | the floral surfaces' Bloom (`FLORA_STEPS`): a flower of one of 23 species, or a sheet of them, petal by petal, lit from the dial |
+| `stepsLens.js` | Lens Blur (`LENS_STEPS`): a thin-lens focal plane from a depth map, gathered on a golden-angle spiral (background capped at twice the point's own disc), lights brighter than white first; on the GPU through texCore's `gpuKernel`, else the same gather on the CPU |
 | `stepsStreamers.js` | Windward Sea's Streamers (`STREAMER_STEPS`): ribbons swept along 3D paths (gust with a tightening curl, spiral, loop, wave) through a camera level with the horizon, twisted to show both faces; maps only: ribbons, facing, side, depth |
 | `stepsNetwork.js` | Veins of Light's Network (`NETWORK_STEPS`): a graph with loops (tree + loops, relative, Gabriel, slime, streets, subdivided), widened by flow from hubs, routed organic to circuit; lines, core, order, nodes, pulses, loops, height |
 | `stepsRoom.js` | Liminal Spaces' Room Caster (`ROOM_STEPS`): a ray-cast empty interior of eleven kinds, handed on as grey buffers (surface, depth, light, pattern, lamps, water, shade) |
@@ -1373,6 +1374,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   docs/prior-art/veins-network.md): a graph with loops, never a tree. Weave picks how the nodes join;
   widths follow the flow from the hubs (the poem's punctuation, else the seed's); Organic ↔ Circuit
   routes from curves to 45°/90° traces with pads and buses. The glow wakes as the dial's light sinks.
+- **GPU passes** (texCore `gpuKernel(name, body, w, h, textures, uniforms)`): a part's per-pixel pass as a WebGL2 fragment
+  shader (texelFetch, row 0 the grid's first row), one shared context, a program per kernel; null when there is no
+  WebGL2, an emulator, or `setGpuPasses(false)`, and the part then runs its CPU path (Node and the tests always do).
+  Write the CPU path first, then the kernel, and check them against each other in Chromium with `setGpuSoftware(true)`
+  (ROADMAP C9: the graph's passes move here one by one).
 - **Windward Sea** (chain `windsea`, `v: 5`; one process part, `streamers`, stepsStreamers.js; prior art
   docs/prior-art/cel-shaded.md): the first love letter to a video game, cel-shaded. Light in bands: the Light
   Engine's light (or Streamers' Facing) through a Posterize (Toon Bands) into a three-stop Gradient Map. The

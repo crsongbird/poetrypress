@@ -1691,6 +1691,19 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
       lines.push({ pts, bold }); }
     return lines;
   }
+  if(kind === 'bloom'){
+    // (Macro Bloom's flower as the camera dial frames it: Zoom sizes it, from the whole flower to its heart filling the
+    //  page; View tips it from face-on; Turn says which way it tips and sets it toward that side's third. Its rim, its
+    //  heart, and a tick the way it tips)
+    const t = (cam.turn || 0)*Math.PI/180, z = Math.max(0, Math.min(1, ((cam.zoom ?? 100) - 25)/375)), r = 0.42*(45 + z*255)/100;
+    const v = Math.min(1, Math.max(0, (cam.view || 0)/100)), ca = Math.max(0.25, Math.cos(v*Math.PI/2*0.95));
+    const cx = aspX*(0.37 + 0.26*(0.5 + 0.5*Math.sin(t))), cy = aspY*(0.62 - 0.24*(0.5 + 0.5*Math.cos(t))), c = Math.cos(t), s = Math.sin(t);
+    for(const [rr, bold] of [[r, true], [r*0.62, false], [r*0.18, true]]){ const pts = [];
+      for(let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2, x = Math.cos(a)*rr, y = Math.sin(a)*rr*ca; pts.push([cx + x*c - y*s, cy + x*s + y*c]); }
+      lines.push({ pts, bold }); }
+    lines.push({ pts: [[cx, cy], [cx - s*r*ca*1.15, cy + c*r*ca*1.15]], bold: false });
+    return lines;
+  }
   if(kind === 'room'){
     // (Liminal Spaces' camera, as the Room Caster takes it: Turn turns it from where the seed looks, View tips it down from
     //  level, Zoom narrows it; the horizon, the floor's lines running to the vanishing point and its crossing lines)
