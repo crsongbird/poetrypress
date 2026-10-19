@@ -284,6 +284,24 @@ Easter eggs).
 - **Lit from maps** (Ruby, 2026-10-19): albedo, height, gloss, translucency (and facing for objects), lit by the Light
   Engine, never drawn already lit (AGENTS §8, step 1b; docs/prior-art/lit-maps.md).
 
+- **L5 · Love letters to video games** (Ruby, 2026-10-19: "I am a game dev first after all"). Each nods to a look,
+  never copies a character, a logo or a name; prior art researched for real first (AGENTS §8, step 0); lit from maps.
+  - **Where they live:** what is plainly a console's or a machine's look (a handheld's four greens, a CRT arcade, PS1
+    wobble) goes in a new **Video Games** group (its own Runology rune); what could live elsewhere hides in its natural
+    group and only nods (the Meadow already reads as a famous green field).
+  - **First: cel-shaded worlds** (Wind Waker, Okami, Breath of the Wild): toon light in steps from the Light Engine (its
+    light posterized into two or three bands, a rim of light), painted skies with swirling cel clouds, a stylized sea
+    with white wave curls and foam, wind-swept toon grass, ink-and-brush outlines (Okami's sumi-e).
+  - **Then:** painted 2D (Hollow Knight, Ori, Gris: layered parallax caverns and forests, glowing motes, watercolour);
+    retro hardware (PS1 low-poly with affine wobble, dithering and fog; a handheld's greens; CRT arcade glow; 16-bit
+    parallax) — with the pixel-art category, L1b; atmospheric journeys (Journey's glittering dunes, Shadow of the
+    Colossus's vast ruins and mist, Myst's ages); city simulators (a city seen from above, zoning colours, traffic,
+    night lights); space games (we have nods already: a cockpit's view, a star map, a nebula with a jump gate).
+  - **Small nods elsewhere:** border stitches, underlines and fonts with a game's grammar (a heart row, a dialogue
+    box, a pixel font); simple backgrounds — a Sierpiński triangle's first steps is mathematics, free to use, under a
+    name of its own (never the game's).
+  - **Presets (Stage 4):** the Meadow gets a preset that nods to the famous field by a name of its own (a nod, never
+    the name).
 - **L1c · Cardboard diorama** (Ruby, 2026-10-19, pinned for later: "maybe we should pin 'cardboard diorama' as a later
   option"): the stepped look the first lit petals had, on purpose — every layer a flat cut-out with real thickness and an
   edge, standing at its own depth, casting crisp shadows on the layer behind, like a paper theatre or a tunnel book.

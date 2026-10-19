@@ -44,7 +44,7 @@ was all in *answering a touch*:
 **Done (this release):**
 - **The settle** (`canvasRenderer.js` `scheduleRender`, `noteUserActivity`): while a hand is on the controls (a
   key, an input or change, a pointer down, a finger moving) no render begins; it begins once they have been still
-  for `SETTLE_MS` = 150 ms. Typing in the poem waits `TYPING_SETTLE_MS` = 400 ms, since people pause longer between
+  for `SETTLE_MS` = 150 ms. Typing in the poem waits `TYPING_SETTLE_MS` = 250 ms (Ruby: 400 felt too long), since people pause longer between
   keys than between a slider's steps. Renders nobody's hand is behind (a texture arriving from the worker) keep
   the old 24-a-second cap. The dial guides are their own canvas, so they still follow the finger live.
 - **The editor** (`editor.js`): it paints at most once a frame, and not at all when the text, the caret and the

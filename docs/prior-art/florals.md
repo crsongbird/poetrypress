@@ -379,6 +379,28 @@ Translucency, a map, wraps the light round each petal and lets it through in the
 sinks or shines from behind: a backlit poppy glows, its veins and its overlaps darker; a leaf glows green. Checked from
 the front, the side and behind before it was shown.
 
+## 8d. What else is in a macro photograph of a flower (Ruby: "pollen, dew, jumping spider, loose petals … shadow casters")
+
+- **Visitors.** Macro photographers' favourite subjects are "the fluffy body of a bee" and "the comically expressive
+  face of a jumping spider"; an insect's eyes are the sharpest point of the picture [src: Adorama].
+  - *Jumping spider:* eight eyes, the front pair (anterior median) large, "big, beady eyes that look disproportionate";
+    "a dense covering of iridescent scales or hairs"; often a red back (Johnson's red-backed) [src: NPS; A-Z Animals].
+  - *Seven-spot ladybird:* "oval, convex", 6.5–7.8 mm; orange-red elytra with three black spots each and one shared
+    beside the scutellum, two white patches ahead of it; a black pronotum with two pale spots; black legs [src: Wikipedia].
+  - *Hoverfly:* 8–20 mm, a large head of eyes, "yellow and black bands of equal width", one pair of clear wings,
+    "hovering among flowers" [src: Australian Museum].
+  - *Aphids:* 2–4 mm, "pear-like or teardrop shape", often green, with cornicles "like a pair of tailpipes", on young
+    buds and stems; ants tend them [src: University of Maryland Extension].
+- **Dew.** A drop is a lens: "Each droplet focusses sunlight to form a tail", a bright caustic on the surface beyond it
+  [src: Atmospheric Optics]; photographers light drops from "diagonally behind" for starbursts on their outlines
+  [src: Canon]. So each drop: a dark rim, a highlight toward the light, a bright tail away from it.
+- **Shadow casters.** The rule is to avoid "casting shadows over your subject" [src: Adorama] — which is exactly what a
+  blade of grass or a leaf between the sun and the flower does in the wild: a soft shadow across the petals.
+
+Built: Bloom's Part: Visitor draws the seed's visitor as maps (shell gloss, eye gloss, clear wings that let light
+through), laid into the flower's maps before the Light Engine, so it is lit with the flower and casts its shadow on it.
+A blade, a stem or leaves out of frame cast a soft shadow along the light, now and then crossing the frame near the lens.
+
 ## 9. Sources consulted
 
 - **Generative:**
@@ -415,6 +437,14 @@ the front, the side and behind before it was shown.
   - https://digital-photography-school.com/how-to-do-more-unique-flower-photography/
   - https://petapixel.com/2022/03/06/13-tips-for-photographing-tiny-spring-flowers/
   - https://www.cam.ac.uk/research/news/why-buttercups-reflect-yellow-on-chins
+  - https://www.adorama.com/alc/macro-photography-for-small-wonders/ (§8d)
+  - https://www.nps.gov/articles/000/jumping-spider.htm (§8d)
+  - https://a-z-animals.com/articles/why-jumping-spiders-have-some-of-the-sharpest-eyes-in-nature/ (§8d)
+  - https://en.wikipedia.org/wiki/Coccinella_septempunctata (§8d)
+  - https://australian.museum/learn/animals/insects/hover-flies/ (§8d)
+  - https://extension.umd.edu/resource/aphids-flowers/ (§8d)
+  - https://atoptics.co.uk/blog/opod-breakfast-droplets/ (§8d)
+  - https://snapshot.asia.canon/en/article/macro-photography-techniques-flowers-in-water-droplets (§8d)
 - **Botany:**
   - https://illinoiswildflowers.info/weeds/plants/oxeye_daisy.htm
   - https://m.illinoiswildflowers.info/weeds/plants/ger_chamomile.htm

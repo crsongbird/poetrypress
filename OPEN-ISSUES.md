@@ -8,24 +8,17 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- FLOWERS, SECOND ROUND (sheets sent): MACRO is now framed by the seed (the whole flower in its setting, or its heart
-  filling the page, more of its kind behind, one nearer the lens as a soft wash across a corner, pollen) and lit from
-  maps, as a renderer lights a material: its colour unlit, its shape (Facing, smooth and curved), its heights, gloss
-  (most petals matte, waxy ones shining) and thinness, so light wraps round the petals and comes through them in their
-  own colour as the dial sinks or shines from behind; veins and overlaps show when backlit. The MEADOW is seen from
-  inside it: a high horizon with a hedgerow or tree line hazed by distance, fields in bands of green and gold, the
-  nearest grass tall and out of focus, a hazy sky of long soft cloud (no green hill under blue and white). FALLEN PETALS
-  lost their outlines and dark rims; petals have soft patches, brown creeping in as they age, crumpled edges; leaves
-  have veins; shadows, not halos. Two more simple ones: DITSY PRINT (tiny flowers and sprigs all over cloth, up to
-  three colours) and BOTANICAL LINE (plants in a fine ink line, with a loose wash or none).
+- MACRO BLOOM'S VISITORS AND SHADOWS (sheets sent): most seeds bring a visitor near the flower's heart — a ladybird,
+  a jumping spider, a hoverfly, an ant, aphids, a fallen petal or a seed's fluff — in a new Visitor Hue (it replaces the
+  Second Bokeh Hue, which now follows the first and the key light), lit with the flower: a ladybird's shell shines, a
+  spider's eyes catch the light, a hoverfly's wings let it through, and each casts its shadow on the petal. Dew drops
+  are little lenses: a dark rim, a highlight, a bright tail beyond them. A blade of grass or leaves between the sun and
+  the flower cast a soft shadow along the light, and now and then cross the frame near the lens. Other visitors wanted
+  (a bee, a snail, a caterpillar, a damselfly)?
 - THE SURFACE MENU'S GROUPS, REARRANGED: Burnt Letter and Cup Ring to Paper & Grounds; Veins of Light and Moss on Stone
   to Grown & Generated; Knotwork to Pattern & Order; Light, Sparks & Dust is now Light, Dust & Feathers (the two
   feathers were there); the Paving Stones and Brick Wall starters to Materials & Craft; the Packet Rain study to Screens
   & Signals. Anything else still in a strange place?
-- TYPING AND SLIDERS ON A PHONE: nothing draws while a hand is on the controls; the page is drawn once they have
-  rested 150 ms (typing: 400 ms, since keys come slower). The poem editor lays the page out once a key, not three
-  times. Measured on a phone-speed CPU: a slider drag went from 30–86% busy to 4–7%; typing from 45% to 24%
-  (PERFORMANCE-AUDIT.md §0 has the numbers and the plan).
 - THE HUES IN THREE GROUPS: Light Colors (Main Light, Rim Light, Ambient Light, beside the dial), Surface Colors (the
   surface's own, up to six, named by the surface; a Ground or Snow Hue joins them), Material Colors (Glow, Shine and
   Shadow Hues), each under a small heading that hides when none of its hues shows. Names right?

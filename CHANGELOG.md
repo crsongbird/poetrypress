@@ -4,6 +4,28 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Gridr (2026-10-19)
+
+- **Macro Bloom has visitors.** Most seeds bring something near the
+  flower's heart, as real macro photographs so often do: a ladybird, a
+  jumping spider, a hoverfly, an ant, aphids, a fallen petal or a seed's
+  fluff, in a new Visitor Hue. Each is lit with the flower: a ladybird's
+  shell shines, a spider's eyes catch the light, a hoverfly's wings let it
+  through, and each casts its shadow on the petal.
+- **Dew drops are little lenses**: a dark rim, a highlight, and a bright
+  tail beyond each drop where it focuses the light.
+- **Shadows from outside the frame**: a blade of grass or leaves between
+  the sun and the flower cast a soft shadow along the light, and now and
+  then cross the frame close to the lens.
+- **Typing redraws sooner**: the page is drawn 250 ms after the last key.
+- The Second Bokeh Hue is replaced by the Visitor Hue; the second bokeh
+  now follows the first and the key light.
+- **Under the hood:** reviewed the tests. The knob probe now sees a
+  picture stamped at a size (the flowers' petal sizes were invisible to
+  it), and draws at 360 px instead of 600 (as telling, and the slowest
+  suite a fifth quicker); the tests that named the Emotional Seed now use
+  other starters; the starter and texture counts follow what is there.
+
 ## Saturn–Fornjot (2026-10-19)
 
 - **Typing and sliders are quick again on a phone.** Nothing redraws while

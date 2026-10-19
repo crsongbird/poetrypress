@@ -37,7 +37,9 @@ const SATURN = ['Pan', 'Daphnis', 'Atlas', 'Prometheus', 'Epimetheus', 'Janus', 
   'Pallene', 'Enceladus', 'Tethys', 'Telesto', 'Calypso', 'Dione', 'Helene', 'Polydeuces', 'Rhea', 'Titan', 'Hyperion',
   'Iapetus', 'Kiviuq', 'Ijiraq', 'Phoebe', 'Paaliaq', 'Skathi', 'Albiorix', 'Bebhionn', 'Erriapus', 'Skoll', 'Siarnaq',
   'Tarqeq', 'Greip', 'Hyrrokkin', 'Jarnsaxa', 'Tarvos', 'Mundilfari', 'Bergelmir', 'Narvi', 'Suttungr', 'Hati',
-  'Farbauti', 'Thrymr', 'Aegir', 'Bestla', 'Fenrir', 'Surtur', 'Kari', 'Ymir', 'Loge', 'Fornjot'];
+  'Farbauti', 'Thrymr', 'Aegir', 'Bestla', 'Fenrir', 'Surtur', 'Kari', 'Ymir', 'Loge', 'Fornjot',
+  // (the Norse group's ten named in 2022)
+  'Gridr', 'Eggther', 'Angrboda', 'Beli', 'Gerd', 'Gunnlod', 'Skrymir', 'Alvaldi', 'Geirrod', 'Thiazzi'];
 // node build.mjs --notes: print the newest section of CHANGELOG.md (the release's commit message)
 if(process.argv.includes('--notes')){
   const log = readFileSync('CHANGELOG.md', 'utf8'), at = log.indexOf('\n## '), next = log.indexOf('\n## ', at + 4);

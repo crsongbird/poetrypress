@@ -322,6 +322,97 @@ function flLeaf(L, x, y, r, a, cF, R, age = 0){
   L.height.strokeStyle = 'rgba(255,255,255,0.14)'; L.height.lineWidth = w*r*0.9; path(L.height); L.height.stroke(); L.height.restore();
 }
 
+/**
+ * A VISITOR on the flower (Part: Visitor; docs/prior-art/florals.md §8d): what macro photographs of flowers so often hold
+ * besides the flower. Drawn as maps (albedo unlit, mask, height, gloss, thickness, facing) like the petals, so the Light
+ * Engine lights it, shines on its shell or its eyes and casts its shadow on the petal.
+ *   kinds: ladybird (seven-spot: an orange-red dome, three black spots a side and one shared at the scutellum, a black
+ *          pronotum with two pale patches), jumping spider (eight eyes, the front two large; a dense coat of hairs; a
+ *          bright back), hoverfly (big eyes, a banded abdomen, one pair of clear wings), ant, aphids (pear-shaped, soft,
+ *          with their cornicles, in a cluster), a fallen petal, a seed's fluff (a pappus).
+ * c: [main (petal hue), dark (center hue), accent (tip hue), green (foliage hue)], s: its length in px, ang: its heading.
+ */
+const FLORA_VISITORS = ['ladybird', 'spider', 'hoverfly', 'ant', 'aphids', 'petal', 'fluff'];
+function flVisitor(L, R, cx, cy, s, ang, kind, c, light){
+  const [lx, ly] = light, ca = Math.cos(ang), sa = Math.sin(ang);
+  const T = (u, v) => [cx + u*s*ca - v*s*sa, cy + u*s*sa + v*s*ca];     // u along it (head +), v across
+  const g8 = v => { const k = Math.round(255*flClamp(v)); return `rgb(${k},${k},${k})`; };
+  const ell = (ctx, u, v, ru, rv, rot = 0) => { const [x, y] = T(u, v); ctx.beginPath(); ctx.ellipse(x, y, ru*s, rv*s, ang + rot, 0, 6.283); };
+  // a dome: albedo, mask, gloss and thickness flat; height and facing rounded (a sphere lit from the light's side)
+  const dome = (u, v, ru, rv, col, gloss, hk = 1, thick = 0.9, rot = 0) => { const [x, y] = T(u, v), r = Math.max(ru, rv)*s;
+    ell(L.pic, u, v, ru, rv, rot); L.pic.fillStyle = flCss(col); L.pic.fill();
+    for(const [ctx, st] of [[L.mask, '#fff'], [L.gloss, g8(gloss)], [L.thick, g8(thick)]]){ ell(ctx, u, v, ru, rv, rot); ctx.fillStyle = st; ctx.fill(); }
+    const hg = L.height.createRadialGradient(x, y, 0, x, y, r); hg.addColorStop(0, g8(0.55 + 0.45*hk)); hg.addColorStop(1, g8(0.55)); ell(L.height, u, v, ru, rv, rot); L.height.fillStyle = hg; L.height.fill();
+    const fx = x - lx*r*0.45, fy = y - ly*r*0.45, fg = L.face.createRadialGradient(fx, fy, 0, x, y, r*1.05); fg.addColorStop(0, g8(1)); fg.addColorStop(0.7, g8(0.7)); fg.addColorStop(1, g8(0.35));
+    ell(L.face, u, v, ru, rv, rot); L.face.fillStyle = fg; L.face.fill(); };
+  const line = (pts, w, col, gloss = 0.3, thick = 0.9) => { for(const [ctx, st] of [[L.pic, flCss(col)], [L.mask, '#fff'], [L.gloss, g8(gloss)], [L.thick, g8(thick)], [L.height, g8(0.62)], [L.face, g8(0.7)]]){
+      ctx.strokeStyle = st; ctx.lineWidth = w*s; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach((q, i) => { const [x, y] = T(q[0], q[1]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); } };
+  const spot = (u, v, r, col) => { ell(L.pic, u, v, r, r); L.pic.fillStyle = flCss(col); L.pic.fill(); };
+  const legs = (pairs, len, w, col, gloss, bend = 0.5) => { for(let k = 0; k < pairs.length; k++) for(const sd of [-1, 1]){ const [u0, a0] = pairs[k], a = a0*sd;
+      const knee = [u0 + Math.cos(a)*len*0.55, sd*0.12 + Math.sin(a)*len*0.55], foot = [knee[0] + Math.cos(a + sd*bend)*len*0.55, knee[1] + Math.sin(a + sd*bend)*len*0.55];
+      line([[u0, sd*0.08], knee, foot], w, col, gloss); } };
+  const dark = c[1], main = c[0], acc = c[2] || flMix(c[0], [255, 220, 120], 0.5), green = c[3];
+  if(kind === 'ladybird'){
+    legs([[0.15, 1.2], [0, 1.6], [-0.15, 2.0]], 0.42, 0.035, flMix(dark, [0, 0, 0], 0.5), 0.5, 0.4);
+    dome(0.42, 0, 0.12, 0.13, flMix(dark, [0, 0, 0], 0.4), 0.7, 0.4);                                   // head
+    dome(0.28, 0, 0.16, 0.3, flMix(dark, [0, 0, 0], 0.5), 0.75, 0.6);                                    // pronotum
+    spot(0.33, -0.18, 0.06, [235, 230, 220]); spot(0.33, 0.18, 0.06, [235, 230, 220]);
+    dome(-0.08, 0, 0.42, 0.36, main, 0.85, 1, 1);                                                        // the elytra, glossy
+    line([[0.22, 0], [-0.48, 0]], 0.012, flMix(dark, [0, 0, 0], 0.5), 0.6);                              // their seam
+    spot(0.16, 0, 0.07, flMix(dark, [0, 0, 0], 0.5));                                                    // the shared spot at the scutellum
+    for(const sd of [-1, 1]) for(const [u, v, r] of [[0.02, 0.2, 0.075], [-0.2, 0.16, 0.08], [-0.12, 0.27, 0.05]]) spot(u, v*sd, r, flMix(dark, [0, 0, 0], 0.5));
+  } else if(kind === 'spider'){
+    // legs first (thick, banded, bent), then the abdomen, the head with its eyes, the palps
+    const hair = flMix(dark, main, 0.25);
+    legs([[0.28, 0.55], [0.18, 1.2], [0.05, 1.8], [-0.05, 2.4]], 0.62, 0.06, hair, 0.15, 0.6);
+    dome(-0.32, 0, 0.3, 0.24, flMix(dark, [0, 0, 0], 0.3), 0.18, 0.8, 1);                                 // abdomen
+    // its bright back (Johnson's red-backed, and many others): a band of the main hue, a pale chevron
+    ell(L.pic, -0.3, 0, 0.22, 0.12); L.pic.fillStyle = flCss(main); L.pic.fill();
+    line([[-0.1, -0.12], [-0.2, 0], [-0.1, 0.12]], 0.025, [240, 236, 226], 0.2);
+    dome(0.14, 0, 0.24, 0.22, flMix(dark, [0, 0, 0], 0.4), 0.2, 0.7, 1);                                  // cephalothorax
+    // hairs: a fringe of short strokes round the body, catching the light
+    L.pic.strokeStyle = flCss(flMix(hair, [240, 230, 210], 0.5), 1, 0.5); L.pic.lineWidth = s*0.006;
+    for(let k = 0; k < 70; k++){ const a = R()*6.283, inC = R() < 0.5, [x, y] = inC ? T(0.14 + Math.cos(a)*0.23, Math.sin(a)*0.21) : T(-0.32 + Math.cos(a)*0.29, Math.sin(a)*0.23), l = s*(0.03 + R()*0.04);
+      L.pic.beginPath(); L.pic.moveTo(x, y); L.pic.lineTo(x + Math.cos(a + ang)*l, y + Math.sin(a + ang)*l); L.pic.stroke(); }
+    // the chelicerae (often iridescent: the accent), the palps, and the eyes: two great front eyes, two beside them
+    dome(0.4, -0.05, 0.05, 0.04, flMix(acc, dark, 0.4), 0.9, 0.5); dome(0.4, 0.05, 0.05, 0.04, flMix(acc, dark, 0.4), 0.9, 0.5);
+    dome(0.42, -0.13, 0.04, 0.04, flMix(hair, [240, 230, 210], 0.4), 0.2, 0.4); dome(0.42, 0.13, 0.04, 0.04, flMix(hair, [240, 230, 210], 0.4), 0.2, 0.4);
+    for(const sd of [-1, 1]){ dome(0.33, sd*0.075, 0.07, 0.07, [12, 10, 12], 1, 1.2, 1); dome(0.31, sd*0.17, 0.035, 0.035, [12, 10, 12], 1, 0.8, 1); }
+  } else if(kind === 'hoverfly'){
+    // two clear wings, thin: they let the light through and shine; then the banded body and the great eyes
+    for(const sd of [-1, 1]){ const [x, y] = T(-0.08, sd*0.26), r = 0.32*s;
+      // (clear: the flower shows through them — a wing covers the petal by a third, mostly shine and light)
+      for(const [ctx, st] of [[L.pic, flCss(flMix(main, [235, 240, 245], 0.7))], [L.mask, 'rgb(85,85,85)'], [L.gloss, g8(0.95)], [L.thick, g8(0.08)], [L.height, g8(0.7)], [L.face, g8(0.8)]]){
+        ctx.beginPath(); ctx.ellipse(x, y, r, r*0.32, ang + sd*0.35, 0, 6.283); ctx.fillStyle = st; ctx.fill(); }
+      L.pic.strokeStyle = flCss(dark, 1, 0.35); L.pic.lineWidth = s*0.006; for(let k = -1; k <= 1; k++){ const [a1, b1] = T(0.1, sd*0.08), [a2, b2] = T(-0.42, sd*(0.35 + k*0.12)); L.pic.beginPath(); L.pic.moveTo(a1, b1); L.pic.lineTo(a2, b2); L.pic.stroke(); } }
+    legs([[0.1, 1.3], [0, 1.7], [-0.1, 2.1]], 0.3, 0.025, dark, 0.4, 0.5);
+    for(let k = 0; k < 4; k++){ const u = -0.12 - k*0.11; dome(u, 0, 0.07, 0.15 - k*0.015, k % 2 ? flMix(dark, [0, 0, 0], 0.4) : acc, 0.6, 0.6); }
+    dome(0.12, 0, 0.13, 0.15, flMix(dark, main, 0.15), 0.5, 0.7);                                       // thorax
+    dome(0.3, 0, 0.09, 0.17, flMix(dark, [120, 40, 20], 0.5), 0.9, 0.9);                                // head, its eyes nearly all of it
+  } else if(kind === 'ant'){
+    legs([[0.12, 0.9], [0.08, 1.6], [0.02, 2.3]], 0.5, 0.025, dark, 0.6, 0.3);
+    dome(-0.3, 0, 0.2, 0.15, dark, 0.8, 0.8); dome(0.06, 0, 0.14, 0.07, dark, 0.8, 0.6); dome(0.32, 0, 0.12, 0.11, dark, 0.8, 0.7);
+    for(const sd of [-1, 1]) line([[0.4, sd*0.05], [0.55, sd*0.14], [0.68, sd*0.06]], 0.018, dark, 0.6);
+  } else if(kind === 'aphids'){
+    const n = 5 + Math.floor(R()*8);
+    for(let k = 0; k < n; k++){ const u = (R() - 0.5)*0.8, v = (R() - 0.5)*0.5, r = 0.05 + R()*0.06, col = flMix(green, main, R()*0.3);
+      dome(u, v, r*1.3, r, col, 0.35, 0.6, 0.6, (R() - 0.5)*0.8);
+      line([[u - r*1.1, v - r*0.4], [u - r*1.6, v - r*0.6]], 0.01, flMix(col, dark, 0.5)); line([[u - r*1.1, v + r*0.4], [u - r*1.6, v + r*0.6]], 0.01, flMix(col, dark, 0.5)); }
+  } else if(kind === 'petal'){
+    // a petal from another flower, fallen and lying a little curled
+    const pts = []; for(let k = 0; k <= 24; k++){ const t = k/24*6.283, r = 0.5*(0.6 + 0.4*Math.cos(t))*(1 + 0.05*Math.sin(t*5)); pts.push([Math.cos(t)*r*0.9 + 0.1, Math.sin(t)*r*0.55]); }
+    const path = ctx => { ctx.beginPath(); pts.forEach((q, i) => { const [x, y] = T(q[0], q[1]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); };
+    const [x0, y0] = T(-0.35, 0), [x1, y1] = T(0.55, 0), gp = L.pic.createLinearGradient(x0, y0, x1, y1); gp.addColorStop(0, flCss(flMix(main, acc, 0.4))); gp.addColorStop(1, flCss(main));
+    path(L.pic); L.pic.fillStyle = gp; L.pic.fill();
+    for(const [ctx, st] of [[L.mask, '#fff'], [L.gloss, g8(0.15)], [L.thick, g8(0.12)], [L.face, g8(0.85)]]){ path(ctx); ctx.fillStyle = st; ctx.fill(); }
+    const hg = L.height.createLinearGradient(x0, y0, x1, y1); hg.addColorStop(0, g8(0.62)); hg.addColorStop(0.6, g8(0.75)); hg.addColorStop(1, g8(0.9)); path(L.height); L.height.fillStyle = hg; L.height.fill();
+  } else {
+    // a seed's fluff (a dandelion's pappus): a brown seed on a long beak, a parachute of fine hairs, nearly all light
+    line([[-0.5, 0], [-0.3, 0]], 0.04, flMix(dark, [120, 80, 40], 0.5), 0.3); line([[-0.3, 0], [0.1, 0]], 0.008, flMix(main, [240, 240, 235], 0.7), 0.5, 0.1);
+    for(let k = 0; k < 40; k++){ const a = (k/40 - 0.5)*2.6 + (R() - 0.5)*0.08, l = 0.38 + R()*0.06; line([[0.1, 0], [0.1 + Math.cos(a)*l, Math.sin(a)*l]], 0.004, flMix(main, [250, 250, 245], 0.8), 0.6, 0.05); }
+  }
+}
+
 /** The layers a Bloom draws on, each a canvas w × h (picture on black; the rest grey on black). */
 function flLayers(w, h){
   const mk = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, w, h); return x; };
@@ -341,6 +432,9 @@ export function genBloom(w, h, o){
     const cc = o.cols.map((c, k) => c || flHex(S.cols[k]));
     const many = o.cells > 1, cx = many ? (i + 0.5)*cw : (o.x ?? 0.5)*w, cy = many ? (j + 0.5)*ch : (o.y ?? 0.5)*h;
     const Rad = Math.min(cw, ch)*0.42*o.size*(many ? 0.75 + R()*0.3 : 1);   // (one flower: Size of the page's shorter side; Across and Down place it)
+    if(o.part === 'visitor'){ const kind = o.visitor ? FLORA_VISITORS[o.visitor - 1] : FLORA_VISITORS[Math.floor(R()*FLORA_VISITORS.length)];
+      const sz = { ladybird: 0.16, spider: 0.22, hoverfly: 0.2, ant: 0.16, aphids: 0.2, petal: 0.32, fluff: 0.3 }[kind];
+      flVisitor(L, R, cx, cy, Math.min(cw, ch)*0.42*o.size*sz*2, R()*6.283, kind, [cc[0], cc[2], cc[1], cc[3]], o.light); continue; }
     if(o.part === 'leaf'){ flLeaf(L, cx - Math.min(cw, ch)*0.35, cy + Math.min(cw, ch)*0.1, Math.min(cw, ch)*0.7*o.size, -0.4 + (R() - 0.5)*0.8, cc[3], R, o.stage > 0.6 ? (o.stage - 0.6)/0.4 : 0); continue; }
     const f = { sp: S, view: flClamp(o.view + (many ? (R() - 0.5)*0.4 : 0)), stage: flClamp(o.stage + (many ? (R() - 0.5)*0.25 : 0)), spin: R()*6.283, turn: many ? (R() - 0.5)*0.6 : 0,
       jitter: o.jitter, flat: o.flat > 0.5, light: o.light, albedo: !!o.albedo, cols: cc, stem: o.stem && o.part === 'whole' };
@@ -369,22 +463,22 @@ export const FLORA_STEPS = {
   bloom: { cat: 'Marks', label: 'Bloom', ins: ['light from', 'petal hue', 'tip hue', 'center hue', 'foliage hue'], outs: ['picture', 'mask', 'height', 'thickness', 'center', 'petals', 'gloss', 'facing'],
     io: { ins: ['value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [FL_R('species', FLORA_SPECIES_LABEL, 0), FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
-      FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0)], cost: () => 3,
+      FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf · Visitor', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0), FL_R('visitor', 'Visitor: Seeded · ' + ['Ladybird', 'Jumping Spider', 'Hoverfly', 'Ant', 'Aphids', 'Fallen Petal', 'Seed Fluff'].join(' · '), 0)], cost: () => 3,
     doc: 'A flower of a real species — a daisy, a poppy, a rose, a foxglove — drawn petal by petal and lit from the dial, from bud to wilted to seed head; or a sheet of them, or one petal or leaf, for Scatter to throw.',
     run(E, n){ const { ww, wh, num } = E, k = Math.min(FLORA_KEYS.length, Math.floor(num(n, 'species', 0)/100*(FLORA_KEYS.length + 1))), d = E.input(n, 1);
       const deg = typeof d === 'number' ? d*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, t = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
       const hue = j => { const v = E.input(n, j); return Array.isArray(v) ? v.map(c => c*255) : null; };
-      const sh = [1, 4, 8, 16][Math.min(3, Math.floor(num(n, 'sheet', 0)/100*4))], part = ['whole', 'petal', 'leaf'][Math.min(2, Math.floor(num(n, 'part', 0)/100*3))];
+      const sh = [1, 4, 8, 16][Math.min(3, Math.floor(num(n, 'sheet', 0)/100*4))], pv = num(n, 'part', 0), part = pv > 95 ? 'visitor' : ['whole', 'petal', 'leaf'][Math.min(2, Math.floor(pv/100*3))];
       const o = { species: k >= FLORA_KEYS.length ? 'mixed' : FLORA_KEYS[k], view: num(n, 'view', 30)/100, stage: num(n, 'stage', 45)/100, jitter: num(n, 'jitter', 40)/100, size: num(n, 'size', 100)/100,
         flat: num(n, 'flat', 0)/100, part, cells: sh, stem: num(n, 'stem', 100) > 50, light: [Math.cos(a)*t, Math.sin(a)*t, Math.sqrt(Math.max(0.05, 1 - t*t))], cols: [hue(2), hue(3), hue(4), hue(5)],
-        seed: ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0) ^ 0x6b10) >>> 0, x: num(n, 'x', 50)/100, y: num(n, 'y', 50)/100, albedo: num(n, 'lit', 0) >= 50 };
+        seed: ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0) ^ 0x6b10) >>> 0, x: num(n, 'x', 50)/100, y: num(n, 'y', 50)/100, albedo: num(n, 'lit', 0) >= 50, visitor: Math.min(FLORA_VISITORS.length, Math.floor(num(n, 'visitor', 0)/100*(FLORA_VISITORS.length + 1))) };
       const [pic, mask, height, thick, cen, ids, gloss, face] = genBloom(ww, wh, o);
       const M = E.asField(E.readCanvas(mask)), Hf = E.asField(E.readCanvas(height)), Ff = E.asField(E.readCanvas(face));
       // (Lit By the Light Engine: Facing and Height made SMOOTH, curved and tapered, never stepped at a petal's edge (Ruby:
       //  "generate normal maps that are somewhat curved, tapered and smooth instead of maps with sharp lines"; stepped maps
       //  made cardboard cut-outs). Each is blurred within the flower's own shape (a blur of it over a blur of the shape),
       //  so the shape's outline stays sharp and nothing darkens round it)
-      if(o.albedo){ const unit = Math.min(ww, wh), inside = (F, r) => { const N = F.length, FM = new Float32Array(N); for(let i = 0; i < N; i++) FM[i] = F[i]*M[i];
+      if(o.albedo && o.part !== 'visitor'){ const unit = Math.min(ww, wh), inside = (F, r) => { const N = F.length, FM = new Float32Array(N); for(let i = 0; i < N; i++) FM[i] = F[i]*M[i];
           const a = E.boxBlur(FM, r), b = E.boxBlur(M, r), out = new Float32Array(N); for(let i = 0; i < N; i++) out[i] = M[i] > 0.004 ? Math.min(1, a[i]/Math.max(1e-4, b[i])) : 0; return out; };
         const sm = o.size*unit*(sh > 1 ? 0.5 : 1);
         return [E.readCanvas(pic), M, inside(Hf, Math.max(1, sm*0.012)), E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), inside(Ff, Math.max(1, sm*0.016))]; }

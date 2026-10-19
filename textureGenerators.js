@@ -697,7 +697,7 @@ export const TEXTURE_CAPS = {
   meadow:        { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
                    tintLabels:['Sky Hue', 'Far Land Hue', 'Grass Hue', 'Flower Hue', 'Second Flower Hue', 'Sunlight Hue'], tintDefaults:['#C9D3D6', '#6E7F6A', '#7A8A45', '#D9332B', '#F2EFE6', '#FFD9A0'] },
   macro:         { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
-                   tintLabels:['Bokeh Hue', 'Second Bokeh Hue', 'Petal Hue', 'Center Hue', 'Foliage Hue', 'Key Light Hue'], tintDefaults:['#F2D27A', '#E8A0B8', '#D7261E', '#1A1414', '#5E7F3A', '#FFF2D8'] },
+                   tintLabels:['Bokeh Hue', 'Visitor Hue', 'Petal Hue', 'Center Hue', 'Foliage Hue', 'Key Light Hue'], tintDefaults:['#F2D27A', '#C8281E', '#D7261E', '#1A1414', '#5E7F3A', '#FFF2D8'] },
   ditsy:         { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
                    tintLabels:['Ground Hue', 'Flower Hue', 'Second Flower Hue', 'Third Flower Hue', 'Center Hue', 'Sprig Hue'], tintDefaults:['#F4EEE2', '#C8506A', '#5A7AC8', '#E8B21C', '#F2D27A', '#6E8A4A'] },
   botline:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,

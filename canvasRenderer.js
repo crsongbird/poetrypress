@@ -2106,7 +2106,7 @@ let lastRenderAt = 0;
 // render begins once they have been still for SETTLE_MS. A render takes a phone a tenth of a second or more, and
 // one started mid-gesture holds up the next touch. Typing waits a little longer (TYPING_SETTLE_MS): people pause
 // longer between keys than between a slider's steps. (PERFORMANCE-AUDIT.md, "the interface at rest".)
-export const SETTLE_MS = 150, TYPING_SETTLE_MS = 400;
+export const SETTLE_MS = 150, TYPING_SETTLE_MS = 250;
 let quietAt = 0;
 const nowMs = () => (typeof performance !== 'undefined' ? performance : Date).now();
 /** A hand on the controls: no render begins until `ms` from now. */

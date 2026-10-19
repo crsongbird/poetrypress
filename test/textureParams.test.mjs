@@ -115,9 +115,10 @@ if(outOfRange.length) console.log('   offenders:', outOfRange.map(p=>p.name).joi
 // internal canvases some textures work on, which between them can tell a
 // real size change from a no-op.
 const M = await import('./canvasMock.mjs');
+// (drawn at 360 px: as telling as 600 for every knob, and the suite a fifth quicker now the flowers are in it)
 function probe(type, v1, v2){
   fresh(); M.resetCreatedCanvases();
-  const c = getTextureCanvas(type, 600, 600, { accent1: '#c9a876', accent2: '#7a8ca3', seed: 5, p1: v1, p2: v2 });
+  const c = getTextureCanvas(type, 360, 360, { accent1: '#c9a876', accent2: '#7a8ca3', seed: 5, p1: v1, p2: v2 });
   // Several textures do their real work on an internal downscaled canvas, so
   // the returned canvas's own stats say nothing about them. Aggregate across
   // every canvas created during generation instead.
