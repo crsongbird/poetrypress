@@ -719,3 +719,22 @@ export const TEXTURE_GROUPS = [
   { glyph: '⎐', name: 'Signs, Sigils & Cards', types: ['cards', 'knotwork', 'sigils', 'summoning'] },
   { glyph: '🜉', name: 'Your Surfaces', types: ['athanor'] },
 ];
+/** WHERE EACH STARTER AND SURFACE STUDY BELONGS (Ruby: "classified and categorized in the picker correctly", any new
+ *  heading a Runology rune): by what it is, in the Surface menu's own groups (after that group's surfaces, each marked
+ *  a study or a starter), and in Screens & Signals (🜳 Radio, the Primal of signals), a group only studies have so far.
+ *  Keys are 'starter:…' and 'study:…', as the menu's values; the Athanor's Open drawer groups them the same way. */
+export const STUDY_GROUP_EXTRA = { glyph: '🜳', name: 'Screens & Signals' };
+export const STUDY_GROUPS = {
+  'Paper & Grounds':        ['study:fibers', 'study:inkthirst', 'study:carbon', 'study:thermal', 'study:letterpress', 'study:scar', 'study:saltbloom'],
+  'Light, Sparks & Dust':   ['starter:sparks'],
+  'Light to Lay Over':      ['study:drowned'],
+  'Weather':                ['starter:weather', 'study:frozenbreath', 'study:breathglass', 'study:packetrain'],
+  'Sky & Cosmos':           ['study:spacedust', 'study:magaurora', 'study:constellation'],
+  'Places & Scenes':        ['starter:terrain', 'study:cartography', 'starter:paving', 'starter:brickwall'],
+  'Ink & Paint':            ['starter:oil', 'starter:tones', 'study:aether', 'study:registration'],
+  'Materials & Craft':      ['starter:agate', 'study:mineral', 'study:lacquer', 'study:velvet', 'study:foil', 'study:polarized', 'starter:vitrine', 'starter:droppedframe', 'starter:woven', 'starter:leaded', 'starter:studs'],
+  'Pattern & Order':        ['starter:dotgrid', 'starter:techno', 'study:misgrid', 'study:rosette', 'study:cathedral', 'starter:ripples'],
+  'Grown & Generated':      ['starter:bloom', 'study:lichen', 'study:mycelial'],
+  'Signs, Sigils & Cards':  ['study:sigilweather', 'study:transmutation', 'study:orbit'],
+  'Screens & Signals':      ['study:deadchannel', 'study:crt', 'study:nosignal', 'study:afterimage', 'study:compression', 'study:memoryleak'],
+};

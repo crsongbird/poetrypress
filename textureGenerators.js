@@ -545,7 +545,7 @@ export const TEXTURE_CAPS = {
   circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
                    tintLabels:['Trace Hue','Data Hue'], tintDefaults:['accent1','accent2'] },
   veins:         { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','lighten','luminosity'], light:true, dial:'Grow From & Light', material:true, tints:2,
-                   tintLabels:['Material Hue','Glow Hue'], tintDefaults:['#B8A48C','#4FE3FF'] },
+                   tintLabels:['Medium Hue','Glow Hue'], tintDefaults:['#B8A48C','#4FE3FF'] },
   crackle:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], light:true, material:true, dial:'Impact & Light', tints:2,
                    tintLabels:['Glaze Hue','Body Hue'], tintDefaults:['#A9B4B0','#7A6A5E'] },
   knotwork:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2, genericTint:true,
@@ -592,7 +592,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
   // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
   blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:100, zoom:100, guide:'disc' } },
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:100, zoom:100, guide:'disc' }, light:true, dial:'Position', lightTilt:35 },
   // water is tinted by the page itself: neutral by default, like all of Touch
   water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:35, zoom:100, guide:'plane' } },
@@ -680,7 +680,7 @@ export const TEXTURE_CAPS = {
   spangle:       { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], material:true, ground:'grey', light:true, tints:1,
                    tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
   tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
-                   tintLabels:['Light Hue','Material Hue'], tintDefaults:['#FFFFFF','#808080'] },
+                   tintLabels:['Light Hue','Facet Hue'], tintDefaults:['#FFFFFF','#808080'] },
   // a divination deck on a table, lit by the dial (shadows, curl, gilt edges)
   // a game in its own colours: the four suits are the page's two accents and these two hues (cartomancy.js)
   cards:         { blends:['source-over','overlay','soft-light','hard-light','multiply','luminosity','screen','color'], ground:'colour', light:true, tints:2,
@@ -786,7 +786,7 @@ for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminaga
 for(const t of ['crystal', 'circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
   'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
-for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
+for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Ground Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
 
 // the fifth hue as a generator wants it: glow as 0–1 channels (null: none);
 // a base colour as 0–255 (null: none)

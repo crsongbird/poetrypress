@@ -26,7 +26,7 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, pageSunAt, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh, genFeathers } from './texWhimsy.js';
 import { skyRingFrame } from './stepsGenerative.js';
 
@@ -262,7 +262,10 @@ export function landScene(seed, o = {}){
   const B = LAND_BIOMES[kind], pitch = Math.max(0, Math.min(1, o.tilt || 0));
   return { kind, B, time, TM: LAND_TIMES[time], pitch,
     horizon: h => Math.max(h*0.08, h*(B.horizon + (hz - 0.5)*0.08) - pitch*h*0.3),
-    sun: (w, horizon) => ({ x: w*(0.12 + sx*0.76), y: horizon*(0.25 + sy*0.5), k: 0.8 + sr*0.4 }) };
+    // (THE SUN FOLLOWS THE DIAL, Ruby: laid on the page as the sun's guide lays it, kept just above the horizon when the
+    //  dial would set it lower; without a dial, the seed's)
+    sun: (w, horizon, h) => { if(o.light == null || !h) return { x: w*(0.12 + sx*0.76), y: horizon*(0.25 + sy*0.5), k: 0.8 + sr*0.4 };
+      const u = Math.min(w, h), p = pageSunAt(o.light, o.lightTilt ?? 100, w/u, h/u); return { x: p.x*u, y: Math.min(p.y*u, horizon*0.92), k: 0.8 + sr*0.4 }; } };
 }
 /** The palette of a painting at COLOUR ck (0: the grey painting exactly): paint(tone 0–255, colour) → a CSS colour. */
 export function landPalette(ck, TM){
@@ -371,7 +374,7 @@ export function paintMist(ctx, w, top, bottom, haze, paint, k){
 
 /** THE SKY, painted: its wash, the sun (or the moon) and its glow, and painted clouds of the kind asked (or the seed's). */
 export function paintSky(ctx, w, h, S, o){
-  const ck = o.colour || 0, zoom = o.size || 1, unit = Math.min(w, h), TM = S.TM, horizon = S.horizon(h), sun = S.sun(w, horizon);
+  const ck = o.colour || 0, zoom = o.size || 1, unit = Math.min(w, h), TM = S.TM, horizon = S.horizon(h), sun = S.sun(w, horizon, h);
   const { paint, rgba, mixC } = landPalette(ck, TM), pick = a => a[Math.floor(Math.random()*a.length)];
   const sky = ctx.createLinearGradient(0, 0, 0, horizon);
   sky.addColorStop(0, paint(150, TM.skyTop)); sky.addColorStop(1, paint(132, TM.skyLow));
@@ -431,7 +434,7 @@ export function paintSky(ctx, w, h, S, o){
  */
 export function paintRidges(ctx, w, h, S, o){
   const amt = o.amt ?? 1, zoom = o.zoom ?? 1, CK = o.colour || 0, unit = Math.min(w, h), B = S.B, TM = S.TM, pitch = S.pitch;
-  const horizon = S.horizon(h), sun = S.sun(w, horizon), sunX = sun.x, sunY = sun.y, sunSide = sunX < w/2 ? -1 : 1;
+  const horizon = S.horizon(h), sun = S.sun(w, horizon, h), sunX = sun.x, sunY = sun.y, sunSide = sunX < w/2 ? -1 : 1;
   const { paint, mixC, jitHue } = landPalette(CK, TM), pick = a => a[Math.floor(Math.random()*a.length)];
   const bands = Math.max(2, Math.round((B.bands[0] + Math.random()*(B.bands[1] - B.bands[0]))*amt));
   const ridge = (x, seed, amp, decay, bump) => {
@@ -646,7 +649,7 @@ const whimPx = E => E.canvasPass ? cpx : E.px;
 const whimArea = E => E.canvasPass ? canonArea(E.ww, E.wh) : E.carea;
 const whimDial = (E, v) => typeof v === 'number' ? v*360 : (E.ctx.light ?? 315);
 const LAND_COUNTRIES = ['seed', ...Object.keys(LAND_BIOMES)], LAND_TIMESEL = ['seed', ...Object.keys(LAND_TIMES)];
-const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'country', 'seed')), time: String(E.P(n, 'time', 'seed')), tilt: E.num(n, 'tilt', 0)/100 });
+const landSceneOf = (E, n) => landScene(E.ctx.seed, { country: String(E.P(n, 'country', 'seed')), time: String(E.P(n, 'time', 'seed')), tilt: E.num(n, 'tilt', 0)/100, light: E.ctx.light ?? 315, lightTilt: E.ctx.lightTilt ?? 100 });
 // PARTICLES: three ways light hangs in the air, each the painter of a texture that used to be its own
 // (texWhimsy: genSnow, genEmbers, genMagicParticles) — flakes (First Snow), sparks (Burning Mana) and
 // motes (Euphoria Dust) — drawn over any picture, in any colours, the wind from any direction

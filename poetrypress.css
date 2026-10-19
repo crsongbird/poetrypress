@@ -2397,3 +2397,9 @@ body.is-mobile .toast{ left:8px; right:8px; transform:none; max-width:none; bott
 /* phone: small controls reach as far as a fingertip, without growing */
 body.is-mobile .lock-btn, body.is-mobile .die-btn, body.is-mobile .hint-btn{ position:relative; }
 body.is-mobile .lock-btn::after, body.is-mobile .die-btn::after, body.is-mobile .hint-btn::after{ content:''; position:absolute; inset:-8px -6px; }
+
+/* THE HUES' GROUP HEADINGS (Light, Surface, Material Colors): a small caps line across the hues' column (both columns
+   where the hues stand in two) */
+.tool-row > .field.hue-head{ grid-column:1 / -1 !important; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); opacity:.85; margin:6px 0 -2px; padding-top:0; padding-bottom:0; border-left:none !important; }
+body.is-mobile .tool-row > .field.hue-head{ grid-column:2 !important; }
+body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !important; }

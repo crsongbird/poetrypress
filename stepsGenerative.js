@@ -1682,10 +1682,10 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
   }
   if(kind === 'disc'){
     // (the Black Hole's disc, as it is seen from the dial: Turn turns it in the sky, View tips it from face-on at the middle
-    //  to edge-on at the rim, Zoom sizes it; drawn at the page's middle, its place the seed's: rings at its inner and
-    //  outer edge and its dark heart)
+    //  to edge-on at the rim, Zoom sizes it; drawn where the light dial places the hole (ring.place), else at the page's
+    //  middle: rings at its inner and outer edge and its dark heart)
     const view = Math.min(1, Math.max(0, cam.view)/100), elev = (13 + 77*(1 - view))*Math.PI/180, spin = ((((cam.turn + 540) % 360) + 360) % 360 - 180)*Math.PI/180;
-    const k = Math.max(0.25, cam.zoom/100), cx = aspX/2, cy = aspY/2, flat = Math.sin(elev), c = Math.cos(spin), s = Math.sin(spin);
+    const k = Math.max(0.25, cam.zoom/100), cx = ring && ring.place ? ring.place.x : aspX/2, cy = ring && ring.place ? ring.place.y : aspY/2, flat = Math.sin(elev), c = Math.cos(spin), s = Math.sin(spin);
     for(const [r, bold] of [[0.24*k, true], [0.12*k, false], [0.05*k, true]]){ const pts = [];
       for(let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2, x = Math.cos(a)*r, y = Math.sin(a)*r*(r < 0.06*k ? 1 : flat); pts.push([cx + x*c - y*s, cy + x*s + y*c]); }
       lines.push({ pts, bold }); }

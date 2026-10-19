@@ -8,40 +8,21 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- PIXEL SPACE and WEBB SKY (new, branch `space`, sheets sent): graphs of general parts with one new part each (Orbs;
-  Diffraction Spikes). The seed picks the scene: Pixel Space's nebula (band, clouds, filaments, galaxy, galaxy in the
-  band, ring nebula) and its worlds (none, one, close, horizon, eclipse, belt, system, black hole, pulsar); Webb's dust
-  (globules streaming from the light, cliffs, a shell, smoke, a deep field of galaxies). No white in the clouds.
-- DAPPLED LEAVES (found while building Webb): its Motion Blurs take the dial's turn as their angle, but Motion Blur counts
-  angles from the right and the dial from the top, so the leaves' shadows are thrown across the light, not along it.
-  Fix it (the look changes), or keep it as approved?
-- CORVID FEATHERS (new) and the four light overlays as graphs (sheet sent): the magpie's white shows on few feathers
-  (its inner web, near the foot); the overlays are gentle on a pale page under Overlay, where Multiply shows them best.
-- SIX HUES: a surface may now ask for up to six pickers (none does yet; the new surfaces will). Their order on the page
-  is the two hue pickers, then the four more, then the fifth hue and the light hues. Right?
-- THE DIAL'S REACH: the handle now rides the ring at 100% (it had stopped at about half the ring's radius), past it to
-  the dashed circle; the curls scale with the light's height; crossing shadows mix to white. Was that the range lost?
-- THE DIAL'S GUIDE: a sun, an impact, a circle, a disc, arrows or lines over the page while the light dial moves, held
-  until the picture lands. Clear enough on a busy picture?
-- THE BLACK HOLE ON THE CAMERA DIAL (Turn, View, Zoom; a wireframe of its disc while it moves), its light dial gone.
-  Right? Its wireframe stands at the page's middle; the hole's own place is the seed's.
-- THE STARTERS AND SURFACE STUDIES ON THE PAGE: in the Surface menu now, under 🜈 Athanor Starters and 🜍 Surface
-  Studies (choosing one puts its graph on the page, its knobs on the sliders; the dice pass over them). Which studies
-  read right, and what is each missing ("The surface studies are... hmmm.")? Orbit Script, Transmutation Engine and
-  Constellation Without Stars are approximations still waiting on parts.
-- THE EMOTIONAL SEED (sheet sent; Athanor Starters › Weather of Feeling): do Storm, Joy and Longing feel like their
-  names, and are their colors right? More moods wanted? Page Hues runs from the second hue (calm) to the first
-  (fierce): in the starter the ground is the second hue, so calm there melts into the ground.
-- PUNCTUATION PARTICLES (sheet sent; Athanor Starters › Punctuation Particles): enough sparks, the right size? Should
-  apostrophes inside words (don't, it's) count as marks? They do now, with the quotes.
-- THE PAINTED RINGWORLD'S SUN follows the dial now. Should the Painted Landscape's sun follow it too (it is the seed's
-  now, with its time of day)? The 3D Ringworld's star stays at the ring's middle, as a real ringworld's does: right?
-- SHAPE STRENGTH on a surface built on The Poem (Ripples from the Words, Circuit Board, the starters): it now sets how
-  far the surface keeps clear of the words. Does the slider feel right on them?
-- THE RIM LIGHT'S STRENGTH: with Rim chosen, the slider under the light dial is its strength (Ambient with Main), and
-  its handle fades with it. The two dials now sit level when Main / Rim shows. Right?
-- WRITING ON A PHONE: about a dozen lines of poem while the keyboard is up (WRITING_LINES in appEvents), and the PML
-  guide over the preview with the keyboard kept up. Enough preview, enough poem?
+- THE HUES IN THREE GROUPS: Light Colors (Main Light, Rim Light, Ambient Light, beside the dial), Surface Colors (the
+  surface's own, up to six, named by the surface; a Ground or Snow Hue joins them), Material Colors (Glow, Shine and
+  Shadow Hues), each under a small heading that hides when none of its hues shows. Names right?
+- THE BLACK HOLE: the light dial places it (its way from the page's middle, its height how far out; at the middle, the
+  page's middle), and the disc's wireframe stands there while either dial moves. The seed now also chooses hot spots in
+  the disc, how much nebula and dust lies behind, and sometimes a galaxy right behind it, lensed into arcs. Older looks
+  and Event Horizon keep their camera and stand at the page's middle.
+- STARTERS AND STUDIES BY KIND: each sits in its Surface menu group after that group's surfaces, marked "(starter)" or
+  "(study)"; the screen-and-signal studies have a group of their own, 🜳 Screens & Signals (Radio). The Athanor's Open
+  drawer groups them the same way. Right homes?
+- DAPPLED LEAVES and WINDOW LIGHT now throw along the light (Window Light had the same quarter turn). The Light Dial part
+  has a third output, Way, for this.
+- THE PAINTED LANDSCAPE'S SUN follows the light dial (kept just above the horizon when the dial would set it lower).
+- WRITING ON A PHONE: drag the divider while the keyboard is up to size the preview again (at least three lines of poem
+  stay); a double-tap gives back the dozen lines.
 
 ## 2 · Ruby's notes to act on
 - NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): liminal spaces (docs/prior-art/liminal-spaces.md); the
@@ -52,6 +33,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   marks — all fictional, as if through a window onto a world like ours but
   with its own lore and rules.
 - PAINTED LANDSCAPE: more variety in the water and land textures.
+- VEINS OF LIGHT (Ruby dislikes it): imagined as a network, circuitry running through things, not the first layer of a
+  Lichtenberg figure. Rebuild it, prior art first; until then it stays hidden from the menu.
 
 ## 3 · Found, not yet fixed
 - CONTOUR MAP at a quarter-size preview differs from its export more than
@@ -59,6 +42,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
+- THE EMOTIONAL SEED (Weather of Feeling): Ruby isn't sure it wants the feature any more. It stays, a starter in
+  🜁 Weather, until Ruby says to retire it.
 - SOUNDS — the instrument itself, when Ruby wants it back:
   - a STRING instrument, something unusual (plucked string by physical model;
     ideas: an Aeolian harp, strings sounded by wind; sympathetic strings that

@@ -84,7 +84,7 @@ const STEP_PARTS = {
     ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]] },
   hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Light Hue']] },
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
-  dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
+  dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height', 'way'], params: [] },
   camdial:  { cat: 'Inputs', label: 'Camera Dial', ins: [], outs: ['turn', 'view', 'zoom'], params: [] },
   // THE CURVE CONTROL (ROADMAP D4, Filter Forge's Curve control): a curve drawn by hand on the page, under Surface
   curvectl: { cat: 'Inputs', label: 'Curve Control', ins: [], outs: ['curve'], params: [STEP_SEL('slot', 'Curve', ['1', '2']), ['name', 'Name', 'text', 'Curve'], ['points', 'Default', 'text', '0,0;100,100']] },
@@ -270,7 +270,7 @@ export const STEP_DOCS = {
   ink: 'Brings the poem’s ink, the color its words are written in, into the graph.',
   backdrop: 'Brings the page’s backdrop into the graph as a picture: its color, or its gradient’s colors from top to bottom.',
   colour: 'A fixed color, typed as a hex code (such as #C0392B).',
-  dial: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
+  dial: 'Brings the page’s light dial into the graph: the light’s direction, its height, and the way it travels.',
   camdial: 'The page’s camera dial as three numbers: its turn, how low it looks (View), and its zoom.',
   curvectl: 'A curve you draw on the page, under Surface: wire it where a curve goes to shape the surface by hand.',
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
@@ -479,7 +479,10 @@ const STEP_RUN = {
   camdial(E, n){ const c = E.ctx.camera || {}, z = c.zoom ?? 100;
     return [((c.turn ?? 0) % 360 + 360) % 360/360, Math.max(0, Math.min(1.3, (c.view ?? 0)/100)), Math.max(0, Math.min(1, (z - 25)/375))]; },
   dial(E, n){ const { ctx } = E;
-    return [((ctx.light ?? 315) % 360)/360, Math.max(0, Math.min(1.3, (ctx.lightTilt ?? 100)/100))];
+    // (WAY: the way the light travels, away from the handle, as an angle counted from the right as Motion Blur, Smudge
+    //  and Rotate count theirs; Direction is counted from the top, as the dial is)
+    const d = ((ctx.light ?? 315) % 360 + 360) % 360;
+    return [d/360, Math.max(0, Math.min(1.3, (ctx.lightTilt ?? 100)/100)), ((d + 90) % 360)/360];
   },
   seed(E, n){ const { ctx } = E;
     return [((ctx.seed >>> 0) % 1000)/1000];
@@ -1228,7 +1231,7 @@ const STEP_IO = {
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   smudge: { ins: ['image', 'field'], outs: ['image'] }, multiblend: { ins: ['image', 'image', 'image', 'image', 'image'], outs: ['image'] },
-  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, curvectl: { outs: ['curve'] }, seed: { outs: ['value'] },
+  curve: { outs: ['curve'] }, curveops: { ins: ['curve', 'curve'], outs: ['curve'] }, tonecurve: { ins: ['image', 'curve'], outs: ['image'] }, profile: { ins: ['curve', 'field'] }, switch: { ins: ['image', 'image', 'value'], outs: ['image'] }, hsv: { ins: ['image'], outs: ['image'] }, dial: { outs: ['value', 'value', 'value'] }, camdial: { outs: ['value', 'value', 'value'] }, curvectl: { outs: ['curve'] }, seed: { outs: ['value'] },
   noise: { ins: ['value'] }, cells: { ins: ['value'] }, turing: { ins: ['value'] }, texture: { ins: ['value'], outs: ['image', 'field'] },
   mix: { ins: ['image', 'image', 'field'], outs: ['image'] }, light: { ins: ['field', 'value'] },
   tint: { ins: ['field', 'colour', 'colour'], outs: ['image'] }, ramp: { ins: ['field', 'colour', 'colour'], outs: ['image'] },

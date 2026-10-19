@@ -215,8 +215,10 @@ export function textLayoutNow(){ return TEXT_LAYOUT; }
 // the runs passes them over). drawTextRun notes them while PUNCT_NOW is a list, which it is for the poem's own lines.
 let PUNCT_NOW = null;
 function notePunct(ctx, text, x, w, top, size, along){
-  const all = ctx.measureText(text).width || 1, k = w/all; let i = 0;
-  for(const ch of text){ const m = punctMark(ch);
+  const all = ctx.measureText(text).width || 1, k = w/all, chars = Array.from(text); let i = 0, j = -1;
+  // (an apostrophe inside a word, as in don't or it's, is part of the word, not a mark: Ruby)
+  const letter = c => !!c && /\p{L}/u.test(c);
+  for(const ch of text){ j++; const m = (ch === "'" || ch === '’') && letter(chars[j - 1]) && letter(chars[j + 1]) ? 0 : punctMark(ch);
     if(m){ const cx = x + (ctx.measureText(text.slice(0, i)).width + ctx.measureText(ch).width/2)*k, sh = along ? along(cx) : null;
       PUNCT_NOW.push([cx + (sh ? sh.dx : 0), top + size*POEM_PUNCT[m - 1].at + (sh ? sh.dy : 0), m]); }
     i += ch.length; }

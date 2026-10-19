@@ -528,7 +528,7 @@ export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
 // Light that came too close
 // goes the long way round the dark —
 // you see its back, bent up.
-export function genBlackHole(w,h,amt,zoom,light,form,lens=1){
+export function genBlackHole(w,h,amt,zoom,light,form,lens=1,place=null){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   // A black hole RAY-TRACED, after Luminet (1979), Riazuelo's and Interstellar's
   // renderers (James et al. 2015) and Antonelli's "Starless": every working
@@ -557,7 +557,9 @@ export function genBlackHole(w,h,amt,zoom,light,form,lens=1){
   // and the nebula's gas and dust. JETS: their length and brightness.
   const jets=Math.max(0, Math.min(1, form==null ? 0 : form)), chaos=zoom;
   const deg=light==null ? 315 : light, lv=lightVec(deg), view=Math.min(1, Math.hypot(lv.lx, lv.ly));
-  const unit=Math.min(w,h), cx=w*(0.2+Math.random()*0.6), cy=h*(0.2+Math.random()*0.6);
+  // (PLACE, Ruby: the light dial places the hole, as it places a Transmutation Circle: its direction from the page's
+  //  middle, its height how far out; without one, as before, the seed's)
+  const unit=Math.min(w,h), sx0=Math.random(), sy0=Math.random(), cx=place ? w/2+place.u*w/2 : w*(0.2+sx0*0.6), cy=place ? h/2+place.v*h/2 : h*(0.2+sy0*0.6);
   const Rsh=unit*(0.055+Math.random()*0.03)*lens, S=Rsh/2.6;       // the shadow; pixels per horizon radius (the camera's zoom: the lens)
   const tilt0=(8+Math.random()*10)*Math.PI/180, elev=tilt0 + (Math.PI/2 - tilt0)*(1-view);
   const spin=(Math.random()-0.5)*0.15 + ((((deg-315+540)%360)+360)%360 - 180)*Math.PI/180;
@@ -572,6 +574,12 @@ export function genBlackHole(w,h,amt,zoom,light,form,lens=1){
   const prof=(r)=>Math.pow(rIn/r,1.5)*Math.sqrt(Math.max(0,1-Math.sqrt(rIn/r)));
   let pmax=0; for(let r=rIn;r<rIn*3;r+=0.05) pmax=Math.max(pmax,prof(r));
   const jph=Math.random()*6.28;
+  // THE SEED'S HOLE (a placed hole only, so an old graph draws as before): hot spots orbiting in the disc, how much
+  // nebula lies behind it and how dusty, and sometimes a galaxy right behind, lensed into arcs and a ring
+  const spots=[], vary={ neb:1, dust:1, gal:null };
+  if(place){ const ns=Math.floor(Math.random()*5); for(let i=0;i<ns;i++) spots.push([Math.random()*Math.PI*2, rIn+0.5+Math.random()*(rOut-rIn)*0.6, 0.25+Math.random()*0.5, 0.6+Math.random()*1.2]);
+    vary.neb=0.2+Math.random()*1.4; vary.dust=0.3+Math.random()*1.4;
+    if(Math.random()<0.45){ const a=Math.random()*6.28, o=Math.random()*1.6; vary.gal={ dx:Math.cos(a)*o, dy:Math.sin(a)*o, r:1.2+Math.random()*2.2, arms:2+Math.floor(Math.random()*3), turn:Math.random()*6.28, tilt:0.35+Math.random()*0.65 }; } }
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), N=ww*wh;
   const EM=new Float32Array(N), TR=new Float32Array(N), BX=new Float32Array(N), BY=new Float32Array(N), CAP=new Float32Array(N);
   const jw0=0.22, jwk=0.06, jetK=60+120*jets, jetOn=jets>0.01;
@@ -615,7 +623,8 @@ export function genBlackHole(w,h,amt,zoom,light,form,lens=1){
           const u=((phi/(2*Math.PI))+twist*lr*dirSign)*GW+ph0, vv=lr*GH/1.2;
           // gas: long filaments wound into spirals (stretched along the orbit), finer streaks on them
           const g1=sampleNoiseGrid(gas,GW,GH,u,vv*1.6), g2=sampleNoiseGrid(gas2,GW,GH,u*2,vv*3);
-          const filament=0.55+turb*(g1*0.9+g2*0.25-0.58);
+          let filament=0.55+turb*(g1*0.9+g2*0.25-0.58);
+          for(const [sp, sr, ss, sa] of spots){ let dp=phi-sp; dp-=Math.round(dp/(2*Math.PI))*2*Math.PI; const q=(dp*rr)*(dp*rr)/(ss*ss*4)+(rr-sr)*(rr-sr)/(ss*ss); if(q<9) filament+=sa*Math.exp(-q); }
           const lane=Math.max(0, sampleNoiseGrid(dust,GW/2,GH/2,u*0.5,vv*1.1)-0.62)/0.38;   // dust: dark, opaque
           // Doppler: the gas's orbit against the ray (toward the eye is −v)
           const vk=Math.sqrt(0.5/Math.max(1.05,rr-1)), bx=-qz/rr*vk*dirSign, bz=qx/rr*vk*dirSign, vl=Math.sqrt(vx*vx+vy*vy+vz*vz);
@@ -660,7 +669,7 @@ export function genBlackHole(w,h,amt,zoom,light,form,lens=1){
   const BR2=Math.max(1, Math.round(Rsh*1.2/div)), wide=Float32Array.from(bl); for(let p=0;p<2;p++) blur(wide, BR2);
   // THE SKY, sampled through the lens at full resolution so the stars stay sharp
   const nebA=makeNoiseGrid(32,32), nebB=makeNoiseGrid(64,64), dustA=makeNoiseGrid(48,48);
-  const neb=Math.min(1.5, 0.5+0.5*amt), cs=cpx(22), pStar=Math.min(0.85, 0.22*amt);
+  const neb=Math.min(1.5, 0.5+0.5*amt)*vary.neb, cs=cpx(22), pStar=Math.min(0.85, 0.22*amt);
   const hash=(a,b,s2)=>{ let x=Math.imul(a,374761393)^Math.imul(b,668265263)^Math.imul(s2,2246822519); x=Math.imul(x^(x>>>13),1274126177); return ((x^(x>>>16))>>>0)/4294967296; };
   const seed=(Math.random()*1e9)|0, U2=unit;
   // the nebula is soft: worked out on the working grid, through the lens
@@ -669,7 +678,9 @@ export function genBlackHole(w,h,amt,zoom,light,form,lens=1){
     if(CAP[k]){ SKY[k]=4; continue; }
     const bx=BX[k], by=BY[k], nx=bx/U2, ny=by/U2, gasv=sampleNoiseGrid(nebA,32,32,nx*5,ny*5)*0.65+sampleNoiseGrid(nebB,64,64,nx*17,ny*17)*0.35;
     const dl=sampleNoiseGrid(dustA,48,48,nx*9+3,ny*9+7), lit=1+0.6*Math.exp(-(((bx-cx)**2+(by-cy)**2)/((Rsh*5)**2)));
-    SKY[k]=128 + neb*(Math.max(0,gasv-0.5)*50*lit - Math.max(0,dl-0.55)*90);
+    let gl=0; const G=vary.gal; if(G){ const gx=(bx-cx)/(Rsh*2)-G.dx, gy=(by-cy)/(Rsh*2)-G.dy, ux=gx*Math.cos(G.turn)+gy*Math.sin(G.turn), uy=(-gx*Math.sin(G.turn)+gy*Math.cos(G.turn))/G.tilt, rg=Math.hypot(ux,uy)/G.r;
+      if(rg<1.6){ const arm=0.5+0.5*Math.cos(G.arms*(Math.atan2(uy,ux)-Math.log(rg+0.05)*2.2)); gl=Math.exp(-rg*rg*1.6)*(0.55+0.45*arm)*110+Math.exp(-rg*rg*30)*90; } }
+    SKY[k]=128 + neb*(Math.max(0,gasv-0.5)*50*lit - Math.max(0,dl-0.55)*90*vary.dust) + gl;
   }
   // all that is not sky, in one buffer: the gas and jets in front, and the bloom
   const FR=new Float32Array(N), bk=0.9*Math.min(1.4,chaos), wk=0.5*Math.min(1.4,chaos);

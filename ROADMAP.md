@@ -265,27 +265,8 @@ Easter eggs).
   §L0), each defaulting to what Ruby expects (her palettes below). Nothing drawn in a fixed colour the user can't set.
 - **No borders drawn by the procedure** (the page has its own border).
 
-- **L0 · Up to six hue pickers per surface** (Ruby chose it): a surface asks for as many hues as it uses, each with
-  a label and a default; saved with the look and its layers, in readings, in the Athanor's Hue parts (slots 1–6).
-- **L1 · Pixel-art space, in Ruby's own style** (the reference is Ruby's own piece; first draft "really cool, a good
-  start"). The reference: a nebula band running diagonally across a tall page, magenta and hot pink at its heart, a small
-  white spiral galaxy glowing in it, cyan and pale blue rims on deep blue, a ground of deep navy shading to near-black
-  purple; chunky 4-point sparkle stars (a long cross, soft glow pixels round the core) in pink, cyan and white, many
-  1–2 px dust stars; a limited palette (10–14 colours), big pixels (the page drawn at about 1/8–1/12 size and scaled
-  up nearest-neighbour), dithered edges between bands. To do: a large variety of space scenes by the seed (nebula
-  bands, ring and bubble nebulae, galaxies spiral and elliptical, planets and moons and rings, comets, star clusters,
-  dark clouds, starfields alone); every colour from the hue inputs (ground, deep sky, nebula heart, rim, clouds, stars),
-  defaults Ruby's palette; no frame. DRAFTED (branch `space`, waiting on Ruby's sheet). Ruby, on the drafts: the
-  nebula band is good, just not the only kind; no white in cloud layers (white was for the galaxy's heart in her
-  piece); more nebulae, black holes, pulsars and galaxies in pixel art.
 - **L1b · A pixel-art category** (Ruby, 2026-10-18, an idea for later): pixel-art filters (pixelate, dither, palette
   reduction over any surface or picture) and more pixel-art surfaces, gathered in a group of their own.
-- **L2 · James Webb false colour** ("a large variety controlled by the seed"). The reference: amber and burnt-orange
-  dust in clumps and streaks like rising embers or pillars, thick toward the bottom and a corner, thinning into a
-  near-black blue sky; a few bright blue stars with JWST's diffraction spikes (six long, two short across), many tiny
-  white and blue stars, little smudged galaxies. To do, by the seed: pillars, cosmic cliffs (Carina), ring and bubble
-  nebulae (Southern Ring), deep fields of galaxies with lensing arcs, dust lanes; the light dial where the carving
-  light comes from. Not Deep Field. DRAFTED as Webb Sky (branch `space`, waiting on Ruby's sheet).
 - **L3 · Liminal spaces** ("a good start"). The reference: a bare room seen straight on, teal-grey walls and ceiling, a
   square fluorescent ceiling panel the only light, a doorway in the far wall onto a darker corridor receding to black, a
   closed door on one side wall, a dark opening on the other, baseboards, a faint sheen on the floor, film grain. To do:
@@ -322,7 +303,13 @@ superseded) wait for Stage 4.
 
 ### Stage 3 · Textures: built from the parts
 - **I**: the 36 Surface Studies become textures in the menu, each a chain
-  with four readings. The approximations wait on their parts (§2 I).
+  with four readings. The approximations wait on their parts (§2 I). Ruby, on the studies as they are: "concepts that
+  might be good situationally"; they will look better as whole texture systems, with their colours and blend modes
+  worked out. Each already sits in its menu group (STUDY_GROUPS in appOptions.js).
+- **Veins of Light, rebuilt** (Ruby dislikes it): a network, circuitry running through things, not the first layer of
+  a Lichtenberg figure. Prior art first (docs/prior-art/), then a graph, then a sheet.
+- **Every existing texture refactored**, in time (Ruby: "eventually we are going to refactor all of the existing
+  ones"): with prior art, Ruby's rules for new surfaces (§2 L) and the parts.
 - **J**: whole-texture parts taken apart (§2 J), each through compare.mjs and
   Ruby's approval when its look changes.
 - **K**: the Easter eggs still to place (§2 K).
@@ -354,6 +341,8 @@ superseded) wait for Stage 4.
   - Sky scenes (Ruby may make these here): a day sky and weather, the light
     from the dial; clouds mostly, now and then something flying across
     (aircraft and contrails, birds, balloons, dragons, witches), seeded.
+  - Some presets blend the overlays tastefully over other surfaces (Ruby, approving Corvid Feathers and the light
+    overlays): Feathers, Corvid Feathers, Dappled Leaves, Window Light, Pool Caustics, Light Leaks.
   - Presets for Ringworld (Ruby: in this pass), Rain on Water, Circuit
     Board's eras and Markings (the Circuitry preset could wear Circuit Board
     instead of Veins of Light), Lichtenberg's camera, and Under Glass over

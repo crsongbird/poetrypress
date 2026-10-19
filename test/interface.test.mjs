@@ -21,6 +21,11 @@ const html = src('index.html');
   const sel = (html.match(/<select id="textureType">([\s\S]*?)<\/select>/) || ['', ''])[1];
   const blocks = [...sel.matchAll(/<optgroup[^>]*>([\s\S]*?)<\/optgroup>/g)].map(m => m[1]);
   const sizes = blocks.map(b => (b.match(/<option/g) || []).length);
+  { const A = await import('../athanor.js'), St = await import('../athanorStudies.js'), all = Object.values(O.STUDY_GROUPS).flat(),
+      keys = [...Object.keys(A.ATHANOR_STARTERS).map(k => 'starter:' + k), ...Object.keys(St.ATHANOR_STUDIES).map(k => 'study:' + k)];
+    check('every starter and Surface Study is in exactly one group (STUDY_GROUPS), each group the Surface menu\'s or Screens & Signals, headed by a Runology rune',
+      keys.every(k => all.filter(x => x === k).length === 1) && all.every(k => keys.includes(k))
+      && Object.keys(O.STUDY_GROUPS).every(n => O.TEXTURE_GROUPS.some(t => t.name === n) || n === O.STUDY_GROUP_EXTRA.name) && O.STUDY_GROUP_EXTRA.glyph === '🜳'); }
   check('the texture menu goes by TEXTURE_GROUPS (the same in the Athanor), each group at least three (but Yours), each headed by a Runology Archetype',
     textureGroups.length === O.TEXTURE_GROUPS.length && sizes.slice(0, -1).every(n => n >= 3) && O.TEXTURE_GROUPS.slice(0, -1).every((g, i) => g.types.length === sizes[i])
     && O.TEXTURE_GROUPS.every(g => ['🜃','🜚','ᕕ','🜁','🝊','🜥','🜄','Ᏹ','🝓','🝆','⎐','🜉'].includes(g.glyph)));

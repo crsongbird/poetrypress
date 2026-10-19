@@ -54,10 +54,12 @@ check('a broken surface among good ones is counted and left out', (() => { const
     noCam === false && A.athanorCamera(lich) && camShown());
   // THE ATHANOR'S STARTERS AND SURFACE STUDIES in the Surface menu (Ruby: to try them on the page)
   const { TEXTURE_PARAMS } = await import('../textureGenerators.js'), { ATHANOR_STUDIES } = await import('../athanorStudies.js');
-  const groups = (t.children || []).filter(g => g.className === 'try-graphs'), opts = groups.flatMap(g => g.children || []);
-  check('the Surface menu offers every Athanor starter and every Surface Study, in two groups of their own',
-    groups.length === 2 && opts.filter(o => o.value.startsWith('starter:')).length === Object.keys(A.ATHANOR_STARTERS).length
-    && opts.filter(o => o.value.startsWith('study:')).length === Object.keys(ATHANOR_STUDIES).length && opts.every(o => o.textContent));
+  const O = await import('../appOptions.js'), opts = (t.children || []).flatMap(g => g.children || []).filter(o => /^(starter|study):/.test(o.value || ''));
+  const groupOf = o => (t.children || []).find(g => (g.children || []).includes(o));
+  check('the Surface menu offers every Athanor starter and every Surface Study, each in its own kind\'s group (STUDY_GROUPS), marked',
+    opts.filter(o => o.value.startsWith('starter:')).length === Object.keys(A.ATHANOR_STARTERS).length
+    && opts.filter(o => o.value.startsWith('study:')).length === Object.keys(ATHANOR_STUDIES).length
+    && opts.every(o => /\((starter|study)\)$/.test(o.textContent) && String(groupOf(o).label).endsWith(Object.keys(O.STUDY_GROUPS).find(n => O.STUDY_GROUPS[n].includes(o.value)))));
   const choose = v => { t.value = v; document.dispatchEvent({ type: 'change', target: t }); return t.value === 'athanor' ? A.athanorName(reg['forgeGraph'].value) : null; };
   check('choosing Weather of Feeling puts it on the page, its Feeling knob on the first slider; the bench is untouched',
     choose('starter:weather') === 'Weather of Feeling' && TEXTURE_PARAMS.athanor[0].label === 'Feeling' && store['uv.forge.bench.v1'] === wip);

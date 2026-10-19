@@ -152,7 +152,7 @@ check('a preset turns the lower surface off (it never leaks from one look to the
 
 // THE SUN GUIDE on a lit surface (Ruby: "light guide seems off"): the light stands on the page in the dial's own direction,
 // as far out as the handle, even on a tall page (stretched to one, it stood nearer upright than the dial)
-{ const { pageSunAt } = await import('../appEvents.js'), aspX = 1, aspY = 1080/608;
+{ const { pageSunAt } = await import('../texCore.js'), aspX = 1, aspY = 1080/608;
   const dirOf = p => (Math.atan2(p.x - aspX/2, -(p.y - aspY/2))*180/Math.PI + 360) % 360;
   const at = deg => pageSunAt(deg, 57, aspX, aspY), mid = pageSunAt(200, 0, aspX, aspY), rim = pageSunAt(90, 100, aspX, aspY);
   check('the page\'s sun guide points the way the dial does, on a tall page too (327°, 45°, 200°)', [327, 45, 200].every(d => Math.abs(dirOf(at(d)) - d) < 0.5));

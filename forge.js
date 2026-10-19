@@ -17,7 +17,7 @@ import { ATHANOR_STUDIES } from './athanorStudies.js';
 import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, athanorGraphOf, layoutAthanor, ATHANOR_NODE, groupPorts, athanorNamed, athanorNumbered, athanorIsNamed } from './athanor.js';
 import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
-import { TEXTURE_GROUPS, ATHANOR_BASICS } from './appOptions.js';
+import { TEXTURE_GROUPS, ATHANOR_BASICS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
 import { KEPT, FORGE_BAR, fill } from './strings.js';
 import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiWalkNeighbors, wikiWalks, WIKI_FIGURES } from './athanorWiki.js';
 
@@ -1157,10 +1157,14 @@ export async function openForge(deps){
       const starter = (k, S) => async () => { const g = athanorStarter(k); if(g) await openGraph(g, S.label, S.teach); };
       const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
       group('🜉', FORGE_BAR.yours, forgeShelf().slice().reverse().map(rec => ['kept:' + encodeURIComponent(rec.name), rec.name, () => openKept(rec)]));
-      group('🜈', FORGE_BAR.starters, Object.entries(ATHANOR_STARTERS).map(([k, S]) => ['starter:' + k, S.label, starter(k, S), S.teach]));
       group(ATHANOR_BASICS.glyph, FORGE_BAR.basics, ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t]).map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
-      group('🜍', FORGE_BAR.studies, Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, S]) => ['study:' + k, S.label, starter(k, S), S.teach]));
-      for(const [g, ts] of chained) group(g.glyph, g.name, ts.map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
+      // (each group: its surfaces, then the starters and studies that belong with them, marked — the Surface menu's
+      //  order; Screens & Signals, studies alone, last)
+      const tries = name => (STUDY_GROUPS[name] || []).map(key => { const [kind, k] = key.split(':'), S = (kind === 'study' ? ATHANOR_STUDIES : ATHANOR_STARTERS)[k];
+        return S ? [key, fill(kind === 'study' ? FORGE_BAR.studyMark : FORGE_BAR.starterMark, S.label), starter(k, S), S.teach] : null; }).filter(Boolean).sort((p, q) => p[1].localeCompare(q[1]));
+      for(const [g, ts] of chained) group(g.glyph, g.name, [...ts.map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]), ...tries(g.name)]);
+      for(const g of TEXTURE_GROUPS) if(!chained.some(([c]) => c === g)) group(g.glyph, g.name, tries(g.name));
+      group(STUDY_GROUP_EXTRA.glyph, STUDY_GROUP_EXTRA.name, tries(STUDY_GROUP_EXTRA.name));
       openSel.value = ''; if(openCh) openCh.refresh(); };
     F.fillOpen = fillOpen;
     // WHETHER THE PAGE SHOWS THIS GRAPH: said in the bar, and a tap puts it there when it doesn't (what Use did)

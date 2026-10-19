@@ -352,6 +352,15 @@ Other parts of a look:
   hues). Requests carry the four as `opts.hues`; a chain's Hue parts read
   slots 1–6 (`chainHues`); a graph shows a picker per Hue slot it reaches.
 - A new surface puts every colour it draws on a hue, never a fixed colour.
+- **The page shows the hues in three groups** (Ruby), each under a heading
+  that hides when none of its hues shows (`syncHueHeads`):
+  - Light Colors: Main Light, Rim Light, Ambient Light (tint6, 7, 8).
+  - Surface Colors: the surface's own, named by `tintLabels` (First to
+    Sixth Hue when it names none), and a Ground or Snow Hue (tint5 when its
+    role isn't glow; appEvents moves the row there).
+  - Material Colors: Glow Hue (tint5 as a glow), Shine Hue, Shadow Hue.
+  - No surface names a colour of its own "Material …": that word is the
+    third group's.
 
 ### 5.5 · Light
 - The ☉/🜚 dial sets a direction and a height (`textureLight`,
@@ -392,7 +401,7 @@ Other parts of a look:
 - **Materials:** `materialOf(highlight, shade)` (null when both are white),
   then per channel `litK(L, i, ambient, M, c)` and `litS(M, c)`.
   - The Shadow Hue colours what's darker than flat ground (`L.flat`), the
-    Specular Hue the shine. Hues are normalised to white's brightness.
+    Shine Hue the shine. Hues are normalised to white's brightness.
   - Caps `material: true` show the two pickers (`textureTint3Hex`,
     `textureTint4Hex`).
   - `opts.components` returns diffuse and occlusion apart.

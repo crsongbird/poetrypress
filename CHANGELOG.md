@@ -4,6 +4,54 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Ymir (2026-10-19)
+
+- **New surface: Pixel Space.** Space in pixel art, after the generators
+  pixel artists use: a nebula, worlds and stars on a grid of square pixels,
+  stepped into bands with dithered seams, every colour from six hues. The
+  seed picks the scene: a nebula band, drifting clouds, a veil of
+  filaments, a galaxy (alone, or lying in the band), a ring nebula round
+  its star; and the worlds: none, one, a close one cropped by the page, a
+  horizon, an eclipse with its corona, a belt of rocks, a little system, a
+  black hole with its glowing disc, a pulsar with its beams. The light dial
+  moves the nebula's rim and every world's lit side. Clouds are never
+  white; white is for stars, a galaxy's heart, a corona.
+- **New surface: Webb Sky.** Deep space as the Webb telescope sees it:
+  dust lit from inside in smooth gradients, stars with six long spikes and
+  two short ones, small galaxies behind everything. The seed picks the
+  dust: globules streaming away from the light, cosmic cliffs, a shell
+  round a dying star, smoke, or a deep field of galaxies with lensed arcs.
+- **New parts:** Orbs (worlds in the dial's light, with rings, moons,
+  eclipses, black holes and pulsars) and Diffraction Spikes (a telescope's
+  starfield, Webb's spikes or Hubble's).
+- **Better parts:** Posterize can dither where two steps meet (ordered,
+  checker or scattered, on Pixelate's cells); Pixelate can let each cell
+  take its brightest point, so a tiny star still lights a pixel; Scatter
+  can count its marks for the whole page; the Light Dial part has a Way
+  output, the way the light travels, as Motion Blur and Smudge read angles.
+  A graph with Pixelate in it is enlarged pixel for pixel.
+- **The Black Hole** is placed by the light dial now: its way from the
+  page's middle, and how far out. Its disc's wireframe stands where the
+  hole will be while either dial moves. The seed adds more: hot spots in
+  the disc, more or less nebula and dust behind, and sometimes a galaxy
+  right behind the hole, bent into arcs. Older looks keep their camera,
+  the hole at the page's middle.
+- **The hues are grouped**: Light Colors (main, rim and ambient light,
+  beside the dial), Surface Colors (the surface's own) and Material Colors
+  (glow, shine, shadow), each under a small heading.
+- **Starters and Surface Studies sit with their kind** in the Surface menu
+  and the Athanor's Open drawer, marked as a starter or a study; screen and
+  signal studies have a group of their own, Screens & Signals.
+- **Dappled Leaves and Window Light** throw their light along the dial, as
+  they should have (they were a quarter turn off).
+- **The Painted Landscape's sun** follows the light dial.
+- **Punctuation Particles** no longer spark on an apostrophe inside a word.
+- **Writing on a phone:** the preview's divider can be dragged again while
+  the keyboard is up; a double-tap gives back the dozen lines.
+- Under the hood: a stray link was taken out of the repository, and
+  shipping now refuses one. Floral prior art written for the floral
+  surfaces to come.
+
 ## Saturn–Kari (2026-10-19)
 
 - **New surface: Feathers.** Procedural feathers on a transparent ground,

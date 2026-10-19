@@ -970,52 +970,57 @@ but bear with me, dear}]/jitter:200
             <input type="hidden" id="cameraView" value="0">
             <input type="hidden" id="cameraZoom" value="100">
           </div>
-          <!-- THE LIGHTS' COLORS (Ruby: the color selectors beside the dial that places the lights): the main light's, the rim
-               light's (its alpha its strength: 0 is off, and the row fades), the ambient's. Then the surface's own hues, then
-               the material's -->
+          <!-- THE HUES, IN THREE GROUPS (Ruby: "group the texture hues, material and lighting engine hues"), each under a
+               heading that hides when none of its hues shows: the LIGHTS' colors beside the dial that places them (the main
+               light's, the rim light's, its alpha its strength, the ambient's); the SURFACE's own colors (up to six, named by
+               the surface; a surface's Ground or Snow Hue joins them, moved here by appEvents); the MATERIAL's (its glow,
+               the tint of its shine and of its shadows) -->
+          <div class="field full hue-head" id="hueHeadLight"><span data-str="label.hues_light">Light Colors</span></div>
           <div class="field full tool-hidden" id="tint6Row">
-            <label id="tint6Label" data-str="label.diffuse_hue" title="The color of the main light, on everything it reaches. White leaves it unchanged; alpha sets the strength.">Main Light Hue</label>
+            <label id="tint6Label" data-str="label.diffuse_hue" title="The color of the main light, on everything it reaches. White leaves it unchanged; alpha sets the strength.">Main Light</label>
             <input type="text" id="textureTint6Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint7Row">
-            <label id="tint7Label" data-str="label.rim_hue" title="The rim light: a second light from its own place on the dial (Rim, above it). Its color; its alpha is how strong it is, and 0 turns it off.">Rim Light Hue</label>
+            <label id="tint7Label" data-str="label.rim_hue" title="The rim light: a second light from its own place on the dial (Rim, above it). Its color; its alpha is how strong it is, and 0 turns it off.">Rim Light</label>
             <input type="text" id="textureTint7Hex" value="#CFE3FF00" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint8Row">
-            <label id="tint8Label" data-str="label.ambient_hue" title="The color of the light from everywhere, strongest in the shade. White leaves it unchanged; alpha sets the strength.">Ambient Hue</label>
+            <label id="tint8Label" data-str="label.ambient_hue" title="The color of the light from everywhere, strongest in the shade. White leaves it unchanged; alpha sets the strength.">Ambient Light</label>
             <input type="text" id="textureTint8Hex" value="#FFFFFF" data-coloris>
           </div>
+          <div class="field full hue-head" id="hueHeadSurface"><span data-str="label.hues_surface">Surface Colors</span></div>
           <div class="field full" id="tint1Row">
-            <label id="tint1Label" data-str="label.tint">Tint</label>
+            <label id="tint1Label" data-str="label.tint">First Hue</label>
             <input type="text" id="textureTint1Hex" value="#7A2B2B" data-coloris>
           </div>
           <div class="field full" id="tint2Row">
-            <label id="tint2Label" data-str="label.second_tint">Second Tint</label>
+            <label id="tint2Label" data-str="label.second_tint">Second Hue</label>
             <input type="text" id="textureTint2Hex" value="#8A6A3C" data-coloris>
           </div>
           <!-- (a surface's third to sixth hues, where it has them: ROADMAP L0) -->
           <div class="field full tool-hidden" id="tint9Row">
-            <label id="tint9Label" data-str="label.hue_3">Hue 3</label>
+            <label id="tint9Label" data-str="label.hue_3">Third Hue</label>
             <input type="text" id="textureTint9Hex" value="#808080" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint10Row">
-            <label id="tint10Label" data-str="label.hue_4">Hue 4</label>
+            <label id="tint10Label" data-str="label.hue_4">Fourth Hue</label>
             <input type="text" id="textureTint10Hex" value="#808080" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint11Row">
-            <label id="tint11Label" data-str="label.hue_5">Hue 5</label>
+            <label id="tint11Label" data-str="label.hue_5">Fifth Hue</label>
             <input type="text" id="textureTint11Hex" value="#808080" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint12Row">
-            <label id="tint12Label" data-str="label.hue_6">Hue 6</label>
+            <label id="tint12Label" data-str="label.hue_6">Sixth Hue</label>
             <input type="text" id="textureTint12Hex" value="#808080" data-coloris>
           </div>
+          <div class="field full hue-head" id="hueHeadMaterial"><span data-str="label.hues_material">Material Colors</span></div>
           <div class="field full tool-hidden" id="tint5Row">
             <label id="tint5Label" data-str="label.fifth_hue" title="Light glowing from within the surface. Black is none.">Glow Hue</label>
             <input type="text" id="textureTint5Hex" value="#000000" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint3Row">
-            <label id="tint3Label" data-str="label.highlight_hue" title="Tints the shine where light catches the surface. White leaves it unchanged; alpha sets the strength.">Specular Hue</label>
+            <label id="tint3Label" data-str="label.highlight_hue" title="Tints the shine where light catches the surface. White leaves it unchanged; alpha sets the strength.">Shine Hue</label>
             <input type="text" id="textureTint3Hex" value="#FFFFFF" data-coloris>
           </div>
           <div class="field full tool-hidden" id="tint4Row">

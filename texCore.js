@@ -262,6 +262,15 @@ function lightWay(deg, T){
 /** The dial as a PLACE on the page, for textures that use it as a position:
  *  the round dial stretched onto the square page, so its rim at 45° reaches
  *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
+/** Where the light dial lays a sun on a page aspX × aspY (the shorter side 1): from the page's middle in the dial's own
+ *  direction, as far out as the handle is (tilt 0–100), its rim at the page's edge along that way (×0.92). The sun's
+ *  guide (appEvents) and a painted sun (the Painted Landscape's) agree by it. */
+export function pageSunAt(deg, tilt, aspX, aspY){
+  const a = deg*Math.PI/180, k = Math.min(1, Math.max(0, tilt)/100), dx = Math.sin(a), dy = -Math.cos(a);
+  const reach = Math.min(Math.abs(dx) > 1e-9 ? aspX/2/Math.abs(dx) : Infinity, Math.abs(dy) > 1e-9 ? aspY/2/Math.abs(dy) : Infinity)*0.92;
+  return { x: aspX/2 + dx*k*reach, y: aspY/2 + dy*k*reach };
+}
+
 export function dialSquare(light){
   const { lx, ly } = dialVec(light), k = Math.hypot(lx, ly);
   if(k < 1e-6) return { u: 0, v: 0 };

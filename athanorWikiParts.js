@@ -54,10 +54,10 @@ export const WIKI_PARTS = {
     see: ['part:dial', 'part:groundview', 'part:discharge'],
   },
   dial: {
-    line: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
+    line: 'Brings the page’s light dial into the graph: the light’s direction, its height, and the way it travels.',
     about: 'The light dial on the page sets where light comes from: its handle is the light, as if you dragged a lamp round the page, and shadows fall the other way (🜚’s spike on the dial points where they fall). Lighting parts read it on their own; the Light Dial part lets you use it for anything else — the direction rain falls, where a crack starts, which way a current flows.',
-    outs: { direction: 'The dial’s angle as a number: 0 at the top, going clockwise round to 1.', height: 'How low the light is: 0 straight overhead (the handle in the dial’s middle), 1 at the rim, up to 1.3 past it.' },
-    tips: ['Wire Direction into a Motion Blur’s Angle: the streaks turn with the dial.'],
+    outs: { direction: 'The dial’s angle as a number: 0 at the top, going clockwise round to 1.', height: 'How low the light is: 0 straight overhead (the handle in the dial’s middle), 1 at the rim, up to 1.3 past it.', way: 'The way the light travels, away from the handle, as an angle counted from the right (0 to 1), as Motion Blur, Smudge and Rotate count theirs. Direction is counted from the top: wired into those, it turns them a quarter turn off the light.' },
+    tips: ['Wire Way into a Motion Blur’s Angle: the streaks run along the light, and turn with the dial.', 'Wire Way into a Smudge’s Which Way: things trail away from the light.'],
     see: ['heights', 'part:material'],
   },
   seed: {
@@ -1046,7 +1046,7 @@ export const WIKI_PARTS = {
   blackhole: {
     line: "A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.",
     about: "Every pixel follows a ray of light back past the hole, bent by its gravity: the stars behind are lensed into arcs and rings, and the disc of hot matter round the hole is seen over it and, bent round, under it too. The camera dial is where you look from: its Turn turns the disc, its View tips it toward edge-on, its zoom brings it closer.",
-    ins: {"view from": "Where you look from, as a light dial's direction (from older graphs; unwired, Turn and View say it)."},
+    ins: {"view from": "Where you look from, as a light dial's direction (from older graphs; unwired, Turn and View say it).", "place at": "Which way from the page's middle the hole stands (wire the Light Dial's Direction). Unwired: the page's dial.", "place out": "How far out from the page's middle it stands, at the page's edge at 1 (wire the Light Dial's Height). Unwired: the page's dial."},
     outs: {"sky": "The hole, its disc and the lensed sky."},
     set: {"zoom": "Chaos: how stirred the disc is.", "amount": "How full of particles the disc is.", "form": "Jets: beams fired from the poles, none at 0.", "variant": "Another sky, another disc.",
       "turn": "Turns the disc in the sky (wire the Camera Dial's Turn).", "view": "How edge-on you see it: face-on at 0, edge-on at 100 (wire the Camera Dial's View).", "lens": "Camera Zoom: how close (wire the Camera Dial's Zoom)."},

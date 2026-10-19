@@ -40,7 +40,7 @@ import { withAltText } from './jpegMeta.js';
 import { describeLook } from './altText.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './effects.js';
-import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM } from './appOptions.js';
+import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName, boxNow } from './canvasRenderer.js';
@@ -51,7 +51,7 @@ import { applyTheme, savedTheme, DEFAULT_THEME } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
 import { moonPhase, moonGlyph, moonGlyphURI, phaseName } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
-import { blendFamily } from './texCore.js';
+import { blendFamily, pageSunAt } from './texCore.js';
 import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from './swatches.js';
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
@@ -1020,7 +1020,7 @@ function retireLook(s){ return retireFormat7(retireFormat6(retireFormat5(retireF
  *  past 315° becomes the camera's Turn, its height the camera's View, the lens as it was. */
 const blackHoleCamera = (light, tilt) => ({ cameraTurn: String(Math.round((((+(light ?? 315) || 0) - 315) % 360 + 360) % 360)),
   cameraView: String(Math.round(Math.max(0, Math.min(100, tilt === undefined || tilt === '' || isNaN(+tilt) ? 100 : +tilt)))), cameraZoom: '100' });
-function retireFormat7Layer(L){ return L && L.textureType === 'blackhole' ? { ...L, ...blackHoleCamera(L.textureLight, L.textureLightTilt) } : L; }
+function retireFormat7Layer(L){ return L && L.textureType === 'blackhole' ? { ...L, ...blackHoleCamera(L.textureLight, L.textureLightTilt), textureLightTilt: 0 } : L; }
 function retireFormat7(s){ if(!s || +s.lookVersion >= 7) return s; let o = retireFormat7Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat7Layer(o.baseLayer) }; return o; }
 /** THE DIAL'S HANDLE BECAME THE LIGHT (format 6; Ruby: the light dial "goes the opposite direction that I would expect"):
  *  most surfaces had been lit from the handle's other side (textureGenerators LIGHT_TURNED). A look, preset or reading
@@ -1660,7 +1660,9 @@ function applyPreset(p){
   // and its camera: the preset's own, or where its texture's camera starts
   // (a Black Hole preset from before format 7 says its view with the light dial: onto the camera, as its looks are)
   { const d = cameraStart(p.textureType || $('textureType').value), bh = p.textureType === 'blackhole' && p.cameraTurn === undefined && p.textureLight !== undefined ? blackHoleCamera(p.textureLight, p.textureLightTilt) : {};
-    putCamera(p.cameraTurn ?? bh.cameraTurn ?? d.turn, p.cameraView ?? bh.cameraView ?? d.view, p.cameraZoom ?? bh.cameraZoom ?? d.zoom); }
+    putCamera(p.cameraTurn ?? bh.cameraTurn ?? d.turn, p.cameraView ?? bh.cameraView ?? d.view, p.cameraZoom ?? bh.cameraZoom ?? d.zoom);
+    // (…and now the light dial places the hole: such a preset's hole stands at the page's middle)
+    if(bh.cameraTurn !== undefined && $('textureLightTilt')){ $('textureLightTilt').value = '0'; syncLightPad(); } }
 
   if(p.font){
     const idx = FONTS.findIndex(f=>f.family===p.font);
@@ -1985,7 +1987,10 @@ function setupPhoneLayout(){
       if(handle.setPointerCapture) handle.setPointerCapture(e.pointerId);
       document.body.classList.add('dragging-divider');
     });
-    handle.addEventListener('pointermove', (e)=>{ if(dragging){ setFrac(fracFor(e)); e.preventDefault(); } });
+    handle.addEventListener('pointermove', (e)=>{ if(!dragging) return; e.preventDefault();
+      // (with the keyboard up the preview is measured in pixels, not a share: the divider sets them)
+      if(document.body.classList.contains('keyboard-open') && document.body.classList.contains('focus-mode')){ KB_STAGE_DRAGGED = Math.round(e.clientY - stageEl.getBoundingClientRect().top); fitEditorRoom(); }
+      else setFrac(fracFor(e)); });
     ['pointerup','pointercancel'].forEach(t => handle.addEventListener(t, ()=>{
       dragging = false;
       document.body.classList.remove('dragging-divider');
@@ -1994,7 +1999,7 @@ function setupPhoneLayout(){
     let lastTap = 0;
     handle.addEventListener('pointerup', ()=>{
       const now = Date.now();
-      if(now - lastTap < 320) setFrac(0.30);
+      if(now - lastTap < 320){ setFrac(0.30); KB_STAGE_DRAGGED = null; fitEditorRoom(); }
       lastTap = now;
     });
   }
@@ -2300,7 +2305,7 @@ function syncTextureTools(resetToDefaults){
   if(t1) t1.classList.toggle('tool-hidden', caps.tints < 1);
   if(t2) t2.classList.toggle('tool-hidden', caps.tints < 2);
   [9, 10, 11, 12].forEach((n, i) => { const r = $('tint' + n + 'Row'); if(r && r.classList) r.classList.toggle('tool-hidden', (caps.tints || 0) < i + 3);
-    setLabelText($('tint' + n + 'Label'), (caps.tintLabels || [])[i + 2] || 'Hue ' + (i + 3)); });
+    setLabelText($('tint' + n + 'Label'), (caps.tintLabels || [])[i + 2] || ['Third', 'Fourth', 'Fifth', 'Sixth'][i] + ' Hue'); });
   // material hues, for lit textures that are coloured (not the grey ones that blend)
   ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-hidden', !caps.material); });
   if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); setColorField('textureTint6Hex', '#FFFFFF'); }
@@ -2318,8 +2323,14 @@ function syncTextureTools(resetToDefaults){
     if(resetToDefaults || !caps.hue5) setColorField('textureTint5Hex', caps.hue5 ? caps.hue5.def : '#000000');
   }
   // (a hue the texture doesn't have says so plainly, not the last texture's name)
-  setLabelText($('tint1Label'), caps.tints >= 1 ? ((caps.tintLabels||[])[0] || 'Tint') : 'Hue');
-  setLabelText($('tint2Label'), caps.tints >= 2 ? ((caps.tintLabels||[])[1] || 'Second tint') : 'Second Hue');
+  setLabelText($('tint1Label'), caps.tints >= 1 ? ((caps.tintLabels||[])[0] || 'First Hue') : 'First Hue');
+  setLabelText($('tint2Label'), caps.tints >= 2 ? ((caps.tintLabels||[])[1] || 'Second Hue') : 'Second Hue');
+  // THE HUES' THREE GROUPS: a Ground or Snow Hue is the surface's own colour (it stands with the Surface Colors), a Glow
+  // is the material's; each group's heading shows only while one of its hues does
+  { const r5 = $('tint5Row'), hm = $('hueHeadMaterial');
+    if(r5 && hm && hm.parentNode && r5.parentNode === hm.parentNode){ const own = caps.hue5 && caps.hue5.role !== 'glow';
+      if(own) hm.parentNode.insertBefore(r5, hm); else if(hm.nextSibling !== r5) hm.parentNode.insertBefore(r5, hm.nextSibling); }
+    syncHueHeads(); }
 
   // a texture that takes its colour from the accents starts there
   if(resetToDefaults && caps.tints >= 1){
@@ -2620,7 +2631,9 @@ function drawCameraGuide(on){
   g._seq = (g._seq || 0) + 1;
   const dpr = G.size(), x = g.getContext('2d'); if(!x) return;
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow();
-  const type = ($('textureType') || {}).value, ring = ringGuideOf(kind, type, c);
+  const type = ($('textureType') || {}).value, deg0 = parseFloat(($('textureLight') || {}).value) || 0, t0 = parseFloat(($('textureLightTilt') || {}).value);
+  // (the Black Hole's disc stands where the light dial places it)
+  const ring = kind === 'disc' ? { place: dialGuidePlace({ k: 'place' }, deg0, isNaN(t0) ? 100 : t0, aspX, aspY) } : ringGuideOf(kind, type, c);
   const lines = cameraGuide(kind, aspX, aspY, c, ring);
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
   const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';
@@ -2636,13 +2649,6 @@ function drawCameraGuide(on){
 // light as a sun at the dial's place on the page (the middle overhead, the rim the page's edge), turned with the camera
 // where the camera turns the ground under it; the rim light's in its own colour
 /** Whether the light dial is a light this surface shows from somewhere (not a wind, a flow, or the Ringworlds' day). */
-/** Where the light dial's light stands on a page aspX × aspY (the shorter side 1): its direction the dial's exactly,
- *  as far out as the handle (tilt 0..100: the middle to the page's edge along that way, a little inside it). */
-export function pageSunAt(deg, tilt, aspX, aspY){
-  const a = deg*Math.PI/180, k = Math.min(1, Math.max(0, tilt)/100), dx = Math.sin(a), dy = -Math.cos(a);
-  const reach = Math.min(Math.abs(dx) > 1e-9 ? aspX/2/Math.abs(dx) : Infinity, Math.abs(dy) > 1e-9 ? aspY/2/Math.abs(dy) : Infinity)*0.92;
-  return { x: aspX/2 + dx*k*reach, y: aspY/2 + dy*k*reach };
-}
 /** WHAT THE LIGHT DIAL PLACES, for its guide (Ruby: "anytime we use a light dial as a position selector or a light
  *  selector we need some kind of indicator of where on screen we are positioning a thing before the render"): a list of
  *  marks, each drawn over the page at once while the dial moves and until the new picture has landed.
@@ -2655,6 +2661,7 @@ export function pageSunAt(deg, tilt, aspX, aspY){
 const DIAL_GUIDES = {
   crackle:     [{ k: 'sun' }, { k: 'impact' }],
   summoning:   [{ k: 'place' }],
+  blackhole:   [{ k: 'disc' }],                              // (the light dial places the hole: its disc's wireframe there)
   snow:        [{ k: 'arrow', fall: true }],                 // (the wind blows from the handle, the flakes fall with it: Wind is how far)
   rainstreaks: [{ k: 'arrow', way: -1 }],                    // (the rain comes from the handle)
   hatch:       [{ k: 'axis' }],                              // (strokes along the handle's line)
@@ -2664,7 +2671,7 @@ const DIAL_GUIDES = {
   aurorasky:   [{ k: 'axis', lean: true }],                  // (the rays' tops lean toward the handle's side)
   watercolour: [{ k: 'arrow', way: 1, tilted: true }],       // (the pigment runs toward the handle, more as it lowers)
   ringworld:   [],
-  landscape:   [],     // (its painted sun is the seed's: the dial lights only the paint's relief)
+  landscape:   [{ k: 'sun' }],      // (its painted sun follows the dial, kept above the horizon)
 };
 export function dialGuideMarks(type){
   if(type === 'ringpaint') return [{ k: 'sun', ring: true }];
@@ -2723,6 +2730,10 @@ function drawDialGuide(on, linger){
   const knob = label => { const i = paramsFor(type).findIndex(q => q.label === label); const v = i < 0 ? NaN : parseFloat(($('texP' + (i + 1)) || {}).value); return isNaN(v) ? undefined : v; };
   const knobs = { size: knob('Circle Size') ?? 100, wind: knob('Wind') };
   for(const mark of marks){
+    // (the Black Hole's disc where the light dial puts it, as the camera dial sees it)
+    if(mark.k === 'disc'){ const L = cameraGuide('disc', aspX, aspY, c, { place: dialGuidePlace({ k: 'place' }, deg0, tilt0, aspX, aspY) });
+      twice((pass, w) => { for(const ln of L){ x.lineWidth = w*(ln.bold ? 1 : 0.5); x.beginPath(); ln.pts.forEach((p, i) => i ? x.lineTo(p[0]*u, p[1]*u) : x.moveTo(p[0]*u, p[1]*u)); x.stroke(); } }, main);
+      continue; }
     if(mark.k === 'sun'){
       for(const [deg, t, colr] of lights){ const p = sunOf(mark.ring, deg, isNaN(t) ? 100 : t); if(!p) continue;
         // (out of the frame: at its edge, with an arrow pointing out toward it)
@@ -2815,6 +2826,14 @@ bindColorField('textureTint8Hex', ()=>scheduleRender());
 // (a function, not a const: labels are renamed at boot, before this line runs)
 function textNode(el){ return (el && el.childNodes && typeof el.childNodes[Symbol.iterator] === 'function') ? [...el.childNodes].find(n => n.nodeType === 3) : null; }
 function labelText(el){ const t = textNode(el); return t ? t.nodeValue.trim() : String(el.textContent || '').trim(); }
+/** Each hue group's heading (Light, Surface, Material Colors) shows while one of the hues after it, up to the next
+ *  heading, does. */
+function syncHueHeads(){
+  for(const id of ['hueHeadLight', 'hueHeadSurface', 'hueHeadMaterial']){ const h = $(id); if(!h || !h.classList) continue;
+    let any = false; for(let r = h.nextElementSibling; r && !(r.classList && r.classList.contains('hue-head')) && r.id !== 'seedRow'; r = r.nextElementSibling)
+      if(r.classList && !r.classList.contains('tool-hidden')) any = true;
+    h.classList.toggle('tool-hidden', !any); }
+}
 function setLabelText(el, text){
   if(!el) return;
   if(!el.childNodes || typeof el.childNodes[Symbol.iterator] !== 'function'){ el.textContent = text; return; }   // (a bare stand-in element)
@@ -3462,6 +3481,9 @@ if(typeof document.querySelectorAll === 'function'){
 // is still the text area, so a tap there writes at the end. The room is measured, not left to nested flexboxes
 // (which, when one of them refused to shrink, once left the last lines out of reach).
 const WRITING_LINES = 12;   // (the poem's lines kept in view while the keyboard is up; the preview has the rest)
+// (…unless the divider is dragged while the keyboard is up, Ruby: "it was kind of nice that we could adjust it": the
+//  preview keeps the height dragged to, at least a strip and leaving at least three lines, until a double-tap resets it)
+let KB_STAGE_DRAGGED = null;
 function fitEditorRoom(){
   const b = document.body;
   if(!b || !b.classList || !b.classList.contains('focus-mode') || typeof document.querySelector !== 'function') return;
@@ -3475,7 +3497,7 @@ function fitEditorRoom(){
   if(stage && stage.getBoundingClientRect && b.classList.contains('keyboard-open')){
     const cs = input && typeof getComputedStyle === 'function' ? getComputedStyle(input) : null, lh = cs ? parseFloat(cs.lineHeight) || parseFloat(cs.fontSize)*1.5 || 20 : 20;
     const free = Math.min(bottom, barTop) - stage.getBoundingClientRect().top - (wrap.getBoundingClientRect().top - stage.getBoundingClientRect().bottom) - 6;
-    const sh = Math.max(64, Math.floor(free - WRITING_LINES*lh - 16));
+    const sh = KB_STAGE_DRAGGED != null ? Math.max(64, Math.min(Math.floor(free - 3*lh - 16), KB_STAGE_DRAGGED)) : Math.max(64, Math.floor(free - WRITING_LINES*lh - 16));
     if(document.documentElement.style.getPropertyValue('--kb-stage-h') !== sh + 'px') document.documentElement.style.setProperty('--kb-stage-h', sh + 'px');
   }
   // (the PML guide, open while writing, lies over the preview: from its top down to the poem's)
@@ -3813,14 +3835,20 @@ function paintTryOptions(){
   const sel = $('textureType'), before = $('athanorGroup');
   if(tryGroupsPainted || !sel || typeof document.createElement !== 'function') return;
   tryGroupsPainted = true;
-  for(const [glyph, label, list] of [['🜈', CHOOSER.starters, Object.entries(ATHANOR_STARTERS).map(([k, S]) => ['starter:' + k, S.label])],
-      ['🜍', CHOOSER.studies, Object.entries(ATHANOR_STUDIES).sort((p, q) => p[1].label.localeCompare(q[1].label)).map(([k, S]) => ['study:' + k, S.label])]]){
-    const g = document.createElement('optgroup'); g.label = glyph + ' ' + label; g.className = 'try-graphs';
-    for(const [v, text] of list){ const o = document.createElement('option'); o.value = v; o.textContent = text; g.appendChild(o); }
-    if(before && typeof sel.insertBefore === 'function') sel.insertBefore(g, before); else sel.appendChild(g);
+  // (each in its own group, after the group's surfaces, by name; Screens & Signals, a group of studies alone, before Yours)
+  const groups = [...(sel.querySelectorAll ? sel.querySelectorAll('optgroup') : [])];
+  for(const [name, keys] of Object.entries(STUDY_GROUPS)){
+    const tg = TEXTURE_GROUPS.find(t => t.name === name), head = (tg || STUDY_GROUP_EXTRA).glyph + ' ' + name;
+    let g = groups.find(o => o.label === head);
+    if(!g){ g = document.createElement('optgroup'); g.label = head; g.className = 'try-graphs'; if(before && typeof sel.insertBefore === 'function') sel.insertBefore(g, before); else sel.appendChild(g); }
+    for(const [v, text] of keys.map(k => [k, tryLabelOf(k)]).filter(([, t]) => t).sort((p, q) => p[1].localeCompare(q[1]))){
+      const o = document.createElement('option'); o.value = v; o.textContent = text; o.className = 'try-graph'; g.appendChild(o); }
   }
   if(typeof CHOOSERS !== 'undefined') CHOOSERS.forEach(c => c && c.refresh && c.refresh());
 }
+/** A starter's or a study's name in the menus, marked as one ('Agate (starter)'), or '' when there is none such. */
+function tryLabelOf(key){ const m = /^(starter|study):(.+)$/.exec(String(key)), S = m && (m[1] === 'study' ? ATHANOR_STUDIES : ATHANOR_STARTERS)[m[2]];
+  return S ? fill(m[1] === 'study' ? CHOOSER.studyMark : CHOOSER.starterMark, S.label) : ''; }
 /** A starter's or a study's graph, by its menu value ('starter:agate', 'study:fibers'). */
 const tryGraphOf = value => { const m = /^(starter|study):(.+)$/.exec(String(value)); if(!m) return null;
   const S = (m[1] === 'study' ? ATHANOR_STUDIES : ATHANOR_STARTERS)[m[2]]; return S ? athanorStarter(m[2]) : null; };
@@ -4737,7 +4765,9 @@ function openTileStamp(value){
     : `${TEXTURE_STAMPS[value] || ''}|${SWATCH_STAMP}|${keptHash(JSON.stringify(thumbLook(value)))}`;
   // a search finds a surface by its readings' names too (Rose Window, Seedy Amber…)
   const extra = value => { const E = TEXTURE_ELEMENTS[value]; if(!E) return ''; return Object.values(E).map(r => r && r.name || '').join(' '); };
-  const glyphFor = value => value === 'athanor' || String(value).startsWith('kept:') ? '🜉' : String(value).startsWith('starter:') ? '🜈' : String(value).startsWith('study:') ? '🜍' : '◈';
+  const glyphFor = value => { if(value === 'athanor' || String(value).startsWith('kept:')) return '🜉';
+    const name = Object.keys(STUDY_GROUPS).find(n => STUDY_GROUPS[n].includes(String(value))); if(!name) return '◈';
+    return (TEXTURE_GROUPS.find(t => t.name === name) || STUDY_GROUP_EXTRA).glyph; };
   surfaceTiles = { thumb, stamp, extra };
   // (one menu serves both surfaces: the layer bar says which one it changes)
   const sel = $('textureType');
