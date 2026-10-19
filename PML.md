@@ -168,7 +168,9 @@ letterpress, bevel, chromatic, doublestrike, erosion. `/fx:none` clears.
 
 Written in the poem, resolved before PML is parsed — so a variable may expand
 into PML. Only the poem is resolved; no other field is. Unknown names stay as
-written; `\§` writes a literal §.
+written; `\§` writes a literal §. On a computer's keyboard `$` works as § before
+a variable's name or `style` (`$SurfName`, `$style ember = …`); anything else after a `$`
+("$5") stays as typed, and `\$` is a literal $.
 
 | Variable | Becomes |
 |---|---|

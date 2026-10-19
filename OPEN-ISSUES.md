@@ -19,12 +19,20 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   apostrophes inside words (don't, it's) count as marks? They do now, with the quotes.
 - THE PAINTED RINGWORLD'S SUN follows the dial now. Should the Painted Landscape's sun follow it too (it is the seed's
   now, with its time of day)? The 3D Ringworld's star stays at the ring's middle, as a real ringworld's does: right?
-- THE LIGHT GUIDE on Crystal "seems off": its direction is now the dial's exactly on a tall page. Was that it, or that
-  Crystal's facets don't look lit from where the sun is (then the guide should skip Crystal)?
 - SHAPE STRENGTH on a surface built on The Poem (Ripples from the Words, Circuit Board, the starters): it now sets how
   far the surface keeps clear of the words. Does the slider feel right on them?
+- THE RIM LIGHT'S STRENGTH: with Rim chosen, the slider under the light dial is its strength (Ambient with Main), and
+  its handle fades with it. The two dials now sit level when Main / Rim shows. Right?
+- WRITING ON A PHONE: about a dozen lines of poem while the keyboard is up (WRITING_LINES in appEvents), and the PML
+  guide over the preview with the keyboard kept up. Enough preview, enough poem?
 
 ## 2 · Ruby's notes to act on
+- FOUR NEW SURFACES (asked for; one release each, sheets first):
+  - PIXEL-ART SPACE in Ruby's own style: nebulas, four-point sparkle stars, magenta / cyan / navy, a scene per seed.
+  - JAMES WEBB FALSE COLOUR: amber dusty clouds, blue stars with diffraction spikes; not Deep Field.
+  - LIMINAL SPACES: rooms and corridors, ceiling panels, their lighting; the camera pans.
+  - FLORALS, five: wilting, happy, a blurred parallax field, one adjustable flower, simple floral patterns. Real
+    species chosen by a slider; composition and depth by the seed.
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
   everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,
@@ -38,6 +46,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
+- THE DIAL'S HANDLE AS THE LIGHT (on the branch `light-handle`, before/after sheets sent): every surface lit from the
+  handle's side, shadows away from it, 🜚's spikes pointing the shadow's way; older looks, presets and readings turned
+  so their pictures stay. Ships to main on Ruby's yes.
 - SOUNDS — the instrument itself, when Ruby wants it back:
   - a STRING instrument, something unusual (plucked string by physical model;
     ideas: an Aeolian harp, strings sounded by wind; sympathetic strings that

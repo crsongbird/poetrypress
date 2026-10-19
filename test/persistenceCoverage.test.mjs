@@ -35,6 +35,8 @@ const EXEMPT = {
   modalRangeB:  'a dialog\'s high handle (a wire\'s range, kept in the graph)',
   lightDegIn:   'the dial\'s angle typed or read: a view of textureLight, which is saved and restored',
   lightTiltIn:  'the dial\'s reach typed or read: a view of textureLightTilt, which is saved and restored',
+  rimStrength:  'the rim\'s strength under the dial: a view of the rim colour\'s alpha (textureRim), which is saved and restored',
+  lightRimKIn:  'the rim strength\'s number typed or read: the same view of textureRim',
   lightAmbIn:   'the Ambient slider\'s number typed or read: a view of textureAmbient, which is saved and restored',
   presetSearch: 'a search over the preset grid: it filters what the grid shows, and is not part of an image',
   cameraTurnIn: 'the camera dial\'s turn typed or read: a view of cameraTurn, which is saved and restored',

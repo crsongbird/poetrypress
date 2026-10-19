@@ -643,15 +643,17 @@ body.is-mobile.focus-mode .card.focus-keep{ flex-direction:column; margin:0; }
 body.is-mobile.focus-mode .card.focus-keep .card-title{ display:none; }
 body.is-mobile.focus-mode .tab-btn:not([data-tab="more"]){ display:none; }
 body.is-mobile.focus-mode .tab-btn[data-tab="more"]{ flex:1 1 100%; }
-/* writing on a phone: PML beside Done Writing opens the guide as a sheet above the bar */
+/* writing on a phone: PML beside Done Writing opens the guide over the preview (fitEditorRoom sets --guide-top and
+   --guide-h), and the keyboard stays up */
 .pml-tab{ display:none; }
 body.is-mobile.focus-mode .pml-tab{ display:flex; align-items:center; justify-content:center; flex:0 0 72px; margin:0; border:0; border-right:1px solid var(--line);
   background:transparent; color:var(--text-dim); font:13px var(--ui-caps); letter-spacing:.08em; }
 body.is-mobile.focus-mode.guide-open .pml-tab{ color:var(--accent); }
 body.is-mobile.focus-mode.guide-open #formattingGuidePanel{ display:block; position:fixed; left:0; right:0; z-index:70; margin:0; overflow:auto; overscroll-behavior:contain;
-  height:calc(var(--vvh) * 0.5); top:calc(var(--vv-bottom, var(--vvh)) - var(--tabbar-h) - var(--vvh) * 0.5); background:var(--bg-panel); border-top:1px solid var(--accent-dim); box-shadow:0 -10px 30px -12px rgba(0,0,0,.7); }
-/* and while the keyboard is up, the preview folds to a strip (a tap on it puts the keyboard away) */
-body.is-mobile.focus-mode.keyboard-open .stage{ height:64px; min-height:64px; max-height:64px; }
+  height:var(--guide-h, calc(var(--vvh) * 0.5)); top:var(--guide-top, 0px); background:var(--bg-panel); border-bottom:1px solid var(--accent-dim); box-shadow:0 10px 30px -12px rgba(0,0,0,.7); }
+/* and while the keyboard is up, the preview keeps what a dozen lines of the poem leave it (fitEditorRoom sets
+   --kb-stage-h; a strip until it has measured), and a tap on it puts the keyboard away */
+body.is-mobile.focus-mode.keyboard-open .stage{ height:var(--kb-stage-h, 64px); min-height:64px; max-height:none; }
 body.is-mobile.focus-mode.keyboard-open .stage .reset-view-btn, body.is-mobile.focus-mode.keyboard-open .stage .download-btn, body.is-mobile.focus-mode.keyboard-open .stage .filmstrip{ display:none; }
 
 /* ---------- nav glyph states ----------
@@ -1534,10 +1536,19 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 :root[data-theme="vellum"] .ld-overlap{ fill:#000000; }
 .light-dial.has-rim.rim-on .ld-overlap{ display:inline; }
 /* which light the finger moves, and the Ambient slider: only where the page's lights reach the surface */
-.light-seg, #lightRow .light-amb, #lightAmbField{ display:none; }
+.light-seg, #lightRow .light-amb, #lightAmbField, #lightRow .light-rimk, #lightRimKField{ display:none; }
 #lightRow.has-rig .light-seg{ display:flex; margin:2px 0 4px; }
-#lightRow.has-rig .light-amb{ display:block; }
-#lightRow.has-rig #lightAmbField{ display:flex; }
+/* (and the camera dial beside it steps down as far as Main / Rim takes, so the two dials sit level: appEvents syncLightPad) */
+.tool-row.has-camera.has-seg > #cameraRow > .light-dial-row{ margin-top:var(--light-seg-h, 38px); }
+#lightRow.has-rig:not(.pick-rim) .light-amb{ display:block; }
+#lightRow.has-rig:not(.pick-rim) #lightAmbField{ display:flex; }
+/* (with Rim chosen, the slider and its number are the rim light's strength) */
+#lightRow.has-rig.pick-rim .light-rimk{ display:block; }
+#lightRow.has-rig.pick-rim #lightRimKField{ display:flex; }
+.ld-rim-spike{ display:none; }
+.light-dial.has-rim .ld-rim-spike{ display:inline; }
+.ld-rim-spike .ld-spike-body{ fill:var(--accent-2); }
+.ld-rim-spike .ld-curl{ stroke:var(--accent-2); }
 #lightRow.has-rig .ld-values{ flex-wrap:wrap; gap:4px 12px; }
 .light-seg .radio-btn{ flex:1 1 0; padding:4px 8px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
 /* each button's dot is its handle's colour: the main light's, the rim light's (hollow while it is off) */
@@ -2384,7 +2395,9 @@ body.is-mobile .forge-crumb .fc-how{ display:none; }
 /* ---------- THE USABILITY REVIEW (Saturn–Albiorix) ---------- */
 /* ⓘ in a heading: the section's hints written out under their controls (a touch screen never shows a title) */
 .hint-btn{ flex:0 0 auto; width:auto; margin:0; padding:0 2px; border:0; background:transparent; color:#6E6880; font:15px/1 var(--ui-text); opacity:.6; cursor:pointer; }
-.hint-btn:hover, .hint-btn:focus-visible, .hint-btn[aria-pressed="true"]{ opacity:1; color:var(--accent); }
+.hint-btn:focus-visible, .hint-btn[aria-pressed="true"]{ opacity:1; color:var(--accent); }
+/* (hover only where there is a pointer that hovers: on a phone a tap left ⓘ lit after its hints were taken away — Ruby) */
+@media (hover: hover){ .hint-btn:hover{ opacity:1; color:var(--accent); } }
 body.is-mobile .hint-btn{ font-size:18px; }
 .tip-line{ display:block; flex:1 0 100%; order:10; grid-column:1 / -1; width:100%; margin:1px 0 3px; font:11px/1.3 var(--ui-sans); color:var(--text-dim); opacity:.85; text-transform:none; letter-spacing:0; white-space:normal; }
 body.is-mobile .tip-line{ font-size:11.5px; }
@@ -21152,7 +21165,7 @@ but bear with me, dear}]/jitter:200
 <p class="pml-ex" data-try="`**not bold**, [not an accent]`"><code>`**not bold**, [not an accent]`</code></p>
 
 <h4>Variables</h4>
-<p>A <code>§</code> and a name is replaced by a value before anything else is read: the surface’s name, tonight’s moon, the look’s spell. They let a page describe itself (the Grimoire’s Instrument Panel is made of them). A name the app doesn’t know stays as typed; <code>\§</code> prints a plain §.</p>
+<p>A <code>§</code> and a name is replaced by a value before anything else is read: the surface’s name, tonight’s moon, the look’s spell. They let a page describe itself (the Grimoire’s Instrument Panel is made of them). A name the app doesn’t know stays as typed; <code>\§</code> prints a plain §. On a computer’s keyboard, <code>$</code> works the same before a variable’s name (<code>$SurfName</code>, <code>$style</code>); “$5” stays as typed.</p>
 <dl>
 <dt><code>§SurfName</code> <code>§SurfParamsA</code> <code>§SurfParamsB</code></dt><dd>the surface, its knobs, its hues (with Two Surfaces, the one on top)</dd>
 <dt><code>§MoonPhase!tonight</code> <code>!seed</code> <code>:0.5</code></dt><dd>a moon (−1…1: 0 full, ±1 new)</dd>
@@ -21777,7 +21790,13 @@ but bear with me, dear}]/jitter:200
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
                   <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="-0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
-                  <!-- 🜚: the spike and its two curls grow out of the rim toward the light; the curls flare outward -->
+                  <!-- 🜚: the spike and its two curls grow out of the rim toward the light; the curls flare outward (the rim
+                       light has its own, in its own colour, as strong as it is) -->
+                  <g class="ld-spike ld-rim-spike" id="lightRimSpike" opacity="0">
+                    <polygon class="ld-spike-body" id="lightRimSpikeBody" points="-3.4,-24 3.4,-24 0,-26"></polygon>
+                    <path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path>
+                    <path class="ld-curl" d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path>
+                  </g>
                   <g class="ld-spike" id="lightSpike" opacity="0">
                     <polygon class="ld-spike-body" id="lightSpikeBody" points="-3.4,-24 3.4,-24 0,-26"></polygon>
                     <path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path>
@@ -21805,12 +21824,15 @@ but bear with me, dear}]/jitter:200
             <!-- THE AMBIENT LIGHT (Ruby: its strength a slider under the dial, as the camera's zoom is): the light from
                  everywhere. Halfway is the surface's own; left, deeper shadows; right, softer -->
             <input type="range" class="cam-zoom light-amb" id="textureAmbient" min="0" max="200" step="1" value="100" aria-label="Ambient light" title="Ambient: the light from everywhere. Halfway is the surface's own; to the left, deeper shadows; to the right, softer.">
+            <!-- (with Rim chosen, the slider is the rim light's strength: its hue's alpha, 0 off) -->
+            <input type="range" class="cam-zoom light-rimk" id="rimStrength" min="0" max="100" step="1" value="0" aria-label="Rim light strength" title="Rim Strength: how bright the rim light is. 0 is off.">
             <!-- the dial's numbers, shown and typed: the chosen light's angle and how far out it reaches (100 the rim; past it,
                  lower), and the ambient -->
             <div class="ld-values">
               <label>Angle <input type="number" id="lightDegIn" min="0" max="359" step="1" inputmode="numeric">°</label>
               <label id="lightTiltField">Height <input type="number" id="lightTiltIn" min="0" max="130" step="1" inputmode="numeric">%</label>
               <label id="lightAmbField">Ambient <input type="number" id="lightAmbIn" min="0" max="200" step="1" inputmode="numeric">%</label>
+              <label id="lightRimKField">Rim <input type="number" id="lightRimKIn" min="0" max="100" step="1" inputmode="numeric">%</label>
             </div>
             <input type="hidden" id="textureLightTilt" value="100">
             <input type="hidden" id="textureLight" value="315">
@@ -44323,7 +44345,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Hati';
+const RELEASE = 'Saturn–Farbauti';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -45101,7 +45123,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
  * A variable becomes plain text — often PML itself, which the parser then
  * reads as if it had been typed — or an inline glyph (see glyphs.js).
  * Anything unknown is left exactly as written, so a typo shows on the page
- * instead of vanishing. \§ writes a literal §.
+ * instead of vanishing. \§ writes a literal §. On a keyboard, $ stands in for § before a variable's name ($SurfName).
  *
  * Resolution applies to the poem only. Usernames, titles and every other
  * field are never passed through here.
@@ -45160,11 +45182,19 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · 3111119";
+const STAMP = "2026-10-19 · 1535393";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
 const TOKEN = /(\\?)§([A-Za-z]+)(?:!([A-Za-z0-9_-]+)|:(-?\d*\.?\d+))?/g;
+/** Every variable's name (and `style`, for a named style's definition): what a `$` may stand in for. */
+const PML_VAR_NAMES = new Set(['SurfName', 'SurfBlendMode', 'LightDir', 'TextureSeed', 'SeedPhrase', 'Reading', 'SurfParamsA', 'SurfParamsB', 'MoonPhase',
+  'UVIcon', 'Glyph', 'Spell', 'SpellRunes', 'Rune', 'SpellName', 'Font', 'Canvas', 'TypeEffect', 'Scale', 'Profile', 'RenderMs', 'CacheMB', 'Fonts', 'Build', 'Today', 'style']);
+/** $ FOR § (Ruby: § is easy on a phone's keyboard and hard on a computer's): `$` before a variable's name (or `style`) is
+ *  read as § — "$5" and "$ in my pocket" stay as typed, and `\$` is a literal $. */
+function dollarsAsSections(text){
+  return String(text).replace(/(^|[^\\])\$([A-Za-z]+)/g, (m, pre, name) => PML_VAR_NAMES.has(name) || name.toLowerCase() === 'style' ? pre + '§' + name : m);
+}
 
 /** p (0 new, 0.5 full, 1 new) from Ruby's scale: -1 new, 0 full, +1 new. */
 const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
@@ -45176,7 +45206,8 @@ const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
  *   spell, font, canvas, typeEffect
  */
 function resolvePmlVariables(text, ctx){
-  if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1)) return text;
+  if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1 && text.indexOf('$') === -1)) return text;
+  if(text.indexOf('$') !== -1) text = dollarsAsSections(text);
   // named styles: their definitions, taken out of the poem before anything else reads it
   const styles = new Map();
   if(/§style/i.test(text)) text = text.split('\n').filter(line => {
@@ -47984,11 +48015,14 @@ function savedTheme(){
 
 
 
+
 const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;' };
 const escapeHtml = t => String(t).replace(/[&<>]/g, c => ESC[c]);
 // a §Variable: its name, then an optional !param or :number (see pmlVars.js)
-const VAR_RE = /^§([A-Za-z]+)(![A-Za-z0-9_-]+|:-?\d*\.?\d+)?/;
-const varSpan = m => span('var', '§' + m[1]) + (m[2] ? span('varp', m[2]) : '');
+const VAR_RE = /^[§$]([A-Za-z]+)(![A-Za-z0-9_-]+|:-?\d*\.?\d+)?/;
+const varSpan = m => span('var', m[0][0] + m[1]) + (m[2] ? span('varp', m[2]) : '');
+// (a $ is a variable only before one's name, as pmlVars reads it: "$5" is money)
+const varAt = (src, i) => { const m = src.slice(i).match(VAR_RE); return m && (src[i] === '§' || PML_VAR_NAMES.has(m[1]) || m[1].toLowerCase() === 'style') ? m : null; };
 
 const span = (cls, text) => `<span class="pml-${cls}">${escapeHtml(text)}</span>`;
 
@@ -48069,8 +48103,8 @@ function highlightLine(line, base){
       continue;
     }
     if(ch === '`'){ out += span('tick', ch); i++; continue; }
-    if(ch === '§'){
-      const m = src.slice(i).match(VAR_RE);
+    if(ch === '§' || ch === '$'){
+      const m = varAt(src, i);
       if(m){ out += varSpan(m); i += m[0].length; continue; }
     }
 
@@ -48131,7 +48165,7 @@ function highlightInline(text, base){
   while(i < text.length){
     const ch = text[i];
     if(ch === '\\' && i + 1 < text.length){ out += span('escape', text.slice(i, i+2)); i += 2; continue; }
-    if(ch === '§'){ const m = text.slice(i).match(VAR_RE); if(m){ out += varSpan(m); i += m[0].length; continue; } }
+    if(ch === '§' || ch === '$'){ const m = varAt(text, i); if(m){ out += varSpan(m); i += m[0].length; continue; } }
     if(ch === '[' || ch === ']'){ out += bspan('sq', ch, base + i); i++; continue; }
     if(ch === '{' || ch === '}'){ out += bspan('cu', ch, base + i); i++; continue; }
     if(ch === '(' || ch === ')'){ out += bspan('paren', ch, base + i); i++; continue; }
@@ -52500,7 +52534,7 @@ const LOCKABLE = [
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
 if(typeof document.querySelectorAll === 'function'){
-  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider', 'textureAmbient']);   // (the zoom's slider is a view of the camera, locked with it; the Ambient slider is the light's, locked with it)
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider', 'textureAmbient', 'rimStrength']);   // (the zoom's slider is a view of the camera, locked with it; the Ambient slider is the light's, locked with it)
   for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
       + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
     if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
@@ -54690,18 +54724,29 @@ function syncLightPad(){
   // the dot slides from the heart of ☉ toward the rim
   const hx = Math.sin(a) * 15 * k, hy = -Math.cos(a) * 15 * k;
   set('lightHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) }); set('lightMainClipDot', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
-  // 🜚's spike grows out of the rim the same way: longer and stronger as the light lowers
-  const tip = 26 + 3 + 15 * k;
-  set('lightSpikeBody', { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
-  set('lightSpike', { transform: `rotate(${deg.toFixed(1)})`, opacity: k < 0.04 ? 0 : (0.35 + 0.65 * k).toFixed(2) });
-  // the rim light's handle, under the main's: hollow while it is off; where the two meet, the lens they share mixes to white
+  // 🜚's spike grows out of the rim the same way, longer and stronger as the light lowers (none overhead); the rim
+  // light has its own, as strong as the rim light is
+  const shadowOf = (body, group, d, kk, strength) => { const tip = 26 + 3 + 16*Math.min(1.3, kk);
+    set(body, { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
+    set(group, { transform: `rotate(${(d % 360).toFixed(1)})`, opacity: kk < 0.04 || strength <= 0 ? 0 : ((0.35 + 0.65*Math.min(1, kk))*strength).toFixed(2) }); };
+  shadowOf('lightSpikeBody', 'lightSpike', deg, k, 1);
+  // the rim light's handle, under the main's: hollow while it is off, fainter as it is weaker; where the two meet, the
+  // lens they share mixes to white
   const reach = lightsReach(), R = rimNow(), rk = Math.max(0, Math.min(130, R.tilt))/100, ra = R.deg*Math.PI/180;
-  const rx = Math.sin(ra)*15*rk, ry = -Math.cos(ra)*15*rk;
-  set('lightRimHandle', { cx: rx.toFixed(2), cy: ry.toFixed(2) }); set('lightOverlap', { cx: rx.toFixed(2), cy: ry.toFixed(2) });
+  const rx = Math.sin(ra)*15*rk, ry = -Math.cos(ra)*15*rk, rs = rimStrengthNow();
+  set('lightRimHandle', { cx: rx.toFixed(2), cy: ry.toFixed(2), opacity: R.on ? (0.35 + 0.65*rs/100).toFixed(2) : '1' }); set('lightOverlap', { cx: rx.toFixed(2), cy: ry.toFixed(2) });
+  shadowOf('lightRimSpikeBody', 'lightRimSpike', R.deg, rk, reach && R.on ? rs/100 : 0);
   const pick = lightPick();
   const dial = $('lightDial');
   if(dial && dial.classList){ dial.classList.toggle('has-rim', reach); dial.classList.toggle('rim-on', reach && R.on); dial.classList.toggle('pick-rim', pick === 'rim'); }
-  const row = $('lightRow'); if(row && row.classList) row.classList.toggle('has-rig', reach);
+  const row = $('lightRow'); if(row && row.classList){ row.classList.toggle('has-rig', reach); row.classList.toggle('pick-rim', reach && pick === 'rim'); }
+  // THE TWO DIALS SIDE BY SIDE (Ruby: "always aligned … it looks good when it was symmetrical"): with Main / Rim above
+  // the light dial, the camera dial steps down as far, so the two sit level
+  { const seg = $('lightSeg'), tr = row && row.closest ? row.closest('.tool-row') : null;
+    if(tr && tr.classList && tr.style){ const on = reach && !!seg && !!seg.getBoundingClientRect;
+      tr.classList.toggle('has-seg', on);
+      if(on && typeof getComputedStyle === 'function'){ const r = seg.getBoundingClientRect(), cs = getComputedStyle(seg), h = r.height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+        if(h > 0) tr.style.setProperty('--light-seg-h', h.toFixed(1) + 'px'); } } }
   { const seg = $('lightSeg'); if(seg && seg.querySelectorAll) seg.querySelectorAll('[data-light]').forEach(b => { const me = b.dataset.light === pick; b.classList.toggle('active', me); b.setAttribute('aria-pressed', String(me)); b.classList.toggle('dim', b.dataset.light === 'rim' && !R.on); }); }
   { const r7 = $('tint7Row'); if(r7 && r7.classList) r7.classList.toggle('rim-off', !R.on); }
   // the numbers beneath are the chosen light's
@@ -54713,6 +54758,18 @@ function syncLightPad(){
   const di = $('lightDegIn'), ti = $('lightTiltIn'), ai = $('lightAmbIn'), ae = typeof document !== 'undefined' ? document.activeElement : null;
   if(di && ae !== di) di.value = String(Math.round(pd)); if(ti && ae !== ti){ ti.value = String(Math.round(isNaN(pt) ? 100 : pt)); ti.max = String(dialMax()); }
   if(ai && ae !== ai) ai.value = String(Math.round(parseFloat(($('textureAmbient') || {}).value) || 0));
+  // the rim light's strength, under the dial while Rim is chosen
+  const rki = $('lightRimKIn'), rkr = $('rimStrength');
+  if(rki && ae !== rki) rki.value = String(rs); if(rkr && ae !== rkr) rkr.value = String(rs);
+}
+/** The rim light's strength, 0–100 (its hue's alpha; 0 while it is off). */
+function rimStrengthNow(){ const h = rimHex(); return h.length === 7 ? 100 : Math.round(parseInt(h.slice(7, 9), 16)/255*100); }
+/** The rim light to a strength (0 turns it off; its colour and place kept). */
+function setRimStrength(v, commit){
+  if(!commit) draftWhileDragging();
+  const a = Math.round(Math.max(0, Math.min(100, +v || 0))/100*255);
+  setColorField('textureTint7Hex', rimHex().slice(0, 7) + a.toString(16).padStart(2, '0').toUpperCase());
+  syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
 }
 // typing the dial's numbers turns the chosen light exactly
 for(const id of ['lightDegIn', 'lightTiltIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
@@ -54791,6 +54848,11 @@ if($('textureAmbient') && $('textureAmbient').addEventListener){
   $('textureAmbient').addEventListener('input', () => { draftWhileDragging(); syncLightPad(); scheduleRender(); });
   $('textureAmbient').addEventListener('change', () => { syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
 }
+if($('rimStrength') && $('rimStrength').addEventListener){
+  $('rimStrength').addEventListener('input', () => setRimStrength($('rimStrength').value, false));
+  $('rimStrength').addEventListener('change', () => setRimStrength($('rimStrength').value, true));
+}
+if($('lightRimKIn') && $('lightRimKIn').addEventListener) $('lightRimKIn').addEventListener('change', () => { const v = parseFloat($('lightRimKIn').value); if(!isNaN(v)) setRimStrength(v, true); });
 if($('lightAmbIn') && $('lightAmbIn').addEventListener) $('lightAmbIn').addEventListener('change', () => {
   const v = parseFloat($('lightAmbIn').value); if(!isNaN(v) && $('textureAmbient')) $('textureAmbient').value = String(Math.round(Math.max(0, Math.min(200, v))));
   syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
@@ -55131,6 +55193,7 @@ function addHintsButton(card, head){
   btn.addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
     showHints(card, !card.classList.contains('hints-open'), true);
+    if(btn.blur && e.pointerType !== 'keyboard' && e.detail > 0) btn.blur();   // (a tap leaves no focus ring that reads as "on")
   });
   headTools(head).appendChild(btn); showHints(card, false);
 }
@@ -55611,7 +55674,11 @@ if(typeof document.querySelectorAll === 'function'){
   if(pmlBtn && pmlBtn.addEventListener) pmlBtn.addEventListener('click', e => {
     e.preventDefault(); const on = !body.classList.contains('guide-open');
     body.classList.toggle('guide-open', on); pmlBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
-    const g = $('formattingGuidePanel'); if(on && g && 'open' in g) g.open = true; });
+    const g = $('formattingGuidePanel'); if(on && g && 'open' in g) g.open = true; fitEditorRoom(); });
+  // (Ruby: opening the guide while writing keeps the keyboard up, and the guide lies over the preview, not the poem: a
+  //  press on PML, or anywhere in the guide, never takes the focus from the poem; a tap on ⤓ Try still writes)
+  for(const el of [pmlBtn, $('formattingGuidePanel')]) if(el && el.addEventListener) el.addEventListener('mousedown', e => {
+    if(body.classList.contains('focus-mode') && !(e.target && e.target.closest && e.target.closest('input, textarea, select'))) e.preventDefault(); });
   // WHILE THE KEYBOARD IS UP the preview folds to a strip, so the poem has the room (the usability review: four lines
   // of editor under a full preview); a tap on the strip puts the keyboard away, and the preview opens again with it
   const stage = typeof document.querySelector === 'function' ? document.querySelector('.stage') : null;
@@ -55629,6 +55696,7 @@ if(typeof document.querySelectorAll === 'function'){
 // and never runs under them: it scrolls inside itself, with a thin bar, and its empty room below the last line
 // is still the text area, so a tap there writes at the end. The room is measured, not left to nested flexboxes
 // (which, when one of them refused to shrink, once left the last lines out of reach).
+const WRITING_LINES = 12;   // (the poem's lines kept in view while the keyboard is up; the preview has the rest)
 function fitEditorRoom(){
   const b = document.body;
   if(!b || !b.classList || !b.classList.contains('focus-mode') || typeof document.querySelector !== 'function') return;
@@ -55636,6 +55704,18 @@ function fitEditorRoom(){
   if(!wrap || !wrap.getBoundingClientRect) return;
   const vv = typeof window !== 'undefined' ? window.visualViewport : null, bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
   const br = bar && bar.getBoundingClientRect ? bar.getBoundingClientRect() : null, barTop = br && br.height > 0 && br.top > 0 ? br.top : bottom;   // (a fixed bar has no offsetParent)
+  // WHILE THE KEYBOARD IS UP (Ruby: "reduce the minimum lines to like… 10 or 14 so I can still see the preview"): the
+  // editor keeps about a dozen lines and the preview takes the rest of the room above them, never less than its strip
+  const stage = document.querySelector('.stage'), input = document.querySelector('.editor-input');
+  if(stage && stage.getBoundingClientRect && b.classList.contains('keyboard-open')){
+    const cs = input && typeof getComputedStyle === 'function' ? getComputedStyle(input) : null, lh = cs ? parseFloat(cs.lineHeight) || parseFloat(cs.fontSize)*1.5 || 20 : 20;
+    const free = Math.min(bottom, barTop) - stage.getBoundingClientRect().top - (wrap.getBoundingClientRect().top - stage.getBoundingClientRect().bottom) - 6;
+    const sh = Math.max(64, Math.floor(free - WRITING_LINES*lh - 16));
+    if(document.documentElement.style.getPropertyValue('--kb-stage-h') !== sh + 'px') document.documentElement.style.setProperty('--kb-stage-h', sh + 'px');
+  }
+  // (the PML guide, open while writing, lies over the preview: from its top down to the poem's)
+  if(stage && stage.getBoundingClientRect){ const st = Math.max(0, stage.getBoundingClientRect().top), gh = Math.max(110, wrap.getBoundingClientRect().top - st - 2);
+    document.documentElement.style.setProperty('--guide-top', st + 'px'); document.documentElement.style.setProperty('--guide-h', gh + 'px'); }
   const room = Math.floor(Math.min(bottom, barTop) - wrap.getBoundingClientRect().top - 6);
   if(!(room > 0)) return;
   const was = b.classList.contains('editor-fit') && document.documentElement.style.getPropertyValue('--editor-room');

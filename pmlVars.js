@@ -8,7 +8,7 @@
  * A variable becomes plain text — often PML itself, which the parser then
  * reads as if it had been typed — or an inline glyph (see glyphs.js).
  * Anything unknown is left exactly as written, so a typo shows on the page
- * instead of vanishing. \§ writes a literal §.
+ * instead of vanishing. \§ writes a literal §. On a keyboard, $ stands in for § before a variable's name ($SurfName).
  *
  * Resolution applies to the poem only. Usernames, titles and every other
  * field are never passed through here.
@@ -73,6 +73,14 @@ export const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
 const TOKEN = /(\\?)§([A-Za-z]+)(?:!([A-Za-z0-9_-]+)|:(-?\d*\.?\d+))?/g;
+/** Every variable's name (and `style`, for a named style's definition): what a `$` may stand in for. */
+export const PML_VAR_NAMES = new Set(['SurfName', 'SurfBlendMode', 'LightDir', 'TextureSeed', 'SeedPhrase', 'Reading', 'SurfParamsA', 'SurfParamsB', 'MoonPhase',
+  'UVIcon', 'Glyph', 'Spell', 'SpellRunes', 'Rune', 'SpellName', 'Font', 'Canvas', 'TypeEffect', 'Scale', 'Profile', 'RenderMs', 'CacheMB', 'Fonts', 'Build', 'Today', 'style']);
+/** $ FOR § (Ruby: § is easy on a phone's keyboard and hard on a computer's): `$` before a variable's name (or `style`) is
+ *  read as § — "$5" and "$ in my pocket" stay as typed, and `\$` is a literal $. */
+export function dollarsAsSections(text){
+  return String(text).replace(/(^|[^\\])\$([A-Za-z]+)/g, (m, pre, name) => PML_VAR_NAMES.has(name) || name.toLowerCase() === 'style' ? pre + '§' + name : m);
+}
 
 /** p (0 new, 0.5 full, 1 new) from Ruby's scale: -1 new, 0 full, +1 new. */
 export const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
@@ -84,7 +92,8 @@ export const phaseFromSigned = x => (Math.max(-1, Math.min(1, x)) + 1) / 2;
  *   spell, font, canvas, typeEffect
  */
 export function resolvePmlVariables(text, ctx){
-  if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1)) return text;
+  if(!text || (text.indexOf('§') === -1 && text.indexOf('`') === -1 && text.indexOf('$') === -1)) return text;
+  if(text.indexOf('$') !== -1) text = dollarsAsSections(text);
   // named styles: their definitions, taken out of the poem before anything else reads it
   const styles = new Map();
   if(/§style/i.test(text)) text = text.split('\n').filter(line => {

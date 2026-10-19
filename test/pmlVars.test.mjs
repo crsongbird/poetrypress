@@ -148,6 +148,13 @@ check('§UVIcon draws the sigil', R('§UVIcon') === R('§Glyph!sigil'));
   check('a style that names itself stops', typeof resolvePmlVariables('§style a = /@a\n<w/@a>', {}) === 'string');
 }
 
+// $ FOR § (Ruby): before a variable's name (or style) a $ reads as §; money and a lone $ stay as typed; \$ is a plain $
+check('$SurfName is §SurfName, "$5" and "a $ sign" stay as typed', R('Uses $SurfName for $5, a $ sign') === 'Uses Lotus Pond for $5, a $ sign' && R('$SurfName') === R('§SurfName'));
+check('…a named style defined with $style works as with §style; an unknown name ($Nope) and an escaped \\$SurfName stay as typed',
+  R('$style e = /b\nthe <coals/@e>') === R('§style e = /b\nthe <coals/@e>') && R('$Nope') === '$Nope' && R('\\$SurfName') === '\\$SurfName');
+{ const { highlightLine } = await import('../editor.js'), h = highlightLine('$SurfName $5', 0);
+  check('the editor marks $SurfName as a variable, and leaves $5 plain', /pml-var">\$SurfName</.test(h) && !/pml-var">\$5/.test(h)); }
+
 console.log();
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

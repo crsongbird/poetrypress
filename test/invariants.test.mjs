@@ -96,6 +96,9 @@ check('§5.1 every frame starts from a clean context (a frame aborted mid-blend 
     at > 0 && at < built.indexOf('</head>\n<body')); }
 check('§10 the texture service starts no timers of its own (nothing to keep Node, or a phone, awake)', !/setInterval\(/.test(src('textureService.js')));
 
+// ---- §1 rule 6: user-facing words live in strings.js ----
+check('§1 the die\'s words live in strings.js, not in the code', /export const DIE = \{/.test(raw('strings.js')) && !/'(Gently|Wildly|As usual)'/.test(src('appEvents.js')));
+
 // ---- §7 Phones: --vvh, never bare vh ----
 {
   // phone rules only: a phone's toolbar and keyboard change its viewport, which plain vh never follows

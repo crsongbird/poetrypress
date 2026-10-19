@@ -180,7 +180,7 @@ const LOCKABLE = [
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
 if(typeof document.querySelectorAll === 'function'){
-  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider', 'textureAmbient']);   // (the zoom's slider is a view of the camera, locked with it; the Ambient slider is the light's, locked with it)
+  const NOT_LOCKABLE = new Set(['soundVolume', 'uiTheme', 'cameraZoomSlider', 'textureAmbient', 'rimStrength']);   // (the zoom's slider is a view of the camera, locked with it; the Ambient slider is the light's, locked with it)
   for(const el of document.querySelectorAll('.card[data-tab="write"] input[type=range][id], .card[data-tab="style"] input[type=range][id], .card[data-tab="type"] input[type=range][id], .card[data-tab="page"] input[type=range][id], '
       + '.card[data-tab="type"] select[id], .card[data-tab="page"] select[id], .card[data-tab="style"] select[id]'))
     if(!LOCKABLE.includes(el.id) && !NOT_LOCKABLE.has(el.id)) LOCKABLE.push(el.id);
@@ -2370,18 +2370,29 @@ function syncLightPad(){
   // the dot slides from the heart of ☉ toward the rim
   const hx = Math.sin(a) * 15 * k, hy = -Math.cos(a) * 15 * k;
   set('lightHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) }); set('lightMainClipDot', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
-  // 🜚's spike grows out of the rim the same way: longer and stronger as the light lowers
-  const tip = 26 + 3 + 15 * k;
-  set('lightSpikeBody', { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
-  set('lightSpike', { transform: `rotate(${deg.toFixed(1)})`, opacity: k < 0.04 ? 0 : (0.35 + 0.65 * k).toFixed(2) });
-  // the rim light's handle, under the main's: hollow while it is off; where the two meet, the lens they share mixes to white
+  // 🜚's spike grows out of the rim the same way, longer and stronger as the light lowers (none overhead); the rim
+  // light has its own, as strong as the rim light is
+  const shadowOf = (body, group, d, kk, strength) => { const tip = 26 + 3 + 16*Math.min(1.3, kk);
+    set(body, { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
+    set(group, { transform: `rotate(${(d % 360).toFixed(1)})`, opacity: kk < 0.04 || strength <= 0 ? 0 : ((0.35 + 0.65*Math.min(1, kk))*strength).toFixed(2) }); };
+  shadowOf('lightSpikeBody', 'lightSpike', deg, k, 1);
+  // the rim light's handle, under the main's: hollow while it is off, fainter as it is weaker; where the two meet, the
+  // lens they share mixes to white
   const reach = lightsReach(), R = rimNow(), rk = Math.max(0, Math.min(130, R.tilt))/100, ra = R.deg*Math.PI/180;
-  const rx = Math.sin(ra)*15*rk, ry = -Math.cos(ra)*15*rk;
-  set('lightRimHandle', { cx: rx.toFixed(2), cy: ry.toFixed(2) }); set('lightOverlap', { cx: rx.toFixed(2), cy: ry.toFixed(2) });
+  const rx = Math.sin(ra)*15*rk, ry = -Math.cos(ra)*15*rk, rs = rimStrengthNow();
+  set('lightRimHandle', { cx: rx.toFixed(2), cy: ry.toFixed(2), opacity: R.on ? (0.35 + 0.65*rs/100).toFixed(2) : '1' }); set('lightOverlap', { cx: rx.toFixed(2), cy: ry.toFixed(2) });
+  shadowOf('lightRimSpikeBody', 'lightRimSpike', R.deg, rk, reach && R.on ? rs/100 : 0);
   const pick = lightPick();
   const dial = $('lightDial');
   if(dial && dial.classList){ dial.classList.toggle('has-rim', reach); dial.classList.toggle('rim-on', reach && R.on); dial.classList.toggle('pick-rim', pick === 'rim'); }
-  const row = $('lightRow'); if(row && row.classList) row.classList.toggle('has-rig', reach);
+  const row = $('lightRow'); if(row && row.classList){ row.classList.toggle('has-rig', reach); row.classList.toggle('pick-rim', reach && pick === 'rim'); }
+  // THE TWO DIALS SIDE BY SIDE (Ruby: "always aligned … it looks good when it was symmetrical"): with Main / Rim above
+  // the light dial, the camera dial steps down as far, so the two sit level
+  { const seg = $('lightSeg'), tr = row && row.closest ? row.closest('.tool-row') : null;
+    if(tr && tr.classList && tr.style){ const on = reach && !!seg && !!seg.getBoundingClientRect;
+      tr.classList.toggle('has-seg', on);
+      if(on && typeof getComputedStyle === 'function'){ const r = seg.getBoundingClientRect(), cs = getComputedStyle(seg), h = r.height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+        if(h > 0) tr.style.setProperty('--light-seg-h', h.toFixed(1) + 'px'); } } }
   { const seg = $('lightSeg'); if(seg && seg.querySelectorAll) seg.querySelectorAll('[data-light]').forEach(b => { const me = b.dataset.light === pick; b.classList.toggle('active', me); b.setAttribute('aria-pressed', String(me)); b.classList.toggle('dim', b.dataset.light === 'rim' && !R.on); }); }
   { const r7 = $('tint7Row'); if(r7 && r7.classList) r7.classList.toggle('rim-off', !R.on); }
   // the numbers beneath are the chosen light's
@@ -2393,6 +2404,18 @@ function syncLightPad(){
   const di = $('lightDegIn'), ti = $('lightTiltIn'), ai = $('lightAmbIn'), ae = typeof document !== 'undefined' ? document.activeElement : null;
   if(di && ae !== di) di.value = String(Math.round(pd)); if(ti && ae !== ti){ ti.value = String(Math.round(isNaN(pt) ? 100 : pt)); ti.max = String(dialMax()); }
   if(ai && ae !== ai) ai.value = String(Math.round(parseFloat(($('textureAmbient') || {}).value) || 0));
+  // the rim light's strength, under the dial while Rim is chosen
+  const rki = $('lightRimKIn'), rkr = $('rimStrength');
+  if(rki && ae !== rki) rki.value = String(rs); if(rkr && ae !== rkr) rkr.value = String(rs);
+}
+/** The rim light's strength, 0–100 (its hue's alpha; 0 while it is off). */
+function rimStrengthNow(){ const h = rimHex(); return h.length === 7 ? 100 : Math.round(parseInt(h.slice(7, 9), 16)/255*100); }
+/** The rim light to a strength (0 turns it off; its colour and place kept). */
+function setRimStrength(v, commit){
+  if(!commit) draftWhileDragging();
+  const a = Math.round(Math.max(0, Math.min(100, +v || 0))/100*255);
+  setColorField('textureTint7Hex', rimHex().slice(0, 7) + a.toString(16).padStart(2, '0').toUpperCase());
+  syncLightPad(); scheduleRender(); if(commit && typeof commitSoon === 'function') commitSoon();
 }
 // typing the dial's numbers turns the chosen light exactly
 for(const id of ['lightDegIn', 'lightTiltIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
@@ -2471,6 +2494,11 @@ if($('textureAmbient') && $('textureAmbient').addEventListener){
   $('textureAmbient').addEventListener('input', () => { draftWhileDragging(); syncLightPad(); scheduleRender(); });
   $('textureAmbient').addEventListener('change', () => { syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
 }
+if($('rimStrength') && $('rimStrength').addEventListener){
+  $('rimStrength').addEventListener('input', () => setRimStrength($('rimStrength').value, false));
+  $('rimStrength').addEventListener('change', () => setRimStrength($('rimStrength').value, true));
+}
+if($('lightRimKIn') && $('lightRimKIn').addEventListener) $('lightRimKIn').addEventListener('change', () => { const v = parseFloat($('lightRimKIn').value); if(!isNaN(v)) setRimStrength(v, true); });
 if($('lightAmbIn') && $('lightAmbIn').addEventListener) $('lightAmbIn').addEventListener('change', () => {
   const v = parseFloat($('lightAmbIn').value); if(!isNaN(v) && $('textureAmbient')) $('textureAmbient').value = String(Math.round(Math.max(0, Math.min(200, v))));
   syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); });
@@ -2811,6 +2839,7 @@ function addHintsButton(card, head){
   btn.addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();                     // never folds the section it sits in
     showHints(card, !card.classList.contains('hints-open'), true);
+    if(btn.blur && e.pointerType !== 'keyboard' && e.detail > 0) btn.blur();   // (a tap leaves no focus ring that reads as "on")
   });
   headTools(head).appendChild(btn); showHints(card, false);
 }
@@ -3291,7 +3320,11 @@ if(typeof document.querySelectorAll === 'function'){
   if(pmlBtn && pmlBtn.addEventListener) pmlBtn.addEventListener('click', e => {
     e.preventDefault(); const on = !body.classList.contains('guide-open');
     body.classList.toggle('guide-open', on); pmlBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
-    const g = $('formattingGuidePanel'); if(on && g && 'open' in g) g.open = true; });
+    const g = $('formattingGuidePanel'); if(on && g && 'open' in g) g.open = true; fitEditorRoom(); });
+  // (Ruby: opening the guide while writing keeps the keyboard up, and the guide lies over the preview, not the poem: a
+  //  press on PML, or anywhere in the guide, never takes the focus from the poem; a tap on ⤓ Try still writes)
+  for(const el of [pmlBtn, $('formattingGuidePanel')]) if(el && el.addEventListener) el.addEventListener('mousedown', e => {
+    if(body.classList.contains('focus-mode') && !(e.target && e.target.closest && e.target.closest('input, textarea, select'))) e.preventDefault(); });
   // WHILE THE KEYBOARD IS UP the preview folds to a strip, so the poem has the room (the usability review: four lines
   // of editor under a full preview); a tap on the strip puts the keyboard away, and the preview opens again with it
   const stage = typeof document.querySelector === 'function' ? document.querySelector('.stage') : null;
@@ -3309,6 +3342,7 @@ if(typeof document.querySelectorAll === 'function'){
 // and never runs under them: it scrolls inside itself, with a thin bar, and its empty room below the last line
 // is still the text area, so a tap there writes at the end. The room is measured, not left to nested flexboxes
 // (which, when one of them refused to shrink, once left the last lines out of reach).
+const WRITING_LINES = 12;   // (the poem's lines kept in view while the keyboard is up; the preview has the rest)
 function fitEditorRoom(){
   const b = document.body;
   if(!b || !b.classList || !b.classList.contains('focus-mode') || typeof document.querySelector !== 'function') return;
@@ -3316,6 +3350,18 @@ function fitEditorRoom(){
   if(!wrap || !wrap.getBoundingClientRect) return;
   const vv = typeof window !== 'undefined' ? window.visualViewport : null, bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
   const br = bar && bar.getBoundingClientRect ? bar.getBoundingClientRect() : null, barTop = br && br.height > 0 && br.top > 0 ? br.top : bottom;   // (a fixed bar has no offsetParent)
+  // WHILE THE KEYBOARD IS UP (Ruby: "reduce the minimum lines to like… 10 or 14 so I can still see the preview"): the
+  // editor keeps about a dozen lines and the preview takes the rest of the room above them, never less than its strip
+  const stage = document.querySelector('.stage'), input = document.querySelector('.editor-input');
+  if(stage && stage.getBoundingClientRect && b.classList.contains('keyboard-open')){
+    const cs = input && typeof getComputedStyle === 'function' ? getComputedStyle(input) : null, lh = cs ? parseFloat(cs.lineHeight) || parseFloat(cs.fontSize)*1.5 || 20 : 20;
+    const free = Math.min(bottom, barTop) - stage.getBoundingClientRect().top - (wrap.getBoundingClientRect().top - stage.getBoundingClientRect().bottom) - 6;
+    const sh = Math.max(64, Math.floor(free - WRITING_LINES*lh - 16));
+    if(document.documentElement.style.getPropertyValue('--kb-stage-h') !== sh + 'px') document.documentElement.style.setProperty('--kb-stage-h', sh + 'px');
+  }
+  // (the PML guide, open while writing, lies over the preview: from its top down to the poem's)
+  if(stage && stage.getBoundingClientRect){ const st = Math.max(0, stage.getBoundingClientRect().top), gh = Math.max(110, wrap.getBoundingClientRect().top - st - 2);
+    document.documentElement.style.setProperty('--guide-top', st + 'px'); document.documentElement.style.setProperty('--guide-h', gh + 'px'); }
   const room = Math.floor(Math.min(bottom, barTop) - wrap.getBoundingClientRect().top - 6);
   if(!(room > 0)) return;
   const was = b.classList.contains('editor-fit') && document.documentElement.style.getPropertyValue('--editor-room');

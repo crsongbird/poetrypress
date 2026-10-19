@@ -388,7 +388,10 @@ Other parts of a look:
     `textureRimTilt`; its hue `textureTint7Hex`, whose alpha is its
     strength: 0 is off). lightHeights adds its direct light and shine, with
     shadows marched its own way (`lightWay`); lightSparse widens its margins
-    to both lights' reach. Flat ground's `flat` includes it.
+    to both lights' reach. Flat ground's `flat` includes it. With Rim
+    chosen above the dial, the slider under it is that alpha (`rimStrength`,
+    `setRimStrength`; a view, not saved on its own), and the rim handle
+    fades with it.
   - The **Ambient slider** (`textureAmbient`, 0–200, 100 the surface's own)
     scales the ambient share's odds against the direct light, so 200% is
     twice the fill and never more than all the light.
@@ -520,6 +523,11 @@ Other parts of a look:
     scroll on it is undone and the height refitted (Firefox measured long
     edits short, and the last lines could not be reached). Fonts arriving
     and the room changing (`fitEditorRoom`) repaint it.
+  - While the phone's keyboard is up, `fitEditorRoom` leaves the poem
+    `WRITING_LINES` (12) and gives the preview the rest (`--kb-stage-h`).
+    The PML guide opened then lies over the preview (`--guide-top`,
+    `--guide-h`); a press on PML or in the guide never takes the poem's
+    focus, so the keyboard stays up.
 - **Text layout:** fitting predicts the size and checks the grid around it.
   Widths are remembered and cleared when a font arrives. Keep new text
   layout on that path: text measurement once took ~70% of the page's CPU.
@@ -653,6 +661,10 @@ Other parts of a look:
     `retireFormat4Layer`); at the defaults the pictures are unchanged.
 - **The report:** pmlVars drops a line whose surface variable has nothing to
   say (`LINE_DROP`, `ctx.surfOff`). `§Build` shows the release name.
+- **`$` for `§`** (Ruby; `§` is hard to reach on a keyboard): pmlVars
+  `dollarsAsSections` turns `$` into `§` before a known name
+  (`PML_VAR_NAMES`) or `style`, first thing; `$5` and `\$` stay as typed.
+  The editor's `varAt` marks the same names.
 - **Sounds** (murmur.js): a sound design is data (`MURMUR_DESIGN`).
   - It holds a scale (D aeolian), instruments made of real partials, and
     compositions in scale degrees, so everything is in key.

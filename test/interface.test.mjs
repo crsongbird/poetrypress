@@ -39,9 +39,6 @@ const html = src('index.html');
     [...Object.values(A.ATHANOR_STARTERS), ...Object.values(CH.TEXTURE_CHAINS)].every(t => /Try: /.test(t.teach) && t.teach.split(/\s+/).length >= 15 && !/^This (graph makes|is) /.test(t.teach)));
 }
 
-// ---- the die's words live in strings.js (§1 rule 6) ----
-check('the die\'s words live in strings.js, not in the code', /export const DIE = \{/.test(src('strings.js')) && !/'(Gently|Wildly|As usual)'/.test(src('appEvents.js')));
-
 console.log();
 console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
 process.exit(failures ? 1 : 0);
