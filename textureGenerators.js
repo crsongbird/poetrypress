@@ -180,7 +180,7 @@ export const TEXTURE_PARAMS = {
                   {key:'paper', label:'Paper', min:0, max:100, def:40, unit:''},
                   {key:'species', label:'Species', min:0, max:100, def:98, unit:''}],
   windsea:        [{key:'horizon', label:'Horizon', min:0, max:100, def:45, unit:''},
-                  {key:'clouds', label:'Clouds', min:0, max:100, def:50, unit:''},
+                  {key:'weather', label:'Weather', min:0, max:100, def:50, unit:''},
                   {key:'swirls', label:'Swirls', min:0, max:100, def:45, unit:''},
                   {key:'waves', label:'Waves', min:0, max:100, def:50, unit:''},
                   {key:'foam', label:'Foam', min:0, max:100, def:45, unit:''},
