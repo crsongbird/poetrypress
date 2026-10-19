@@ -1266,6 +1266,29 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - No preset uses one.
   - They are quiet grounds of two or three general parts, with every slider
     a plain 0–100. They are the Athanor's easiest lessons.
+- **Pixel Space** (chain `pixelspace`; one process part, `orbs`, genOrbs in
+  stepsGenerative.js; prior art docs/prior-art/space-scenes.md part A):
+  - Every grey map goes through Pixelate, then Posterize with Dither on the
+    same cell (the Pixel Size knob drives both), then a Gradient Map. The
+    chain is `crisp: true`, so genChain enlarges it pixel for pixel. A user
+    graph with a Pixelate in it is enlarged crisp too.
+  - The seed picks the nebula (a Map Switch fed by a Random Number): band,
+    clouds, filaments, or a nested switch of galaxy, galaxy in the band, and
+    ring nebula. Orbs picks its own framing: none, centred, close, horizon,
+    eclipse, belt, system, black hole or pulsar.
+  - **White is never a cloud colour** (Ruby). The nebula ramp tops out at a
+    Mix of the Nebula Hue and Starlight. White belongs to stars, a galaxy's
+    heart, a corona and a photon ring.
+  - The rim: a Smudge of the nebula toward the handle, less the nebula.
+    Smudge and Motion Blur read angles from the right (0° = +x); the dial
+    reads from the top. Convert with clamped Math, as the chain does:
+    (dial − ¼) + (dial < ¼)·(dial + ¾).
+- **Webb Sky** (chain `webb`; one process part, `spikes`, genSpikes in
+  stepsGenerative.js; docs/prior-art/space-scenes.md part B): smooth, never posterized. The
+  seed picks globules, cliffs, a shell, smoke, or a deep field. Every kind
+  is broken into clumps by a fine Perlin and streamed along the light by a
+  Motion Blur (Streaming). Spikes are six and two (Webb), never four, unless
+  someone sets the part to Hubble.
 - **Feathers and Corvid Feathers** (one process part, `feathers`;
   genFeathers in texWhimsy.js; prior art docs/prior-art/feathers-and-light.md):
   - Bird is a setting in fifths (`FEATHER_BIRDS`: plain, crow, raven, magpie,
@@ -1775,6 +1798,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
 - A texture's option value used elsewhere in the markup (the box's Frosted
   Glass is `value="frost"`) is counted once: the tests use a Set.
 - Stitches are retired by ALIAS, never deleted (old poems parse them).
+- **Scatter's Count is per canonical area.** On a real page (3072 px wide)
+  a Count of 100 throws about 2,000 marks. A dev harness that renders at
+  scale 1 on a small grid shows thirty to forty times fewer, so a graph tuned
+  there floods the page. Render through getTextureCanvas with
+  `scale: width/3072`, or set Scatter's Count Is to "for the page" (Count is
+  then the number of marks on the whole page) for stars and sparkles.
+- Perlin Noise's Scale is a frequency: bigger is finer.
 - **Measure on the right machine.** This sandbox has one core and no GPU.
   Parallel workers and shaders can't show their gains here, and timing
   harnesses lie easily. Count events rather than infer them.

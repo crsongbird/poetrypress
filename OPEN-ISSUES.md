@@ -8,6 +8,13 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- PIXEL SPACE and WEBB SKY (new, branch `space`, sheets sent): graphs of general parts with one new part each (Orbs;
+  Diffraction Spikes). The seed picks the scene: Pixel Space's nebula (band, clouds, filaments, galaxy, galaxy in the
+  band, ring nebula) and its worlds (none, one, close, horizon, eclipse, belt, system, black hole, pulsar); Webb's dust
+  (globules streaming from the light, cliffs, a shell, smoke, a deep field of galaxies). No white in the clouds.
+- DAPPLED LEAVES (found while building Webb): its Motion Blurs take the dial's turn as their angle, but Motion Blur counts
+  angles from the right and the dial from the top, so the leaves' shadows are thrown across the light, not along it.
+  Fix it (the look changes), or keep it as approved?
 - CORVID FEATHERS (new) and the four light overlays as graphs (sheet sent): the magpie's white shows on few feathers
   (its inner web, near the foot); the overlays are gentle on a pale page under Overlay, where Multiply shows them best.
 - SIX HUES: a surface may now ask for up to six pickers (none does yet; the new surfaces will). Their order on the page
@@ -37,8 +44,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   guide over the preview with the keyboard kept up. Enough preview, enough poem?
 
 ## 2 · Ruby's notes to act on
-- NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): Pixel Space and Webb (seeded
-  variety; prior art in docs/prior-art/space-scenes.md); liminal spaces (docs/prior-art/liminal-spaces.md); the
+- NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): liminal spaces (docs/prior-art/liminal-spaces.md); the
   florals (imprints, bouquets, wilting and petals, an idyllic meadow, macro bokeh).
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble

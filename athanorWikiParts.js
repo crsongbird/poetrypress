@@ -549,8 +549,9 @@ export const WIKI_PARTS = {
   posterize: {
     line: 'Reduces a gray map to a few flat steps, like a screenprint.',
     ins: { field: 'The gray map.' }, outs: { field: 'The stepped map.' },
-    set: { steps: 'How many levels of gray remain.' },
-    see: ['part:tonecurve'],
+    set: { steps: 'How many levels of gray remain.', dither: 'Pixel art’s dither: where two steps meet they interleave in a pattern instead of a hard line. A little only touches the seams; more spreads it.', cell: 'How big each dither cell is. Give it the same number as a Pixelate’s Cell Size and the pattern sits on its pixels.', pattern: 'Ordered (a 4×4 Bayer pattern, the classic), Checker (half and half, the hand-placed look), or Scattered (a cell at random, for dust).' },
+    tips: ['Pixelate, then Posterize with Dither on the same cell size, then a Gradient Map: a pixel artist’s banded, dithered ramp from any noise.'],
+    see: ['part:tonecurve', 'part:pixelate'],
   },
   transform: {
     line: 'Scales and rotates a gray map, repeating it past its edges.',
@@ -605,9 +606,9 @@ export const WIKI_PARTS = {
     see: ['mapping'],
   },
   pixelate: {
-    line: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers.',
+    line: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers or its brightest point.',
     ins: { field: 'The map.' }, outs: { field: 'The pixelated map.' },
-    set: { size: 'Cell size.', cell: 'Cell shape.' },
+    set: { size: 'Cell size.', cell: 'Cell shape.', take: 'The average of what each cell covers, or the brightest point in it, so a star smaller than a cell still lights a whole pixel.' },
   },
   twirl: {
     line: 'Twists a gray map around a point, strongest at the center and fading out at the radius.',
@@ -819,7 +820,7 @@ export const WIKI_PARTS = {
     ins: { picture: 'A picture to use as the mark (Shape: picture), or to color the marks from (Mark Colors: from the picture).', where: 'Where marks may fall: they land only on light areas.', 'which way': 'Turns each mark to the map’s value at that point.' },
     outs: { marks: 'All the marks, white on black.', heights: 'The marks as heights.', 'each mark': 'A different gray per mark.', 'in color': 'The marks in their colors, on black: the picture’s color where each lands, or the stamped picture itself.' },
     set: { shape: 'The mark.', count: 'How many.', size: 'Their size (a map on its ⚙: each mark sized by the map where it lands).', vary: 'How much sizes differ.', turn: 'How randomly each is rotated.', clump: 'Gathers them into clusters.', fade: 'How much their brightness varies.', variation: 'Another arrangement.',
-      glyphs: 'Which symbols the Glyph shape throws.', layers: 'Where marks overlap: the brightest shows, or the last thrown, the largest or the smallest lies on top.', color: 'White marks, or each in the picture’s color where it lands (the In Color output).' },
+      glyphs: 'Which symbols the Glyph shape throws.', layers: 'Where marks overlap: the brightest shows, or the last thrown, the largest or the smallest lies on top.', color: 'White marks, or each in the picture’s color where it lands (the In Color output).', per: 'Per area: Count is how thickly they lie, so a bigger page holds more. For the page: Count is how many there are on the whole page, however large it is drawn (stars in a sky, a few sparkles).' },
     tips: ['Shape: glyph, Glyphs: alchemy, Mark Colors: from the picture with a Spectrum in Picture: a rain of colored sigils.', 'On Top: largest, with Size Variety high: big marks cover the small, like leaves.'],
     see: ['mapping', 'masks'],
   },
@@ -1402,6 +1403,24 @@ export const WIKI_PARTS = {
     set: { webs: 'How many webs (one at 0).', size: 'How big.', dew: 'How much dew: none (0) to heavy beading.', drops: 'How big the drops.', torn: 'How much of the spiral is torn away.', sag: 'How much the spiral sags between spokes.', irid: 'White glints (0) or the colours thin silk splits the light into (100).', threads: 'How close the spiral is wound.', width: 'How thick the silk is drawn.', variant: 'Other webs.' },
     tips: ['Screen the glints through a Blur for the soft bloom of a web in morning sun.', 'Turn Dew to 0 and Iridescence up for a dry web shimmering in colours.'],
     see: ['part:shards', 'part:dial'],
+  },
+  spikes: {
+    line: 'A starfield as a space telescope sees it: the brightest few with diffraction spikes (Webb’s six and two, or Hubble’s four), soft stars and pinpoints; the spikes alone, and their outer parts, to colour apart.',
+    about: 'A telescope’s mirror and the struts that hold its second mirror spread a bright star’s light into spikes. Webb’s eighteen hexagonal segments give six long spikes (at 90°, 30° and 150°, each with its opposite) and its vertical strut two short horizontal ones; Hubble’s four struts give four. A spike fades as it goes out, beaded where the gaps between segments break it, and a brighter star throws longer spikes. Only the brightest few have them: the rest are soft stars and pinpoints (docs/prior-art/space-scenes.md B.1).',
+    ins: { where: 'Where stars may fall (white: anywhere). Unwired: anywhere.' },
+    outs: { stars: 'Every star, spikes and all.', spikes: 'The spikes alone.', tips: 'The outer half of each spike, to tint (a longer wavelength spreads wider, so a spike reddens toward its tip).' },
+    set: { style: 'Webb (six and two spikes) or Hubble (four).', count: 'How many stars have spikes.', length: 'How long the spikes are.', dots: 'How many other stars.', turn: 'Turns every spike a little (a telescope that rolled).', variant: 'Another sky on the same seed.' },
+    tips: ['Screen the stars through a Glow over dust for a Webb picture.', 'Gradient Map the tips toward red: Webb’s spikes redden outward.'],
+    see: ['part:scatter', 'part:glow'],
+  },
+  orbs: {
+    line: 'Worlds in the light: a planet’s disc, its terminator from the dial, bands or continents or craters wrapped round it, rings with a near and a far half and their shadows, the air at its rim; framed by the seed.',
+    about: 'Pixel artists draw a planet as a disc lit from one side: the light on the sphere under the disc gives the terminator, and a pattern wrapped round the sphere (bands for a gas giant, continents, ice, craters, cracks of lava) gives it a world. Orbs makes those as grey maps, for a Posterize and a Gradient Map to colour (docs/prior-art/space-scenes.md). The seed frames the scene: nothing at all, one world on a third of the page with moons, a close one cropped by the page, a horizon (the world below, its lit limb toward the page), an eclipse (a dark disc before a star, its corona streaming), a belt of rocks, a little system of worlds, a black hole (its accretion disc crossing it, the far side of the disc bent up round it, a thin photon ring), or a pulsar (a small fierce star, two beams along its axis, ripples spreading round it). A ring is a flat annulus through the world’s centre: its near half crosses in front, its far half passes behind, the world casts its shadow on the ring and the ring on the world.',
+    ins: { 'light from': 'The light’s direction (wire the Light Dial’s Direction). Unwired: the page’s dial.', 'light height': 'How low the light is (the Light Dial’s Height): high lights a world’s face, at the rim half of it. Unwired: the page’s.' },
+    outs: { bodies: 'Where the worlds are (white): planets, moons, rocks, a black hole’s disc, a pulsar.', shade: 'The light on them and on their rings, their shadows on each other.', surface: 'Each world’s pattern: bands, continents, ice, craters or lava (and the rings’ bands).', rings: 'Where the rings show.', glow: 'The air at each rim, brighter on the lit side; an eclipse’s star and corona; a black hole’s photon ring; a pulsar’s beams and ripples.', height: 'How far each point of a world stands toward you, for a relief.', 'each body': 'A grey for each world, the moons darker, to colour them apart.' },
+    set: { world: 'What kind of world: Seeded (the seed’s), a gas giant, rocky, ice, cratered, or molten.', frame: 'How the seed frames them: Seeded, or one framing for every seed.', size: 'How big the worlds are.', moons: 'How many moons (and how many rocks in a belt).', ring: 'How likely a world is ringed, and how wide its rings.', detail: 'How fine the pattern on each world.', turn: 'Tilts every world’s axis.', variant: 'Another framing on the same seed.' },
+    tips: ['Multiply Shade by Surface, then Pixelate, Posterize and a Gradient Map: Pixel Space’s worlds.', 'Wire Height into a Simple Lighting for worlds with relief.'],
+    see: ['part:pixelate', 'part:posterize', 'part:dial'],
   },
   surface: {
     line: 'The end of every graph: whatever reaches it is the texture. One per graph.',

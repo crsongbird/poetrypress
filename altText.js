@@ -32,7 +32,7 @@ export const TEXTURE_LOOKS = {
   stainedglass: 'panes of stained glass held in lead', brokenglass: 'broken glass scattered on the page, its shards catching the light and casting bright caustics', dewwebs: 'spider webs beaded with dew, glinting in the light', underglass: 'a sheet of glass over the page, catching the light: a window\'s reflection, scratches, fingerprints and dust', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
   crackedglaze: 'cracked and crazed ceramic glaze', crackle: 'a glaze crackled by cracks spreading across it', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, sometimes coins, and often other things left there: a candle, a cup, a letter)',
-  blackhole: 'a black hole ringed by a bright, swirling disc', turing: 'organic spots and stripes, like animal skin or coral',
+  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', webb: 'deep space in infrared: glowing dust and stars with six-pointed spikes', turing: 'organic spots and stripes, like animal skin or coral',
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolor paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
   ash: 'charred paper, ash and embers', wax: 'pools of sealing wax', dunes: 'wind-rippled sand dunes', kintsugi: 'pottery mended with seams of gold',

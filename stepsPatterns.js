@@ -154,7 +154,10 @@ export const PATTERN_STEPS = {
       // (F2: glyphs, which mark lies on top, and each mark's own color — after the old settings, so no ⚙ port moves)
       ['glyphs', 'Glyphs', 'select', 'mixed', { options: Object.keys(PAT_GLYPH_SETS), when: 'shape:glyph' }],
       PAT_SEL('layers', 'On Top', ['brightest', 'last thrown', 'largest', 'smallest']),
-      PAT_SEL('color', 'Mark Colors', ['white', 'from the picture'])],
+      PAT_SEL('color', 'Mark Colors', ['white', 'from the picture']),
+      // (COUNT FOR THE PAGE: Count marks on the whole page, however large it is drawn — stars in a sky, a few sparkles —
+      //  where per area, as it always was, a bigger page holds more of them)
+      PAT_SEL('per', 'Count Is', ['per area', 'for the page'])],
     cost: () => 3,
     doc: 'Scatters copies of a mark across the page (dots, stars, sigils, glyphs or any picture), each with its own size, turn, brightness and, if you like, color.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
@@ -162,7 +165,7 @@ export const PATTERN_STEPS = {
       const tinted = P(n, 'color', 'white') === 'from the picture', layers = P(n, 'layers', 'brightest');
       const pic = shape === 'picture' || tinted ? asImage(input(n, 1)) : null, glyphs = shape === 'glyph' ? (PAT_GLYPHS[P(n, 'glyphs', 'mixed')] || PAT_GLYPHS.mixed) : null;
       // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
-      const count = Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
+      const count = P(n, 'per', 'per area') === 'for the page' ? Math.round(num(n, 'count', 60)) : Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
       const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };

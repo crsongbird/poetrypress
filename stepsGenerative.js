@@ -1947,7 +1947,182 @@ function dwDraw(ww, wh, unit, webs, o, E){
   return [tc, gc, dc];
 }
 
+// ---- ORBS (Pixel Space's one process part; docs/prior-art/space-scenes.md A.4): spheres in a light, as Deep-Fold's pixel
+// planets are made: a disc, the sphere under it (its normal), the light from the dial on it (a terminator), a pattern
+// wrapped round it (bands, continents, ice, craters, lava), rings with a near half and a far half and each one's shadow
+// on the other, an atmosphere outside its rim. The seed frames it (one world centred, a close one cropped by the page,
+// a horizon, an eclipse, a belt of rocks, a little system) unless Framing fixes the framing.
+const ORB_WORLDS = ['seeded', 'gas', 'rocky', 'ice', 'cratered', 'molten'];
+const ORB_FRAMES = ['seeded', 'centred', 'close', 'horizon', 'eclipse', 'belt', 'system', 'black hole', 'pulsar'];
+/** Value noise in three dimensions (on a sphere's surface), lattice hashed from a seed. */
+function orbNoise(seed){
+  const H = (x, y, z) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1440670441) + Math.imul(seed, 2246822519) | 0;
+    h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0)/4294967296; };
+  const s = t => t*t*(3 - 2*t);
+  const vn = (x, y, z) => { const X = Math.floor(x), Y = Math.floor(y), Z = Math.floor(z), u = s(x - X), v = s(y - Y), w = s(z - Z);
+    const l = (a, b, t) => a + (b - a)*t;
+    return l(l(l(H(X, Y, Z), H(X + 1, Y, Z), u), l(H(X, Y + 1, Z), H(X + 1, Y + 1, Z), u), v), l(l(H(X, Y, Z + 1), H(X + 1, Y, Z + 1), u), l(H(X, Y + 1, Z + 1), H(X + 1, Y + 1, Z + 1), u), v), w); };
+  const fbm = (x, y, z, oct = 4) => { let t = 0, a = 0.5, f = 1, n = 0; for(let o = 0; o < oct; o++){ t += vn(x*f + o*17.3, y*f, z*f)*a; n += a; a *= 0.5; f *= 2.03; } return t/n; };
+  return { vn, fbm };
+}
+/** The bodies of a framing, in page units (the short side is 1), far to near. */
+function orbFrame(R, aw, ah, o){
+  const rnd = (a, b) => a + R()*(b - a), pick = a => a[Math.floor(R()*a.length)];
+  const W = ['gas', 'rocky', 'ice', 'cratered', 'molten'], world = () => o.world !== 'seeded' ? o.world : pick(W);
+  let frame = o.frame;
+  if(frame === 'seeded'){ const t = R(); frame = t < 0.16 ? 'none' : t < 0.32 ? 'centred' : t < 0.43 ? 'close' : t < 0.54 ? 'horizon' : t < 0.62 ? 'eclipse' : t < 0.72 ? 'belt' : t < 0.82 ? 'system' : t < 0.92 ? 'black hole' : 'pulsar'; }
+  if(frame === 'none') return { frame, bodies: [] };
+  const thirds = () => [aw*pick([1/3, 2/3, 0.5]) + rnd(-0.08, 0.08), ah*pick([1/3, 2/3, 0.4, 0.6]) + rnd(-0.08, 0.08)];
+  const ringed = k => o.ring > 0 && (k === 'gas' || k === 'ice' || R() < 0.3) && R() < 0.25 + o.ring*0.75;
+  const body = (cx, cy, r, kind, extra) => ({ cx, cy, r, kind, tilt: rnd(-0.45, 0.45) + o.turn, spin: rnd(0, 6.28), seed: Math.floor(R()*1e9), ring: null, rough: 0, ...extra });
+  const withRing = b => { if(ringed(b.kind)) b.ring = { rin: rnd(1.25, 1.6), rout: rnd(1.8, 2.5)*(0.8 + o.ring*0.4), open: rnd(0.14, 0.42)*(R() < 0.5 ? 1 : -1), gaps: rnd(0.2, 1) }; return b; };
+  const moons = m => { const out = [], n = Math.round(R()*o.moons*5);
+    for(let i = 0; i < n; i++){ const a = rnd(0, 6.28), d = rnd(1.5, 3.4), r = m.r*rnd(0.07, 0.26), ca = Math.cos(m.tilt), sa = Math.sin(m.tilt);
+      const ex = Math.cos(a)*d*m.r, ey = Math.sin(a)*d*m.r*(m.ring ? Math.abs(m.ring.open) : rnd(0.2, 0.7));
+      out.push(body(m.cx + ex*ca - ey*sa, m.cy + ex*sa + ey*ca, r, R() < 0.6 ? 'cratered' : pick(['rocky', 'ice', 'molten']), { behind: Math.sin(a) < 0 })); }
+    return out; };
+  const S = o.size, B = [];
+  if(frame === 'centred'){ const [x, y] = thirds(), m = withRing(body(x, y, rnd(0.13, 0.3)*S, world())); const ms = moons(m); B.push(...ms.filter(b => b.behind), m, ...ms.filter(b => !b.behind)); }
+  else if(frame === 'close'){ const a = (Math.hypot(o.toward.x, o.toward.y) > 0.05 ? Math.atan2(o.toward.y, o.toward.x) + Math.PI : rnd(0, 6.28)) + rnd(-1, 1), r = rnd(0.55, 1.05)*S, m = withRing(body(aw/2 + Math.cos(a)*r*rnd(0.6, 1.1), ah/2 + Math.sin(a)*r*rnd(0.6, 1.1), r, world())); B.push(m, ...moons(m).filter(b => !b.behind).slice(0, 2)); }
+  else if(frame === 'horizon'){ const r = rnd(1.4, 4)*S, show = rnd(0.2, 0.42), t = Math.hypot(o.toward.x, o.toward.y) > 0.05 ? Math.atan2(o.toward.y, o.toward.x) : -Math.PI/2;
+    // (a horizon below the light: the world lies on the page's far side from the dial, its lit limb toward the page)
+    const a = t + Math.PI + rnd(-0.5, 0.5), ex = Math.cos(a), ey = Math.sin(a), reach = Math.abs(ex)*aw/2 + Math.abs(ey)*ah/2;
+    const cx = aw/2 + ex*(reach + r - show*Math.min(aw, ah)), cy = ah/2 + ey*(reach + r - show*Math.min(aw, ah));
+    B.push(body(cx, cy, r, world(), { tilt: a - Math.PI/2 + rnd(-0.2, 0.2), atmos: 1 })); const [x, y] = thirds(); if(R() < 0.6) B.unshift(body(aw - x, ah - y, rnd(0.03, 0.09)*S, pick(W))); }
+  else if(frame === 'eclipse'){ const [x, y] = thirds(), r = rnd(0.12, 0.26)*S; B.push(body(x, y, r, world(), { eclipse: { dx: rnd(-0.12, 0.12)*r, dy: rnd(-0.12, 0.12)*r, r: r*rnd(0.92, 1.12) } })); }
+  else if(frame === 'belt'){ const a = rnd(-0.6, 0.6), cx = aw/2, cy = ah*rnd(0.3, 0.7), n = Math.round(rnd(22, 60)*(0.6 + o.moons*0.8));
+    for(let i = 0; i < n; i++){ const t = rnd(-1, 1)*1.2, off = (R() + R() + R() - 1.5)*0.18, near = R(), r = (0.008 + Math.pow(near, 5)*0.12)*S;
+      B.push(body(cx + Math.cos(a)*t - Math.sin(a)*off, cy + Math.sin(a)*t + Math.cos(a)*off, r, R() < 0.8 ? 'cratered' : 'rocky', { rough: rnd(0.15, 0.4), near })); }
+    B.sort((p, q) => p.near - q.near); }
+  // (a black hole: a black disc, its accretion disc crossing it, the far side of the disc bent up over it as a halo, a thin
+  //  photon ring; a pulsar: a small fierce star, two beams along its axis, ripples spreading out round it)
+  else if(frame === 'black hole'){ const [x, y] = thirds(), r = rnd(0.05, 0.11)*S;
+    B.push(body(x, y, r, 'void', { tilt: rnd(-0.35, 0.35) + o.turn, hole: { beam: R() < 0.5 ? 1 : -1 }, ring: { rin: rnd(1.5, 1.9), rout: rnd(3, 4.6), open: rnd(0.08, 0.26)*(R() < 0.5 ? 1 : -1), gaps: rnd(0.1, 0.5), lit: 1 } })); }
+  else if(frame === 'pulsar'){ const [x, y] = thirds(); B.push(body(x, y, rnd(0.012, 0.025)*S, 'star', { tilt: rnd(-1.2, 1.2) + o.turn, pulsar: { k: rnd(5, 11), reach: rnd(10, 18) } })); }
+  else { const n = 2 + Math.floor(R()*3); for(let i = 0; i < n; i++){ const r = rnd(0.04, 0.16)*S; B.push(withRing(body(rnd(0.1, 0.9)*aw, rnd(0.1, 0.9)*ah, r, i ? pick(W) : world()))); } B.sort((p, q) => p.r - q.r); }
+  return { frame, bodies: B };
+}
+// ---- DIFFRACTION SPIKES (Webb's one process part; docs/prior-art/space-scenes.md B.1): a starfield as a space telescope
+// sees it. Webb's eighteen hexagonal mirror segments diffract six long spikes (at 90°, 30° and 150°, each with its
+// opposite), and the strut that holds its secondary mirror two short horizontal ones; Hubble's four struts give four. A
+// spike is bright near the star and fades as 1/r, beaded where the segment gaps break it; its length grows with the
+// star's brightness; only the brightest few stars have them. Three populations: the spiked few, soft stars, pinpoints.
+const SPIKE_STYLES = ['webb', 'hubble'];
+function genSpikes(ww, wh, unit, o){
+  const R = mulberry32(o.seed), N = ww*wh, stars = new Float32Array(N), spikes = new Float32Array(N), tips = new Float32Array(N);
+  const add = (F, x, y, v) => { if(x < 0 || y < 0 || x >= ww || y >= wh) return; const q = (y | 0)*ww + (x | 0); F[q] = Math.min(1.5, F[q] + v); };
+  const where = o.where, placeOk = (x, y) => !where || R() < where[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))];
+  const place = () => { for(let k = 0; k < 14; k++){ const x = R()*ww, y = R()*wh; if(placeOk(x, y)) return [x, y]; } return null; };
+  // pinpoints and soft stars
+  const nDots = Math.round(o.dots*2400*ww*wh/(unit*unit)*0.6);
+  for(let i = 0; i < nDots; i++){ const p = place(); if(!p) continue; const b = Math.pow(R(), 3)*0.9 + 0.1, r = R() < 0.12 ? 0.8 + R()*1.6 : 0;
+    if(!r){ add(stars, p[0], p[1], b); continue; }
+    const rp = r*unit/600, Rr = Math.ceil(rp*2.5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(rp*rp + 1e-6); if(d2 < 6.25) add(stars, p[0] + dx, p[1] + dy, b*Math.exp(-d2)); } }
+  // the spiked few
+  const nBig = Math.round(1 + o.count*24), webb = o.style === 'webb';
+  const dirs = webb ? [90, 30, 150, 270, 210, 330].map(a => [a, 1]).concat([[0, 0.5], [180, 0.5]]) : [45, 135, 225, 315].map(a => [a, 1]);
+  for(let i = 0; i < nBig; i++){ const p = place(); if(!p) continue; const br = 0.35 + 0.65*Math.pow(R(), 1.8);
+    const L = unit*(0.04 + 0.26*o.length)*Math.sqrt(br), core = Math.max(1, unit*0.006*(0.5 + br)), beads = 0.6 + R()*0.6, turn = o.turn;
+    // the core and its halo
+    const Rr = Math.ceil(core*5); for(let dy = -Rr; dy <= Rr; dy++) for(let dx = -Rr; dx <= Rr; dx++){ const d2 = (dx*dx + dy*dy)/(core*core); add(stars, p[0] + dx, p[1] + dy, br*(Math.exp(-d2*1.5) + 0.25*Math.exp(-d2*0.15))); }
+    for(const [deg, k] of dirs){ const a = (deg + turn)*Math.PI/180, cx = Math.cos(a), cy = -Math.sin(a), len = L*k, w = Math.max(0.5, core*0.35);
+      for(let t = core*0.6; t < len; t += 0.5){ const f = br*k*(1 - t/len)*Math.min(1, core*2/t)*(0.72 + 0.28*Math.sin(t/core*beads*2.1)), x = p[0] + cx*t, y = p[1] + cy*t;
+        for(let pp = -1; pp <= 1; pp++){ const v = f*(pp ? 0.35 : 1)*0.5, xx = x - cy*pp*w, yy = y + cx*pp*w; add(spikes, xx, yy, v); add(stars, xx, yy, v); if(t > len*0.45) add(tips, xx, yy, v*(t/len)); } } } }
+  return [stars, spikes, tips];
+}
+/** Orbs: bodies, shade, surface, rings, glow, height and each body (fields on the grid). */
+function genOrbs(ww, wh, unit, o){
+  const R = mulberry32(o.seed), N = ww*wh, { bodies, frame } = orbFrame(R, ww/unit, wh/unit, o);
+  const mask = new Float32Array(N), shade = new Float32Array(N), surf = new Float32Array(N), rings = new Float32Array(N), glow = new Float32Array(N), height = new Float32Array(N), each = new Float32Array(N);
+  // the light: toward the dial's handle, as high as it is (at the rim, grazing: half of each world lit)
+  const T = Math.min(1, o.tilt), Lz0 = Math.sqrt(Math.max(0, 1 - T*T)), d = o.toward;
+  const det = o.detail;
+  bodies.forEach((b, bi) => {
+    const nz = orbNoise(b.seed), rp = b.r*unit, ca = Math.cos(b.tilt), sa = Math.sin(b.tilt), cs = Math.cos(b.spin), ss = Math.sin(b.spin);
+    // its light in its own frame (turned with its axis); an eclipsed world is lit from behind, a hairline on the dial's side
+    let lx = d.x*T, ly = d.y*T, lz = Lz0; if(b.eclipse){ lx = d.x*0.22; ly = d.y*0.22; lz = -0.975; }
+    const Lx = lx*ca + ly*sa, Ly = -lx*sa + ly*ca, Lz = lz;
+    const rg = b.ring, ci = rg ? Math.sqrt(1 - rg.open*rg.open)*Math.sign(rg.open) : 0, si = rg ? Math.abs(rg.open) : 1;     // the ring plane's normal (0, ci, si)
+    const reach = b.pulsar ? b.pulsar.reach*1.1 : rg ? rg.rout : b.eclipse ? 2.6 : b.atmos ? 1.25 : 1.12, x0 = Math.max(0, Math.floor((b.cx - b.r*reach)*unit)), x1 = Math.min(ww - 1, Math.ceil((b.cx + b.r*reach)*unit));
+    const y0 = Math.max(0, Math.floor((b.cy - b.r*reach)*unit)), y1 = Math.min(wh - 1, Math.ceil((b.cy + b.r*reach)*unit));
+    const craters = b.kind === 'cratered' ? Array.from({ length: 26 + Math.floor(R()*30) }, () => { const u = R()*2 - 1, t = R()*6.283, s = Math.sqrt(1 - u*u); return [s*Math.cos(t), u, s*Math.sin(t), 0.06 + Math.pow(R(), 2.5)*0.35]; }) : null;
+    const edge = th => 1 + b.rough*(nz.fbm(Math.cos(th)*2 + 5, Math.sin(th)*2, 0.5, 3) - 0.5)*2;
+    const pattern = (px, py, pz) => {
+      // (turned on its axis, then the world's own pattern)
+      const X = px*cs + pz*ss, Y = py, Z = -px*ss + pz*cs, f = 1.6 + det*4;
+      if(b.kind === 'gas'){ const w = nz.fbm(X*f*0.7, Y*f*0.7, Z*f*0.7) - 0.5; return 0.5 + 0.5*Math.sin((Y + w*0.35)*(5 + det*14) + nz.vn(0, Y*6, 0)*4); }
+      if(b.kind === 'rocky'){ const h = nz.fbm(X*f, Y*f, Z*f, 5); return Math.min(1, Math.max(0, (h - 0.42)*3.2 + 0.5)); }
+      if(b.kind === 'ice'){ const h = nz.fbm(X*f*1.4, Y*f*1.4, Z*f*1.4); return Math.min(1, 0.55 + (h - 0.5)*0.9 + Math.max(0, Math.abs(Y) - 0.6)*1.6); }
+      if(b.kind === 'molten'){ const h = nz.fbm(X*f, Y*f, Z*f, 5), r = 1 - Math.abs(h*2 - 1); return Math.pow(r, 6); }
+      if(b.kind === 'void') return 0;
+      if(b.kind === 'star') return 1;
+      let h = 0.55 + (nz.fbm(X*f*1.2, Y*f*1.2, Z*f*1.2) - 0.5)*0.6;
+      for(const [cx, cy, cz, cr] of craters){ const dd = Math.hypot(X - cx, Y - cy, Z - cz)/cr; if(dd < 1.25) h += dd < 1 ? -0.28*(1 - dd*dd) + 0.25*Math.pow(dd, 6) : 0.22*(1.25 - dd)*4; }
+      return Math.min(1, Math.max(0, h)); };
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+      const q = y*ww + x, ux = (x + 0.5)/unit - b.cx, uy = (y + 0.5)/unit - b.cy, a = (ux*ca + uy*sa)/b.r, c = (-ux*sa + uy*ca)/b.r, r = Math.hypot(a, c);
+      const e = b.rough ? edge(Math.atan2(c, a)) : 1, rho = r/e, cov = Math.min(1, Math.max(0, (1 - rho)*rp*e + 0.5));
+      // its rings: where the page's ray meets the ring plane (z toward us), in front of the world or behind it
+      let ringHere = 0, rz = 0, ringShade = 0, ringSurf = 0;
+      if(rg){ rz = -c*ci/si; const rr = Math.hypot(a, c, rz);
+        if(rr > rg.rin && rr < rg.rout){ const t = (rr - rg.rin)/(rg.rout - rg.rin), band = nz.vn(rr*9*(1 + rg.gaps), 3.3, 1.7);
+          ringHere = Math.min(1, Math.min(t, 1 - t)*rp*(rg.rout - rg.rin)*0.9)*(band > 0.25*rg.gaps ? 1 : 0.15);
+          // the world's shadow on it
+          const dot = a*Lx + c*Ly + rz*Lz, px = a - dot*Lx, py = c - dot*Ly, pz = rz - dot*Lz;
+          ringShade = rg.lit ? 0.55 + 0.45*band*(0.75 + 0.25*Math.sign(b.hole.beam*a)) : dot < 0 && px*px + py*py + pz*pz < 1 ? 0.12 : 0.45 + 0.45*Math.abs(ci*Ly + si*Lz);
+          ringSurf = 0.3 + 0.7*band; } }
+      const zs = rho < 1 ? Math.sqrt(1 - rho*rho) : 0;
+      const ringFront = ringHere > 0 && rz > zs;
+      if(cov > 0){
+        const lam = b.kind === 'void' ? 0 : b.kind === 'star' ? 1 : Math.max(0, a/e*Lx + c/e*Ly + zs*Lz);
+        // the rings' shadow on the world
+        let sh = 1; if(rg){ const nl = ci*Ly + si*Lz; if(Math.abs(nl) > 1e-3){ const t = -(ci*c/e + si*zs)/nl; if(t > 0){ const hx = a/e + t*Lx, hy = c/e + t*Ly, hz = zs + t*Lz, hr = Math.hypot(hx, hy, hz); if(hr > rg.rin && hr < rg.rout) sh = 0.35; } } }
+        const k = cov;
+        glow[q] *= 1 - k; mask[q] = Math.max(mask[q], k); shade[q] = shade[q]*(1 - k) + lam*sh*k; surf[q] = surf[q]*(1 - k) + pattern(a/e, c/e, zs)*k; height[q] = height[q]*(1 - k) + zs*k; each[q] = each[q]*(1 - k) + (bodies.length > 1 ? 1 - bi/bodies.length*0.8 : 1)*k;
+        if(ringHere > 0 && !ringFront) rings[q] *= 1 - k; }
+      // (a black hole's disc gives its own light: it goes to the glow, cut through the black disc where it crosses in front)
+      if(rg && rg.lit){ if(ringHere > 0 && (ringFront || cov < 1)){ const k = ringFront ? ringHere : ringHere*(1 - cov); glow[q] = Math.max(glow[q], k*ringShade); if(ringFront) mask[q] *= 1 - k; } }
+      else if(ringHere > 0 && (ringFront || cov < 1)){ const k = ringFront ? ringHere : ringHere*(1 - cov);
+        rings[q] = Math.max(rings[q], k); shade[q] = shade[q]*(1 - k) + ringShade*k; surf[q] = surf[q]*(1 - k) + ringSurf*k; }
+      // the air at its rim, brighter on the lit side; an eclipsed world's corona (the star behind it, rays streaming)
+      if(b.hole && rho > 1){ const t = (rho - 1)/0.5, top = 0.55 + 0.45*Math.max(0, -c*Math.sign(rg.open)/Math.max(1e-6, r));
+        // the halo: the disc's far side lensed up round the hole; the photon ring a hairline at its edge
+        if(t < 1 && !(ringHere > 0 && rz > 0)){ const k = Math.pow(1 - t, 1.6)*top*(0.7 + 0.3*nz.vn(Math.atan2(c, a)*4 + 9, 1.3, rho*3)); glow[q] = Math.max(glow[q], k); }
+        glow[q] = Math.max(glow[q], Math.max(0, 1 - Math.abs(rho - 1.04)/0.06)); }
+      if(b.pulsar && rho > 1){ const P = b.pulsar, along = Math.abs(c), across = Math.abs(a);
+        const beam = along > 1 && along < P.reach && across < 0.35 + along*0.06 ? (1 - along/P.reach)*(1 - across/(0.35 + along*0.06)) : 0;
+        const ripple = rho < P.reach*0.8 ? Math.pow(Math.max(0, Math.cos(rho/P.k*Math.PI*2*1.5)), 8)*(1 - rho/(P.reach*0.8))*0.8 : 0;
+        glow[q] = Math.max(glow[q], beam, ripple, Math.max(0, 1 - (rho - 1)/2.5)); }
+      else if(rho > 1 && !b.hole){ if(b.eclipse){ const ec = b.eclipse, ex = ux/b.r - ec.dx/b.r, ey = uy/b.r - ec.dy/b.r, er = Math.hypot(ex, ey)/(ec.r/b.r);
+          const disc = er < 1 ? 1 : 0, ray = 0.6 + 0.4*nz.vn(Math.atan2(ey, ex)*7 + 40, 0.5, er*0.6), cor = er >= 1 ? Math.pow(Math.max(0, 1 - (er - 1)/(1.6*ray)), 2.2) : 0;
+          glow[q] = Math.max(glow[q], disc*(1 - cov) + cor*(1 - cov)); }
+        else { const w = b.atmos ? 0.16 : 0.09, t = (rho - 1)/w; if(t < 1){ const side = Math.max(0, (a*Lx + c*Ly)/Math.max(1e-6, r)); glow[q] = Math.max(glow[q], Math.pow(1 - t, 2)*(0.3 + 0.7*side)*0.75); } } }
+      else if(b.atmos){ const t = (1 - rho)/0.05; if(t < 1) glow[q] = Math.max(glow[q], (1 - t)*0.6*Math.max(0, (a*Lx + c*Ly)/Math.max(1e-6, r) + 0.3)); }
+    }
+  });
+  return { frame, fields: [mask, shade, surf, rings, glow, height, each] };
+}
+
 export const GEN_STEPS = {
+  // DIFFRACTION SPIKES (Webb's process part): a telescope's stars, six and two spikes or four
+  spikes: { cat: 'Marks', label: 'Diffraction Spikes', ins: ['where'], outs: ['stars', 'spikes', 'tips'], io: { ins: ['field'], outs: ['field', 'field', 'field'] },
+    params: [GEN_R('style', 'Telescope: Webb · Hubble', 0), GEN_R('count', 'Spiked Stars', 30), GEN_R('length', 'Spike Length', 50), GEN_R('dots', 'Other Stars', 50), GEN_R('turn', 'Turn', 0, -30, 30), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
+    doc: 'A starfield as a space telescope sees it: the brightest few with diffraction spikes (Webb’s six and two, or Hubble’s four), soft stars and pinpoints; the spikes alone, and their outer parts, to colour apart.',
+    run(E, n){ const { ww, wh, unit, num } = E, w = E.input(n, 1);
+      const o = { seed: genSeed(E, n) ^ 0x5b1c, style: SPIKE_STYLES[Math.min(1, Math.floor(num(n, 'style', 0)/50))], count: num(n, 'count', 30)/100, length: num(n, 'length', 50)/100, dots: num(n, 'dots', 50)/100,
+        turn: num(n, 'turn', 0), where: w == null ? null : E.asField(w) };
+      return genSpikes(ww, wh, unit, o); } },
+  // ORBS (Pixel Space's process part): worlds in the dial's light, framed by the seed
+  orbs: { cat: 'Marks', label: 'Orbs', ins: ['light from', 'light height'], outs: ['bodies', 'shade', 'surface', 'rings', 'glow', 'height', 'each body'],
+    io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+    params: [GEN_R('world', 'World: Seeded · Gas · Rocky · Ice · Cratered · Molten', 0), GEN_R('frame', 'Framing: Seeded · Centred · Close · Horizon · Eclipse · Belt · System · Black Hole · Pulsar', 0),
+      GEN_R('size', 'Size', 100, 40, 250), GEN_R('moons', 'Moons', 40), GEN_R('ring', 'Rings', 50), GEN_R('detail', 'Detail', 50), GEN_R('turn', 'Turn', 0, -90, 90), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
+    doc: 'Worlds in the light: a planet’s disc, its terminator from the dial, bands or continents or craters wrapped round it, rings with a near and a far half and their shadows, the air at its rim; framed by the seed.',
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), h = E.input(n, 2), sixth = (k, m) => Math.min(m - 1, Math.floor(num(n, k, 0)/100*m));
+      const o = { seed: genSeed(E, n) ^ 0x51ab, world: ORB_WORLDS[sixth('world', 6)], frame: ORB_FRAMES[sixth('frame', 9)], size: num(n, 'size', 100)/100, moons: num(n, 'moons', 40)/100,
+        ring: num(n, 'ring', 50)/100, detail: num(n, 'detail', 50)/100, turn: num(n, 'turn', 0)*Math.PI/180, toward: { x: -dial.x, y: -dial.y },
+        tilt: typeof h === 'number' ? h : Math.max(0, Math.min(1.3, (E.ctx.lightTilt ?? 100)/100)) };
+      return genOrbs(ww, wh, unit, o).fields; } },
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
   ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
     outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',

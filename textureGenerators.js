@@ -99,6 +99,22 @@ export const TEXTURE_PARAMS = {
                   {key:'sheen', label:'Sheen', min:0, max:100, def:70, unit:''},
                   {key:'depth', label:'Depth', min:0, max:100, def:40, unit:''},
                   {key:'lift', label:'Lift', min:0, max:100, def:60, unit:''}],
+  pixelspace:     [{key:'pixel', label:'Pixel Size', min:0, max:100, def:40, unit:''},
+                  {key:'amount', label:'Nebula', min:0, max:100, def:55, unit:''},
+                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
+                  {key:'sparkles', label:'Sparkles', min:0, max:100, def:40, unit:''},
+                  {key:'worlds', label:'Worlds', min:0, max:100, def:50, unit:''},
+                  {key:'dither', label:'Dither', min:0, max:100, def:40, unit:''},
+                  {key:'swirl', label:'Swirl', min:0, max:100, def:50, unit:''},
+                  {key:'bands', label:'Bands', min:0, max:100, def:45, unit:''}],
+  webb:           [{key:'amount', label:'Dust', min:0, max:100, def:55, unit:''},
+                  {key:'streaming', label:'Streaming', min:0, max:100, def:45, unit:''},
+                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
+                  {key:'spiked', label:'Spiked Stars', min:0, max:100, def:30, unit:''},
+                  {key:'length', label:'Spike Length', min:0, max:100, def:50, unit:''},
+                  {key:'galaxies', label:'Galaxies', min:0, max:100, def:40, unit:''},
+                  {key:'glow', label:'Glow', min:0, max:100, def:50, unit:''},
+                  {key:'detail', label:'Detail', min:0, max:100, def:50, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -597,6 +613,12 @@ export const TEXTURE_CAPS = {
   // (the crow family: every colour a hue, defaults a raven's; Sheen turns with the light dial)
   corvids:       { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'], light:true, tints:6,
                    tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#0E0E14','#0A0A10','#5A3AC8','#2A8AA8','#F2F2F0','#060608'] },
+  // (pixel-art space: every colour a hue, defaults those of Ruby's own pixel nebula; the light dial lights the rims and the worlds)
+  pixelspace:    { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
+                   tintLabels:['Deep Sky Hue','Mid Sky Hue','Nebula Hue','Rim Hue','World Hue','Starlight Hue'], tintDefaults:['#0E0726','#3A1C78','#E2367F','#46A8E6','#9A6BE0','#FFF4FA'] },
+  // (Webb's false colour: every colour a hue, defaults its orange dust and blue stars; the light dial lights the dust and streams it)
+  webb:          { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
+                   tintLabels:['Deep Sky Hue','Dust Shadow Hue','Dust Hue','Dust Light Hue','Starlight Hue','Ionized Gas Hue'], tintDefaults:['#04050E','#3A1406','#C2581A','#FFC774','#A9C4FF','#3E5CC8'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -825,6 +847,10 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'corvids'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'webb'){
+    result = genChain(type, w, h, light, extra, tint1 || '#04050E', tint2 || '#3A1406');   // (chains.js)
+  } else if(type === 'pixelspace'){
+    result = genChain(type, w, h, light, extra, tint1 || '#0E0726', tint2 || '#3A1C78');   // (chains.js)
   } else if(type === 'dappled'){
     result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
   } else if(type === 'windowlight'){
@@ -1190,7 +1216,8 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   }
   sx.putImageData(im, 0, 0);
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  // (a graph with Pixelate in it, pixel art, is enlarged pixel for pixel; every other is smoothed)
+  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !/"pixelate"/.test(typeof extra.graph === 'string' ? extra.graph : JSON.stringify(extra.graph || '')); cx.drawImage(small, 0, 0, w, h);
   return c;
 }
 // The Athanor's STEP PREVIEWS: every node's first output, small, as tiles of
@@ -1252,7 +1279,8 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   sx.putImageData(im, 0, 0);
   if(ww === w && wh === h) return small;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  // (a CRISP chain, pixel art, is enlarged pixel for pixel; every other is smoothed)
+  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !chain.crisp; cx.drawImage(small, 0, 0, w, h);
   return c;
 }
 export function getTextureCanvas(type, w, h, opts = {}){
