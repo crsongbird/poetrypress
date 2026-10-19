@@ -382,6 +382,7 @@ export const STEP_DOCS = {
   ribbons: 'Curtains of light hung in sheets, like silk ribbons or an aurora, in one color or blended between two.',
   bokeh: 'Out-of-focus lights through a real lens: soft discs whose blur follows each one’s distance from the focal plane.',
   cityscape: 'A city at night across the water: a skyline of mostly dark windows, a few of them lit, reflected below.',
+  feathers: 'Feathers scattered over a transparent ground: shafts and barbed vanes, splitting, fluffing to down at the foot, lit by the dial and lifted off the page by their shadows.',
   lotus: 'Flowers floating on water, from a bell bud through lotus to hydrangea, each petal shaded and throwing its shadow.',
   transmutation: 'A transmutation circle, drawn by hand or machined: rings of glyphs, polygrams and planets, placed by the dial.',
   rosettes: 'Guilloché: banknote rosettes woven of many turned copies of one wavy loop over a field of fine waves, engraved and lit.',

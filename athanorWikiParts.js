@@ -1205,6 +1205,15 @@ export const WIKI_PARTS = {
     tips: ["The Glow Hue is the city’s glow: the sky above the lights, lit from below."],
     see: ["seeds", "color"],
   },
+  feathers: {
+    line: 'Feathers scattered over a transparent ground: shafts and barbed vanes, splitting, fluffing to down at the foot, lit by the dial and lifted off the page by their shadows.',
+    about: 'Each feather is a shaft (the rachis) with a vane on each side made of fine barbs that lean toward the tip. Where the vane is whole the barbs hold together; where it splits they part in a V, as a real feather does when it is ruffled; where it is down they are loose and wavy (always at the foot, the afterfeather, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen toward the bottom) and each one’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The ground is transparent, so the feathers lie on whatever is under them.',
+    ins: { 'light from': 'The light’s direction (wire the Light Dial): the vane facing it is brighter, and the shadows fall away from it.', 'feather hue': 'The feathers (empty: a warm white).', 'tip hue': 'Their tips, bars and eyes (empty: a soft brown).' },
+    outs: { feathers: 'The feathers, on a transparent ground.' },
+    set: { size: 'Feather Size.', count: 'How many feathers.', fluff: 'From crisp vanes to soft down.', curl: 'How much the shafts bend.', splits: 'How often the vanes part into gaps.', marks: 'Plain at 0, bars across the vanes in the middle, eyes near the tips at 100, in the Tip Hue.', depth: 'How far off some feathers lie: smaller, fainter and out of focus.', lift: 'How far above the page they float: the length and strength of their shadows.', variant: 'Other feathers in other places.' },
+    tips: ['Their ground is transparent: on a pale page try Multiply, on a dark one Screen, and over another surface Soft Light.'],
+    see: ['part:lotus', 'part:scatter'],
+  },
   lotus: {
     line: "Flowers floating on water, from a bell bud through lotus to hydrangea, each petal shaded and throwing its shadow.",
     about: "Blooms float on a transparent ground (the page shows through). Flower runs through seven kinds in turn, each blending into the next: bell bud, cherry blossom, day lily, lotus (with its seed pod), daisy, rosette and hydrangea. The light comes from the dial: each petal’s fold turns its far half into shade, each bloom brightens on its lit side and throws its shadow on the water away from the light, and each ring of petals shades the ring beneath it. A lower light throws longer shadows.",

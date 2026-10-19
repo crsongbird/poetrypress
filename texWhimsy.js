@@ -1030,3 +1030,135 @@ export function genMoon(w,h,amt,zoom,form,night){
 // PAINTED LANDSCAPE is a chain now: painted sky → painted ridges → watercolour wash (stepsWhimsy.js, chains.js 'landscape').
 
 // FLOW-FIELD INK is a chain now: one Flow Lines part (stepsWhimsy.js whimFlowLines; chains.js 'flowfield').
+
+/**
+ * FEATHERS (Ruby: "procedurally generated feathers in the background that you can fade or blend with a page color or
+ * with a simple texture"), on a transparent ground. A feather is a shaft (the rachis) with a vane each side made of
+ * barbs: fine lines leaving the shaft toward the tip, held together where the vane is whole, parting where it splits
+ * (the V-shaped gaps a real feather shows), loose and wavy where it is down (the fluff at every feather's foot, and the
+ * whole feather as Fluff rises). Kinds, by the seed per feather: a contour feather (broad, round-tipped, even), a
+ * flight feather (long, its leading vane narrow), a plume (soft, drooping). The light dial lights each vane as a
+ * shallow roof over the shaft (the side facing the light brighter) and casts a soft shadow away from it (Lift);
+ * Depth puts some feathers farther off: smaller, fainter and out of focus.
+ *  o: size, count, fluff, curl, splits, marks (0 plain · bars · eyes), depth, lift (all 0..1 but size and count, ×1),
+ *     light (degrees), hue, tip (hex), seed (the composition: scattered, drifting, fanned or fallen)
+ */
+export function genFeathers(w, h, o){
+  const unit = Math.min(w, h), R = Math.random, rnd = (a, b) => a + R()*(b - a);
+  const rgbOf = hx => { const c = parseHex(hx); return [c.r, c.g, c.b]; }, base = rgbOf(o.hue || '#ECE6DC'), tip = rgbOf(o.tip || '#7C6A5C');
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
+  const css = (c, al) => `rgba(${Math.round(Math.max(0, Math.min(255, c[0])))},${Math.round(Math.max(0, Math.min(255, c[1])))},${Math.round(Math.max(0, Math.min(255, c[2])))},${al.toFixed(3)})`;
+  const lv = lightVec(o.light == null ? 315 : o.light), lm = Math.hypot(lv.lx, lv.ly), tlx = lm > 1e-4 ? -lv.lx/lm : 0, tly = lm > 1e-4 ? -lv.ly/lm : 0;   // (toward the light)
+  // THE COMPOSITION, by the seed: where the feathers lie and which way they point
+  const comp = ['scatter', 'drift', 'fan', 'fallen'][Math.floor(R()*4)], drift = rnd(-0.9, 0.9) + Math.PI*0.5*(R() < 0.5 ? 1 : -1);
+  const n = Math.max(1, Math.round(canonArea(w, h)/(unit*unit/(cpx(1)*cpx(1)))*0 + (w*h)/(unit*unit)*(4 + 26*o.count)/(o.size*o.size*0.9 + 0.1)));
+  const F = [];
+  for(let k = 0; k < Math.min(400, n); k++){
+    const z = o.depth > 0 ? Math.pow(R(), 0.8) : 1;               // 1 near, toward 0 far
+    let x = R()*w, y = R()*h, ang;
+    if(comp === 'drift') ang = drift + rnd(-0.35, 0.35);
+    else if(comp === 'fan'){ const cx = w*rnd(0.3, 0.7), cy = h*1.08; x = cx + (R() - 0.5)*w*0.5; y = h*rnd(0.15, 1.0); ang = Math.atan2(y - cy, x - cx) + Math.PI/2 + rnd(-0.25, 0.25); }
+    else if(comp === 'fallen'){ y = h*(1 - Math.pow(R(), 1.6)*0.85); ang = rnd(-Math.PI, Math.PI); }
+    else ang = rnd(-Math.PI, Math.PI);
+    const kind = R() < 0.18 ? 'plume' : R() < 0.45 ? 'flight' : 'contour';
+    const L = unit*o.size*(kind === 'flight' ? rnd(0.32, 0.5) : kind === 'plume' ? rnd(0.22, 0.34) : rnd(0.18, 0.3))*(0.55 + 0.45*z);
+    F.push({ x, y, ang, kind, L, z, flip: R() < 0.5 ? 1 : -1, curl: (o.curl*0.6 + rnd(-0.12, 0.12))*(R() < 0.5 ? 1 : -1), tone: rnd(-0.08, 0.08), seed: R() });
+  }
+  F.sort((a, b) => a.z - b.z);
+  // three depths, each on its own canvas: the far ones drawn small and scaled up (out of focus), fainter
+  const out = document.createElement('canvas'); out.width = w; out.height = h; const ox = out.getContext('2d', CPU);
+  const shades = document.createElement('canvas'), sd = Math.max(4, Math.round(unit/90)); shades.width = Math.ceil(w/sd); shades.height = Math.ceil(h/sd);
+  const sx = shades.getContext('2d', CPU);
+  const bands = [[0, 0.34], [0.34, 0.67], [0.67, 1.01]];
+  for(const [z0, z1] of bands){
+    const group = F.filter(f => f.z >= z0 && f.z < z1); if(!group.length) continue;
+    const zm = (z0 + z1)/2, blur = o.depth*(1 - zm)*(1 - zm), div = 1 + blur*7, fade = 1 - o.depth*(1 - zm)*0.65;
+    const lc = document.createElement('canvas'); lc.width = Math.ceil(w/div); lc.height = Math.ceil(h/div); const x = lc.getContext('2d', CPU);
+    x.scale(1/div, 1/div); x.lineCap = 'round';
+    // the shadows first, on the small canvas (a cheap blur), away from the light
+    if(o.lift > 0 && lm > 1e-4){ sx.clearRect(0, 0, shades.width, shades.height); sx.save(); sx.scale(1/sd, 1/sd);
+      const off = unit*0.035*o.lift*(0.4 + 0.6*zm)*Math.min(1, lm);
+      for(const f of group) silhouette(sx, f, f.x - tlx*off, f.y - tly*off, 'rgba(0,0,0,1)');
+      sx.restore(); ox.save(); ox.globalAlpha = 0.32*o.lift*fade*Math.min(1, lm*1.4); ox.imageSmoothingEnabled = true; ox.drawImage(shades, 0, 0, w, h); ox.restore(); }
+    for(const f of group) feather(x, f);
+    ox.save(); ox.globalAlpha = fade; ox.imageSmoothingEnabled = true; ox.drawImage(lc, 0, 0, w, h); ox.restore();
+  }
+  return out;
+
+  // the vane's half-width at t (0 the foot, 1 the tip) on side s (+1 / −1), as a share of the length
+  function halfWidth(f, t, s){
+    const lead = f.kind === 'flight' && s === f.flip ? 0.42 : 1;
+    const wmax = f.kind === 'flight' ? 0.11 : f.kind === 'plume' ? 0.2 : 0.17;
+    const body = Math.pow(Math.sin(Math.PI*Math.min(1, t*0.92 + 0.04)), f.kind === 'contour' ? 0.55 : 0.8);
+    const tipRound = t > 0.85 ? Math.sqrt(Math.max(0, 1 - Math.pow((t - 0.85)/0.15, 2))) : 1;
+    return wmax*lead*body*tipRound*(t < 0.12 ? 0.55 + t*3.7 : 1);
+  }
+  // the shaft at t: a gentle curve (Curl) in the feather's own frame, x across, y along (the foot at 0, the tip at −L)
+  function shaft(f, t){ return [f.curl*f.L*0.22*t*t, -f.L*t]; }
+  function toPage(f, p, X, Y){ const c = Math.cos(f.ang), s = Math.sin(f.ang); return [X + p[0]*c - p[1]*s, Y + p[0]*s + p[1]*c]; }
+  function silhouette(x, f, X, Y, fill){
+    x.fillStyle = fill; x.beginPath();
+    for(let i = 0; i <= 24; i++){ const t = i/24, p = shaft(f, t), hw = halfWidth(f, t, 1)*f.L, q = toPage(f, [p[0] + hw, p[1] - hw*0.4], X, Y); i ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]); }
+    for(let i = 24; i >= 0; i--){ const t = i/24, p = shaft(f, t), hw = halfWidth(f, t, -1)*f.L, q = toPage(f, [p[0] - hw, p[1] - hw*0.4], X, Y); x.lineTo(q[0], q[1]); }
+    x.closePath(); x.fill();
+  }
+  function feather(x, f){
+    const L = f.L, fr = mulberryLocal(Math.floor(f.seed*1e9) >>> 0), r = (a, b) => a + fr()*(b - a);
+    const fluff = Math.min(1, o.fluff + (f.kind === 'plume' ? 0.45 : 0));
+    const lw = Math.max(cpx(0.35), L*0.005), barbs = Math.round(Math.min(220, L/Math.max(cpx(0.9), L*0.0065)));
+    // the splits: places along each side where the vane parts
+    const splitAt = [[], []]; for(const si of [0, 1]){ const ns = Math.round(o.splits*6*r(0.5, 1.4)); for(let k = 0; k < ns; k++) splitAt[si].push([r(0.18, 0.9), r(0.04, 0.12)]); }
+    const c = Math.cos(f.ang), s = Math.sin(f.ang);
+    // the vane's body under its barbs (whole where the feather is firm, almost none where it is down), the feather's hue
+    // toward the tip's along it
+    { const A = toPage(f, [0, 0], f.x, f.y), B = toPage(f, [0, -L], f.x, f.y), gr = x.createLinearGradient(A[0], A[1], B[0], B[1]);
+      gr.addColorStop(0, css(base.map(v => v*(1 + f.tone)), 0)); gr.addColorStop(0.18, css(base.map(v => v*(1 + f.tone)), 0.42*(1 - fluff)));
+      gr.addColorStop(0.75, css(mix(base, tip, 0.45).map(v => v*(1 + f.tone)), 0.5*(1 - fluff))); gr.addColorStop(1, css(mix(base, tip, 0.85).map(v => v*(1 + f.tone)), 0.5*(1 - fluff)));
+      silhouette(x, f, f.x, f.y, gr); }
+    // the eye near the tip (Markings past two thirds): rings of the tip's hue round a dark heart, a pale halo
+    const eyeK = o.marks >= 0.66 ? Math.min(1, (o.marks - 0.66)/0.34) : 0, eyeAt = shaft(f, 0.78), eyeR = L*0.14*(0.7 + 0.3*eyeK);
+    if(eyeK > 0){ const E0 = toPage(f, eyeAt, f.x, f.y);
+      for(const [rk, colr, al] of [[1, mix(base, [255, 244, 214], 0.6), 0.75], [0.78, tip, 0.9], [0.5, mix(tip, [30, 90, 110], 0.5), 0.9], [0.28, [18, 22, 48], 0.95]]){
+        x.fillStyle = css(colr, al*eyeK); x.beginPath(); x.ellipse(E0[0], E0[1], eyeR*rk*0.82, eyeR*rk*1.1, f.ang, 0, Math.PI*2); x.fill(); } }
+    for(const side of [1, -1]){
+      const si = side > 0 ? 0 : 1;
+      // the vane facing the light is brighter (a shallow roof over the shaft)
+      const nx = side*c, ny = side*s, lit = 1 + 0.16*Math.min(1, lm*1.5)*(nx*tlx + ny*tly);
+      let open = 0;
+      for(let b = 0; b < barbs; b++){
+        const t = 0.03 + 0.97*b/barbs, p = shaft(f, t), hw = halfWidth(f, t, side)*L; if(hw <= 0.3) continue;
+        // down at the foot (the afterfeather), and everywhere as Fluff rises
+        const down = Math.max(fluff, t < 0.16 ? 1 - t/0.16 : 0);
+        let lean = 0.62 + 0.25*t;                                  // the barbs lean toward the tip
+        for(const [at, wd] of splitAt[si]) if(t > at && t < at + wd) open = Math.max(open, 1 - (t - at)/wd);
+        lean += open*0.85; open *= 0.8;
+        const len = hw/Math.max(0.35, Math.sin(lean))*(1 + down*0.35)*r(0.94, 1.06);
+        const ax = side*Math.sin(lean), ay = -Math.cos(lean);
+        const bend = (0.12 + 0.25*down)*len;
+        const sx0 = p[0], sy0 = p[1], ex = sx0 + ax*len, ey = sy0 + ay*len - bend*0.4;
+        const mx = sx0 + ax*len*0.55 + down*r(-0.45, 0.45)*len, my = sy0 + ay*len*0.55 - bend*0.15 + down*r(-0.45, 0.45)*len;
+        // its colour: the feather's hue toward the tip's, and the markings
+        let tt = Math.pow(t, 1.6)*0.85;
+        if(o.marks > 0.05 && o.marks < 0.66){ const band = 0.5 + 0.5*Math.sin(t*Math.PI*(5 + 6*o.marks) + f.seed*6); tt = Math.max(tt, band > 0.7 ? Math.min(1, o.marks*1.6) : 0); }
+        let col = mix(base, tip, tt);
+        // (through the eye the barbs only texture it)
+        const inEye = eyeK > 0 && Math.hypot((mx - eyeAt[0])/0.82, (my - eyeAt[1])/1.1) < eyeR*1.05 ? 0.3 : 1;
+        col = col.map(v => v*lit*(1 + f.tone));
+        const P0 = toPage(f, [sx0, sy0], f.x, f.y), P1 = toPage(f, [mx, my], f.x, f.y), P2 = toPage(f, [ex, ey], f.x, f.y);
+        x.strokeStyle = css(col, (0.7 - 0.3*down)*(0.8 + 0.2*r(0, 1))*inEye); x.lineWidth = lw*(1 - 0.35*down);
+        x.beginPath(); x.moveTo(P0[0], P0[1]); x.quadraticCurveTo(P1[0], P1[1], P2[0], P2[1]); x.stroke();
+        // and the down's wisps: a second, looser strand
+        for(let q = 0; q < Math.round(down*3); q++){ const W0 = toPage(f, [mx + r(-1, 1)*len*0.5, my + r(-1, 1)*len*0.5], f.x, f.y), W1 = toPage(f, [ex + r(-1, 1)*len*0.45, ey + r(-1, 1)*len*0.45], f.x, f.y);
+          x.strokeStyle = css(col, 0.14 + 0.16*down); x.lineWidth = lw*0.7; x.beginPath(); x.moveTo(P0[0], P0[1]); x.quadraticCurveTo(W0[0], W0[1], W1[0], W1[1]); x.stroke(); }
+      }
+    }
+    // the shaft over the vanes: the quill pale and stiff at the foot, thinning to the tip
+    x.lineCap = 'round';
+    for(let i = 0; i < 16; i++){ const t0 = i/16, t1 = (i + 1)/16, a = toPage(f, shaft(f, t0), f.x, f.y), b = toPage(f, shaft(f, t1), f.x, f.y);
+      x.strokeStyle = css(mix(base, [255, 250, 240], 0.35).map(v => v*(1 + f.tone)), 0.85); x.lineWidth = Math.max(cpx(0.4), L*0.012*(1 - 0.8*t0));
+      x.beginPath(); x.moveTo(a[0], a[1]); x.lineTo(b[0], b[1]); x.stroke(); }
+    const q = toPage(f, [0, L*0.07], f.x, f.y), a0 = toPage(f, [0, 0], f.x, f.y);
+    x.lineWidth = Math.max(cpx(0.5), L*0.014); x.beginPath(); x.moveTo(a0[0], a0[1]); x.lineTo(q[0], q[1]); x.stroke();   // the calamus, bare
+  }
+  function mulberryLocal(a){ return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; }; }
+}

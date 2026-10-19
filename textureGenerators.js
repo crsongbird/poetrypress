@@ -90,6 +90,14 @@ export const TEXTURE_PARAMS = {
                   {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
                   // soft speckled, noisy highlights over the flakes (0: none)
                   {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
+  feathers:      [{key:'zoom',  label:'Feather Size',    min:40, max:250, def:100, unit:'%'},
+                  {key:'amt',   label:'Feathers',        min:0,  max:100, def:30,  unit:''},
+                  {key:'fluff', label:'Fluff',           min:0,  max:100, def:15,  unit:''},
+                  {key:'curl',  label:'Curl',            min:0,  max:100, def:30,  unit:''},
+                  {key:'splits', label:'Splits',          min:0,  max:100, def:30,  unit:''},
+                  {key:'marks', label:'Markings',        min:0,  max:100, def:0,   unit:'', ticks:[0,33,66,100], names:['Plain','Bars','Bars','Eyes']},
+                  {key:'depth', label:'Depth',           min:0,  max:100, def:50,  unit:''},
+                  {key:'lift',  label:'Lift',            min:0,  max:100, def:50,  unit:''}],
   flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
                   {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:18},
                   // the third, unusual knob: which flower. 50 is the lotus
@@ -565,6 +573,10 @@ export const TEXTURE_CAPS = {
   // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
   metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
+  // feathers on a transparent ground, made to lie on the page's colour or a simple surface (Ruby): Normal as painted,
+  // Multiply on a pale page, Screen on a dark one, Soft Light or Overlay into another surface
+  feathers:      { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'],
+                   light:true, tints:2, tintLabels:['Feather Hue','Tip Hue'], tintDefaults:['#ECE6DC','#7C6A5C'] },
   // real colour on a transparent ground: Normal shows the flowers as painted
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
                    light:true, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
@@ -781,6 +793,8 @@ export function textureCacheMB(){ let px = 0; for(const c of textureCache.values
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
   let result;  if(type === 'clouds'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
+  } else if(type === 'feathers'){
+    result = genChain(type, w, h, light, extra, tint1 || '#ECE6DC', tint2 || '#7C6A5C');   // Feathers (chains.js)
   } else if(type === 'flowers'){
     result = genChain(type, w, h, light, extra, tint1, tint2);           // Lotus Pond (chains.js)
   } else if(type === 'inkbleed'){

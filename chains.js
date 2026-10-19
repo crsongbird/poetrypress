@@ -556,6 +556,26 @@ export const TEXTURE_CHAINS = {
       ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
     wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+  // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
+  // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
+  feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air.', nodes: [
+      ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
+      ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
+      ['knob', { slot: '3', name: 'Fluff', def: 15 }, 40, 200],                    // 3
+      ['knob', { slot: '4', name: 'Curl', def: 30 }, 40, 280],                     // 4
+      ['knob', { slot: '5', name: 'Splits', def: 30 }, 40, 360],                   // 5
+      ['knob', { slot: '6', name: 'Markings', def: 0 }, 40, 440],                  // 6
+      ['knob', { slot: '7', name: 'Depth', def: 50 }, 40, 520],                    // 7
+      ['knob', { slot: '8', name: 'Lift', def: 50 }, 40, 600],                     // 8
+      ['dial', {}, 40, 680],                                                       // 9
+      ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760],                        // 10
+      ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840],                            // 11
+      ['feathers', { size: 100, '~size': '40,250', count: 30, '~count': '0,100', fluff: 15, '~fluff': '0,100', curl: 30, '~curl': '0,100', splits: 30, '~splits': '0,100',
+        marks: 0, '~marks': '0,100', depth: 50, '~depth': '0,100', lift: 50, '~lift': '0,100' }, 320, 300],   // 12
+      ['surface', { name: 'Feathers', ground: 'colour' }, 600, 320]],              // 13
+    wires: [[1, 1, 12, paramPort('feathers', 'size')], [2, 1, 12, paramPort('feathers', 'count')], [3, 1, 12, paramPort('feathers', 'fluff')], [4, 1, 12, paramPort('feathers', 'curl')],
+      [5, 1, 12, paramPort('feathers', 'splits')], [6, 1, 12, paramPort('feathers', 'marks')], [7, 1, 12, paramPort('feathers', 'depth')], [8, 1, 12, paramPort('feathers', 'lift')],
+      [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [12, 1, 13, 1]] },
   summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
       ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
       ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)

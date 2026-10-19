@@ -274,6 +274,7 @@ export const UI_STRINGS = {
   'label.hue_4':                                "Hue 4",
   'label.hue_5':                                "Hue 5",
   'label.hue_6':                                "Hue 6",
+  'option.feathers':                           "Feathers",
   'option.lotus_pond':                         "Lotus Pond",
   'option.painter_s_frustration':              "Painter's Frustration",
   'option.90s_dots':                           "Retro Dots",

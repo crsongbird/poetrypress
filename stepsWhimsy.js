@@ -27,7 +27,7 @@
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
 import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
-import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh } from './texWhimsy.js';
+import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh, genFeathers } from './texWhimsy.js';
 import { skyRingFrame } from './stepsGenerative.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -1032,6 +1032,14 @@ export const WHIMSY_STEPS = {
     params: [WHIM_R('zoom', 'Focal Plane', 100, 25, 400), WHIM_R('amount', 'Orb Count', 100, 20, 260), WHIM_R('form', 'Aperture', 0), WHIM_R('object', 'Object Shape', 0), WHIM_R('spread', 'Color Variation', 0, 0, 180), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
     (E, n, w, h) => { const t1 = wholeHex(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 0), o = E.num(n, 'object', 0), sp = E.num(n, 'spread', 0);
       return () => genBokeh(w, h, a, z, f, o, sp, t1); }),
+  // Feathers (Ruby: "procedurally generated feathers in the background"), on a transparent ground, under the texture's
+  // own seed + Variant
+  feathers: kitWhole({ cat: 'Marks', label: 'Feathers', ins: ['light from', 'feather hue', 'tip hue'], outs: ['feathers'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
+    params: [WHIM_R('size', 'Feather Size', 100, 40, 250), WHIM_R('count', 'Feathers', 30), WHIM_R('fluff', 'Fluff', 15), WHIM_R('curl', 'Curl', 30), WHIM_R('splits', 'Splits', 30),
+      WHIM_R('marks', 'Markings', 0), WHIM_R('depth', 'Depth', 50), WHIM_R('lift', 'Lift', 50), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 5 },
+    (E, n, w, h) => { const light = wholeDial(E, n, 1), hue = wholeHex(E, n, 2), tip = wholeHex(E, n, 3), v = k => E.num(n, k, 0)/100;
+      const o = { size: Math.max(0.4, E.num(n, 'size', 100)/100), count: v('count'), fluff: v('fluff'), curl: v('curl'), splits: v('splits'), marks: v('marks'), depth: v('depth'), lift: v('lift'), light, hue, tip };
+      return () => genFeathers(w, h, o); }),
   // Fractal Moon, as a part (drawn as it always was, under the texture's own seed + Variant)
   moon: { cat: 'Textures', label: 'Fractal Moon', ins: [], outs: ['moon'], io: { outs: ['image'] },
     params: [WHIM_R('zoom', 'Moon Size', 100, 60, 150), WHIM_R('amount', 'Fractal Depth', 100, 20, 190), WHIM_R('form', 'Clouds', 30), WHIM_R('night', 'Night Sky', 70), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,

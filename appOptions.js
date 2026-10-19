@@ -706,7 +706,7 @@ export const WELCOME_POEM = "## WTF is [PoetryPress]?\n\n>  [{\"well, it's a wei
 export const ATHANOR_BASICS = { glyph: '🜛', name: 'Basics', types: ['cells', 'checker', 'softgradient', 'plainnoise', 'polka', 'stripes'] };
 export const TEXTURE_GROUPS = [
   { glyph: '🜃', name: 'Paper & Grounds', types: ['coldpress', 'grain', 'linen', 'oldpaper'] },
-  { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'magicparticles', 'clouds', 'embers', 'aurora'] },
+  { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'feathers', 'magicparticles', 'clouds', 'embers', 'aurora'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
   { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'skyring', 'ringworld'] },
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
