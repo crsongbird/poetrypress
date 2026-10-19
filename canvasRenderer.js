@@ -970,7 +970,9 @@ function computeLineWidths(ctx, line, baseSize, fontDef){
 // computeLineWidths returns, measured at the winning size, so the draw pass
 // can look these up instead of remeasuring everything from scratch a second
 // time immediately after this function already measured it once.
-function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing){
+function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing, S = 1){
+  // (S, this render's scale: the grid and the floor are in EXPORT pixels, so the preview picks the size the saved
+  //  image will — Ruby: the text came out smaller in the saved image than in the preview)
   // The largest size, on the grid maxSizePx, maxSizePx-2, … (above 8), at
   // which every line fits — exactly what stepping down 2px at a time from the
   // top finds, but in ~3 measuring passes instead of dozens. Width grows in
@@ -978,7 +980,7 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
   // predicts the answer; the grid around the prediction is then checked with
   // real measurements (down while it doesn't fit, up while the next does,
   // peeking two further steps up in case rounding made fit non-monotonic).
-  const minSize = 8;
+  const minSize = 8*S, step = 2*S;
   const measureAt = size => {
     let maxLineWidth = 0, totalHeight = 0;
     const widths = new Map();
@@ -991,7 +993,7 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
     }
     return { size, widths, fits: maxLineWidth <= maxWidth && totalHeight <= maxHeight, maxLineWidth, totalHeight };
   };
-  const onGrid = s => s > minSize && s <= maxSizePx && ((maxSizePx - s) % 2 === 0);
+  const onGrid = s => { const k = (maxSizePx - s)/step; return s > minSize && s <= maxSizePx + 1e-9 && Math.abs(k - Math.round(k)) < 1e-6; };
   const top = measureAt(maxSizePx);
   if(top.fits || maxSizePx <= minSize){
     if(top.fits) return { size: top.size, widths: top.widths };
@@ -999,17 +1001,21 @@ function fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacin
     // predict, snapped down onto the grid
     const byW = top.maxLineWidth > 0 ? maxSizePx*maxWidth/top.maxLineWidth : maxSizePx;
     const byH = top.totalHeight > 0 ? maxSizePx*maxHeight/top.totalHeight : maxSizePx;
-    let s = maxSizePx - 2*Math.max(1, Math.ceil((maxSizePx - Math.min(byW, byH))/2));
+    let s = maxSizePx - step*Math.max(1, Math.ceil((maxSizePx - Math.min(byW, byH))/step - 1e-9));
     const tried = new Map([[maxSizePx, top]]);
     const at = size => { if(!tried.has(size)) tried.set(size, measureAt(size)); return tried.get(size); };
+    // (each size on the grid by its step count from the top, so a fraction of a pixel never drifts it off the grid)
+    const atK = k => maxSizePx - k*step;
+    let k = Math.round((maxSizePx - s)/step);
     // down until it fits
-    while(onGrid(s) && !at(s).fits) s -= 2;
+    while(onGrid(atK(k)) && !at(atK(k)).fits) k++;
+    s = atK(k);
     if(onGrid(s)){
       // up while a larger size on the grid fits (peeking two steps past a miss)
       for(;;){
-        if(onGrid(s + 2) && at(s + 2).fits){ s += 2; continue; }
-        if(onGrid(s + 4) && at(s + 4).fits){ s += 4; continue; }
-        if(onGrid(s + 6) && at(s + 6).fits){ s += 6; continue; }
+        if(onGrid(atK(k - 1)) && at(atK(k - 1)).fits){ k -= 1; s = atK(k); continue; }
+        if(onGrid(atK(k - 2)) && at(atK(k - 2)).fits){ k -= 2; s = atK(k); continue; }
+        if(onGrid(atK(k - 3)) && at(atK(k - 3)).fits){ k -= 3; s = atK(k); continue; }
         break;
       }
       return { size: s, widths: at(s).widths };
@@ -1237,12 +1243,12 @@ export function invalidateTextMeasurements(){
   linesCacheValue = null;
 }
 let fitCacheLines = null;
-function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing, shapeKey){
+function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing, shapeKey, S = 1){
   // The key is the layout's SHAPE (shapeKey: the text with live numbers —
   // §RenderMs, §Profile, §CacheMB — by their shape, not their digits), so a
   // stat ticking over doesn't refit a page whose layout hasn't changed. With
   // no live numbers in the poem it is exactly linesCacheKey, as before.
-  const key = [shapeKey != null ? shapeKey : linesCacheKey, fontDef.family, fontDef.weight, maxWidth, maxHeight, maxSizePx, spacing].join('|');
+  const key = [shapeKey != null ? shapeKey : linesCacheKey, fontDef.family, fontDef.weight, maxWidth, maxHeight, maxSizePx, spacing, S].join('|');
   if(key === fitCacheKey){
     if(fitCacheLines === lines) return fitCacheValue;
     // the same layout with live numbers changed: keep the size, measure these lines once
@@ -1251,7 +1257,7 @@ function getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spaci
     fitCacheValue = { size: fitCacheValue.size, widths }; fitCacheLines = lines;
     return fitCacheValue;
   }
-  fitCacheValue = fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing);
+  fitCacheValue = fitTextSize(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, spacing, S);
   fitCacheKey = key; fitCacheLines = lines;
   return fitCacheValue;
 }
@@ -1692,7 +1698,8 @@ function renderInto(canvas){
     for(const ln of lines) if(ln.parts) for(const pt of ln.parts) if(pt.customFontIdx != null && FONTS[pt.customFontIdx]) used.push(FONTS[pt.customFontIdx]);
     ensureFonts(used, () => { invalidateTextMeasurements(); scheduleRender(); });
   }
-  const maxSizePx = Math.max(10, parseFloat($('maxSize').value) || 120);
+  // (Max Text Size is in the saved image's pixels, like the border's: at this render's scale here)
+  const maxSizePx = Math.max(10, parseFloat($('maxSize').value) || 120)*S;
   const lineSpacing = Math.pow(2, parseFloat($('lineSpacing').value) || 0);
 
   lap('frame');
@@ -1713,7 +1720,7 @@ function renderInto(canvas){
   const maxHeight = H - paddingY*2;
 
   const shapeKey = (linesCacheKey && linesCacheKey.startsWith(rawText)) ? shapeText + linesCacheKey.slice(rawText.length) : null;
-  const { size: baseSize, widths: fitWidths } = getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing, shapeKey);
+  const { size: baseSize, widths: fitWidths } = getCachedFit(ctx, lines, fontDef, maxWidth, maxHeight, maxSizePx, lineSpacing, shapeKey, S);
   const totalHeight = blockHeight(lines, baseSize, lineSpacing, fitWidths);
 
   let startY;

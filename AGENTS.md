@@ -277,6 +277,11 @@ Stages are timed (`§Profile`).
 - The preview is drawn at screen size (S in steps of ¼ ⅓ ½ ⅔ 1) and must
   look like the export scaled down.
 - At S = 1 every conversion is pixel-identical.
+- Every length a control sets in pixels is the saved image's, so times S in
+  `renderInto`: the border's and the box's, and Max Text Size. The text fit
+  steps by 2·S from the cap (`fitTextSize`), so the preview picks the size the
+  saved image will (Ruby: the saved text came out smaller than the preview's
+  once the margins left room past an unscaled cap).
 
 ### 5.3 · Textures in a worker
 - The renderer asks `textureService.requestTexture(slot, …)`.

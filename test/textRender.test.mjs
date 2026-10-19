@@ -111,6 +111,17 @@ check('a wave rises first, to its height', wave(100).dy < 0 && Math.abs(Math.abs
 check('a straight run has no shape', runShape({}, 300, 50) === null && runShape({ arc: 30 }, 0, 50) === null);
 check('a font by its name, any case', fontIndexByName('cinzel') >= 0 && fontIndexByName('Cormorant') >= 0 && fontIndexByName('nowhere') === -1);
 
+// MAX TEXT SIZE is in the saved image's pixels (Ruby: the text came out smaller in the saved image than in the preview,
+// most after the margins and Breathing Room were moved): at half scale the preview's cap is half as many pixels, so the
+// poem is drawn at the same share of the page as it is saved
+{ const { setRenderScale } = await import('../canvasRenderer.js'), c = registry['poemCanvas'], w0 = c.width, h0 = c.height;
+  registry['poemText'].value = 'a short line'; registry['maxSize'].value = '60';
+  const pxAt = sc => { c.width = Math.round(w0*sc); c.height = Math.round(h0*sc); setRenderScale(sc); drawn.length = 0; render();
+    const sizes = drawn.filter(d => /short/.test(d.t)).map(d => parseFloat((/([\d.]+)px/.exec(d.font) || [])[1])); return Math.max(...sizes); };
+  const full = pxAt(1), half = pxAt(0.5); c.width = w0; c.height = h0; setRenderScale(1);
+  check('the preview at half scale draws the poem at half the saved image\'s size, Max Text Size included (60 px saved, 30 in the preview)',
+    full === 60 && Math.abs(half - 30) < 1e-6); }
+
 // PUNCTUATION (ROADMAP G2): the page records where each mark sits, after the runs, as "x,y,mark" (which every reader
 // of the runs passes over), each inside its line's run and in reading order
 { const { textLayoutNow } = await import('../canvasRenderer.js'), { poemMarks, poemRuns } = await import('../steps.js');
