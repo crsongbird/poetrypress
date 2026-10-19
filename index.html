@@ -871,20 +871,28 @@ but bear with me, dear}]/jitter:200
                        light lowers; the rim light casts its own, in its own colour, as strong as it is -->
                   <g class="ld-spike ld-rim-spike" id="lightRimSpike" opacity="0">
                     <polygon class="ld-spike-body" id="lightRimSpikeBody" points="-3.4,-24 3.4,-24 0,-26"></polygon>
-                    <path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path>
-                    <path class="ld-curl" d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path>
+                    <g id="lightRimSpikeCurls"><path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path><path class="ld-curl" d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path></g>
                   </g>
                   <g class="ld-spike" id="lightSpike" opacity="0">
                     <polygon class="ld-spike-body" id="lightSpikeBody" points="-3.4,-24 3.4,-24 0,-26"></polygon>
-                    <path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path>
-                    <path class="ld-curl" d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path>
+                    <g id="lightSpikeCurls"><path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path><path class="ld-curl" d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path></g>
                   </g>
+                  <!-- where the two shadows cross they mix to white (to black on a light theme), as the handles do: the rim's
+                       shadow drawn again in the overlap colour, seen only through the main shadow's shape -->
+                  <defs><mask id="lightSpikeMask" maskUnits="userSpaceOnUse" x="-50" y="-50" width="100" height="100"><g id="lightSpikeMaskG">
+                    <polygon id="lightSpikeMaskBody" fill="#fff" points="-3.4,-24 3.4,-24 0,-26"></polygon>
+                    <g id="lightSpikeMaskCurls" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path><path d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path></g>
+                  </g></mask></defs>
+                  <g class="ld-spike-overlap" id="lightSpikeOverlap" mask="url(#lightSpikeMask)" opacity="0"><g id="lightSpikeOverlapG">
+                    <polygon class="ld-spike-body" id="lightSpikeOverlapBody" points="-3.4,-24 3.4,-24 0,-26"></polygon>
+                    <g id="lightSpikeOverlapCurls"><path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path><path class="ld-curl" d="M 3.2 -28.5 c 5.4 1.2 8.2 -4.2 4.4 -6.6 c -2.7 -1.5 -5.4 1.1 -3.1 3.6"></path></g>
+                  </g></g>
                   <!-- ☉: one bold circle; the dot at its heart is the handle -->
                   <circle class="ld-ring" r="26"></circle>
                   <!-- past the rim (engine-lit textures only): the light sinks lower -->
-                  <circle class="ld-low" r="19.5"></circle>
+                  <circle class="ld-low" r="33.8"></circle>
                   <!-- the halfway mark (it catches lightly) and the centre -->
-                  <circle class="ld-half" r="7.5"></circle>
+                  <circle class="ld-half" r="13"></circle>
                   <circle class="ld-centre" r="1.4"></circle>
                   <!-- the rim light's handle, under the main light's; where the two overlap they mix to white (to black on a light
                        theme), as two lights do -->
@@ -931,7 +939,7 @@ but bear with me, dear}]/jitter:200
                        corners round a ring drawn as a lens barrel -->
                   <path class="cam-corner" d="M -42 -30 V -42 H -30 M 30 -42 H 42 V -30 M 42 30 V 42 H 30 M -30 42 H -42 V 30"></path>
                   <circle class="ld-ring cam-ring" r="26"></circle>
-                  <circle class="ld-half" r="7.5"></circle>
+                  <circle class="ld-half" r="13"></circle>
                   <!-- what the camera sees: a frame round the middle, smaller as it zooms in -->
                   <rect class="cam-frame" id="cameraFrame" x="-9" y="-12" width="18" height="24"></rect>
                   <line class="cam-sight" id="cameraSight" x1="0" y1="0" x2="0" y2="0"></line>

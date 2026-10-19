@@ -345,6 +345,11 @@ Other parts of a look:
 ### 5.5 · Light
 - The ☉/🜚 dial sets a direction and a height (`textureLight`,
   `textureLightTilt`). `lightVec` scales by height.
+- **The dial's geometry** (appEvents `DIAL_R`): a handle at 100% sits on
+  ☉'s ring (26 units of the 100-unit box), under the finger; past the rim
+  it goes on to the dashed circle (130%, 33.8). The camera dial the same.
+  🜚's spike and curls grow with the light's height (`shadowOf`); where the
+  two shadows cross, the overlap colour shows (`lightSpikeMask`).
 - **The handle is the light** (Ruby: "dragging a light around an object in
   the center … it projects a shadow"). Every surface is lit from the
   handle's side, and shadows fall away from it; 🜚's spike on the dial (and

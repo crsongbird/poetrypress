@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Fenrir (2026-10-19)
+
+- **The light dial's handle reaches the ring again.** At full height it
+  sits on the ring, under your finger, and past the rim (on surfaces lit
+  from below the horizon) it goes on outside it, to the dashed circle. The
+  camera dial's handle does the same. The halfway mark moved out with it.
+- **🜚's curls grow as the light lowers:** small with the light high,
+  flaring as it sinks toward the horizon.
+- **Where the main and rim shadows cross on the dial, they mix to white**
+  (black on a light theme), as the two handles do.
+- **Under the hood:** pruned the stylesheet (every declaration it questioned
+  still mattered somewhere; nothing removed). The roadmap records Ruby's rules
+  for the new surfaces: built in the Athanor from general parts, varied by
+  the seed, every colour on a hue input.
+
 ## Saturn–Bestla (2026-10-19)
 
 - **The Black Hole is seen from the camera dial.** Its Turn turns the disc

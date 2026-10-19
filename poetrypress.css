@@ -1472,12 +1472,13 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .light-dial-row{ display:flex; align-items:center; justify-content:center; position:relative; min-height:140px; }
 .light-dial{ width:132px; height:132px; touch-action:none; cursor:grab; user-select:none; }
 .light-dial svg{ width:100%; height:100%; overflow:visible; }
-/* ☉ at rest — one bold circle, the dot at its heart. Drag the dot and the
-   spike of 🜚 grows out of the rim toward the light, curls and all. */
+/* ☉ at rest — one bold circle, the dot at its heart. Drag the dot (the light)
+   out to the ring and beyond, and 🜚's spike, its shadow, grows out of the far
+   side of the rim, curls and all. */
 .ld-ring{ fill:none; stroke:var(--accent); stroke-width:4.4; }
 .ld-tick{ fill:var(--bg-panel, #1a1717); stroke:var(--accent); stroke-width:1.2; opacity:.75; cursor:pointer; }
 .ld-tick.active{ fill:var(--accent); opacity:1; }
-.ld-handle{ fill:var(--accent); }
+.ld-handle{ fill:var(--accent); stroke:var(--bg-panel, #1a1717); stroke-width:1.2; }   /* (its edge parts it from the ring it rides at 100%) */
 .ld-spike-body{ fill:var(--accent); }
 .ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
 .ld-btn{ position:absolute; border:1px solid var(--border, #444); background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 85%, var(--text-main) 5%), var(--bg-panel-2)); color:var(--text-dim); border-radius:8px; font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; box-shadow:inset 0 1px 0 var(--hi), 0 1px 2px var(--well); }
@@ -1502,6 +1503,13 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .ld-overlap{ fill:#FFFFFF; display:none; pointer-events:none; }
 :root[data-theme="vellum"] .ld-overlap{ fill:#000000; }
 .light-dial.has-rim.rim-on .ld-overlap{ display:inline; }
+/* (and where their two shadows cross, the same) */
+.ld-spike-overlap{ display:none; pointer-events:none; }
+.ld-spike-overlap .ld-spike-body{ fill:#FFFFFF; }
+.ld-spike-overlap .ld-curl{ stroke:#FFFFFF; }
+:root[data-theme="vellum"] .ld-spike-overlap .ld-spike-body{ fill:#000000; }
+:root[data-theme="vellum"] .ld-spike-overlap .ld-curl{ stroke:#000000; }
+.light-dial.has-rim.rim-on .ld-spike-overlap{ display:inline; }
 /* which light the finger moves, and the Ambient slider: only where the page's lights reach the surface */
 .light-seg, #lightRow .light-amb, #lightAmbField, #lightRow .light-rimk, #lightRimKField{ display:none; }
 #lightRow.has-rig .light-seg{ display:flex; margin:2px 0 4px; }

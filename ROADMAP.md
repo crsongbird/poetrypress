@@ -254,48 +254,52 @@ Easter eggs).
 - **K3 · More nods** where a surface's own subject invites one (a wreck's
   hull markings, a black hole's accretion disk seen past a ringed planet).
 
-### L · New surfaces Ruby asked for (Stage 3; one release each, sheets first)
+### L · New surfaces Ruby asked for (Stage 3; sheets first, each shipped on Ruby's yes)
 
-Ruby sent a reference image with each. The images are not in the repo, so
-this is what each shows; build to it.
+**Ruby's rules for all of them (2026-10-18, after the first drafts):**
+- **Every one opens in the Athanor as a graph of general parts**, with at most one new process part each where no
+  general part can do the job (§J). A whole-picture part is a violation of the app's design (Ruby: "you are violating
+  principles of this application's design").
+- **The seed must matter: a vast variety of scenes**, not one picture recoloured. Every user input must matter too.
+- **Colours come from the hue inputs, always**, as many as the picture uses (up to six hue pickers per surface,
+  §L0), each defaulting to what Ruby expects (her palettes below). Nothing drawn in a fixed colour the user can't set.
+- **No borders drawn by the procedure** (the page has its own border).
 
-- **L1 · Pixel-art space, in Ruby's own style** (the reference is Ruby's own
-  piece). A nebula band runs diagonally across a tall page. Its heart is
-  magenta and hot pink, with a small white spiral galaxy glowing at the
-  middle. Its edges are cyan and pale blue rims on deep blue. The ground is
-  deep navy shading to near-black purple. Stars are chunky pixel sparkles: a
-  few large 4-point crosses (one long axis pair, soft glow pixels round the
-  core) in pink, cyan and white, many 1–2 px dust stars. The palette is
-  limited (about 10–14 colours) and the pixels are big (the page drawn at
-  roughly 1/8–1/12 size and scaled up nearest-neighbour), with dithered
-  edges between bands. A thin magenta frame line. Many seeded scenes:
-  nebula shape, galaxy or none, star density. Not Deep Field's soft look.
-- **L2 · James Webb false colour.** A field of amber and burnt-orange dust:
-  clumps and streaks like rising embers or pillars, denser toward the bottom
-  and one corner, thinning into a near-black blue sky. A few bright blue
-  stars with JWST's diffraction spikes (six long spikes plus the short
-  horizontal pair), many tiny white and blue stars, little smudged galaxies
-  scattered through the dark. Distinct from Deep Field.
-- **L3 · Liminal spaces** (creepy, empty, built with the lighting): a bare
-  room seen straight on, teal-grey walls and ceiling, a square fluorescent
-  ceiling panel the only light, a doorway in the far wall onto a darker
-  corridor that recedes to black, a closed door on one side wall, a dark
-  opening on the other, baseboards, a faint sheen on the floor, film grain.
-  Seeded layouts of rooms and corridors (panels, doors, turns); the camera
-  dial pans and turns through the space; the light dial sets the panel
-  light. Very still.
-- **L4 · Florals, five surfaces** (the reference: a yellow wildflower meadow,
-  daisy-like flowers sharp in the foreground and soft in the distance, a
-  dirt path, pines, storm clouds and lightning over a bright sky):
-  wilting flowers; happy flowers; a blurred parallax field of flowers
-  (depth of field: near sharp, far soft); one adjustable flower; simple
-  floral patterns. Real species chosen by a slider; composition and depth
-  by the seed.
-- **L5 · Feathers** (Ruby: "simple textures of feathers with sliders that
-  control how much"): procedurally generated feathers in the background,
-  made to fade or blend with the page colour or a simple texture.
-- **L6 · More surfaces meant to be blended** with the page or with a simple
-  texture (transparent or mid-grey grounds that read well on any blend).
+- **L0 · Up to six hue pickers per surface** (Ruby chose it): a surface asks for as many hues as it uses, each with
+  a label and a default; saved with the look and its layers, in readings, in the Athanor's Hue parts (slots 1–6).
+- **L1 · Pixel-art space, in Ruby's own style** (the reference is Ruby's own piece; first draft "really cool, a good
+  start"). The reference: a nebula band running diagonally across a tall page, magenta and hot pink at its heart, a small
+  white spiral galaxy glowing in it, cyan and pale blue rims on deep blue, a ground of deep navy shading to near-black
+  purple; chunky 4-point sparkle stars (a long cross, soft glow pixels round the core) in pink, cyan and white, many
+  1–2 px dust stars; a limited palette (10–14 colours), big pixels (the page drawn at about 1/8–1/12 size and scaled
+  up nearest-neighbour), dithered edges between bands. To do: a large variety of space scenes by the seed (nebula
+  bands, ring and bubble nebulae, galaxies spiral and elliptical, planets and moons and rings, comets, star clusters,
+  dark clouds, starfields alone); every colour from the hue inputs (ground, deep sky, nebula heart, rim, clouds, stars),
+  defaults Ruby's palette; no frame.
+- **L2 · James Webb false colour** ("a large variety controlled by the seed"). The reference: amber and burnt-orange
+  dust in clumps and streaks like rising embers or pillars, thick toward the bottom and a corner, thinning into a
+  near-black blue sky; a few bright blue stars with JWST's diffraction spikes (six long, two short across), many tiny
+  white and blue stars, little smudged galaxies. To do, by the seed: pillars, cosmic cliffs (Carina), ring and bubble
+  nebulae (Southern Ring), deep fields of galaxies with lensing arcs, dust lanes; the light dial where the carving
+  light comes from. Not Deep Field.
+- **L3 · Liminal spaces** ("a good start"). The reference: a bare room seen straight on, teal-grey walls and ceiling, a
+  square fluorescent ceiling panel the only light, a doorway in the far wall onto a darker corridor receding to black, a
+  closed door on one side wall, a dark opening on the other, baseboards, a faint sheen on the floor, film grain. To do:
+  research the prior art (the Backrooms and its levels, poolrooms, empty malls, hotel corridors, offices, schools and
+  hospitals at night, stairwells, playplaces, parking garages, dreamcore) and cite it in AGENTS §9; a vast variety by
+  the seed (kinds of space, materials, fixtures, lighting colour and flicker); the camera dial pans and turns; built as
+  a graph (a Room Caster process part, then general parts for light, colour, grain).
+- **L4 · Florals** (the first draft misunderstood all but the field). Ruby wants all of these, each with seeded
+  variations: simple floral imprints (pressed flowers, ink or block-print stamps, botanical silhouettes); bundles and
+  bouquets; wilting flowers and scattered rose petals; an idyllic meadow (the field, which was good, made far more
+  idyllic: wind through it, petals in the air, soft sun); macro images with soft bokeh, made from parts and using all
+  of the lighting engine, stylized, a showpiece of the engine. Real species chosen by a slider.
+- **L5 · Feathers** (approved): ship as a graph (the Feathers process part + general parts), and add corvid feathers
+  (Ruby: "really want corvid feathers"): crow (matte black, faint blue-purple sheen), raven (larger, glossy, strong
+  blue-violet iridescence), magpie (black and white, the black iridescent green-blue-purple), blue jay (blue, black
+  bars, white tips).
+- **L6 · Light to lay over a page** (approved: Dappled Leaves, Window Light, Pool Caustics, Light Leaks): ship each as
+  a graph of general parts on mid-grey, so Soft Light and Overlay lay them over anything.
 
 ---
 
@@ -324,7 +328,8 @@ superseded) wait for Stage 4.
 - **J**: whole-texture parts taken apart (§2 J), each through compare.mjs and
   Ruby's approval when its look changes.
 - **K**: the Easter eggs still to place (§2 K).
-- **L**: Ruby's new surfaces (§2 L), one per release, each with its sheet.
+- **L**: Ruby's new surfaces (§2 L), one per release, each with its sheet. Then (Ruby's marathon, 2026-10-18) **I**
+  (the studies become textures) and **J** (every black box taken apart), before the presets.
 - **Rebuild the textures that aren't chains yet**, so every texture is a
   graph. The list (menu ids; test/hygiene keeps it the code's, so delete
   one here when it becomes a chain):

@@ -8,6 +8,8 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- THE DIAL'S REACH: the handle now rides the ring at 100% (it had stopped at about half the ring's radius), past it to
+  the dashed circle; the curls scale with the light's height; crossing shadows mix to white. Was that the range lost?
 - THE DIAL'S GUIDE: a sun, an impact, a circle, a disc, arrows or lines over the page while the light dial moves, held
   until the picture lands. Clear enough on a busy picture?
 - THE BLACK HOLE ON THE CAMERA DIAL (Turn, View, Zoom; a wireframe of its disc while it moves), its light dial gone.

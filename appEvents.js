@@ -2390,25 +2390,36 @@ function putRim(deg, tilt){
 }
 /** The rim light on (at RIM_ON, its own colour kept) or off (its alpha 0). */
 function setRimOn(on){ const h = rimHex().slice(0, 7); setColorField('textureTint7Hex', h + (on ? RIM_ON : '00')); }
+/** THE DIALS' REACH (Ruby: "we used to be able to move this right to the edge"): a handle at 100% sits on ☉'s ring, under
+ *  the finger, its centre this far from the middle (in the dial's 100-unit box); past the rim (to 130%, an engine-lit
+ *  surface's lower light) it goes on outside the ring, to the dashed circle. The camera's View the same. */
+const DIAL_R = 26;
 function syncLightPad(){
   const deg = parseFloat($('textureLight').value) || 0, tilt = $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
   const k = Math.max(0, Math.min(130, isNaN(tilt) ? 100 : tilt)) / 100, a = deg * Math.PI / 180;
   const set = (id, attrs) => { const el = $(id); if(el && el.setAttribute) for(const key in attrs) el.setAttribute(key, attrs[key]); };
   // the dot slides from the heart of ☉ toward the rim
-  const hx = Math.sin(a) * 15 * k, hy = -Math.cos(a) * 15 * k;
+  const hx = Math.sin(a) * DIAL_R * k, hy = -Math.cos(a) * DIAL_R * k;
   set('lightHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) }); set('lightMainClipDot', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
   // 🜚 AS A SHADOW (Ruby): the ☉ at the middle casts it away from the light, out of the rim on the far side, longer and
   // darker as the light lowers (none overhead); the rim light casts its own, as strong as the rim light is
-  const shadowOf = (body, group, d, kk, strength) => { const tip = 26 + 3 + 16*Math.min(1.3, kk);
-    set(body, { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
-    set(group, { transform: `rotate(${((d + 180) % 360).toFixed(1)})`, opacity: kk < 0.04 || strength <= 0 ? 0 : ((0.35 + 0.65*Math.min(1, kk))*strength).toFixed(2) }); };
-  shadowOf('lightSpikeBody', 'lightSpike', deg, k, 1);
+  // (its curls grow with it, small with the light high, flaring as it lowers: Ruby)
+  const shadowOf = (body, group, d, kk, strength) => { const kc = Math.min(1.3, kk), tip = 26 + 3 + 16*kc, curl = (0.55 + 0.5*kc).toFixed(3);
+    const shape = { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` }, curls = { transform: `translate(0 -24.5) scale(${curl}) translate(0 24.5)` }, turn = `rotate(${((d + 180) % 360).toFixed(1)})`;
+    const op = kk < 0.04 || strength <= 0 ? 0 : (0.35 + 0.65*Math.min(1, kk))*strength;
+    set(body, shape); set(body.replace('Body', 'Curls'), curls); set(group, { transform: turn, opacity: op.toFixed(2) });
+    return { shape, curls, turn, op }; };
+  const mainShadow = shadowOf('lightSpikeBody', 'lightSpike', deg, k, 1);
   // the rim light's handle, under the main's: hollow while it is off, fainter as it is weaker; where the two meet, the
   // lens they share mixes to white
   const reach = lightsReach(), R = rimNow(), rk = Math.max(0, Math.min(130, R.tilt))/100, ra = R.deg*Math.PI/180;
-  const rx = Math.sin(ra)*15*rk, ry = -Math.cos(ra)*15*rk, rs = rimStrengthNow();
+  const rx = Math.sin(ra)*DIAL_R*rk, ry = -Math.cos(ra)*DIAL_R*rk, rs = rimStrengthNow();
   set('lightRimHandle', { cx: rx.toFixed(2), cy: ry.toFixed(2), opacity: R.on ? (0.35 + 0.65*rs/100).toFixed(2) : '1' }); set('lightOverlap', { cx: rx.toFixed(2), cy: ry.toFixed(2) });
-  shadowOf('lightRimSpikeBody', 'lightRimSpike', R.deg, rk, reach && R.on ? rs/100 : 0);
+  const rimShadow = shadowOf('lightRimSpikeBody', 'lightRimSpike', R.deg, rk, reach && R.on ? rs/100 : 0);
+  // where the two shadows cross, the overlap colour (the rim's shadow seen through the main's), as the handles mix
+  set('lightSpikeMaskG', { transform: mainShadow.turn }); set('lightSpikeMaskBody', mainShadow.shape); set('lightSpikeMaskCurls', mainShadow.curls);
+  set('lightSpikeOverlapG', { transform: rimShadow.turn }); set('lightSpikeOverlapBody', rimShadow.shape); set('lightSpikeOverlapCurls', rimShadow.curls);
+  set('lightSpikeOverlap', { opacity: Math.min(mainShadow.op, rimShadow.op).toFixed(2) });
   const pick = lightPick();
   const dial = $('lightDial');
   if(dial && dial.classList){ dial.classList.toggle('has-rim', reach); dial.classList.toggle('rim-on', reach && R.on); dial.classList.toggle('pick-rim', pick === 'rim'); }
@@ -2479,8 +2490,8 @@ if($('lightDial') && $('lightDial').addEventListener){
     // the rim, and stays there until it is pulled well past it; beyond, it
     // moves more slowly, like pulling against a detent (to 130, only for the
     // engine-lit textures)
-    const raw = Math.hypot(x, y) / 30 * 100;
-    let tilt = raw < 93 ? raw : raw < 118 ? 100 : Math.min(dialMax(), 100 + (raw - 118) * 0.45);
+    const raw = Math.hypot(x, y) / DIAL_R * 100;
+    let tilt = raw < 93 ? raw : raw < 118 ? 100 : Math.min(dialMax(), 100 + (raw - 118) * 0.6);
     tilt = Math.min(dialMax(), tilt);
     if(tilt === 100 && fromPointer.was !== 100 && typeof navigator !== 'undefined' && navigator.vibrate) try { navigator.vibrate(8); } catch(_){}
     fromPointer.was = tilt;
@@ -2555,7 +2566,7 @@ function putCamera(turn, view, zoom){
 function syncCameraPad(){
   const c = cameraNow(), k = Math.max(0, Math.min(100, c.view))/100, a = c.turn*Math.PI/180;
   const set = (id, attrs) => { const el = $(id); if(el && el.setAttribute) for(const key in attrs) el.setAttribute(key, attrs[key]); };
-  const hx = Math.sin(a)*15*k, hy = -Math.cos(a)*15*k;
+  const hx = Math.sin(a)*DIAL_R*k, hy = -Math.cos(a)*DIAL_R*k;
   set('cameraHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
   set('cameraSight', { x1: hx.toFixed(2), y1: hy.toFixed(2), x2: '0', y2: '0', opacity: k < 0.04 ? '0' : '0.8' });
   // the frame: what the camera sees, turned with it, smaller as it zooms in
@@ -2738,7 +2749,7 @@ if($('cameraDial') && $('cameraDial').addEventListener){
   let pinch0 = 0, zoom0 = 100, dragging = false;
   const fromPointer = (e, snapTicks) => {
     const rc = dial.getBoundingClientRect(), x = (e.clientX - rc.left)/rc.width*100 - 50, y = (e.clientY - rc.top)/rc.height*100 - 50;
-    let turn = Math.atan2(x, -y)*180/Math.PI, view = Math.min(100, Math.hypot(x, y)/30*100);
+    let turn = Math.atan2(x, -y)*180/Math.PI, view = Math.min(100, Math.hypot(x, y)/DIAL_R*100);
     if(snapTicks || view > 88){ const nearest = Math.round(turn/45)*45; if(Math.abs(nearest - turn) < 7) turn = nearest; }
     if(Math.abs(view - 50) < 4) view = 50;
     if(view > 96) view = 100;
