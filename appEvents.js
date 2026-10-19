@@ -4604,7 +4604,7 @@ const WORKING_WORDS = {
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
-  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', turing: 'Letting the reaction diffuse',
+  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',

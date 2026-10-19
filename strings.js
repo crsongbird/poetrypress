@@ -238,6 +238,7 @@ export const UI_STRINGS = {
   'option.landscape':                         "Painted Landscape",
   'option.cityscape':                         "Night City",
   'option.blackhole':                         "Black Hole",
+  'option.pixelspace':                        "Pixel Space",
   'option.scrying_pool':                      "Scrying Pool",
   'option.fractal_moon':                      "Fractal Moon",
   'option.bottom_left':                        "Bottom Left",

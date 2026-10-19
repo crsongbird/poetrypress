@@ -687,6 +687,197 @@ export const TEXTURE_CHAINS = {
     [23, 1, 8, paramPort('gradient', 'angle')], [24, 1, 11, paramPort('gradient', 'angle')], [25, 1, 7, paramPort('forms', 'count')]] },
   // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
   // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
+  // ── Pixel Space (ROADMAP §2 L1): pixel-art space, general parts and Orbs; docs/prior-art/space-scenes.md ──
+  pixelspace: { label: 'Pixel Space', div: 4, crisp: true, teach: 'Space in pixel art, after the generators pixel artists use (Deep-Fold’s Pixel Space and Pixel Planets): a nebula, worlds and stars on a coarse grid of square pixels, every colour from the six hues and the seed choosing the scene. The seed picks the nebula’s form (Random Numbers into a Map Switch): a torn band across the page at the seed’s angle, drifting clouds, a veil of filaments (the ridges of a Perlin Noise), or a galaxy twisted round a point, alone or lying in the band. Every grey map is cut into square cells by Pixelate (Pixel Size), stepped by Posterize (Bands) with Dither where two steps meet, and coloured by a Gradient Map from the Deep Sky through the Mid Sky and the Nebula Hue to Starlight. The rim on the side toward the light is a Smudge of the nebula toward the dial’s handle, less the nebula itself. Stars are two Scatters: dust (Stars) and four-point sparkles (Sparkles) with a halo, each cell taking its brightest point so the smallest star still lights a pixel; some take the Rim or World Hue. Orbs makes the worlds: the seed frames them (none, one, a close one cropped by the page, a horizon, an eclipse with its corona, a belt of rocks, a little system), with bands, continents, ice, craters or lava, rings and moons, each lit by the Light Dial. Try: turn the dial and watch the rims and every world’s terminator follow it.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Pixel Size', def: 40 }, 40, 40],                                                                                   // 1
+      ['knob', { slot: '2', name: 'Nebula', def: 55 }, 40, 150],                                                                                      // 2
+      ['knob', { slot: '3', name: 'Stars', def: 50 }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4', name: 'Sparkles', def: 40 }, 40, 370],                                                                                    // 4
+      ['knob', { slot: '5', name: 'Worlds', def: 50 }, 40, 480],                                                                                      // 5
+      ['knob', { slot: '6', name: 'Dither', def: 40 }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '7', name: 'Swirl', def: 50 }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8', name: 'Bands', def: 45 }, 40, 810],                                                                                       // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Deep Sky' }, 40, 1030],                                                                                             // 10
+      ['hue', { slot: '2', name: 'Mid Sky' }, 40, 1140],                                                                                              // 11
+      ['hue', { slot: '3', name: 'Nebula Heart' }, 40, 1250],                                                                                         // 12
+      ['hue', { slot: '4', name: 'Nebula Rim' }, 40, 1360],                                                                                           // 13
+      ['hue', { slot: '5', name: 'Worlds' }, 40, 1470],                                                                                               // 14
+      ['hue', { slot: '6', name: 'Starlight' }, 40, 1580],                                                                                            // 15
+      ['perlin', { scale: 45, '~scale': '22,80', details: 4, rough: 45, contrast: 35 }, 260, 40],                                                     // 16
+      ['random', { lo: 0, hi: 100 }, 40, 1690],                                                                                                       // 17
+      ['perlin', { scale: 18, details: 3, rough: 50, contrast: 20 }, 40, 1800],                                                                       // 18
+      ['gradient', { shape: 'linear', angle: 60 }, 260, 150],                                                                                         // 19
+      ['random', { lo: 0, hi: 100 }, 40, 1910],                                                                                                       // 20
+      ['number', { value: 50 }, 40, 2020],                                                                                                            // 21
+      ['math', { op: 'difference' }, 480, 40],                                                                                                        // 22
+      ['maprange', { inLo: 0, inHi: 30, '~inHi': '18,42', outLo: 100, outHi: 0 }, 700, 40],                                                           // 23
+      ['random', { lo: 0, hi: 100 }, 40, 2130],                                                                                                       // 24
+      ['warp', { amount: 30, '~amount': '0,80' }, 920, 40],                                                                                           // 25
+      ['maprange', { outLo: 45, outHi: 100 }, 480, 150],                                                                                              // 26
+      ['math', { op: 'multiply' }, 1140, 40],                                                                                                         // 27
+      ['perlin', { scale: 12, details: 2, contrast: 70 }, 40, 2240],                                                                                  // 28
+      ['warp', { amount: 30, '~amount': '0,80' }, 480, 260],                                                                                          // 29
+      ['maprange', { inLo: 42, inHi: 62, outLo: 0, outHi: 100 }, 260, 260],                                                                           // 30
+      ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 31
+      ['maprange', { inLo: 0, inHi: 12, '~inHi': '6,18', outLo: 100, outHi: 0 }, 700, 260],                                                           // 32
+      ['perlin', { scale: 22, '~scale': '12,40', details: 2, rough: 40, contrast: 30 }, 260, 370],                                                    // 33
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 34
+      ['math', { op: 'difference' }, 480, 370],                                                                                                       // 35
+      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 36
+      ['maprange', { inLo: 42, inHi: 62, outLo: 0, outHi: 100 }, 260, 480],                                                                           // 37
+      ['maprange', { outLo: 55, outHi: 100 }, 480, 480],                                                                                              // 38
+      ['warp', { amount: 30, '~amount': '0,80' }, 920, 150],                                                                                          // 39
+      ['math', { op: 'multiply' }, 1140, 150],                                                                                                        // 40
+      ['number', { value: 40 }, 40, 2570],                                                                                                            // 41
+      ['math', { op: 'multiply' }, 480, 590],                                                                                                         // 42
+      ['math', { op: 'max' }, 1360, 40],                                                                                                              // 43
+      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 44
+      ['random', { lo: 25, hi: 75 }, 40, 2680],                                                                                                       // 45
+      ['random', { lo: 25, hi: 75 }, 40, 2790],                                                                                                       // 46
+      ['ellipse', { size: 110, '~size': '70,160', height: 100, soft: 100 }, 260, 590],                                                                // 47
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 48
+      ['invert', {}, 480, 700],                                                                                                                       // 49
+      ['twirl', { angle: 520, radius: 60, '~angle': '300,720' }, 1360, 150],                                                                          // 50
+      ['math', { op: 'multiply' }, 700, 370],                                                                                                         // 51
+      ['math', { op: 'screen' }, 920, 260],                                                                                                           // 52
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 53
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 54
+      ['math', { op: 'multiply' }, 700, 480],                                                                                                         // 55
+      ['number', { value: 70 }, 40, 3120],                                                                                                            // 56
+      ['math', { op: 'multiply' }, 920, 370],                                                                                                         // 57
+      ['math', { op: 'screen' }, 1580, 150],                                                                                                          // 58
+      ['ellipse', { size: 90, '~size': '50,130', height: 70, '~height': '35,100', angle: 0, soft: 100 }, 260, 700],                                   // 59
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 60
+      ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 61
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 62
+      ['maprange', { inLo: 0, inHi: 22, '~inHi': '12,30', outLo: 100, outHi: 0 }, 700, 590],                                                          // 63
+      ['math', { op: 'difference' }, 480, 810],                                                                                                       // 64
+      ['number', { value: 60 }, 40, 3560],                                                                                                            // 65
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 66
+      ['maprange', { outLo: 35, outHi: 100 }, 480, 920],                                                                                              // 67
+      ['math', { op: 'multiply' }, 920, 480],                                                                                                         // 68
+      ['warp', { amount: 30, '~amount': '0,80' }, 1140, 370],                                                                                         // 69
+      ['mapswitch', { soft: 0 }, 2240, 40],                                                                                                           // 70
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 71
+      ['number', { value: 85 }, 40, 3890],                                                                                                            // 72
+      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 73
+      ['math', { op: 'max' }, 2020, 40],                                                                                                              // 74
+      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 75
+      ['mapswitch', { soft: 0 }, 2460, 40],                                                                                                           // 76
+      ['levels', { lo: 35, '~lo': '75,5', hi: 95, gamma: 50 }, 2680, 40],                                                                             // 77
+      ['maprange', { inLo: 30, inHi: 85, outLo: 0, outHi: 22 }, 260, 810],                                                                            // 78
+      ['perlin', { scale: 25, details: 3, contrast: 20 }, 40, 4110],                                                                                  // 79
+      ['maprange', { outLo: 18, outHi: 100 }, 2900, 40],                                                                                              // 80
+      ['number', { value: 2 }, 40, 4220],                                                                                                             // 81
+      ['math', { op: 'greater' }, 2900, 150],                                                                                                         // 82
+      ['math', { op: 'multiply' }, 3120, 40],                                                                                                         // 83
+      ['math', { op: 'max' }, 3340, 40],                                                                                                              // 84
+      ['mix', { t: 40 }, 260, 920],                                                                                                                   // 85
+      ['gradmap', { stops: 4 }, 4000, 40],                                                                                                            // 86
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 3560, 40],                                                                     // 87
+      ['posterize', { steps: 6, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 3780, 40],                                               // 88
+      ['number', { value: 25 }, 40, 4330],                                                                                                            // 89
+      ['math', { op: 'subtract' }, 260, 1030],                                                                                                        // 90
+      ['math', { op: 'less' }, 260, 1140],                                                                                                            // 91
+      ['number', { value: 75 }, 40, 4440],                                                                                                            // 92
+      ['math', { op: 'add' }, 260, 1250],                                                                                                             // 93
+      ['math', { op: 'multiply' }, 480, 1030],                                                                                                        // 94
+      ['math', { op: 'add' }, 700, 700],                                                                                                              // 95
+      ['blur', { radius: 5 }, 2900, 260],                                                                                                             // 96
+      ['number', { value: 10 }, 40, 4550],                                                                                                            // 97
+      ['math', { op: 'greater' }, 3120, 150],                                                                                                         // 98
+      ['smudge', { length: 16, '~length': '8,32', strength: 100, trail: 85 }, 3340, 150],                                                             // 99
+      ['random', { lo: 0, hi: 100 }, 40, 4660],                                                                                                       // 100
+      ['math', { op: 'subtract' }, 3560, 150],                                                                                                        // 101
+      ['number', { value: 100 }, 40, 4770],                                                                                                           // 102
+      ['math', { op: 'multiply' }, 3780, 150],                                                                                                        // 103
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 4000, 150],                                                                    // 104
+      ['threshold', { at: 4, soft: 0 }, 4220, 40],                                                                                                    // 105
+      ['threshold', { at: 30, soft: 0 }, 4220, 150],                                                                                                  // 106
+      ['threshold', { at: 88, soft: 0 }, 1360, 260],                                                                                                  // 107
+      ['math', { op: 'multiply' }, 700, 810],                                                                                                         // 108
+      ['math', { op: 'greater' }, 260, 1360],                                                                                                         // 109
+      ['math', { op: 'multiply' }, 920, 590],                                                                                                         // 110
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 1140, 480],                                                                    // 111
+      ['blend', { opacity: 100 }, 4220, 260],                                                                                                         // 112
+      ['blend', { opacity: 100 }, 4440, 40],                                                                                                          // 113
+      ['blend', { opacity: 55 }, 4660, 40],                                                                                                           // 114
+      ['scatter', { shape: 'dot', count: 160, '~count': '30,400', size: 3, vary: 60, fade: 75, clump: 30 }, 260, 1470],                               // 115
+      ['random', { lo: 0, hi: 100 }, 40, 4880],                                                                                                       // 116
+      ['scatter', { shape: 'cross', count: 10, '~count': '2,36', size: 24, vary: 75, turn: 0, fade: 30 }, 260, 1580],                                 // 117
+      ['threshold', { at: 30, soft: 0 }, 700, 920],                                                                                                   // 118
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1140],                                                                  // 119
+      ['threshold', { at: 40, soft: 0 }, 700, 1030],                                                                                                  // 120
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1250],                                                                  // 121
+      ['blur', { radius: 10 }, 480, 1360],                                                                                                            // 122
+      ['threshold', { at: 12, soft: 0 }, 920, 700],                                                                                                   // 123
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1140],                                                                    // 124
+      ['blend', { opacity: 55 }, 4880, 40],                                                                                                           // 125
+      ['threshold', { at: 70, soft: 0 }, 480, 1470],                                                                                                  // 126
+      ['threshold', { at: 60, soft: 0 }, 480, 1580],                                                                                                  // 127
+      ['math', { op: 'max' }, 920, 810],                                                                                                              // 128
+      ['blend', { opacity: 100 }, 5100, 40],                                                                                                          // 129
+      ['blend', { opacity: 100 }, 5320, 40],                                                                                                          // 130
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1250],                                                                    // 131
+      ['math', { op: 'multiply' }, 920, 920],                                                                                                         // 132
+      ['blend', { opacity: 100 }, 5540, 40],                                                                                                          // 133
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1360],                                                                    // 134
+      ['math', { op: 'multiply' }, 920, 1030],                                                                                                        // 135
+      ['orbs', { size: 100, '~size': '50,200' }, 260, 1690],                                                                                          // 136
+      ['maprange', { outLo: 40, outHi: 100 }, 480, 1690],                                                                                             // 137
+      ['maprange', { outLo: 6, outHi: 100 }, 480, 1800],                                                                                              // 138
+      ['math', { op: 'multiply' }, 700, 1470],                                                                                                        // 139
+      ['mix', { t: 40 }, 260, 1800],                                                                                                                  // 140
+      ['gradmap', { stops: 4 }, 1360, 370],                                                                                                           // 141
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 920, 1140],                                                                    // 142
+      ['posterize', { steps: 5, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 1140, 590],                                              // 143
+      ['pixelate', { size: 12, '~size': '5,24' }, 480, 1910],                                                                                         // 144
+      ['posterize', { steps: 4, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 700, 1580],                                              // 145
+      ['gradmap', { stops: 3 }, 920, 1250],                                                                                                           // 146
+      ['threshold', { at: 10, soft: 0 }, 920, 1360],                                                                                                  // 147
+      ['blend', { opacity: 100 }, 5760, 40],                                                                                                          // 148
+      ['threshold', { at: 50, soft: 0 }, 920, 1470],                                                                                                  // 149
+      ['math', { op: 'max' }, 480, 2020],                                                                                                             // 150
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1690],                                                                    // 151
+      ['blend', { opacity: 100 }, 5980, 40],                                                                                                          // 152
+      ['surface', { name: 'Pixel Space', ground: 'colour' }, 6200, 40]],                                                                              // 153
+    wires: [[17, 1, 16, paramPort('perlin', 'scale')], [20, 1, 19, paramPort('gradient', 'angle')], [19, 1, 22, 1], [21, 1, 22, 2], [22, 1, 23, 1],
+      [24, 1, 23, paramPort('maprange', 'inHi')], [23, 1, 25, 1], [18, 1, 25, 2], [7, 1, 25, paramPort('warp', 'amount')], [25, 1, 27, 1], [26, 1, 27, 2],
+      [16, 1, 26, 1], [16, 1, 29, 1], [18, 1, 29, 2], [7, 1, 29, paramPort('warp', 'amount')], [29, 1, 31, 1], [30, 1, 31, 2], [28, 1, 30, 1],
+      [34, 1, 33, paramPort('perlin', 'scale')], [33, 1, 35, 1], [21, 1, 35, 2], [35, 1, 32, 1], [36, 1, 32, paramPort('maprange', 'inHi')], [28, 1, 37, 1],
+      [16, 1, 38, 1], [32, 1, 39, 1], [18, 1, 39, 2], [7, 1, 39, paramPort('warp', 'amount')], [39, 1, 40, 1], [38, 1, 40, 2], [16, 1, 42, 1], [41, 1, 42, 2],
+      [40, 1, 43, 1], [42, 1, 43, 2], [43, 1, 44, 1], [37, 1, 44, 2], [45, 1, 47, paramPort('ellipse', 'x')], [46, 1, 47, paramPort('ellipse', 'y')],
+      [48, 1, 47, paramPort('ellipse', 'size')], [47, 2, 49, 1], [49, 1, 51, 1], [49, 1, 51, 2], [49, 1, 52, 1], [51, 1, 52, 2], [52, 1, 53, 1],
+      [16, 1, 53, 2], [53, 1, 50, 1], [45, 1, 50, paramPort('twirl', 'x')], [46, 1, 50, paramPort('twirl', 'y')], [54, 1, 50, paramPort('twirl', 'angle')],
+      [49, 1, 55, 1], [49, 1, 55, 2], [55, 1, 57, 1], [56, 1, 57, 2], [50, 1, 58, 1], [57, 1, 58, 2], [45, 1, 59, paramPort('ellipse', 'x')],
+      [46, 1, 59, paramPort('ellipse', 'y')], [60, 1, 59, paramPort('ellipse', 'size')], [61, 1, 59, paramPort('ellipse', 'height')],
+      [62, 1, 59, paramPort('ellipse', 'angle')], [59, 2, 64, 1], [65, 1, 64, 2], [64, 1, 63, 1], [66, 1, 63, paramPort('maprange', 'inHi')], [16, 1, 67, 1],
+      [63, 1, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [18, 1, 69, 2], [7, 1, 69, paramPort('warp', 'amount')], [71, 1, 70, 1], [58, 1, 70, 2], [58, 1, 73, 1],
+      [72, 1, 73, 2], [27, 1, 74, 1], [73, 1, 74, 2], [74, 1, 70, 3], [69, 1, 70, 4], [75, 1, 76, 1], [27, 1, 76, 2], [31, 1, 76, 3], [44, 1, 76, 4],
+      [70, 1, 76, 5], [76, 1, 77, 1], [2, 1, 77, paramPort('levels', 'lo')], [79, 1, 78, 1], [77, 1, 80, 1], [77, 1, 82, 1], [81, 1, 82, 2], [80, 1, 83, 1],
+      [82, 1, 83, 2], [78, 1, 84, 1], [83, 1, 84, 2], [12, 1, 85, 1], [15, 1, 85, 2], [84, 1, 87, 1], [1, 1, 87, paramPort('pixelate', 'size')],
+      [87, 1, 88, 1], [1, 1, 88, paramPort('posterize', 'cell')], [6, 1, 88, paramPort('posterize', 'dither')], [8, 1, 88, paramPort('posterize', 'steps')],
+      [88, 1, 86, 1], [10, 1, 86, 2], [11, 1, 86, 3], [12, 1, 86, 4], [85, 1, 86, 5], [9, 1, 90, 1], [89, 1, 90, 2], [9, 1, 91, 1], [89, 1, 91, 2],
+      [9, 1, 93, 1], [92, 1, 93, 2], [91, 1, 94, 1], [93, 1, 94, 2], [90, 1, 95, 1], [94, 1, 95, 2], [77, 1, 96, 1], [96, 1, 98, 1], [97, 1, 98, 2],
+      [98, 1, 99, 1], [95, 1, 99, 2], [100, 1, 99, paramPort('smudge', 'length')], [99, 1, 101, 1], [98, 1, 101, 2], [101, 1, 103, 1], [102, 1, 103, 2],
+      [103, 1, 104, 1], [1, 1, 104, paramPort('pixelate', 'size')], [104, 1, 105, 1], [104, 1, 106, 1], [49, 1, 108, 1], [49, 1, 108, 2], [75, 1, 109, 1],
+      [92, 1, 109, 2], [108, 1, 110, 1], [109, 1, 110, 2], [110, 1, 111, 1], [1, 1, 111, paramPort('pixelate', 'size')], [111, 1, 107, 1], [86, 1, 112, 1],
+      [15, 1, 112, 2], [107, 1, 112, 3], [112, 1, 113, 1], [13, 1, 113, 2], [105, 1, 113, 3], [113, 1, 114, 1], [15, 1, 114, 2], [106, 1, 114, 3],
+      [3, 1, 115, paramPort('scatter', 'count')], [116, 1, 115, paramPort('scatter', 'clump')], [4, 1, 117, paramPort('scatter', 'count')], [115, 1, 119, 1],
+      [1, 1, 119, paramPort('pixelate', 'size')], [119, 1, 118, 1], [117, 1, 121, 1], [1, 1, 121, paramPort('pixelate', 'size')], [121, 1, 120, 1],
+      [117, 1, 122, 1], [122, 1, 124, 1], [1, 1, 124, paramPort('pixelate', 'size')], [124, 1, 123, 1], [114, 1, 125, 1], [12, 1, 125, 2], [123, 1, 125, 3],
+      [115, 3, 126, 1], [117, 3, 127, 1], [118, 1, 128, 1], [120, 1, 128, 2], [125, 1, 129, 1], [15, 1, 129, 2], [128, 1, 129, 3], [129, 1, 130, 1],
+      [14, 1, 130, 2], [126, 1, 131, 1], [1, 1, 131, paramPort('pixelate', 'size')], [118, 1, 132, 1], [131, 1, 132, 2], [132, 1, 130, 3], [130, 1, 133, 1],
+      [13, 1, 133, 2], [127, 1, 134, 1], [1, 1, 134, paramPort('pixelate', 'size')], [120, 1, 135, 1], [134, 1, 135, 2], [135, 1, 133, 3], [9, 1, 136, 1],
+      [9, 2, 136, 2], [5, 1, 136, paramPort('orbs', 'size')], [136, 3, 137, 1], [136, 2, 138, 1], [138, 1, 139, 1], [137, 1, 139, 2], [14, 1, 140, 1],
+      [15, 1, 140, 2], [139, 1, 142, 1], [1, 1, 142, paramPort('pixelate', 'size')], [142, 1, 143, 1], [1, 1, 143, paramPort('posterize', 'cell')],
+      [6, 1, 143, paramPort('posterize', 'dither')], [143, 1, 141, 1], [10, 1, 141, 2], [11, 1, 141, 3], [14, 1, 141, 4], [140, 1, 141, 5], [136, 5, 144, 1],
+      [1, 1, 144, paramPort('pixelate', 'size')], [144, 1, 145, 1], [1, 1, 145, paramPort('posterize', 'cell')], [6, 1, 145, paramPort('posterize', 'dither')],
+      [145, 1, 146, 1], [11, 1, 146, 2], [13, 1, 146, 3], [15, 1, 146, 4], [145, 1, 147, 1], [133, 1, 148, 1], [146, 1, 148, 2], [147, 1, 148, 3],
+      [136, 1, 150, 1], [136, 4, 150, 2], [150, 1, 151, 1], [1, 1, 151, paramPort('pixelate', 'size')], [151, 1, 149, 1], [148, 1, 152, 1], [141, 1, 152, 2],
+      [149, 1, 152, 3], [152, 1, 153, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2

@@ -12800,7 +12800,146 @@ function dwDraw(ww, wh, unit, webs, o, E){
   return [tc, gc, dc];
 }
 
+// ---- ORBS (Pixel Space's one process part; docs/prior-art/space-scenes.md A.4): spheres in a light, as Deep-Fold's pixel
+// planets are made: a disc, the sphere under it (its normal), the light from the dial on it (a terminator), a pattern
+// wrapped round it (bands, continents, ice, craters, lava), rings with a near half and a far half and each one's shadow
+// on the other, an atmosphere outside its rim. The seed frames it (one world centred, a close one cropped by the page,
+// a horizon, an eclipse, a belt of rocks, a little system) unless Framing fixes the framing.
+const ORB_WORLDS = ['seeded', 'gas', 'rocky', 'ice', 'cratered', 'molten'];
+const ORB_FRAMES = ['seeded', 'centred', 'close', 'horizon', 'eclipse', 'belt', 'system', 'black hole', 'pulsar'];
+/** Value noise in three dimensions (on a sphere's surface), lattice hashed from a seed. */
+function orbNoise(seed){
+  const H = (x, y, z) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1440670441) + Math.imul(seed, 2246822519) | 0;
+    h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0)/4294967296; };
+  const s = t => t*t*(3 - 2*t);
+  const vn = (x, y, z) => { const X = Math.floor(x), Y = Math.floor(y), Z = Math.floor(z), u = s(x - X), v = s(y - Y), w = s(z - Z);
+    const l = (a, b, t) => a + (b - a)*t;
+    return l(l(l(H(X, Y, Z), H(X + 1, Y, Z), u), l(H(X, Y + 1, Z), H(X + 1, Y + 1, Z), u), v), l(l(H(X, Y, Z + 1), H(X + 1, Y, Z + 1), u), l(H(X, Y + 1, Z + 1), H(X + 1, Y + 1, Z + 1), u), v), w); };
+  const fbm = (x, y, z, oct = 4) => { let t = 0, a = 0.5, f = 1, n = 0; for(let o = 0; o < oct; o++){ t += vn(x*f + o*17.3, y*f, z*f)*a; n += a; a *= 0.5; f *= 2.03; } return t/n; };
+  return { vn, fbm };
+}
+/** The bodies of a framing, in page units (the short side is 1), far to near. */
+function orbFrame(R, aw, ah, o){
+  const rnd = (a, b) => a + R()*(b - a), pick = a => a[Math.floor(R()*a.length)];
+  const W = ['gas', 'rocky', 'ice', 'cratered', 'molten'], world = () => o.world !== 'seeded' ? o.world : pick(W);
+  let frame = o.frame;
+  if(frame === 'seeded'){ const t = R(); frame = t < 0.16 ? 'none' : t < 0.32 ? 'centred' : t < 0.43 ? 'close' : t < 0.54 ? 'horizon' : t < 0.62 ? 'eclipse' : t < 0.72 ? 'belt' : t < 0.82 ? 'system' : t < 0.92 ? 'black hole' : 'pulsar'; }
+  if(frame === 'none') return { frame, bodies: [] };
+  const thirds = () => [aw*pick([1/3, 2/3, 0.5]) + rnd(-0.08, 0.08), ah*pick([1/3, 2/3, 0.4, 0.6]) + rnd(-0.08, 0.08)];
+  const ringed = k => o.ring > 0 && (k === 'gas' || k === 'ice' || R() < 0.3) && R() < 0.25 + o.ring*0.75;
+  const body = (cx, cy, r, kind, extra) => ({ cx, cy, r, kind, tilt: rnd(-0.45, 0.45) + o.turn, spin: rnd(0, 6.28), seed: Math.floor(R()*1e9), ring: null, rough: 0, ...extra });
+  const withRing = b => { if(ringed(b.kind)) b.ring = { rin: rnd(1.25, 1.6), rout: rnd(1.8, 2.5)*(0.8 + o.ring*0.4), open: rnd(0.14, 0.42)*(R() < 0.5 ? 1 : -1), gaps: rnd(0.2, 1) }; return b; };
+  const moons = m => { const out = [], n = Math.round(R()*o.moons*5);
+    for(let i = 0; i < n; i++){ const a = rnd(0, 6.28), d = rnd(1.5, 3.4), r = m.r*rnd(0.07, 0.26), ca = Math.cos(m.tilt), sa = Math.sin(m.tilt);
+      const ex = Math.cos(a)*d*m.r, ey = Math.sin(a)*d*m.r*(m.ring ? Math.abs(m.ring.open) : rnd(0.2, 0.7));
+      out.push(body(m.cx + ex*ca - ey*sa, m.cy + ex*sa + ey*ca, r, R() < 0.6 ? 'cratered' : pick(['rocky', 'ice', 'molten']), { behind: Math.sin(a) < 0 })); }
+    return out; };
+  const S = o.size, B = [];
+  if(frame === 'centred'){ const [x, y] = thirds(), m = withRing(body(x, y, rnd(0.13, 0.3)*S, world())); const ms = moons(m); B.push(...ms.filter(b => b.behind), m, ...ms.filter(b => !b.behind)); }
+  else if(frame === 'close'){ const a = (Math.hypot(o.toward.x, o.toward.y) > 0.05 ? Math.atan2(o.toward.y, o.toward.x) + Math.PI : rnd(0, 6.28)) + rnd(-1, 1), r = rnd(0.55, 1.05)*S, m = withRing(body(aw/2 + Math.cos(a)*r*rnd(0.6, 1.1), ah/2 + Math.sin(a)*r*rnd(0.6, 1.1), r, world())); B.push(m, ...moons(m).filter(b => !b.behind).slice(0, 2)); }
+  else if(frame === 'horizon'){ const r = rnd(1.4, 4)*S, show = rnd(0.2, 0.42), t = Math.hypot(o.toward.x, o.toward.y) > 0.05 ? Math.atan2(o.toward.y, o.toward.x) : -Math.PI/2;
+    // (a horizon below the light: the world lies on the page's far side from the dial, its lit limb toward the page)
+    const a = t + Math.PI + rnd(-0.5, 0.5), ex = Math.cos(a), ey = Math.sin(a), reach = Math.abs(ex)*aw/2 + Math.abs(ey)*ah/2;
+    const cx = aw/2 + ex*(reach + r - show*Math.min(aw, ah)), cy = ah/2 + ey*(reach + r - show*Math.min(aw, ah));
+    B.push(body(cx, cy, r, world(), { tilt: a - Math.PI/2 + rnd(-0.2, 0.2), atmos: 1 })); const [x, y] = thirds(); if(R() < 0.6) B.unshift(body(aw - x, ah - y, rnd(0.03, 0.09)*S, pick(W))); }
+  else if(frame === 'eclipse'){ const [x, y] = thirds(), r = rnd(0.12, 0.26)*S; B.push(body(x, y, r, world(), { eclipse: { dx: rnd(-0.12, 0.12)*r, dy: rnd(-0.12, 0.12)*r, r: r*rnd(0.92, 1.12) } })); }
+  else if(frame === 'belt'){ const a = rnd(-0.6, 0.6), cx = aw/2, cy = ah*rnd(0.3, 0.7), n = Math.round(rnd(22, 60)*(0.6 + o.moons*0.8));
+    for(let i = 0; i < n; i++){ const t = rnd(-1, 1)*1.2, off = (R() + R() + R() - 1.5)*0.18, near = R(), r = (0.008 + Math.pow(near, 5)*0.12)*S;
+      B.push(body(cx + Math.cos(a)*t - Math.sin(a)*off, cy + Math.sin(a)*t + Math.cos(a)*off, r, R() < 0.8 ? 'cratered' : 'rocky', { rough: rnd(0.15, 0.4), near })); }
+    B.sort((p, q) => p.near - q.near); }
+  // (a black hole: a black disc, its accretion disc crossing it, the far side of the disc bent up over it as a halo, a thin
+  //  photon ring; a pulsar: a small fierce star, two beams along its axis, ripples spreading out round it)
+  else if(frame === 'black hole'){ const [x, y] = thirds(), r = rnd(0.05, 0.11)*S;
+    B.push(body(x, y, r, 'void', { tilt: rnd(-0.35, 0.35) + o.turn, hole: { beam: R() < 0.5 ? 1 : -1 }, ring: { rin: rnd(1.5, 1.9), rout: rnd(3, 4.6), open: rnd(0.08, 0.26)*(R() < 0.5 ? 1 : -1), gaps: rnd(0.1, 0.5), lit: 1 } })); }
+  else if(frame === 'pulsar'){ const [x, y] = thirds(); B.push(body(x, y, rnd(0.012, 0.025)*S, 'star', { tilt: rnd(-1.2, 1.2) + o.turn, pulsar: { k: rnd(5, 11), reach: rnd(10, 18) } })); }
+  else { const n = 2 + Math.floor(R()*3); for(let i = 0; i < n; i++){ const r = rnd(0.04, 0.16)*S; B.push(withRing(body(rnd(0.1, 0.9)*aw, rnd(0.1, 0.9)*ah, r, i ? pick(W) : world()))); } B.sort((p, q) => p.r - q.r); }
+  return { frame, bodies: B };
+}
+/** Orbs: bodies, shade, surface, rings, glow, height and each body (fields on the grid). */
+function genOrbs(ww, wh, unit, o){
+  const R = mulberry32(o.seed), N = ww*wh, { bodies, frame } = orbFrame(R, ww/unit, wh/unit, o);
+  const mask = new Float32Array(N), shade = new Float32Array(N), surf = new Float32Array(N), rings = new Float32Array(N), glow = new Float32Array(N), height = new Float32Array(N), each = new Float32Array(N);
+  // the light: toward the dial's handle, as high as it is (at the rim, grazing: half of each world lit)
+  const T = Math.min(1, o.tilt), Lz0 = Math.sqrt(Math.max(0, 1 - T*T)), d = o.toward;
+  const det = o.detail;
+  bodies.forEach((b, bi) => {
+    const nz = orbNoise(b.seed), rp = b.r*unit, ca = Math.cos(b.tilt), sa = Math.sin(b.tilt), cs = Math.cos(b.spin), ss = Math.sin(b.spin);
+    // its light in its own frame (turned with its axis); an eclipsed world is lit from behind, a hairline on the dial's side
+    let lx = d.x*T, ly = d.y*T, lz = Lz0; if(b.eclipse){ lx = d.x*0.22; ly = d.y*0.22; lz = -0.975; }
+    const Lx = lx*ca + ly*sa, Ly = -lx*sa + ly*ca, Lz = lz;
+    const rg = b.ring, ci = rg ? Math.sqrt(1 - rg.open*rg.open)*Math.sign(rg.open) : 0, si = rg ? Math.abs(rg.open) : 1;     // the ring plane's normal (0, ci, si)
+    const reach = b.pulsar ? b.pulsar.reach*1.1 : rg ? rg.rout : b.eclipse ? 2.6 : b.atmos ? 1.25 : 1.12, x0 = Math.max(0, Math.floor((b.cx - b.r*reach)*unit)), x1 = Math.min(ww - 1, Math.ceil((b.cx + b.r*reach)*unit));
+    const y0 = Math.max(0, Math.floor((b.cy - b.r*reach)*unit)), y1 = Math.min(wh - 1, Math.ceil((b.cy + b.r*reach)*unit));
+    const craters = b.kind === 'cratered' ? Array.from({ length: 26 + Math.floor(R()*30) }, () => { const u = R()*2 - 1, t = R()*6.283, s = Math.sqrt(1 - u*u); return [s*Math.cos(t), u, s*Math.sin(t), 0.06 + Math.pow(R(), 2.5)*0.35]; }) : null;
+    const edge = th => 1 + b.rough*(nz.fbm(Math.cos(th)*2 + 5, Math.sin(th)*2, 0.5, 3) - 0.5)*2;
+    const pattern = (px, py, pz) => {
+      // (turned on its axis, then the world's own pattern)
+      const X = px*cs + pz*ss, Y = py, Z = -px*ss + pz*cs, f = 1.6 + det*4;
+      if(b.kind === 'gas'){ const w = nz.fbm(X*f*0.7, Y*f*0.7, Z*f*0.7) - 0.5; return 0.5 + 0.5*Math.sin((Y + w*0.35)*(5 + det*14) + nz.vn(0, Y*6, 0)*4); }
+      if(b.kind === 'rocky'){ const h = nz.fbm(X*f, Y*f, Z*f, 5); return Math.min(1, Math.max(0, (h - 0.42)*3.2 + 0.5)); }
+      if(b.kind === 'ice'){ const h = nz.fbm(X*f*1.4, Y*f*1.4, Z*f*1.4); return Math.min(1, 0.55 + (h - 0.5)*0.9 + Math.max(0, Math.abs(Y) - 0.6)*1.6); }
+      if(b.kind === 'molten'){ const h = nz.fbm(X*f, Y*f, Z*f, 5), r = 1 - Math.abs(h*2 - 1); return Math.pow(r, 6); }
+      if(b.kind === 'void') return 0;
+      if(b.kind === 'star') return 1;
+      let h = 0.55 + (nz.fbm(X*f*1.2, Y*f*1.2, Z*f*1.2) - 0.5)*0.6;
+      for(const [cx, cy, cz, cr] of craters){ const dd = Math.hypot(X - cx, Y - cy, Z - cz)/cr; if(dd < 1.25) h += dd < 1 ? -0.28*(1 - dd*dd) + 0.25*Math.pow(dd, 6) : 0.22*(1.25 - dd)*4; }
+      return Math.min(1, Math.max(0, h)); };
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+      const q = y*ww + x, ux = (x + 0.5)/unit - b.cx, uy = (y + 0.5)/unit - b.cy, a = (ux*ca + uy*sa)/b.r, c = (-ux*sa + uy*ca)/b.r, r = Math.hypot(a, c);
+      const e = b.rough ? edge(Math.atan2(c, a)) : 1, rho = r/e, cov = Math.min(1, Math.max(0, (1 - rho)*rp*e + 0.5));
+      // its rings: where the page's ray meets the ring plane (z toward us), in front of the world or behind it
+      let ringHere = 0, rz = 0, ringShade = 0, ringSurf = 0;
+      if(rg){ rz = -c*ci/si; const rr = Math.hypot(a, c, rz);
+        if(rr > rg.rin && rr < rg.rout){ const t = (rr - rg.rin)/(rg.rout - rg.rin), band = nz.vn(rr*9*(1 + rg.gaps), 3.3, 1.7);
+          ringHere = Math.min(1, Math.min(t, 1 - t)*rp*(rg.rout - rg.rin)*0.9)*(band > 0.25*rg.gaps ? 1 : 0.15);
+          // the world's shadow on it
+          const dot = a*Lx + c*Ly + rz*Lz, px = a - dot*Lx, py = c - dot*Ly, pz = rz - dot*Lz;
+          ringShade = rg.lit ? 0.55 + 0.45*band*(0.75 + 0.25*Math.sign(b.hole.beam*a)) : dot < 0 && px*px + py*py + pz*pz < 1 ? 0.12 : 0.45 + 0.45*Math.abs(ci*Ly + si*Lz);
+          ringSurf = 0.3 + 0.7*band; } }
+      const zs = rho < 1 ? Math.sqrt(1 - rho*rho) : 0;
+      const ringFront = ringHere > 0 && rz > zs;
+      if(cov > 0){
+        const lam = b.kind === 'void' ? 0 : b.kind === 'star' ? 1 : Math.max(0, a/e*Lx + c/e*Ly + zs*Lz);
+        // the rings' shadow on the world
+        let sh = 1; if(rg){ const nl = ci*Ly + si*Lz; if(Math.abs(nl) > 1e-3){ const t = -(ci*c/e + si*zs)/nl; if(t > 0){ const hx = a/e + t*Lx, hy = c/e + t*Ly, hz = zs + t*Lz, hr = Math.hypot(hx, hy, hz); if(hr > rg.rin && hr < rg.rout) sh = 0.35; } } }
+        const k = cov;
+        glow[q] *= 1 - k; mask[q] = Math.max(mask[q], k); shade[q] = shade[q]*(1 - k) + lam*sh*k; surf[q] = surf[q]*(1 - k) + pattern(a/e, c/e, zs)*k; height[q] = height[q]*(1 - k) + zs*k; each[q] = each[q]*(1 - k) + (bodies.length > 1 ? 1 - bi/bodies.length*0.8 : 1)*k;
+        if(ringHere > 0 && !ringFront) rings[q] *= 1 - k; }
+      // (a black hole's disc gives its own light: it goes to the glow, cut through the black disc where it crosses in front)
+      if(rg && rg.lit){ if(ringHere > 0 && (ringFront || cov < 1)){ const k = ringFront ? ringHere : ringHere*(1 - cov); glow[q] = Math.max(glow[q], k*ringShade); if(ringFront) mask[q] *= 1 - k; } }
+      else if(ringHere > 0 && (ringFront || cov < 1)){ const k = ringFront ? ringHere : ringHere*(1 - cov);
+        rings[q] = Math.max(rings[q], k); shade[q] = shade[q]*(1 - k) + ringShade*k; surf[q] = surf[q]*(1 - k) + ringSurf*k; }
+      // the air at its rim, brighter on the lit side; an eclipsed world's corona (the star behind it, rays streaming)
+      if(b.hole && rho > 1){ const t = (rho - 1)/0.5, top = 0.55 + 0.45*Math.max(0, -c*Math.sign(rg.open)/Math.max(1e-6, r));
+        // the halo: the disc's far side lensed up round the hole; the photon ring a hairline at its edge
+        if(t < 1 && !(ringHere > 0 && rz > 0)){ const k = Math.pow(1 - t, 1.6)*top*(0.7 + 0.3*nz.vn(Math.atan2(c, a)*4 + 9, 1.3, rho*3)); glow[q] = Math.max(glow[q], k); }
+        glow[q] = Math.max(glow[q], Math.max(0, 1 - Math.abs(rho - 1.04)/0.06)); }
+      if(b.pulsar && rho > 1){ const P = b.pulsar, along = Math.abs(c), across = Math.abs(a);
+        const beam = along > 1 && along < P.reach && across < 0.35 + along*0.06 ? (1 - along/P.reach)*(1 - across/(0.35 + along*0.06)) : 0;
+        const ripple = rho < P.reach*0.8 ? Math.pow(Math.max(0, Math.cos(rho/P.k*Math.PI*2*1.5)), 8)*(1 - rho/(P.reach*0.8))*0.8 : 0;
+        glow[q] = Math.max(glow[q], beam, ripple, Math.max(0, 1 - (rho - 1)/2.5)); }
+      else if(rho > 1 && !b.hole){ if(b.eclipse){ const ec = b.eclipse, ex = ux/b.r - ec.dx/b.r, ey = uy/b.r - ec.dy/b.r, er = Math.hypot(ex, ey)/(ec.r/b.r);
+          const disc = er < 1 ? 1 : 0, ray = 0.6 + 0.4*nz.vn(Math.atan2(ey, ex)*7 + 40, 0.5, er*0.6), cor = er >= 1 ? Math.pow(Math.max(0, 1 - (er - 1)/(1.6*ray)), 2.2) : 0;
+          glow[q] = Math.max(glow[q], disc*(1 - cov) + cor*(1 - cov)); }
+        else { const w = b.atmos ? 0.16 : 0.09, t = (rho - 1)/w; if(t < 1){ const side = Math.max(0, (a*Lx + c*Ly)/Math.max(1e-6, r)); glow[q] = Math.max(glow[q], Math.pow(1 - t, 2)*(0.3 + 0.7*side)*0.75); } } }
+      else if(b.atmos){ const t = (1 - rho)/0.05; if(t < 1) glow[q] = Math.max(glow[q], (1 - t)*0.6*Math.max(0, (a*Lx + c*Ly)/Math.max(1e-6, r) + 0.3)); }
+    }
+  });
+  return { frame, fields: [mask, shade, surf, rings, glow, height, each] };
+}
+
 const GEN_STEPS = {
+  // ORBS (Pixel Space's process part): worlds in the dial's light, framed by the seed
+  orbs: { cat: 'Marks', label: 'Orbs', ins: ['light from', 'light height'], outs: ['bodies', 'shade', 'surface', 'rings', 'glow', 'height', 'each body'],
+    io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+    params: [GEN_R('world', 'World: Seeded · Gas · Rocky · Ice · Cratered · Molten', 0), GEN_R('frame', 'Framing: Seeded · Centred · Close · Horizon · Eclipse · Belt · System · Black Hole · Pulsar', 0),
+      GEN_R('size', 'Size', 100, 40, 250), GEN_R('moons', 'Moons', 40), GEN_R('ring', 'Rings', 50), GEN_R('detail', 'Detail', 50), GEN_R('turn', 'Turn', 0, -90, 90), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
+    doc: 'Worlds in the light: a planet’s disc, its terminator from the dial, bands or continents or craters wrapped round it, rings with a near and a far half and their shadows, the air at its rim; framed by the seed.',
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), h = E.input(n, 2), sixth = (k, m) => Math.min(m - 1, Math.floor(num(n, k, 0)/100*m));
+      const o = { seed: genSeed(E, n) ^ 0x51ab, world: ORB_WORLDS[sixth('world', 6)], frame: ORB_FRAMES[sixth('frame', 9)], size: num(n, 'size', 100)/100, moons: num(n, 'moons', 40)/100,
+        ring: num(n, 'ring', 50)/100, detail: num(n, 'detail', 50)/100, turn: num(n, 'turn', 0)*Math.PI/180, toward: { x: -dial.x, y: -dial.y },
+        tilt: typeof h === 'number' ? h : Math.max(0, Math.min(1.3, (E.ctx.lightTilt ?? 100)/100)) };
+      return genOrbs(ww, wh, unit, o).fields; } },
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
   ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
     outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',
@@ -16618,7 +16757,7 @@ const STEP_PARTS = {
   math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine', 'round', 'floor', 'ceiling', 'greater', 'less', 'log'])] },
   mix:      { cat: 'Combine', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [STEP_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
-  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16)] },
+  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16), STEP_R('dither', 'Dither', 0), STEP_R('cell', 'Dither Cell', 20, 2, 200), STEP_SEL('pattern', 'Dither Pattern', ['ordered', 'checker', 'scattered'])] },
   transform:{ cat: 'Shape', label: 'Tile & Rotate', ins: ['field'], outs: ['field'], params: [STEP_R('scale', 'Scale', 100, 25, 400), STEP_R('angle', 'Angle', 0, 0, 360)] },
   edges:    { cat: 'Shape', label: 'Edge Detect', ins: ['field'], outs: ['edges'], params: [STEP_R('strength', 'Strength', 50)] },
   // light and colour
@@ -16710,7 +16849,7 @@ const STEP_PARTS = {
                 STEP_SEL('marks', 'Punctuation', Object.keys(POEM_MARK_SETS)), STEP_R('glow', 'Punctuation Glow', 100, 10, 400)] },
   // more ways to reshape a gray map (Filter Forge's and Blender's staples)
   grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
-  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
+  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds']), STEP_SEL('take', 'Each Cell Takes', ['the average', 'the brightest'])] },
   twirl:    { cat: 'Shape', label: 'Twirl', ins: ['field'], outs: ['field'], params: [STEP_R('angle', 'Twist', 180, -720, 720), STEP_R('radius', 'Radius', 70, 5, 150), STEP_R('x', 'Across', 50), STEP_R('y', 'Down', 50)] },
   mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
   chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
@@ -16844,7 +16983,7 @@ const STEP_DOCS = {
   profile: 'A gradient whose shape is a curve: across the page, around the center, toward the edges, or along any map.',
   poem: 'Hands the graph the poem’s layout: where the words, lines, stanzas, rhymes and punctuation sit on the page.',
   grow: 'Grows the bright parts of a gray map outward, or shrinks them inward.',
-  pixelate: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers.',
+  pixelate: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers or its brightest point.',
   twirl: 'Twists a gray map around a point, strongest at the center and fading out at the radius.',
   mirror: 'Folds a gray map onto itself so one half repeats the other.',
   chroma: 'Slides a picture’s red and blue apart, like a cheap lens or a misprint (chromatic aberration).',
@@ -17132,10 +17271,18 @@ const STEP_RUN = {
     if(isImg(v)){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }; for(let i = 0; i < N; i++){ o.r[i] = 1 - v.r[i]; o.g[i] = 1 - v.g[i]; o.b[i] = 1 - v.b[i]; } return [o]; }
     const f = asField(v), o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = 1 - f[i]; return [o];
   },
-  posterize(E, n){ const { N, input, map, at, asField } = E;
+  posterize(E, n){ const { ww, wh, N, unit, input, map, at, num, P, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
-    const K = map(n, 'steps', 5), o = new Float32Array(N);
-    for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); }
+    // DITHER (pixel art's own): a threshold pattern on cells as Pixelate's (the same Cell Size lines them up), so
+    // where two steps meet they interleave instead of meeting in a hard line; a little dither only touches the seams
+    const K = map(n, 'steps', 5), o = new Float32Array(N), D = num(n, 'dither', 0)/100;
+    if(D <= 0){ for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); } return [o]; }
+    const c = Math.max(1, num(n, 'cell', 20)*unit/1536*1.2), pat = P(n, 'pattern', 'ordered');
+    const B4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], hash = (a, b) => { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0)/4294967296; };
+    for(let y = 0; y < wh; y++){ const cy = Math.floor(y/c);
+      for(let x = 0; x < ww; x++){ const q = y*ww + x, cx = Math.floor(x/c), k = Math.max(2, Math.min(16, Math.round(at(K, q))));
+        const t = pat === 'checker' ? ((cx + cy) & 1)*0.5 + 0.25 : pat === 'scattered' ? hash(cx, cy) : (B4[(cy & 3)*4 + (cx & 3)] + 0.5)/16;
+        o[q] = Math.min(k - 1, Math.max(0, Math.floor(Math.max(0, f[q])*k + (t - 0.5)*D)))/(k - 1); } }
     return [o];
   },
   transform(E, n){ const { ww, wh, N, input, num, asField } = E;
@@ -17668,12 +17815,14 @@ Object.assign(STEP_RUN, {
     return [o];
   },
   pixelate(E, n){ const { ww, wh, N, unit, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares');
-    const cellOf = (x, y) => { if(kind === 'diamonds'){ const u = (x + y)/c, v = (x - y)/c; return Math.floor(u) + ':' + Math.floor(v); }
-      const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return Math.floor(sx/c) + ':' + row; };
-    const sum = new Map(), id = new Array(N);
-    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k) || [0, 0]; s[0] += f[q]; s[1]++; sum.set(k, s); }
-    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
+    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares'), most = P(n, 'take', 'the average') === 'the brightest';
+    // (EACH CELL TAKES THE BRIGHTEST: a star smaller than a cell still lights it, as a pixel artist's one-pixel star)
+    const cellOf = kind === 'diamonds' ? (x, y) => { const u = Math.floor((x + y)/c), v = Math.floor((x - y)/c); return (u + 65536)*131072 + v + 65536; }
+      : (x, y) => { const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return (row + 1)*131072 + Math.floor(sx/c) + 1; };
+    const sum = new Map(), id = new Float64Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k);
+      if(!s) sum.set(k, [f[q], 1]); else if(most){ if(f[q] > s[0]) s[0] = f[q]; } else { s[0] += f[q]; s[1]++; } }
+    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = most ? s[0] : s[0]/s[1]; }
     return [o];
   },
   twirl(E, n){ const { ww, wh, N, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
@@ -18745,6 +18894,197 @@ const TEXTURE_CHAINS = {
     [23, 1, 8, paramPort('gradient', 'angle')], [24, 1, 11, paramPort('gradient', 'angle')], [25, 1, 7, paramPort('forms', 'count')]] },
   // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
   // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
+  // ── Pixel Space (ROADMAP §2 L1): pixel-art space, general parts and Orbs; docs/prior-art/space-scenes.md ──
+  pixelspace: { label: 'Pixel Space', div: 4, crisp: true, teach: 'Space in pixel art, after the generators pixel artists use (Deep-Fold’s Pixel Space and Pixel Planets): a nebula, worlds and stars on a coarse grid of square pixels, every colour from the six hues and the seed choosing the scene. The seed picks the nebula’s form (Random Numbers into a Map Switch): a torn band across the page at the seed’s angle, drifting clouds, a veil of filaments (the ridges of a Perlin Noise), or a galaxy twisted round a point, alone or lying in the band. Every grey map is cut into square cells by Pixelate (Pixel Size), stepped by Posterize (Bands) with Dither where two steps meet, and coloured by a Gradient Map from the Deep Sky through the Mid Sky and the Nebula Hue to Starlight. The rim on the side toward the light is a Smudge of the nebula toward the dial’s handle, less the nebula itself. Stars are two Scatters: dust (Stars) and four-point sparkles (Sparkles) with a halo, each cell taking its brightest point so the smallest star still lights a pixel; some take the Rim or World Hue. Orbs makes the worlds: the seed frames them (none, one, a close one cropped by the page, a horizon, an eclipse with its corona, a belt of rocks, a little system), with bands, continents, ice, craters or lava, rings and moons, each lit by the Light Dial. Try: turn the dial and watch the rims and every world’s terminator follow it.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Pixel Size', def: 40 }, 40, 40],                                                                                   // 1
+      ['knob', { slot: '2', name: 'Nebula', def: 55 }, 40, 150],                                                                                      // 2
+      ['knob', { slot: '3', name: 'Stars', def: 50 }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4', name: 'Sparkles', def: 40 }, 40, 370],                                                                                    // 4
+      ['knob', { slot: '5', name: 'Worlds', def: 50 }, 40, 480],                                                                                      // 5
+      ['knob', { slot: '6', name: 'Dither', def: 40 }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '7', name: 'Swirl', def: 50 }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8', name: 'Bands', def: 45 }, 40, 810],                                                                                       // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Deep Sky' }, 40, 1030],                                                                                             // 10
+      ['hue', { slot: '2', name: 'Mid Sky' }, 40, 1140],                                                                                              // 11
+      ['hue', { slot: '3', name: 'Nebula Heart' }, 40, 1250],                                                                                         // 12
+      ['hue', { slot: '4', name: 'Nebula Rim' }, 40, 1360],                                                                                           // 13
+      ['hue', { slot: '5', name: 'Worlds' }, 40, 1470],                                                                                               // 14
+      ['hue', { slot: '6', name: 'Starlight' }, 40, 1580],                                                                                            // 15
+      ['perlin', { scale: 45, '~scale': '22,80', details: 4, rough: 45, contrast: 35 }, 260, 40],                                                     // 16
+      ['random', { lo: 0, hi: 100 }, 40, 1690],                                                                                                       // 17
+      ['perlin', { scale: 18, details: 3, rough: 50, contrast: 20 }, 40, 1800],                                                                       // 18
+      ['gradient', { shape: 'linear', angle: 60 }, 260, 150],                                                                                         // 19
+      ['random', { lo: 0, hi: 100 }, 40, 1910],                                                                                                       // 20
+      ['number', { value: 50 }, 40, 2020],                                                                                                            // 21
+      ['math', { op: 'difference' }, 480, 40],                                                                                                        // 22
+      ['maprange', { inLo: 0, inHi: 30, '~inHi': '18,42', outLo: 100, outHi: 0 }, 700, 40],                                                           // 23
+      ['random', { lo: 0, hi: 100 }, 40, 2130],                                                                                                       // 24
+      ['warp', { amount: 30, '~amount': '0,80' }, 920, 40],                                                                                           // 25
+      ['maprange', { outLo: 45, outHi: 100 }, 480, 150],                                                                                              // 26
+      ['math', { op: 'multiply' }, 1140, 40],                                                                                                         // 27
+      ['perlin', { scale: 12, details: 2, contrast: 70 }, 40, 2240],                                                                                  // 28
+      ['warp', { amount: 30, '~amount': '0,80' }, 480, 260],                                                                                          // 29
+      ['maprange', { inLo: 42, inHi: 62, outLo: 0, outHi: 100 }, 260, 260],                                                                           // 30
+      ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 31
+      ['maprange', { inLo: 0, inHi: 12, '~inHi': '6,18', outLo: 100, outHi: 0 }, 700, 260],                                                           // 32
+      ['perlin', { scale: 22, '~scale': '12,40', details: 2, rough: 40, contrast: 30 }, 260, 370],                                                    // 33
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 34
+      ['math', { op: 'difference' }, 480, 370],                                                                                                       // 35
+      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 36
+      ['maprange', { inLo: 42, inHi: 62, outLo: 0, outHi: 100 }, 260, 480],                                                                           // 37
+      ['maprange', { outLo: 55, outHi: 100 }, 480, 480],                                                                                              // 38
+      ['warp', { amount: 30, '~amount': '0,80' }, 920, 150],                                                                                          // 39
+      ['math', { op: 'multiply' }, 1140, 150],                                                                                                        // 40
+      ['number', { value: 40 }, 40, 2570],                                                                                                            // 41
+      ['math', { op: 'multiply' }, 480, 590],                                                                                                         // 42
+      ['math', { op: 'max' }, 1360, 40],                                                                                                              // 43
+      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 44
+      ['random', { lo: 25, hi: 75 }, 40, 2680],                                                                                                       // 45
+      ['random', { lo: 25, hi: 75 }, 40, 2790],                                                                                                       // 46
+      ['ellipse', { size: 110, '~size': '70,160', height: 100, soft: 100 }, 260, 590],                                                                // 47
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 48
+      ['invert', {}, 480, 700],                                                                                                                       // 49
+      ['twirl', { angle: 520, radius: 60, '~angle': '300,720' }, 1360, 150],                                                                          // 50
+      ['math', { op: 'multiply' }, 700, 370],                                                                                                         // 51
+      ['math', { op: 'screen' }, 920, 260],                                                                                                           // 52
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 53
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 54
+      ['math', { op: 'multiply' }, 700, 480],                                                                                                         // 55
+      ['number', { value: 70 }, 40, 3120],                                                                                                            // 56
+      ['math', { op: 'multiply' }, 920, 370],                                                                                                         // 57
+      ['math', { op: 'screen' }, 1580, 150],                                                                                                          // 58
+      ['ellipse', { size: 90, '~size': '50,130', height: 70, '~height': '35,100', angle: 0, soft: 100 }, 260, 700],                                   // 59
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 60
+      ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 61
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 62
+      ['maprange', { inLo: 0, inHi: 22, '~inHi': '12,30', outLo: 100, outHi: 0 }, 700, 590],                                                          // 63
+      ['math', { op: 'difference' }, 480, 810],                                                                                                       // 64
+      ['number', { value: 60 }, 40, 3560],                                                                                                            // 65
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 66
+      ['maprange', { outLo: 35, outHi: 100 }, 480, 920],                                                                                              // 67
+      ['math', { op: 'multiply' }, 920, 480],                                                                                                         // 68
+      ['warp', { amount: 30, '~amount': '0,80' }, 1140, 370],                                                                                         // 69
+      ['mapswitch', { soft: 0 }, 2240, 40],                                                                                                           // 70
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 71
+      ['number', { value: 85 }, 40, 3890],                                                                                                            // 72
+      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 73
+      ['math', { op: 'max' }, 2020, 40],                                                                                                              // 74
+      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 75
+      ['mapswitch', { soft: 0 }, 2460, 40],                                                                                                           // 76
+      ['levels', { lo: 35, '~lo': '75,5', hi: 95, gamma: 50 }, 2680, 40],                                                                             // 77
+      ['maprange', { inLo: 30, inHi: 85, outLo: 0, outHi: 22 }, 260, 810],                                                                            // 78
+      ['perlin', { scale: 25, details: 3, contrast: 20 }, 40, 4110],                                                                                  // 79
+      ['maprange', { outLo: 18, outHi: 100 }, 2900, 40],                                                                                              // 80
+      ['number', { value: 2 }, 40, 4220],                                                                                                             // 81
+      ['math', { op: 'greater' }, 2900, 150],                                                                                                         // 82
+      ['math', { op: 'multiply' }, 3120, 40],                                                                                                         // 83
+      ['math', { op: 'max' }, 3340, 40],                                                                                                              // 84
+      ['mix', { t: 40 }, 260, 920],                                                                                                                   // 85
+      ['gradmap', { stops: 4 }, 4000, 40],                                                                                                            // 86
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 3560, 40],                                                                     // 87
+      ['posterize', { steps: 6, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 3780, 40],                                               // 88
+      ['number', { value: 25 }, 40, 4330],                                                                                                            // 89
+      ['math', { op: 'subtract' }, 260, 1030],                                                                                                        // 90
+      ['math', { op: 'less' }, 260, 1140],                                                                                                            // 91
+      ['number', { value: 75 }, 40, 4440],                                                                                                            // 92
+      ['math', { op: 'add' }, 260, 1250],                                                                                                             // 93
+      ['math', { op: 'multiply' }, 480, 1030],                                                                                                        // 94
+      ['math', { op: 'add' }, 700, 700],                                                                                                              // 95
+      ['blur', { radius: 5 }, 2900, 260],                                                                                                             // 96
+      ['number', { value: 10 }, 40, 4550],                                                                                                            // 97
+      ['math', { op: 'greater' }, 3120, 150],                                                                                                         // 98
+      ['smudge', { length: 16, '~length': '8,32', strength: 100, trail: 85 }, 3340, 150],                                                             // 99
+      ['random', { lo: 0, hi: 100 }, 40, 4660],                                                                                                       // 100
+      ['math', { op: 'subtract' }, 3560, 150],                                                                                                        // 101
+      ['number', { value: 100 }, 40, 4770],                                                                                                           // 102
+      ['math', { op: 'multiply' }, 3780, 150],                                                                                                        // 103
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 4000, 150],                                                                    // 104
+      ['threshold', { at: 4, soft: 0 }, 4220, 40],                                                                                                    // 105
+      ['threshold', { at: 30, soft: 0 }, 4220, 150],                                                                                                  // 106
+      ['threshold', { at: 88, soft: 0 }, 1360, 260],                                                                                                  // 107
+      ['math', { op: 'multiply' }, 700, 810],                                                                                                         // 108
+      ['math', { op: 'greater' }, 260, 1360],                                                                                                         // 109
+      ['math', { op: 'multiply' }, 920, 590],                                                                                                         // 110
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 1140, 480],                                                                    // 111
+      ['blend', { opacity: 100 }, 4220, 260],                                                                                                         // 112
+      ['blend', { opacity: 100 }, 4440, 40],                                                                                                          // 113
+      ['blend', { opacity: 55 }, 4660, 40],                                                                                                           // 114
+      ['scatter', { shape: 'dot', count: 160, '~count': '30,400', size: 3, vary: 60, fade: 75, clump: 30 }, 260, 1470],                               // 115
+      ['random', { lo: 0, hi: 100 }, 40, 4880],                                                                                                       // 116
+      ['scatter', { shape: 'cross', count: 10, '~count': '2,36', size: 24, vary: 75, turn: 0, fade: 30 }, 260, 1580],                                 // 117
+      ['threshold', { at: 30, soft: 0 }, 700, 920],                                                                                                   // 118
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1140],                                                                  // 119
+      ['threshold', { at: 40, soft: 0 }, 700, 1030],                                                                                                  // 120
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1250],                                                                  // 121
+      ['blur', { radius: 10 }, 480, 1360],                                                                                                            // 122
+      ['threshold', { at: 12, soft: 0 }, 920, 700],                                                                                                   // 123
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1140],                                                                    // 124
+      ['blend', { opacity: 55 }, 4880, 40],                                                                                                           // 125
+      ['threshold', { at: 70, soft: 0 }, 480, 1470],                                                                                                  // 126
+      ['threshold', { at: 60, soft: 0 }, 480, 1580],                                                                                                  // 127
+      ['math', { op: 'max' }, 920, 810],                                                                                                              // 128
+      ['blend', { opacity: 100 }, 5100, 40],                                                                                                          // 129
+      ['blend', { opacity: 100 }, 5320, 40],                                                                                                          // 130
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1250],                                                                    // 131
+      ['math', { op: 'multiply' }, 920, 920],                                                                                                         // 132
+      ['blend', { opacity: 100 }, 5540, 40],                                                                                                          // 133
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1360],                                                                    // 134
+      ['math', { op: 'multiply' }, 920, 1030],                                                                                                        // 135
+      ['orbs', { size: 100, '~size': '50,200' }, 260, 1690],                                                                                          // 136
+      ['maprange', { outLo: 40, outHi: 100 }, 480, 1690],                                                                                             // 137
+      ['maprange', { outLo: 6, outHi: 100 }, 480, 1800],                                                                                              // 138
+      ['math', { op: 'multiply' }, 700, 1470],                                                                                                        // 139
+      ['mix', { t: 40 }, 260, 1800],                                                                                                                  // 140
+      ['gradmap', { stops: 4 }, 1360, 370],                                                                                                           // 141
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 920, 1140],                                                                    // 142
+      ['posterize', { steps: 5, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 1140, 590],                                              // 143
+      ['pixelate', { size: 12, '~size': '5,24' }, 480, 1910],                                                                                         // 144
+      ['posterize', { steps: 4, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 700, 1580],                                              // 145
+      ['gradmap', { stops: 3 }, 920, 1250],                                                                                                           // 146
+      ['threshold', { at: 10, soft: 0 }, 920, 1360],                                                                                                  // 147
+      ['blend', { opacity: 100 }, 5760, 40],                                                                                                          // 148
+      ['threshold', { at: 50, soft: 0 }, 920, 1470],                                                                                                  // 149
+      ['math', { op: 'max' }, 480, 2020],                                                                                                             // 150
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1690],                                                                    // 151
+      ['blend', { opacity: 100 }, 5980, 40],                                                                                                          // 152
+      ['surface', { name: 'Pixel Space', ground: 'colour' }, 6200, 40]],                                                                              // 153
+    wires: [[17, 1, 16, paramPort('perlin', 'scale')], [20, 1, 19, paramPort('gradient', 'angle')], [19, 1, 22, 1], [21, 1, 22, 2], [22, 1, 23, 1],
+      [24, 1, 23, paramPort('maprange', 'inHi')], [23, 1, 25, 1], [18, 1, 25, 2], [7, 1, 25, paramPort('warp', 'amount')], [25, 1, 27, 1], [26, 1, 27, 2],
+      [16, 1, 26, 1], [16, 1, 29, 1], [18, 1, 29, 2], [7, 1, 29, paramPort('warp', 'amount')], [29, 1, 31, 1], [30, 1, 31, 2], [28, 1, 30, 1],
+      [34, 1, 33, paramPort('perlin', 'scale')], [33, 1, 35, 1], [21, 1, 35, 2], [35, 1, 32, 1], [36, 1, 32, paramPort('maprange', 'inHi')], [28, 1, 37, 1],
+      [16, 1, 38, 1], [32, 1, 39, 1], [18, 1, 39, 2], [7, 1, 39, paramPort('warp', 'amount')], [39, 1, 40, 1], [38, 1, 40, 2], [16, 1, 42, 1], [41, 1, 42, 2],
+      [40, 1, 43, 1], [42, 1, 43, 2], [43, 1, 44, 1], [37, 1, 44, 2], [45, 1, 47, paramPort('ellipse', 'x')], [46, 1, 47, paramPort('ellipse', 'y')],
+      [48, 1, 47, paramPort('ellipse', 'size')], [47, 2, 49, 1], [49, 1, 51, 1], [49, 1, 51, 2], [49, 1, 52, 1], [51, 1, 52, 2], [52, 1, 53, 1],
+      [16, 1, 53, 2], [53, 1, 50, 1], [45, 1, 50, paramPort('twirl', 'x')], [46, 1, 50, paramPort('twirl', 'y')], [54, 1, 50, paramPort('twirl', 'angle')],
+      [49, 1, 55, 1], [49, 1, 55, 2], [55, 1, 57, 1], [56, 1, 57, 2], [50, 1, 58, 1], [57, 1, 58, 2], [45, 1, 59, paramPort('ellipse', 'x')],
+      [46, 1, 59, paramPort('ellipse', 'y')], [60, 1, 59, paramPort('ellipse', 'size')], [61, 1, 59, paramPort('ellipse', 'height')],
+      [62, 1, 59, paramPort('ellipse', 'angle')], [59, 2, 64, 1], [65, 1, 64, 2], [64, 1, 63, 1], [66, 1, 63, paramPort('maprange', 'inHi')], [16, 1, 67, 1],
+      [63, 1, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [18, 1, 69, 2], [7, 1, 69, paramPort('warp', 'amount')], [71, 1, 70, 1], [58, 1, 70, 2], [58, 1, 73, 1],
+      [72, 1, 73, 2], [27, 1, 74, 1], [73, 1, 74, 2], [74, 1, 70, 3], [69, 1, 70, 4], [75, 1, 76, 1], [27, 1, 76, 2], [31, 1, 76, 3], [44, 1, 76, 4],
+      [70, 1, 76, 5], [76, 1, 77, 1], [2, 1, 77, paramPort('levels', 'lo')], [79, 1, 78, 1], [77, 1, 80, 1], [77, 1, 82, 1], [81, 1, 82, 2], [80, 1, 83, 1],
+      [82, 1, 83, 2], [78, 1, 84, 1], [83, 1, 84, 2], [12, 1, 85, 1], [15, 1, 85, 2], [84, 1, 87, 1], [1, 1, 87, paramPort('pixelate', 'size')],
+      [87, 1, 88, 1], [1, 1, 88, paramPort('posterize', 'cell')], [6, 1, 88, paramPort('posterize', 'dither')], [8, 1, 88, paramPort('posterize', 'steps')],
+      [88, 1, 86, 1], [10, 1, 86, 2], [11, 1, 86, 3], [12, 1, 86, 4], [85, 1, 86, 5], [9, 1, 90, 1], [89, 1, 90, 2], [9, 1, 91, 1], [89, 1, 91, 2],
+      [9, 1, 93, 1], [92, 1, 93, 2], [91, 1, 94, 1], [93, 1, 94, 2], [90, 1, 95, 1], [94, 1, 95, 2], [77, 1, 96, 1], [96, 1, 98, 1], [97, 1, 98, 2],
+      [98, 1, 99, 1], [95, 1, 99, 2], [100, 1, 99, paramPort('smudge', 'length')], [99, 1, 101, 1], [98, 1, 101, 2], [101, 1, 103, 1], [102, 1, 103, 2],
+      [103, 1, 104, 1], [1, 1, 104, paramPort('pixelate', 'size')], [104, 1, 105, 1], [104, 1, 106, 1], [49, 1, 108, 1], [49, 1, 108, 2], [75, 1, 109, 1],
+      [92, 1, 109, 2], [108, 1, 110, 1], [109, 1, 110, 2], [110, 1, 111, 1], [1, 1, 111, paramPort('pixelate', 'size')], [111, 1, 107, 1], [86, 1, 112, 1],
+      [15, 1, 112, 2], [107, 1, 112, 3], [112, 1, 113, 1], [13, 1, 113, 2], [105, 1, 113, 3], [113, 1, 114, 1], [15, 1, 114, 2], [106, 1, 114, 3],
+      [3, 1, 115, paramPort('scatter', 'count')], [116, 1, 115, paramPort('scatter', 'clump')], [4, 1, 117, paramPort('scatter', 'count')], [115, 1, 119, 1],
+      [1, 1, 119, paramPort('pixelate', 'size')], [119, 1, 118, 1], [117, 1, 121, 1], [1, 1, 121, paramPort('pixelate', 'size')], [121, 1, 120, 1],
+      [117, 1, 122, 1], [122, 1, 124, 1], [1, 1, 124, paramPort('pixelate', 'size')], [124, 1, 123, 1], [114, 1, 125, 1], [12, 1, 125, 2], [123, 1, 125, 3],
+      [115, 3, 126, 1], [117, 3, 127, 1], [118, 1, 128, 1], [120, 1, 128, 2], [125, 1, 129, 1], [15, 1, 129, 2], [128, 1, 129, 3], [129, 1, 130, 1],
+      [14, 1, 130, 2], [126, 1, 131, 1], [1, 1, 131, paramPort('pixelate', 'size')], [118, 1, 132, 1], [131, 1, 132, 2], [132, 1, 130, 3], [130, 1, 133, 1],
+      [13, 1, 133, 2], [127, 1, 134, 1], [1, 1, 134, paramPort('pixelate', 'size')], [120, 1, 135, 1], [134, 1, 135, 2], [135, 1, 133, 3], [9, 1, 136, 1],
+      [9, 2, 136, 2], [5, 1, 136, paramPort('orbs', 'size')], [136, 3, 137, 1], [136, 2, 138, 1], [138, 1, 139, 1], [137, 1, 139, 2], [14, 1, 140, 1],
+      [15, 1, 140, 2], [139, 1, 142, 1], [1, 1, 142, paramPort('pixelate', 'size')], [142, 1, 143, 1], [1, 1, 143, paramPort('posterize', 'cell')],
+      [6, 1, 143, paramPort('posterize', 'dither')], [143, 1, 141, 1], [10, 1, 141, 2], [11, 1, 141, 3], [14, 1, 141, 4], [140, 1, 141, 5], [136, 5, 144, 1],
+      [1, 1, 144, paramPort('pixelate', 'size')], [144, 1, 145, 1], [1, 1, 145, paramPort('posterize', 'cell')], [6, 1, 145, paramPort('posterize', 'dither')],
+      [145, 1, 146, 1], [11, 1, 146, 2], [13, 1, 146, 3], [15, 1, 146, 4], [145, 1, 147, 1], [133, 1, 148, 1], [146, 1, 148, 2], [147, 1, 148, 3],
+      [136, 1, 150, 1], [136, 4, 150, 2], [150, 1, 151, 1], [1, 1, 151, paramPort('pixelate', 'size')], [151, 1, 149, 1], [148, 1, 152, 1], [141, 1, 152, 2],
+      [149, 1, 152, 3], [152, 1, 153, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
@@ -20144,6 +20484,14 @@ const TEXTURE_PARAMS = {
                   {key:'sheen', label:'Sheen', min:0, max:100, def:70, unit:''},
                   {key:'depth', label:'Depth', min:0, max:100, def:40, unit:''},
                   {key:'lift', label:'Lift', min:0, max:100, def:60, unit:''}],
+  pixelspace:     [{key:'pixel', label:'Pixel Size', min:0, max:100, def:40, unit:''},
+                  {key:'amount', label:'Nebula', min:0, max:100, def:55, unit:''},
+                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
+                  {key:'sparkles', label:'Sparkles', min:0, max:100, def:40, unit:''},
+                  {key:'worlds', label:'Worlds', min:0, max:100, def:50, unit:''},
+                  {key:'dither', label:'Dither', min:0, max:100, def:40, unit:''},
+                  {key:'swirl', label:'Swirl', min:0, max:100, def:50, unit:''},
+                  {key:'bands', label:'Bands', min:0, max:100, def:45, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -20642,6 +20990,9 @@ const TEXTURE_CAPS = {
   // (the crow family: every colour a hue, defaults a raven's; Sheen turns with the light dial)
   corvids:       { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'], light:true, tints:6,
                    tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#0E0E14','#0A0A10','#5A3AC8','#2A8AA8','#F2F2F0','#060608'] },
+  // (pixel-art space: every colour a hue, defaults those of Ruby's own pixel nebula; the light dial lights the rims and the worlds)
+  pixelspace:    { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
+                   tintLabels:['Deep Sky Hue','Mid Sky Hue','Nebula Hue','Rim Hue','World Hue','Starlight Hue'], tintDefaults:['#0E0726','#3A1C78','#E2367F','#46A8E6','#9A6BE0','#FFF4FA'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -20870,6 +21221,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'corvids'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'pixelspace'){
+    result = genChain(type, w, h, light, extra, tint1 || '#0E0726', tint2 || '#3A1C78');   // (chains.js)
   } else if(type === 'dappled'){
     result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
   } else if(type === 'windowlight'){
@@ -21235,7 +21588,8 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   }
   sx.putImageData(im, 0, 0);
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  // (a graph with Pixelate in it, pixel art, is enlarged pixel for pixel; every other is smoothed)
+  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !/"pixelate"/.test(typeof extra.graph === 'string' ? extra.graph : JSON.stringify(extra.graph || '')); cx.drawImage(small, 0, 0, w, h);
   return c;
 }
 // The Athanor's STEP PREVIEWS: every node's first output, small, as tiles of
@@ -21297,7 +21651,8 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   sx.putImageData(im, 0, 0);
   if(ww === w && wh === h) return small;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  // (a CRISP chain, pixel art, is enlarged pixel for pixel; every other is smoothed)
+  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !chain.crisp; cx.drawImage(small, 0, 0, w, h);
   return c;
 }
 function getTextureCanvas(type, w, h, opts = {}){
@@ -22065,6 +22420,7 @@ but bear with me, dear}]/jitter:200
                 <option value="astral" data-str="option.deep_field">Deep Field</option>
                 <option value="moon" data-str="option.fractal_moon">Fractal Moon</option>
                 <option value="ringpaint" data-str="option.painted_ringworld">Painted Ringworld</option>
+                <option value="pixelspace" data-str="option.pixelspace">Pixel Space</option>
                 <option value="skyring" data-str="option.ring_in_the_sky">Ring in the Sky</option>
                 <option value="ringworld" data-str="option.ringworld">Ringworld</option>
               </optgroup>
@@ -23201,6 +23557,7 @@ const UI_STRINGS = {
   'option.landscape':                         "Painted Landscape",
   'option.cityscape':                         "Night City",
   'option.blackhole':                         "Black Hole",
+  'option.pixelspace':                        "Pixel Space",
   'option.scrying_pool':                      "Scrying Pool",
   'option.fractal_moon':                      "Fractal Moon",
   'option.bottom_left':                        "Bottom Left",
@@ -24341,7 +24698,7 @@ const TEXTURE_GROUPS = [
   { glyph: '🜚', name: 'Light, Sparks & Dust', types: ['bokeh', 'corvids', 'feathers', 'magicparticles', 'clouds', 'embers', 'aurora'] },
   { glyph: 'ᕕ', name: 'Light to Lay Over', types: ['dappled', 'lightleaks', 'caustics', 'windowlight'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
-  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'skyring', 'ringworld'] },
+  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'pixelspace', 'skyring', 'ringworld'] },
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'flowers', 'cityscape', 'landscape', 'water'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
   { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['ash', 'crystal', 'cupring', 'crackle', 'kintsugi', 'spangle', 'moss', 'wax', 'metalleaf', 'stainedglass', 'underglass', 'brokenglass'] },
@@ -36020,7 +36377,146 @@ function dwDraw(ww, wh, unit, webs, o, E){
   return [tc, gc, dc];
 }
 
+// ---- ORBS (Pixel Space's one process part; docs/prior-art/space-scenes.md A.4): spheres in a light, as Deep-Fold's pixel
+// planets are made: a disc, the sphere under it (its normal), the light from the dial on it (a terminator), a pattern
+// wrapped round it (bands, continents, ice, craters, lava), rings with a near half and a far half and each one's shadow
+// on the other, an atmosphere outside its rim. The seed frames it (one world centred, a close one cropped by the page,
+// a horizon, an eclipse, a belt of rocks, a little system) unless Framing fixes the framing.
+const ORB_WORLDS = ['seeded', 'gas', 'rocky', 'ice', 'cratered', 'molten'];
+const ORB_FRAMES = ['seeded', 'centred', 'close', 'horizon', 'eclipse', 'belt', 'system', 'black hole', 'pulsar'];
+/** Value noise in three dimensions (on a sphere's surface), lattice hashed from a seed. */
+function orbNoise(seed){
+  const H = (x, y, z) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1440670441) + Math.imul(seed, 2246822519) | 0;
+    h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0)/4294967296; };
+  const s = t => t*t*(3 - 2*t);
+  const vn = (x, y, z) => { const X = Math.floor(x), Y = Math.floor(y), Z = Math.floor(z), u = s(x - X), v = s(y - Y), w = s(z - Z);
+    const l = (a, b, t) => a + (b - a)*t;
+    return l(l(l(H(X, Y, Z), H(X + 1, Y, Z), u), l(H(X, Y + 1, Z), H(X + 1, Y + 1, Z), u), v), l(l(H(X, Y, Z + 1), H(X + 1, Y, Z + 1), u), l(H(X, Y + 1, Z + 1), H(X + 1, Y + 1, Z + 1), u), v), w); };
+  const fbm = (x, y, z, oct = 4) => { let t = 0, a = 0.5, f = 1, n = 0; for(let o = 0; o < oct; o++){ t += vn(x*f + o*17.3, y*f, z*f)*a; n += a; a *= 0.5; f *= 2.03; } return t/n; };
+  return { vn, fbm };
+}
+/** The bodies of a framing, in page units (the short side is 1), far to near. */
+function orbFrame(R, aw, ah, o){
+  const rnd = (a, b) => a + R()*(b - a), pick = a => a[Math.floor(R()*a.length)];
+  const W = ['gas', 'rocky', 'ice', 'cratered', 'molten'], world = () => o.world !== 'seeded' ? o.world : pick(W);
+  let frame = o.frame;
+  if(frame === 'seeded'){ const t = R(); frame = t < 0.16 ? 'none' : t < 0.32 ? 'centred' : t < 0.43 ? 'close' : t < 0.54 ? 'horizon' : t < 0.62 ? 'eclipse' : t < 0.72 ? 'belt' : t < 0.82 ? 'system' : t < 0.92 ? 'black hole' : 'pulsar'; }
+  if(frame === 'none') return { frame, bodies: [] };
+  const thirds = () => [aw*pick([1/3, 2/3, 0.5]) + rnd(-0.08, 0.08), ah*pick([1/3, 2/3, 0.4, 0.6]) + rnd(-0.08, 0.08)];
+  const ringed = k => o.ring > 0 && (k === 'gas' || k === 'ice' || R() < 0.3) && R() < 0.25 + o.ring*0.75;
+  const body = (cx, cy, r, kind, extra) => ({ cx, cy, r, kind, tilt: rnd(-0.45, 0.45) + o.turn, spin: rnd(0, 6.28), seed: Math.floor(R()*1e9), ring: null, rough: 0, ...extra });
+  const withRing = b => { if(ringed(b.kind)) b.ring = { rin: rnd(1.25, 1.6), rout: rnd(1.8, 2.5)*(0.8 + o.ring*0.4), open: rnd(0.14, 0.42)*(R() < 0.5 ? 1 : -1), gaps: rnd(0.2, 1) }; return b; };
+  const moons = m => { const out = [], n = Math.round(R()*o.moons*5);
+    for(let i = 0; i < n; i++){ const a = rnd(0, 6.28), d = rnd(1.5, 3.4), r = m.r*rnd(0.07, 0.26), ca = Math.cos(m.tilt), sa = Math.sin(m.tilt);
+      const ex = Math.cos(a)*d*m.r, ey = Math.sin(a)*d*m.r*(m.ring ? Math.abs(m.ring.open) : rnd(0.2, 0.7));
+      out.push(body(m.cx + ex*ca - ey*sa, m.cy + ex*sa + ey*ca, r, R() < 0.6 ? 'cratered' : pick(['rocky', 'ice', 'molten']), { behind: Math.sin(a) < 0 })); }
+    return out; };
+  const S = o.size, B = [];
+  if(frame === 'centred'){ const [x, y] = thirds(), m = withRing(body(x, y, rnd(0.13, 0.3)*S, world())); const ms = moons(m); B.push(...ms.filter(b => b.behind), m, ...ms.filter(b => !b.behind)); }
+  else if(frame === 'close'){ const a = (Math.hypot(o.toward.x, o.toward.y) > 0.05 ? Math.atan2(o.toward.y, o.toward.x) + Math.PI : rnd(0, 6.28)) + rnd(-1, 1), r = rnd(0.55, 1.05)*S, m = withRing(body(aw/2 + Math.cos(a)*r*rnd(0.6, 1.1), ah/2 + Math.sin(a)*r*rnd(0.6, 1.1), r, world())); B.push(m, ...moons(m).filter(b => !b.behind).slice(0, 2)); }
+  else if(frame === 'horizon'){ const r = rnd(1.4, 4)*S, show = rnd(0.2, 0.42), t = Math.hypot(o.toward.x, o.toward.y) > 0.05 ? Math.atan2(o.toward.y, o.toward.x) : -Math.PI/2;
+    // (a horizon below the light: the world lies on the page's far side from the dial, its lit limb toward the page)
+    const a = t + Math.PI + rnd(-0.5, 0.5), ex = Math.cos(a), ey = Math.sin(a), reach = Math.abs(ex)*aw/2 + Math.abs(ey)*ah/2;
+    const cx = aw/2 + ex*(reach + r - show*Math.min(aw, ah)), cy = ah/2 + ey*(reach + r - show*Math.min(aw, ah));
+    B.push(body(cx, cy, r, world(), { tilt: a - Math.PI/2 + rnd(-0.2, 0.2), atmos: 1 })); const [x, y] = thirds(); if(R() < 0.6) B.unshift(body(aw - x, ah - y, rnd(0.03, 0.09)*S, pick(W))); }
+  else if(frame === 'eclipse'){ const [x, y] = thirds(), r = rnd(0.12, 0.26)*S; B.push(body(x, y, r, world(), { eclipse: { dx: rnd(-0.12, 0.12)*r, dy: rnd(-0.12, 0.12)*r, r: r*rnd(0.92, 1.12) } })); }
+  else if(frame === 'belt'){ const a = rnd(-0.6, 0.6), cx = aw/2, cy = ah*rnd(0.3, 0.7), n = Math.round(rnd(22, 60)*(0.6 + o.moons*0.8));
+    for(let i = 0; i < n; i++){ const t = rnd(-1, 1)*1.2, off = (R() + R() + R() - 1.5)*0.18, near = R(), r = (0.008 + Math.pow(near, 5)*0.12)*S;
+      B.push(body(cx + Math.cos(a)*t - Math.sin(a)*off, cy + Math.sin(a)*t + Math.cos(a)*off, r, R() < 0.8 ? 'cratered' : 'rocky', { rough: rnd(0.15, 0.4), near })); }
+    B.sort((p, q) => p.near - q.near); }
+  // (a black hole: a black disc, its accretion disc crossing it, the far side of the disc bent up over it as a halo, a thin
+  //  photon ring; a pulsar: a small fierce star, two beams along its axis, ripples spreading out round it)
+  else if(frame === 'black hole'){ const [x, y] = thirds(), r = rnd(0.05, 0.11)*S;
+    B.push(body(x, y, r, 'void', { tilt: rnd(-0.35, 0.35) + o.turn, hole: { beam: R() < 0.5 ? 1 : -1 }, ring: { rin: rnd(1.5, 1.9), rout: rnd(3, 4.6), open: rnd(0.08, 0.26)*(R() < 0.5 ? 1 : -1), gaps: rnd(0.1, 0.5), lit: 1 } })); }
+  else if(frame === 'pulsar'){ const [x, y] = thirds(); B.push(body(x, y, rnd(0.012, 0.025)*S, 'star', { tilt: rnd(-1.2, 1.2) + o.turn, pulsar: { k: rnd(5, 11), reach: rnd(10, 18) } })); }
+  else { const n = 2 + Math.floor(R()*3); for(let i = 0; i < n; i++){ const r = rnd(0.04, 0.16)*S; B.push(withRing(body(rnd(0.1, 0.9)*aw, rnd(0.1, 0.9)*ah, r, i ? pick(W) : world()))); } B.sort((p, q) => p.r - q.r); }
+  return { frame, bodies: B };
+}
+/** Orbs: bodies, shade, surface, rings, glow, height and each body (fields on the grid). */
+function genOrbs(ww, wh, unit, o){
+  const R = mulberry32(o.seed), N = ww*wh, { bodies, frame } = orbFrame(R, ww/unit, wh/unit, o);
+  const mask = new Float32Array(N), shade = new Float32Array(N), surf = new Float32Array(N), rings = new Float32Array(N), glow = new Float32Array(N), height = new Float32Array(N), each = new Float32Array(N);
+  // the light: toward the dial's handle, as high as it is (at the rim, grazing: half of each world lit)
+  const T = Math.min(1, o.tilt), Lz0 = Math.sqrt(Math.max(0, 1 - T*T)), d = o.toward;
+  const det = o.detail;
+  bodies.forEach((b, bi) => {
+    const nz = orbNoise(b.seed), rp = b.r*unit, ca = Math.cos(b.tilt), sa = Math.sin(b.tilt), cs = Math.cos(b.spin), ss = Math.sin(b.spin);
+    // its light in its own frame (turned with its axis); an eclipsed world is lit from behind, a hairline on the dial's side
+    let lx = d.x*T, ly = d.y*T, lz = Lz0; if(b.eclipse){ lx = d.x*0.22; ly = d.y*0.22; lz = -0.975; }
+    const Lx = lx*ca + ly*sa, Ly = -lx*sa + ly*ca, Lz = lz;
+    const rg = b.ring, ci = rg ? Math.sqrt(1 - rg.open*rg.open)*Math.sign(rg.open) : 0, si = rg ? Math.abs(rg.open) : 1;     // the ring plane's normal (0, ci, si)
+    const reach = b.pulsar ? b.pulsar.reach*1.1 : rg ? rg.rout : b.eclipse ? 2.6 : b.atmos ? 1.25 : 1.12, x0 = Math.max(0, Math.floor((b.cx - b.r*reach)*unit)), x1 = Math.min(ww - 1, Math.ceil((b.cx + b.r*reach)*unit));
+    const y0 = Math.max(0, Math.floor((b.cy - b.r*reach)*unit)), y1 = Math.min(wh - 1, Math.ceil((b.cy + b.r*reach)*unit));
+    const craters = b.kind === 'cratered' ? Array.from({ length: 26 + Math.floor(R()*30) }, () => { const u = R()*2 - 1, t = R()*6.283, s = Math.sqrt(1 - u*u); return [s*Math.cos(t), u, s*Math.sin(t), 0.06 + Math.pow(R(), 2.5)*0.35]; }) : null;
+    const edge = th => 1 + b.rough*(nz.fbm(Math.cos(th)*2 + 5, Math.sin(th)*2, 0.5, 3) - 0.5)*2;
+    const pattern = (px, py, pz) => {
+      // (turned on its axis, then the world's own pattern)
+      const X = px*cs + pz*ss, Y = py, Z = -px*ss + pz*cs, f = 1.6 + det*4;
+      if(b.kind === 'gas'){ const w = nz.fbm(X*f*0.7, Y*f*0.7, Z*f*0.7) - 0.5; return 0.5 + 0.5*Math.sin((Y + w*0.35)*(5 + det*14) + nz.vn(0, Y*6, 0)*4); }
+      if(b.kind === 'rocky'){ const h = nz.fbm(X*f, Y*f, Z*f, 5); return Math.min(1, Math.max(0, (h - 0.42)*3.2 + 0.5)); }
+      if(b.kind === 'ice'){ const h = nz.fbm(X*f*1.4, Y*f*1.4, Z*f*1.4); return Math.min(1, 0.55 + (h - 0.5)*0.9 + Math.max(0, Math.abs(Y) - 0.6)*1.6); }
+      if(b.kind === 'molten'){ const h = nz.fbm(X*f, Y*f, Z*f, 5), r = 1 - Math.abs(h*2 - 1); return Math.pow(r, 6); }
+      if(b.kind === 'void') return 0;
+      if(b.kind === 'star') return 1;
+      let h = 0.55 + (nz.fbm(X*f*1.2, Y*f*1.2, Z*f*1.2) - 0.5)*0.6;
+      for(const [cx, cy, cz, cr] of craters){ const dd = Math.hypot(X - cx, Y - cy, Z - cz)/cr; if(dd < 1.25) h += dd < 1 ? -0.28*(1 - dd*dd) + 0.25*Math.pow(dd, 6) : 0.22*(1.25 - dd)*4; }
+      return Math.min(1, Math.max(0, h)); };
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++){
+      const q = y*ww + x, ux = (x + 0.5)/unit - b.cx, uy = (y + 0.5)/unit - b.cy, a = (ux*ca + uy*sa)/b.r, c = (-ux*sa + uy*ca)/b.r, r = Math.hypot(a, c);
+      const e = b.rough ? edge(Math.atan2(c, a)) : 1, rho = r/e, cov = Math.min(1, Math.max(0, (1 - rho)*rp*e + 0.5));
+      // its rings: where the page's ray meets the ring plane (z toward us), in front of the world or behind it
+      let ringHere = 0, rz = 0, ringShade = 0, ringSurf = 0;
+      if(rg){ rz = -c*ci/si; const rr = Math.hypot(a, c, rz);
+        if(rr > rg.rin && rr < rg.rout){ const t = (rr - rg.rin)/(rg.rout - rg.rin), band = nz.vn(rr*9*(1 + rg.gaps), 3.3, 1.7);
+          ringHere = Math.min(1, Math.min(t, 1 - t)*rp*(rg.rout - rg.rin)*0.9)*(band > 0.25*rg.gaps ? 1 : 0.15);
+          // the world's shadow on it
+          const dot = a*Lx + c*Ly + rz*Lz, px = a - dot*Lx, py = c - dot*Ly, pz = rz - dot*Lz;
+          ringShade = rg.lit ? 0.55 + 0.45*band*(0.75 + 0.25*Math.sign(b.hole.beam*a)) : dot < 0 && px*px + py*py + pz*pz < 1 ? 0.12 : 0.45 + 0.45*Math.abs(ci*Ly + si*Lz);
+          ringSurf = 0.3 + 0.7*band; } }
+      const zs = rho < 1 ? Math.sqrt(1 - rho*rho) : 0;
+      const ringFront = ringHere > 0 && rz > zs;
+      if(cov > 0){
+        const lam = b.kind === 'void' ? 0 : b.kind === 'star' ? 1 : Math.max(0, a/e*Lx + c/e*Ly + zs*Lz);
+        // the rings' shadow on the world
+        let sh = 1; if(rg){ const nl = ci*Ly + si*Lz; if(Math.abs(nl) > 1e-3){ const t = -(ci*c/e + si*zs)/nl; if(t > 0){ const hx = a/e + t*Lx, hy = c/e + t*Ly, hz = zs + t*Lz, hr = Math.hypot(hx, hy, hz); if(hr > rg.rin && hr < rg.rout) sh = 0.35; } } }
+        const k = cov;
+        glow[q] *= 1 - k; mask[q] = Math.max(mask[q], k); shade[q] = shade[q]*(1 - k) + lam*sh*k; surf[q] = surf[q]*(1 - k) + pattern(a/e, c/e, zs)*k; height[q] = height[q]*(1 - k) + zs*k; each[q] = each[q]*(1 - k) + (bodies.length > 1 ? 1 - bi/bodies.length*0.8 : 1)*k;
+        if(ringHere > 0 && !ringFront) rings[q] *= 1 - k; }
+      // (a black hole's disc gives its own light: it goes to the glow, cut through the black disc where it crosses in front)
+      if(rg && rg.lit){ if(ringHere > 0 && (ringFront || cov < 1)){ const k = ringFront ? ringHere : ringHere*(1 - cov); glow[q] = Math.max(glow[q], k*ringShade); if(ringFront) mask[q] *= 1 - k; } }
+      else if(ringHere > 0 && (ringFront || cov < 1)){ const k = ringFront ? ringHere : ringHere*(1 - cov);
+        rings[q] = Math.max(rings[q], k); shade[q] = shade[q]*(1 - k) + ringShade*k; surf[q] = surf[q]*(1 - k) + ringSurf*k; }
+      // the air at its rim, brighter on the lit side; an eclipsed world's corona (the star behind it, rays streaming)
+      if(b.hole && rho > 1){ const t = (rho - 1)/0.5, top = 0.55 + 0.45*Math.max(0, -c*Math.sign(rg.open)/Math.max(1e-6, r));
+        // the halo: the disc's far side lensed up round the hole; the photon ring a hairline at its edge
+        if(t < 1 && !(ringHere > 0 && rz > 0)){ const k = Math.pow(1 - t, 1.6)*top*(0.7 + 0.3*nz.vn(Math.atan2(c, a)*4 + 9, 1.3, rho*3)); glow[q] = Math.max(glow[q], k); }
+        glow[q] = Math.max(glow[q], Math.max(0, 1 - Math.abs(rho - 1.04)/0.06)); }
+      if(b.pulsar && rho > 1){ const P = b.pulsar, along = Math.abs(c), across = Math.abs(a);
+        const beam = along > 1 && along < P.reach && across < 0.35 + along*0.06 ? (1 - along/P.reach)*(1 - across/(0.35 + along*0.06)) : 0;
+        const ripple = rho < P.reach*0.8 ? Math.pow(Math.max(0, Math.cos(rho/P.k*Math.PI*2*1.5)), 8)*(1 - rho/(P.reach*0.8))*0.8 : 0;
+        glow[q] = Math.max(glow[q], beam, ripple, Math.max(0, 1 - (rho - 1)/2.5)); }
+      else if(rho > 1 && !b.hole){ if(b.eclipse){ const ec = b.eclipse, ex = ux/b.r - ec.dx/b.r, ey = uy/b.r - ec.dy/b.r, er = Math.hypot(ex, ey)/(ec.r/b.r);
+          const disc = er < 1 ? 1 : 0, ray = 0.6 + 0.4*nz.vn(Math.atan2(ey, ex)*7 + 40, 0.5, er*0.6), cor = er >= 1 ? Math.pow(Math.max(0, 1 - (er - 1)/(1.6*ray)), 2.2) : 0;
+          glow[q] = Math.max(glow[q], disc*(1 - cov) + cor*(1 - cov)); }
+        else { const w = b.atmos ? 0.16 : 0.09, t = (rho - 1)/w; if(t < 1){ const side = Math.max(0, (a*Lx + c*Ly)/Math.max(1e-6, r)); glow[q] = Math.max(glow[q], Math.pow(1 - t, 2)*(0.3 + 0.7*side)*0.75); } } }
+      else if(b.atmos){ const t = (1 - rho)/0.05; if(t < 1) glow[q] = Math.max(glow[q], (1 - t)*0.6*Math.max(0, (a*Lx + c*Ly)/Math.max(1e-6, r) + 0.3)); }
+    }
+  });
+  return { frame, fields: [mask, shade, surf, rings, glow, height, each] };
+}
+
 const GEN_STEPS = {
+  // ORBS (Pixel Space's process part): worlds in the dial's light, framed by the seed
+  orbs: { cat: 'Marks', label: 'Orbs', ins: ['light from', 'light height'], outs: ['bodies', 'shade', 'surface', 'rings', 'glow', 'height', 'each body'],
+    io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
+    params: [GEN_R('world', 'World: Seeded · Gas · Rocky · Ice · Cratered · Molten', 0), GEN_R('frame', 'Framing: Seeded · Centred · Close · Horizon · Eclipse · Belt · System · Black Hole · Pulsar', 0),
+      GEN_R('size', 'Size', 100, 40, 250), GEN_R('moons', 'Moons', 40), GEN_R('ring', 'Rings', 50), GEN_R('detail', 'Detail', 50), GEN_R('turn', 'Turn', 0, -90, 90), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
+    doc: 'Worlds in the light: a planet’s disc, its terminator from the dial, bands or continents or craters wrapped round it, rings with a near and a far half and their shadows, the air at its rim; framed by the seed.',
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), h = E.input(n, 2), sixth = (k, m) => Math.min(m - 1, Math.floor(num(n, k, 0)/100*m));
+      const o = { seed: genSeed(E, n) ^ 0x51ab, world: ORB_WORLDS[sixth('world', 6)], frame: ORB_FRAMES[sixth('frame', 9)], size: num(n, 'size', 100)/100, moons: num(n, 'moons', 40)/100,
+        ring: num(n, 'ring', 50)/100, detail: num(n, 'detail', 50)/100, turn: num(n, 'turn', 0)*Math.PI/180, toward: { x: -dial.x, y: -dial.y },
+        tilt: typeof h === 'number' ? h : Math.max(0, Math.min(1.3, (E.ctx.lightTilt ?? 100)/100)) };
+      return genOrbs(ww, wh, unit, o).fields; } },
   // (Ruby: a ringworld; the dial is its camera, one slider its light) the world's maps, for other parts to lay things on
   ringview: { cat: 'Shape', label: 'Ringworld View', ins: ['look toward', 'look up', 'zoom', 'sun height', 'sun from'],
     outs: ['along', 'across', 'distance', 'detail', 'space', 'walls', 'star', 'daylight', 'shadow squares', 'air', 'daylight here', 'scaffolding', 'open floor', 'seam', 'beacons', 'sky air',
@@ -39838,7 +40334,7 @@ const STEP_PARTS = {
   math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine', 'round', 'floor', 'ceiling', 'greater', 'less', 'log'])] },
   mix:      { cat: 'Combine', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [STEP_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
-  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16)] },
+  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16), STEP_R('dither', 'Dither', 0), STEP_R('cell', 'Dither Cell', 20, 2, 200), STEP_SEL('pattern', 'Dither Pattern', ['ordered', 'checker', 'scattered'])] },
   transform:{ cat: 'Shape', label: 'Tile & Rotate', ins: ['field'], outs: ['field'], params: [STEP_R('scale', 'Scale', 100, 25, 400), STEP_R('angle', 'Angle', 0, 0, 360)] },
   edges:    { cat: 'Shape', label: 'Edge Detect', ins: ['field'], outs: ['edges'], params: [STEP_R('strength', 'Strength', 50)] },
   // light and colour
@@ -39930,7 +40426,7 @@ const STEP_PARTS = {
                 STEP_SEL('marks', 'Punctuation', Object.keys(POEM_MARK_SETS)), STEP_R('glow', 'Punctuation Glow', 100, 10, 400)] },
   // more ways to reshape a gray map (Filter Forge's and Blender's staples)
   grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
-  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
+  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds']), STEP_SEL('take', 'Each Cell Takes', ['the average', 'the brightest'])] },
   twirl:    { cat: 'Shape', label: 'Twirl', ins: ['field'], outs: ['field'], params: [STEP_R('angle', 'Twist', 180, -720, 720), STEP_R('radius', 'Radius', 70, 5, 150), STEP_R('x', 'Across', 50), STEP_R('y', 'Down', 50)] },
   mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
   chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
@@ -40064,7 +40560,7 @@ const STEP_DOCS = {
   profile: 'A gradient whose shape is a curve: across the page, around the center, toward the edges, or along any map.',
   poem: 'Hands the graph the poem’s layout: where the words, lines, stanzas, rhymes and punctuation sit on the page.',
   grow: 'Grows the bright parts of a gray map outward, or shrinks them inward.',
-  pixelate: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers.',
+  pixelate: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers or its brightest point.',
   twirl: 'Twists a gray map around a point, strongest at the center and fading out at the radius.',
   mirror: 'Folds a gray map onto itself so one half repeats the other.',
   chroma: 'Slides a picture’s red and blue apart, like a cheap lens or a misprint (chromatic aberration).',
@@ -40352,10 +40848,18 @@ const STEP_RUN = {
     if(isImg(v)){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }; for(let i = 0; i < N; i++){ o.r[i] = 1 - v.r[i]; o.g[i] = 1 - v.g[i]; o.b[i] = 1 - v.b[i]; } return [o]; }
     const f = asField(v), o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = 1 - f[i]; return [o];
   },
-  posterize(E, n){ const { N, input, map, at, asField } = E;
+  posterize(E, n){ const { ww, wh, N, unit, input, map, at, num, P, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
-    const K = map(n, 'steps', 5), o = new Float32Array(N);
-    for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); }
+    // DITHER (pixel art's own): a threshold pattern on cells as Pixelate's (the same Cell Size lines them up), so
+    // where two steps meet they interleave instead of meeting in a hard line; a little dither only touches the seams
+    const K = map(n, 'steps', 5), o = new Float32Array(N), D = num(n, 'dither', 0)/100;
+    if(D <= 0){ for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); } return [o]; }
+    const c = Math.max(1, num(n, 'cell', 20)*unit/1536*1.2), pat = P(n, 'pattern', 'ordered');
+    const B4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], hash = (a, b) => { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0)/4294967296; };
+    for(let y = 0; y < wh; y++){ const cy = Math.floor(y/c);
+      for(let x = 0; x < ww; x++){ const q = y*ww + x, cx = Math.floor(x/c), k = Math.max(2, Math.min(16, Math.round(at(K, q))));
+        const t = pat === 'checker' ? ((cx + cy) & 1)*0.5 + 0.25 : pat === 'scattered' ? hash(cx, cy) : (B4[(cy & 3)*4 + (cx & 3)] + 0.5)/16;
+        o[q] = Math.min(k - 1, Math.max(0, Math.floor(Math.max(0, f[q])*k + (t - 0.5)*D)))/(k - 1); } }
     return [o];
   },
   transform(E, n){ const { ww, wh, N, input, num, asField } = E;
@@ -40888,12 +41392,14 @@ Object.assign(STEP_RUN, {
     return [o];
   },
   pixelate(E, n){ const { ww, wh, N, unit, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares');
-    const cellOf = (x, y) => { if(kind === 'diamonds'){ const u = (x + y)/c, v = (x - y)/c; return Math.floor(u) + ':' + Math.floor(v); }
-      const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return Math.floor(sx/c) + ':' + row; };
-    const sum = new Map(), id = new Array(N);
-    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k) || [0, 0]; s[0] += f[q]; s[1]++; sum.set(k, s); }
-    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
+    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares'), most = P(n, 'take', 'the average') === 'the brightest';
+    // (EACH CELL TAKES THE BRIGHTEST: a star smaller than a cell still lights it, as a pixel artist's one-pixel star)
+    const cellOf = kind === 'diamonds' ? (x, y) => { const u = Math.floor((x + y)/c), v = Math.floor((x - y)/c); return (u + 65536)*131072 + v + 65536; }
+      : (x, y) => { const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return (row + 1)*131072 + Math.floor(sx/c) + 1; };
+    const sum = new Map(), id = new Float64Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k);
+      if(!s) sum.set(k, [f[q], 1]); else if(most){ if(f[q] > s[0]) s[0] = f[q]; } else { s[0] += f[q]; s[1]++; } }
+    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = most ? s[0] : s[0]/s[1]; }
     return [o];
   },
   twirl(E, n){ const { ww, wh, N, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
@@ -41965,6 +42471,197 @@ const TEXTURE_CHAINS = {
     [23, 1, 8, paramPort('gradient', 'angle')], [24, 1, 11, paramPort('gradient', 'angle')], [25, 1, 7, paramPort('forms', 'count')]] },
   // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
   // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
+  // ── Pixel Space (ROADMAP §2 L1): pixel-art space, general parts and Orbs; docs/prior-art/space-scenes.md ──
+  pixelspace: { label: 'Pixel Space', div: 4, crisp: true, teach: 'Space in pixel art, after the generators pixel artists use (Deep-Fold’s Pixel Space and Pixel Planets): a nebula, worlds and stars on a coarse grid of square pixels, every colour from the six hues and the seed choosing the scene. The seed picks the nebula’s form (Random Numbers into a Map Switch): a torn band across the page at the seed’s angle, drifting clouds, a veil of filaments (the ridges of a Perlin Noise), or a galaxy twisted round a point, alone or lying in the band. Every grey map is cut into square cells by Pixelate (Pixel Size), stepped by Posterize (Bands) with Dither where two steps meet, and coloured by a Gradient Map from the Deep Sky through the Mid Sky and the Nebula Hue to Starlight. The rim on the side toward the light is a Smudge of the nebula toward the dial’s handle, less the nebula itself. Stars are two Scatters: dust (Stars) and four-point sparkles (Sparkles) with a halo, each cell taking its brightest point so the smallest star still lights a pixel; some take the Rim or World Hue. Orbs makes the worlds: the seed frames them (none, one, a close one cropped by the page, a horizon, an eclipse with its corona, a belt of rocks, a little system), with bands, continents, ice, craters or lava, rings and moons, each lit by the Light Dial. Try: turn the dial and watch the rims and every world’s terminator follow it.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Pixel Size', def: 40 }, 40, 40],                                                                                   // 1
+      ['knob', { slot: '2', name: 'Nebula', def: 55 }, 40, 150],                                                                                      // 2
+      ['knob', { slot: '3', name: 'Stars', def: 50 }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4', name: 'Sparkles', def: 40 }, 40, 370],                                                                                    // 4
+      ['knob', { slot: '5', name: 'Worlds', def: 50 }, 40, 480],                                                                                      // 5
+      ['knob', { slot: '6', name: 'Dither', def: 40 }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '7', name: 'Swirl', def: 50 }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8', name: 'Bands', def: 45 }, 40, 810],                                                                                       // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Deep Sky' }, 40, 1030],                                                                                             // 10
+      ['hue', { slot: '2', name: 'Mid Sky' }, 40, 1140],                                                                                              // 11
+      ['hue', { slot: '3', name: 'Nebula Heart' }, 40, 1250],                                                                                         // 12
+      ['hue', { slot: '4', name: 'Nebula Rim' }, 40, 1360],                                                                                           // 13
+      ['hue', { slot: '5', name: 'Worlds' }, 40, 1470],                                                                                               // 14
+      ['hue', { slot: '6', name: 'Starlight' }, 40, 1580],                                                                                            // 15
+      ['perlin', { scale: 45, '~scale': '22,80', details: 4, rough: 45, contrast: 35 }, 260, 40],                                                     // 16
+      ['random', { lo: 0, hi: 100 }, 40, 1690],                                                                                                       // 17
+      ['perlin', { scale: 18, details: 3, rough: 50, contrast: 20 }, 40, 1800],                                                                       // 18
+      ['gradient', { shape: 'linear', angle: 60 }, 260, 150],                                                                                         // 19
+      ['random', { lo: 0, hi: 100 }, 40, 1910],                                                                                                       // 20
+      ['number', { value: 50 }, 40, 2020],                                                                                                            // 21
+      ['math', { op: 'difference' }, 480, 40],                                                                                                        // 22
+      ['maprange', { inLo: 0, inHi: 30, '~inHi': '18,42', outLo: 100, outHi: 0 }, 700, 40],                                                           // 23
+      ['random', { lo: 0, hi: 100 }, 40, 2130],                                                                                                       // 24
+      ['warp', { amount: 30, '~amount': '0,80' }, 920, 40],                                                                                           // 25
+      ['maprange', { outLo: 45, outHi: 100 }, 480, 150],                                                                                              // 26
+      ['math', { op: 'multiply' }, 1140, 40],                                                                                                         // 27
+      ['perlin', { scale: 12, details: 2, contrast: 70 }, 40, 2240],                                                                                  // 28
+      ['warp', { amount: 30, '~amount': '0,80' }, 480, 260],                                                                                          // 29
+      ['maprange', { inLo: 42, inHi: 62, outLo: 0, outHi: 100 }, 260, 260],                                                                           // 30
+      ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 31
+      ['maprange', { inLo: 0, inHi: 12, '~inHi': '6,18', outLo: 100, outHi: 0 }, 700, 260],                                                           // 32
+      ['perlin', { scale: 22, '~scale': '12,40', details: 2, rough: 40, contrast: 30 }, 260, 370],                                                    // 33
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 34
+      ['math', { op: 'difference' }, 480, 370],                                                                                                       // 35
+      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 36
+      ['maprange', { inLo: 42, inHi: 62, outLo: 0, outHi: 100 }, 260, 480],                                                                           // 37
+      ['maprange', { outLo: 55, outHi: 100 }, 480, 480],                                                                                              // 38
+      ['warp', { amount: 30, '~amount': '0,80' }, 920, 150],                                                                                          // 39
+      ['math', { op: 'multiply' }, 1140, 150],                                                                                                        // 40
+      ['number', { value: 40 }, 40, 2570],                                                                                                            // 41
+      ['math', { op: 'multiply' }, 480, 590],                                                                                                         // 42
+      ['math', { op: 'max' }, 1360, 40],                                                                                                              // 43
+      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 44
+      ['random', { lo: 25, hi: 75 }, 40, 2680],                                                                                                       // 45
+      ['random', { lo: 25, hi: 75 }, 40, 2790],                                                                                                       // 46
+      ['ellipse', { size: 110, '~size': '70,160', height: 100, soft: 100 }, 260, 590],                                                                // 47
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 48
+      ['invert', {}, 480, 700],                                                                                                                       // 49
+      ['twirl', { angle: 520, radius: 60, '~angle': '300,720' }, 1360, 150],                                                                          // 50
+      ['math', { op: 'multiply' }, 700, 370],                                                                                                         // 51
+      ['math', { op: 'screen' }, 920, 260],                                                                                                           // 52
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 53
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 54
+      ['math', { op: 'multiply' }, 700, 480],                                                                                                         // 55
+      ['number', { value: 70 }, 40, 3120],                                                                                                            // 56
+      ['math', { op: 'multiply' }, 920, 370],                                                                                                         // 57
+      ['math', { op: 'screen' }, 1580, 150],                                                                                                          // 58
+      ['ellipse', { size: 90, '~size': '50,130', height: 70, '~height': '35,100', angle: 0, soft: 100 }, 260, 700],                                   // 59
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 60
+      ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 61
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 62
+      ['maprange', { inLo: 0, inHi: 22, '~inHi': '12,30', outLo: 100, outHi: 0 }, 700, 590],                                                          // 63
+      ['math', { op: 'difference' }, 480, 810],                                                                                                       // 64
+      ['number', { value: 60 }, 40, 3560],                                                                                                            // 65
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 66
+      ['maprange', { outLo: 35, outHi: 100 }, 480, 920],                                                                                              // 67
+      ['math', { op: 'multiply' }, 920, 480],                                                                                                         // 68
+      ['warp', { amount: 30, '~amount': '0,80' }, 1140, 370],                                                                                         // 69
+      ['mapswitch', { soft: 0 }, 2240, 40],                                                                                                           // 70
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 71
+      ['number', { value: 85 }, 40, 3890],                                                                                                            // 72
+      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 73
+      ['math', { op: 'max' }, 2020, 40],                                                                                                              // 74
+      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 75
+      ['mapswitch', { soft: 0 }, 2460, 40],                                                                                                           // 76
+      ['levels', { lo: 35, '~lo': '75,5', hi: 95, gamma: 50 }, 2680, 40],                                                                             // 77
+      ['maprange', { inLo: 30, inHi: 85, outLo: 0, outHi: 22 }, 260, 810],                                                                            // 78
+      ['perlin', { scale: 25, details: 3, contrast: 20 }, 40, 4110],                                                                                  // 79
+      ['maprange', { outLo: 18, outHi: 100 }, 2900, 40],                                                                                              // 80
+      ['number', { value: 2 }, 40, 4220],                                                                                                             // 81
+      ['math', { op: 'greater' }, 2900, 150],                                                                                                         // 82
+      ['math', { op: 'multiply' }, 3120, 40],                                                                                                         // 83
+      ['math', { op: 'max' }, 3340, 40],                                                                                                              // 84
+      ['mix', { t: 40 }, 260, 920],                                                                                                                   // 85
+      ['gradmap', { stops: 4 }, 4000, 40],                                                                                                            // 86
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 3560, 40],                                                                     // 87
+      ['posterize', { steps: 6, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 3780, 40],                                               // 88
+      ['number', { value: 25 }, 40, 4330],                                                                                                            // 89
+      ['math', { op: 'subtract' }, 260, 1030],                                                                                                        // 90
+      ['math', { op: 'less' }, 260, 1140],                                                                                                            // 91
+      ['number', { value: 75 }, 40, 4440],                                                                                                            // 92
+      ['math', { op: 'add' }, 260, 1250],                                                                                                             // 93
+      ['math', { op: 'multiply' }, 480, 1030],                                                                                                        // 94
+      ['math', { op: 'add' }, 700, 700],                                                                                                              // 95
+      ['blur', { radius: 5 }, 2900, 260],                                                                                                             // 96
+      ['number', { value: 10 }, 40, 4550],                                                                                                            // 97
+      ['math', { op: 'greater' }, 3120, 150],                                                                                                         // 98
+      ['smudge', { length: 16, '~length': '8,32', strength: 100, trail: 85 }, 3340, 150],                                                             // 99
+      ['random', { lo: 0, hi: 100 }, 40, 4660],                                                                                                       // 100
+      ['math', { op: 'subtract' }, 3560, 150],                                                                                                        // 101
+      ['number', { value: 100 }, 40, 4770],                                                                                                           // 102
+      ['math', { op: 'multiply' }, 3780, 150],                                                                                                        // 103
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 4000, 150],                                                                    // 104
+      ['threshold', { at: 4, soft: 0 }, 4220, 40],                                                                                                    // 105
+      ['threshold', { at: 30, soft: 0 }, 4220, 150],                                                                                                  // 106
+      ['threshold', { at: 88, soft: 0 }, 1360, 260],                                                                                                  // 107
+      ['math', { op: 'multiply' }, 700, 810],                                                                                                         // 108
+      ['math', { op: 'greater' }, 260, 1360],                                                                                                         // 109
+      ['math', { op: 'multiply' }, 920, 590],                                                                                                         // 110
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 1140, 480],                                                                    // 111
+      ['blend', { opacity: 100 }, 4220, 260],                                                                                                         // 112
+      ['blend', { opacity: 100 }, 4440, 40],                                                                                                          // 113
+      ['blend', { opacity: 55 }, 4660, 40],                                                                                                           // 114
+      ['scatter', { shape: 'dot', count: 160, '~count': '30,400', size: 3, vary: 60, fade: 75, clump: 30 }, 260, 1470],                               // 115
+      ['random', { lo: 0, hi: 100 }, 40, 4880],                                                                                                       // 116
+      ['scatter', { shape: 'cross', count: 10, '~count': '2,36', size: 24, vary: 75, turn: 0, fade: 30 }, 260, 1580],                                 // 117
+      ['threshold', { at: 30, soft: 0 }, 700, 920],                                                                                                   // 118
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1140],                                                                  // 119
+      ['threshold', { at: 40, soft: 0 }, 700, 1030],                                                                                                  // 120
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the brightest' }, 480, 1250],                                                                  // 121
+      ['blur', { radius: 10 }, 480, 1360],                                                                                                            // 122
+      ['threshold', { at: 12, soft: 0 }, 920, 700],                                                                                                   // 123
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1140],                                                                    // 124
+      ['blend', { opacity: 55 }, 4880, 40],                                                                                                           // 125
+      ['threshold', { at: 70, soft: 0 }, 480, 1470],                                                                                                  // 126
+      ['threshold', { at: 60, soft: 0 }, 480, 1580],                                                                                                  // 127
+      ['math', { op: 'max' }, 920, 810],                                                                                                              // 128
+      ['blend', { opacity: 100 }, 5100, 40],                                                                                                          // 129
+      ['blend', { opacity: 100 }, 5320, 40],                                                                                                          // 130
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1250],                                                                    // 131
+      ['math', { op: 'multiply' }, 920, 920],                                                                                                         // 132
+      ['blend', { opacity: 100 }, 5540, 40],                                                                                                          // 133
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1360],                                                                    // 134
+      ['math', { op: 'multiply' }, 920, 1030],                                                                                                        // 135
+      ['orbs', { size: 100, '~size': '50,200' }, 260, 1690],                                                                                          // 136
+      ['maprange', { outLo: 40, outHi: 100 }, 480, 1690],                                                                                             // 137
+      ['maprange', { outLo: 6, outHi: 100 }, 480, 1800],                                                                                              // 138
+      ['math', { op: 'multiply' }, 700, 1470],                                                                                                        // 139
+      ['mix', { t: 40 }, 260, 1800],                                                                                                                  // 140
+      ['gradmap', { stops: 4 }, 1360, 370],                                                                                                           // 141
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 920, 1140],                                                                    // 142
+      ['posterize', { steps: 5, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 1140, 590],                                              // 143
+      ['pixelate', { size: 12, '~size': '5,24' }, 480, 1910],                                                                                         // 144
+      ['posterize', { steps: 4, dither: 40, cell: 12, '~cell': '5,24', pattern: 'ordered' }, 700, 1580],                                              // 145
+      ['gradmap', { stops: 3 }, 920, 1250],                                                                                                           // 146
+      ['threshold', { at: 10, soft: 0 }, 920, 1360],                                                                                                  // 147
+      ['blend', { opacity: 100 }, 5760, 40],                                                                                                          // 148
+      ['threshold', { at: 50, soft: 0 }, 920, 1470],                                                                                                  // 149
+      ['math', { op: 'max' }, 480, 2020],                                                                                                             // 150
+      ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1690],                                                                    // 151
+      ['blend', { opacity: 100 }, 5980, 40],                                                                                                          // 152
+      ['surface', { name: 'Pixel Space', ground: 'colour' }, 6200, 40]],                                                                              // 153
+    wires: [[17, 1, 16, paramPort('perlin', 'scale')], [20, 1, 19, paramPort('gradient', 'angle')], [19, 1, 22, 1], [21, 1, 22, 2], [22, 1, 23, 1],
+      [24, 1, 23, paramPort('maprange', 'inHi')], [23, 1, 25, 1], [18, 1, 25, 2], [7, 1, 25, paramPort('warp', 'amount')], [25, 1, 27, 1], [26, 1, 27, 2],
+      [16, 1, 26, 1], [16, 1, 29, 1], [18, 1, 29, 2], [7, 1, 29, paramPort('warp', 'amount')], [29, 1, 31, 1], [30, 1, 31, 2], [28, 1, 30, 1],
+      [34, 1, 33, paramPort('perlin', 'scale')], [33, 1, 35, 1], [21, 1, 35, 2], [35, 1, 32, 1], [36, 1, 32, paramPort('maprange', 'inHi')], [28, 1, 37, 1],
+      [16, 1, 38, 1], [32, 1, 39, 1], [18, 1, 39, 2], [7, 1, 39, paramPort('warp', 'amount')], [39, 1, 40, 1], [38, 1, 40, 2], [16, 1, 42, 1], [41, 1, 42, 2],
+      [40, 1, 43, 1], [42, 1, 43, 2], [43, 1, 44, 1], [37, 1, 44, 2], [45, 1, 47, paramPort('ellipse', 'x')], [46, 1, 47, paramPort('ellipse', 'y')],
+      [48, 1, 47, paramPort('ellipse', 'size')], [47, 2, 49, 1], [49, 1, 51, 1], [49, 1, 51, 2], [49, 1, 52, 1], [51, 1, 52, 2], [52, 1, 53, 1],
+      [16, 1, 53, 2], [53, 1, 50, 1], [45, 1, 50, paramPort('twirl', 'x')], [46, 1, 50, paramPort('twirl', 'y')], [54, 1, 50, paramPort('twirl', 'angle')],
+      [49, 1, 55, 1], [49, 1, 55, 2], [55, 1, 57, 1], [56, 1, 57, 2], [50, 1, 58, 1], [57, 1, 58, 2], [45, 1, 59, paramPort('ellipse', 'x')],
+      [46, 1, 59, paramPort('ellipse', 'y')], [60, 1, 59, paramPort('ellipse', 'size')], [61, 1, 59, paramPort('ellipse', 'height')],
+      [62, 1, 59, paramPort('ellipse', 'angle')], [59, 2, 64, 1], [65, 1, 64, 2], [64, 1, 63, 1], [66, 1, 63, paramPort('maprange', 'inHi')], [16, 1, 67, 1],
+      [63, 1, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [18, 1, 69, 2], [7, 1, 69, paramPort('warp', 'amount')], [71, 1, 70, 1], [58, 1, 70, 2], [58, 1, 73, 1],
+      [72, 1, 73, 2], [27, 1, 74, 1], [73, 1, 74, 2], [74, 1, 70, 3], [69, 1, 70, 4], [75, 1, 76, 1], [27, 1, 76, 2], [31, 1, 76, 3], [44, 1, 76, 4],
+      [70, 1, 76, 5], [76, 1, 77, 1], [2, 1, 77, paramPort('levels', 'lo')], [79, 1, 78, 1], [77, 1, 80, 1], [77, 1, 82, 1], [81, 1, 82, 2], [80, 1, 83, 1],
+      [82, 1, 83, 2], [78, 1, 84, 1], [83, 1, 84, 2], [12, 1, 85, 1], [15, 1, 85, 2], [84, 1, 87, 1], [1, 1, 87, paramPort('pixelate', 'size')],
+      [87, 1, 88, 1], [1, 1, 88, paramPort('posterize', 'cell')], [6, 1, 88, paramPort('posterize', 'dither')], [8, 1, 88, paramPort('posterize', 'steps')],
+      [88, 1, 86, 1], [10, 1, 86, 2], [11, 1, 86, 3], [12, 1, 86, 4], [85, 1, 86, 5], [9, 1, 90, 1], [89, 1, 90, 2], [9, 1, 91, 1], [89, 1, 91, 2],
+      [9, 1, 93, 1], [92, 1, 93, 2], [91, 1, 94, 1], [93, 1, 94, 2], [90, 1, 95, 1], [94, 1, 95, 2], [77, 1, 96, 1], [96, 1, 98, 1], [97, 1, 98, 2],
+      [98, 1, 99, 1], [95, 1, 99, 2], [100, 1, 99, paramPort('smudge', 'length')], [99, 1, 101, 1], [98, 1, 101, 2], [101, 1, 103, 1], [102, 1, 103, 2],
+      [103, 1, 104, 1], [1, 1, 104, paramPort('pixelate', 'size')], [104, 1, 105, 1], [104, 1, 106, 1], [49, 1, 108, 1], [49, 1, 108, 2], [75, 1, 109, 1],
+      [92, 1, 109, 2], [108, 1, 110, 1], [109, 1, 110, 2], [110, 1, 111, 1], [1, 1, 111, paramPort('pixelate', 'size')], [111, 1, 107, 1], [86, 1, 112, 1],
+      [15, 1, 112, 2], [107, 1, 112, 3], [112, 1, 113, 1], [13, 1, 113, 2], [105, 1, 113, 3], [113, 1, 114, 1], [15, 1, 114, 2], [106, 1, 114, 3],
+      [3, 1, 115, paramPort('scatter', 'count')], [116, 1, 115, paramPort('scatter', 'clump')], [4, 1, 117, paramPort('scatter', 'count')], [115, 1, 119, 1],
+      [1, 1, 119, paramPort('pixelate', 'size')], [119, 1, 118, 1], [117, 1, 121, 1], [1, 1, 121, paramPort('pixelate', 'size')], [121, 1, 120, 1],
+      [117, 1, 122, 1], [122, 1, 124, 1], [1, 1, 124, paramPort('pixelate', 'size')], [124, 1, 123, 1], [114, 1, 125, 1], [12, 1, 125, 2], [123, 1, 125, 3],
+      [115, 3, 126, 1], [117, 3, 127, 1], [118, 1, 128, 1], [120, 1, 128, 2], [125, 1, 129, 1], [15, 1, 129, 2], [128, 1, 129, 3], [129, 1, 130, 1],
+      [14, 1, 130, 2], [126, 1, 131, 1], [1, 1, 131, paramPort('pixelate', 'size')], [118, 1, 132, 1], [131, 1, 132, 2], [132, 1, 130, 3], [130, 1, 133, 1],
+      [13, 1, 133, 2], [127, 1, 134, 1], [1, 1, 134, paramPort('pixelate', 'size')], [120, 1, 135, 1], [134, 1, 135, 2], [135, 1, 133, 3], [9, 1, 136, 1],
+      [9, 2, 136, 2], [5, 1, 136, paramPort('orbs', 'size')], [136, 3, 137, 1], [136, 2, 138, 1], [138, 1, 139, 1], [137, 1, 139, 2], [14, 1, 140, 1],
+      [15, 1, 140, 2], [139, 1, 142, 1], [1, 1, 142, paramPort('pixelate', 'size')], [142, 1, 143, 1], [1, 1, 143, paramPort('posterize', 'cell')],
+      [6, 1, 143, paramPort('posterize', 'dither')], [143, 1, 141, 1], [10, 1, 141, 2], [11, 1, 141, 3], [14, 1, 141, 4], [140, 1, 141, 5], [136, 5, 144, 1],
+      [1, 1, 144, paramPort('pixelate', 'size')], [144, 1, 145, 1], [1, 1, 145, paramPort('posterize', 'cell')], [6, 1, 145, paramPort('posterize', 'dither')],
+      [145, 1, 146, 1], [11, 1, 146, 2], [13, 1, 146, 3], [15, 1, 146, 4], [145, 1, 147, 1], [133, 1, 148, 1], [146, 1, 148, 2], [147, 1, 148, 3],
+      [136, 1, 150, 1], [136, 4, 150, 2], [150, 1, 151, 1], [1, 1, 151, paramPort('pixelate', 'size')], [151, 1, 149, 1], [148, 1, 152, 1], [141, 1, 152, 2],
+      [149, 1, 152, 3], [152, 1, 153, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
@@ -43364,6 +44061,14 @@ const TEXTURE_PARAMS = {
                   {key:'sheen', label:'Sheen', min:0, max:100, def:70, unit:''},
                   {key:'depth', label:'Depth', min:0, max:100, def:40, unit:''},
                   {key:'lift', label:'Lift', min:0, max:100, def:60, unit:''}],
+  pixelspace:     [{key:'pixel', label:'Pixel Size', min:0, max:100, def:40, unit:''},
+                  {key:'amount', label:'Nebula', min:0, max:100, def:55, unit:''},
+                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
+                  {key:'sparkles', label:'Sparkles', min:0, max:100, def:40, unit:''},
+                  {key:'worlds', label:'Worlds', min:0, max:100, def:50, unit:''},
+                  {key:'dither', label:'Dither', min:0, max:100, def:40, unit:''},
+                  {key:'swirl', label:'Swirl', min:0, max:100, def:50, unit:''},
+                  {key:'bands', label:'Bands', min:0, max:100, def:45, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -43862,6 +44567,9 @@ const TEXTURE_CAPS = {
   // (the crow family: every colour a hue, defaults a raven's; Sheen turns with the light dial)
   corvids:       { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'], light:true, tints:6,
                    tintLabels:['Feather Hue','Tip Hue','Sheen Hue','Second Sheen Hue','Pale Hue','Dark Hue'], tintDefaults:['#0E0E14','#0A0A10','#5A3AC8','#2A8AA8','#F2F2F0','#060608'] },
+  // (pixel-art space: every colour a hue, defaults those of Ruby's own pixel nebula; the light dial lights the rims and the worlds)
+  pixelspace:    { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
+                   tintLabels:['Deep Sky Hue','Mid Sky Hue','Nebula Hue','Rim Hue','World Hue','Starlight Hue'], tintDefaults:['#0E0726','#3A1C78','#E2367F','#46A8E6','#9A6BE0','#FFF4FA'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -44090,6 +44798,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'corvids'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'pixelspace'){
+    result = genChain(type, w, h, light, extra, tint1 || '#0E0726', tint2 || '#3A1C78');   // (chains.js)
   } else if(type === 'dappled'){
     result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
   } else if(type === 'windowlight'){
@@ -44455,7 +45165,8 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   }
   sx.putImageData(im, 0, 0);
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  // (a graph with Pixelate in it, pixel art, is enlarged pixel for pixel; every other is smoothed)
+  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !/"pixelate"/.test(typeof extra.graph === 'string' ? extra.graph : JSON.stringify(extra.graph || '')); cx.drawImage(small, 0, 0, w, h);
   return c;
 }
 // The Athanor's STEP PREVIEWS: every node's first output, small, as tiles of
@@ -44517,7 +45228,8 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   sx.putImageData(im, 0, 0);
   if(ww === w && wh === h) return small;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, 0, w, h);
+  // (a CRISP chain, pixel art, is enlarged pixel for pixel; every other is smoothed)
+  const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !chain.crisp; cx.drawImage(small, 0, 0, w, h);
   return c;
 }
 function getTextureCanvas(type, w, h, opts = {}){
@@ -44740,6 +45452,10 @@ const TEXTURE_ELEMENTS = {
     fire:  { name: 'Blue Jay',        k: [100, 90, 30, 10, 30, 35, 40, 60], t: ['#3A6AD8', '#2A4AA8', '#8AB8FF', '#B8D8FF', '#F6F8FF', '#101420'] },
     wind:  { name: 'Magpie',          k: [75, 110, 25, 10, 30, 80, 40, 60], t: ['#0E1012', '#0A0C0E', '#2A9A6A', '#4A4AC8', '#F4F4F2', '#060608'] },
     earth: { name: 'Crow',            k: [25, 90, 30, 15, 35, 35, 40, 55], t: ['#1A1A1E', '#121216', '#3A3A8A', '#2A6A6A', '#E8E6E0', '#08080A'] } },
+  pixelspace: { def: 'water', water: { name: 'Pink Nebula' },
+    fire:  { name: 'Red Giant',       k: [35, 65, 45, 50, 70, 30, 60, 55], t: ['#140608', '#4A1020', '#F2603A', '#FFC24A', '#C86A3A', '#FFF2DC'], light: [250, 100] },
+    wind:  { name: 'Pocket Green',    k: [70, 50, 40, 30, 50, 55, 40, 20], t: ['#0F380F', '#306230', '#8BAC0F', '#9BBC0F', '#8BAC0F', '#E0F8D0'] },
+    earth: { name: 'Ice Moon',        k: [50, 35, 60, 35, 80, 25, 30, 60], t: ['#060B1A', '#18305A', '#6AB0D8', '#E8F4FF', '#8A9AB8', '#FFFFFF'], light: [45, 80] } },
   dappled: { def: 'earth', earth: { name: 'Dappled Leaves' },
     fire:  { name: 'Late Sun',        k: [60, 45, 40], t: ['#FFC27A', '#3A2440'], light: [270, 100], blend: 'soft-light' },
     water: { name: 'Shade Garden',    k: [45, 85, 70], t: ['#E6F4E0', '#1E3A40'] },
@@ -45339,7 +46055,7 @@ const TEXTURE_LOOKS = {
   stainedglass: 'panes of stained glass held in lead', brokenglass: 'broken glass scattered on the page, its shards catching the light and casting bright caustics', dewwebs: 'spider webs beaded with dew, glinting in the light', underglass: 'a sheet of glass over the page, catching the light: a window\'s reflection, scratches, fingerprints and dust', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
   crackedglaze: 'cracked and crazed ceramic glaze', crackle: 'a glaze crackled by cracks spreading across it', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, sometimes coins, and often other things left there: a candle, a cup, a letter)',
-  blackhole: 'a black hole ringed by a bright, swirling disc', turing: 'organic spots and stripes, like animal skin or coral',
+  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', turing: 'organic spots and stripes, like animal skin or coral',
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolor paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
   ash: 'charred paper, ash and embers', wax: 'pools of sealing wax', dunes: 'wind-rippled sand dunes', kintsugi: 'pottery mended with seams of gold',
@@ -46134,7 +46850,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · 2948531";
+const STAMP = "2026-10-19 · 76f7e65";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -50477,8 +51193,9 @@ const WIKI_PARTS = {
   posterize: {
     line: 'Reduces a gray map to a few flat steps, like a screenprint.',
     ins: { field: 'The gray map.' }, outs: { field: 'The stepped map.' },
-    set: { steps: 'How many levels of gray remain.' },
-    see: ['part:tonecurve'],
+    set: { steps: 'How many levels of gray remain.', dither: 'Pixel art’s dither: where two steps meet they interleave in a pattern instead of a hard line. A little only touches the seams; more spreads it.', cell: 'How big each dither cell is. Give it the same number as a Pixelate’s Cell Size and the pattern sits on its pixels.', pattern: 'Ordered (a 4×4 Bayer pattern, the classic), Checker (half and half, the hand-placed look), or Scattered (a cell at random, for dust).' },
+    tips: ['Pixelate, then Posterize with Dither on the same cell size, then a Gradient Map: a pixel artist’s banded, dithered ramp from any noise.'],
+    see: ['part:tonecurve', 'part:pixelate'],
   },
   transform: {
     line: 'Scales and rotates a gray map, repeating it past its edges.',
@@ -50533,9 +51250,9 @@ const WIKI_PARTS = {
     see: ['mapping'],
   },
   pixelate: {
-    line: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers.',
+    line: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers or its brightest point.',
     ins: { field: 'The map.' }, outs: { field: 'The pixelated map.' },
-    set: { size: 'Cell size.', cell: 'Cell shape.' },
+    set: { size: 'Cell size.', cell: 'Cell shape.', take: 'The average of what each cell covers, or the brightest point in it, so a star smaller than a cell still lights a whole pixel.' },
   },
   twirl: {
     line: 'Twists a gray map around a point, strongest at the center and fading out at the radius.',
@@ -51330,6 +52047,15 @@ const WIKI_PARTS = {
     set: { webs: 'How many webs (one at 0).', size: 'How big.', dew: 'How much dew: none (0) to heavy beading.', drops: 'How big the drops.', torn: 'How much of the spiral is torn away.', sag: 'How much the spiral sags between spokes.', irid: 'White glints (0) or the colours thin silk splits the light into (100).', threads: 'How close the spiral is wound.', width: 'How thick the silk is drawn.', variant: 'Other webs.' },
     tips: ['Screen the glints through a Blur for the soft bloom of a web in morning sun.', 'Turn Dew to 0 and Iridescence up for a dry web shimmering in colours.'],
     see: ['part:shards', 'part:dial'],
+  },
+  orbs: {
+    line: 'Worlds in the light: a planet’s disc, its terminator from the dial, bands or continents or craters wrapped round it, rings with a near and a far half and their shadows, the air at its rim; framed by the seed.',
+    about: 'Pixel artists draw a planet as a disc lit from one side: the light on the sphere under the disc gives the terminator, and a pattern wrapped round the sphere (bands for a gas giant, continents, ice, craters, cracks of lava) gives it a world. Orbs makes those as grey maps, for a Posterize and a Gradient Map to colour (docs/prior-art/space-scenes.md). The seed frames the scene: nothing at all, one world on a third of the page with moons, a close one cropped by the page, a horizon (the world below, its lit limb toward the page), an eclipse (a dark disc before a star, its corona streaming), a belt of rocks, a little system of worlds, a black hole (its accretion disc crossing it, the far side of the disc bent up round it, a thin photon ring), or a pulsar (a small fierce star, two beams along its axis, ripples spreading round it). A ring is a flat annulus through the world’s centre: its near half crosses in front, its far half passes behind, the world casts its shadow on the ring and the ring on the world.',
+    ins: { 'light from': 'The light’s direction (wire the Light Dial’s Direction). Unwired: the page’s dial.', 'light height': 'How low the light is (the Light Dial’s Height): high lights a world’s face, at the rim half of it. Unwired: the page’s.' },
+    outs: { bodies: 'Where the worlds are (white): planets, moons, rocks, a black hole’s disc, a pulsar.', shade: 'The light on them and on their rings, their shadows on each other.', surface: 'Each world’s pattern: bands, continents, ice, craters or lava (and the rings’ bands).', rings: 'Where the rings show.', glow: 'The air at each rim, brighter on the lit side; an eclipse’s star and corona; a black hole’s photon ring; a pulsar’s beams and ripples.', height: 'How far each point of a world stands toward you, for a relief.', 'each body': 'A grey for each world, the moons darker, to colour them apart.' },
+    set: { world: 'What kind of world: Seeded (the seed’s), a gas giant, rocky, ice, cratered, or molten.', frame: 'How the seed frames them: Seeded, or one framing for every seed.', size: 'How big the worlds are.', moons: 'How many moons (and how many rocks in a belt).', ring: 'How likely a world is ringed, and how wide its rings.', detail: 'How fine the pattern on each world.', turn: 'Tilts every world’s axis.', variant: 'Another framing on the same seed.' },
+    tips: ['Multiply Shade by Surface, then Pixelate, Posterize and a Gradient Map: Pixel Space’s worlds.', 'Wire Height into a Simple Lighting for worlds with relief.'],
+    see: ['part:pixelate', 'part:posterize', 'part:dial'],
   },
   surface: {
     line: 'The end of every graph: whatever reaches it is the texture. One per graph.',
@@ -57924,7 +58650,7 @@ const WORKING_WORDS = {
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
-  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', turing: 'Letting the reaction diffuse',
+  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',

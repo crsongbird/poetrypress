@@ -106,7 +106,7 @@ const STEP_PARTS = {
   math:     { cat: 'Combine', label: 'Math', ins: ['a', 'b'], outs: ['result'], params: [STEP_SEL('op', 'Operation', ['add', 'multiply', 'max', 'min', 'difference', 'subtract', 'divide', 'power', 'average', 'screen', 'modulo', 'sine', 'round', 'floor', 'ceiling', 'greater', 'less', 'log'])] },
   mix:      { cat: 'Combine', label: 'Mix', ins: ['a', 'b', 'amount'], outs: ['result'], params: [STEP_R('t', 'Amount', 50)] },
   invert:   { cat: 'Shape', label: 'Invert', ins: ['field'], outs: ['field'], params: [] },
-  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16)] },
+  posterize:{ cat: 'Shape', label: 'Posterize', ins: ['field'], outs: ['field'], params: [STEP_R('steps', 'Steps', 5, 2, 16), STEP_R('dither', 'Dither', 0), STEP_R('cell', 'Dither Cell', 20, 2, 200), STEP_SEL('pattern', 'Dither Pattern', ['ordered', 'checker', 'scattered'])] },
   transform:{ cat: 'Shape', label: 'Tile & Rotate', ins: ['field'], outs: ['field'], params: [STEP_R('scale', 'Scale', 100, 25, 400), STEP_R('angle', 'Angle', 0, 0, 360)] },
   edges:    { cat: 'Shape', label: 'Edge Detect', ins: ['field'], outs: ['edges'], params: [STEP_R('strength', 'Strength', 50)] },
   // light and colour
@@ -198,7 +198,7 @@ const STEP_PARTS = {
                 STEP_SEL('marks', 'Punctuation', Object.keys(POEM_MARK_SETS)), STEP_R('glow', 'Punctuation Glow', 100, 10, 400)] },
   // more ways to reshape a gray map (Filter Forge's and Blender's staples)
   grow:     { cat: 'Shape', label: 'Grow & Shrink', ins: ['field'], outs: ['field'], params: [STEP_R('amount', 'Amount', 60, 0, 100), STEP_R('radius', 'Radius', 12, 1, 100)] },
-  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds'])] },
+  pixelate: { cat: 'Shape', label: 'Pixelate', ins: ['field'], outs: ['field'], params: [STEP_R('size', 'Cell Size', 20, 2, 200), STEP_SEL('cell', 'Cells', ['squares', 'bricks', 'diamonds']), STEP_SEL('take', 'Each Cell Takes', ['the average', 'the brightest'])] },
   twirl:    { cat: 'Shape', label: 'Twirl', ins: ['field'], outs: ['field'], params: [STEP_R('angle', 'Twist', 180, -720, 720), STEP_R('radius', 'Radius', 70, 5, 150), STEP_R('x', 'Across', 50), STEP_R('y', 'Down', 50)] },
   mirror:   { cat: 'Shape', label: 'Mirror', ins: ['field'], outs: ['field'], params: [STEP_SEL('axis', 'Mirror', ['left to right', 'top to bottom', 'both', 'diagonal']), STEP_R('at', 'Fold At', 50)] },
   chroma:   { cat: 'Light & Color', label: 'Chromatic Offset', ins: ['picture'], outs: ['picture'], params: [STEP_R('amount', 'Offset', 20), STEP_R('angle', 'Angle', 0, 0, 360), STEP_R('edge', 'Toward the Edges', 0)] },
@@ -332,7 +332,7 @@ export const STEP_DOCS = {
   profile: 'A gradient whose shape is a curve: across the page, around the center, toward the edges, or along any map.',
   poem: 'Hands the graph the poem’s layout: where the words, lines, stanzas, rhymes and punctuation sit on the page.',
   grow: 'Grows the bright parts of a gray map outward, or shrinks them inward.',
-  pixelate: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers.',
+  pixelate: 'Breaks a gray map into flat cells (squares, bricks or diamonds), each the average of what it covers or its brightest point.',
   twirl: 'Twists a gray map around a point, strongest at the center and fading out at the radius.',
   mirror: 'Folds a gray map onto itself so one half repeats the other.',
   chroma: 'Slides a picture’s red and blue apart, like a cheap lens or a misprint (chromatic aberration).',
@@ -620,10 +620,18 @@ const STEP_RUN = {
     if(isImg(v)){ const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }; for(let i = 0; i < N; i++){ o.r[i] = 1 - v.r[i]; o.g[i] = 1 - v.g[i]; o.b[i] = 1 - v.b[i]; } return [o]; }
     const f = asField(v), o = new Float32Array(N); for(let i = 0; i < N; i++) o[i] = 1 - f[i]; return [o];
   },
-  posterize(E, n){ const { N, input, map, at, asField } = E;
+  posterize(E, n){ const { ww, wh, N, unit, input, map, at, num, P, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
-    const K = map(n, 'steps', 5), o = new Float32Array(N);
-    for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); }
+    // DITHER (pixel art's own): a threshold pattern on cells as Pixelate's (the same Cell Size lines them up), so
+    // where two steps meet they interleave instead of meeting in a hard line; a little dither only touches the seams
+    const K = map(n, 'steps', 5), o = new Float32Array(N), D = num(n, 'dither', 0)/100;
+    if(D <= 0){ for(let i = 0; i < N; i++){ const k = Math.max(2, Math.min(16, Math.round(at(K, i)))); o[i] = Math.min(k - 1, Math.floor(Math.max(0, f[i])*k))/(k - 1); } return [o]; }
+    const c = Math.max(1, num(n, 'cell', 20)*unit/1536*1.2), pat = P(n, 'pattern', 'ordered');
+    const B4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], hash = (a, b) => { let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0; h = Math.imul(h ^ h >>> 13, 1274126177); return ((h ^ h >>> 16) >>> 0)/4294967296; };
+    for(let y = 0; y < wh; y++){ const cy = Math.floor(y/c);
+      for(let x = 0; x < ww; x++){ const q = y*ww + x, cx = Math.floor(x/c), k = Math.max(2, Math.min(16, Math.round(at(K, q))));
+        const t = pat === 'checker' ? ((cx + cy) & 1)*0.5 + 0.25 : pat === 'scattered' ? hash(cx, cy) : (B4[(cy & 3)*4 + (cx & 3)] + 0.5)/16;
+        o[q] = Math.min(k - 1, Math.max(0, Math.floor(Math.max(0, f[q])*k + (t - 0.5)*D)))/(k - 1); } }
     return [o];
   },
   transform(E, n){ const { ww, wh, N, input, num, asField } = E;
@@ -1156,12 +1164,14 @@ Object.assign(STEP_RUN, {
     return [o];
   },
   pixelate(E, n){ const { ww, wh, N, unit, input, num, P, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
-    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares');
-    const cellOf = (x, y) => { if(kind === 'diamonds'){ const u = (x + y)/c, v = (x - y)/c; return Math.floor(u) + ':' + Math.floor(v); }
-      const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return Math.floor(sx/c) + ':' + row; };
-    const sum = new Map(), id = new Array(N);
-    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k) || [0, 0]; s[0] += f[q]; s[1]++; sum.set(k, s); }
-    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = s[0]/s[1]; }
+    const c = Math.max(1, num(n, 'size', 20)*unit/1536*1.2), kind = P(n, 'cell', 'squares'), most = P(n, 'take', 'the average') === 'the brightest';
+    // (EACH CELL TAKES THE BRIGHTEST: a star smaller than a cell still lights it, as a pixel artist's one-pixel star)
+    const cellOf = kind === 'diamonds' ? (x, y) => { const u = Math.floor((x + y)/c), v = Math.floor((x - y)/c); return (u + 65536)*131072 + v + 65536; }
+      : (x, y) => { const row = Math.floor(y/c), sx = kind === 'bricks' && row % 2 ? x + c/2 : x; return (row + 1)*131072 + Math.floor(sx/c) + 1; };
+    const sum = new Map(), id = new Float64Array(N);
+    for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, k = cellOf(x, y); id[q] = k; const s = sum.get(k);
+      if(!s) sum.set(k, [f[q], 1]); else if(most){ if(f[q] > s[0]) s[0] = f[q]; } else { s[0] += f[q]; s[1]++; } }
+    const o = new Float32Array(N); for(let q = 0; q < N; q++){ const s = sum.get(id[q]); o[q] = most ? s[0] : s[0]/s[1]; }
     return [o];
   },
   twirl(E, n){ const { ww, wh, N, input, num, map, at, asField } = E; const f = asField(input(n, 1)); if(!f) return null;
