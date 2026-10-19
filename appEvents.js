@@ -44,7 +44,7 @@ import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DE
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName, boxNow } from './canvasRenderer.js';
-import { paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox, layerLights } from './textureGenerators.js';
+import { LIGHT_TURNED, LIGHT_KEPT_PARTS, paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox, layerLights } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme, DEFAULT_THEME } from './theme.js';
@@ -948,7 +948,7 @@ function applyPersisted(s){
 // Hatch's angle (their sliders took new jobs); 3 every blend for every surface; 4 Ringworld's day on the light dial and
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic.
 // Older looks are translated on load
-const LOOK_VERSION = 5;
+const LOOK_VERSION = 6;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -1013,7 +1013,24 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))); }
+function retireLook(s){ return retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))); }
+/** THE DIAL'S HANDLE BECAME THE LIGHT (format 6; Ruby: the light dial "goes the opposite direction that I would expect"):
+ *  most surfaces had been lit from the handle's other side (textureGenerators LIGHT_TURNED). A look, preset or reading
+ *  made before is turned half round on such a surface, the main light and the rim alike, so it keeps its picture and
+ *  its handle now stands where its light really is. */
+function lightTurned(L){
+  if(!L || !L.textureType) return false;
+  if(L.textureType === 'athanor'){ const g = String(L.forgeGraph || ''); return !!g && !LIGHT_KEPT_PARTS.some(p => g.includes('"name":"' + p + '"')); }
+  return LIGHT_TURNED.has(L.textureType);
+}
+const halfRound = v => String(((Math.round(+v || 0) + 180) % 360 + 360) % 360);
+function retireFormat6Layer(L){
+  if(!lightTurned(L)) return L;
+  const o = { ...L, textureLight: halfRound(L.textureLight ?? 315) };
+  if(L.textureRim !== undefined && L.textureRim !== '') o.textureRim = halfRound(L.textureRim);
+  return o;
+}
+function retireFormat6(s){ if(!s || +s.lookVersion >= 6) return s; let o = retireFormat6Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat6Layer(o.baseLayer) }; return o; }
 /** A look from before format 5 (Saturn–Hyperion and earlier): Ringworld's eighth slider was Stand At (where across the
  *  band you stood); it is Traffic now, at its middle (the ships as they were), and the seed says where you stand.
  *  Terrain and Structures keep their values as Landforms and Cities (the same relief, the same works). */
@@ -1625,7 +1642,8 @@ function applyPreset(p){
   // the light's height: a preset's own, or raking (the only light presets knew)
   if($('textureLightTilt')){ $('textureLightTilt').value = p.textureLightTilt !== undefined ? p.textureLightTilt : '100'; syncLightPad(); }
   // and its direction: a preset's own, or where its texture's dial starts (Harsh Rain: straight down)
-  { const ld = p.textureLight !== undefined ? p.textureLight : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
+  // (a preset's own light, from before the handle became the light, turned half round where its surface's light turned)
+  { const ld = p.textureLight !== undefined ? (lightTurned(p) ? halfRound(p.textureLight) : p.textureLight) : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
     if(ld != null){ $('textureLight').value = String(ld); syncLightPad(); } }
   // and its camera: the preset's own, or where its texture's camera starts
   { const d = cameraStart(p.textureType || $('textureType').value);
@@ -2370,11 +2388,11 @@ function syncLightPad(){
   // the dot slides from the heart of ☉ toward the rim
   const hx = Math.sin(a) * 15 * k, hy = -Math.cos(a) * 15 * k;
   set('lightHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) }); set('lightMainClipDot', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
-  // 🜚's spike grows out of the rim the same way, longer and stronger as the light lowers (none overhead); the rim
-  // light has its own, as strong as the rim light is
+  // 🜚 AS A SHADOW (Ruby): the ☉ at the middle casts it away from the light, out of the rim on the far side, longer and
+  // darker as the light lowers (none overhead); the rim light casts its own, as strong as the rim light is
   const shadowOf = (body, group, d, kk, strength) => { const tip = 26 + 3 + 16*Math.min(1.3, kk);
     set(body, { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
-    set(group, { transform: `rotate(${(d % 360).toFixed(1)})`, opacity: kk < 0.04 || strength <= 0 ? 0 : ((0.35 + 0.65*Math.min(1, kk))*strength).toFixed(2) }); };
+    set(group, { transform: `rotate(${((d + 180) % 360).toFixed(1)})`, opacity: kk < 0.04 || strength <= 0 ? 0 : ((0.35 + 0.65*Math.min(1, kk))*strength).toFixed(2) }); };
   shadowOf('lightSpikeBody', 'lightSpike', deg, k, 1);
   // the rim light's handle, under the main's: hollow while it is off, fainter as it is weaker; where the two meet, the
   // lens they share mixes to white
@@ -3217,7 +3235,8 @@ function applyElement(id){
     (v.t || []).slice(0, caps.tints || 0).forEach((hex, i) => { setColorField('textureTint' + (i + 1) + 'Hex', hex); state.ui.tintFollows[i] = false; });
     if(v.t5 && caps.hue5) setColorField('textureTint5Hex', v.t5);
     if(v.blend && caps.blends.includes(v.blend)){ $('textureBlend').value = v.blend; fire($('textureBlend')); }
-    if(v.light && caps.light && !state.locks.has('textureLight')) setLight(v.light[0], v.light[1], false);
+    // (a reading's light, set before the handle became the light, turned half round where its surface's light turned)
+    if(v.light && caps.light && !state.locks.has('textureLight')) setLight(LIGHT_TURNED.has($('textureType').value) ? +halfRound(v.light[0]) : v.light[0], v.light[1], false);
     if(v.cam && caps.camera && !state.locks.has('cameraTurn')) putCamera(v.cam[0], v.cam[1], v.cam[2]);
   });
   state.ui.element = id;

@@ -8,6 +8,8 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- THE HANDLE AS THE LIGHT: every surface lit from the handle's side, 🜚's spike (and the rim's) pointing the shadow's
+  way. Any surface that still reads backwards, or a reading or preset whose picture moved?
 - THE STARTERS AND SURFACE STUDIES ON THE PAGE: in the Surface menu now, under 🜈 Athanor Starters and 🜍 Surface
   Studies (choosing one puts its graph on the page, its knobs on the sliders; the dice pass over them). Which studies
   read right, and what is each missing ("The surface studies are... hmmm.")? Orbit Script, Transmutation Engine and
@@ -46,9 +48,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
-- THE DIAL'S HANDLE AS THE LIGHT (on the branch `light-handle`, before/after sheets sent): every surface lit from the
-  handle's side, shadows away from it, 🜚's spikes pointing the shadow's way; older looks, presets and readings turned
-  so their pictures stay. Ships to main on Ruby's yes.
 - SOUNDS — the instrument itself, when Ruby wants it back:
   - a STRING instrument, something unusual (plucked string by physical model;
     ideas: an Aeolian harp, strings sounded by wind; sympathetic strings that

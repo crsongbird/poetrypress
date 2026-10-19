@@ -279,7 +279,7 @@ export const CHAOS_STEPS = {
   cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
     params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
-      const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;
+      const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg + 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;   // (struck on the side away from the light, the handle)
       // (the cracks run on the export's grid, `ctx.page`, at every size, and are drawn scaled: a crack walks pixel by
       //  pixel, so a preview's own grid ran other cracks)
       const [GW, GH] = ctx.page || [ww, wh], K = unit/Math.min(GW, GH);

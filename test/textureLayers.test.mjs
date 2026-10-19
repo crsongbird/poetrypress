@@ -70,9 +70,9 @@ check('…and the lower waits in the look, for when it is turned on again', s.ba
 load({ ...base, texture: true, textureType: 'hatch', textureSeed: 1234, textureLight: '200', baseToggle: true, baseType: 'linen', baseP1: '61', baseP2: '33', baseOpacity: '44', baseBlend: 'multiply', lookVersion: 2, locks: [] });
 s = save();
 const L = s.baseLayer || {};
-check('an old look\'s base layer opens as the lower surface, drawn as before (its knobs, opacity and blend; the page\'s light; the seed turned)',
+check('an old look\'s base layer opens as the lower surface, drawn as before (its knobs, opacity and blend; the page\'s light, half round as linen is lit from the handle now; the seed turned)',
   L.textureType === 'linen' && String(L.texP1) === '61' && String(L.texP2) === '33' && +L.textureOpacity === 44 && L.textureBlend === 'multiply'
-  && String(L.textureLight) === '200' && L.textureSeed === turned(1234) && s.baseType === undefined && s.baseP1 === undefined && L.textureGround === undefined);
+  && String(L.textureLight) === '20' && L.textureSeed === turned(1234) && s.baseType === undefined && s.baseP1 === undefined && L.textureGround === undefined);
 load({ ...base, texture: true, textureType: 'hatch', baseToggle: true, baseType: 'clouds', baseBlend: 'source-over', lookVersion: 2, locks: [] });
 s = save();
 check('…on the ground it was made on then, where a blend not made for it once fell back to its first',

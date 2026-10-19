@@ -29,7 +29,9 @@ check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never 
 // ---- the light's direction and height ----
 {
   const full = C.lightVec(90), half = C.withLightTilt(0.5, () => C.lightVec(90)), over = C.withLightTilt(0, () => C.lightVec(90));
-  check('the light is raking by default, softer as it rises, flat overhead', Math.abs(full.lx - 1) < 1e-9 && Math.abs(half.lx - 0.5) < 1e-9 && over.lx === 0);
+  // the dial's handle is the light: at 90° it stands east, so the light travels west (lightVec is its travel; dialVec where it stands)
+  check('the light is raking by default, softer as it rises, flat overhead', Math.abs(full.lx + 1) < 1e-9 && Math.abs(half.lx + 0.5) < 1e-9 && over.lx === 0);
+  check('dialVec points at the handle, lightVec away from it', Math.abs(C.dialVec(90).lx - 1) < 1e-9 && Math.abs(C.dialVec(0).ly + 1) < 1e-9);
 }
 
 // ---- lightHeights: a dome ----
@@ -37,10 +39,10 @@ check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never 
   const ww = 64, wh = 64, H = new Float32Array(ww*wh);
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const d = Math.hypot(x - 32, y - 32); H[y*ww + x] = d < 12 ? Math.sqrt(144 - d*d) : 0; }
   const L = C.lightHeights(H, ww, wh, { light: 90 }), at = (r, x, y) => r.light[y*ww + x];
-  check('the side facing the light is lit, the far side shaded', at(L, 23, 32) > at(L, 41, 32) + 0.3);
-  check('a dome casts a shadow away from the light', at(L, 50, 32) < at(L, 5, 5) - 0.05);
+  check('the side facing the light (the handle, east at 90°) is lit, the far side shaded', at(L, 41, 32) > at(L, 23, 32) + 0.3);
+  check('a dome casts a shadow away from the light', at(L, 14, 32) < at(L, 5, 5) - 0.05);
   const O = C.withLightTilt(0, () => C.lightHeights(H, ww, wh, { light: 90 }));
-  check('light from straight overhead casts no shadow', at(O, 50, 32) > 0.95);
+  check('light from straight overhead casts no shadow', at(O, 14, 32) > 0.95);
   check('a glossy surface takes a highlight', Math.max(...C.lightHeights(H, ww, wh, { light: 90, gloss: 0.9 }).spec) > 0.3);
   check('in Node there is no WebGL2, so lighting runs on the CPU (the fingerprints test that path)', C.lightBackend() === 'cpu');
 }
@@ -48,9 +50,9 @@ check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never 
 // ---- normal maps, components, gloss maps, materials ----
 {
   const ww = 48, wh = 48, flatH = new Float32Array(ww*wh), N = new Float32Array(ww*wh*3);
-  // a normal map tilting every pixel east; on the dial, 270° light comes FROM the east (90° from the west)
+  // a normal map tilting every pixel east; on the dial, 90° light comes from the east, where the handle is (270° from the west)
   for(let i = 0; i < ww*wh; i++){ const t = 0.6, l = Math.hypot(t, 0, 1); N[i*3] = t/l; N[i*3+1] = 0; N[i*3+2] = 1/l; }
-  const plain = C.lightHeights(flatH, ww, wh, { light: 270 }), toward = C.lightHeights(flatH, ww, wh, { light: 270, normals: N }), away = C.lightHeights(flatH, ww, wh, { light: 90, normals: N });
+  const plain = C.lightHeights(flatH, ww, wh, { light: 270 }), toward = C.lightHeights(flatH, ww, wh, { light: 90, normals: N }), away = C.lightHeights(flatH, ww, wh, { light: 270, normals: N });
   check('normal maps: tilted toward the light is brighter than flat, tilted away is darker', toward.light[24*ww + 24] > plain.light[24*ww + 24] + 0.05 && away.light[24*ww + 24] < plain.light[24*ww + 24] - 0.05);
   const H = new Float32Array(ww*wh); for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const d = Math.hypot(x - 24, y - 24); H[y*ww + x] = d < 10 ? Math.sqrt(100 - d*d) : 0; }
   const L = C.lightHeights(H, ww, wh, { light: 90, ambient: 0.4, components: true });

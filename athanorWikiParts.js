@@ -55,7 +55,7 @@ export const WIKI_PARTS = {
   },
   dial: {
     line: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
-    about: 'The light dial on the page sets where light comes from. Lighting parts read it on their own; the Light Dial part lets you use it for anything else — the direction rain falls, where a crack starts, which way a current flows.',
+    about: 'The light dial on the page sets where light comes from: its handle is the light, as if you dragged a lamp round the page, and shadows fall the other way (🜚’s spike on the dial points where they fall). Lighting parts read it on their own; the Light Dial part lets you use it for anything else — the direction rain falls, where a crack starts, which way a current flows.',
     outs: { direction: 'The dial’s angle as a number: 0 at the top, going clockwise round to 1.', height: 'How low the light is: 0 straight overhead (the handle in the dial’s middle), 1 at the rim, up to 1.3 past it.' },
     tips: ['Wire Direction into a Motion Blur’s Angle: the streaks turn with the dial.'],
     see: ['heights', 'part:material'],

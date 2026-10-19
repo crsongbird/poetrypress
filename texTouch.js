@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { litT, lightVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
+import { litT, lightVec, dialVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
 
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
@@ -265,7 +265,7 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   const ellipse=(cx, cy, rx, ry, ang, fn)=>{ const R=Math.max(rx,ry)+2, ca=Math.cos(ang), sa=Math.sin(ang);
     for(let y=Math.max(0,Math.floor(cy-R)); y<=Math.min(PH-1,Math.ceil(cy+R)); y++) for(let x=Math.max(0,Math.floor(cx-R)); x<=Math.min(PW-1,Math.ceil(cx+R)); x++){
       const dx=x-cx, dy=y-cy, u=(dx*ca+dy*sa)/rx, v=(-dx*sa+dy*ca)/ry; fn(y*PW+x, u, v, u*u+v*v); } };
-  const shadowAt=(cx, cy, z)=>{ const off=(1-z)*floor*(0.3+0.9*ltilt); return [cx+SX*off, cy+SY*off]; };
+  const shadowAt=(cx, cy, z)=>{ const off=(1-z)*floor*(0.3+0.9*ltilt); return [cx-SX*off, cy-SY*off]; };   // (away from the light: the handle's side)
   // stones on the floor: lit domes, each its own tone
   const stoneN=Math.round((kind==='stream' ? 70 : kind==='well' ? 26 : 14)*area);
   for(let k=0;k<stoneN;k++){
@@ -821,7 +821,8 @@ export function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   const vr=Math.max(0,Math.min(1, varK==null ? 0.4 : varK)), br=Math.max(0,Math.min(1, brush==null ? 0 : brush));
   const metal=parseHex(tint||'#C9CED6');
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);   // toward the light
+  // (the way the light travels, as lightVec: away from the dial's handle, where the light is)
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=-Math.cos(la), SY=-Math.sin(la);
   // the grains: a jittered lattice of nuclei — more jittered, and of more
   // varied sizes, as Variation rises — each with its own facet tilt and axis
   const cs=unit*0.09*zoom, gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, G=[];
@@ -1127,7 +1128,8 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
   const ph=Math.max(0,Math.min(1, phantoms==null ? 0.3 : phantoms)), inc=Math.max(0,Math.min(1, inclusions==null ? 0.2 : inclusions));
   const CR=parseHex(tint1||'#B9A6D8'), IN=parseHex(tint2||'#D9A441');
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);
+  // (the way the light travels, as lightVec: away from the dial's handle, where the light is)
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=-Math.cos(la), SY=-Math.sin(la);
   // a set of faces: centres on a jittered lattice, each a tilted plane
   const faces=(cs)=>{ const gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, F=[];
     for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ const a=Math.random()*Math.PI*2, t=0.2+Math.random()*0.5;
@@ -1523,7 +1525,7 @@ export function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
     OPS.push({ t:0, cx:C[0] + (Math.random()-0.5)*r0*0.2, cy:C[1] + (Math.random()-0.5)*r0*0.2, r:r0*(0.7 + Math.random()*0.5)*(ink ? 0.75 : 1), kind, dens:0.42 + Math.random()*0.45 });
   }
   // the breath: strokes along the dial's direction (and a few eddies)
-  const lv=lightVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
+  const lv=dialVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
   const nS=Math.round(2 + breath*5);
   for(let s=0;s<nS;s++){
     const a=ang + (Math.random()-0.5)*0.7, mx=Math.cos(a), my=Math.sin(a);

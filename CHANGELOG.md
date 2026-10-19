@@ -4,6 +4,20 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Thrymr (2026-10-19)
+
+- **The light dial's handle is the light.** Drag it round like a lamp
+  round the page: every surface is now lit from the handle's side, and its
+  shadows fall the other way. Many surfaces had been lit from the opposite
+  side (Crystal, Spangle, Crackle, Cells, Turing Pattern, Stained Glass,
+  Old Paper, Linen and others). Looks, presets and readings made before
+  keep their pictures: their light is turned half round when they open, so
+  the handle now stands where their light really is.
+- **🜚's spike points where the shadows fall,** out of the dial's far side
+  from the light. The rim light has a spike of its own, in its colour.
+- **Water's shadows fall away from the light** too. Ringworld's land is lit
+  from the handle's side, a little.
+
 ## Saturn–Farbauti (2026-10-19)
 
 - **`$` works wherever `§` does in PML.** `$moon`, `$spell` and the other

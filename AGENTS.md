@@ -345,6 +345,20 @@ Other parts of a look:
 ### 5.5 · Light
 - The ☉/🜚 dial sets a direction and a height (`textureLight`,
   `textureLightTilt`). `lightVec` scales by height.
+- **The handle is the light** (Ruby: "dragging a light around an object in
+  the center … it projects a shadow"). Every surface is lit from the
+  handle's side, and shadows fall away from it; 🜚's spike on the dial (and
+  the rim light's, in its colour) points where they fall.
+  - `lightVec` is the way the light travels (away from the handle);
+    `dialVec` is the handle's own way, for a dial that is a direction or a
+    place (wind, a breath, Pigment's flow, where a circle stands); Athanor
+    parts take `genDial(E, n, port)` (travel), or `light: false` for an
+    angle of their own (Lichtenberg's strike).
+  - Older looks (format < 6), presets and readings on the surfaces that were
+    lit from the far side (`LIGHT_TURNED`; an Athanor look unless its graph
+    holds a `LIGHT_KEPT_PARTS` part) are turned half round on load
+    (`retireFormat6`, `halfRound`), so their pictures stay. A new surface
+    reads `lightVec`/`dialVec` and is never added to `LIGHT_TURNED`.
 - `lightHeights(H, …)` lights a height field like a game engine: diffuse,
   specular by material, soft cast shadows, ambient occlusion. New lit
   textures build a height field and use it.

@@ -12,7 +12,7 @@
  * weave → cloth → surface (chains.js).
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { CPU, wordsRoom, chamferDistance, lightBasis, lightSparse, lightHeights, lightVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare, wholeCam, wholeTurned } from './texCore.js';
+import { CPU, wordsRoom, chamferDistance, lightBasis, lightSparse, lightHeights, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, parseHex, cpx, mulberry32, kitPicture, kitCanvas, fbmSampler, withSeed, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare, wholeCam, wholeTurned } from './texCore.js';
 import { genColdPress, genCupRing, genOldPaper, genBurntLetter, genHoarfrost, genGlassRain, genWater, genDunes, genMoss, genKintsugi, genSpangle, genCrystalLeaf, genSuminagashi } from './texTouch.js';
 
 const TOUCH_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -88,7 +88,7 @@ function touchPigment(D, img, ww, wh, col, wet, light){
     return O; };
   const er = Math.max(1, Math.round(unit*(0.006 + wet*0.012))), blurred = blurF(blurF(D, er), er);
   const tooth = fbmSampler(28, 2), bloom = fbmSampler(5, 3);
-  const lv = lightVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
+  const lv = dialVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
   const rim = 1.1*(1 - wet*0.6), gran = 0.12 + 0.12*(1 - wet), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
   for(let i = 0; i < N; i++){
     const x = i % ww, y = (i/ww) | 0, u = x/unit, v = y/unit;
@@ -172,7 +172,7 @@ export const TOUCH_STEPS = {
     params: [TOUCH_R('size', 'Pool Size', 100, 40, 400), TOUCH_R('count', 'Pool Count', 100, 25, 300), TOUCH_R('viscosity', 'Viscosity', 45), TOUCH_R('splatter', 'Splatter', 0), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
     run(E, n){ const { ww, wh, unit, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       const zoom = num(n, 'size', 100)/100, amt = num(n, 'count', 100)/100, visc = num(n, 'viscosity', 45)/100, spl = num(n, 'splatter', 0)/100;
-      const dv = E.input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, tx = -Math.cos(da), ty = -Math.sin(da);
+      const dv = E.input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, tx = Math.cos(da), ty = Math.sin(da);   // (thrown toward the light: the handle)
       return withSeed(seed, () => {
         const nP = Math.max(1, Math.round(3*amt)), spread = 1.2 - 0.45*visc, pours = [];
         for(let k = 0; k < nP; k++){

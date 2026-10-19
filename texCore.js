@@ -195,7 +195,20 @@ export function withLightTilt(t, fn){
   try { return fn(); }
   finally { LIGHT_TILT = prev; }
 }
+/**
+ * THE DIAL'S HANDLE IS THE LIGHT (Ruby: "dragging a light around an object in the center … it projects a shadow"):
+ * the light comes FROM the handle's side, and shadows fall the other way, on every surface. lightVec is the way the
+ * light TRAVELS, away from the handle, its length how low the light is (0 overhead). (Before looks of format 6 most
+ * surfaces read the handle as the way the light travelled, lit from the side opposite it; older looks are turned half
+ * round so they keep their picture: appEvents retireFormat6.) dialVec is the handle's own way, for a dial that is a
+ * direction or a place rather than a light (wind, flow, a breath, where a circle stands).
+ */
 export function lightVec(light){
+  const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
+  const T = Math.min(1, LIGHT_TILT);
+  return { lx: -Math.cos(a) * T, ly: -Math.sin(a) * T };
+}
+export function dialVec(light){
   const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
   const T = Math.min(1, LIGHT_TILT);
   return { lx: Math.cos(a) * T, ly: Math.sin(a) * T };
@@ -242,7 +255,7 @@ export function lightRigOf({ ambient, ambientHue, mainHue, rimDeg, rimTilt, rimH
 function lightWay(deg, T){
   const a = ((deg == null ? 315 : deg) - 90)*Math.PI/180, tilt = Math.max(0, Math.min(1, T)), low = Math.max(0, Math.min(1, (T - 1)/0.3));
   const elev = (90 - tilt*78 - low*8)*Math.PI/180, horiz = Math.cos(elev);
-  const Lx = tilt > 1e-6 ? -Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? -Math.sin(a)*horiz : 0, Lz = Math.sin(elev);
+  const Lx = tilt > 1e-6 ? Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? Math.sin(a)*horiz : 0, Lz = Math.sin(elev);   // (toward the handle: the light)
   const hz = Lz + 1, hl = Math.hypot(Lx, Ly, hz) || 1, lxy = Math.hypot(Lx, Ly);
   return { Lx, Ly, Lz, Hx: Lx/hl, Hy: Ly/hl, Hz: hz/hl, lxy, stepX: lxy > 1e-6 ? Lx/lxy : 0, stepY: lxy > 1e-6 ? Ly/lxy : 0, rise: lxy > 1e-6 ? Lz/lxy : 1e9 };
 }
@@ -250,7 +263,7 @@ function lightWay(deg, T){
  *  the round dial stretched onto the square page, so its rim at 45° reaches
  *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
 export function dialSquare(light){
-  const { lx, ly } = lightVec(light), k = Math.hypot(lx, ly);
+  const { lx, ly } = dialVec(light), k = Math.hypot(lx, ly);
   if(k < 1e-6) return { u: 0, v: 0 };
   const dx = lx / k, dy = ly / k, m = Math.max(Math.abs(dx), Math.abs(dy));
   return { u: dx / m * k, v: dy / m * k };

@@ -213,7 +213,7 @@ check('importing the same spell twice does not duplicate it',
 {
   // (the camera taken out: an old look of a surface with a camera, saved before it, has none)
   const base = save(), { lookVersion, cameraTurn, cameraView, cameraZoom, ...old } = base;
-  check('a look says which format it was saved in', base.lookVersion === 5);
+  check('a look says which format it was saved in', base.lookVersion === 6);
   load({ ...old, texture: true, textureType: 'rainstreaks', texP1: '200', texP2: '-30', textureLight: '315' });
   let s = save();
   check('an old Harsh Rain look: Slant −30° becomes the dial at 30°, no gusts', s.textureLight === '30' && +s.texP2 === 0 && +s.texP1 === 200);

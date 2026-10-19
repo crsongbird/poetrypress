@@ -3493,7 +3493,20 @@ function withLightTilt(t, fn){
   try { return fn(); }
   finally { LIGHT_TILT = prev; }
 }
+/**
+ * THE DIAL'S HANDLE IS THE LIGHT (Ruby: "dragging a light around an object in the center … it projects a shadow"):
+ * the light comes FROM the handle's side, and shadows fall the other way, on every surface. lightVec is the way the
+ * light TRAVELS, away from the handle, its length how low the light is (0 overhead). (Before looks of format 6 most
+ * surfaces read the handle as the way the light travelled, lit from the side opposite it; older looks are turned half
+ * round so they keep their picture: appEvents retireFormat6.) dialVec is the handle's own way, for a dial that is a
+ * direction or a place rather than a light (wind, flow, a breath, where a circle stands).
+ */
 function lightVec(light){
+  const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
+  const T = Math.min(1, LIGHT_TILT);
+  return { lx: -Math.cos(a) * T, ly: -Math.sin(a) * T };
+}
+function dialVec(light){
   const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
   const T = Math.min(1, LIGHT_TILT);
   return { lx: Math.cos(a) * T, ly: Math.sin(a) * T };
@@ -3540,7 +3553,7 @@ function lightRigOf({ ambient, ambientHue, mainHue, rimDeg, rimTilt, rimHue } = 
 function lightWay(deg, T){
   const a = ((deg == null ? 315 : deg) - 90)*Math.PI/180, tilt = Math.max(0, Math.min(1, T)), low = Math.max(0, Math.min(1, (T - 1)/0.3));
   const elev = (90 - tilt*78 - low*8)*Math.PI/180, horiz = Math.cos(elev);
-  const Lx = tilt > 1e-6 ? -Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? -Math.sin(a)*horiz : 0, Lz = Math.sin(elev);
+  const Lx = tilt > 1e-6 ? Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? Math.sin(a)*horiz : 0, Lz = Math.sin(elev);   // (toward the handle: the light)
   const hz = Lz + 1, hl = Math.hypot(Lx, Ly, hz) || 1, lxy = Math.hypot(Lx, Ly);
   return { Lx, Ly, Lz, Hx: Lx/hl, Hy: Ly/hl, Hz: hz/hl, lxy, stepX: lxy > 1e-6 ? Lx/lxy : 0, stepY: lxy > 1e-6 ? Ly/lxy : 0, rise: lxy > 1e-6 ? Lz/lxy : 1e9 };
 }
@@ -3548,7 +3561,7 @@ function lightWay(deg, T){
  *  the round dial stretched onto the square page, so its rim at 45° reaches
  *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
 function dialSquare(light){
-  const { lx, ly } = lightVec(light), k = Math.hypot(lx, ly);
+  const { lx, ly } = dialVec(light), k = Math.hypot(lx, ly);
   if(k < 1e-6) return { u: 0, v: 0 };
   const dx = lx / k, dy = ly / k, m = Math.max(Math.abs(dx), Math.abs(dy));
   return { u: dx / m * k, v: dy / m * k };
@@ -6879,7 +6892,7 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   const ellipse=(cx, cy, rx, ry, ang, fn)=>{ const R=Math.max(rx,ry)+2, ca=Math.cos(ang), sa=Math.sin(ang);
     for(let y=Math.max(0,Math.floor(cy-R)); y<=Math.min(PH-1,Math.ceil(cy+R)); y++) for(let x=Math.max(0,Math.floor(cx-R)); x<=Math.min(PW-1,Math.ceil(cx+R)); x++){
       const dx=x-cx, dy=y-cy, u=(dx*ca+dy*sa)/rx, v=(-dx*sa+dy*ca)/ry; fn(y*PW+x, u, v, u*u+v*v); } };
-  const shadowAt=(cx, cy, z)=>{ const off=(1-z)*floor*(0.3+0.9*ltilt); return [cx+SX*off, cy+SY*off]; };
+  const shadowAt=(cx, cy, z)=>{ const off=(1-z)*floor*(0.3+0.9*ltilt); return [cx-SX*off, cy-SY*off]; };   // (away from the light: the handle's side)
   // stones on the floor: lit domes, each its own tone
   const stoneN=Math.round((kind==='stream' ? 70 : kind==='well' ? 26 : 14)*area);
   for(let k=0;k<stoneN;k++){
@@ -7435,7 +7448,8 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   const vr=Math.max(0,Math.min(1, varK==null ? 0.4 : varK)), br=Math.max(0,Math.min(1, brush==null ? 0 : brush));
   const metal=parseHex(tint||'#C9CED6');
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);   // toward the light
+  // (the way the light travels, as lightVec: away from the dial's handle, where the light is)
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=-Math.cos(la), SY=-Math.sin(la);
   // the grains: a jittered lattice of nuclei — more jittered, and of more
   // varied sizes, as Variation rises — each with its own facet tilt and axis
   const cs=unit*0.09*zoom, gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, G=[];
@@ -7741,7 +7755,8 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
   const ph=Math.max(0,Math.min(1, phantoms==null ? 0.3 : phantoms)), inc=Math.max(0,Math.min(1, inclusions==null ? 0.2 : inclusions));
   const CR=parseHex(tint1||'#B9A6D8'), IN=parseHex(tint2||'#D9A441');
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);
+  // (the way the light travels, as lightVec: away from the dial's handle, where the light is)
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=-Math.cos(la), SY=-Math.sin(la);
   // a set of faces: centres on a jittered lattice, each a tilted plane
   const faces=(cs)=>{ const gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, F=[];
     for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ const a=Math.random()*Math.PI*2, t=0.2+Math.random()*0.5;
@@ -8137,7 +8152,7 @@ function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
     OPS.push({ t:0, cx:C[0] + (Math.random()-0.5)*r0*0.2, cy:C[1] + (Math.random()-0.5)*r0*0.2, r:r0*(0.7 + Math.random()*0.5)*(ink ? 0.75 : 1), kind, dens:0.42 + Math.random()*0.45 });
   }
   // the breath: strokes along the dial's direction (and a few eddies)
-  const lv=lightVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
+  const lv=dialVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
   const nS=Math.round(2 + breath*5);
   for(let s=0;s<nS;s++){
     const a=ang + (Math.random()-0.5)*0.7, mx=Math.cos(a), my=Math.sin(a);
@@ -9613,7 +9628,7 @@ function touchPigment(D, img, ww, wh, col, wet, light){
     return O; };
   const er = Math.max(1, Math.round(unit*(0.006 + wet*0.012))), blurred = blurF(blurF(D, er), er);
   const tooth = fbmSampler(28, 2), bloom = fbmSampler(5, 3);
-  const lv = lightVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
+  const lv = dialVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
   const rim = 1.1*(1 - wet*0.6), gran = 0.12 + 0.12*(1 - wet), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
   for(let i = 0; i < N; i++){
     const x = i % ww, y = (i/ww) | 0, u = x/unit, v = y/unit;
@@ -9697,7 +9712,7 @@ const TOUCH_STEPS = {
     params: [TOUCH_R('size', 'Pool Size', 100, 40, 400), TOUCH_R('count', 'Pool Count', 100, 25, 300), TOUCH_R('viscosity', 'Viscosity', 45), TOUCH_R('splatter', 'Splatter', 0), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
     run(E, n){ const { ww, wh, unit, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       const zoom = num(n, 'size', 100)/100, amt = num(n, 'count', 100)/100, visc = num(n, 'viscosity', 45)/100, spl = num(n, 'splatter', 0)/100;
-      const dv = E.input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, tx = -Math.cos(da), ty = -Math.sin(da);
+      const dv = E.input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, tx = Math.cos(da), ty = Math.sin(da);   // (thrown toward the light: the handle)
       return withSeed(seed, () => {
         const nP = Math.max(1, Math.round(3*amt)), spread = 1.2 - 0.45*visc, pours = [];
         for(let k = 0; k < nP; k++){
@@ -10726,8 +10741,11 @@ Object.assign(TOUCH_STEPS, {
 const GEN_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const genClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
-// the dial (a wired value 0..1, else the page's own) as an angle, and the unit vector toward its handle
-const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
+// the dial (a wired value 0..1, else the page's own) as an angle, and the unit vector the way its light travels (away
+// from the handle, where the light is: what grows, strikes or spreads goes with the light)
+// (`light: false` for a part whose way is its own angle, never the light's: Lichtenberg's strike, a slider)
+const genDial = (E, n, port, light = true) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, k = light ? -1 : 1;
+  return { deg, x: k*Math.cos(a), y: k*Math.sin(a) }; };
 
 // ---------------- THE GROUND CAMERA ----------------
 // (Ruby: "change the fov of the lens and allow rotating or tracking around".) A part that draws a world lying on the
@@ -12729,7 +12747,7 @@ const GEN_STEPS = {
     params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
       GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variation', 0, 0, 99),
       GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12,
-    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1, false), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
         grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));
@@ -13496,7 +13514,7 @@ function whimFlowLines(w, h, o, px, area){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const ctx = c.getContext('2d', CPU);
   const unit = Math.min(w, h), zoom = o.zoom, amt = o.amt, turb = o.turb;
-  const lv = lightVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
+  const lv = dialVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;   // (a direction: the handle's way)
   let fieldAt;
   if(o.map){ const M = o.map, mw = o.mw, mh = o.mh;
     fieldAt = (x, y) => base + (M[Math.min(mh - 1, Math.max(0, y/h*mh|0))*mw + Math.min(mw - 1, Math.max(0, x/w*mw|0))] - 0.5)*Math.PI*2.6*turb; }
@@ -14271,7 +14289,7 @@ const CHAOS_STEPS = {
   cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
     params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
-      const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;
+      const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg + 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;   // (struck on the side away from the light, the handle)
       // (the cracks run on the export's grid, `ctx.page`, at every size, and are drawn scaled: a crack walks pixel by
       //  pixel, so a preview's own grid ran other cracks)
       const [GW, GH] = ctx.page || [ww, wh], K = unit/Math.min(GW, GH);
@@ -20155,6 +20173,19 @@ const TEXTURE_PARAMS = {
  * the page, which is why their tint controls are disabled rather than
  * silently ignored.
  */
+/**
+ * THE SURFACES WHOSE LIGHT TURNED HALF ROUND when the dial's handle became the light itself (texCore lightVec): before,
+ * they read the handle as the way the light travelled and were lit from its other side. Their older looks, presets and
+ * readings are turned half round as they are put on (appEvents lightTurned), so each keeps the picture it had. The rest
+ * already lit from the handle (the rings, the lotus, the water, glass under glass, the webs, the shards, the shaft of
+ * light), or use the dial as a direction or a place (wind, flow, rain, a breath, where a circle stands), and keep theirs.
+ * A graph from the Athanor turns unless it holds one of LIGHT_KEPT_PARTS.
+ */
+const LIGHT_TURNED = new Set(['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'metalleaf', 'brushstrokes',
+  'glassrain', 'rainwater', 'sigils', 'crackedglaze', 'oldpaper', 'crystal', 'spangle', 'tessellate', 'cards', 'linen', 'coldpress', 'cupring', 'guilloche',
+  'chladni', 'contour', 'stainedglass', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']);
+const LIGHT_KEPT_PARTS = ['ringsky', 'ringarch', 'ringland', 'ringview', 'shards', 'dewwebs', 'shaft', 'glasspane', 'shapeland', 'lotus', 'water',
+  'curtains', 'ribbons', 'streaks', 'hatching', 'marbling', 'flowlines', 'particles', 'transmutation', 'blackhole', 'washes', 'pigment'];
 const TEXTURE_CAPS = {
   // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
   circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
@@ -21790,8 +21821,9 @@ but bear with me, dear}]/jitter:200
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
                   <circle class="ld-tick" data-deg="0" cx="0.0" cy="-45.0" r="2.6"></circle><circle class="ld-tick" data-deg="45" cx="31.82" cy="-31.82" r="2.6"></circle><circle class="ld-tick" data-deg="90" cx="45.0" cy="-0.0" r="2.6"></circle><circle class="ld-tick" data-deg="135" cx="31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="180" cx="0.0" cy="45.0" r="2.6"></circle><circle class="ld-tick" data-deg="225" cx="-31.82" cy="31.82" r="2.6"></circle><circle class="ld-tick" data-deg="270" cx="-45.0" cy="0.0" r="2.6"></circle><circle class="ld-tick" data-deg="315" cx="-31.82" cy="-31.82" r="2.6"></circle>
-                  <!-- 🜚: the spike and its two curls grow out of the rim toward the light; the curls flare outward (the rim
-                       light has its own, in its own colour, as strong as it is) -->
+                  <!-- 🜚 AS A SHADOW (Ruby: the handle is a light dragged round the ☉ at the middle, and this is the shadow it
+                       casts): the spike and its two curls grow out of the rim on the far side from the light, longer as the
+                       light lowers; the rim light casts its own, in its own colour, as strong as it is -->
                   <g class="ld-spike ld-rim-spike" id="lightRimSpike" opacity="0">
                     <polygon class="ld-spike-body" id="lightRimSpikeBody" points="-3.4,-24 3.4,-24 0,-26"></polygon>
                     <path class="ld-curl" d="M -3.2 -28.5 c -5.4 1.2 -8.2 -4.2 -4.4 -6.6 c 2.7 -1.5 5.4 1.1 3.1 3.6"></path>
@@ -26230,7 +26262,20 @@ function withLightTilt(t, fn){
   try { return fn(); }
   finally { LIGHT_TILT = prev; }
 }
+/**
+ * THE DIAL'S HANDLE IS THE LIGHT (Ruby: "dragging a light around an object in the center … it projects a shadow"):
+ * the light comes FROM the handle's side, and shadows fall the other way, on every surface. lightVec is the way the
+ * light TRAVELS, away from the handle, its length how low the light is (0 overhead). (Before looks of format 6 most
+ * surfaces read the handle as the way the light travelled, lit from the side opposite it; older looks are turned half
+ * round so they keep their picture: appEvents retireFormat6.) dialVec is the handle's own way, for a dial that is a
+ * direction or a place rather than a light (wind, flow, a breath, where a circle stands).
+ */
 function lightVec(light){
+  const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
+  const T = Math.min(1, LIGHT_TILT);
+  return { lx: -Math.cos(a) * T, ly: -Math.sin(a) * T };
+}
+function dialVec(light){
   const a = ((light == null ? 315 : light) - 90) * Math.PI / 180;
   const T = Math.min(1, LIGHT_TILT);
   return { lx: Math.cos(a) * T, ly: Math.sin(a) * T };
@@ -26277,7 +26322,7 @@ function lightRigOf({ ambient, ambientHue, mainHue, rimDeg, rimTilt, rimHue } = 
 function lightWay(deg, T){
   const a = ((deg == null ? 315 : deg) - 90)*Math.PI/180, tilt = Math.max(0, Math.min(1, T)), low = Math.max(0, Math.min(1, (T - 1)/0.3));
   const elev = (90 - tilt*78 - low*8)*Math.PI/180, horiz = Math.cos(elev);
-  const Lx = tilt > 1e-6 ? -Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? -Math.sin(a)*horiz : 0, Lz = Math.sin(elev);
+  const Lx = tilt > 1e-6 ? Math.cos(a)*horiz : 0, Ly = tilt > 1e-6 ? Math.sin(a)*horiz : 0, Lz = Math.sin(elev);   // (toward the handle: the light)
   const hz = Lz + 1, hl = Math.hypot(Lx, Ly, hz) || 1, lxy = Math.hypot(Lx, Ly);
   return { Lx, Ly, Lz, Hx: Lx/hl, Hy: Ly/hl, Hz: hz/hl, lxy, stepX: lxy > 1e-6 ? Lx/lxy : 0, stepY: lxy > 1e-6 ? Ly/lxy : 0, rise: lxy > 1e-6 ? Lz/lxy : 1e9 };
 }
@@ -26285,7 +26330,7 @@ function lightWay(deg, T){
  *  the round dial stretched onto the square page, so its rim at 45° reaches
  *  the very corner. Returns u, v in -1..1 (0, 0 is the centre). */
 function dialSquare(light){
-  const { lx, ly } = lightVec(light), k = Math.hypot(lx, ly);
+  const { lx, ly } = dialVec(light), k = Math.hypot(lx, ly);
   if(k < 1e-6) return { u: 0, v: 0 };
   const dx = lx / k, dy = ly / k, m = Math.max(Math.abs(dx), Math.abs(dy));
   return { u: dx / m * k, v: dy / m * k };
@@ -29616,7 +29661,7 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   const ellipse=(cx, cy, rx, ry, ang, fn)=>{ const R=Math.max(rx,ry)+2, ca=Math.cos(ang), sa=Math.sin(ang);
     for(let y=Math.max(0,Math.floor(cy-R)); y<=Math.min(PH-1,Math.ceil(cy+R)); y++) for(let x=Math.max(0,Math.floor(cx-R)); x<=Math.min(PW-1,Math.ceil(cx+R)); x++){
       const dx=x-cx, dy=y-cy, u=(dx*ca+dy*sa)/rx, v=(-dx*sa+dy*ca)/ry; fn(y*PW+x, u, v, u*u+v*v); } };
-  const shadowAt=(cx, cy, z)=>{ const off=(1-z)*floor*(0.3+0.9*ltilt); return [cx+SX*off, cy+SY*off]; };
+  const shadowAt=(cx, cy, z)=>{ const off=(1-z)*floor*(0.3+0.9*ltilt); return [cx-SX*off, cy-SY*off]; };   // (away from the light: the handle's side)
   // stones on the floor: lit domes, each its own tone
   const stoneN=Math.round((kind==='stream' ? 70 : kind==='well' ? 26 : 14)*area);
   for(let k=0;k<stoneN;k++){
@@ -30172,7 +30217,8 @@ function genSpangle(w,h,amt,zoom,light,tint,form,varK,brush,M3,GL){
   const vr=Math.max(0,Math.min(1, varK==null ? 0.4 : varK)), br=Math.max(0,Math.min(1, brush==null ? 0 : brush));
   const metal=parseHex(tint||'#C9CED6');
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);   // toward the light
+  // (the way the light travels, as lightVec: away from the dial's handle, where the light is)
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=-Math.cos(la), SY=-Math.sin(la);
   // the grains: a jittered lattice of nuclei — more jittered, and of more
   // varied sizes, as Variation rises — each with its own facet tilt and axis
   const cs=unit*0.09*zoom, gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, G=[];
@@ -30478,7 +30524,8 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
   const ph=Math.max(0,Math.min(1, phantoms==null ? 0.3 : phantoms)), inc=Math.max(0,Math.min(1, inclusions==null ? 0.2 : inclusions));
   const CR=parseHex(tint1||'#B9A6D8'), IN=parseHex(tint2||'#D9A441');
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
-  const la=((light==null?315:light)-90)*Math.PI/180, SX=Math.cos(la), SY=Math.sin(la);
+  // (the way the light travels, as lightVec: away from the dial's handle, where the light is)
+  const la=((light==null?315:light)-90)*Math.PI/180, SX=-Math.cos(la), SY=-Math.sin(la);
   // a set of faces: centres on a jittered lattice, each a tilted plane
   const faces=(cs)=>{ const gx=Math.ceil(ww/cs)+2, gy=Math.ceil(wh/cs)+2, F=[];
     for(let j=0;j<gy;j++) for(let i=0;i<gx;i++){ const a=Math.random()*Math.PI*2, t=0.2+Math.random()*0.5;
@@ -30874,7 +30921,7 @@ function genSuminagashi(w,h,amt,zoom,light,form,tint1,tint2){
     OPS.push({ t:0, cx:C[0] + (Math.random()-0.5)*r0*0.2, cy:C[1] + (Math.random()-0.5)*r0*0.2, r:r0*(0.7 + Math.random()*0.5)*(ink ? 0.75 : 1), kind, dens:0.42 + Math.random()*0.45 });
   }
   // the breath: strokes along the dial's direction (and a few eddies)
-  const lv=lightVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
+  const lv=dialVec(light==null?45:light), lm=Math.hypot(lv.lx,lv.ly), ang=lm>1e-3 ? Math.atan2(lv.ly,lv.lx) : Math.random()*Math.PI*2;
   const nS=Math.round(2 + breath*5);
   for(let s=0;s<nS;s++){
     const a=ang + (Math.random()-0.5)*0.7, mx=Math.cos(a), my=Math.sin(a);
@@ -32350,7 +32397,7 @@ function touchPigment(D, img, ww, wh, col, wet, light){
     return O; };
   const er = Math.max(1, Math.round(unit*(0.006 + wet*0.012))), blurred = blurF(blurF(D, er), er);
   const tooth = fbmSampler(28, 2), bloom = fbmSampler(5, 3);
-  const lv = lightVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
+  const lv = dialVec(light == null ? 0 : light), lm = Math.hypot(lv.lx, lv.ly), gx = lm > 1e-3 ? lv.lx/lm : 0, gy = lm > 1e-3 ? lv.ly/lm : 0, run = Math.min(1, lm);
   const rim = 1.1*(1 - wet*0.6), gran = 0.12 + 0.12*(1 - wet), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
   for(let i = 0; i < N; i++){
     const x = i % ww, y = (i/ww) | 0, u = x/unit, v = y/unit;
@@ -32434,7 +32481,7 @@ const TOUCH_STEPS = {
     params: [TOUCH_R('size', 'Pool Size', 100, 40, 400), TOUCH_R('count', 'Pool Count', 100, 25, 300), TOUCH_R('viscosity', 'Viscosity', 45), TOUCH_R('splatter', 'Splatter', 0), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
     run(E, n){ const { ww, wh, unit, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       const zoom = num(n, 'size', 100)/100, amt = num(n, 'count', 100)/100, visc = num(n, 'viscosity', 45)/100, spl = num(n, 'splatter', 0)/100;
-      const dv = E.input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, tx = -Math.cos(da), ty = -Math.sin(da);
+      const dv = E.input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, tx = Math.cos(da), ty = Math.sin(da);   // (thrown toward the light: the handle)
       return withSeed(seed, () => {
         const nP = Math.max(1, Math.round(3*amt)), spread = 1.2 - 0.45*visc, pours = [];
         for(let k = 0; k < nP; k++){
@@ -33463,8 +33510,11 @@ Object.assign(TOUCH_STEPS, {
 const GEN_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const genClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
-// the dial (a wired value 0..1, else the page's own) as an angle, and the unit vector toward its handle
-const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
+// the dial (a wired value 0..1, else the page's own) as an angle, and the unit vector the way its light travels (away
+// from the handle, where the light is: what grows, strikes or spreads goes with the light)
+// (`light: false` for a part whose way is its own angle, never the light's: Lichtenberg's strike, a slider)
+const genDial = (E, n, port, light = true) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, k = light ? -1 : 1;
+  return { deg, x: k*Math.cos(a), y: k*Math.sin(a) }; };
 
 // ---------------- THE GROUND CAMERA ----------------
 // (Ruby: "change the fov of the lens and allow rotating or tracking around".) A part that draws a world lying on the
@@ -35466,7 +35516,7 @@ const GEN_STEPS = {
     params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
       GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variation', 0, 0, 99),
       GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12,
-    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1, false), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
         grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));
@@ -36233,7 +36283,7 @@ function whimFlowLines(w, h, o, px, area){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const ctx = c.getContext('2d', CPU);
   const unit = Math.min(w, h), zoom = o.zoom, amt = o.amt, turb = o.turb;
-  const lv = lightVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
+  const lv = dialVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;   // (a direction: the handle's way)
   let fieldAt;
   if(o.map){ const M = o.map, mw = o.mw, mh = o.mh;
     fieldAt = (x, y) => base + (M[Math.min(mh - 1, Math.max(0, y/h*mh|0))*mw + Math.min(mw - 1, Math.max(0, x/w*mw|0))] - 0.5)*Math.PI*2.6*turb; }
@@ -37008,7 +37058,7 @@ const CHAOS_STEPS = {
   cracks: { cat: 'Noise', label: 'Spreading Cracks', ins: ['impact at'], outs: ['height', 'glaze', 'grime', 'fine'], io: { ins: ['value'], outs: ['field', 'field', 'field', 'field'] },
     params: [CHAOS_R('scale', 'Crack Scale', 100, 50, 300), CHAOS_R('count', 'Cracks', 100, 20, 400), CHAOS_R('spread', 'From One Point', 30), CHAOS_R('wander', 'Wander', 40), CHAOS_R('age', 'Chipping', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 10,
     run(E, n){ const { ww, wh, N, unit, num, input, ctx } = E;
-      const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg - 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;
+      const dv = input(n, 1), deg = typeof dv === 'number' ? dv*360 : (ctx.light ?? 315), da = (deg + 90)*Math.PI/180, zoom = num(n, 'scale', 100)/100;   // (struck on the side away from the light, the handle)
       // (the cracks run on the export's grid, `ctx.page`, at every size, and are drawn scaled: a crack walks pixel by
       //  pixel, so a preview's own grid ran other cracks)
       const [GW, GH] = ctx.page || [ww, wh], K = unit/Math.min(GW, GH);
@@ -42892,6 +42942,19 @@ const TEXTURE_PARAMS = {
  * the page, which is why their tint controls are disabled rather than
  * silently ignored.
  */
+/**
+ * THE SURFACES WHOSE LIGHT TURNED HALF ROUND when the dial's handle became the light itself (texCore lightVec): before,
+ * they read the handle as the way the light travelled and were lit from its other side. Their older looks, presets and
+ * readings are turned half round as they are put on (appEvents lightTurned), so each keeps the picture it had. The rest
+ * already lit from the handle (the rings, the lotus, the water, glass under glass, the webs, the shards, the shaft of
+ * light), or use the dial as a direction or a place (wind, flow, rain, a breath, where a circle stands), and keep theirs.
+ * A graph from the Athanor turns unless it holds one of LIGHT_KEPT_PARTS.
+ */
+const LIGHT_TURNED = new Set(['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'metalleaf', 'brushstrokes',
+  'glassrain', 'rainwater', 'sigils', 'crackedglaze', 'oldpaper', 'crystal', 'spangle', 'tessellate', 'cards', 'linen', 'coldpress', 'cupring', 'guilloche',
+  'chladni', 'contour', 'stainedglass', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']);
+const LIGHT_KEPT_PARTS = ['ringsky', 'ringarch', 'ringland', 'ringview', 'shards', 'dewwebs', 'shaft', 'glasspane', 'shapeland', 'lotus', 'water',
+  'curtains', 'ribbons', 'streaks', 'hatching', 'marbling', 'flowlines', 'particles', 'transmutation', 'blackhole', 'washes', 'pigment'];
 const TEXTURE_CAPS = {
   // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
   circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
@@ -44345,11 +44408,11 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Farbauti';
+const RELEASE = 'Saturn–Thrymr';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"x1H4Euh6","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"UKWll1yK","checker":"KkB1dIau","chladni":"fg4n11Wm","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"CP7Fb68B","contour":"lveY9-4D","crackedglaze":"4C-ldMio","crackle":"Q__MAGU6","crystal":"MqYKutGn","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"sihYp08z","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"npIroxL4","grain":"sXiGDWE0","growth":"0StFvT4O","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qCXId_zX","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"G4Q8Fhfh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"PZ0yae4a","oldpaper":"KiTyhvQT","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"aYDyL6O_","ringpaint":"nIPj4L7t","ringworld":"Glj7XdIW","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"53CijlRT","stainedglass":"Xf6pf_7_","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"6S_Mr36q","turing":"S_tqYKwy","underglass":"yw9UZYdJ","veins":"prRcdxbI","water":"JzwOUOSi","watercolour":"pg8g8DCf","wax":"bCiCHM1m"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"YJnHzsfc","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"R8benyFh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"YtNY3Szl","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -45182,7 +45245,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · 1535393";
+const STAMP = "2026-10-19 · 3034921";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -49027,7 +49090,7 @@ const WIKI_PARTS = {
   },
   dial: {
     line: 'Brings the page’s light dial into the graph: the light’s direction and its height.',
-    about: 'The light dial on the page sets where light comes from. Lighting parts read it on their own; the Light Dial part lets you use it for anything else — the direction rain falls, where a crack starts, which way a current flows.',
+    about: 'The light dial on the page sets where light comes from: its handle is the light, as if you dragged a lamp round the page, and shadows fall the other way (🜚’s spike on the dial points where they fall). Lighting parts read it on their own; the Light Dial part lets you use it for anything else — the direction rain falls, where a crack starts, which way a current flows.',
     outs: { direction: 'The dial’s angle as a number: 0 at the top, going clockwise round to 1.', height: 'How low the light is: 0 straight overhead (the handle in the dial’s middle), 1 at the rim, up to 1.3 past it.' },
     tips: ['Wire Direction into a Motion Blur’s Angle: the streaks turn with the dial.'],
     see: ['heights', 'part:material'],
@@ -53302,7 +53365,7 @@ function applyPersisted(s){
 // Hatch's angle (their sliders took new jobs); 3 every blend for every surface; 4 Ringworld's day on the light dial and
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic.
 // Older looks are translated on load
-const LOOK_VERSION = 5;
+const LOOK_VERSION = 6;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -53367,7 +53430,24 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))); }
+function retireLook(s){ return retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))); }
+/** THE DIAL'S HANDLE BECAME THE LIGHT (format 6; Ruby: the light dial "goes the opposite direction that I would expect"):
+ *  most surfaces had been lit from the handle's other side (textureGenerators LIGHT_TURNED). A look, preset or reading
+ *  made before is turned half round on such a surface, the main light and the rim alike, so it keeps its picture and
+ *  its handle now stands where its light really is. */
+function lightTurned(L){
+  if(!L || !L.textureType) return false;
+  if(L.textureType === 'athanor'){ const g = String(L.forgeGraph || ''); return !!g && !LIGHT_KEPT_PARTS.some(p => g.includes('"name":"' + p + '"')); }
+  return LIGHT_TURNED.has(L.textureType);
+}
+const halfRound = v => String(((Math.round(+v || 0) + 180) % 360 + 360) % 360);
+function retireFormat6Layer(L){
+  if(!lightTurned(L)) return L;
+  const o = { ...L, textureLight: halfRound(L.textureLight ?? 315) };
+  if(L.textureRim !== undefined && L.textureRim !== '') o.textureRim = halfRound(L.textureRim);
+  return o;
+}
+function retireFormat6(s){ if(!s || +s.lookVersion >= 6) return s; let o = retireFormat6Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat6Layer(o.baseLayer) }; return o; }
 /** A look from before format 5 (Saturn–Hyperion and earlier): Ringworld's eighth slider was Stand At (where across the
  *  band you stood); it is Traffic now, at its middle (the ships as they were), and the seed says where you stand.
  *  Terrain and Structures keep their values as Landforms and Cities (the same relief, the same works). */
@@ -53979,7 +54059,8 @@ function applyPreset(p){
   // the light's height: a preset's own, or raking (the only light presets knew)
   if($('textureLightTilt')){ $('textureLightTilt').value = p.textureLightTilt !== undefined ? p.textureLightTilt : '100'; syncLightPad(); }
   // and its direction: a preset's own, or where its texture's dial starts (Harsh Rain: straight down)
-  { const ld = p.textureLight !== undefined ? p.textureLight : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
+  // (a preset's own light, from before the handle became the light, turned half round where its surface's light turned)
+  { const ld = p.textureLight !== undefined ? (lightTurned(p) ? halfRound(p.textureLight) : p.textureLight) : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
     if(ld != null){ $('textureLight').value = String(ld); syncLightPad(); } }
   // and its camera: the preset's own, or where its texture's camera starts
   { const d = cameraStart(p.textureType || $('textureType').value);
@@ -54724,11 +54805,11 @@ function syncLightPad(){
   // the dot slides from the heart of ☉ toward the rim
   const hx = Math.sin(a) * 15 * k, hy = -Math.cos(a) * 15 * k;
   set('lightHandle', { cx: hx.toFixed(2), cy: hy.toFixed(2) }); set('lightMainClipDot', { cx: hx.toFixed(2), cy: hy.toFixed(2) });
-  // 🜚's spike grows out of the rim the same way, longer and stronger as the light lowers (none overhead); the rim
-  // light has its own, as strong as the rim light is
+  // 🜚 AS A SHADOW (Ruby): the ☉ at the middle casts it away from the light, out of the rim on the far side, longer and
+  // darker as the light lowers (none overhead); the rim light casts its own, as strong as the rim light is
   const shadowOf = (body, group, d, kk, strength) => { const tip = 26 + 3 + 16*Math.min(1.3, kk);
     set(body, { points: `-3.4,-24.5 3.4,-24.5 0,${(-tip).toFixed(2)}` });
-    set(group, { transform: `rotate(${(d % 360).toFixed(1)})`, opacity: kk < 0.04 || strength <= 0 ? 0 : ((0.35 + 0.65*Math.min(1, kk))*strength).toFixed(2) }); };
+    set(group, { transform: `rotate(${((d + 180) % 360).toFixed(1)})`, opacity: kk < 0.04 || strength <= 0 ? 0 : ((0.35 + 0.65*Math.min(1, kk))*strength).toFixed(2) }); };
   shadowOf('lightSpikeBody', 'lightSpike', deg, k, 1);
   // the rim light's handle, under the main's: hollow while it is off, fainter as it is weaker; where the two meet, the
   // lens they share mixes to white
@@ -55571,7 +55652,8 @@ function applyElement(id){
     (v.t || []).slice(0, caps.tints || 0).forEach((hex, i) => { setColorField('textureTint' + (i + 1) + 'Hex', hex); state.ui.tintFollows[i] = false; });
     if(v.t5 && caps.hue5) setColorField('textureTint5Hex', v.t5);
     if(v.blend && caps.blends.includes(v.blend)){ $('textureBlend').value = v.blend; fire($('textureBlend')); }
-    if(v.light && caps.light && !state.locks.has('textureLight')) setLight(v.light[0], v.light[1], false);
+    // (a reading's light, set before the handle became the light, turned half round where its surface's light turned)
+    if(v.light && caps.light && !state.locks.has('textureLight')) setLight(LIGHT_TURNED.has($('textureType').value) ? +halfRound(v.light[0]) : v.light[0], v.light[1], false);
     if(v.cam && caps.camera && !state.locks.has('cameraTurn')) putCamera(v.cam[0], v.cam[1], v.cam[2]);
   });
   state.ui.element = id;

@@ -478,6 +478,19 @@ export const TEXTURE_PARAMS = {
  * the page, which is why their tint controls are disabled rather than
  * silently ignored.
  */
+/**
+ * THE SURFACES WHOSE LIGHT TURNED HALF ROUND when the dial's handle became the light itself (texCore lightVec): before,
+ * they read the handle as the way the light travelled and were lit from its other side. Their older looks, presets and
+ * readings are turned half round as they are put on (appEvents lightTurned), so each keeps the picture it had. The rest
+ * already lit from the handle (the rings, the lotus, the water, glass under glass, the webs, the shards, the shaft of
+ * light), or use the dial as a direction or a place (wind, flow, rain, a breath, where a circle stands), and keep theirs.
+ * A graph from the Athanor turns unless it holds one of LIGHT_KEPT_PARTS.
+ */
+export const LIGHT_TURNED = new Set(['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'metalleaf', 'brushstrokes',
+  'glassrain', 'rainwater', 'sigils', 'crackedglaze', 'oldpaper', 'crystal', 'spangle', 'tessellate', 'cards', 'linen', 'coldpress', 'cupring', 'guilloche',
+  'chladni', 'contour', 'stainedglass', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']);
+export const LIGHT_KEPT_PARTS = ['ringsky', 'ringarch', 'ringland', 'ringview', 'shards', 'dewwebs', 'shaft', 'glasspane', 'shapeland', 'lotus', 'water',
+  'curtains', 'ribbons', 'streaks', 'hatching', 'marbling', 'flowlines', 'particles', 'transmutation', 'blackhole', 'washes', 'pigment'];
 export const TEXTURE_CAPS = {
   // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
   circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,

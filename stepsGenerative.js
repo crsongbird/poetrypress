@@ -41,8 +41,11 @@ import { CPU, withSeed, wordsRoom, kitCanvas, makeNoiseGrid, sampleNoiseGrid, li
 const GEN_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const genClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 const genSeed = (E, n) => ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0;
-// the dial (a wired value 0..1, else the page's own) as an angle, and the unit vector toward its handle
-const genDial = (E, n, port) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180; return { deg, x: Math.cos(a), y: Math.sin(a) }; };
+// the dial (a wired value 0..1, else the page's own) as an angle, and the unit vector the way its light travels (away
+// from the handle, where the light is: what grows, strikes or spreads goes with the light)
+// (`light: false` for a part whose way is its own angle, never the light's: Lichtenberg's strike, a slider)
+const genDial = (E, n, port, light = true) => { const v = E.input(n, port), deg = typeof v === 'number' ? v*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, k = light ? -1 : 1;
+  return { deg, x: k*Math.cos(a), y: k*Math.sin(a) }; };
 
 // ---------------- THE GROUND CAMERA ----------------
 // (Ruby: "change the fov of the lens and allow rotating or tracking around".) A part that draws a world lying on the
@@ -2044,7 +2047,7 @@ export const GEN_STEPS = {
     params: [GEN_R('reach', 'Reach', 50), GEN_R('branching', 'Branching', 50), GEN_R('poles', 'Poles', 2, 1, 3), GEN_R('grain', 'Along the Grain', 30), GEN_R('width', 'Channel Width', 100, 30, 300),
       GEN_R('zoom', 'Zoom', 100, 50, 400), GEN_R('offset', 'Slide', 0, -100, 100), GEN_R('variant', 'Variation', 0, 0, 99),
       GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12,
-    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
+    run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1, false), zoom = num(n, 'zoom', 100)/100, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       const o = { count: Math.round(700 + 8000*num(n, 'reach', 50)/100), eta: 1.2 + (1 - num(n, 'branching', 50)/100)*6.5, poles: Math.round(num(n, 'poles', 2)),
         grain: num(n, 'grain', 30)/100, dx: dial.x, dy: dial.y, zoom, offset: num(n, 'offset', 0)/100 };
       const { segs } = withSeed(genSeed(E, n), () => genLichtenberg(ww/unit, wh/unit, o));

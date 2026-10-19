@@ -26,7 +26,7 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh } from './texWhimsy.js';
 import { skyRingFrame } from './stepsGenerative.js';
 
@@ -660,7 +660,7 @@ function whimFlowLines(w, h, o, px, area){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const ctx = c.getContext('2d', CPU);
   const unit = Math.min(w, h), zoom = o.zoom, amt = o.amt, turb = o.turb;
-  const lv = lightVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;
+  const lv = dialVec(o.light == null ? 0 : o.light), base = Math.hypot(lv.lx, lv.ly) > 1e-3 ? Math.atan2(lv.ly, lv.lx) : 0;   // (a direction: the handle's way)
   let fieldAt;
   if(o.map){ const M = o.map, mw = o.mw, mh = o.mh;
     fieldAt = (x, y) => base + (M[Math.min(mh - 1, Math.max(0, y/h*mh|0))*mw + Math.min(mw - 1, Math.max(0, x/w*mw|0))] - 0.5)*Math.PI*2.6*turb; }
