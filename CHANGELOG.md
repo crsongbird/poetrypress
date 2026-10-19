@@ -4,6 +4,28 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Eggther (2026-10-19)
+
+- **New surface: Windward Sea**, the first love letter to a video game: a
+  sea and sky in the cel-shaded look of the great sailing games, in
+  Places & Scenes. Light falls in a few flat bands (Toon Bands), never a
+  gradient. Clouds heap above the horizon and curl into swirls; foam and
+  the waves' long white lines grow smaller toward the horizon; islands
+  stand on it; the sun follows the light dial and sets into the sea as
+  the light sinks.
+- **The weather is the seed's**: clear, fair, overcast, or now and then a
+  storm, with a slate sky, a choppy sea and wind everywhere. The Weather
+  knob leans it fairer or stormier.
+- **The wind is drawn in the world, not on the sky**: ribbons that run
+  with the wind and end in tightening curls, near ones large and far ones
+  small, twisting to show both faces, lit in the same bands as the
+  clouds.
+- Four readings: Fair Wind, Sunset Sail, Squall and Morning Breeze.
+- **New part in the Athanor: Streamers.** Ribbons swept along curves in
+  3D space (a gust with a curl, a spiral, a loop, a wave) and seen through
+  a camera; it hands on maps (the ribbons, how they face the light, which
+  face shows, how near) for a graph to light.
+
 ## Saturn–Gridr (2026-10-19)
 
 - **Macro Bloom has visitors.** Most seeds bring something near the

@@ -290,7 +290,7 @@ Easter eggs).
     wobble) goes in a new **Video Games** group (its own Runology rune); what could live elsewhere hides in its natural
     group and only nods (the Meadow already reads as a famous green field).
   - **First: cel-shaded worlds** (Wind Waker, Okami, Breath of the Wild; docs/prior-art/cel-shaded.md). The sea and
-    sky is built (Windward Sea, on branch `cel`, with Ruby). Next: wind-swept toon grass and hills, ink-and-brush
+    sky is built (Windward Sea). Next: wind-swept toon grass and hills, ink-and-brush
     outlines (Okami's sumi-e, on parchment).
   - **Then:** painted 2D (Hollow Knight, Ori, Gris: layered parallax caverns and forests, glowing motes, watercolour);
     retro hardware (PS1 low-poly with affine wobble, dithering and fog; a handheld's greens; CRT arcade glow; 16-bit
@@ -300,6 +300,9 @@ Easter eggs).
   - **Small nods elsewhere:** border stitches, underlines and fonts with a game's grammar (a heart row, a dialogue
     box, a pixel font); simple backgrounds — a Sierpiński triangle's first steps is mathematics, free to use, under a
     name of its own (never the game's).
+  - **Next pass on the first two (Ruby, 2026-10-19):** the Windward Sea's wind about 30% less dramatic; an
+    occasional small fairy (a glowing nod) in the Meadow and the Windward Sea; Macro Bloom's bugs a little smaller,
+    and a 1-in-66 chance of a small fairy among its visitors (OPEN-ISSUES §2).
   - **Presets (Stage 4):** the Meadow gets a preset that nods to the famous field by a name of its own (a nod, never
     the name).
 - **L1c · Cardboard diorama** (Ruby, 2026-10-19, pinned for later: "maybe we should pin 'cardboard diorama' as a later
