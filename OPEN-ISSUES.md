@@ -8,22 +8,24 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- LIMINAL SPACES (new, branch `liminal`, sheet sent): the Room Caster ray-casts an empty place of one of eleven kinds
-  (lobby, warehouse, tunnels, poolrooms, hotel, school, hospital, subway, garage, mall, office), the seed's layout, lamps
-  and camera; general parts colour, light, haze and grain it. Six hues (walls, floor, ceiling, accent and water, light,
-  dark); the camera dial looks round. More kinds wanted (a stairwell, a playplace, an airport, an endless suburb)?
-- FLOWERS (new, branch `florals`, sheets sent): five surfaces in a new ᘓ Flowers group (Lotus Pond moves there),
-  built from general parts and one new part, Bloom, which draws 23 real species (front, side, any stage from bud to
-  spent; one flower, a sheet of them, a single petal or a leaf). Floral Imprints (the seed's cyanotype, stamp, crest
-  or pressed flowers), Bouquets (posy, bundle, crown, wreath), Fallen Petals (wilting heads and petals on wood, linen
-  or stone), Meadow (a hill of wildflowers under sky), Macro (one flower close, bokeh and dew, a second of its kind
-  out of focus behind). Scatter can now throw a picture or a sheet of them, with black as clear. Species right? More?
-- VEINS OF LIGHT, REBUILT (branch `veins`, built on `florals`, sheets sent; back in the menu there): a network with
-  loops, not a tree. A new part, Network, joins nodes one of six ways (Weave: Tree + Loops, Relative, Gabriel, Slime,
-  Streets, Subdivided), widens each line by the flow it carries from the hubs (the poem's punctuation, else the seed's),
-  and routes it from organic curves to circuit traces (Organic ↔ Circuit), with pads, buses and pulses. Eight knobs
-  (Material and Weave each start at Seeded), six hues; the glow wakes as the dial's light sinks. Readings: Circuit
-  Marble, Leaf Lumen, Undercity. The Circuitry look moved to its new knobs.
+- FLOWERS, SECOND ROUND (sheets sent): MACRO is now framed by the seed (the whole flower in its setting, or its heart
+  filling the page, more of its kind behind, one nearer the lens as a soft wash across a corner, pollen) and lit from
+  maps, as a renderer lights a material: its colour unlit, its shape (Facing, smooth and curved), its heights, gloss
+  (most petals matte, waxy ones shining) and thinness, so light wraps round the petals and comes through them in their
+  own colour as the dial sinks or shines from behind; veins and overlaps show when backlit. The MEADOW is seen from
+  inside it: a high horizon with a hedgerow or tree line hazed by distance, fields in bands of green and gold, the
+  nearest grass tall and out of focus, a hazy sky of long soft cloud (no green hill under blue and white). FALLEN PETALS
+  lost their outlines and dark rims; petals have soft patches, brown creeping in as they age, crumpled edges; leaves
+  have veins; shadows, not halos. Two more simple ones: DITSY PRINT (tiny flowers and sprigs all over cloth, up to
+  three colours) and BOTANICAL LINE (plants in a fine ink line, with a loose wash or none).
+- THE SURFACE MENU'S GROUPS, REARRANGED: Burnt Letter and Cup Ring to Paper & Grounds; Veins of Light and Moss on Stone
+  to Grown & Generated; Knotwork to Pattern & Order; Light, Sparks & Dust is now Light, Dust & Feathers (the two
+  feathers were there); the Paving Stones and Brick Wall starters to Materials & Craft; the Packet Rain study to Screens
+  & Signals. Anything else still in a strange place?
+- TYPING AND SLIDERS ON A PHONE: nothing draws while a hand is on the controls; the page is drawn once they have
+  rested 150 ms (typing: 400 ms, since keys come slower). The poem editor lays the page out once a key, not three
+  times. Measured on a phone-speed CPU: a slider drag went from 30–86% busy to 4–7%; typing from 45% to 24%
+  (PERFORMANCE-AUDIT.md §0 has the numbers and the plan).
 - THE HUES IN THREE GROUPS: Light Colors (Main Light, Rim Light, Ambient Light, beside the dial), Surface Colors (the
   surface's own, up to six, named by the surface; a Ground or Snow Hue joins them), Material Colors (Glow, Shine and
   Shadow Hues), each under a small heading that hides when none of its hues shows. Names right?
@@ -31,9 +33,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   page's middle), and the disc's wireframe stands there while either dial moves. The seed now also chooses hot spots in
   the disc, how much nebula and dust lies behind, and sometimes a galaxy right behind it, lensed into arcs. Older looks
   and Event Horizon keep their camera and stand at the page's middle.
-- STARTERS AND STUDIES BY KIND: each sits in its Surface menu group after that group's surfaces, marked "(starter)" or
-  "(study)"; the screen-and-signal studies have a group of their own, 🜳 Screens & Signals (Radio). The Athanor's Open
-  drawer groups them the same way. Right homes?
 - DAPPLED LEAVES and WINDOW LIGHT now throw along the light (Window Light had the same quarter turn). The Light Dial part
   has a third output, Way, for this.
 - THE PAINTED LANDSCAPE'S SUN follows the light dial (kept just above the horizon when the dial would set it lower).
@@ -54,15 +53,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
-- THE EMOTIONAL SEED (Weather of Feeling): Ruby isn't sure it wants the feature any more. It stays, a starter in
-  🜁 Weather, until Ruby says to retire it.
-- SOUNDS — the instrument itself, when Ruby wants it back:
-  - a STRING instrument, something unusual (plucked string by physical model;
-    ideas: an Aeolian harp, strings sounded by wind; sympathetic strings that
-    ring when another is struck; a koto-like pluck that bends up)
-  - a way to PLAY it by hand (a big, forgiving pad to strum, pluck or bow,
-    recorded straight into a composition) instead of typing degrees
-  - Ruby's design from the Murmur Studio goes into murmur.js MURMUR_DESIGN.
+(nothing)
 
 ## 5 · Long horizon
 - THE SATURN RELEASE (Ruby): once every texture is taken apart into parts, a
@@ -82,9 +73,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     reason to exist, in this app's terms
   - a MASK from the poem: the words cut through a surface or an image (type
     as a window), and the reverse — a surface only where the words are
-  - CROP AND FRAME presets for where the image goes (a post, a story, a
-    print, a book page), each its own safe area shown while working
-  - a PRINT size: inches and DPI beside pixels, with bleed for print
   - BATCH: one look, many poems (a chapbook's pages, a series of posts)
   - imported images keep the app's grammar: four readings of a photo (🜂 warm
     and burned, 🜄 cool and soft, 🜁 pale and airy, 🜃 grained and dark)

@@ -141,6 +141,7 @@ node tools/prune.mjs                           # what has gone unused: names, st
 python3 tools/css-audit.py                     # which CSS declarations never win, in any state (desk, phone, tabs, Athanor, themes)
 python3 tools/css-prune.py [--write]           # remove those, verified: no drawn element computes differently in any state
 node tools/make-murmur-studio.mjs              # rebuild tools/murmur-studio.html from its template and murmur.js
+node tools/ui-profile.mjs [rate] [out]          # the interface on a slowed phone: idle, typing, sliders, selects (PERFORMANCE-AUDIT §0; needs Playwright)
 ```
 
 The site must work **both built and unbuilt** (served straight from the
@@ -428,6 +429,32 @@ Other parts of a look:
     `ltSecondS`), in its own color (the ninth input); negative draws light
     out. At 0 the loops are the old ones exactly. The GPU path is the same
     engine, so it stays line for line with the CPU.
+  - **Translucency as a map** (graphs v4 and later; a chain opts in with `v: 5`
+    on its entry): how thin each point is. There the shading is blurred a
+    little and WRAPPED, `(k + w)/(1 + w)` with w = 0.6·t; a band of the
+    surface's own colour lies where light turns to shadow (the scatter band);
+    and light comes THROUGH, `TR = t × back`, back growing as the dial sinks
+    toward and past the horizon (`lightTiltNow`, `lightLow`) and with a second
+    light from behind. What comes through is the pigment's hue at full
+    strength (the picture normalised by its brightest channel, deepened), so
+    a backlit petal glows red however dark its lit face. The scalar
+    Translucency is untouched by any of this (no fingerprint moved).
+    docs/prior-art/lit-maps.md.
+  - **What heights can and can't do.** Relief 100 is a rise of 3% of the
+    page's shorter side per unit of height (200 at most: 6%). That is the
+    scale of grain, crinkle, a bevel, a vein; it can't turn a cupped petal
+    or a feather half away from the light. A process part that knows its
+    object's 3D shape hands on **Facing** (Bloom's), the light at the
+    object's own scale from its true normals; the graph multiplies it into
+    the albedo and the engine adds the surface's own light on top.
+  - **Smooth maps, never stepped** (Ruby: stepped maps made "cardboard
+    cut-outs"; a "cardboard diorama" is pinned as a style of its own,
+    ROADMAP): Facing and Height are blurred within the object's own shape (a
+    blur of the map over a blur of the shape), so they curve and taper while
+    the outline stays sharp and nothing darkens round it.
+  - **Check by turning the light round:** front, side, behind and low, and
+    the rim on and off. If two opposite lights give the same picture, the
+    light isn't reaching the shape (measure a half-page mean if unsure).
 - **The page's lights** (ROADMAP C1, C2 on the page; texCore
   `withLightRig`, built by `lightRigOf` from a layer's keys through
   `layerLights`): set round one texture's making, as `withLightTilt` is.
@@ -951,11 +978,6 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
     `curveFromPoints` is a monotone cubic (it never overshoots a point).
   - A wired ⚙'s range and a binding's range are set with two handles
     (`modalPrompt({ range })`).
-  - The **Emotional Seed** (`feeling`) turns one feeling into a color and
-    three numbers (density, turbulence, contrast) through its mood's curves
-    (`FEELING_MOODS`), or through a Curve wired onto a number's port. Its
-    Page Hues mood reads both pickers, so `athanorHues` offers them for it.
-    Starter: Weather of Feeling.
 - **The poem as input:** the **The Poem** part (words, distance, lines,
   stanzas, rhymes, punctuation, and three numbers: aware, in the letters,
   round the words) gets the layout as
@@ -1182,17 +1204,47 @@ the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
    four readings.
 5. Render it, time it.
 
-**Add a texture**
-0. **Look up the prior art first, for anything Ruby asks to be generated**
-   (Ruby: "looking up prior art tends to give you ideas for what to make,
-   and also how to make it unique"). Research what exists (art, photography,
-   games, generators, techniques), write it up with sources in
-   docs/prior-art/ (one file per subject, as docs/prior-art/liminal-spaces.md), and design from it: the kinds the seed
-   chooses among, what makes each recognizable, and what this app can do
-   that the others don't. Never wait to be asked.
+**Add a texture** (and remake one, and answer Ruby's notes on one: the same steps)
+0. **Research the prior art for real, first, for anything Ruby asks to be
+   generated** (Ruby: "looking up prior art tends to give you ideas for what
+   to make, and also how to make it unique"; and, 2026-10-19: "You should also
+   look up prior art… You're not really doing that.").
+   - Research is searching and READING, not remembering: search the web, open
+     the sources (papers, photographs and the photographers' notes, artists'
+     breakdowns, botany or physics of the real thing, how games and films
+     render it), and take what each one teaches. A doc of things you already
+     believed, marked [gen], is not research.
+   - Write it up in docs/prior-art/ (one file per subject, as
+     docs/prior-art/liminal-spaces.md): each claim with its source [src], what
+     makes the subject recognizable, how the real thing gets its look (its
+     material and its light, not only its shape), the kinds the seed chooses
+     among, and what this app can do that the others don't.
+   - Every round of Ruby's notes on a surface is researched again: the note
+     names what is wrong ("too cartoony", "the Bliss wallpaper"); find out
+     what the real thing does instead, cite it, and add it to the doc.
+   - Never wait to be asked.
 1. Build it as a chain of parts (above), general parts with at most one new
    process part (ROADMAP §2 L, §J). A whole-picture part is not allowed.
    Every colour on a hue input, the seed giving real variety.
+1b. **Light it with every map the engine takes** (Ruby, 2026-10-19: "you have
+   access to albedo, specularity, and all of these other lighting features…
+   Use them!! We built these tools so you could use them!"). Anything with
+   form is made as maps and lit, never drawn already lit:
+   - **albedo**: the colour with no light in it (no shading, no highlights, no
+     outline strokes standing in for edges); the painted look lives here, in
+     its brushwork and colour variation;
+   - **height**: the true shape (a petal's cup and curl, a stone's bevel, a
+     ridge's crest), not one ramp per piece, plus its fine surface (crinkle,
+     grain, fibre) — the Light Engine's shadows and occlusion come from it;
+   - **gloss**: what shines and what doesn't (a buttercup's wax, a velvet
+     petal's matte, a dew drop's mirror, a leaf's satin);
+   - **thickness / translucency**: where light comes through (a thin petal or
+     leaf backlit, wax, jade, skin), for the Light Engine's Translucency map;
+   - and the engine's light: the dial, the rim (second) light, the ambient
+     hue. Maps that match one another (gloss and height following the painted
+     shapes, as in a painted PBR texture) give a painted picture that is also
+     physically right. Render it lit from several sides before showing Ruby:
+     a picture that only works from one light was painted, not lit.
 2. Measure in canonical pixels. Draw on `document.createElement('canvas')`
    with no other DOM (it runs in a worker). No `Path2D` or `isPointInPath`:
    use plain geometry, as `apertureOutline` does.
@@ -1309,6 +1361,17 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     Surface, then Pattern, Light, Lamps, haze, grain.
   - The camera dial looks round; its guide ('room') is the horizon and the
     floor's lines. No light dial: the lamps are the light.
+- **The Flowers** (ᘓ; one process part, `bloom`, stepsFlora.js; prior art docs/prior-art/florals.md):
+  Floral Imprints, Bouquets, Fallen Petals, Meadow, Macro, Ditsy Print, Botanical Line (and Lotus Pond).
+  - Bloom's picture is on black, its half-covered edge pixels given their colour back and a hair of
+    coverage left black, so Scatter's "black is clear" stamps have no dark rim; Scatter does the same for
+    its own stamps (their coverage kept apart). No petal outlines: Ruby found them cartoony.
+  - Macro's framing is the seed's, a continuum from the whole flower to its heart filling the page; the
+    Meadow is seen from inside it, never a green hill under blue and white cumulus (Ruby: "Bliss").
+- **Veins of Light** (chain `veins`; one process part, `network`, stepsNetwork.js; prior art
+  docs/prior-art/veins-network.md): a graph with loops, never a tree. Weave picks how the nodes join;
+  widths follow the flow from the hubs (the poem's punctuation, else the seed's); Organic ↔ Circuit
+  routes from curves to 45°/90° traces with pads and buses. The glow wakes as the dial's light sinks.
 - **Webb Sky** (chain `webb`; one process part, `spikes`, genSpikes in
   stepsGenerative.js; docs/prior-art/space-scenes.md part B): smooth, never posterized. The
   seed picks globules, cliffs, a shell, smoke, or a deep field. Every kind
@@ -1942,7 +2005,12 @@ background) don't belong in it.
 - **Address Ruby indirectly** ("Ruby", not "you"), as Ruby prefers.
 - **Use what has been done already:** before building a technique, look up
   the prior art (a published method, an established library, a known
-  shader) and adopt it.
+  shader) and adopt it. Look it up: search, open and read, every time (§8, Add
+  a texture, step 0), for a technique as much as for a subject.
+- **Use the lighting tools** for every surface with form: albedo, height,
+  gloss and translucency maps lit by the Light Engine (§8, step 1b). Drawn-on
+  shading, outlines and baked highlights read as cartoons (Ruby, the
+  florals).
   - Reinvent only for a good reason, and say what it is.
   - The prior art so far: the Claude Doc "Unfixable Vellum — Prior Art &
     Recommendations", and the Filter Forge study (ROADMAP.md §1).

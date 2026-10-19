@@ -157,10 +157,6 @@ const STEP_PARTS = {
   groupin:  { cat: 'Inputs', label: 'Group Input', ins: [], outs: ['input'], params: [['name', 'Name', 'text', 'Input'], STEP_R('def', 'Default', 50)] },
   groupout: { cat: 'Output', label: 'Group Result', ins: ['result', 'result 2', 'result 3', 'result 4'], outs: [], params: [], hidden: true },
   random:   { cat: 'Inputs', label: 'Random Number', ins: [], outs: ['value'], params: [STEP_R('lo', 'Lowest', 0), STEP_R('hi', 'Highest', 100)] },
-  // THE EMOTIONAL SEED (ROADMAP G4, the prior-art review's named macro): one feeling, from calm (0) to fierce (1),
-  // fanned out at once into a color and three numbers, each through its own remapper (the mood's, or a Curve wired in)
-  feeling:  { cat: 'Inputs', label: 'Emotional Seed', ins: ['feeling', 'density curve', 'turbulence curve', 'contrast curve'], outs: ['colour', 'density', 'turbulence', 'contrast'],
-              params: [STEP_SEL('mood', 'Mood', ['storm', 'joy', 'longing', 'accents', 'page hues']), STEP_R('def', 'Feeling', 50)] },
   // reshaping a grey map's values; masks drawn from shapes
   maprange: { cat: 'Shape', label: 'Map Range', ins: ['field'], outs: ['field'], params: [STEP_R('inLo', 'From Low', 0), STEP_R('inHi', 'From High', 100), STEP_R('outLo', 'To Low', 0), STEP_R('outHi', 'To High', 100)] },
   shape:    { cat: 'Noise', label: 'Shape Mask', ins: [], outs: ['mask'], params: [STEP_SEL('form', 'Shape', ['circle', 'ring', 'square', 'diamond', 'star', 'vignette']),
@@ -279,7 +275,6 @@ export const STEP_DOCS = {
   seed: 'Brings the page’s seed into the graph as a number, to shift patterns whenever the seed changes.',
   page: 'Gives every point its position on the page: across (x), down (y), and distance from the center.',
   number: 'A number you set by hand, from 0 to 1, to wire into a setting’s ⚙ port.',
-  feeling: 'One feeling, from calm to fierce, turned at once into a color and three numbers (density, turbulence, contrast) to wire into settings.',
   smudge: 'Smears the picture one way, as a finger drags wet paint: each point takes on what lies behind it along the stroke.',
   multiblend: 'Lays up to four layers over a base at once, in one blend mode, each at its own strength.',
   group: 'Several parts made one, with a graph of their own inside (Open shows it). Each Group Input and Knob inside is one of its inputs, and each result wired to the Group Result inside is one of its outputs.',
@@ -448,15 +443,6 @@ function stepScaleByPoint(E, SC, layer){
   return o;
 }
 
-// THE EMOTIONAL SEED'S MOODS: three colors (calm, between, fierce) and how density, turbulence and contrast answer
-// the feeling. A storm gathers fast and hardens; joy fills and brightens; longing empties, stirs a little, and blurs.
-// (Accents and the page's hues take their colors from the page and answer the feeling evenly.)
-const FEELING_MOODS = {
-  storm:   { c: ['#A7D3D0', '#8C9BC4', '#E0566E'], d: f => 0.25 + 0.6*f, t: f => Math.pow(f, 0.6), k: f => 0.2 + 0.75*f*Math.sqrt(f) },
-  joy:     { c: ['#6E7598', '#E59AB8', '#FFD36E'], d: f => 0.3 + 0.5*f, t: f => 0.15 + 0.5*f, k: f => 0.25 + 0.6*f },
-  longing: { c: ['#F1EAD8', '#A9C1DA', '#5C79B8'], d: f => 0.8 - 0.6*f, t: f => 0.1 + 0.4*f*f, k: f => 0.7 - 0.5*f },
-};
-const FEELING_LINEAR = { d: f => f, t: f => f, k: f => f };
 // ---- what each part does ----
 const STEP_RUN = {
   knob(E, n){ const { ctx, num, P } = E;
@@ -904,20 +890,6 @@ Object.assign(STEP_RUN, {
   group(){ return null; }, groupout(){ return null; },
   // the node's own random stream (from the page's seed and the node's id): the same number until the seed changes
   random(E, n){ const lo = E.num(n, 'lo', 0), hi = E.num(n, 'hi', 100); return [(lo + (hi - lo)*Math.random())/100]; },
-  // (the Emotional Seed: the feeling wired in, or its own; each number through the mood's curve, or a Curve on its port
-  // read with the feeling across; the color along the mood's three colors, calm → between → fierce)
-  feeling(E, n){ const { ctx, input, num, P, asField, isCurve, hexCol } = E, w = input(n, 1);
-    const val = v => typeof v === 'number' ? v : Array.isArray(v) ? 0.299*v[0] + 0.587*v[1] + 0.114*v[2] : isCurve(v) ? curveAt(v, 0.5)
-      : (f => { let t = 0; for(let i = 0; i < f.length; i++) t += f[i]; return f.length ? t/f.length : 0.5; })(asField(v));
-    const f = Math.max(0, Math.min(1, w == null ? num(n, 'def', 50)/100 : val(w)));
-    const mood = P(n, 'mood', 'storm'), M = FEELING_MOODS[mood] || FEELING_LINEAR;
-    const cols = mood === 'accents' ? [1, 0].map(k => (ctx.accents || [])[k] || ['#B0303A', '#C9A33A'][k])
-      : mood === 'page hues' ? [1, 0].map((k, j) => /^#?[0-9a-f]{6}/i.test((ctx.tints || [])[k] || '') ? ctx.tints[k] : FEELING_MOODS.joy.c[j*2]) : M.c;
-    const C = cols.map(hexCol), mid = cols.length > 2 ? C[1] : C[0].map((x, i) => (x + C[1][i])/2), last = C[C.length - 1];
-    const colour = f < 0.5 ? C[0].map((x, i) => x + (mid[i] - x)*f*2) : mid.map((x, i) => x + (last[i] - x)*(f - 0.5)*2);
-    const out = (j, fn) => { const c = input(n, j); return Math.max(0, Math.min(1, isCurve(c) ? curveAt(c, f) : fn(f))); };
-    return [colour, out(2, M.d), out(3, M.t), out(4, M.k)];
-  },
   maprange(E, n){ const { N, input, map, at, asField } = E;
     const f = asField(input(n, 1)); if(!f) return null;
     const A = map(n, 'inLo', 0), B = map(n, 'inHi', 100), C = map(n, 'outLo', 0), D = map(n, 'outHi', 100), o = new Float32Array(N);
@@ -1230,7 +1202,7 @@ Object.assign(STEP_COST, { maprange: () => 1, shape: () => 1.5, split: () => 1, 
  */
 export const VALUE_TYPES = ['field', 'image', 'colour', 'value', 'curve'];
 const STEP_IO = {
-  knob: { outs: ['value'] }, feeling: { ins: ['value', 'curve', 'curve', 'curve'], outs: ['colour', 'value', 'value', 'value'] }, poem: { outs: ['field', 'field', 'field', 'field', 'field', 'value', 'value', 'value', 'field'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
+  knob: { outs: ['value'] }, poem: { outs: ['field', 'field', 'field', 'field', 'field', 'value', 'value', 'value', 'field'] }, hue: { outs: ['colour'] }, colour: { outs: ['colour'] }, accent: { outs: ['colour'] }, ink: { outs: ['colour'] }, backdrop: { outs: ['image'] }, number: { outs: ['value'] }, random: { outs: ['value'] },
   split: { ins: ['image'] }, merge: { outs: ['image'] }, chroma: { ins: ['image'], outs: ['image'] },
   bricon: { ins: ['image'], outs: ['image'] }, bricks: { ins: ['curve'] }, perlin: { ins: ['value'] },
   smudge: { ins: ['image', 'field'], outs: ['image'] }, multiblend: { ins: ['image', 'image', 'image', 'image', 'image'], outs: ['image'] },

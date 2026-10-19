@@ -101,8 +101,8 @@ check('opened from the top bar; a full-screen editor',
     C.athanorBudget(graph).scale === 1 && C.athanorBudget(heavy).scale > 1 && C.athanorBudget(heavy).scale <= 3 && C.athanorBudget(big).tooMany
     && F.describeForge(big).includes('too many nodes') && F.describeForge(heavy).includes('reduced detail'));
   const starters = Object.keys(C.ATHANOR_STARTERS);
-  check('seventeen starter graphs, each a working surface (evaluated here; Reaction–Diffusion, Oil on Canvas, A Picture Under Glass and A Dropped Frame need the page\'s textures, and Paving Stones a canvas that paints)',
-    starters.length === 17 && starters.filter(k => !['bloom', 'oil', 'vitrine', 'droppedframe', 'paving'].includes(k)).every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
+  check('sixteen starter graphs, each a working surface (evaluated here; Reaction–Diffusion, Oil on Canvas, A Picture Under Glass and A Dropped Frame need the page\'s textures, and Paving Stones a canvas that paints)',
+    starters.length === 16 && starters.filter(k => !['bloom', 'oil', 'vitrine', 'droppedframe', 'paving'].includes(k)).every(k => { const gr = C.athanorStarter(k); const im = run2(JSON.stringify(gr));
       return gr.v === C.ATHANOR_VERSION && im && im.r.some(v => v > 0.02) && C.athanorName(gr) === C.ATHANOR_STARTERS[k].label; }));
   // FILTER FORGE'S MAP INPUTS (v3): a gray map on a ⚙ setting sets it point by point; v2 took its average
   { const mk = v => JSON.stringify({ v, drawflow: { Home: { data: {

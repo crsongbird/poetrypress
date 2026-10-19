@@ -2097,19 +2097,37 @@ export function resetBackBuffer(){ BACK = null; failures = 0; }
 // frame into a single call — e.g. applyPreset() touches a dozen+ fields, each
 // of which would otherwise ask for its own full render.
 let renderScheduled = false;
-// At most 24 renders a second: dragging a slider fires far faster than that,
-// and 24 is plenty to feel live while leaving the phone room to breathe. The
-// last change always renders — a pending render picks up the latest state.
+// At most 24 renders a second, for renders nobody's hand is behind (a texture
+// arriving from the worker, a font loading).
 const MIN_RENDER_GAP = 1000 / 24;
 let lastRenderAt = 0;
+// THE SETTLE (Ruby: "a very brief delay … after the user is done making selections before the rendering begins"):
+// while a hand is on the controls (a key, a slider's step, a dial dragged, a select changed) nothing renders; the
+// render begins once they have been still for SETTLE_MS. A render takes a phone a tenth of a second or more, and
+// one started mid-gesture holds up the next touch. Typing waits a little longer (TYPING_SETTLE_MS): people pause
+// longer between keys than between a slider's steps. (PERFORMANCE-AUDIT.md, "the interface at rest".)
+export const SETTLE_MS = 150, TYPING_SETTLE_MS = 400;
+let quietAt = 0;
+const nowMs = () => (typeof performance !== 'undefined' ? performance : Date).now();
+/** A hand on the controls: no render begins until `ms` from now. */
+export function noteUserActivity(ms = SETTLE_MS){ quietAt = Math.max(quietAt, nowMs() + ms); }
+if(typeof document !== 'undefined' && document.addEventListener){
+  const busy = () => noteUserActivity();
+  for(const t of ['input', 'change', 'keydown', 'pointerdown']) document.addEventListener(t, busy, { capture: true, passive: true });
+  // (a finger held down and moving: a slider or a dial being dragged; a mouse merely passing over counts for nothing)
+  document.addEventListener('pointermove', e => { if(e.buttons || e.pointerType === 'touch') busy(); }, { capture: true, passive: true });
+}
 export function scheduleRender(){
   if(renderScheduled) return;
   renderScheduled = true;
-  const wait = Math.max(0, MIN_RENDER_GAP - ((typeof performance !== 'undefined' ? performance : Date).now() - lastRenderAt));
   const go = ()=>requestAnimationFrame(()=>{
     renderScheduled = false;
-    lastRenderAt = (typeof performance !== 'undefined' ? performance : Date).now();
+    lastRenderAt = nowMs();
     render();
   });
-  wait > 0 ? setTimeout(go, wait) : go();
+  // wait for the hand to be still (and the gap since the last render); checked again when the wait ends, as the
+  // hand may have moved on in the meantime
+  const tick = () => { const t = nowMs(), wait = Math.max(quietAt - t, MIN_RENDER_GAP - (t - lastRenderAt));
+    wait > 0 ? setTimeout(tick, wait) : go(); };
+  tick();
 }

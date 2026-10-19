@@ -85,6 +85,22 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 
 ### C · Lighting (texCore.js lightHeights + shader; the dial UI)
 
+- **C7 · Every surface with form lit from maps, the same way** (Ruby, 2026-10-19: "ensure lighting engine behavior is
+  consistent across every surface that uses the lighting engine … implement all of these cool lighting engine features
+  to realistic or creative or artistic effect on every texture filter that they could benefit from"). AGENTS §8 step 1b
+  and docs/prior-art/lit-maps.md are the method. In order:
+  1. **Audit**: every surface that lights (C6's list): which maps it gives (albedo, height, gloss, translucency,
+     facing), whether its albedo has light baked in, whether its Relief and light height read the same as the others'
+     (one dial position should look like the same sun on every surface). A sheet of each lit from four sides.
+  2. **One behaviour**: what differs without a reason is made the same (Relief's scale, the ambient's share, how
+     shadows soften, the rim light), in the engine, not per surface.
+  3. **The maps they lack**: gloss maps (wet stone, gold, lacquer, wax), translucency (wax, glass, leaves, skin, paper
+     held to light), facing for objects (feathers, cards, worlds), each surface's albedo unlit. Through compare.mjs
+     sheets for Ruby (§8, replace a method).
+- **C8 · Scatter throws a picture's maps together** (a general part change): one throw stamping several maps of the same
+  sheet (picture, height, gloss, thickness, facing) at the same places, so Fallen Petals, Bouquets and the Meadow's near
+  flowers can be lit as Macro Bloom is (today only the picture and its mask travel).
+
 - **C3 · Occlusion quality.** Low, medium or high presets for the AO march
   and the shadow trace, chosen per device. The baseline phone uses medium.
 - **C4 · An environment from the page, everywhere.** The lit Surface already
@@ -264,21 +280,16 @@ Easter eggs).
 - **Colours come from the hue inputs, always**, as many as the picture uses (up to six hue pickers per surface,
   §L0), each defaulting to what Ruby expects (her palettes below). Nothing drawn in a fixed colour the user can't set.
 - **No borders drawn by the procedure** (the page has its own border).
+- **Prior art researched for real, and again for every round of notes** (Ruby, 2026-10-19; AGENTS §8, step 0).
+- **Lit from maps** (Ruby, 2026-10-19): albedo, height, gloss, translucency (and facing for objects), lit by the Light
+  Engine, never drawn already lit (AGENTS §8, step 1b; docs/prior-art/lit-maps.md).
 
+- **L1c · Cardboard diorama** (Ruby, 2026-10-19, pinned for later: "maybe we should pin 'cardboard diorama' as a later
+  option"): the stepped look the first lit petals had, on purpose — every layer a flat cut-out with real thickness and an
+  edge, standing at its own depth, casting crisp shadows on the layer behind, like a paper theatre or a tunnel book.
+  Prior art first (paper theatres, tunnel books, shadow boxes, Lotte Reiniger, Kirigami pop-ups).
 - **L1b · A pixel-art category** (Ruby, 2026-10-18, an idea for later): pixel-art filters (pixelate, dither, palette
   reduction over any surface or picture) and more pixel-art surfaces, gathered in a group of their own.
-- **L3 · Liminal spaces** ("a good start"). The reference: a bare room seen straight on, teal-grey walls and ceiling, a
-  square fluorescent ceiling panel the only light, a doorway in the far wall onto a darker corridor receding to black, a
-  closed door on one side wall, a dark opening on the other, baseboards, a faint sheen on the floor, film grain. To do:
-  research the prior art (the Backrooms and its levels, poolrooms, empty malls, hotel corridors, offices, schools and
-  hospitals at night, stairwells, playplaces, parking garages, dreamcore) and cite it in AGENTS §9; a vast variety by
-  the seed (kinds of space, materials, fixtures, lighting colour and flicker); the camera dial pans and turns; built as
-  a graph (a Room Caster process part, then general parts for light, colour, grain).
-- **L4 · Florals** (the first draft misunderstood all but the field). Ruby wants all of these, each with seeded
-  variations: simple floral imprints (pressed flowers, ink or block-print stamps, botanical silhouettes); bundles and
-  bouquets; wilting flowers and scattered rose petals; an idyllic meadow (the field, which was good, made far more
-  idyllic: wind through it, petals in the air, soft sun); macro images with soft bokeh, made from parts and using all
-  of the lighting engine, stylized, a showpiece of the engine. Real species chosen by a slider.
 
 ---
 
@@ -299,6 +310,7 @@ superseded) wait for Stage 4.
   what they unlock (§2 F).
 
 ### Stage 2 · Features: the engine, the controls, the poem
+- **C7, C8** first (Ruby): every lit surface from maps, the same engine behaviour everywhere, Scatter carrying maps.
 - **C3, C4** lighting; **C5** the camera dial on more textures; **C6** what the lighting audit left to do.
 
 ### Stage 3 · Textures: built from the parts

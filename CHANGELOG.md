@@ -4,6 +4,55 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Fornjot (2026-10-19)
+
+- **Typing and sliders are quick again on a phone.** Nothing redraws while
+  a hand is on the controls: the page is drawn once they have rested for a
+  moment (150 ms; typing waits 400 ms, since keys come slower). The poem
+  editor redraws once a key instead of three times, and only the line that
+  changed. On a phone-speed processor, dragging a slider went from 30–86%
+  busy to 4–7%, and typing from 45% to 24%. With nothing touched, the page
+  does nothing at all.
+- **New surface: Liminal Spaces.** An empty place built for passing
+  through, seen as a camera sees it: a lobby, a warehouse, tunnels, the
+  poolrooms, a hotel corridor, a school, a hospital, a subway, a garage, a
+  mall or an office, each laid out by the seed, its lamps and where the
+  camera stands. The camera dial looks round.
+- **New group of surfaces: Flowers**, with Lotus Pond and seven new ones,
+  all drawn from 23 real species:
+  - **Floral Imprints**: cyanotypes, inked stamps, a crest folded from one
+    flower, or flowers pressed on the page.
+  - **Bouquets**: a posy, a bundle, a crown or a wreath.
+  - **Fallen Petals**: wilting flowers and petals on wood, linen or stone,
+    browning as they age.
+  - **Meadow**: a wildflower meadow seen from inside it, a hedgerow along
+    the horizon, fields beyond, the nearest grass out of focus.
+  - **Macro Bloom**: one flower close, framed by the seed from the whole
+    flower to its heart filling the page, lit like a real material: light
+    wraps round its petals and comes through them in their own colour when
+    the light is low or behind, showing the veins.
+  - **Ditsy Print**: tiny flowers and sprigs all over cloth.
+  - **Botanical Line**: plants drawn in a fine ink line, with a loose wash
+    of colour or none.
+- **Veins of Light is back, remade as a network**: lines that join up into
+  loops, as a leaf's veins, a slime mould's tubes, a street plan or a
+  circuit do, each as wide as the flow it carries, from organic curves to
+  circuit traces with pads, buses and pulses. It glows more as the light
+  sinks. Eight knobs and six hues; readings Circuit Marble, Leaf Lumen and
+  Undercity.
+- **New parts:** Room Caster (an empty interior, ray-cast), Bloom (a flower
+  of a real species, or a sheet of them; it can hand on its colour unlit,
+  with maps of its shape, gloss and thinness, for the Light Engine to
+  light), Network (a graph with loops). **Better parts:** Scatter throws a
+  picture or a sheet of pictures, black as clear, with clean edges; the
+  Light Engine's Translucency can be a map, light coming through thin
+  parts in their own colour.
+- **The Surface menu is regrouped**: Burnt Letter and Cup Ring are with
+  Paper & Grounds, Veins of Light and Moss on Stone with Grown & Generated,
+  Knotwork with Pattern & Order; Light, Sparks & Dust is now Light, Dust &
+  Feathers; some starters and studies moved to where they belong.
+- **Removed**: the Emotional Seed part and its starter, Weather of Feeling.
+
 ## Saturn–Loge (2026-10-19)
 
 - **Your credit is remembered.** The name or handle signed on the image is

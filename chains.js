@@ -1381,14 +1381,16 @@ export const TEXTURE_CHAINS = {
       ['scatter', { shape: 'picture', ground: 'black is clear', count: 60, '~count': '5,320', size: 12, '~size': '6,30', big: 200, vary: 55, turn: 100, clump: 55, '~clump': '0,95', fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16' }, 480, 260],// 32
       ['blend', { mode: 'normal', opacity: 100 }, 1360, 40],                                                                                          // 33
       ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 34
-      ['blur', { radius: 2 }, 1140, 150],                                                                                                             // 35
+      ['blur', { radius: 5 }, 1140, 150],                                                                                                             // 35
       ['number', { value: 70 }, 40, 2350],                                                                                                            // 36
       ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 37
       ['number', { value: 45 }, 40, 2460],                                                                                                            // 38
       ['math', { op: 'multiply' }, 700, 260],                                                                                                         // 39
       ['math', { op: 'max' }, 920, 150],                                                                                                              // 40
-      ['material', { relief: 40, '~relief': '0,90', gloss: 15, shine: 20, shadow: 70, occlusion: 40, ambient: 45 }, 1800, 40],                        // 41
-      ['surface', { name: 'Fallen Petals', ground: 'colour' }, 2020, 40]],                                                                            // 42
+      ['math', { op: 'max' }, 700, 370],                                                                                                              // 41
+      ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 42
+      ['material', { relief: 35, '~relief': '0,65', gloss: 12, shine: 18, shadow: 45, occlusion: 55, ambient: 50, translucency: 25 }, 1800, 40],      // 43
+      ['surface', { name: 'Fallen Petals', ground: 'colour' }, 2020, 40]],                                                                            // 44
     wires: [[17, 1, 16, paramPort('waves', 'freq')], [16, 1, 18, 1], [19, 1, 18, 2], [23, 1, 22, 1], [18, 1, 22, 2], [20, 1, 22, 3], [21, 1, 22, 4], [22, 1, 24, 1],
       [7, 1, 24, paramPort('maprange', 'outLo')], [7, 1, 24, paramPort('maprange', 'outHi')], [24, 1, 25, 1], [10, 1, 26, 1], [13, 1, 26, 2], [26, 1, 25, 2],
       [10, 1, 25, 3], [10, 1, 27, 1], [15, 1, 27, 2], [27, 1, 25, 4], [9, 1, 28, 1], [11, 1, 28, 2], [12, 1, 28, 3], [13, 1, 28, 4], [14, 1, 28, 5],
@@ -1397,15 +1399,16 @@ export const TEXTURE_CHAINS = {
       [8, 1, 31, paramPort('bloom', 'species')], [3, 1, 31, paramPort('bloom', 'stage')], [31, 1, 32, 1], [1, 1, 32, paramPort('scatter', 'count')],
       [2, 1, 32, paramPort('scatter', 'size')], [5, 1, 32, paramPort('scatter', 'clump')], [25, 1, 33, 1], [29, 4, 33, 2], [29, 1, 33, 3], [33, 1, 34, 1],
       [32, 4, 34, 2], [32, 1, 34, 3], [29, 1, 37, 1], [36, 1, 37, 2], [32, 1, 39, 1], [38, 1, 39, 2], [37, 1, 40, 1], [39, 1, 40, 2], [40, 1, 35, 1],
-      [34, 1, 41, 1], [35, 1, 41, 2], [15, 1, 41, 6], [9, 1, 41, 7], [6, 1, 41, paramPort('material', 'relief')], [41, 1, 42, 1]] },
+      [29, 1, 41, 1], [32, 1, 41, 2], [35, 1, 42, 1], [41, 1, 42, 2], [34, 1, 43, 1], [42, 1, 43, 2], [15, 1, 43, 6], [9, 1, 43, 7],
+      [6, 1, 43, paramPort('material', 'relief')], [43, 1, 44, 1]] },
   meadow: { label: 'Idyllic Meadow', div: 2, teach: 'A meadow on a summer day (docs/prior-art/florals.md §6), after Monet’s and Van Gogh’s poppy fields and Kazuo Oga’s soft greens: a high warm sky of cumulus, rolling land fading into the distance, grass leaning with one wind, flowers near and far, petals in the air. The Light Dial is the sun: it lights the clouds (Simple Lighting on their blurred shape), the grass blades, every flower, and a warm glow where it stands. The land is a Threshold of a Gradient raised by a broad noise (Horizon); its colour runs from the far land’s hue, faded toward the sky, to the grass’s. Grass is a Scatter of dashes leaning with the seed’s wind, larger near; far flowers are clumped dabs; near ones are two of Bloom’s sheets (the Species slider’s, and a habitat’s mix in the second hue) thrown larger nearer, the largest on top; petals are diamonds smeared along the wind (Wind). Try: the dial low behind the field.',
     nodes: [
       ['knob', { slot: '1', name: 'Flowers', def: 55 }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2', name: 'Grass', def: 55 }, 40, 150],                                                                                       // 2
+      ['knob', { slot: '2', name: 'Grass', def: 60 }, 40, 150],                                                                                       // 2
       ['knob', { slot: '3', name: 'Wind', def: 45 }, 40, 260],                                                                                        // 3
       ['knob', { slot: '4', name: 'Petals in the Air', def: 35 }, 40, 370],                                                                           // 4
-      ['knob', { slot: '5', name: 'Horizon', def: 40 }, 40, 480],                                                                                     // 5
-      ['knob', { slot: '6', name: 'Clouds', def: 50 }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '5', name: 'Horizon', def: 30 }, 40, 480],                                                                                     // 5
+      ['knob', { slot: '6', name: 'Clouds', def: 45 }, 40, 590],                                                                                      // 6
       ['knob', { slot: '7', name: 'Second Flower', def: 40 }, 40, 700],                                                                               // 7
       ['knob', { slot: '8', name: 'Species', def: 27 }, 40, 810],                                                                                     // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
@@ -1425,104 +1428,135 @@ export const TEXTURE_CHAINS = {
       ['mix', { t: 45 }, 260, 260],                                                                                                                   // 23
       ['gradmap', { stops: 2 }, 480, 150],                                                                                                            // 24
       ['maprange', { outLo: 0, outHi: 100 }, 260, 370],                                                                                               // 25
-      ['perlin', { scale: 9, '~scale': '5,16', details: 5, rough: 55, contrast: 40 }, 260, 480],                                                      // 26
+      ['perlin', { scale: 7, '~scale': '4,12', details: 4, rough: 50, contrast: 35 }, 260, 480],                                                      // 26
       ['random', { lo: 0, hi: 100 }, 40, 2020],                                                                                                       // 27
-      ['warp', { amount: 20 }, 480, 260],                                                                                                             // 28
-      ['perlin', { scale: 4, details: 2 }, 40, 2130],                                                                                                 // 29
-      ['threshold', { at: 62, '~at': '82,42', soft: 18 }, 920, 40],                                                                                   // 30
-      ['maprange', { inLo: 0, inHi: 60, outLo: 100, outHi: 60 }, 260, 590],                                                                           // 31
-      ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 32
-      ['blur', { radius: 3 }, 1140, 40],                                                                                                              // 33
-      ['light', { relief: 70, gloss: 0, shadow: 30 }, 1360, 40],                                                                                      // 34
-      ['gradmap', { stops: 3 }, 1580, 40],                                                                                                            // 35
-      ['mix', { t: 30 }, 260, 700],                                                                                                                   // 36
-      ['mix', { t: 18 }, 260, 810],                                                                                                                   // 37
-      ['blend', { mode: 'normal', opacity: 92 }, 1800, 40],                                                                                           // 38
-      ['gradmap', { stops: 3 }, 480, 370],                                                                                                            // 39
-      ['mix', { t: 35 }, 260, 920],                                                                                                                   // 40
-      ['mix', { t: 55 }, 260, 1030],                                                                                                                  // 41
-      ['perlin', { scale: 60, details: 4, rough: 60, contrast: 30 }, 40, 2240],                                                                       // 42
-      ['maprange', { outLo: 82, outHi: 100 }, 260, 1140],                                                                                             // 43
-      ['blend', { mode: 'multiply', opacity: 100 }, 700, 260],                                                                                        // 44
-      ['blend', { mode: 'normal', opacity: 100 }, 2020, 40],                                                                                          // 45
-      ['random', { lo: 17, hi: 33 }, 40, 2350],                                                                                                       // 46
-      ['perlin', { scale: 30, details: 2 }, 40, 2460],                                                                                                // 47
-      ['maprange', { outLo: 0, outHi: 8 }, 260, 1250],                                                                                                // 48
-      ['math', { op: 'add' }, 480, 480],                                                                                                              // 49
-      ['scatter', { shape: 'dash', count: 220, '~count': '60,400', size: 14, vary: 70, turn: 12, fade: 40, clump: 30 }, 920, 150],                    // 50
-      ['maprange', { outLo: 2, outHi: 16 }, 480, 590],                                                                                                // 51
-      ['light', { relief: 60, gloss: 30, shadow: 20 }, 1140, 150],                                                                                    // 52
-      ['gradmap', { stops: 3 }, 1360, 150],                                                                                                           // 53
-      ['mix', { t: 40 }, 260, 1360],                                                                                                                  // 54
-      ['mix', { t: 45 }, 260, 1470],                                                                                                                  // 55
-      ['blend', { mode: 'normal', opacity: 85 }, 2240, 40],                                                                                           // 56
-      ['scatter', { shape: 'dot', count: 40, '~count': '3,90', size: 3, vary: 60, clump: 75, fade: 30 }, 1140, 260],                                  // 57
-      ['maprange', { inLo: 0, inHi: 60, outLo: 100, outHi: 0 }, 480, 700],                                                                            // 58
-      ['math', { op: 'multiply' }, 920, 260],                                                                                                         // 59
-      ['threshold', { at: 50, '~at': '20,80', soft: 0 }, 1360, 260],                                                                                  // 60
-      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 61
-      ['blend', { mode: 'normal', opacity: 90 }, 2460, 40],                                                                                           // 62
-      ['math', { op: 'subtract' }, 1580, 260],                                                                                                        // 63
-      ['blend', { mode: 'normal', opacity: 90 }, 2680, 40],                                                                                           // 64
-      ['bloom', { species: 0, view: 55, '~view': '35,80', stage: 45, '~stage': '35,60', sheet: 100, stem: 100, jitter: 45 }, 260, 1580],              // 65
-      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 66
-      ['bloom', { species: 99, view: 60, stage: 50, sheet: 100, stem: 100, jitter: 45, variant: 7 }, 260, 1690],                                      // 67
-      ['maprange', { inLo: 25, inHi: 100, outLo: 0, outHi: 100 }, 480, 810],                                                                          // 68
-      ['math', { op: 'multiply' }, 920, 370],                                                                                                         // 69
-      ['scatter', { shape: 'picture', ground: 'black is clear', count: 60, '~count': '6,140', size: 22, vary: 60, turn: 8, clump: 65, fade: 0, layers: 'largest', per: 'for the page', sheet: 'a sheet of 16' }, 1140, 370],// 70
-      ['maprange', { inLo: 20, inHi: 100, outLo: 6, outHi: 100 }, 480, 920],                                                                          // 71
-      ['scatter', { shape: 'picture', ground: 'black is clear', count: 30, '~count': '0,90', size: 22, vary: 60, turn: 8, clump: 65, fade: 0, layers: 'largest', per: 'for the page', sheet: 'a sheet of 16' }, 1140, 480],// 72
-      ['maprange', { inLo: 20, inHi: 100, outLo: 6, outHi: 100 }, 480, 1030],                                                                         // 73
-      ['blend', { mode: 'normal', opacity: 100 }, 2900, 40],                                                                                          // 74
-      ['blend', { mode: 'normal', opacity: 100 }, 3120, 40],                                                                                          // 75
-      ['dial', {}, 40, 2680],                                                                                                                         // 76
-      ['math', { op: 'sine' }, 260, 1800],                                                                                                            // 77
-      ['number', { value: 75 }, 40, 2790],                                                                                                            // 78
-      ['math', { op: 'sine' }, 260, 1910],                                                                                                            // 79
-      ['number', { value: 100 }, 40, 2900],                                                                                                           // 80
-      ['math', { op: 'min' }, 260, 2020],                                                                                                             // 81
-      ['ellipse', { size: 40, height: 100, soft: 100 }, 1140, 590],                                                                                   // 82
-      ['math', { op: 'multiply' }, 480, 1140],                                                                                                        // 83
-      ['number', { value: 50 }, 40, 3010],                                                                                                            // 84
-      ['math', { op: 'subtract' }, 480, 1250],                                                                                                        // 85
-      ['math', { op: 'multiply' }, 700, 370],                                                                                                         // 86
-      ['math', { op: 'add' }, 920, 480],                                                                                                              // 87
-      ['math', { op: 'multiply' }, 480, 1360],                                                                                                        // 88
-      ['math', { op: 'subtract' }, 480, 1470],                                                                                                        // 89
-      ['math', { op: 'multiply' }, 700, 480],                                                                                                         // 90
-      ['math', { op: 'add' }, 920, 590],                                                                                                              // 91
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 370],                                                                          // 92
-      ['levels', { lo: 30, hi: 100, gamma: 30 }, 1580, 370],                                                                                          // 93
-      ['maprange', { inLo: 0, inHi: 80, outLo: 100, outHi: 30 }, 260, 2130],                                                                          // 94
-      ['math', { op: 'multiply' }, 1800, 150],                                                                                                        // 95
-      ['blend', { mode: 'screen', opacity: 45 }, 3340, 40],                                                                                           // 96
-      ['scatter', { shape: 'diamond', count: 60, '~count': '0,240', size: 5, vary: 70, turn: 30, clump: 40, fade: 20, per: 'for the page' }, 260, 2240],// 97
-      ['motionblur', { length: 6, '~length': '0,20', angle: 20 }, 480, 1580],                                                                         // 98
-      ['mix', { t: 35 }, 260, 2350],                                                                                                                  // 99
-      ['blend', { mode: 'normal', opacity: 90 }, 3560, 40],                                                                                           // 100
-      ['surface', { name: 'Idyllic Meadow', ground: 'colour' }, 3780, 40]],                                                                           // 101
+      ['motionblur', { length: 40, '~length': '20,70', angle: 0 }, 480, 260],                                                                         // 28
+      ['random', { lo: 0, hi: 100 }, 40, 2130],                                                                                                       // 29
+      ['threshold', { at: 55, '~at': '80,35', soft: 40 }, 700, 150],                                                                                  // 30
+      ['blur', { radius: 6 }, 920, 40],                                                                                                               // 31
+      ['gradmap', { stops: 2 }, 480, 370],                                                                                                            // 32
+      ['maprange', { outLo: 0, outHi: 100 }, 260, 590],                                                                                               // 33
+      ['mix', { t: 30 }, 260, 700],                                                                                                                   // 34
+      ['mix', { t: 35 }, 260, 810],                                                                                                                   // 35
+      ['blend', { mode: 'normal', opacity: 70 }, 1140, 40],                                                                                           // 36
+      ['gradmap', { stops: 3 }, 480, 480],                                                                                                            // 37
+      ['mix', { t: 35 }, 260, 920],                                                                                                                   // 38
+      ['mix', { t: 55 }, 260, 1030],                                                                                                                  // 39
+      ['perlin', { scale: 60, details: 4, rough: 60, contrast: 30 }, 40, 2240],                                                                       // 40
+      ['maprange', { outLo: 82, outHi: 100 }, 260, 1140],                                                                                             // 41
+      ['waves', { freq: 9, '~freq': '5,16', angle: 90 }, 260, 1250],                                                                                  // 42
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 43
+      ['warp', { amount: 25 }, 480, 590],                                                                                                             // 44
+      ['perlin', { scale: 5, details: 2 }, 40, 2460],                                                                                                 // 45
+      ['gradmap', { stops: 3 }, 700, 260],                                                                                                            // 46
+      ['mix', { t: 45 }, 260, 1360],                                                                                                                  // 47
+      ['mix', { t: 50 }, 260, 1470],                                                                                                                  // 48
+      ['maprange', { inLo: 0, inHi: 55, outLo: 75, outHi: 0 }, 480, 700],                                                                             // 49
+      ['blend', { mode: 'multiply', opacity: 100 }, 700, 370],                                                                                        // 50
+      ['blend', { mode: 'normal', opacity: 80 }, 920, 150],                                                                                           // 51
+      ['blend', { mode: 'normal', opacity: 100 }, 1360, 40],                                                                                          // 52
+      ['perlin', { scale: 45, '~scale': '30,80', details: 4, rough: 60, contrast: 60 }, 40, 2570],                                                    // 53
+      ['maprange', { outLo: 0, outHi: 6, '~outHi': '2,9' }, 260, 1580],                                                                               // 54
+      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 55
+      ['threshold', { at: 34, '~at': '16,56', soft: 1 }, 920, 260],                                                                                   // 56
+      ['math', { op: 'add' }, 480, 810],                                                                                                              // 57
+      ['math', { op: 'add' }, 700, 480],                                                                                                              // 58
+      ['mix', { t: 35 }, 260, 1690],                                                                                                                  // 59
+      ['perlin', { scale: 40, details: 4, contrast: 50 }, 40, 2790],                                                                                  // 60
+      ['maprange', { outLo: 55, outHi: 95 }, 260, 1800],                                                                                              // 61
+      ['blend', { mode: 'multiply', opacity: 100 }, 480, 920],                                                                                        // 62
+      ['blend', { mode: 'normal', opacity: 28 }, 700, 590],                                                                                           // 63
+      ['math', { op: 'subtract' }, 1140, 150],                                                                                                        // 64
+      ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 65
+      ['random', { lo: 17, hi: 33 }, 40, 2900],                                                                                                       // 66
+      ['perlin', { scale: 30, details: 2 }, 40, 3010],                                                                                                // 67
+      ['maprange', { outLo: 0, outHi: 8 }, 260, 1910],                                                                                                // 68
+      ['math', { op: 'add' }, 480, 1030],                                                                                                             // 69
+      ['scatter', { shape: 'dash', count: 220, '~count': '60,400', size: 14, vary: 70, turn: 12, fade: 40, clump: 30 }, 920, 370],                    // 70
+      ['maprange', { outLo: 2, outHi: 16 }, 480, 1140],                                                                                               // 71
+      ['light', { relief: 60, gloss: 30, shadow: 20 }, 1140, 260],                                                                                    // 72
+      ['gradmap', { stops: 3 }, 1360, 150],                                                                                                           // 73
+      ['mix', { t: 40 }, 260, 2020],                                                                                                                  // 74
+      ['mix', { t: 45 }, 260, 2130],                                                                                                                  // 75
+      ['blend', { mode: 'normal', opacity: 85 }, 1800, 40],                                                                                           // 76
+      ['scatter', { shape: 'dot', count: 40, '~count': '3,90', size: 3, vary: 60, clump: 75, fade: 30 }, 1140, 370],                                  // 77
+      ['maprange', { inLo: 0, inHi: 60, outLo: 100, outHi: 0 }, 480, 1250],                                                                           // 78
+      ['math', { op: 'multiply' }, 920, 480],                                                                                                         // 79
+      ['threshold', { at: 50, '~at': '20,80', soft: 0 }, 1360, 260],                                                                                  // 80
+      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 81
+      ['blend', { mode: 'normal', opacity: 90 }, 2020, 40],                                                                                           // 82
+      ['math', { op: 'subtract' }, 1580, 260],                                                                                                        // 83
+      ['blend', { mode: 'normal', opacity: 90 }, 2240, 40],                                                                                           // 84
+      ['bloom', { species: 0, view: 55, '~view': '35,80', stage: 45, '~stage': '35,60', sheet: 100, stem: 100, jitter: 45 }, 260, 2240],              // 85
+      ['random', { lo: 0, hi: 100 }, 40, 3120],                                                                                                       // 86
+      ['bloom', { species: 99, view: 60, stage: 50, sheet: 100, stem: 100, jitter: 45, variant: 7 }, 260, 2350],                                      // 87
+      ['maprange', { inLo: 25, inHi: 100, outLo: 0, outHi: 100 }, 480, 1360],                                                                         // 88
+      ['math', { op: 'multiply' }, 920, 590],                                                                                                         // 89
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 60, '~count': '6,140', size: 22, vary: 60, turn: 8, clump: 65, fade: 0, layers: 'largest', per: 'for the page', sheet: 'a sheet of 16' }, 1140, 480],// 90
+      ['maprange', { inLo: 20, inHi: 100, outLo: 6, outHi: 100 }, 480, 1470],                                                                         // 91
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 30, '~count': '0,90', size: 22, vary: 60, turn: 8, clump: 65, fade: 0, layers: 'largest', per: 'for the page', sheet: 'a sheet of 16' }, 1140, 590],// 92
+      ['maprange', { inLo: 20, inHi: 100, outLo: 6, outHi: 100 }, 480, 1580],                                                                         // 93
+      ['blend', { mode: 'normal', opacity: 100 }, 2460, 40],                                                                                          // 94
+      ['blend', { mode: 'normal', opacity: 100 }, 2680, 40],                                                                                          // 95
+      ['scatter', { shape: 'dash', count: 70, '~count': '20,160', size: 70, '~size': '40,110', vary: 60, turn: 16, fade: 30, clump: 20, per: 'for the page' }, 700, 700],// 96
+      ['maprange', { inLo: 70, inHi: 100, outLo: 0, outHi: 100 }, 480, 1690],                                                                         // 97
+      ['blur', { radius: 4 }, 920, 700],                                                                                                              // 98
+      ['mix', { t: 40 }, 260, 2460],                                                                                                                  // 99
+      ['blend', { mode: 'normal', opacity: 85 }, 2900, 40],                                                                                           // 100
+      ['dial', {}, 40, 3230],                                                                                                                         // 101
+      ['math', { op: 'sine' }, 260, 2570],                                                                                                            // 102
+      ['number', { value: 75 }, 40, 3340],                                                                                                            // 103
+      ['math', { op: 'sine' }, 260, 2680],                                                                                                            // 104
+      ['number', { value: 100 }, 40, 3450],                                                                                                           // 105
+      ['math', { op: 'min' }, 260, 2790],                                                                                                             // 106
+      ['ellipse', { size: 40, height: 100, soft: 100 }, 1140, 700],                                                                                   // 107
+      ['math', { op: 'multiply' }, 480, 1800],                                                                                                        // 108
+      ['number', { value: 50 }, 40, 3560],                                                                                                            // 109
+      ['math', { op: 'subtract' }, 480, 1910],                                                                                                        // 110
+      ['math', { op: 'multiply' }, 700, 810],                                                                                                         // 111
+      ['math', { op: 'add' }, 920, 810],                                                                                                              // 112
+      ['math', { op: 'multiply' }, 480, 2020],                                                                                                        // 113
+      ['math', { op: 'subtract' }, 480, 2130],                                                                                                        // 114
+      ['math', { op: 'multiply' }, 700, 920],                                                                                                         // 115
+      ['math', { op: 'add' }, 920, 920],                                                                                                              // 116
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 370],                                                                          // 117
+      ['levels', { lo: 30, hi: 100, gamma: 30 }, 1580, 370],                                                                                          // 118
+      ['maprange', { inLo: 0, inHi: 80, outLo: 100, outHi: 30 }, 260, 2900],                                                                          // 119
+      ['math', { op: 'multiply' }, 1800, 150],                                                                                                        // 120
+      ['blend', { mode: 'screen', opacity: 45 }, 3120, 40],                                                                                           // 121
+      ['scatter', { shape: 'diamond', count: 60, '~count': '0,240', size: 5, vary: 70, turn: 30, clump: 40, fade: 20, per: 'for the page' }, 260, 3010],// 122
+      ['motionblur', { length: 6, '~length': '0,20', angle: 20 }, 480, 2240],                                                                         // 123
+      ['mix', { t: 35 }, 260, 3120],                                                                                                                  // 124
+      ['blend', { mode: 'normal', opacity: 90 }, 3340, 40],                                                                                           // 125
+      ['surface', { name: 'Idyllic Meadow', ground: 'colour' }, 3560, 40]],                                                                           // 126
     wires: [[17, 1, 18, 1], [19, 1, 18, paramPort('maprange', 'outHi')], [16, 1, 21, 1], [18, 1, 21, 2], [21, 1, 20, 1], [5, 1, 20, paramPort('threshold', 'at')],
       [16, 1, 22, 1], [5, 1, 22, paramPort('levels', 'lo')], [10, 1, 23, 1], [15, 1, 23, 2], [16, 1, 25, 1], [25, 1, 24, 1], [10, 1, 24, 2], [23, 1, 24, 3],
-      [27, 1, 26, paramPort('perlin', 'scale')], [26, 1, 28, 1], [29, 1, 28, 2], [16, 1, 31, 1], [28, 1, 32, 1], [31, 1, 32, 2], [32, 1, 30, 1],
-      [6, 1, 30, paramPort('threshold', 'at')], [30, 1, 33, 1], [33, 1, 34, 1], [9, 1, 34, 2], [34, 1, 35, 1], [10, 1, 36, 1], [11, 1, 36, 2], [36, 1, 35, 2],
-      [15, 1, 37, 1], [10, 1, 37, 2], [37, 1, 35, 3], [15, 1, 35, 4], [24, 1, 38, 1], [35, 1, 38, 2], [33, 1, 38, 3], [22, 1, 39, 1], [11, 1, 40, 1],
-      [10, 1, 40, 2], [40, 1, 39, 2], [11, 1, 41, 1], [12, 1, 41, 2], [41, 1, 39, 3], [12, 1, 39, 4], [42, 1, 43, 1], [39, 1, 44, 1], [43, 1, 44, 2],
-      [38, 1, 45, 1], [44, 1, 45, 2], [20, 1, 45, 3], [47, 1, 48, 1], [46, 1, 49, 1], [48, 1, 49, 2], [20, 1, 50, 2], [49, 1, 50, 3],
-      [2, 1, 50, paramPort('scatter', 'count')], [22, 1, 51, 1], [51, 1, 50, paramPort('scatter', 'size')], [50, 2, 52, 1], [9, 1, 52, 2], [52, 1, 53, 1],
-      [12, 1, 54, 1], [11, 1, 54, 2], [54, 1, 53, 2], [12, 1, 53, 3], [12, 1, 55, 1], [15, 1, 55, 2], [55, 1, 53, 4], [45, 1, 56, 1], [53, 1, 56, 2],
-      [50, 1, 56, 3], [22, 1, 58, 1], [20, 1, 59, 1], [58, 1, 59, 2], [59, 1, 57, 2], [1, 1, 57, paramPort('scatter', 'count')], [57, 3, 60, 1],
-      [7, 1, 60, paramPort('threshold', 'at')], [57, 1, 61, 1], [60, 1, 61, 2], [56, 1, 62, 1], [13, 1, 62, 2], [61, 1, 62, 3], [57, 1, 63, 1], [60, 1, 63, 2],
-      [62, 1, 64, 1], [14, 1, 64, 2], [63, 1, 64, 3], [9, 1, 65, 1], [13, 1, 65, 2], [8, 1, 65, paramPort('bloom', 'species')],
-      [66, 1, 65, paramPort('bloom', 'view')], [9, 1, 67, 1], [14, 1, 67, 2], [22, 1, 68, 1], [20, 1, 69, 1], [68, 1, 69, 2], [65, 1, 70, 1], [69, 1, 70, 2],
-      [1, 1, 70, paramPort('scatter', 'count')], [22, 1, 71, 1], [71, 1, 70, paramPort('scatter', 'size')], [67, 1, 72, 1], [69, 1, 72, 2],
-      [7, 1, 72, paramPort('scatter', 'count')], [22, 1, 73, 1], [73, 1, 72, paramPort('scatter', 'size')], [64, 1, 74, 1], [72, 4, 74, 2], [72, 1, 74, 3],
-      [74, 1, 75, 1], [70, 4, 75, 2], [70, 1, 75, 3], [76, 1, 77, 1], [76, 1, 79, 1], [78, 1, 79, 2], [76, 2, 81, 1], [80, 1, 81, 2], [77, 1, 83, 1],
-      [81, 1, 83, 2], [80, 1, 85, 1], [81, 1, 85, 2], [84, 1, 86, 1], [85, 1, 86, 2], [83, 1, 87, 1], [86, 1, 87, 2], [87, 1, 82, paramPort('ellipse', 'x')],
-      [79, 1, 88, 1], [81, 1, 88, 2], [80, 1, 89, 1], [81, 1, 89, 2], [84, 1, 90, 1], [89, 1, 90, 2], [88, 1, 91, 1], [90, 1, 91, 2],
-      [91, 1, 82, paramPort('ellipse', 'y')], [82, 2, 92, 1], [92, 1, 93, 1], [16, 1, 94, 1], [93, 1, 95, 1], [94, 1, 95, 2], [75, 1, 96, 1], [15, 1, 96, 2],
-      [95, 1, 96, 3], [46, 1, 97, 3], [4, 1, 97, paramPort('scatter', 'count')], [97, 1, 98, 1], [3, 1, 98, paramPort('motionblur', 'length')], [13, 1, 99, 1],
-      [15, 1, 99, 2], [96, 1, 100, 1], [99, 1, 100, 2], [98, 1, 100, 3], [100, 1, 101, 1]] },
-  macro: { label: 'Macro Bloom', div: 2, teach: 'One flower close, as a macro lens sees it (docs/prior-art/florals.md §7): the background a soft wash of foliage and bokeh, round discs of light far out of focus, every one its own; dew on the petals. It shows off the Light Engine: the flower’s heights (Bloom’s Height) lit from the dial, a rim light behind it, light through its thin petals (Translucency), its shadows and occlusion. Bloom draws it on a third of the page, the seed’s; its species, size, stage and view are the sliders’. Bokeh is a Scatter of dots blurred by the Aperture, in two hues; the wash a blurred Perlin Noise. Dew is a Scatter of small domes where the flower is, each lit by Simple Lighting, its highlight screened and glowing in the Key Light’s hue. Try: the dial behind the flower, Translucency high, and watch the petals glow.',
+      [27, 1, 26, paramPort('perlin', 'scale')], [26, 1, 28, 1], [29, 1, 28, paramPort('motionblur', 'length')], [28, 1, 30, 1],
+      [6, 1, 30, paramPort('threshold', 'at')], [30, 1, 31, 1], [16, 1, 33, 1], [33, 1, 32, 1], [10, 1, 34, 1], [15, 1, 34, 2], [34, 1, 32, 2], [15, 1, 35, 1],
+      [10, 1, 35, 2], [35, 1, 32, 3], [24, 1, 36, 1], [32, 1, 36, 2], [31, 1, 36, 3], [22, 1, 37, 1], [11, 1, 38, 1], [10, 1, 38, 2], [38, 1, 37, 2],
+      [11, 1, 39, 1], [12, 1, 39, 2], [39, 1, 37, 3], [12, 1, 37, 4], [40, 1, 41, 1], [43, 1, 42, paramPort('waves', 'freq')], [42, 1, 44, 1], [45, 1, 44, 2],
+      [44, 1, 46, 1], [12, 1, 47, 1], [11, 1, 47, 2], [47, 1, 46, 2], [12, 1, 46, 3], [12, 1, 48, 1], [15, 1, 48, 2], [48, 1, 46, 4], [22, 1, 49, 1],
+      [37, 1, 50, 1], [41, 1, 50, 2], [50, 1, 51, 1], [46, 1, 51, 2], [49, 1, 51, 3], [36, 1, 52, 1], [51, 1, 52, 2], [20, 1, 52, 3], [53, 1, 54, 1],
+      [55, 1, 54, paramPort('maprange', 'outHi')], [16, 1, 57, 1], [18, 1, 57, 2], [57, 1, 58, 1], [54, 1, 58, 2], [58, 1, 56, 1],
+      [5, 1, 56, paramPort('threshold', 'at')], [11, 1, 59, 1], [12, 1, 59, 2], [60, 1, 61, 1], [59, 1, 62, 1], [61, 1, 62, 2], [62, 1, 63, 1], [10, 1, 63, 2],
+      [56, 1, 64, 1], [20, 1, 64, 2], [52, 1, 65, 1], [63, 1, 65, 2], [64, 1, 65, 3], [67, 1, 68, 1], [66, 1, 69, 1], [68, 1, 69, 2], [20, 1, 70, 2],
+      [69, 1, 70, 3], [2, 1, 70, paramPort('scatter', 'count')], [22, 1, 71, 1], [71, 1, 70, paramPort('scatter', 'size')], [70, 2, 72, 1], [9, 1, 72, 2],
+      [72, 1, 73, 1], [12, 1, 74, 1], [11, 1, 74, 2], [74, 1, 73, 2], [12, 1, 73, 3], [12, 1, 75, 1], [15, 1, 75, 2], [75, 1, 73, 4], [65, 1, 76, 1],
+      [73, 1, 76, 2], [70, 1, 76, 3], [22, 1, 78, 1], [20, 1, 79, 1], [78, 1, 79, 2], [79, 1, 77, 2], [1, 1, 77, paramPort('scatter', 'count')],
+      [77, 3, 80, 1], [7, 1, 80, paramPort('threshold', 'at')], [77, 1, 81, 1], [80, 1, 81, 2], [76, 1, 82, 1], [13, 1, 82, 2], [81, 1, 82, 3], [77, 1, 83, 1],
+      [80, 1, 83, 2], [82, 1, 84, 1], [14, 1, 84, 2], [83, 1, 84, 3], [9, 1, 85, 1], [13, 1, 85, 2], [8, 1, 85, paramPort('bloom', 'species')],
+      [86, 1, 85, paramPort('bloom', 'view')], [9, 1, 87, 1], [14, 1, 87, 2], [22, 1, 88, 1], [20, 1, 89, 1], [88, 1, 89, 2], [85, 1, 90, 1], [89, 1, 90, 2],
+      [1, 1, 90, paramPort('scatter', 'count')], [22, 1, 91, 1], [91, 1, 90, paramPort('scatter', 'size')], [87, 1, 92, 1], [89, 1, 92, 2],
+      [7, 1, 92, paramPort('scatter', 'count')], [22, 1, 93, 1], [93, 1, 92, paramPort('scatter', 'size')], [84, 1, 94, 1], [92, 4, 94, 2], [92, 1, 94, 3],
+      [94, 1, 95, 1], [90, 4, 95, 2], [90, 1, 95, 3], [22, 1, 97, 1], [97, 1, 96, 2], [69, 1, 96, 3], [2, 1, 96, paramPort('scatter', 'count')],
+      [96, 1, 98, 1], [12, 1, 99, 1], [11, 1, 99, 2], [95, 1, 100, 1], [99, 1, 100, 2], [98, 1, 100, 3], [101, 1, 102, 1], [101, 1, 104, 1], [103, 1, 104, 2],
+      [101, 2, 106, 1], [105, 1, 106, 2], [102, 1, 108, 1], [106, 1, 108, 2], [105, 1, 110, 1], [106, 1, 110, 2], [109, 1, 111, 1], [110, 1, 111, 2],
+      [108, 1, 112, 1], [111, 1, 112, 2], [112, 1, 107, paramPort('ellipse', 'x')], [104, 1, 113, 1], [106, 1, 113, 2], [105, 1, 114, 1], [106, 1, 114, 2],
+      [109, 1, 115, 1], [114, 1, 115, 2], [113, 1, 116, 1], [115, 1, 116, 2], [116, 1, 107, paramPort('ellipse', 'y')], [107, 2, 117, 1], [117, 1, 118, 1],
+      [16, 1, 119, 1], [118, 1, 120, 1], [119, 1, 120, 2], [100, 1, 121, 1], [15, 1, 121, 2], [120, 1, 121, 3], [66, 1, 122, 3],
+      [4, 1, 122, paramPort('scatter', 'count')], [122, 1, 123, 1], [3, 1, 123, paramPort('motionblur', 'length')], [13, 1, 124, 1], [15, 1, 124, 2],
+      [121, 1, 125, 1], [124, 1, 125, 2], [123, 1, 125, 3], [125, 1, 126, 1]] },
+  macro: { label: 'Macro Bloom', div: 2, v: 5, teach: 'One flower close, as a macro lens sees it (docs/prior-art/florals.md §7, §8b, §8c): the seed frames it, from the whole flower in its setting to its heart filling the page, with more of its kind far behind, one nearer the lens as a soft wash across a corner, pollen about its heart, dew on its petals. It is made as a renderer makes a material (docs/prior-art/lit-maps.md): Bloom, Lit By the Light Engine, hands on its colours with no light in them (Picture), how squarely each part faces the dial (Facing: the flower’s own shape), its heights (each petal’s cross-section, its sunk veins, a fine crinkle from a Perlin Noise), what shines (Gloss: a velvet petal matte, a buttercup’s wax bright) and how thin it is (Thickness, more where petals overlap and along the veins). The Light Engine lights it from the dial, with a rim light behind; Translucency, a map of how thin it is, wraps the light round each petal and lets it through in the petal’s own colour, more as the light sinks low or comes from behind. Bokeh is a Scatter of dots blurred by the Aperture, in two hues. Try: the dial low behind the flower, Translucency high, and watch the petals glow and their veins show.',
     nodes: [
       ['knob', { slot: '1', name: 'Species', def: 27 }, 40, 40],                                                                                      // 1
       ['knob', { slot: '2', name: 'Bloom Size', def: 55 }, 40, 150],                                                                                  // 2
@@ -1555,61 +1589,217 @@ export const TEXTURE_CHAINS = {
       ['math', { op: 'subtract' }, 700, 260],                                                                                                         // 29
       ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 30
       ['blend', { mode: 'screen', opacity: 70 }, 1140, 40],                                                                                           // 31
-      ['bloom', { species: 27, view: 30, '~view': '0,80', stage: 45, '~stage': '20,85', size: 80, '~size': '40,140', stem: 0, '~stem': '0,100', jitter: 60, x: 50, '~x': '0,100', y: 50, '~y': '0,100' }, 260, 480],// 32
+      ['bloom', { species: 27, view: 40, '~view': '10,85', stage: 45, '~stage': '20,85', sheet: 34, stem: 100, jitter: 60, variant: 5 }, 260, 480],   // 32
       ['random', { lo: 0, hi: 100 }, 40, 2020],                                                                                                       // 33
       ['random', { lo: 0, hi: 100 }, 40, 2130],                                                                                                       // 34
-      ['random', { lo: 0, hi: 100 }, 40, 2240],                                                                                                       // 35
-      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 36
-      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 37
-      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 38
-      ['blur', { radius: 14, '~radius': '6,24' }, 480, 370],                                                                                          // 39
-      ['threshold', { at: 40, soft: 0 }, 260, 590],                                                                                                   // 40
-      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 41
-      ['gradmap', { stops: 2 }, 700, 370],                                                                                                            // 42
-      ['blur', { radius: 14, '~radius': '6,24' }, 480, 480],                                                                                          // 43
-      ['mix', { t: 20 }, 260, 700],                                                                                                                   // 44
-      ['mix', { t: 45 }, 260, 810],                                                                                                                   // 45
-      ['math', { op: 'multiply' }, 700, 480],                                                                                                         // 46
-      ['blend', { mode: 'normal', opacity: 70 }, 1360, 40],                                                                                           // 47
-      ['bloom', { species: 27, view: 25, stage: 45, size: 110, '~size': '55,160', stem: 0, '~stem': '0,100', jitter: 40, x: 50, '~x': '30,70', y: 50, '~y': '32,68' }, 700, 590],// 48
-      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 49
-      ['maprange', { outLo: 0, outHi: 20 }, 260, 920],                                                                                                // 50
-      ['math', { op: 'add' }, 480, 590],                                                                                                              // 51
-      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 52
-      ['maprange', { outLo: 0, outHi: 35 }, 260, 1030],                                                                                               // 53
-      ['math', { op: 'add' }, 480, 700],                                                                                                              // 54
-      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 55
-      ['random', { lo: 0, hi: 100 }, 40, 3120],                                                                                                       // 56
-      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 57
-      ['material', { relief: 45, gloss: 30, shine: 40, shadow: 45, occlusion: 50, ambient: 35, translucency: 50, '~translucency': '0,90', second: 55, secondTurn: 180, secondHeight: 120 }, 920, 260],// 58
-      ['blur', { radius: 1 }, 920, 370],                                                                                                              // 59
-      ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 60
-      ['scatter', { shape: 'dot', count: 30, '~count': '0,160', size: 3, '~size': '2,6', vary: 80, clump: 60, fade: 10, per: 'for the page' }, 920, 480],// 61
-      ['light', { relief: 90, gloss: 90, shadow: 40 }, 1140, 150],                                                                                    // 62
-      ['mix', { t: 30 }, 260, 1140],                                                                                                                  // 63
-      ['maprange', { outLo: 0, outHi: 35 }, 1140, 260],                                                                                               // 64
-      ['blend', { mode: 'multiply', opacity: 100 }, 1800, 40],                                                                                        // 65
-      ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 66
-      ['blend', { mode: 'screen', opacity: 90 }, 2020, 40],                                                                                           // 67
-      ['glow', { radius: 10, aura: 50, strength: 40, auraK: 30, core: 30 }, 2240, 40],                                                                // 68
-      ['math', { op: 'multiply' }, 1360, 260],                                                                                                        // 69
-      ['surface', { name: 'Macro Bloom', ground: 'colour' }, 2460, 40]],                                                                              // 70
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 3, '~count': '0,7', size: 70, '~size': '40,100', big: 300, vary: 50, turn: 30, clump: 30, fade: 0, layers: 'largest', per: 'for the page', sheet: 'a sheet of 4' }, 480, 370],// 35
+      ['random', { lo: 0, hi: 100 }, 40, 2240],                                                                                                       // 36
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 37
+      ['blur', { radius: 14, '~radius': '6,24' }, 700, 370],                                                                                          // 38
+      ['blur', { radius: 14, '~radius': '6,24' }, 920, 260],                                                                                          // 39
+      ['math', { op: 'average' }, 700, 480],                                                                                                          // 40
+      ['gradmap', { stops: 3 }, 1140, 150],                                                                                                           // 41
+      ['mix', { t: 40 }, 260, 590],                                                                                                                   // 42
+      ['mix', { t: 25 }, 260, 700],                                                                                                                   // 43
+      ['mix', { t: 30 }, 260, 810],                                                                                                                   // 44
+      ['blend', { mode: 'normal', opacity: 75 }, 1360, 40],                                                                                           // 45
+      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 46
+      ['maprange', { outLo: 0, outHi: 50 }, 260, 920],                                                                                                // 47
+      ['maprange', { outLo: 0, outHi: 50 }, 260, 1030],                                                                                               // 48
+      ['math', { op: 'add' }, 480, 480],                                                                                                              // 49
+      ['bloom', { species: 27, view: 25, stage: 45, size: 110, '~size': '55,320', stem: 0, '~stem': '0,100', jitter: 40, x: 50, y: 50, lit: 100 }, 1140, 260],// 50
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 51
+      ['maprange', { outLo: 0, outHi: 20 }, 260, 1140],                                                                                               // 52
+      ['math', { op: 'add' }, 480, 590],                                                                                                              // 53
+      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 54
+      ['maprange', { outLo: 0, outHi: 35 }, 260, 1250],                                                                                               // 55
+      ['math', { op: 'add' }, 480, 700],                                                                                                              // 56
+      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 57
+      ['maprange', { outLo: 35, outHi: 65 }, 920, 370],                                                                                               // 58
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 59
+      ['maprange', { outLo: 36, outHi: 6 }, 700, 590],                                                                                                // 60
+      ['maprange', { outLo: 64, outHi: 94 }, 700, 700],                                                                                               // 61
+      ['maprange', { outLo: 35, outHi: 65 }, 920, 480],                                                                                               // 62
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 63
+      ['maprange', { outLo: 38, outHi: 8 }, 700, 810],                                                                                                // 64
+      ['maprange', { outLo: 62, outHi: 92 }, 700, 920],                                                                                               // 65
+      ['material', { relief: 120, gloss: 30, shine: 45, shadow: 50, occlusion: 45, ambient: 32, translucency: 50, '~translucency': '0,100', second: 55, secondTurn: 180, secondHeight: 120 }, 2020, 40],// 66
+      ['perlin', { scale: 70, '~scale': '45,110', details: 4, rough: 60, contrast: 40 }, 260, 1360],                                                  // 67
+      ['random', { lo: 0, hi: 100 }, 40, 3120],                                                                                                       // 68
+      ['maprange', { outLo: 0, outHi: 8 }, 480, 810],                                                                                                 // 69
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 150],                                                                          // 70
+      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 71
+      ['blend', { mode: 'multiply', opacity: 100 }, 1360, 260],                                                                                       // 72
+      ['math', { op: 'multiply' }, 1360, 370],                                                                                                        // 73
+      ['math', { op: 'add' }, 1580, 150],                                                                                                             // 74
+      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 75
+      ['blur', { radius: 1 }, 1360, 480],                                                                                                             // 76
+      ['blend', { mode: 'normal', opacity: 100 }, 2240, 40],                                                                                          // 77
+      ['scatter', { shape: 'dot', count: 30, '~count': '0,160', size: 3, '~size': '2,6', vary: 80, clump: 60, fade: 10, per: 'for the page' }, 1360, 590],// 78
+      ['light', { relief: 90, gloss: 90, shadow: 40 }, 1580, 260],                                                                                    // 79
+      ['mix', { t: 30 }, 260, 1470],                                                                                                                  // 80
+      ['maprange', { outLo: 0, outHi: 35 }, 1580, 370],                                                                                               // 81
+      ['blend', { mode: 'multiply', opacity: 100 }, 2460, 40],                                                                                        // 82
+      ['math', { op: 'multiply' }, 1800, 150],                                                                                                        // 83
+      ['blend', { mode: 'screen', opacity: 90 }, 2680, 40],                                                                                           // 84
+      ['glow', { radius: 10, aura: 50, strength: 40, auraK: 30, core: 30 }, 2900, 40],                                                                // 85
+      ['math', { op: 'multiply' }, 1800, 260],                                                                                                        // 86
+      ['blur', { radius: 10 }, 1360, 700],                                                                                                            // 87
+      ['scatter', { shape: 'dot', count: 80, '~count': '0,260', size: 1.5, '~size': '1,3', vary: 70, clump: 85, fade: 30, per: 'for the page' }, 1800, 370],// 88
+      ['maprange', { inLo: 0, inHi: 35, outLo: 0, outHi: 100 }, 1580, 480],                                                                           // 89
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 90
+      ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 91
+      ['mix', { t: 55 }, 260, 1580],                                                                                                                  // 92
+      ['blend', { mode: 'normal', opacity: 85 }, 3120, 40],                                                                                           // 93
+      ['bloom', { species: 27, view: 20, '~view': '0,60', stage: 45, size: 260, '~size': '180,320', stem: 0, jitter: 50, x: 50, '~x': '0,100', y: 50, '~y': '0,100', variant: 9 }, 260, 1690],// 94
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 95
+      ['random', { lo: 0, hi: 100 }, 40, 3560],                                                                                                       // 96
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 97
+      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 98
+      ['blur', { radius: 30, '~radius': '16,44' }, 480, 920],                                                                                         // 99
+      ['threshold', { at: 55, soft: 0 }, 260, 1800],                                                                                                  // 100
+      ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 101
+      ['math', { op: 'multiply' }, 700, 1030],                                                                                                        // 102
+      ['shape', { form: 'vignette', size: 100, soft: 60 }, 40, 4000],                                                                                 // 103
+      ['maprange', { outLo: 100, outHi: 0 }, 260, 1910],                                                                                              // 104
+      ['math', { op: 'multiply' }, 920, 590],                                                                                                         // 105
+      ['mix', { t: 20 }, 260, 2020],                                                                                                                  // 106
+      ['blend', { mode: 'normal', opacity: 70 }, 3340, 40],                                                                                           // 107
+      ['surface', { name: 'Macro Bloom', ground: 'colour' }, 3560, 40]],                                                                              // 108
     wires: [[17, 1, 16, paramPort('perlin', 'scale')], [16, 1, 18, 1], [18, 1, 19, 1], [14, 1, 20, 1], [11, 1, 20, 2], [20, 1, 19, 2], [14, 1, 19, 3],
       [10, 1, 21, 1], [14, 1, 21, 2], [21, 1, 19, 4], [4, 1, 22, paramPort('scatter', 'count')], [23, 1, 22, paramPort('scatter', 'size')], [22, 1, 24, 1],
       [5, 1, 24, paramPort('blur', 'radius')], [22, 3, 25, 1], [24, 1, 26, 1], [25, 1, 26, 2], [19, 1, 27, 1], [10, 1, 27, 2], [26, 1, 27, 3], [28, 1, 29, 1],
       [25, 1, 29, 2], [24, 1, 30, 1], [29, 1, 30, 2], [27, 1, 31, 1], [11, 1, 31, 2], [30, 1, 31, 3], [9, 1, 32, 1], [12, 1, 32, 2], [13, 1, 32, 4],
       [14, 1, 32, 5], [1, 1, 32, paramPort('bloom', 'species')], [33, 1, 32, paramPort('bloom', 'view')], [34, 1, 32, paramPort('bloom', 'stage')],
-      [35, 1, 32, paramPort('bloom', 'size')], [36, 1, 32, paramPort('bloom', 'stem')], [37, 1, 32, paramPort('bloom', 'x')],
-      [38, 1, 32, paramPort('bloom', 'y')], [32, 2, 39, 1], [5, 1, 39, paramPort('blur', 'radius')], [41, 1, 40, 1], [32, 5, 43, 1],
-      [5, 1, 43, paramPort('blur', 'radius')], [43, 1, 42, 1], [12, 1, 44, 1], [14, 1, 44, 2], [44, 1, 42, 2], [12, 1, 45, 1], [13, 1, 45, 2], [45, 1, 42, 3],
-      [39, 1, 46, 1], [40, 1, 46, 2], [31, 1, 47, 1], [42, 1, 47, 2], [46, 1, 47, 3], [9, 1, 48, 1], [12, 1, 48, 2], [13, 1, 48, 4], [14, 1, 48, 5],
-      [1, 1, 48, paramPort('bloom', 'species')], [2, 1, 48, paramPort('bloom', 'size')], [49, 1, 50, 1], [3, 1, 51, 1], [50, 1, 51, 2],
-      [51, 1, 48, paramPort('bloom', 'stage')], [52, 1, 53, 1], [8, 1, 54, 1], [53, 1, 54, 2], [54, 1, 48, paramPort('bloom', 'view')],
-      [55, 1, 48, paramPort('bloom', 'stem')], [56, 1, 48, paramPort('bloom', 'x')], [57, 1, 48, paramPort('bloom', 'y')], [48, 1, 58, 1], [48, 3, 58, 2],
-      [15, 1, 58, 6], [9, 1, 58, 7], [7, 1, 58, paramPort('material', 'translucency')], [48, 2, 59, 1], [47, 1, 60, 1], [58, 1, 60, 2], [59, 1, 60, 3],
-      [48, 2, 61, 2], [6, 1, 61, paramPort('scatter', 'count')], [61, 2, 62, 1], [9, 1, 62, 2], [12, 1, 63, 1], [14, 1, 63, 2], [61, 1, 64, 1], [60, 1, 65, 1],
-      [63, 1, 65, 2], [64, 1, 65, 3], [62, 2, 66, 1], [61, 1, 66, 2], [65, 1, 67, 1], [15, 1, 67, 2], [66, 1, 67, 3], [67, 1, 68, 1], [62, 2, 69, 1],
-      [61, 1, 69, 2], [69, 1, 68, 2], [15, 1, 68, 3], [68, 1, 70, 1]] },
+      [32, 1, 35, 1], [36, 1, 35, paramPort('scatter', 'count')], [37, 1, 35, paramPort('scatter', 'size')], [35, 1, 38, 1],
+      [5, 1, 38, paramPort('blur', 'radius')], [35, 4, 40, 1], [35, 4, 40, 2], [40, 1, 39, 1], [5, 1, 39, paramPort('blur', 'radius')], [39, 1, 41, 1],
+      [13, 1, 42, 1], [14, 1, 42, 2], [42, 1, 41, 2], [12, 1, 43, 1], [14, 1, 43, 2], [43, 1, 41, 3], [12, 1, 44, 1], [10, 1, 44, 2], [44, 1, 41, 4],
+      [31, 1, 45, 1], [41, 1, 45, 2], [38, 1, 45, 3], [2, 1, 47, 1], [46, 1, 48, 1], [47, 1, 49, 1], [48, 1, 49, 2], [9, 1, 50, 1], [12, 1, 50, 2],
+      [13, 1, 50, 4], [14, 1, 50, 5], [1, 1, 50, paramPort('bloom', 'species')], [49, 1, 50, paramPort('bloom', 'size')], [51, 1, 52, 1], [3, 1, 53, 1],
+      [52, 1, 53, 2], [53, 1, 50, paramPort('bloom', 'stage')], [54, 1, 55, 1], [8, 1, 56, 1], [55, 1, 56, 2], [56, 1, 50, paramPort('bloom', 'view')],
+      [57, 1, 50, paramPort('bloom', 'stem')], [59, 1, 58, 1], [49, 1, 60, 1], [60, 1, 58, paramPort('maprange', 'outLo')], [49, 1, 61, 1],
+      [61, 1, 58, paramPort('maprange', 'outHi')], [58, 1, 50, paramPort('bloom', 'x')], [63, 1, 62, 1], [49, 1, 64, 1],
+      [64, 1, 62, paramPort('maprange', 'outLo')], [49, 1, 65, 1], [65, 1, 62, paramPort('maprange', 'outHi')], [62, 1, 50, paramPort('bloom', 'y')],
+      [68, 1, 67, paramPort('perlin', 'scale')], [67, 1, 69, 1], [50, 4, 70, 1], [70, 1, 71, 1], [50, 2, 71, 2], [50, 1, 72, 1], [50, 8, 72, 2],
+      [72, 1, 66, 1], [69, 1, 73, 1], [50, 2, 73, 2], [50, 3, 74, 1], [73, 1, 74, 2], [74, 1, 66, 2], [50, 7, 66, 3], [15, 1, 66, 6], [9, 1, 66, 7],
+      [71, 1, 75, 1], [7, 1, 75, 2], [75, 1, 66, paramPort('material', 'translucency')], [50, 2, 76, 1], [45, 1, 77, 1], [66, 1, 77, 2], [76, 1, 77, 3],
+      [50, 2, 78, 2], [6, 1, 78, paramPort('scatter', 'count')], [78, 2, 79, 1], [9, 1, 79, 2], [12, 1, 80, 1], [14, 1, 80, 2], [78, 1, 81, 1], [77, 1, 82, 1],
+      [80, 1, 82, 2], [81, 1, 82, 3], [79, 2, 83, 1], [78, 1, 83, 2], [82, 1, 84, 1], [15, 1, 84, 2], [83, 1, 84, 3], [84, 1, 85, 1], [79, 2, 86, 1],
+      [78, 1, 86, 2], [86, 1, 85, 2], [15, 1, 85, 3], [50, 5, 87, 1], [87, 1, 89, 1], [89, 1, 88, 2], [90, 1, 88, paramPort('scatter', 'count')],
+      [91, 1, 88, paramPort('scatter', 'size')], [13, 1, 92, 1], [15, 1, 92, 2], [85, 1, 93, 1], [92, 1, 93, 2], [88, 1, 93, 3], [9, 1, 94, 1], [12, 1, 94, 2],
+      [13, 1, 94, 4], [14, 1, 94, 5], [1, 1, 94, paramPort('bloom', 'species')], [95, 1, 94, paramPort('bloom', 'view')],
+      [96, 1, 94, paramPort('bloom', 'size')], [97, 1, 94, paramPort('bloom', 'x')], [98, 1, 94, paramPort('bloom', 'y')], [94, 2, 99, 1],
+      [5, 1, 99, paramPort('blur', 'radius')], [101, 1, 100, 1], [99, 1, 102, 1], [100, 1, 102, 2], [103, 1, 104, 1], [102, 1, 105, 1], [104, 1, 105, 2],
+      [12, 1, 106, 1], [15, 1, 106, 2], [93, 1, 107, 1], [106, 1, 107, 2], [105, 1, 107, 3], [107, 1, 108, 1]] },
+  ditsy: { label: 'Ditsy Print', div: 2, teach: 'A small floral print all over cloth, as the cotton day dresses of the 1930s and Liberty’s Tana Lawn have it (docs/prior-art/florals.md §8): tiny flowers at random, never in rows, a sprig of leaf between. Bloom draws a sheet of sixteen heads face on and pressed flat (a print has no depth), once in each of three colours; Scatter throws each sheet over the cloth (Flowers, Flower Size, Clustering, Turn), cut out by black; Colors says how many of the three print, and a Threshold of it lets the second and third in. Bloom’s single leaves are the sprigs. Canvas Weave, through a Map Range, gives the cloth its weave (Cloth). Try: a dark ground and Colors high.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Flowers', def: 55 }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2', name: 'Flower Size', def: 35 }, 40, 150],                                                                                 // 2
+      ['knob', { slot: '3', name: 'Sprigs', def: 45 }, 40, 260],                                                                                      // 3
+      ['knob', { slot: '4', name: 'Colors', def: 50 }, 40, 370],                                                                                      // 4
+      ['knob', { slot: '5', name: 'Cloth', def: 40 }, 40, 480],                                                                                       // 5
+      ['knob', { slot: '6', name: 'Clustering', def: 30 }, 40, 590],                                                                                  // 6
+      ['knob', { slot: '7', name: 'Turn', def: 70 }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8', name: 'Species', def: 98 }, 40, 810],                                                                                     // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Ground Hue' }, 40, 1030],                                                                                           // 10
+      ['hue', { slot: '2', name: 'Flower Hue' }, 40, 1140],                                                                                           // 11
+      ['hue', { slot: '3', name: 'Second Flower Hue' }, 40, 1250],                                                                                    // 12
+      ['hue', { slot: '4', name: 'Third Flower Hue' }, 40, 1360],                                                                                     // 13
+      ['hue', { slot: '5', name: 'Center Hue' }, 40, 1470],                                                                                           // 14
+      ['hue', { slot: '6', name: 'Sprig Hue' }, 40, 1580],                                                                                            // 15
+      ['canvasweave', { pitch: 70, '~pitch': '45,120' }, 260, 40],                                                                                    // 16
+      ['random', { lo: 0, hi: 100 }, 40, 1690],                                                                                                       // 17
+      ['maprange', { outLo: 92, outHi: 100, '~outLo': '100,72' }, 480, 40],                                                                           // 18
+      ['blend', { mode: 'multiply', opacity: 100 }, 700, 40],                                                                                         // 19
+      ['bloom', { species: 98, view: 0, flat: 100, stage: 50, '~stage': '30,65', sheet: 100, stem: 0, jitter: 55, variant: 1 }, 260, 150],            // 20
+      ['random', { lo: 0, hi: 100 }, 40, 1800],                                                                                                       // 21
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 160, '~count': '10,350', size: 26, '~size': '12.0,48.0', vary: 35, turn: 70, clump: 30, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16' }, 480, 150],// 22
+      ['bloom', { species: 98, view: 0, flat: 100, stage: 50, '~stage': '30,65', sheet: 100, stem: 0, jitter: 55, variant: 2 }, 260, 260],            // 23
+      ['random', { lo: 0, hi: 100 }, 40, 1910],                                                                                                       // 24
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 160, '~count': '6,210', size: 26, '~size': '12.0,48.0', vary: 35, turn: 70, clump: 30, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16' }, 480, 260],// 25
+      ['bloom', { species: 98, view: 0, flat: 100, stage: 50, '~stage': '30,65', sheet: 100, stem: 0, jitter: 55, variant: 3 }, 260, 370],            // 26
+      ['random', { lo: 0, hi: 100 }, 40, 2020],                                                                                                       // 27
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 160, '~count': '4,140', size: 26, '~size': '12.0,48.0', vary: 35, turn: 70, clump: 30, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16' }, 480, 370],// 28
+      ['threshold', { at: 33, soft: 0 }, 260, 480],                                                                                                   // 29
+      ['threshold', { at: 66, soft: 0 }, 260, 590],                                                                                                   // 30
+      ['bloom', { species: 0, part: 70, sheet: 100, stage: 40, jitter: 50, variant: 4 }, 260, 700],                                                   // 31
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 80, '~count': '0,300', size: 20, '~size': '10,36', vary: 40, turn: 100, clump: 30, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16' }, 480, 480],// 32
+      ['blend', { mode: 'normal', opacity: 100 }, 920, 40],                                                                                           // 33
+      ['math', { op: 'multiply' }, 700, 150],                                                                                                         // 34
+      ['blend', { mode: 'normal', opacity: 100 }, 1140, 40],                                                                                          // 35
+      ['math', { op: 'multiply' }, 700, 260],                                                                                                         // 36
+      ['blend', { mode: 'normal', opacity: 100 }, 1360, 40],                                                                                          // 37
+      ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 38
+      ['blend', { mode: 'multiply', opacity: 70 }, 1800, 40],                                                                                         // 39
+      ['surface', { name: 'Ditsy Print', ground: 'colour' }, 2020, 40]],                                                                              // 40
+    wires: [[17, 1, 16, paramPort('canvasweave', 'pitch')], [16, 1, 18, 1], [5, 1, 18, paramPort('maprange', 'outLo')], [10, 1, 19, 1], [18, 1, 19, 2],
+      [9, 1, 20, 1], [11, 1, 20, 2], [11, 1, 20, 3], [14, 1, 20, 4], [15, 1, 20, 5], [8, 1, 20, paramPort('bloom', 'species')],
+      [21, 1, 20, paramPort('bloom', 'stage')], [20, 1, 22, 1], [1, 1, 22, paramPort('scatter', 'count')], [2, 1, 22, paramPort('scatter', 'size')],
+      [6, 1, 22, paramPort('scatter', 'clump')], [7, 1, 22, paramPort('scatter', 'turn')], [9, 1, 23, 1], [12, 1, 23, 2], [12, 1, 23, 3], [14, 1, 23, 4],
+      [15, 1, 23, 5], [8, 1, 23, paramPort('bloom', 'species')], [24, 1, 23, paramPort('bloom', 'stage')], [23, 1, 25, 1],
+      [1, 1, 25, paramPort('scatter', 'count')], [2, 1, 25, paramPort('scatter', 'size')], [6, 1, 25, paramPort('scatter', 'clump')],
+      [7, 1, 25, paramPort('scatter', 'turn')], [9, 1, 26, 1], [13, 1, 26, 2], [13, 1, 26, 3], [14, 1, 26, 4], [15, 1, 26, 5],
+      [8, 1, 26, paramPort('bloom', 'species')], [27, 1, 26, paramPort('bloom', 'stage')], [26, 1, 28, 1], [1, 1, 28, paramPort('scatter', 'count')],
+      [2, 1, 28, paramPort('scatter', 'size')], [6, 1, 28, paramPort('scatter', 'clump')], [7, 1, 28, paramPort('scatter', 'turn')], [4, 1, 29, 1],
+      [4, 1, 30, 1], [9, 1, 31, 1], [15, 1, 31, 5], [31, 1, 32, 1], [3, 1, 32, paramPort('scatter', 'count')], [2, 1, 32, paramPort('scatter', 'size')],
+      [6, 1, 32, paramPort('scatter', 'clump')], [19, 1, 33, 1], [32, 4, 33, 2], [32, 1, 33, 3], [28, 1, 34, 1], [30, 1, 34, 2], [33, 1, 35, 1],
+      [28, 4, 35, 2], [34, 1, 35, 3], [25, 1, 36, 1], [29, 1, 36, 2], [35, 1, 37, 1], [25, 4, 37, 2], [36, 1, 37, 3], [37, 1, 38, 1], [22, 4, 38, 2],
+      [22, 1, 38, 3], [38, 1, 39, 1], [18, 1, 39, 2], [39, 1, 40, 1]] },
+  botline: { label: 'Botanical Line', div: 2, teach: 'Flowers drawn in a fine ink line, with a loose wash of colour or none (docs/prior-art/florals.md §8): the line art of a field guide’s margin, clean confident outlines, no shading, the paper left to breathe. Bloom draws a sheet of four whole plants from the side, stems and leaves; Scatter throws a few, large (Plants, Plant Size). Edges of the plants’ shape is the outline; edges of their colours (Detail) the lines between petals and leaves. Blur and Threshold set the pen (Line). The wash is the plants’ own colour, multiplied in under the line and slipped off it by an Offset (Wash, Wash Slip). Split HSB finds the green, so leaves and stems take the second ink. Try: Plants low, Plant Size high, Wash at nothing.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Plants', def: 35 }, 40, 40],                                                                                       // 1
+      ['knob', { slot: '2', name: 'Plant Size', def: 55 }, 40, 150],                                                                                  // 2
+      ['knob', { slot: '3', name: 'Line', def: 45 }, 40, 260],                                                                                        // 3
+      ['knob', { slot: '4', name: 'Detail', def: 55 }, 40, 370],                                                                                      // 4
+      ['knob', { slot: '5', name: 'Wash', def: 40 }, 40, 480],                                                                                        // 5
+      ['knob', { slot: '6', name: 'Wash Slip', def: 30 }, 40, 590],                                                                                   // 6
+      ['knob', { slot: '7', name: 'Paper', def: 40 }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8', name: 'Species', def: 98 }, 40, 810],                                                                                     // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['hue', { slot: '1', name: 'Paper Hue' }, 40, 1030],                                                                                            // 10
+      ['hue', { slot: '2', name: 'Ink Hue' }, 40, 1140],                                                                                              // 11
+      ['hue', { slot: '3', name: 'Petal Wash Hue' }, 40, 1250],                                                                                       // 12
+      ['hue', { slot: '4', name: 'Center Wash Hue' }, 40, 1360],                                                                                      // 13
+      ['hue', { slot: '5', name: 'Leaf Wash Hue' }, 40, 1470],                                                                                        // 14
+      ['hue', { slot: '6', name: 'Second Ink Hue' }, 40, 1580],                                                                                       // 15
+      ['perlin', { scale: 420, details: 4, rough: 60, contrast: 20 }, 40, 1690],                                                                      // 16
+      ['maprange', { outLo: 97, outHi: 100, '~outLo': '100,90' }, 260, 40],                                                                           // 17
+      ['blend', { mode: 'multiply', opacity: 100 }, 480, 40],                                                                                         // 18
+      ['bloom', { species: 98, view: 70, '~view': '45,90', stage: 45, '~stage': '20,75', sheet: 34, stem: 100, jitter: 45, variant: 6 }, 260, 150],   // 19
+      ['random', { lo: 0, hi: 100 }, 40, 1800],                                                                                                       // 20
+      ['random', { lo: 0, hi: 100 }, 40, 1910],                                                                                                       // 21
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 4, '~count': '1,14', size: 60, '~size': '30,95', big: 300, vary: 35, turn: 25, '~turn': '0,60', clump: 20, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 4' }, 480, 150],// 22
+      ['random', { lo: 0, hi: 100 }, 40, 2020],                                                                                                       // 23
+      ['edges', { strength: 100 }, 700, 40],                                                                                                          // 24
+      ['edges', { strength: 100 }, 700, 150],                                                                                                         // 25
+      ['maprange', { inLo: 0, inHi: 60, outLo: 0, outHi: 60, '~outHi': '0,100' }, 920, 40],                                                           // 26
+      ['maprange', { inLo: 0, inHi: 25, outLo: 0, outHi: 100 }, 920, 150],                                                                            // 27
+      ['math', { op: 'max' }, 1140, 40],                                                                                                              // 28
+      ['blur', { radius: 1, '~radius': '0,3' }, 1360, 40],                                                                                            // 29
+      ['threshold', { at: 30, '~at': '45,12', soft: 25 }, 1580, 40],                                                                                  // 30
+      ['offset', { x: 0, y: 0, '~x': '0,5', '~y': '0,4' }, 700, 260],                                                                                 // 31
+      ['blur', { radius: 3 }, 920, 260],                                                                                                              // 32
+      ['maprange', { outLo: 0, outHi: 40, '~outHi': '0,90' }, 1140, 150],                                                                             // 33
+      ['blend', { mode: 'multiply', opacity: 100 }, 1360, 150],                                                                                       // 34
+      ['splithsb', {}, 700, 370],                                                                                                                     // 35
+      ['threshold', { at: 22, soft: 6 }, 1360, 260],                                                                                                  // 36
+      ['maprange', { inLo: 20, inHi: 45, outLo: 0, outHi: 100 }, 920, 370],                                                                           // 37
+      ['maprange', { inLo: 15, inHi: 40, outLo: 0, outHi: 100 }, 920, 480],                                                                           // 38
+      ['math', { op: 'multiply' }, 1140, 260],                                                                                                        // 39
+      ['blend', { mode: 'normal', opacity: 100 }, 1800, 40],                                                                                          // 40
+      ['math', { op: 'multiply' }, 1800, 150],                                                                                                        // 41
+      ['blend', { mode: 'normal', opacity: 100 }, 2020, 40],                                                                                          // 42
+      ['surface', { name: 'Botanical Line', ground: 'colour' }, 2240, 40]],                                                                           // 43
+    wires: [[16, 1, 17, 1], [7, 1, 17, paramPort('maprange', 'outLo')], [10, 1, 18, 1], [17, 1, 18, 2], [9, 1, 19, 1], [12, 1, 19, 2], [12, 1, 19, 3],
+      [13, 1, 19, 4], [14, 1, 19, 5], [8, 1, 19, paramPort('bloom', 'species')], [20, 1, 19, paramPort('bloom', 'view')],
+      [21, 1, 19, paramPort('bloom', 'stage')], [19, 1, 22, 1], [1, 1, 22, paramPort('scatter', 'count')], [2, 1, 22, paramPort('scatter', 'size')],
+      [23, 1, 22, paramPort('scatter', 'turn')], [22, 1, 24, 1], [22, 4, 25, 1], [25, 1, 26, 1], [4, 1, 26, paramPort('maprange', 'outHi')], [24, 1, 27, 1],
+      [27, 1, 28, 1], [26, 1, 28, 2], [28, 1, 29, 1], [3, 1, 29, paramPort('blur', 'radius')], [29, 1, 30, 1], [3, 1, 30, paramPort('threshold', 'at')],
+      [22, 1, 31, 1], [6, 1, 31, paramPort('offset', 'x')], [6, 1, 31, paramPort('offset', 'y')], [31, 1, 32, 1], [32, 1, 33, 1],
+      [5, 1, 33, paramPort('maprange', 'outHi')], [18, 1, 34, 1], [22, 4, 34, 2], [33, 1, 34, 3], [22, 4, 35, 1], [35, 1, 37, 1], [35, 2, 38, 1],
+      [37, 1, 39, 1], [38, 1, 39, 2], [39, 1, 36, 1], [34, 1, 40, 1], [11, 1, 40, 2], [30, 1, 40, 3], [30, 1, 41, 1], [36, 1, 41, 2], [40, 1, 42, 1],
+      [15, 1, 42, 2], [41, 1, 42, 3], [42, 1, 43, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2

@@ -227,32 +227,6 @@ check('a Note makes nothing and breaks nothing', run([node(5, 'note', { text: 'h
   check('Curve Ops: Transition crosses from the first curve to the second; Fade eases a curve to nothing at its ends',
     S.curveAt(tr, 0.1) < 0.01 && S.curveAt(tr, 0.9) > 0.99 && Math.abs(S.curveAt(tr, 0.5) - 0.5) < 0.05 && S.curveAt(fd, 0) < 0.01 && S.curveAt(fd, 1) < 0.01 && S.curveAt(fd, 0.5) > 0.99); }
 
-// ---- the Emotional Seed (ROADMAP G4): one feeling fanned out through remappers ----
-{ // (the part run on its own: its feeling `w`, a curve on Density's port, the page's colors)
-  const outs = (data, ctx = {}, ins = {}) => S.STEPS.feeling.run({ ctx: { knobs: [], tints: [], ...ctx }, input: (n, j) => j === 1 && ins.w != null ? ins.w : j === 2 && ins.curve ? ins.curve : undefined,
-    num: (n, k, d) => n.data[k] ?? d, P: (n, k, d) => n.data[k] ?? d, asField: v => v, isCurve: v => !!(v && v.curve), hexCol: h => { const c = parseInt(h.slice(1), 16); return [(c >> 16 & 255)/255, (c >> 8 & 255)/255, (c & 255)/255]; } }, { data });
-  const hex = c => '#' + c.map(v => Math.round(v*255).toString(16).padStart(2, '0')).join('').toUpperCase();
-  const calm = outs({ mood: 'storm', def: 0 }), fierce = outs({ mood: 'storm', def: 100 }), wired = outs({ mood: 'storm', def: 0 }, {}, { w: 1 });
-  check('Emotional Seed: one feeling gives a color and three numbers, each 0–1; a storm fills, stirs and hardens as it grows',
-    S.STEPS.feeling.outs.length === 4 && [calm, fierce].every(o => o.length === 4 && o.slice(1).every(v => v >= 0 && v <= 1))
-    && fierce[1] > calm[1] && fierce[2] > calm[2] + 0.5 && fierce[3] > calm[3] + 0.5 && hex(calm[0]) === '#A7D3D0' && hex(fierce[0]) === '#E0566E');
-  check('…the feeling wired in wins over its own setting; longing empties and softens as it grows (each mood its own curves)',
-    JSON.stringify(wired) === JSON.stringify(fierce) && outs({ mood: 'longing', def: 100 })[1] < outs({ mood: 'longing', def: 0 })[1] && outs({ mood: 'longing', def: 100 })[3] < outs({ mood: 'longing', def: 0 })[3]);
-  const flatCurve = { curve: new Float32Array(257).fill(0.25) };
-  check('…a Curve on a number\'s port reshapes it (the feeling read across the curve); the others keep the mood\'s',
-    outs({ mood: 'storm', def: 100 }, {}, { curve: flatCurve })[1] === 0.25 && outs({ mood: 'storm', def: 100 }, {}, { curve: flatCurve })[2] === fierce[2]);
-  check('…Accents runs from the Conjunction Hue (calm) to the Opposition Hue (fierce); Page Hues from the second hue to the first',
-    hex(outs({ mood: 'accents', def: 0 }, { accents: ['#112233', '#445566'] })[0]) === '#445566' && hex(outs({ mood: 'accents', def: 100 }, { accents: ['#112233', '#445566'] })[0]) === '#112233'
-    && hex(outs({ mood: 'page hues', def: 0 }, { tints: ['#AA0000', '#0000AA'] })[0]) === '#0000AA' && hex(outs({ mood: 'page hues', def: 100 }, { tints: ['#AA0000', '#0000AA'] })[0]) === '#AA0000');
-  const pickers = mood => C.athanorHues(graph([node(1, 'feeling', { mood }), node(2, 'tint', {}, { 1: [1, 2], 2: [1, 1] }), node(99, 'surface', { ground: 'grey' }, { 1: [2, 1] })]));
-  const named = C.athanorHues(graph([node(1, 'feeling', { mood: 'page hues' }), node(3, 'hue', { slot: '2', name: 'Ground' }), node(2, 'tint', {}, { 1: [1, 2], 2: [1, 1], 3: [3, 1] }), node(99, 'surface', { ground: 'grey' }, { 1: [2, 1] })]));
-  check('…a seed of the page\'s hues puts both pickers on the page (a Hue part\'s own name wins); another mood puts none',
-    JSON.stringify(pickers('page hues').map(h => h.label)) === '["Fierce Hue","Calm Hue"]' && pickers('storm').length === 0 && JSON.stringify(named.map(h => h.label)) === '["Fierce Hue","Ground"]');
-  const weather = k => C.evalAthanor(JSON.stringify(C.athanorStarter('weather')), 40, 40, { seed: 3, knobs: [k], tints: ['#E8C9A0', '#1E2230'] }, {});
-  const spread = im => { let lo = 1, hi = 0; for(const v of im.r) { lo = Math.min(lo, v); hi = Math.max(hi, v); } return hi - lo; };
-  const red = im => im.r.reduce((a, v) => a + v, 0)/im.r.length - im.b.reduce((a, v) => a + v, 0)/im.b.length;
-  check('…the Weather of Feeling starter: one Knob (Feeling) drives it all; turned up, the picture reddens and its contrast grows',
-    C.athanorKnobs(C.athanorStarter('weather')).map(k => k.label).join() === 'Feeling' && red(weather(100)) > red(weather(0)) + 0.1 && spread(weather(100)) > spread(weather(0))); }
 // UP TO SIX HUES (ROADMAP L0, Ruby: "always use as many user inputs as humanly possible"): a Hue part reads slots 1–6; a
 // graph whose Hue reads the fifth puts five pickers on the page, the fifth named as its part says
 { const g5 = graph([node(3, 'hue', { slot: '5', name: 'Star Hue' }), node(2, 'tint', {}, { 1: [9, 1], 2: [3, 1], 3: [3, 1] }), node(9, 'noise', {}), node(99, 'surface', { ground: 'colour' }, { 1: [2, 1] })]);

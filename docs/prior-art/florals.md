@@ -326,6 +326,59 @@ Keep colours honest. No blue tulips [src] and no blue roses unless the user pick
 
 ---
 
+## 8b. Ruby's first look, and what changed (Saturn series)
+
+Ruby: "most of them are good. The simple ones are really good. We could use more simple ones." Three asked
+for more:
+
+- **Macro** "needs to actually try to generate more than just the flower bulb." A macro photograph is a
+  *framing*, not a flower centred on bokeh: the heart filling the page with petals running off every edge,
+  a second flower nearer the lens than the focus as a soft wash across a corner, more of its kind far behind,
+  pollen fallen about the stamens, the petal's own crinkle catching the light [gen]. The seed now chooses
+  the framing on a continuum, from the whole flower in its setting to its heart filling the page, and the
+  closer the framing the further off the middle the flower may sit (Bloom Size and the seed both bring it
+  near); a Perlin crinkle goes into the Light Engine's heights; Bloom draws more points along a petal the
+  larger it is, so no facets show close up.
+- **Meadow** "reminds me way too much of the Windows XP Bliss wallpaper." Bliss is one smooth green hill
+  under saturated blue and white cumulus [gen]. The meadow is now seen from inside it: a high horizon, a
+  hedgerow or line of trees along it, hazed blue by distance; fields beyond in long bands of green and gold;
+  the nearest grass tall and out of focus across the page's foot; the sky long soft streaks of high cloud and
+  haze, warm toward the sun. Default hues: a pale hazy sky, a muted far land, an olive grass, a warm sun.
+- **Fallen Petals** "too cartoony. Getting better." What read as a drawing: an inked rim round every petal;
+  a dark fringe round every stamp (a half-covered pixel drawn half over black); flat even colour; perfectly
+  symmetrical leaves; hard drop shadows with a lit halo. Now: no outline; Scatter gives a "black is clear"
+  stamp its colour back where it only partly covers (its coverage kept apart); Bloom gives back the colour
+  of its own half-covered edge pixels and leaves a hair of coverage clear; every petal has a few soft lighter
+  and darker patches, and as it ages, brown creeping in from the tip and the edges, its edge crumpling; leaves
+  have side veins, uneven edges and brown patches with age; the heights are soft inside each petal and flat
+  on the ground, so they cast a shadow, not a halo.
+
+### More simple ones
+
+**Ditsy Print.** A "very small scale all-over pattern with a random look, not linear or geometric"; flowers
+are the usual motif; mass-produced on cheap cotton for 1920s–40s day dresses, back in the 1970s; Liberty's
+are the finer grade [src: Vintage Fashion Guild]. So: tiny flowers at random (never in rows), a sprig of leaf
+between, flat (pressed, face on), on cloth whose weave shows. Bloom's sheet of sixteen heads, once per colour
+(three flower hues; Colors says how many print), Bloom's leaves as sprigs, Canvas Weave for the cloth.
+
+**Botanical Line.** Flower line art: "a single uninterrupted line", "simplify petals and stems, and use clean,
+confident lines. Less is more", "clear outlines instead of shading or heavy color", "leave negative space";
+thicker lines for focal points, thin for delicacy [src: Craftionary]. The field guide's margin drawing, and
+line-and-wash. So: Bloom's whole plants from the side, a few, large; Edges of their shape for the outline and
+of their colours for the inner lines (Detail); Blur and Threshold as the pen (Line); the wash their own
+colour multiplied in and slipped off the line (Wash, Wash Slip); leaves and stems in a second ink (Split HSB
+finds the green).
+
+## 8c. Macro, lit with maps (Ruby: "Use them!! We built these tools so you could use them!")
+
+The close-up was still drawn already lit. It is now made as a renderer's material (docs/prior-art/lit-maps.md): Bloom
+hands on its colours unlit, how squarely each part faces the light (Facing, from each petal's true normals), heights
+with each petal's cross-section and sunk veins, gloss (most petals matte from their conical cells, a buttercup's or a
+tulip's wax bright: Stavenga 2020), and thickness (adding where petals overlap and along the veins). The Light Engine's
+Translucency, a map, wraps the light round each petal and lets it through in the pigment's own colour as the light
+sinks or shines from behind: a backlit poppy glows, its veins and its overlaps darker; a leaf glows green. Checked from
+the front, the side and behind before it was shown.
+
 ## 9. Sources consulted
 
 - **Generative:**
@@ -344,6 +397,8 @@ Keep colours honest. No blue tulips [src] and no blue roses unless the user pick
   - https://ncbg.unc.edu/2022/04/05/pressing-matters-how-to-make-an-herbarium-specimen/
   - https://en.wikipedia.org/wiki/Karl_Blossfeldt
   - https://budsandtendrils.substack.com/p/how-to-keep-the-colour-in-pressed
+  - https://forums.vintagefashionguild.org/threads/fabric-friday-ditzy-ditsy-print.77336 (Ditsy Print, §8b)
+  - https://www.craftionary.net/?p=31207 (flower line art, Botanical Line, §8b)
 - **Arrangements and vanitas:**
   - https://en.wikipedia.org/wiki/Ikebana
   - https://nmwa.org/art/collection/roses-convolvulus-poppies-and-other-flowers-urn-stone-ledge/

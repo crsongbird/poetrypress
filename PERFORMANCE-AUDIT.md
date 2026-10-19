@@ -1,8 +1,78 @@
-# Performance audit — Jupiter–Ersa
+# Performance audit — Jupiter–Ersa (texture and render) · Saturn (the interface, §0)
 
 Measured, not guessed: Chrome as a Pixel-sized phone and Node for textures,
 on a development machine. **A phone is roughly 3–5× slower**, so multiply
 every number here for the experience on a real device.
+
+---
+
+## 0 · The interface at rest and in hand (Saturn series)
+
+Ruby, on a phone: typing and every control had become slow, whatever preset was open. Measured with
+`node tools/ui-profile.mjs` (the built page in Chromium as a 390×844 phone, its CPU slowed 6×, which is about
+a mid-range phone): idle, typing a line at 120 ms a key, dragging five sliders (a value every 40 ms, as a finger
+moves), changing two selects. Then the same with Liminal Spaces, Veins of Light and Meadow chosen.
+
+**Idle was never the problem.** With nothing touched the page is busy 0.1% of the time: one 200 ms watch on the
+seed field (6 ms in 15 s) and nothing else. No timer, frame loop or observer runs in the background. The cost
+was all in *answering a touch*:
+
+| Gesture (6× slower CPU) | Before: busy | long tasks | key → paint (median/max) | After: busy | long tasks | key → paint |
+|---|---|---|---|---|---|---|
+| idle, 15 s | 11 ms (0%) | 0 | – | 21 ms (0%) | 0 | – |
+| typing a line | 5,725 ms (45%) | 6,527 ms | 88 / 368 ms | 1,572 ms (24%) | 2,853 ms | 80 / 144 ms |
+| dragging Line Spacing | 5,951 ms (86%) | 6,343 ms | | 268 ms (4%) | 103 ms | |
+| dragging a surface knob | 2,615 ms (42%) | 2,999 ms | | 418 ms (7%) | 322 ms | |
+| dragging Surface Opacity | 2,117 ms (34%) | 2,153 ms | | 394 ms (6%) | 53 ms | |
+| dragging Card Opacity | 1,982 ms (32%) | 2,075 ms | | 393 ms (6%) | 80 ms | |
+| dragging Background Angle | 1,839 ms (30%) | 2,108 ms | | 281 ms (4%) | 97 ms | |
+| a font chosen · a blend chosen | 109 · 99 ms | | | 78 · 93 ms | | |
+
+(After typing, the page is drawn once, 300–450 ms later: the render the keys no longer start one by one.)
+
+**What it was:**
+1. **A render on every step of a gesture.** A slider's every value and a pause of 150 ms between keys each
+   started a full render of the page (100–250 ms on a phone: the text fitted, every layer composited). A render
+   in progress holds up the next touch, so the finger outran the page. 24 renders while typing one line; 26 for
+   each slider drag.
+2. **The poem editor laid the page out several times a key.** An input and the keyup after it each repainted
+   the editor; each repaint set the textarea's height to `auto` to measure it (collapsing the box and laying the
+   whole page out), set it back (another), then read every line's position for the gutter (another). The mirror's
+   whole markup was replaced on every key, so the browser restyled the whole poem.
+3. Smaller: the Create/Save buttons re-read every setting 120 ms after each touch (33 times in a typed line).
+
+**Done (this release):**
+- **The settle** (`canvasRenderer.js` `scheduleRender`, `noteUserActivity`): while a hand is on the controls (a
+  key, an input or change, a pointer down, a finger moving) no render begins; it begins once they have been still
+  for `SETTLE_MS` = 150 ms. Typing in the poem waits `TYPING_SETTLE_MS` = 400 ms, since people pause longer between
+  keys than between a slider's steps. Renders nobody's hand is behind (a texture arriving from the worker) keep
+  the old 24-a-second cap. The dial guides are their own canvas, so they still follow the finger live.
+- **The editor** (`editor.js`): it paints at most once a frame, and not at all when the text, the caret and the
+  width haven't changed; it reads every measure before it writes anything (one layout a key); it no longer
+  collapses the textarea to measure it; each line sits in its own inline span and only changed lines are
+  replaced.
+- The Create/Save check waits 300 ms of rest.
+
+**The plan, before many more presets and surfaces** (in order of what they'd save):
+1. **The editor's last cost (about 25 ms a key here, 5–8 on a fast phone):** the mirror is one inline flow, so
+   any change re-lays every line of it. Try `contain: layout style` on the editor block, then a box per line, once
+   `test/editor.test.mjs` can prove the mirror and the textarea still break every line at the same place (the
+   reason it is one flow today).
+2. **Poll nothing.** The seed field is watched every 200 ms for changes made elsewhere (rerolls, presets, undo,
+   loads); call `syncSeedWords` where those set it instead. Keep a rule: no `setInterval` in the interface (a test
+   can grep for it).
+3. **Count renders in a test.** A suite that fires twenty inputs 50 ms apart through the DOM mock and checks that
+   exactly one render follows, `SETTLE_MS` after the last, so no new control can quietly bypass the settle.
+4. **One listener, not one per control,** for the things every control does (the readout, the dirty mark, the
+   draft, the settle): a delegated `input` listener on the panel. Fewer closures at start-up, one path to measure.
+5. **Each surface's cost in its registry entry** (`TEXTURE_CAPS.cost`: light, medium, heavy) from the texture
+   timings below, so the presets can be built to a budget, and a heavy surface previews at a lower resolution
+   while a hand is on its knobs.
+6. **The render itself** (Ruby: later): the text is fitted from scratch on every render (`measureText` was 40% of a
+   Line Spacing drag); cache the measures by font, size and run. Layers that didn't change (the surface, the
+   card) are composited again every time; keep the composed back layer and redraw only what moved.
+7. **Measure every release:** `node tools/ui-profile.mjs` with the default look and two heavy surfaces; a typed key
+   above 100 ms (median, 6×) or a drag above 10% busy is a regression.
 
 ---
 

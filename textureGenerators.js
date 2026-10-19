@@ -148,11 +148,11 @@ export const TEXTURE_PARAMS = {
                   {key:'surface', label:'Surface', min:0, max:100, def:50, unit:''},
                   {key:'species', label:'Species', min:0, max:100, def:41, unit:''}],
   meadow:         [{key:'flowers', label:'Flowers', min:0, max:100, def:55, unit:''},
-                  {key:'grass', label:'Grass', min:0, max:100, def:55, unit:''},
+                  {key:'grass', label:'Grass', min:0, max:100, def:60, unit:''},
                   {key:'wind', label:'Wind', min:0, max:100, def:45, unit:''},
                   {key:'petals', label:'Petals in the Air', min:0, max:100, def:35, unit:''},
-                  {key:'horizon', label:'Horizon', min:0, max:100, def:40, unit:''},
-                  {key:'clouds', label:'Clouds', min:0, max:100, def:50, unit:''},
+                  {key:'horizon', label:'Horizon', min:0, max:100, def:30, unit:''},
+                  {key:'clouds', label:'Clouds', min:0, max:100, def:45, unit:''},
                   {key:'second', label:'Second Flower', min:0, max:100, def:40, unit:''},
                   {key:'species', label:'Species', min:0, max:100, def:27, unit:''}],
   macro:          [{key:'species', label:'Species', min:0, max:100, def:27, unit:''},
@@ -163,6 +163,22 @@ export const TEXTURE_PARAMS = {
                   {key:'dew', label:'Dew', min:0, max:100, def:35, unit:''},
                   {key:'translucency', label:'Translucency', min:0, max:100, def:55, unit:''},
                   {key:'view', label:'View', min:0, max:100, def:25, unit:''}],
+  ditsy:          [{key:'flowers', label:'Flowers', min:0, max:100, def:55, unit:''},
+                  {key:'size', label:'Flower Size', min:0, max:100, def:35, unit:''},
+                  {key:'sprigs', label:'Sprigs', min:0, max:100, def:45, unit:''},
+                  {key:'colors', label:'Colors', min:0, max:100, def:50, unit:''},
+                  {key:'cloth', label:'Cloth', min:0, max:100, def:40, unit:''},
+                  {key:'cluster', label:'Clustering', min:0, max:100, def:30, unit:''},
+                  {key:'turn', label:'Turn', min:0, max:100, def:70, unit:''},
+                  {key:'species', label:'Species', min:0, max:100, def:98, unit:''}],
+  botline:        [{key:'plants', label:'Plants', min:0, max:100, def:35, unit:''},
+                  {key:'size', label:'Plant Size', min:0, max:100, def:55, unit:''},
+                  {key:'line', label:'Line', min:0, max:100, def:45, unit:''},
+                  {key:'detail', label:'Detail', min:0, max:100, def:55, unit:''},
+                  {key:'wash', label:'Wash', min:0, max:100, def:40, unit:''},
+                  {key:'slip', label:'Wash Slip', min:0, max:100, def:30, unit:''},
+                  {key:'paper', label:'Paper', min:0, max:100, def:40, unit:''},
+                  {key:'species', label:'Species', min:0, max:100, def:98, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -679,9 +695,13 @@ export const TEXTURE_CAPS = {
   petals:        { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
                    tintLabels:['Surface Hue', 'Petal Hue', 'Aged Petal Hue', 'Center Hue', 'Leaf Hue', 'Light Hue'], tintDefaults:['#7A5A40', '#C2264B', '#7A3A2A', '#3A2418', '#5A6A3A', '#FFE8C8'] },
   meadow:        { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
-                   tintLabels:['Sky Hue', 'Far Land Hue', 'Grass Hue', 'Flower Hue', 'Second Flower Hue', 'Sunlight Hue'], tintDefaults:['#8FC3E8', '#7FA06A', '#6E9E4A', '#D9332B', '#F2EFE6', '#FFE8B0'] },
+                   tintLabels:['Sky Hue', 'Far Land Hue', 'Grass Hue', 'Flower Hue', 'Second Flower Hue', 'Sunlight Hue'], tintDefaults:['#C9D3D6', '#6E7F6A', '#7A8A45', '#D9332B', '#F2EFE6', '#FFD9A0'] },
   macro:         { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
                    tintLabels:['Bokeh Hue', 'Second Bokeh Hue', 'Petal Hue', 'Center Hue', 'Foliage Hue', 'Key Light Hue'], tintDefaults:['#F2D27A', '#E8A0B8', '#D7261E', '#1A1414', '#5E7F3A', '#FFF2D8'] },
+  ditsy:         { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+                   tintLabels:['Ground Hue', 'Flower Hue', 'Second Flower Hue', 'Third Flower Hue', 'Center Hue', 'Sprig Hue'], tintDefaults:['#F4EEE2', '#C8506A', '#5A7AC8', '#E8B21C', '#F2D27A', '#6E8A4A'] },
+  botline:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+                   tintLabels:['Paper Hue', 'Ink Hue', 'Petal Wash Hue', 'Center Wash Hue', 'Leaf Wash Hue', 'Second Ink Hue'], tintDefaults:['#F4EFE4', '#2A2420', '#D88098', '#E8C040', '#8AA87A', '#4E6A3A'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -923,9 +943,13 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'petals'){
     result = genChain(type, w, h, light, extra, tint1 || '#7A5A40', tint2 || '#C2264B');   // (chains.js)
   } else if(type === 'meadow'){
-    result = genChain(type, w, h, light, extra, tint1 || '#8FC3E8', tint2 || '#7FA06A');   // (chains.js)
+    result = genChain(type, w, h, light, extra, tint1 || '#C9D3D6', tint2 || '#6E7F6A');   // (chains.js)
   } else if(type === 'macro'){
     result = genChain(type, w, h, light, extra, tint1 || '#F2D27A', tint2 || '#E8A0B8');   // (chains.js)
+  } else if(type === 'ditsy'){
+    result = genChain(type, w, h, light, extra, tint1 || '#F4EEE2', tint2 || '#C8506A');   // (chains.js)
+  } else if(type === 'botline'){
+    result = genChain(type, w, h, light, extra, tint1 || '#F4EFE4', tint2 || '#2A2420');   // (chains.js)
   } else if(type === 'dappled'){
     result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
   } else if(type === 'windowlight'){

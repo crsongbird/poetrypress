@@ -24,7 +24,7 @@
  * Each paints at full size in a canvas pass (the page's own textures) and runs
  * on the Athanor's grid otherwise; the same code does both.
  */
-import { cpx, canonDiv, lightHeights, lightRig, withLightTilt, kitCanvas, kitPicture, kitField, kitFieldCanvas, kitImage, isCanvasLike, CPU } from './texCore.js';
+import { cpx, canonDiv, lightHeights, lightRig, withLightTilt, lightTiltNow, lightLow, kitCanvas, kitPicture, kitField, kitFieldCanvas, kitImage, isCanvasLike, CPU } from './texCore.js';
 
 const LT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const ltClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -70,9 +70,23 @@ function ltLight(H, gw, gh, deg, o, glossMap){
       for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
-  if(o.sss > 0){ const r = Math.max(1, Math.round(unit*0.006*(0.5 + o.sss))), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
+  if(o.sss > 0 && !o.sssMap){ const r = Math.max(1, Math.round(unit*0.006*(0.5 + o.sss))), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
     for(let i = 0; i < K.length; i++){ const k = K[i] + (B[i] - K[i])*o.sss*0.85; K[i] = k + (1 - Math.min(1, k))*0.22*o.sss; S[i] = S[i]*(1 - o.sss*0.5) + SB[i]*o.sss*0.6; } }
-  return { K, S, A, K2, S2 };
+  // TRANSLUCENCY AS A MAP (a thin petal or leaf, wax, skin: how much light comes through each point;
+  // docs/prior-art/lit-maps.md): its shading softened and WRAPPED round the terminator (GPU Gems ch. 16: (N·L + w)/(1 + w)),
+  // a band of the pigment's own colour where light fades to shadow (the same chapter's scatter band), and light coming
+  // THROUGH it, in its pigment's colour, as the light sinks low or a second light shines from behind (Crysis's two-sided
+  // leaves: the back light times a translucency map; Habel 2007: thin parts transmit most)
+  let TR = null, BD = null;
+  if(o.sssMap){ const T = o.sssMap, r = Math.max(1, Math.round(unit*0.008)), B = ltBlur(ltBlur(K, gw, gh, r), gw, gh, r), SB = ltBlur(S, gw, gh, r);
+    const tilt = o.tilt == null ? lightTiltNow() : o.tilt, back = Math.min(1.6, 0.18 + 0.7*Math.min(1, tilt) + 0.8*lightLow() + (o.second > 0 ? o.second*Math.max(0, Math.cos((o.secondTurn - 180)*Math.PI/180))*0.9 : 0));
+    TR = new Float32Array(K.length); BD = new Float32Array(K.length);
+    for(let i = 0; i < K.length; i++){ const t = Math.max(0, Math.min(1, T[i]*(o.sss > 0 ? o.sss*2 : 1)));
+      if(t <= 0) continue;
+      let k = K[i] + (B[i] - K[i])*t*0.7; const w = t*0.6; k = (k + w)/(1 + w);
+      const e = Math.min(1, k), sw = 0.32; BD[i] = t*(e > 0 && e < sw*2 ? (e < sw ? e/sw : (sw*2 - e)/sw) : 0);
+      K[i] = k; S[i] = S[i]*(1 - t*0.35) + SB[i]*t*0.35; TR[i] = t*back; } }
+  return { K, S, A, K2, S2, TR, BD };
 }
 // the second light's two shares (C2), per channel: what multiplies the picture (its light) and what adds to it (its shine)
 function ltSecondK(o){ const h = o.secondHue || [1, 1, 1], g = o.secondKind; return [0, 1, 2].map(c => g === 'shine only' ? 0 : o.second*h[c]); }
@@ -89,7 +103,7 @@ function ltBlur(F, gw, gh, r){
 // (on the grid, `byPoint`: Relief and Gloss may be maps, a value per point; a canvas pass reads them whole)
 function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
-  const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25);
+  const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25), TM = byPoint ? E.map(n, 'translucency', 0) : null;
   const per = M => { const o = new Float32Array(M.length); for(let i = 0; i < M.length; i++) o[i] = M[i]/100; return o; };
   const o = { deg, relief: typeof RM === 'number' ? RM/100 : 0.5, gloss: typeof GM === 'number' ? GM/100 : 0.25, shadow: E.num(n, 'shadow', 60)/100,
     ao: E.num(n, 'occlusion', 35)/100, ambient: E.num(n, 'ambient', 35)/100, shine: E.num(n, 'shine', 35)/100, sss: E.num(n, 'translucency', 0)/100,
@@ -99,7 +113,7 @@ function ltSettings(E, n, byPoint){
     second: E.num(n, 'second', 0)/100, secondTurn: E.num(n, 'secondTurn', 180), secondHeight: E.num(n, 'secondHeight', 120)/100,
     secondSoft: E.num(n, 'secondSoft', 30)/100, secondKind: E.P(n, 'secondKind', 'light and shine'),
     secondHue: (v => Array.isArray(v) ? ltHue(v) : null)(E.input(n, 9)),
-    reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM) };
+    reliefMap: typeof RM === 'number' ? null : per(RM), glossMap: typeof GM === 'number' ? null : per(GM), sssMap: TM == null || typeof TM === 'number' ? null : per(TM) };
   // THE PAGE'S RIM LIGHT (the light dial's second handle) is the second light of a part that has none of its own: from
   // its own way and height, in its own colour, at its strength
   const PR = lightRig() && lightRig().rim;
@@ -446,7 +460,7 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 export const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4'],
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4', 'translucency:4'],
     io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130),
@@ -480,11 +494,16 @@ export const LIGHT_STEPS = {
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
       // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
-      const { K, S, A, K2, S2 } = ltLight(H, ww, wh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null, out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
+      const { K, S, A, K2, S2, TR, BD } = ltLight(H, ww, wh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null, out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
         if(K2) for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0) + K2[i]*SK[c]) + s*(M ? M.hi[c] : 1) + S2[i]*SS[c];
-        else for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); }
+        else for(let c = 0; c < 3; c++) oc[c][i] = ch[c][i]*(ltK(K[i], M, c) + (A ? A[i]*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1);
+        // (light through it comes out its pigment's colour: the albedo once more, deepened; the main light's hue on it)
+        //  (its hue at full strength, however dark the face we see is: what comes through is filtered by the pigment, not lit by
+        //   the front: Stavenga 2020, the pigment filters the light on its way through)
+        if(TR && (TR[i] > 0 || BD[i] > 0)){ const m = Math.max(1e-3, ch[0][i], ch[1][i], ch[2][i]);
+          for(let c = 0; c < 3; c++){ const u = Math.max(0, ch[c][i])/m, tint = u*Math.sqrt(u)*Math.min(1, m*4), hue = M && M.di ? M.di[c] : 1; oc[c][i] += tint*(TR[i]*0.75 + BD[i]*0.3)*hue; } } }
       return [out, lf, S]; } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),

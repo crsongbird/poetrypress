@@ -61,11 +61,11 @@ check('a broken surface among good ones is counted and left out', (() => { const
     && opts.filter(o => o.value.startsWith('study:')).length === Object.keys(ATHANOR_STUDIES).length
     && opts.every(o => /\((starter|study)\)$/.test(o.textContent) && String(groupOf(o).label).endsWith(Object.keys(O.STUDY_GROUPS).find(n => O.STUDY_GROUPS[n].includes(o.value)))));
   const choose = v => { t.value = v; document.dispatchEvent({ type: 'change', target: t }); return t.value === 'athanor' ? A.athanorName(reg['forgeGraph'].value) : null; };
-  check('choosing Weather of Feeling puts it on the page, its Feeling knob on the first slider; the bench is untouched',
-    choose('starter:weather') === 'Weather of Feeling' && TEXTURE_PARAMS.athanor[0].label === 'Feeling' && store['uv.forge.bench.v1'] === wip);
+  check('choosing Agate puts it on the page, its Turbulence knob on the first slider; the bench is untouched',
+    choose('starter:agate') === 'Agate' && TEXTURE_PARAMS.athanor[0].label === 'Turbulence' && store['uv.forge.bench.v1'] === wip);
   check('…and a Surface Study, the same way', choose('study:fibers') === ATHANOR_STUDIES.fibers.label && choose('starter:sparks') === 'Punctuation Particles');
   // (the dice pass over them: they are there to try, not to land on)
-  t.options = ['linen', 'starter:weather', 'study:fibers', 'starter:sparks', 'inkbleed'].map(value => ({ value }));
+  t.options = ['linen', 'starter:agate', 'study:fibers', 'starter:sparks', 'inkbleed'].map(value => ({ value }));
   const rolled = new Set(); for(let i = 0; i < 40; i++){ reg['randomSurfaceBtn'].dispatchEvent({ type: 'click' }); rolled.add(t.value); }
   check('New Random Surface never lands on a starter or a study', rolled.has('linen') && rolled.has('inkbleed') && [...rolled].every(v => !/^(starter|study):/.test(v))); }
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');

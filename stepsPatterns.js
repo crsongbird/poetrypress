@@ -181,6 +181,9 @@ export const PATTERN_STEPS = {
       if(layers === 'brightest') mx.globalCompositeOperation = 'lighten';
       const [cc, cx] = colored ? mk() : [null, null];
       if(cx && layers === 'brightest') cx.globalCompositeOperation = 'lighten';
+      // (a picture whose black is clear: where a stamp only partly covers a point its colour was drawn partly over
+      //  black, a dark rim round every stamp; its coverage, kept apart, gives the colour back)
+      const clearPic = shape === 'picture' && P(n, 'ground', 'solid') === 'black is clear' && pic, [vc, vx] = clearPic && cx ? mk() : [null, null];
       const marks = [];
       // a picture to stamp, as a small canvas
       let stamp = null;
@@ -226,18 +229,22 @@ export const PATTERN_STEPS = {
         const at = (m, img) => { const q = Math.min(wh - 1, Math.max(0, m.y | 0))*ww + Math.min(ww - 1, Math.max(0, m.x | 0)); return [img.r[q], img.g[q], img.b[q]]; };
         for(const m of marks){
           const k = m.g/255, c = tinted && pic ? at(m, pic).map(v => Math.round(Math.max(0, Math.min(1, v))*255*k)) : [m.g, m.g, m.g];
-          for(const [ctx, col, isMark] of [[mx, `rgb(${m.g},${m.g},${m.g})`, true], [ix, `rgb(${m.id},${m.id},${m.id})`, false], ...(cx ? [[cx, `rgb(${c[0]},${c[1]},${c[2]})`, true]] : [])]){
+          for(const [ctx, col, isMark] of [[mx, `rgb(${m.g},${m.g},${m.g})`, true], [ix, `rgb(${m.id},${m.id},${m.id})`, false], ...(cx ? [[cx, `rgb(${c[0]},${c[1]},${c[2]})`, true]] : []), ...(vx ? [[vx, '#fff', 'coverage']] : [])]){
             ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.ang); ctx.fillStyle = ctx.strokeStyle = col;
             if(m.glyph){ ctx.font = `${Math.max(1, m.r*2.2)}px ${GLYPH_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(m.glyph, 0, 0); }
             else { ctx.scale(m.r, m.r);
-              if(stamp){ if(isMark){ ctx.globalAlpha = ctx === cx ? 1 : m.g/255; if(ctx === cx && !tinted) ctx.globalAlpha = k; stampAt(ctx, ctx === mx && stampMask ? stampMask : stamp, m); }
+              if(stamp && isMark === 'coverage'){ ctx.globalAlpha = 1; stampAt(ctx, stampMask, m); }
+              else if(stamp){ if(isMark){ ctx.globalAlpha = ctx === cx ? 1 : m.g/255; if(ctx === cx && !tinted) ctx.globalAlpha = k; stampAt(ctx, ctx === mx && stampMask ? stampMask : stamp, m); }
                 else ctx.fillRect(-1, -1, 2, 2); }
               else { st = m.s0; patShape(ctx, shape, rand); } }     // (every pass draws the same sigil)
             ctx.restore(); }
         }
       }
       const markF = E.lum(readCanvas(mc)), each = E.lum(readCanvas(ic));
-      return [markF, E.boxBlur(markF, Math.max(1, R0*0.18)), each, cc ? readCanvas(cc) : markF];
+      let colour = cc ? readCanvas(cc) : markF;
+      if(vc && colour.r){ const V = E.lum(readCanvas(vc));
+        for(let i = 0; i < N; i++){ const v = V[i]; if(v > 0.02 && v < 0.98){ const u = 1/v; colour.r[i] = Math.min(1, colour.r[i]*u); colour.g[i] = Math.min(1, colour.g[i]*u); colour.b[i] = Math.min(1, colour.b[i]*u); } } }
+      return [markF, E.boxBlur(markF, Math.max(1, R0*0.18)), each, colour];
     } },
 
   // FILTER FORGE'S CHECKER, TILES and DOTS in one: a regular pattern, turned and sized

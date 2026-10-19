@@ -210,7 +210,12 @@ function highlightInline(text, base){
  * zero-width inline anchors, which the gutter measures without introducing
  * any block box of their own.
  */
-export function highlightDocument(text, marks, hints){
+export function highlightDocument(text, marks, hints){   // test hook: the whole mirror as one string (the editor itself patches it line by line, highlightLines)
+  return highlightLines(text, marks, hints).join('\n') + '\u200b';
+}
+/** The same, a line at a time: each line's markup (its anchor and its coloured text), for the mirror to patch only
+ *  the lines that changed. */
+export function highlightLines(text, marks, hints){
   BRACKET_MARKS = marks && marks.size ? marks : null;
   const lines = String(text).split('\n');
   // the styles the poem names (§style name = …), so their uses are known
@@ -222,7 +227,7 @@ export function highlightDocument(text, marks, hints){
     const out = `<span class="ln-mark" data-n="${i + 1}"></span>` + highlightLine(line, base);
     base += line.length + 1;          // + the newline
     return out;
-  }).join('\n') + '\u200b';
+  });
   BRACKET_MARKS = null; HINTS = null;
   return html;
 }
@@ -282,35 +287,60 @@ export function installEditor({ textarea, mirror, gutter, hint, knownFont, onInp
     return pair ? new Set(pair) : null;
   }
 
-  function paint(){
+  // PAINT, at most once a frame and only when something changed (PERFORMANCE-AUDIT.md, typing): an input and the
+  // keyup after it used to paint twice per key, each laying the whole page out again. The mirror is redrawn in the
+  // frame before the screen shows it, so the coloured text never lags the caret.
+  let shown = { v: null, a: -1, b: -1, w: -1 }, queued = false;
+  function paint(force){
+    const v = textarea.value, a = textarea.selectionStart, b = textarea.selectionEnd, w = textarea.clientWidth || 0;
+    if(force !== true && v === shown.v && a === shown.a && b === shown.b && w === shown.w) return;
+    shown = { v, a, b, w };
     const hints = [];
-    mirror.innerHTML = highlightDocument(textarea.value, currentMarks(), hints);
-    if(hint){ const t = hintText(hints, typeof textarea.selectionStart === 'number' ? textarea.selectionStart : null);
+    patchMirror(highlightLines(v, currentMarks(), hints));
+    if(hint){ const t = hintText(hints, typeof a === 'number' ? a : null);
       if(hint.textContent !== t) hint.textContent = t; hint.hidden = !t; }
+    // (every reading first, then every writing: one layout per key, not one per measure)
+    const g = gutter ? gutterHtml() : null;
     fitHeight();
-    if(gutter) paintGutter();
+    if(g !== null && g !== lastGutter){ lastGutter = g; gutter.innerHTML = g; }
   }
+  // each line in its own inline span (no box, so nothing about the flow changes): a key changes one line, and only
+  // that line's markup is replaced, so the browser restyles one line, not the poem
+  let lineHtml = [], lineEls = [];
+  function patchMirror(lines){
+    if(lines.length === lineHtml.length && lineEls.length === lines.length && lineEls.every(e => e.parentNode === mirror)){
+      for(let i = 0; i < lines.length; i++) if(lines[i] !== lineHtml[i]) lineEls[i].innerHTML = lines[i];
+    } else {
+      mirror.innerHTML = lines.map(l => `<span class="ln">${l}</span>`).join('\n') + '\u200b';
+      lineEls = mirror.children ? Array.from(mirror.children).filter(e => e.className === 'ln') : [];
+    }
+    lineHtml = lines;
+  }
+  const paintSoon = () => { if(queued) return; queued = true;
+    (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : f => setTimeout(f, 0))(() => { queued = false; paint(); }); };
 
   // The gutter cannot simply count lines: a wrapped line occupies several
   // rows. Each logical line's start carries a zero-width inline anchor, so
   // its top can be measured directly out of the same continuous flow the
   // text is in — no block boxes, nothing that could round differently.
-  function paintGutter(){
+  let lastGutter = null;
+  function paintGutter(){ const g = gutterHtml(); if(g !== lastGutter){ lastGutter = g; gutter.innerHTML = g; } }
+  function gutterHtml(){
     const marks = mirror.querySelectorAll ? mirror.querySelectorAll('.ln-mark') : [];
     const total = mirror.scrollHeight || 0;
     let html = '';
+    const rowH = marks.length && typeof getComputedStyle === 'function' ? parseFloat(getComputedStyle(mirror).lineHeight) || 0 : 0;
     for(let i = 0; i < marks.length; i++){
       const top = marks[i].offsetTop;
       const next = (i + 1 < marks.length) ? marks[i + 1].offsetTop : total;
       const h = Math.max(0, next - top);
-      const rowH = parseFloat(getComputedStyle(mirror).lineHeight) || 0;
       const wrapped = rowH && h > rowH * 1.5;
       html += `<div class="gutter-line"${h ? ` style="height:${h}px"` : ''}>`
             + `<span class="gutter-n">${i + 1}</span>`
             + (wrapped ? '<span class="gutter-wrap">⤶</span>' : '')
             + '</div>';
     }
-    gutter.innerHTML = html;
+    return html;
   }
 
   function fitHeight(){
@@ -322,29 +352,33 @@ export function installEditor({ textarea, mirror, gutter, hint, knownFont, onInp
     // text scrolls ITSELF to show the caret (some browsers measure it short),
     // and overflow:hidden then hides its last line where nothing outside can
     // reach it. With room to spare it never has to.
-    textarea.style.height = 'auto';
+    // (Its height is not first reset to 'auto' to be measured: that collapsed the box and laid the whole page out
+    // twice on every key. The mirror's height is the text's; the textarea's own counts only when its text has
+    // overflowed it, which the reset used to find.)
     const lh = (typeof getComputedStyle === 'function' && parseFloat(getComputedStyle(textarea).lineHeight)) || 21;
-    const h = Math.max(mirror.scrollHeight || 0, textarea.scrollHeight || 0);
-    if(h) textarea.style.height = Math.ceil(h + lh) + 'px';
+    const over = (textarea.scrollHeight || 0) > (textarea.clientHeight || 0) + 1 ? textarea.scrollHeight - lh : 0;
+    const h = Math.max(mirror.scrollHeight || 0, over);
+    if(h){ const want = Math.ceil(h + lh) + 'px'; if(textarea.style.height !== want) textarea.style.height = want; }
     if(textarea.scrollTop) textarea.scrollTop = 0;
   }
 
   if(textarea.addEventListener){
-    textarea.addEventListener('input', ()=>{ paint(); if(onInput) onInput(); });
+    textarea.addEventListener('input', ()=>{ paintSoon(); if(onInput) onInput(); });
     // the textarea itself never scrolls (its box holds all its text; the box round it scrolls): if a browser scrolls
     // it anyway to show the caret, its text slips under the mirror and its last lines out of reach, so it is put back
     textarea.addEventListener('scroll', ()=>{ if(textarea.scrollTop){ textarea.scrollTop = 0; fitHeight(); } });
     // the caret can move without any input: taps, arrow keys, selection
-    for(const evt of ['click', 'keyup', 'select']) textarea.addEventListener(evt, paint);
+    for(const evt of ['click', 'keyup', 'select']) textarea.addEventListener(evt, paintSoon);
   }
   if(typeof window !== 'undefined' && window.addEventListener){
-    window.addEventListener('resize', paint);
+    window.addEventListener('resize', () => { shown.w = -1; paintSoon(); });
   }
   // NO ResizeObserver here. paint() sets the textarea's height, which resizes
   // the very element an observer would be watching, which calls paint()
   // again — "ResizeObserver loop completed with undelivered notifications",
   // and a height left in whatever state the loop bailed out in. Callers
   // repaint explicitly instead (see repaintEditor in appEvents.js).
-  paint();
-  return { paint, fitHeight };
+  paint(true);
+  // (callers that repaint on purpose, a font or a poem loaded, always repaint)
+  return { paint: () => paint(true), fitHeight };
 }

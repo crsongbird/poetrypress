@@ -43,7 +43,7 @@ import { EFFECT_DEFS, EFFECT_TYPES, legacyOutline, legacyTypeEffect } from './ef
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
-import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName, boxNow } from './canvasRenderer.js';
+import { render, scheduleRender, noteUserActivity, TYPING_SETTLE_MS, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName, boxNow } from './canvasRenderer.js';
 import { LIGHT_TURNED, LIGHT_KEPT_PARTS, SURFACE_HUE_KEYS, paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox, layerLights } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
@@ -82,7 +82,7 @@ const murmur = createMurmur({ enabled: false });
  */
 const state = {
   page: { align: 'left', valign: 'center', aspect: '9:16', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
-  ui:   { tintBySystem: false, tintFollows: [true, true, true, true, true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
+  ui:   { tintBySystem: false, tintFollows: [true, true, true, true, true, true], palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
   locks: new Set(),
   // SURFACE LAYERS: which one the controls show (upper or lower), the other one's settings (a layer: the
   // upper's own keys), its locks, and its reading and hue-following; see the surface layers section
@@ -609,9 +609,11 @@ if($('usernameField') && $('usernameField').addEventListener){
   try { const k = typeof localStorage === 'undefined' ? null : localStorage.getItem(CREDIT_KEY); if(k != null && !$('usernameField').value) $('usernameField').value = k; } catch(e){}
 }
 
+// (typing: the page is drawn again once the keys have rested a moment, TYPING_SETTLE_MS, not on every key)
+$('poemText').addEventListener('keydown', () => noteUserActivity(TYPING_SETTLE_MS));
 $('poemText').addEventListener('input', ()=>{
-  clearTimeout(state.ui.poemTimer);
-  state.ui.poemTimer = setTimeout(scheduleRender, 150);
+  noteUserActivity(TYPING_SETTLE_MS);
+  scheduleRender();
   notePoemSoon();
 });
 // (where the cursor is counts only once the poem has been touched: ⤓ Try goes at the end until then)
@@ -4353,7 +4355,7 @@ if(document.addEventListener){
   let vaultTick = null;
   const nudge = ()=>{
     clearTimeout(vaultTick);
-    vaultTick = setTimeout(()=>vault.refresh(), 120);
+    vaultTick = setTimeout(()=>vault.refresh(), 300);   // (once the hand rests: a refresh reads every setting)
   };
   document.addEventListener('input', nudge);
   document.addEventListener('change', nudge);
@@ -4641,7 +4643,7 @@ const WORKING_WORDS = {
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
-  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', macro: 'Focusing the lens', meadow: 'Walking into the meadow', petals: 'Letting the petals fall', bouquets: 'Gathering the flowers', imprints: 'Pressing the flowers', liminal: 'Finding the way back', turing: 'Letting the reaction diffuse',
+  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', botline: 'Inking the stems', ditsy: 'Printing the cloth', macro: 'Focusing the lens', meadow: 'Walking into the meadow', petals: 'Letting the petals fall', bouquets: 'Gathering the flowers', imprints: 'Pressing the flowers', liminal: 'Finding the way back', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',

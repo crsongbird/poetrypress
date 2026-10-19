@@ -216,6 +216,8 @@ export function dialVec(light){
 /** How far past the dial's rim the light was pulled (0..1): only the lighting
  *  engine reads it, sinking the light from 12° toward 4° above the horizon —
  *  long, raking shadows. Textures that shade themselves never see it. */
+/** The light's height now (0 overhead … 1 at the horizon … 1.3 below it): how far a backlit leaf or petal glows. */
+export function lightTiltNow(){ return LIGHT_TILT; }
 export function lightLow(){ return Math.max(0, Math.min(1, (LIGHT_TILT - 1) / 0.3)); }
 
 // ---------- THE PAGE'S LIGHTS: a rim light and the ambient (ROADMAP C1, C2) ----------
