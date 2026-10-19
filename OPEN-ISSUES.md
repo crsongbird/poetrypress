@@ -8,6 +8,11 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- SUNRISE SCROLL (branch `ink`, sheets sent; not on main): the second love letter, the ink-painted wolf game's look
+  and the painters it loved. Mountains band behind band, each a wash of diluted ink lit in toon bands, the far ones
+  craggy, their ridges brushed thick and thin with dry-brush breaks, their feet fading into mist; a woodblock's graded
+  sky, a red sun the dial sets behind the peaks, long rounded mist bands, cherry petals adrift, the paper aged at the
+  edges. Readings: Spring Scroll, Vermilion Dusk, Indigo Print, Bare Ink. In Places & Scenes. Merge it? What to change?
 - THE SURFACE MENU'S GROUPS, REARRANGED: Burnt Letter and Cup Ring to Paper & Grounds; Veins of Light and Moss on Stone
   to Grown & Generated; Knotwork to Pattern & Order; Light, Sparks & Dust is now Light, Dust & Feathers (the two
   feathers were there); the Paving Stones and Brick Wall starters to Materials & Craft; the Packet Rain study to Screens

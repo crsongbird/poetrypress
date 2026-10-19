@@ -240,6 +240,7 @@ export const UI_STRINGS = {
   'option.blackhole':                         "Black Hole",
   'option.pixelspace':                        "Pixel Space",
   'option.webb':                              "Webb Sky",
+  'option.inkscroll':                           "Sunrise Scroll",
   'option.windsea':                             "Windward Sea",
   'option.botline':                             "Botanical Line",
   'option.ditsy':                               "Ditsy Print",

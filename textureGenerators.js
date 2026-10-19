@@ -187,6 +187,14 @@ export const TEXTURE_PARAMS = {
                   {key:'wind', label:'Wind', min:0, max:100, def:35, unit:''},
                   {key:'islands', label:'Islands', min:0, max:100, def:40, unit:''},
                   {key:'bands', label:'Toon Bands', min:0, max:100, def:30, unit:''}],
+  inkscroll:      [{key:'peaks', label:'Peaks', min:0, max:100, def:55, unit:''},
+                  {key:'mist', label:'Mist', min:0, max:100, def:50, unit:''},
+                  {key:'ink', label:'Ink', min:0, max:100, def:50, unit:''},
+                  {key:'wash', label:'Wash', min:0, max:100, def:55, unit:''},
+                  {key:'clouds', label:'Clouds', min:0, max:100, def:45, unit:''},
+                  {key:'blossoms', label:'Blossoms', min:0, max:100, def:35, unit:''},
+                  {key:'age', label:'Age', min:0, max:100, def:40, unit:''},
+                  {key:'bands', label:'Toon Bands', min:0, max:100, def:30, unit:''}],
   dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
                   {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
                   {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
@@ -712,6 +720,8 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Paper Hue', 'Ink Hue', 'Petal Wash Hue', 'Center Wash Hue', 'Leaf Wash Hue', 'Second Ink Hue'], tintDefaults:['#F4EFE4', '#2A2420', '#D88098', '#E8C040', '#8AA87A', '#4E6A3A'] },
   windsea:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
                    tintLabels:['Sky Hue', 'Sea Hue', 'Deep Sea Hue', 'Foam Hue', 'Island Hue', 'Sun Hue'], tintDefaults:['#3A7BD5', '#1F6FB8', '#0E4A8A', '#F4F8FF', '#5FA040', '#FFF2A8'] },
+  inkscroll:     { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+                   tintLabels:['Paper Hue', 'Ink Hue', 'Sky Hue', 'Mountain Hue', 'Blossom Hue', 'Sun Hue'], tintDefaults:['#EADCBA', '#1E1A18', '#2E5A88', '#5E7A62', '#E07A8E', '#D23A2A'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
   windowlight:   { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -962,6 +972,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1 || '#F4EFE4', tint2 || '#2A2420');   // (chains.js)
   } else if(type === 'windsea'){
     result = genChain(type, w, h, light, extra, tint1 || '#3A7BD5', tint2 || '#1F6FB8');   // (chains.js)
+  } else if(type === 'inkscroll'){
+    result = genChain(type, w, h, light, extra, tint1 || '#EADCBA', tint2 || '#1E1A18');   // (chains.js)
   } else if(type === 'dappled'){
     result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
   } else if(type === 'windowlight'){

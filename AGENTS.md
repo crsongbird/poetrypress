@@ -1373,6 +1373,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   docs/prior-art/veins-network.md): a graph with loops, never a tree. Weave picks how the nodes join;
   widths follow the flow from the hubs (the poem's punctuation, else the seed's); Organic ↔ Circuit
   routes from curves to 45°/90° traces with pads and buses. The glow wakes as the dial's light sinks.
+- **Sunrise Scroll** (chain `inkscroll`, `v: 5`; general parts only; prior art docs/prior-art/cel-shaded.md §7):
+  ink-wash mountains band behind band. A ridge is a 1D noise (a Curve's noise through a Profile Gradient), never a 2D
+  noise cut by a gradient (that makes blobs, not profiles); far ridges folded into crags. A Number's value is 0–100
+  (num(50) is a half): a multiply by num(0.9) is nearly nothing.
 - **Windward Sea** (chain `windsea`, `v: 5`; one process part, `streamers`, stepsStreamers.js; prior art
   docs/prior-art/cel-shaded.md): the first love letter to a video game, cel-shaded. Light in bands: the Light
   Engine's light (or Streamers' Facing) through a Posterize (Toon Bands) into a three-stop Gradient Map. The
