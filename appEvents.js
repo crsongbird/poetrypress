@@ -599,6 +599,15 @@ $('textureSeedReroll').addEventListener('click', ()=>{
 });
 $('usernameCorner').addEventListener('change', scheduleRender);
 $('spellMark').addEventListener('change', scheduleRender);
+// THE CREDIT IS KEPT (Ruby: "save the username/credit in the local storage so the user doesn't have to keep entering it.
+// It should persist forever"): whatever is typed is kept in this browser, and every visit starts with it. It is never
+// part of a look (vault.js NOT_PART_OF_A_LOOK), so no preset, spell or shared look changes it; clearing the field clears it.
+const CREDIT_KEY = 'uv.credit.v1';
+if($('usernameField') && $('usernameField').addEventListener){
+  const keepCredit = () => { try { localStorage.setItem(CREDIT_KEY, String($('usernameField').value || '').slice(0, 120)); } catch(e){} };
+  $('usernameField').addEventListener('input', keepCredit); $('usernameField').addEventListener('change', keepCredit);
+  try { const k = typeof localStorage === 'undefined' ? null : localStorage.getItem(CREDIT_KEY); if(k != null && !$('usernameField').value) $('usernameField').value = k; } catch(e){}
+}
 
 $('poemText').addEventListener('input', ()=>{
   clearTimeout(state.ui.poemTimer);

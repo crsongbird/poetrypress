@@ -4,6 +4,12 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Loge (2026-10-19)
+
+- **Your credit is remembered.** The name or handle signed on the image is
+  kept in this browser, so every visit starts with it. Presets, spells and
+  shared looks never change it; clearing the field clears it.
+
 ## Saturn–Ymir (2026-10-19)
 
 - **New surface: Pixel Space.** Space in pixel art, after the generators

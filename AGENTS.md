@@ -342,6 +342,11 @@ Other parts of a look:
   thumbnails, step previews on or off) live in localStorage, **never** in a
   look.
 
+### 5.4a · The credit
+- The Credit field (`usernameField`) is kept in localStorage (`uv.credit.v1`,
+  appEvents) on every edit and filled from it at start (Ruby: "persist
+  forever"). It is never part of a look (vault.js `NOT_PART_OF_A_LOOK`).
+
 ### 5.4b · A surface's own hues
 - Up to six (ROADMAP L0; Ruby: "always use as many user inputs as humanly
   possible and set the defaults to being what I expect them to be"):

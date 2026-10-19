@@ -46554,7 +46554,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Ymir';
+const RELEASE = 'Saturn–Loge';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -47391,7 +47391,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · 345134c";
+const STAMP = "2026-10-19 · 22fd61a";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -55201,6 +55201,15 @@ $('textureSeedReroll').addEventListener('click', ()=>{
 });
 $('usernameCorner').addEventListener('change', scheduleRender);
 $('spellMark').addEventListener('change', scheduleRender);
+// THE CREDIT IS KEPT (Ruby: "save the username/credit in the local storage so the user doesn't have to keep entering it.
+// It should persist forever"): whatever is typed is kept in this browser, and every visit starts with it. It is never
+// part of a look (vault.js NOT_PART_OF_A_LOOK), so no preset, spell or shared look changes it; clearing the field clears it.
+const CREDIT_KEY = 'uv.credit.v1';
+if($('usernameField') && $('usernameField').addEventListener){
+  const keepCredit = () => { try { localStorage.setItem(CREDIT_KEY, String($('usernameField').value || '').slice(0, 120)); } catch(e){} };
+  $('usernameField').addEventListener('input', keepCredit); $('usernameField').addEventListener('change', keepCredit);
+  try { const k = typeof localStorage === 'undefined' ? null : localStorage.getItem(CREDIT_KEY); if(k != null && !$('usernameField').value) $('usernameField').value = k; } catch(e){}
+}
 
 $('poemText').addEventListener('input', ()=>{
   clearTimeout(state.ui.poemTimer);
