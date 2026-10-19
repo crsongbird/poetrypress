@@ -1047,6 +1047,51 @@ export const TEXTURE_CHAINS = {
       [133, 1, 132, 3], [3, 1, 134, paramPort('spikes', 'dots')], [4, 1, 134, paramPort('spikes', 'count')], [5, 1, 134, paramPort('spikes', 'length')],
       [132, 1, 135, 1], [14, 1, 135, 2], [134, 1, 135, 3], [135, 1, 136, 1], [12, 1, 136, 2], [134, 3, 136, 3], [136, 1, 137, 1], [134, 1, 137, 2],
       [14, 1, 137, 3], [7, 1, 137, paramPort('glow', 'strength')], [137, 1, 138, 1]] },
+  // ── Liminal Spaces (ROADMAP §2 L3): the Room Caster and general parts; docs/prior-art/liminal-spaces.md ──
+  liminal: { label: 'Liminal Spaces', div: 2, teach: 'An empty place made for passing through, after the liminal spaces of the internet (the Backrooms, the poolrooms, Kane Pixels’ found footage, Jared Pike’s Dream Pools, The Exit 8): nobody there, everything familiar and a little off, the end of it lost in the dark. The Room Caster builds it and casts it as a ray-caster does. The seed picks the kind of place (a lobby of stripes and drop ceiling, a concrete warehouse, maintenance tunnels, the poolrooms, a hotel corridor, a school hallway after hours, a hospital corridor, a subway passage of white tile, a parking garage, a dead mall, an office after hours), lays it out (a long corridor with doors and a turn into the dark, an open plan of stubs and pillars, a maze, a hall of pools), hangs its lights (some missing, some dead) and stands the camera in it. It hands on grey maps, as a renderer does: which surface each point is, how far, the light reaching it, each surface’s pattern, the lamps, the water, each face’s shade. A Gradient Map in bands colours each surface its own hue; Blend multiplies in the pattern and the light (a Gradient Map from the Dark Hue to the Light Hue) and lays the water in the Accent Hue; the lamps are screened in and bloom (Glow); a haze swallows the far end; Film Grain and a Chromatic Offset (the seed’s, now and then) give it a camcorder’s grade. The Camera Dial turns the camera from where the seed looks, tips it down, and zooms. Try: Failing Lights high and Haze high, for a corridor nobody has walked in years.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                                                                                        // 1
+      ['knob', { slot: '2', name: 'Ceiling', def: 50 }, 40, 150],                                                                                     // 2
+      ['knob', { slot: '3', name: 'Width', def: 50 }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4', name: 'Lights', def: 60 }, 40, 370],                                                                                      // 4
+      ['knob', { slot: '5', name: 'Failing Lights', def: 25 }, 40, 480],                                                                              // 5
+      ['knob', { slot: '6', name: 'Haze', def: 30 }, 40, 590],                                                                                        // 6
+      ['knob', { slot: '7', name: 'Grain', def: 35 }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8', name: 'Strangeness', def: 30 }, 40, 810],                                                                                 // 8
+      ['camdial', {}, 40, 920],                                                                                                                       // 9
+      ['hue', { slot: '1', name: 'Wall Hue' }, 40, 1030],                                                                                             // 10
+      ['hue', { slot: '2', name: 'Floor Hue' }, 40, 1140],                                                                                            // 11
+      ['hue', { slot: '3', name: 'Ceiling Hue' }, 40, 1250],                                                                                          // 12
+      ['hue', { slot: '4', name: 'Accent Hue' }, 40, 1360],                                                                                           // 13
+      ['hue', { slot: '5', name: 'Light Hue' }, 40, 1470],                                                                                            // 14
+      ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1580],                                                                                             // 15
+      ['roomcaster', {}, 260, 40],                                                                                                                    // 16
+      ['gradmap', { stops: 5, blend: 'bands' }, 480, 40],                                                                                             // 17
+      ['blend', { mode: 'multiply', opacity: 100 }, 700, 40],                                                                                         // 18
+      ['blend', { mode: 'normal', opacity: 85 }, 920, 40],                                                                                            // 19
+      ['gradmap', { stops: 2 }, 700, 150],                                                                                                            // 20
+      ['maprange', { inLo: 0, inHi: 85, outLo: 6, outHi: 100 }, 480, 150],                                                                            // 21
+      ['blend', { mode: 'multiply', opacity: 100 }, 1140, 40],                                                                                        // 22
+      ['maprange', { outLo: 0, outHi: 100 }, 480, 260],                                                                                               // 23
+      ['blend', { mode: 'multiply', opacity: 100 }, 1360, 40],                                                                                        // 24
+      ['blend', { mode: 'screen', opacity: 100 }, 1580, 40],                                                                                          // 25
+      ['glow', { radius: 18, aura: 70, strength: 60, auraK: 35, core: 50 }, 1800, 40],                                                                // 26
+      ['mix', { t: 18 }, 260, 150],                                                                                                                   // 27
+      ['maprange', { inLo: 15, inHi: 100, outLo: 0, outHi: 60, '~outHi': '0,100' }, 480, 370],                                                        // 28
+      ['blend', { mode: 'normal', opacity: 100 }, 2020, 40],                                                                                          // 29
+      ['grain', { size: 160, contrast: 120, kind: 33 }, 40, 1690],                                                                                    // 30
+      ['blend', { mode: 'overlay', opacity: 35, '~opacity': '0,80' }, 2240, 40],                                                                      // 31
+      ['chroma', { amount: 10, '~amount': '0,30', angle: 0, edge: 30 }, 2460, 40],                                                                    // 32
+      ['random', { lo: 0, hi: 100 }, 40, 1800],                                                                                                       // 33
+      ['surface', { name: 'Liminal Spaces', ground: 'colour' }, 2680, 40]],                                                                           // 34
+    wires: [[1, 1, 16, paramPort('roomcaster', 'reach')], [2, 1, 16, paramPort('roomcaster', 'ceiling')], [3, 1, 16, paramPort('roomcaster', 'width')],
+      [4, 1, 16, paramPort('roomcaster', 'lights')], [5, 1, 16, paramPort('roomcaster', 'failing')], [8, 1, 16, paramPort('roomcaster', 'strange')],
+      [9, 1, 16, 1], [9, 2, 16, 2], [9, 3, 16, 3], [16, 1, 17, 1], [15, 1, 17, 2], [11, 1, 17, 3], [12, 1, 17, 4], [10, 1, 17, 5], [13, 1, 17, 6],
+      [17, 1, 18, 1], [16, 4, 18, 2], [18, 1, 19, 1], [13, 1, 19, 2], [16, 6, 19, 3], [16, 3, 21, 1], [21, 1, 20, 1], [15, 1, 20, 2], [14, 1, 20, 3],
+      [19, 1, 22, 1], [20, 1, 22, 2], [16, 7, 23, 1], [22, 1, 24, 1], [23, 1, 24, 2], [24, 1, 25, 1], [14, 1, 25, 2], [16, 5, 25, 3], [25, 1, 26, 1],
+      [16, 5, 26, 2], [14, 1, 26, 3], [15, 1, 27, 1], [14, 1, 27, 2], [16, 2, 28, 1], [6, 1, 28, paramPort('maprange', 'outHi')], [26, 1, 29, 1],
+      [27, 1, 29, 2], [28, 1, 29, 3], [29, 1, 31, 1], [30, 1, 31, 2], [7, 1, 31, paramPort('blend', 'opacity')], [31, 1, 32, 1],
+      [33, 1, 32, paramPort('chroma', 'amount')], [32, 1, 34, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
       ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2

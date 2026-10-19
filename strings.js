@@ -240,6 +240,7 @@ export const UI_STRINGS = {
   'option.blackhole':                         "Black Hole",
   'option.pixelspace':                        "Pixel Space",
   'option.webb':                              "Webb Sky",
+  'option.liminal':                           "Liminal Spaces",
   'option.scrying_pool':                      "Scrying Pool",
   'option.fractal_moon':                      "Fractal Moon",
   'option.bottom_left':                        "Bottom Left",

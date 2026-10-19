@@ -1691,6 +1691,16 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
       lines.push({ pts, bold }); }
     return lines;
   }
+  if(kind === 'room'){
+    // (Liminal Spaces' camera, as the Room Caster takes it: Turn turns it from where the seed looks, View tips it down from
+    //  level, Zoom narrows it; the horizon, the floor's lines running to the vanishing point and its crossing lines)
+    const pitch = -(1 - Math.min(1, Math.max(0, cam.view)/100))*0.75, fov = 75*Math.PI/180/Math.max(0.25, cam.zoom/100), f = aspX/2/Math.tan(fov/2);
+    const turn = ((((cam.turn + 180) % 360) + 360) % 360 - 180)*Math.PI/180, cx = aspX/2, hy = aspY/2 + Math.tan(pitch)*f, vx = cx - Math.tan(Math.max(-1.2, Math.min(1.2, turn)))*f;
+    lines.push({ pts: [[0, hy], [aspX, hy]], bold: true });
+    for(let k = -6; k <= 6; k++) lines.push({ pts: [[vx, hy], [vx + k*aspX*0.35, aspY*3]], bold: k === 0 });
+    for(let k = 1; k <= 6; k++){ const y = hy + (aspY - hy + 0.3)*Math.pow(k/6, 2); if(y > hy + 0.01) lines.push({ pts: [[0, y], [aspX, y]], bold: false }); }
+    return lines;
+  }
   if(kind === 'ellipse'){
     // (Ring in the Sky's ring, as it is drawn from the dial: Turn spins it, View raises the eye, Zoom sizes it; the
     //  band's two edges and its walls' inner edges, the far half bold)

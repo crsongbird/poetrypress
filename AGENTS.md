@@ -233,6 +233,7 @@ default.
 |---|---|
 | `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes. Touch: also the glass (Scratches, Smudges, Window Reflection, Shatter, Glass Pane) |
+| `stepsRoom.js` | Liminal Spaces' Room Caster (`ROOM_STEPS`): a ray-cast empty interior of eleven kinds, handed on as grey buffers (surface, depth, light, pattern, lamps, water, shade) |
 | `stepsRing.js` | the Painted Ringworld's parts (`RING_STEPS`): The Arch (`rgPaintArch`) and Land on the Ring (`rgPaintLand`), seen through Ringworld's own camera (`ringCamera`) in a painter's curved perspective, with the Worlds (`RG_WORLDS`, `RG_PROF`) and their painted things |
 | `stepsPatterns.js` | general pattern parts (`PATTERN_STEPS`): Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh (`patDelaunay`), Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum; Split and Merge HSB and Lab, Median (`patRank`), Map Switch, Flip, Perspective, Rotate and Scale (`patResample`) |
 | `chains.js` | the textures rebuilt as graphs of parts (`TEXTURE_CHAINS`, each with its TEACH) |
@@ -1297,6 +1298,15 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     Smudge and Motion Blur read angles from the right (0° = +x); the dial
     reads from the top. Convert with clamped Math, as the chain does:
     (dial − ¼) + (dial < ¼)·(dial + ¾).
+- **Liminal Spaces** (chain `liminal`; one process part, `roomcaster`,
+  stepsRoom.js; prior art docs/prior-art/liminal-spaces.md):
+  - The seed picks one of eleven kinds (ROOM_KINDS, weighted), its layout
+    (corridor, open plan, maze, hall, pools, garage), lamps and camera.
+  - Its light is a light map spread through open cells only, so it never
+    leaks through walls. Colour is the graph's: a banded Gradient Map of
+    Surface, then Pattern, Light, Lamps, haze, grain.
+  - The camera dial looks round; its guide ('room') is the horizon and the
+    floor's lines. No light dial: the lamps are the light.
 - **Webb Sky** (chain `webb`; one process part, `spikes`, genSpikes in
   stepsGenerative.js; docs/prior-art/space-scenes.md part B): smooth, never posterized. The
   seed picks globules, cliffs, a shell, smoke, or a deep field. Every kind

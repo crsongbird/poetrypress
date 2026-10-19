@@ -107,6 +107,14 @@ export const TEXTURE_PARAMS = {
                   {key:'dither', label:'Dither', min:0, max:100, def:40, unit:''},
                   {key:'swirl', label:'Swirl', min:0, max:100, def:50, unit:''},
                   {key:'bands', label:'Bands', min:0, max:100, def:45, unit:''}],
+  liminal:        [{key:'reach', label:'Reach', min:0, max:100, def:50, unit:''},
+                  {key:'ceiling', label:'Ceiling', min:0, max:100, def:50, unit:''},
+                  {key:'width', label:'Width', min:0, max:100, def:50, unit:''},
+                  {key:'lights', label:'Lights', min:0, max:100, def:60, unit:''},
+                  {key:'failing', label:'Failing Lights', min:0, max:100, def:25, unit:''},
+                  {key:'haze', label:'Haze', min:0, max:100, def:30, unit:''},
+                  {key:'grain', label:'Grain', min:0, max:100, def:35, unit:''},
+                  {key:'strange', label:'Strangeness', min:0, max:100, def:30, unit:''}],
   webb:           [{key:'amount', label:'Dust', min:0, max:100, def:55, unit:''},
                   {key:'streaming', label:'Streaming', min:0, max:100, def:45, unit:''},
                   {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
@@ -616,6 +624,10 @@ export const TEXTURE_CAPS = {
   // (pixel-art space: every colour a hue, defaults those of Ruby's own pixel nebula; the light dial lights the rims and the worlds)
   pixelspace:    { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
                    tintLabels:['Deep Sky Hue','Mid Sky Hue','Nebula Hue','Rim Hue','World Hue','Starlight Hue'], tintDefaults:['#0E0726','#3A1C78','#E2367F','#46A8E6','#9A6BE0','#FFF4FA'] },
+  // (liminal spaces: every colour a hue, defaults the teal-grey of Ruby's reference; the camera dial looks round the place)
+  liminal:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], tints:6,
+                   tintLabels:['Wall Hue','Floor Hue','Ceiling Hue','Accent Hue','Light Hue','Dark Hue'], tintDefaults:['#7FA0A2','#6E8486','#5E7476','#8FA9AA','#E8F4F6','#050A0C'],
+                   camera:{ turn:0, view:100, zoom:100, guide:'room' } },
   // (Webb's false colour: every colour a hue, defaults its orange dust and blue stars; the light dial lights the dust and streams it)
   webb:          { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
                    tintLabels:['Deep Sky Hue','Dust Shadow Hue','Dust Hue','Dust Light Hue','Starlight Hue','Ionized Gas Hue'], tintDefaults:['#04050E','#3A1406','#C2581A','#FFC774','#A9C4FF','#3E5CC8'] },
@@ -847,6 +859,8 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
     result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
   } else if(type === 'corvids'){
     result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
+  } else if(type === 'liminal'){
+    result = genChain(type, w, h, light, extra, tint1 || '#7FA0A2', tint2 || '#6E8486');   // (chains.js)
   } else if(type === 'webb'){
     result = genChain(type, w, h, light, extra, tint1 || '#04050E', tint2 || '#3A1406');   // (chains.js)
   } else if(type === 'pixelspace'){
