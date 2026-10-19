@@ -486,6 +486,10 @@ export const TEXTURE_PARAMS = {
  * light), or use the dial as a direction or a place (wind, flow, rain, a breath, where a circle stands), and keep theirs.
  * A graph from the Athanor turns unless it holds one of LIGHT_KEPT_PARTS.
  */
+/** THE SURFACE'S OWN HUES (ROADMAP L0, Ruby: "always use as many user inputs as humanly possible"): up to six pickers,
+ *  `caps.tints` how many a surface uses, `tintLabels`/`tintDefaults` in that order. The first two are the old Hue and
+ *  Second Hue fields; the four more have ids of their own (the 3rd–8th tints already being the material and light hues). */
+export const SURFACE_HUE_KEYS = ['textureTint1', 'textureTint2', 'textureTint9', 'textureTint10', 'textureTint11', 'textureTint12'];
 export const LIGHT_TURNED = new Set(['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'metalleaf', 'brushstrokes',
   'glassrain', 'rainwater', 'sigils', 'crackedglaze', 'oldpaper', 'crystal', 'spangle', 'tessellate', 'cards', 'linen', 'coldpress', 'cupring', 'guilloche',
   'chladni', 'contour', 'stainedglass', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']);
@@ -1078,7 +1082,7 @@ function describeRequest(type, w, h, opts){
             + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (rig ? `_L${rigKey(rig)}` : '')
-            + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '')
+            + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '') + (Array.isArray(opts.hues) && opts.hues.some(Boolean) ? `_hu${opts.hues.map(h => h || '').join(',')}` : '')
             + (blend ? `_b${blendFamily(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
@@ -1120,7 +1124,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
+    { knobs: extra.knobs, tints: [tint1, tint2, ...(extra.hues || [])], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
       channel: ATHANOR_CHANNELS.includes(extra.channel) && extra.channel !== 'final' ? extra.channel : null, aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -1145,7 +1149,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null },
+  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2, ...(extra.hues || [])], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -1161,6 +1165,9 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
 // its own grid, its sliders read across their own ranges (the graph's bound
 // params, '@k2[10,700]', read the slider's own value back).
 const chainGraphs = new Map();
+/** A chain's hues, slots 1–6: the two pickers, then the four more a surface may ask for (ROADMAP L0), each its default
+ *  when empty. */
+const chainHues = (td, t1, t2, more) => [t1 || td[0], t2 || td[1], ...[0, 1, 2, 3].map(i => ((more || [])[i]) || td[i + 2])];
 function genChain(type, w, h, light, extra, tint1, tint2){
   const chain = TEXTURE_CHAINS[type];
   if(!chainGraphs.has(type)) chainGraphs.set(type, athanorStarter(type));
@@ -1170,14 +1177,14 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   const td = (TEXTURE_CAPS[type] || {}).tintDefaults || [];
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
-    const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
+    const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
       accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true,
       text: chain.poem && extra.text ? poemLines(extra.text) : '', aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 1) }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
-  const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: [tint1 || td[0], tint2 || td[1]], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
+  const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
@@ -1238,7 +1245,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

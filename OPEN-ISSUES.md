@@ -8,13 +8,14 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- SIX HUES: a surface may now ask for up to six pickers (none does yet; the new surfaces will). Their order on the page
+  is the two hue pickers, then the four more, then the fifth hue and the light hues. Right?
 - THE DIAL'S REACH: the handle now rides the ring at 100% (it had stopped at about half the ring's radius), past it to
   the dashed circle; the curls scale with the light's height; crossing shadows mix to white. Was that the range lost?
 - THE DIAL'S GUIDE: a sun, an impact, a circle, a disc, arrows or lines over the page while the light dial moves, held
   until the picture lands. Clear enough on a busy picture?
 - THE BLACK HOLE ON THE CAMERA DIAL (Turn, View, Zoom; a wireframe of its disc while it moves), its light dial gone.
   Right? Its wireframe stands at the page's middle; the hole's own place is the seed's.
-- FEATHERS (sheet sent; branch `feathers`): ships on Ruby's yes. Which of the four readings, which sliders are missing?
 - THE STARTERS AND SURFACE STUDIES ON THE PAGE: in the Surface menu now, under 🜈 Athanor Starters and 🜍 Surface
   Studies (choosing one puts its graph on the page, its knobs on the sliders; the dice pass over them). Which studies
   read right, and what is each missing ("The surface studies are... hmmm.")? Orbit Script, Transmutation Engine and
@@ -34,8 +35,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   guide over the preview with the keyboard kept up. Enough preview, enough poem?
 
 ## 2 · Ruby's notes to act on
-- NEW SURFACES ASKED FOR: pixel-art space, James Webb, liminal spaces, five florals, feathers, surfaces to blend
-  (ROADMAP §2 L, with what each reference image shows).
+- NEW SURFACES (ROADMAP §2 L, Ruby's rules and what each reference image shows): Feathers with corvids, the four light
+  overlays (approved: rebuild as graphs, then ship); Pixel Space and Webb (seeded variety); liminal spaces (prior art);
+  the florals (imprints, bouquets, wilting and petals, an idyllic meadow, macro bokeh).
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
   everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,

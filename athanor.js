@@ -268,8 +268,8 @@ export function athanorHues(graph){
   const out = [], reach = athanorReach(graph);
   for(const n of Object.values(athanorFlat(graph).nodes)){
     if(n.name !== 'hue' || !reach.has(String(n.id))) continue;
-    const d = n.data || {}, slot = Math.max(1, Math.min(2, parseInt(d.slot, 10) || 1));
-    if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : 'Dark Hue')).slice(0, 24) });
+    const d = n.data || {}, slot = Math.max(1, Math.min(6, parseInt(d.slot, 10) || 1));   // (up to six: ROADMAP L0)
+    if(!out.find(h => h.slot === slot)) out.push({ slot, label: String(d.name || (slot === 1 ? 'Light Hue' : slot === 2 ? 'Dark Hue' : 'Hue ' + slot)).slice(0, 24) });
   }
   // (an Emotional Seed of the page's hues reads both pickers: the second calm, the first fierce; a Hue's own name wins)
   for(const n of Object.values(athanorFlat(graph).nodes)) if(n.name === 'feeling' && (n.data || {}).mood === 'page hues' && reach.has(String(n.id)))

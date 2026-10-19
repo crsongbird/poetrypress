@@ -342,6 +342,17 @@ Other parts of a look:
   thumbnails, step previews on or off) live in localStorage, **never** in a
   look.
 
+### 5.4b · A surface's own hues
+- Up to six (ROADMAP L0; Ruby: "always use as many user inputs as humanly
+  possible and set the defaults to being what I expect them to be"):
+  `caps.tints` says how many, `tintLabels` and `tintDefaults` name and seed
+  them in order. They live in `SURFACE_HUE_KEYS` (textureGenerators.js):
+  the first two are `textureTint1`/`textureTint2`, the four more
+  `textureTint9`–`textureTint12` (3–8 are the material, fifth and light
+  hues). Requests carry the four as `opts.hues`; a chain's Hue parts read
+  slots 1–6 (`chainHues`); a graph shows a picker per Hue slot it reaches.
+- A new surface puts every colour it draws on a hue, never a fixed colour.
+
 ### 5.5 · Light
 - The ☉/🜚 dial sets a direction and a height (`textureLight`,
   `textureLightTilt`). `lightVec` scales by height.
@@ -1155,8 +1166,16 @@ the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
 5. Render it, time it.
 
 **Add a texture**
-1. Build it as a chain of parts (above). A standalone `genX` only if it
-   truly can't be.
+0. **Look up the prior art first, for anything Ruby asks to be generated**
+   (Ruby: "looking up prior art tends to give you ideas for what to make,
+   and also how to make it unique"). Research what exists (art, photography,
+   games, generators, techniques), write it up with sources in
+   docs/prior-art (one file per subject, as `docs/prior-art/liminal-spaces.md`), and design from it: the kinds the seed
+   chooses among, what makes each recognizable, and what this app can do
+   that the others don't. Never wait to be asked.
+1. Build it as a chain of parts (above), general parts with at most one new
+   process part (ROADMAP §2 L, §J). A whole-picture part is not allowed.
+   Every colour on a hue input, the seed giving real variety.
 2. Measure in canonical pixels. Draw on `document.createElement('canvas')`
    with no other DOM (it runs in a worker). No `Path2D` or `isPointInPath`:
    use plain geometry, as `apertureOutline` does.

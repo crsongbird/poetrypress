@@ -24,7 +24,7 @@ export const WIKI_PARTS = {
     see: ['controls', 'ranges', 'part:number'],
   },
   hue: {
-    line: 'Brings one of the surface’s two hue pickers into the graph as a color.',
+    line: 'Brings one of the surface’s hue pickers (up to six) into the graph as a color.',
     about: 'The page has two hue pickers under Surface (Light Hue and Dark Hue). A Hue part hands the chosen color to the graph, so the person using your surface can recolor it without opening the Athanor.',
     outs: { colour: 'The color chosen in that picker.' },
     set: { slot: 'Which picker: 1 (usually the light hue) or 2 (the dark hue).', name: 'The picker’s label on the page.' },

@@ -44,7 +44,7 @@ import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, ASPECTS, SIZE_LIMITS, DE
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { applyEscapes, tokenizeInline, buildLines } from './textParsers.js';
 import { render, scheduleRender, invalidateTextMeasurements, setRenderScale, resetBackBuffer, resolvedPoemText, textLayoutNow, graphUsesPoem, measureTextGround, SURFACE_BLENDS, surfaceFromDom, setSurfaceSource, athanorTitleOf, pageEnvNow, fontIndexByName, boxNow } from './canvasRenderer.js';
-import { LIGHT_TURNED, LIGHT_KEPT_PARTS, paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox, layerLights } from './textureGenerators.js';
+import { LIGHT_TURNED, LIGHT_KEPT_PARTS, SURFACE_HUE_KEYS, paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox, layerLights } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
 import { applyTheme, savedTheme, DEFAULT_THEME } from './theme.js';
@@ -82,7 +82,7 @@ const murmur = createMurmur({ enabled: false });
  */
 const state = {
   page: { align: 'left', valign: 'center', aspect: '9:16', bgStops: 2, textStops: 2, exportW: 0, exportH: 0 },
-  ui:   { tintBySystem: false, tintFollows: [true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
+  ui:   { tintBySystem: false, tintFollows: [true, true, true, true, true, true], poemTimer: null, palette: [], pickingField: null, zoom: 1, fullPreview: false, saving: false, previewMeasured: false, element: null, edits: 0 },
   locks: new Set(),
   // SURFACE LAYERS: which one the controls show (upper or lower), the other one's settings (a layer: the
   // upper's own keys), its locks, and its reading and hue-following; see the surface layers section
@@ -175,7 +175,7 @@ const LOCKABLE = [
   'textColorHex','textColor2Hex','textColor3Hex','textColor4Hex',
   'accent1ColorHex','accent2ColorHex','borderColorHex',
   'fontFamily','textureType','textureOpacity','textureBlend','textureLight','cameraTurn',
-  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','textureTint7Hex','textureTint8Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
+  'textureTint1Hex','textureTint2Hex','textureTint3Hex','textureTint4Hex','textureTint5Hex','textureTint6Hex','textureTint7Hex','textureTint8Hex','textureTint9Hex','textureTint10Hex','textureTint11Hex','textureTint12Hex','texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','textureSeedValue',
 ];
 // …and EVERY slider and menu in the four making tabs (Ruby: all sliders can lock),
 // found in the markup, so a new one is lockable the day it is added
@@ -356,10 +356,10 @@ toggleSubblock('textureToggle','textureBlock');
 // trades the two whole, locks included.
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureRim', 'textureRimTilt', 'textureAmbient', 'textureTint7', 'textureTint8',
-  'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
+  'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureTint9', 'textureTint10', 'textureTint11', 'textureTint12', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
   'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
-  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex']);
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex', 'textureTint9Hex', 'textureTint10Hex', 'textureTint11Hex', 'textureTint12Hex']);
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
 /** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
@@ -369,7 +369,7 @@ function freshLower(){
     textureRim: String(RIM_DEFAULT.deg), textureRimTilt: String(RIM_DEFAULT.tilt), textureAmbient: '100', textureTint7: RIM_DEFAULT.hex + '00', textureTint8: '#FFFFFF',
     textureSeed: ((parseInt($('textureSeedValue').value, 10) || 0) ^ 0x5bd1e995) >>> 0, textureSeedWords: '', forgeGraph: '' };
   defs.forEach((d, i) => { L['texP' + (i + 1)] = String(d.def); });
-  (caps.tintDefaults || []).forEach((c, i) => { L['textureTint' + (i + 1)] = c === 'accent1' ? $('accent1ColorHex').value : c === 'accent2' ? $('accent2ColorHex').value : c; });
+  (caps.tintDefaults || []).forEach((c, i) => { if(SURFACE_HUE_KEYS[i]) L[SURFACE_HUE_KEYS[i]] = c === 'accent1' ? $('accent1ColorHex').value : c === 'accent2' ? $('accent2ColorHex').value : c; });
   return L;
 }
 /** The controls show the other layer, and the one they showed waits (its locks with it, the reading it wears
@@ -774,7 +774,7 @@ function poemAltText(){
     return { type: t, name: surfaceNameOf(t, L.forgeGraph), reading: reading && !reading.isDefault ? reading.name : null, element: reading ? reading.element : null,
       opacity: +L.textureOpacity || 0, blend: L.textureBlend,
       knobs: defs.map((d, i) => ({ label: d.label, value: +L['texP' + (i + 1)], min: d.min, max: d.max })),
-      hues: [L.textureTint1, L.textureTint2].slice(0, caps.tints || 0),
+      hues: SURFACE_HUE_KEYS.map(k => L[k]).slice(0, caps.tints || 0),
       light: caps.light && !caps.dial ? { deg: +L.textureLight || 0, tilt: +L.textureLightTilt } : null };
   };
   return describeLook({
@@ -1100,7 +1100,7 @@ function retireBaseLayer(s){
   // (a grey surface was made on the ground of its own first blend when the chosen one wasn't made for it)
   if(caps.ground === 'grey' && !caps.blends.includes(L.textureBlend) && blendFamily(L.textureBlend) !== blendFamily(caps.blends[0])) L.textureGround = caps.blends[0];
   defs.forEach((d, i) => { L['texP' + (i + 1)] = String(i === 0 && s.baseP1 !== undefined ? s.baseP1 : i === 1 && s.baseP2 !== undefined ? s.baseP2 : d.def); });
-  (caps.tintDefaults || []).forEach((c, i) => { L['textureTint' + (i + 1)] = c === 'accent1' ? a1 : c === 'accent2' ? a2 : c; });
+  (caps.tintDefaults || []).forEach((c, i) => { if(SURFACE_HUE_KEYS[i]) L[SURFACE_HUE_KEYS[i]] = c === 'accent1' ? a1 : c === 'accent2' ? a2 : c; });
   const out = { ...s, baseLayer: L };
   for(const k of ['baseType', 'baseP1', 'baseP2', 'baseOpacity', 'baseBlend']) delete out[k];
   return out;
@@ -1263,6 +1263,10 @@ function restoreSurfaceDetails(s){
     putCamera(s.cameraTurn !== undefined ? s.cameraTurn : d.turn, s.cameraView !== undefined ? s.cameraView : d.view, s.cameraZoom !== undefined ? s.cameraZoom : d.zoom); }
   if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
   if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
+  if(s.textureTint9) setColorField('textureTint9Hex', s.textureTint9);
+  if(s.textureTint10) setColorField('textureTint10Hex', s.textureTint10);
+  if(s.textureTint11) setColorField('textureTint11Hex', s.textureTint11);
+  if(s.textureTint12) setColorField('textureTint12Hex', s.textureTint12);
   // material hues: white (none) unless the look carries them
   setColorField('textureTint3Hex', s.textureTint3 || '#FFFFFF');
   setColorField('textureTint4Hex', s.textureTint4 || '#FFFFFF');
@@ -1724,6 +1728,7 @@ function applyPreset(p){
     // following the accents, so changing an accent later won't replace it
     if(p.textureTint1){ setColorField('textureTint1Hex', p.textureTint1); state.ui.tintFollows[0] = false; }
     if(p.textureTint2){ setColorField('textureTint2Hex', p.textureTint2); state.ui.tintFollows[1] = false; }
+    [9, 10, 11, 12].forEach((n, i) => { if(p['textureTint' + n]){ setColorField('textureTint' + n + 'Hex', p['textureTint' + n]); state.ui.tintFollows[i + 2] = false; } });
     setColorField('textureTint3Hex', p.textureTint3 || '#FFFFFF');
     setColorField('textureTint4Hex', p.textureTint4 || '#FFFFFF');
     setColorField('textureTint5Hex', p.textureTint5 || hue5Default(p.textureType || $('textureType').value));
@@ -2291,9 +2296,11 @@ function syncTextureTools(resetToDefaults){
 
   const t1 = $('tint1Row'), t2 = $('tint2Row');
   // a hue the texture doesn't use is HIDDEN, as an unused slider is (Ruby)
-  ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row','tint7Row','tint8Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
+  ['tint1Row','tint2Row','tint3Row','tint4Row','tint5Row','tint6Row','tint7Row','tint8Row','tint9Row','tint10Row','tint11Row','tint12Row'].forEach(id => { const r = $(id); if(r && r.classList) r.classList.remove('tool-off'); });
   if(t1) t1.classList.toggle('tool-hidden', caps.tints < 1);
   if(t2) t2.classList.toggle('tool-hidden', caps.tints < 2);
+  [9, 10, 11, 12].forEach((n, i) => { const r = $('tint' + n + 'Row'); if(r && r.classList) r.classList.toggle('tool-hidden', (caps.tints || 0) < i + 3);
+    setLabelText($('tint' + n + 'Label'), (caps.tintLabels || [])[i + 2] || 'Hue ' + (i + 3)); });
   // material hues, for lit textures that are coloured (not the grey ones that blend)
   ['tint3Row', 'tint4Row'].forEach(id => { const r = $(id); if(r) r.classList.toggle('tool-hidden', !caps.material); });
   if(resetToDefaults){ setColorField('textureTint3Hex', '#FFFFFF'); setColorField('textureTint4Hex', '#FFFFFF'); setColorField('textureTint6Hex', '#FFFFFF'); }
@@ -2324,9 +2331,10 @@ function syncTextureTools(resetToDefaults){
     state.ui.tintBySystem = true;
     setColorField('textureTint1Hex', resolve(defs[0], '#7A2B2B'));
     if(caps.tints >= 2) setColorField('textureTint2Hex', resolve(defs[1], '#8A6A3C'));
+    for(let i = 2; i < Math.min(6, caps.tints); i++) setColorField(SURFACE_HUE_KEYS[i] + 'Hex', resolve(defs[i], '#808080'));
     state.ui.tintBySystem = false;
     // a freshly defaulted tint follows its source until you pick one by hand
-    state.ui.tintFollows[0] = state.ui.tintFollows[1] = true;
+    state.ui.tintFollows = [true, true, true, true, true, true];
   }
 }
 
@@ -2338,9 +2346,9 @@ function syncTextureTools(resetToDefaults){
 function followAccents(){
   const caps = capsFor($('textureType').value);
   const defs = caps.tintDefaults || [];
-  const ids = ['textureTint1Hex', 'textureTint2Hex'];
+  const ids = SURFACE_HUE_KEYS.map(k => k + 'Hex');
   let changed = false;
-  for(let i = 0; i < Math.min(caps.tints || 0, 2); i++){
+  for(let i = 0; i < Math.min(caps.tints || 0, 6); i++){
     const src = defs[i] === 'accent1' ? 'accent1ColorHex' : defs[i] === 'accent2' ? 'accent2ColorHex' : null;
     if(!src || !state.ui.tintFollows[i] || state.locks.has(ids[i])) continue;
     state.ui.tintBySystem = true;
@@ -2352,10 +2360,10 @@ function followAccents(){
   const O = state.layers.other, ou = state.layers.otherUi;
   if(O && ou && O.textureType){
     const oc = capsFor(O.textureType), od = oc.tintDefaults || [];
-    for(let i = 0; i < Math.min(oc.tints || 0, 2); i++){
+    for(let i = 0; i < Math.min(oc.tints || 0, 6); i++){
       const src = od[i] === 'accent1' ? 'accent1ColorHex' : od[i] === 'accent2' ? 'accent2ColorHex' : null;
-      if(!src || !ou.follows[i] || (state.layers.otherLocks || []).includes(ids[i]) || O['textureTint' + (i + 1)] === $(src).value) continue;
-      O['textureTint' + (i + 1)] = $(src).value; changed = true;
+      if(!src || !ou.follows[i] || (state.layers.otherLocks || []).includes(ids[i]) || O[SURFACE_HUE_KEYS[i]] === $(src).value) continue;
+      O[SURFACE_HUE_KEYS[i]] = $(src).value; changed = true;
     }
   }
   if(changed) scheduleRender();
@@ -2795,6 +2803,7 @@ function keepGround(ground){
 // choosing a tint yourself stops it following the accents
 bindColorField('textureTint1Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[0] = false; scheduleRender(); });
 bindColorField('textureTint2Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[1] = false; scheduleRender(); });
+[9, 10, 11, 12].forEach((n, i) => bindColorField('textureTint' + n + 'Hex', ()=>{ if(!state.ui.tintBySystem) state.ui.tintFollows[i + 2] = false; scheduleRender(); }));
 bindColorField('textureTint3Hex', ()=>scheduleRender());
 bindColorField('textureTint4Hex', ()=>scheduleRender());
 bindColorField('textureTint5Hex', ()=>scheduleRender());
@@ -3323,7 +3332,7 @@ function applyElement(id){
     }
     (v.k || []).forEach((x, i) => { const d = defs[i], el = $('texP' + (i + 1)); if(!d || !el) return;
       el.value = String(Math.max(d.min, Math.min(d.max, x))); fire(el); });
-    (v.t || []).slice(0, caps.tints || 0).forEach((hex, i) => { setColorField('textureTint' + (i + 1) + 'Hex', hex); state.ui.tintFollows[i] = false; });
+    (v.t || []).slice(0, Math.min(6, caps.tints || 0)).forEach((hex, i) => { setColorField(SURFACE_HUE_KEYS[i] + 'Hex', hex); state.ui.tintFollows[i] = false; });
     if(v.t5 && caps.hue5) setColorField('textureTint5Hex', v.t5);
     if(v.blend && caps.blends.includes(v.blend)){ $('textureBlend').value = v.blend; fire($('textureBlend')); }
     // (a reading's light, set before the handle became the light, turned half round where its surface's light turned)
@@ -3738,7 +3747,7 @@ function applyAthanorGraph(redraw = true){
     return { key: 'k' + (i + 1), label: k ? k.label : 'Knob ' + (i + 1), min: 0, max: 100, def: k ? k.def : 50, unit: '', ...(k ? knobKind(k) : {}), ...(top ? {} : { hidden: true }) }; });
   const caps = TEXTURE_CAPS.athanor;
   if(caps){ caps.tints = hues.length ? Math.max(...hues.map(h => h.slot)) : 0;
-    caps.tintLabels = [1, 2].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : 'Dark Hue'));
+    caps.tintLabels = [1, 2, 3, 4, 5, 6].map(sl => (hues.find(h => h.slot === sl) || {}).label || (sl === 1 ? 'Light Hue' : sl === 2 ? 'Dark Hue' : 'Hue ' + sl));
     // THE CAMERA DIAL for a graph whose Camera Dial reaches its Surface (Ruby: it never appeared for one). A graph that
     // is a menu texture's chain, by name, starts where that texture's camera starts; its wireframe guide only where it
     // is a plane's (a ring's or an ellipse's guide reads the texture's own sliders)

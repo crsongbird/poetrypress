@@ -253,5 +253,10 @@ check('a Note makes nothing and breaks nothing', run([node(5, 'note', { text: 'h
   const red = im => im.r.reduce((a, v) => a + v, 0)/im.r.length - im.b.reduce((a, v) => a + v, 0)/im.b.length;
   check('…the Weather of Feeling starter: one Knob (Feeling) drives it all; turned up, the picture reddens and its contrast grows',
     C.athanorKnobs(C.athanorStarter('weather')).map(k => k.label).join() === 'Feeling' && red(weather(100)) > red(weather(0)) + 0.1 && spread(weather(100)) > spread(weather(0))); }
+// UP TO SIX HUES (ROADMAP L0, Ruby: "always use as many user inputs as humanly possible"): a Hue part reads slots 1–6; a
+// graph whose Hue reads the fifth puts five pickers on the page, the fifth named as its part says
+{ const g5 = graph([node(3, 'hue', { slot: '5', name: 'Star Hue' }), node(2, 'tint', {}, { 1: [9, 1], 2: [3, 1], 3: [3, 1] }), node(9, 'noise', {}), node(99, 'surface', { ground: 'colour' }, { 1: [2, 1] })]);
+  const hues = C.athanorHues(g5), im = C.evalAthanor(g5, 8, 8, { seed: 1, tints: ['#000000', '#000000', '#000000', '#000000', '#FF0000', '#000000'] }, {});
+  check('a Hue part reads the fifth of six hues, and the page shows that picker by its name', hues.length === 1 && hues[0].slot === 5 && hues[0].label === 'Star Hue' && im && im.r[0] > 0.9 && im.g[0] < 0.1); }
 console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

@@ -1155,7 +1155,7 @@ function pmlVarContext(W, H){
   const seed = parseInt(L.textureSeed, 10) || 0;
   const hex = n => String(L['textureTint' + n] || '');
   const hues = [];
-  for(let i = 0; i < Math.min(2, caps.tints || 0); i++) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Second Hue' : 'Hue'), hex: hex(i + 1) });
+  for(let i = 0; i < Math.min(6, caps.tints || 0); i++) hues.push({ label: (caps.tintLabels || [])[i] || (i ? 'Hue ' + (i + 1) : 'Hue'), hex: hex([1, 2, 9, 10, 11, 12][i]) });
   // the material hues and the fifth, when they are in use (not their "none")
   if(caps.material) [[3, 'Specular Hue'], [4, 'Shadow Hue']].forEach(([n, label]) => { if(hex(n) && hex(n).toUpperCase() !== '#FFFFFF') hues.push({ label, hex: hex(n) }); });
   const lit = caps.diffuse || caps.rig || type === 'athanor';
@@ -1315,6 +1315,8 @@ export function surfaceFromDom(){
     cameraTurn: v('cameraTurn'), cameraView: v('cameraView'), cameraZoom: v('cameraZoom'),
     textureTint1: v('textureTint1Hex'), textureTint2: v('textureTint2Hex'), textureTint3: v('textureTint3Hex'),
     textureTint4: v('textureTint4Hex'), textureTint5: v('textureTint5Hex'), textureTint6: v('textureTint6Hex'),
+    // (a surface's third to sixth hues: ROADMAP L0)
+    textureTint9: v('textureTint9Hex'), textureTint10: v('textureTint10Hex'), textureTint11: v('textureTint11Hex'), textureTint12: v('textureTint12Hex'),
     // the page's lights (ROADMAP C1, C2): the rim light, the light dial's second handle; the Ambient slider; their hues
     textureRim: v('textureRim'), textureRimTilt: v('textureRimTilt'), textureAmbient: v('textureAmbient'), textureTint7: v('textureTint7Hex'), textureTint8: v('textureTint8Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
@@ -1351,6 +1353,8 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const tints = shape ? shape.tints : caps.tints;
   const tint = (n, on) => on ? (L['textureTint' + n] || null) : null;
   const tint1 = tint(1, tints >= 1), tint2 = tint(2, tints >= 2), tint3 = tint(3, caps.material), tint4 = tint(4, caps.material);
+  // (its third to sixth hues, where it has them: ROADMAP L0)
+  const hues = tints > 2 ? [9, 10, 11, 12].map((n, i) => tint(n, tints >= i + 3)) : undefined;
   // (the Main Light Hue: a surface's Diffuse Hue, or the page's light's colour where the page's lights reach it)
   const tint5 = tint(5, !!caps.hue5), tint6 = tint(6, !!caps.diffuse || !!caps.rig || type === 'athanor');
   // the page's lights: the rim light, the Ambient slider and hue (a surface they reach, or a graph)
@@ -1385,7 +1389,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const around = slot !== 'base' || !L.textureTextBlend ? (L.textureTextAware !== false && L.textureShapeAware ? strength : 0) : 0;
     layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S, ...(around ? { around, text: TEXT_LAYOUT } : {}) }));   // (tint5: the airglow's own colour)
   } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
-    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera }));
+    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera }));
   } else {
     // (an Athanor surface carries its graph: the worker makes it from that)
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
@@ -1402,7 +1406,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
     // (the curves drawn under Surface, for a graph with a Curve Control: '' is the control's own Default)
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 

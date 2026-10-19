@@ -82,7 +82,7 @@ const STEP_PARTS = {
   knob:     { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6','7','8']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
     STEP_SEL('kind', 'Kind', ['slider', 'steps', 'angle', 'switch']), [...STEP_R('steps', 'Steps', 3, 2, 12).slice(0, 4), { min: 2, max: 12, when: 'kind:steps' }],
     ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]] },
-  hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2']), ['name', 'Name', 'text', 'Light Hue']] },
+  hue:      { cat: 'Inputs', label: 'Hue', ins: [], outs: ['colour'], params: [STEP_SEL('slot', 'Hue', ['1','2','3','4','5','6']), ['name', 'Name', 'text', 'Light Hue']] },
   glowhue:  { cat: 'Inputs', label: 'Glow Hue', ins: [], outs: ['colour'], params: [] },
   dial:     { cat: 'Inputs', label: 'Light Dial', ins: [], outs: ['direction', 'height'], params: [] },
   camdial:  { cat: 'Inputs', label: 'Camera Dial', ins: [], outs: ['turn', 'view', 'zoom'], params: [] },
@@ -262,7 +262,7 @@ export function stepDistance(mask, ww, wh){
  */
 export const STEP_DOCS = {
   knob: 'One of the 8 surface sliders on the page, as a number: wire it into a setting to move that setting from the page.',
-  hue: 'Brings one of the surface’s two hue pickers into the graph as a color.',
+  hue: 'Brings one of the surface’s hue pickers (up to six) into the graph as a color.',
   glowhue: 'Brings the surface’s Glow Hue into the graph: a color for light that seems to come from inside the surface.',
   pours: 'Pools of poured liquid that spread and merge, as a map of how much liquid is where.',
   meniscus: 'Gives poured liquid its surface: a flat top, a rounded edge and lumps where it is thick.',

@@ -14,6 +14,7 @@
 import { readFileSync } from 'fs';
 
 const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 // anchor on the LAST occurrence: an older comment further up the file also
 // contains the words "MOBILE LAYOUT", and matching that one swept the whole
 // media query into the slice and produced false positives
@@ -85,8 +86,12 @@ check('download button declares a z-index', zDl !== null);
 // positioned within that frame rather than against the viewport — a stray
 // viewport-anchored `top` is what made it vanish below the clipped frame.
 const dlRule = (mobile.match(/body\.is-mobile \.download-btn\{[^}]*\}/) || [''])[0];
-check('the download button is positioned inside the preview frame',
-  /position:absolute/.test(dlRule) && /bottom:7px/.test(dlRule) && /top:auto/.test(dlRule));
+// (one check for both halves: its markup follows the canvas, in the frame, and its rule places it there; the reset
+//  button sits between them, so their order is not what matters)
+check('the download button sits inside the preview frame, placed against it, not the viewport',
+  /position:absolute/.test(dlRule) && /bottom:7px/.test(dlRule) && /top:auto/.test(dlRule)
+  && (() => { const canvasAt = html.indexOf('<canvas id="poemCanvas"'), btn = html.indexOf('<button class="download-btn"');
+              return canvasAt !== -1 && btn > canvasAt && html.lastIndexOf('<div', canvasAt) !== -1; })());
 check('only one rule positions the download button on mobile',
   (mobile.match(/body\.is-mobile \.download-btn\{/g) || []).length === 1);
 
@@ -96,7 +101,6 @@ check('tab-bar clearance is padded onto .controls, which is what scrolls',
   /body\.is-mobile\s+\.controls\s*\{[^}]*padding-bottom:\s*calc\([^)]*--tabbar-h/.test(mobile));
 
 // --- the three bugs from the phone screenshots ---
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 // 1. No viewport meta = Android Chrome assumes ~980px and scales everything
 //    down to roughly a third size. This was the "text is tiny" root cause.
@@ -153,12 +157,6 @@ check('preview height comes from a keyboard-stable variable',
   /--vvh-stable/.test(mobile));
 check('--vvh-stable is only written while the keyboard is closed',
   /if\(!keyboard\)\s*root\.style\.setProperty\('--vvh-stable'/.test(js));
-// the reset button now sits between the canvas and the download button;
-// what matters is that both live inside the preview frame, not their order
-check('the download button sits inside the preview frame',
-  (() => { const canvasAt = html.indexOf('<canvas id="poemCanvas"'), btn = html.indexOf('<button class="download-btn"');
-           const frameOpen = html.lastIndexOf('<div', canvasAt);
-           return canvasAt !== -1 && btn > canvasAt && frameOpen !== -1; })());
 check('the preview has a reset-position control', html.includes('id="resetViewBtn"'));
 check('focus mode hides every panel except the one kept',
   /\.focus-mode \.card\[data-tab\]:not\(\.focus-keep\)\{[^}]*display:none/.test(mobile));
