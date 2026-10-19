@@ -8,6 +8,8 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- A RELOAD KEEPS THE LOOK: an empty poem no longer starts fresh (that was the opening look, the default theme and every
+  slider new); the surface and sliders come back with the page empty, and ⟲ is the fresh start. Right?
 - THE SURFACE MENU'S GROUPS, REARRANGED: Burnt Letter and Cup Ring to Paper & Grounds; Veins of Light and Moss on Stone
   to Grown & Generated; Knotwork to Pattern & Order; Light, Sparks & Dust is now Light, Dust & Feathers (the two
   feathers were there); the Paving Stones and Brick Wall starters to Materials & Craft; the Packet Rain study to Screens
@@ -30,7 +32,17 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - A FAIRY now and then (Ruby: "both Hyrule Field and the wind waker need an occasional fairy showing up from the
   game"): small, a glowing nod and never the character itself, in the Meadow and the Windward Sea, and in Macro Bloom
   as a visitor at a 1-in-66 chance (small).
-- MACRO BLOOM: the bugs a little smaller on the flowers.
+- MACRO BLOOM (Ruby, 2026-10-19: "beautiful, but it's difficult to figure out what sliders actually do"): framed with
+  the camera dial, with a guide on the page; one Aperture slider for the bokeh (two sliders do the same thing now); a
+  physically accurate focal plane, as the other focal blur has, on the GPU; every slider one clear thing, the same each
+  time; insects rare, smaller, at most two, placed with care and lit as everything else is (and the bugs a little
+  smaller, the 1-in-66 fairy, above).
+- SUNRISE SCROLL (branch `ink`): Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
+  seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a
+  village of roofs and gates, fields under a great tree, a cursed land under red miasma.
+- THE GPU (Ruby: "implement most of these things on the GPU to accelerate rendering as much as inhumanly possible"):
+  only the Light Engine's shadow march, occlusion and shine run on the GPU; blur, focal blur, warp, blend, posterize,
+  Scatter and the rest of a graph run on the CPU. Move them (PERFORMANCE-AUDIT, ROADMAP).
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
   everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,

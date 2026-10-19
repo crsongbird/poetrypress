@@ -47,7 +47,7 @@ import { render, scheduleRender, noteUserActivity, TYPING_SETTLE_MS, invalidateT
 import { LIGHT_TURNED, LIGHT_KEPT_PARTS, SURFACE_HUE_KEYS, paramsFor, capsFor, paramReadout, clearTextureCache, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, textureKeyFor, peekTexture, athanorSheetLayout, graphUsesBackdrop, graphUsesBox, layerLights } from './textureGenerators.js';
 import { seedPhrase, seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
-import { applyTheme, savedTheme, DEFAULT_THEME } from './theme.js';
+import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
 import { moonPhase, moonGlyph, moonGlyphURI, phaseName } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
@@ -4405,15 +4405,23 @@ function restoreDraft(){
   let d = null;
   try { d = typeof localStorage === 'undefined' ? null : JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch(e){ return false; }
   if(!d || typeof d !== 'object' || typeof d.poem !== 'string') return false;
-  if(!d.poem.trim()){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} applyTheme(DEFAULT_THEME); return false; }
-  if(d.poem === WELCOME_POEM) return false;
+  // the look comes back whatever the poem is: an empty page, or the welcome still in it, is no reason to lose a surface
+  // someone chose (the controls showed the welcome's while the browser put back the old values: Ruby, 2026-10-19)
   // a look that fails the check is passed over quietly (no dialog at start-up); one that throws is rolled back by safeRestore
   if(!checkLook(d.look, 'The draft').ok || !safeRestore(d.look, 'The draft')) return false;
   try { restoreShape(d.look); } catch(e){ /* the default shape stands */ }
-  $('poemText').value = d.poem; repaintEditor();
+  if(d.poem !== WELCOME_POEM){ $('poemText').value = d.poem; repaintEditor(); }
   return true;
 }
 try { restoreDraft(); } catch(e){ /* a draft never stops the app opening: the welcome page stands */ }
+// THE BROWSER'S OWN MEMORY OF THE CONTROLS: on a reload a browser may put back the controls' last values by itself,
+// after the app has set them and without an event (Ruby saw one surface's slider names over another's values, the
+// other drawn). Once the page has loaded, the controls are read as they stand and put back through the app's own
+// path, so the names, readouts and hues agree with what is drawn.
+function reconcileControls(){ try { restoreSettings(serializeCurrentSettings()); scheduleRender(); } catch(e){ /* the page stands as it is */ } }
+if(typeof window !== 'undefined' && window.addEventListener){
+  window.addEventListener('load', reconcileControls, { once: true });
+  window.addEventListener('pageshow', e => { if(e && e.persisted) reconcileControls(); }); }
 // every way a poem or look changes passes through one of these (typing, sliders, presets, the
 // Grimoire, spells, JSON, undo); the save reads the page as it is when the moment is up
 for(const type of ['input', 'change', 'click', 'keydown']) document.addEventListener(type, saveDraftSoon, true);

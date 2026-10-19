@@ -284,6 +284,11 @@ Easter eggs).
 - **Lit from maps** (Ruby, 2026-10-19): albedo, height, gloss, translucency (and facing for objects), lit by the Light
   Engine, never drawn already lit (AGENTS §8, step 1b; docs/prior-art/lit-maps.md).
 
+- **C9 · The graph on the GPU** (Ruby, 2026-10-19: "as much as inhumanly possible"): today only the Light Engine's
+  shadow march, occlusion and shine run on WebGL2. Next, in order of what they cost: blur and the focal blur (a
+  physically accurate focal plane, for Macro Bloom and the other focal blur), warp and displace, blend and mix, levels,
+  posterize and gradient maps, then Scatter's stamping. A pass stays on the GPU between parts (no read-back between
+  them) wherever the next part also runs there.
 - **L5 · Love letters to video games** (Ruby, 2026-10-19: "I am a game dev first after all"). Each nods to a look,
   never copies a character, a logo or a name; prior art researched for real first (AGENTS §8, step 0); lit from maps.
   - **Where they live:** what is plainly a console's or a machine's look (a handheld's four greens, a CRT arcade, PS1
