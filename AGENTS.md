@@ -650,15 +650,26 @@ Other parts of a look:
     (direction and height; `caps.lowLight` lets it past the rim).
   - Use them creatively where it stays intuitive (Ringworld: the light dial
     is the time of day).
-  - **The sun's guide** (`drawSunGuide`; Ruby: "a sun position guide that
-    shows up on the image also before the render"): while the light dial
-    moves, a sun over the page where the light comes from, at once: the
-    Painted Ringworld's where it will stand in the picture
-    (`ringSunGuide`, an arrow at the edge when out of the frame); any other
-    surface lit by the dial at the dial's place stretched onto the page,
-    turned against a camera that turns the ground; the rim light's in the
-    second accent. Not for a dial that is a wind, a flow or the day. But every control on a dial must do what its
-    handle suggests: a turn that changes nothing is worse than no dial.
+  - **The dial's guide** (`drawDialGuide`; Ruby: "anytime we use a light
+    dial as a position selector or a light selector we need some kind of
+    indicator of where on screen we are positioning a thing before the
+    render"): while the light dial moves, what it places is drawn over the
+    page at once, and stays until the new picture has landed
+    (`holdGuideUntilMade` waits on `texturesSettled`; the camera's
+    wireframe does the same). The marks, per surface (`DIAL_GUIDES`,
+    `dialGuideMarks`, places by `dialGuidePlace`):
+    - *sun*: any surface lit by the dial, at the dial's place stretched
+      onto the page (`pageSunAt`), turned against a camera that turns the
+      ground; the Painted Ringworld's through its camera (`ringSunGuide`);
+      the rim light's in the second accent.
+    - *impact* (Crackle: where its cracks burst from), *place* (Transmutation
+      Circle: its centre and size), *disc* (Black Hole: how its disc is
+      seen), *arrow* (wind, rain, a flow, a run of pigment: its heading),
+      *axis* (hatching, breaths, aurora rays: their line).
+    - A new surface whose dial places or heads something adds its entry to
+      `DIAL_GUIDES` (check it against a render: the guide must match the
+      picture). Every control on a dial must do what its handle suggests: a
+      turn that changes nothing is worse than no dial.
   - Done: Lichtenberg, Ringworld, Broken Glass, Scrying Pool, Dune Ripples,
     Moss on Stone. Waiting: ROADMAP C5.
 - **The oblique camera's turn and lens** (texCore `obliqueFrame(ww, wh,

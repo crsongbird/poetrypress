@@ -159,6 +159,20 @@ check('a preset turns the lower surface off (it never leaks from one look to the
   check('…overhead at the middle, near the page\'s edge at the dial\'s rim, and further out as the handle goes out',
     Math.abs(mid.x - 0.5) < 1e-9 && Math.abs(mid.y - aspY/2) < 1e-9 && rim.x > 0.94 && rim.x < 1 && pageSunAt(327, 30, aspX, aspY).y > at(327).y); }
 
+// THE DIAL'S GUIDE (Ruby: "anytime we use a light dial as a position selector or a light selector we need some kind of
+// indicator of where on screen we are positioning a thing before the render"): every surface the dial lights, places or
+// heads shows where, and each mark stands where the picture puts its thing
+{ const { dialGuideMarks, dialGuidePlace } = await import('../appEvents.js'), { TEXTURE_CAPS } = await import('../textureGenerators.js');
+  const bare = Object.keys(TEXTURE_CAPS).filter(t => (TEXTURE_CAPS[t].light || TEXTURE_CAPS[t].dial) && !dialGuideMarks(t).length && !['ringworld', 'landscape'].includes(t));
+  check('every surface the light dial lights, places or heads has a guide on the page' + (bare.length ? ': not ' + bare.join(', ') : ''), !bare.length);
+  const at = (t, deg, tilt, knobs) => dialGuidePlace(dialGuideMarks(t).find(m => m.k !== 'sun'), deg, tilt, 1, 1.5, knobs);
+  const rain = at('rainstreaks', 0, 100), still = at('snow', 90, 100, { wind: 0 }), blown = at('snow', 90, 100, { wind: 100 }), flow = at('flowfield', 90, 100);
+  check('…rain from a handle at the top falls down the page; still air lets snow fall straight down, and wind from the right blows it left; a flow runs toward the handle',
+    rain.dy > 0.99 && Math.abs(still.dx) < 1e-9 && still.dy > 0.99 && blown.dx < -0.5 && flow.dx > 0.99);
+  const imp = at('crackle', 315, 80), circ = at('summoning', 0, 0, { size: 100 }), corner = at('summoning', 135, 100, { size: 100 });
+  check('…Crackle\'s impact stands on the far side from the light; the Transmutation Circle in the middle at the dial\'s middle, at the page\'s corner at its rim',
+    imp.x > 0.5 && imp.y > 0.75 && Math.abs(circ.x - 0.5) < 1e-9 && Math.abs(circ.y - 0.75) < 1e-9 && Math.abs(corner.x - 1) < 1e-9 && Math.abs(corner.y - 1.5) < 1e-9); }
+
 // A SECTION SWITCHED OFF (Ruby: Border Options and Inset Box opened empty): its controls stay in view, faded, and the first
 // change made there by hand switches it on; the dice's and a loaded look's changes (not the person's) never do
 { const { eyeBlock } = await import('../appEvents.js'), box = reg['borderToggle'], block = reg['borderBlock'], card = { contains: () => true };

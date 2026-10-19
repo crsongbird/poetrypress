@@ -44408,7 +44408,7 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Thrymr';
+const RELEASE = 'Saturn–Aegir';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
@@ -45245,7 +45245,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · 3034921";
+const STAMP = "2026-10-19 · 7593bb2";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -54871,7 +54871,7 @@ function setRim(deg, tilt, commit){
 }
 /** The chosen light to (deg, tilt). */
 // (the dial's own moves show the sun's guide: held while dragging, a moment after a click, a key or a typed number)
-function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); drawSunGuide(true, !!commit); }
+function movePicked(deg, tilt, commit){ if(lightPick() === 'rim') setRim(deg, tilt, commit); else setLight(deg, tilt, commit); drawDialGuide(true, !!commit); }
 function pickedNow(){ if(lightPick() === 'rim'){ const R = rimNow(); return { deg: R.deg, tilt: R.tilt }; }
   const t = parseFloat(($('textureLightTilt') || {}).value); return { deg: parseFloat($('textureLight').value) || 0, tilt: isNaN(t) ? 100 : t }; }
 if($('lightSeg') && $('lightSeg').addEventListener) $('lightSeg').addEventListener('click', e => {
@@ -54901,7 +54901,7 @@ if($('lightDial') && $('lightDial').addEventListener){
   let dragging = false;
   dial.addEventListener('pointerdown', e => { dragging = true; if(dial.setPointerCapture) dial.setPointerCapture(e.pointerId); fromPointer(e, e.target && e.target.classList && e.target.classList.contains('ld-tick')); });
   dial.addEventListener('pointermove', e => { if(dragging) fromPointer(e, false); });
-  const end = () => { if(dragging){ dragging = false; drawSunGuide(false); if(typeof commitSoon === 'function') commitSoon(); } };
+  const end = () => { if(dragging){ dragging = false; drawDialGuide(false); if(typeof commitSoon === 'function') commitSoon(); } };
   dial.addEventListener('pointerup', end); dial.addEventListener('pointercancel', end);
   // keys: arrows turn it by 15°, page up/down raise and lower it
   dial.addEventListener('keydown', e => {
@@ -54913,7 +54913,7 @@ if($('lightDial') && $('lightDial').addEventListener){
 // ⟲ resets the chosen light (the rim light: off, back where it starts)
 if($('lightReset') && $('lightReset').addEventListener) $('lightReset').addEventListener('click', () => {
   if(lightPick() === 'rim'){ putRim(RIM_DEFAULT.deg, RIM_DEFAULT.tilt); setRimOn(false); syncLightPad(); scheduleRender(); if(typeof commitSoon === 'function') commitSoon(); return; }
-  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); drawSunGuide(true, true); });
+  setLight(LIGHT_DEFAULT.deg, LIGHT_DEFAULT.tilt, true); drawDialGuide(true, true); });
 // ◎ to the centre (overhead / the middle of the page), keeping the angle; ⚄ a
 // random angle, keeping the distance. Neither is sticky. Each moves the chosen light.
 if($('lightCentre') && $('lightCentre').addEventListener) $('lightCentre').addEventListener('click', () => movePicked(pickedNow().deg, 0, true));
@@ -54982,7 +54982,6 @@ function setCamera(turn, view, zoom, commit){
   if(commit && typeof commitSoon === 'function') commitSoon();
 }
 // THE GUIDE: the shot as lines over the page, at once, while the surface is still being made
-let camGuideT = 0;
 /** A guide's canvas over the page (made the first time), sized to it now; null where there is no page to draw over. */
 function guideCanvas(cls){
   const pc = $('poemCanvas'), wrap = pc && pc.parentElement;
@@ -55006,8 +55005,8 @@ function drawCameraGuide(on){
   const caps = capsFor(($('textureType') || {}).value) || {}, kind = caps.camera && caps.camera.guide;
   const G = kind ? guideCanvas('cam-guide') : null; if(!G) return;
   const g = G.g;
-  clearTimeout(camGuideT);
-  if(!on){ camGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
+  if(!on){ holdGuideUntilMade(g); return; }
+  g._seq = (g._seq || 0) + 1;
   const dpr = G.size(), x = g.getContext('2d'); if(!x) return;
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow();
   const type = ($('textureType') || {}).value, ring = ringGuideOf(kind, type, c);
@@ -55025,7 +55024,6 @@ function drawCameraGuide(on){
 // sun where it will stand in the picture (an arrow at the edge when it is out of the frame); any other lit surface's
 // light as a sun at the dial's place on the page (the middle overhead, the rim the page's edge), turned with the camera
 // where the camera turns the ground under it; the rim light's in its own colour
-let sunGuideT = 0;
 /** Whether the light dial is a light this surface shows from somewhere (not a wind, a flow, or the Ringworlds' day). */
 /** Where the light dial's light stands on a page aspX × aspY (the shorter side 1): its direction the dial's exactly,
  *  as far out as the handle (tilt 0..100: the middle to the page's edge along that way, a little inside it). */
@@ -55034,41 +55032,120 @@ function pageSunAt(deg, tilt, aspX, aspY){
   const reach = Math.min(Math.abs(dx) > 1e-9 ? aspX/2/Math.abs(dx) : Infinity, Math.abs(dy) > 1e-9 ? aspY/2/Math.abs(dy) : Infinity)*0.92;
   return { x: aspX/2 + dx*k*reach, y: aspY/2 + dy*k*reach };
 }
-function sunGuideKind(type){ const caps = capsFor(type) || {};
-  if(type === 'ringpaint') return 'ring';
-  if(type === 'landscape') return null;   // (its painted sun is the seed's: the dial lights only the paint's relief)
-  return caps.light && !caps.dirOnly && (!caps.dial || /Light|Sun/.test(caps.dial)) ? 'page' : null; }
-function drawSunGuide(on, linger){
-  const type = ($('textureType') || {}).value, kind = sunGuideKind(type), G = kind ? guideCanvas('sun-guide') : null; if(!G) return;
+/** WHAT THE LIGHT DIAL PLACES, for its guide (Ruby: "anytime we use a light dial as a position selector or a light
+ *  selector we need some kind of indicator of where on screen we are positioning a thing before the render"): a list of
+ *  marks, each drawn over the page at once while the dial moves and until the new picture has landed.
+ *   sun      the light, where it comes from (the dial laid on the page; the Painted Ringworld's through its camera)
+ *   impact   where Crackle's cracks burst from (on the far side from the light, as the Spreading Cracks part strikes)
+ *   place    where a thing stands (Transmutation Circle: its centre, by dialSquare, and its circle's size)
+ *   disc     how a disc is seen (Black Hole: turned by the dial's way, edge-on at its rim, face-on at its middle)
+ *   arrow    a heading the dial gives (wind, rain, a flow, a breath): `way` +1 toward the handle, −1 away from it
+ *   axis     a line the dial lays (hatching, field lines): along the handle's line, or across it (`across`)
+ *  (A surface whose dial is the day, Ringworld, has its camera's guide only.) */
+const DIAL_GUIDES = {
+  crackle:     [{ k: 'sun' }, { k: 'impact' }],
+  summoning:   [{ k: 'place' }],
+  blackhole:   [{ k: 'disc' }],
+  snow:        [{ k: 'arrow', fall: true }],                 // (the wind blows from the handle, the flakes fall with it: Wind is how far)
+  rainstreaks: [{ k: 'arrow', way: -1 }],                    // (the rain comes from the handle)
+  hatch:       [{ k: 'axis' }],                              // (strokes along the handle's line)
+  suminagashi: [{ k: 'axis' }],                              // (the breaths push both ways along it)
+  flowfield:   [{ k: 'arrow', way: 1 }],                     // (the current runs toward the handle)
+  aurora:      [{ k: 'arrow', way: 1 }],                     // (Hem Hue to Curtain Hue, toward the handle)
+  aurorasky:   [{ k: 'axis', lean: true }],                  // (the rays' tops lean toward the handle's side)
+  watercolour: [{ k: 'arrow', way: 1, tilted: true }],       // (the pigment runs toward the handle, more as it lowers)
+  ringworld:   [],
+  landscape:   [],     // (its painted sun is the seed's: the dial lights only the paint's relief)
+};
+function dialGuideMarks(type){
+  if(type === 'ringpaint') return [{ k: 'sun', ring: true }];
+  if(DIAL_GUIDES[type]) return DIAL_GUIDES[type];
+  const caps = capsFor(type) || {};
+  return caps.light && !caps.dirOnly && (!caps.dial || /Light|Sun/.test(caps.dial)) ? [{ k: 'sun' }] : [];
+}
+/** Where the guide marks stand on a page aspX × aspY (the shorter side 1), for a dial at deg, tilt (0–100+). */
+function dialGuidePlace(mark, deg, tilt, aspX, aspY, knobs = {}){
+  const a = (deg - 90)*Math.PI/180, hx = Math.cos(a), hy = Math.sin(a), k = Math.max(0, tilt)/100;
+  if(mark.k === 'impact') return { x: aspX*(0.5 - hx*0.38), y: aspY*(0.5 - hy*0.38) };
+  if(mark.k === 'place'){ const kk = Math.min(1, k), m = Math.max(Math.abs(hx), Math.abs(hy)) || 1;
+    return { x: aspX*(0.5 + hx/m*kk/2), y: aspY*(0.5 + hy/m*kk/2), r: 0.34*(knobs.size || 100)/100 }; }
+  if(mark.k === 'disc'){ const view = Math.min(1, k), elev = (13 + 77*(1 - view))*Math.PI/180, spin = ((((deg - 315 + 540) % 360) + 360) % 360 - 180)*Math.PI/180;
+    return { x: aspX/2, y: aspY/2, r: 0.2, flat: Math.sin(elev), turn: spin }; }
+  if(mark.k === 'arrow' || mark.k === 'axis'){ const s = mark.k === 'arrow' ? mark.way || 1 : 1;
+    let t = [hx*s, hy*s];
+    if(mark.fall){ const w = Math.max(0, Math.min(1, (knobs.wind ?? 50)/100)); t = [-hx*1.6*w, 1 - hy*1.6*w]; }   // (genSnow: gravity and the wind)
+    if(mark.lean) t = [0.35*hx, -1];                                                                         // (whimAurora: hem to top)
+    const m = Math.hypot(t[0], t[1]) || 1;
+    return { x: aspX/2, y: aspY/2, dx: t[0]/m, dy: t[1]/m, strength: mark.tilted ? Math.min(1, k) : 1 }; }
+  return null;
+}
+/** Keep a guide up until the picture it shows has been made (Ruby: "renders can take a long time even for simple
+ *  textures"), at least `min` ms after the last move, at most a minute; then fade it. A move meanwhile (`g._seq`) keeps it. */
+function holdGuideUntilMade(g, min = 700){
+  const seq = g._seq = (g._seq || 0) + 1, t0 = Date.now();
+  setTimeout(() => { if(seq !== g._seq) return;
+    let fired = false; const once = () => { if(fired || seq !== g._seq) return; fired = true;
+      setTimeout(() => { if(seq === g._seq) g.classList.remove('on'); }, Math.max(0, min - (Date.now() - t0))); };
+    texturesSettled().then(once); setTimeout(once, 60000); }, 140);   // (after the render has asked for its surface)
+}
+function drawDialGuide(on, linger){
+  const type = ($('textureType') || {}).value, marks = dialGuideMarks(type), G = marks.length ? guideCanvas('sun-guide') : null; if(!G) return;
   const g = G.g;
-  clearTimeout(sunGuideT);
-  if(!on){ sunGuideT = setTimeout(() => g.classList.remove('on'), 450); return; }
+  if(!on){ holdGuideUntilMade(g); return; }
+  g._seq = (g._seq || 0) + 1;
   const dpr = G.size(), x = g.getContext('2d'); if(!x) return;
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), caps = capsFor(type) || {};
   const cs = getComputedStyle(document.body), col = n => (cs.getPropertyValue(n) || '').trim();
-  const main = col('--accent') || '#E7A0B8', rimC = col('--accent-2') || '#9FD0E8';
+  const main = col('--accent') || '#E7A0B8', rimC = col('--accent-2') || '#9FD0E8', dark = 'rgba(0,0,0,.55)';
   // a light's place on the page: the Painted Ringworld's sun through its camera; else the dial laid on the page, its middle
   // the page's, in the dial's own direction exactly (Ruby: "light guide seems off": stretched to a tall page it stood
   // nearer upright than the dial), as far out as the dial's handle is, its rim at the page's edge along that way; turned
   // against a camera that turns the ground
   const turn = caps.camera && caps.camera.guide === 'plane' ? c.turn : 0;
-  const placeOf = (deg, tilt) => {
-    if(kind === 'ring'){ const p = ringSunGuide(aspX, aspY, ringGuideOf('ring', type, c), deg, tilt/100); return p ? { x: p.x, y: p.y, up: p.up } : null; }
+  const sunOf = (ring, deg, tilt) => {
+    if(ring){ const p = ringSunGuide(aspX, aspY, ringGuideOf('ring', type, c), deg, tilt/100); return p ? { x: p.x, y: p.y, up: p.up } : null; }
     return { ...pageSunAt(deg - turn, tilt, aspX, aspY), up: true }; };
-  const lights = [[parseFloat($('textureLight').value) || 0, parseFloat(($('textureLightTilt') || {}).value), main]];
+  const deg0 = parseFloat($('textureLight').value) || 0, t0 = parseFloat(($('textureLightTilt') || {}).value), tilt0 = isNaN(t0) ? 100 : t0;
+  const lights = [[deg0, tilt0, main]];
   if(lightsReach(type)){ const R = rimNow(); if(R.on || lightPick() === 'rim') lights.push([R.deg, R.tilt, rimC]); }
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
-  for(const [deg, t, colr] of lights){ const p = placeOf(deg, isNaN(t) ? 100 : t); if(!p) continue;
-    // (out of the frame: at its edge, with an arrow pointing out toward it)
-    const m = 0.045, ex = Math.max(m, Math.min(aspX - m, p.x)), ey = Math.max(m, Math.min(aspY - m, p.y)), out = ex !== p.x || ey !== p.y;
-    const X = ex*u, Y = ey*u, rs = u*0.022, rays = (len, w) => { for(let k = 0; k < 8; k++){ const a = k*Math.PI/4; x.lineWidth = w;
-      x.beginPath(); x.moveTo(X + Math.cos(a)*rs*1.6, Y + Math.sin(a)*rs*1.6); x.lineTo(X + Math.cos(a)*rs*len, Y + Math.sin(a)*rs*len); x.stroke(); } };
-    for(const pass of [0, 1]){ x.strokeStyle = pass ? colr : 'rgba(0,0,0,.55)'; x.fillStyle = pass ? colr : 'rgba(0,0,0,.55)'; x.globalAlpha = p.up ? 0.95 : 0.5;
-      const w = (pass ? 2 : 5)*dpr; x.lineWidth = w; x.beginPath(); x.arc(X, Y, rs, 0, Math.PI*2); pass ? x.fill() : x.stroke(); rays(2.6, w);
-      if(out){ const a = Math.atan2(p.y - ey, p.x - ex), tx = X + Math.cos(a)*rs*3.6, ty = Y + Math.sin(a)*rs*3.6;
-        x.beginPath(); x.moveTo(tx, ty); x.lineTo(tx - Math.cos(a - 0.5)*rs*1.4, ty - Math.sin(a - 0.5)*rs*1.4); x.moveTo(tx, ty); x.lineTo(tx - Math.cos(a + 0.5)*rs*1.4, ty - Math.sin(a + 0.5)*rs*1.4); x.stroke(); } } }
+  // each mark drawn twice: a dark halo, then its colour, so it reads on any picture
+  const twice = (fn, colr) => { for(const pass of [0, 1]){ x.strokeStyle = x.fillStyle = pass ? colr : dark; fn(pass, (pass ? 2 : 5)*dpr); } };
+  const head = (X, Y, a, len, w) => { x.lineWidth = w; x.beginPath(); x.moveTo(X, Y); x.lineTo(X - Math.cos(a - 0.45)*len, Y - Math.sin(a - 0.45)*len); x.moveTo(X, Y); x.lineTo(X - Math.cos(a + 0.45)*len, Y - Math.sin(a + 0.45)*len); x.stroke(); };
+  // (the knobs a mark needs, found by their labels: the Transmutation Circle's size, the snow's wind)
+  const knob = label => { const i = paramsFor(type).findIndex(q => q.label === label); const v = i < 0 ? NaN : parseFloat(($('texP' + (i + 1)) || {}).value); return isNaN(v) ? undefined : v; };
+  const knobs = { size: knob('Circle Size') ?? 100, wind: knob('Wind') };
+  for(const mark of marks){
+    if(mark.k === 'sun'){
+      for(const [deg, t, colr] of lights){ const p = sunOf(mark.ring, deg, isNaN(t) ? 100 : t); if(!p) continue;
+        // (out of the frame: at its edge, with an arrow pointing out toward it)
+        const m = 0.045, ex = Math.max(m, Math.min(aspX - m, p.x)), ey = Math.max(m, Math.min(aspY - m, p.y)), out = ex !== p.x || ey !== p.y;
+        const X = ex*u, Y = ey*u, rs = u*0.022;
+        x.globalAlpha = p.up ? 0.95 : 0.5;
+        twice((pass, w) => { x.lineWidth = w; x.beginPath(); x.arc(X, Y, rs, 0, Math.PI*2); pass ? x.fill() : x.stroke();
+          for(let q = 0; q < 8; q++){ const a = q*Math.PI/4; x.beginPath(); x.moveTo(X + Math.cos(a)*rs*1.6, Y + Math.sin(a)*rs*1.6); x.lineTo(X + Math.cos(a)*rs*2.6, Y + Math.sin(a)*rs*2.6); x.stroke(); }
+          if(out){ const a = Math.atan2(p.y - ey, p.x - ex); head(X + Math.cos(a)*rs*3.6, Y + Math.sin(a)*rs*3.6, a, rs*1.4, w); } }, colr); }
+      continue; }
+    const p = dialGuidePlace(mark, deg0, tilt0, aspX, aspY, knobs); if(!p) continue;
+    const X = p.x*u, Y = p.y*u; x.globalAlpha = 0.95;
+    if(mark.k === 'impact') twice((pass, w) => { const r = u*0.03; x.lineWidth = w; x.beginPath();
+      for(let q = 0; q < 6; q++){ const a = q*Math.PI/3 + 0.3; x.moveTo(X + Math.cos(a)*r*0.35, Y + Math.sin(a)*r*0.35); x.lineTo(X + Math.cos(a)*r*(q % 2 ? 1.6 : 1.1), Y + Math.sin(a)*r*(q % 2 ? 1.6 : 1.1)); }
+      x.stroke(); }, main);
+    else if(mark.k === 'place') twice((pass, w) => { const r = p.r*u, cr = u*0.025; x.lineWidth = w;
+      x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.setLineDash([u*0.02, u*0.015]); x.stroke(); x.setLineDash([]);
+      x.beginPath(); x.moveTo(X - cr, Y); x.lineTo(X + cr, Y); x.moveTo(X, Y - cr); x.lineTo(X, Y + cr); x.stroke(); }, main);
+    else if(mark.k === 'disc') twice((pass, w) => { const r = p.r*u; x.lineWidth = w; x.beginPath(); x.ellipse(X, Y, r, Math.max(r*0.04, r*p.flat), p.turn, 0, Math.PI*2); x.stroke();
+      x.beginPath(); x.arc(X, Y, r*0.18, 0, Math.PI*2); pass ? x.fill() : x.stroke(); }, main);
+    else if(mark.k === 'arrow' || mark.k === 'axis'){
+      // a heading or a line through the page's middle; three of them, the outer two fainter, as wind or hatching reads
+      const L = Math.min(aspX, aspY)*0.36*u, a = Math.atan2(p.dy, p.dx), nx = -p.dy, ny = p.dx;
+      for(const [off, al] of [[0, 0.95], [-0.22, 0.45], [0.22, 0.45]]){ x.globalAlpha = al*(0.45 + 0.55*Math.max(0.15, p.strength));
+        const cx = X + nx*off*u, cy = Y + ny*off*u, len = off ? L*0.7 : L;
+        twice((pass, w) => { x.lineWidth = w; x.beginPath(); x.moveTo(cx - p.dx*len, cy - p.dy*len); x.lineTo(cx + p.dx*len, cy + p.dy*len); x.stroke();
+          if(mark.k === 'arrow') head(cx + p.dx*len, cy + p.dy*len, a, u*0.04, w); }, main); } }
+  }
   x.globalAlpha = 1; g.classList.add('on');
-  if(linger) sunGuideT = setTimeout(() => g.classList.remove('on'), 900);
+  if(linger) holdGuideUntilMade(g, 900);
 }
 if($('cameraDial') && $('cameraDial').addEventListener){
   const dial = $('cameraDial'), ptrs = new Map();

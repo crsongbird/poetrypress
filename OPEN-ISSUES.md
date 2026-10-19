@@ -8,8 +8,9 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- THE HANDLE AS THE LIGHT: every surface lit from the handle's side, 🜚's spike (and the rim's) pointing the shadow's
-  way. Any surface that still reads backwards, or a reading or preset whose picture moved?
+- THE DIAL'S GUIDE: a sun, an impact, a circle, a disc, arrows or lines over the page while the light dial moves, held
+  until the picture lands. Clear enough on a busy picture? Black Hole's disc is drawn at the page's middle (its place is
+  the seed's).
 - THE STARTERS AND SURFACE STUDIES ON THE PAGE: in the Surface menu now, under 🜈 Athanor Starters and 🜍 Surface
   Studies (choosing one puts its graph on the page, its knobs on the sliders; the dice pass over them). Which studies
   read right, and what is each missing ("The surface studies are... hmmm.")? Orbit Script, Transmutation Engine and
@@ -29,12 +30,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   guide over the preview with the keyboard kept up. Enough preview, enough poem?
 
 ## 2 · Ruby's notes to act on
-- FOUR NEW SURFACES (asked for; one release each, sheets first):
-  - PIXEL-ART SPACE in Ruby's own style: nebulas, four-point sparkle stars, magenta / cyan / navy, a scene per seed.
-  - JAMES WEBB FALSE COLOUR: amber dusty clouds, blue stars with diffraction spikes; not Deep Field.
-  - LIMINAL SPACES: rooms and corridors, ceiling panels, their lighting; the camera pans.
-  - FLORALS, five: wilting, happy, a blurred parallax field, one adjustable flower, simple floral patterns. Real
-    species chosen by a slider; composition and depth by the seed.
+- NEW SURFACES ASKED FOR: pixel-art space, James Webb, liminal spaces, five florals, feathers, surfaces to blend
+  (ROADMAP §2 L, with what each reference image shows).
 - CARTOMANCY: the clutter and its lighting read as cartoony — light the
   table, cards and objects with the Light Engine (now a part). Scramble
   everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,

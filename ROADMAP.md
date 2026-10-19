@@ -219,6 +219,49 @@ Easter eggs).
 - **K3 · More nods** where a surface's own subject invites one (a wreck's
   hull markings, a black hole's accretion disk seen past a ringed planet).
 
+### L · New surfaces Ruby asked for (Stage 3; one release each, sheets first)
+
+Ruby sent a reference image with each. The images are not in the repo, so
+this is what each shows; build to it.
+
+- **L1 · Pixel-art space, in Ruby's own style** (the reference is Ruby's own
+  piece). A nebula band runs diagonally across a tall page. Its heart is
+  magenta and hot pink, with a small white spiral galaxy glowing at the
+  middle. Its edges are cyan and pale blue rims on deep blue. The ground is
+  deep navy shading to near-black purple. Stars are chunky pixel sparkles: a
+  few large 4-point crosses (one long axis pair, soft glow pixels round the
+  core) in pink, cyan and white, many 1–2 px dust stars. The palette is
+  limited (about 10–14 colours) and the pixels are big (the page drawn at
+  roughly 1/8–1/12 size and scaled up nearest-neighbour), with dithered
+  edges between bands. A thin magenta frame line. Many seeded scenes:
+  nebula shape, galaxy or none, star density. Not Deep Field's soft look.
+- **L2 · James Webb false colour.** A field of amber and burnt-orange dust:
+  clumps and streaks like rising embers or pillars, denser toward the bottom
+  and one corner, thinning into a near-black blue sky. A few bright blue
+  stars with JWST's diffraction spikes (six long spikes plus the short
+  horizontal pair), many tiny white and blue stars, little smudged galaxies
+  scattered through the dark. Distinct from Deep Field.
+- **L3 · Liminal spaces** (creepy, empty, built with the lighting): a bare
+  room seen straight on, teal-grey walls and ceiling, a square fluorescent
+  ceiling panel the only light, a doorway in the far wall onto a darker
+  corridor that recedes to black, a closed door on one side wall, a dark
+  opening on the other, baseboards, a faint sheen on the floor, film grain.
+  Seeded layouts of rooms and corridors (panels, doors, turns); the camera
+  dial pans and turns through the space; the light dial sets the panel
+  light. Very still.
+- **L4 · Florals, five surfaces** (the reference: a yellow wildflower meadow,
+  daisy-like flowers sharp in the foreground and soft in the distance, a
+  dirt path, pines, storm clouds and lightning over a bright sky):
+  wilting flowers; happy flowers; a blurred parallax field of flowers
+  (depth of field: near sharp, far soft); one adjustable flower; simple
+  floral patterns. Real species chosen by a slider; composition and depth
+  by the seed.
+- **L5 · Feathers** (Ruby: "simple textures of feathers with sliders that
+  control how much"): procedurally generated feathers in the background,
+  made to fade or blend with the page colour or a simple texture.
+- **L6 · More surfaces meant to be blended** with the page or with a simple
+  texture (transparent or mid-grey grounds that read well on any blend).
+
 ---
 
 ## 3 · Order of work: four stages, presets last (Ruby)
@@ -246,6 +289,7 @@ superseded) wait for Stage 4.
 - **J**: whole-texture parts taken apart (§2 J), each through compare.mjs and
   Ruby's approval when its look changes.
 - **K**: the Easter eggs still to place (§2 K).
+- **L**: Ruby's new surfaces (§2 L), one per release, each with its sheet.
 - **Rebuild the textures that aren't chains yet**, so every texture is a
   graph. The list (menu ids; test/hygiene keeps it the code's, so delete
   one here when it becomes a chain):
