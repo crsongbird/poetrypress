@@ -28,7 +28,7 @@ const html = src('index.html');
       && Object.keys(O.STUDY_GROUPS).every(n => O.TEXTURE_GROUPS.some(t => t.name === n) || n === O.STUDY_GROUP_EXTRA.name) && O.STUDY_GROUP_EXTRA.glyph === '🜳'); }
   check('the texture menu goes by TEXTURE_GROUPS (the same in the Athanor), each group at least three (but Yours), each headed by a Runology Archetype',
     textureGroups.length === O.TEXTURE_GROUPS.length && sizes.slice(0, -1).every(n => n >= 3) && O.TEXTURE_GROUPS.slice(0, -1).every((g, i) => g.types.length === sizes[i])
-    && O.TEXTURE_GROUPS.every(g => ['🜃','🜚','ᕕ','🜁','🝊','🜥','🜄','Ᏹ','🝓','🝆','⎐','🜉'].includes(g.glyph)));
+    && O.TEXTURE_GROUPS.every(g => ['🜃','🜚','ᕕ','🜁','🝊','🜥','ᘓ','🜄','Ᏹ','🝓','🝆','⎐','🜉'].includes(g.glyph)));
   check('…each group alphabetical', blocks.every(b => { const names = [...b.matchAll(/>([^<]+)<\/option>/g)].map(x => x[1].toLowerCase().replace(/'/g, ''));
     return names.every((n, i) => i === 0 || names[i - 1] <= n); }));
   check('…and the Basics are the Athanor\'s alone (hidden options, so old looks still open)',

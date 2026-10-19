@@ -102,6 +102,7 @@ const ORDER = [
   'stepsLight.js',        // the engine's own parts: Light Engine, Oil Paint, Canvas Weave, Paint Swipes
   'stepsRing.js',         // the Painted Ringworld's parts: The Arch, Land on the Ring
   'stepsRoom.js',         // Liminal Spaces' Room Caster
+  'stepsFlora.js',        // the floral surfaces' Bloom
   'stepsPatterns.js',     // general parts, second shelf: Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh, Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum, HSB and Lab, Median, Map Switch, Flip, Perspective
   'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain, Guilloché; Night City, Lotus Pond
   'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
@@ -170,7 +171,7 @@ if (!html.includes(js)) throw new Error('the bundle was not inlined verbatim');
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsPatterns.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsPatterns.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');

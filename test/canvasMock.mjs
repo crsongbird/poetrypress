@@ -37,6 +37,10 @@ export function makeMockContext(w, h){
                 // pixel and direction signals, so a knob that changes tone or
                 // angle rather than size is still detectable
                 pixelSum: 0, pixelVar: 0, pixelHash: 0, pathDx: 0, rotSum: 0, rotSigned: 0 };
+  // how big things are drawn when a part stamps a picture (drawImage after a
+  // scale): kept out of the enumerable stats so fingerprints taken before it
+  // existed still hold, and read only by the knob probe
+  Object.defineProperty(stats, 'scaleSum', { value: 0, writable: true, enumerable: false });
   const ctx = {
     canvas: { width: w, height: h },
     globalAlpha: 1,
@@ -66,7 +70,7 @@ export function makeMockContext(w, h){
       ctx._lastX = x; ctx._lastY = y;
     },
     ellipse(cx,cy,rx,ry,rot){ stats.arcs++; stats.radiusSum += (rx+ry)/2; assertFinite('ellipse', cx,cy,rx,ry,rot); },
-    scale(sx,sy){ assertFinite('scale', sx, sy); },
+    scale(sx,sy){ assertFinite('scale', sx, sy); stats.scaleSum += Math.abs(sx) + Math.abs(sy); },
     arc(cx,cy,r){
       stats.arcs++;
       stats.radiusSum += r;

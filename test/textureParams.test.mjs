@@ -32,7 +32,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
 // Saturn–Kiviuq on: the Painted Ringworld and Ring in the Sky joined Sky & Cosmos
-check('the picker offers 76 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 77 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
+check('the picker offers 81 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 82 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -49,7 +49,7 @@ check('every texture declares two params, plus an optional third that must be Fo
     || (t === 'ringpaint' && d.length === 8 && d[2].label === 'World' && d[5].key === 'alt' && d[7].label === 'Brush')
     || (t === 'skyring' && d.length === 7 && d[4].label === 'Star Height' && d[6].label === 'Brush')
     // (Corvid Feathers: eight, its Bird first; the light to lay over: three, or four)
-    || (t === 'corvids' && d.length === 8 && d[0].key === 'bird') || (t === 'pixelspace' && d.length === 8 && d[0].key === 'pixel') || (t === 'webb' && d.length === 8 && d[0].key === 'amount') || (t === 'liminal' && d.length === 8 && d[0].key === 'reach') || (['dappled', 'windowlight', 'caustics', 'lightleaks'].includes(t) && d.length === 3)
+    || (t === 'corvids' && d.length === 8 && d[0].key === 'bird') || (t === 'pixelspace' && d.length === 8 && d[0].key === 'pixel') || (t === 'webb' && d.length === 8 && d[0].key === 'amount') || (t === 'liminal' && d.length === 8 && d[0].key === 'reach') || (['imprints', 'bouquets', 'petals', 'meadow', 'macro'].includes(t) && d.length === 8) || (['dappled', 'windowlight', 'caustics', 'lightleaks'].includes(t) && d.length === 3)
     // (Feathers: eight, each how much of one thing, Lift last)
     || (t === 'feathers' && d.length === 8 && d[2].key === 'fluff' && d[7].key === 'lift')
     // (Under Glass: eight, each a thing the glass catches, Cracks and Edge last but one and last)
@@ -137,7 +137,8 @@ function probe(type, v1, v2){
   // the marks alone (no pixels), and where every written pixel's tone lies
   let lines = 0, hash = 0;
   for(const cv of M.createdCanvases){ const st = cv.getContext('2d')._stats; lines += st.radiusSum + st.pathLen + st.pathDx + st.rectArea/500; hash = (Math.imul(hash, 31) + (st.pixelHash || 0)) >>> 0; }
-  return { geo, lines, hash, dims: M.createdCanvases.map(x=>x.width+'x'+x.height).join(',') };
+  let scl = 0; for(const cv of M.createdCanvases) scl += cv.getContext('2d')._stats.scaleSum || 0;
+  return { geo, lines, hash, scl, dims: M.createdCanvases.map(x=>x.width+'x'+x.height).join(',') };
 }
 function movesWith(type, i){
   const d = TEXTURE_PARAMS[type];
@@ -149,7 +150,9 @@ function movesWith(type, i){
   const hi = i === 0 ? probe(type, a1, d[1].def) : probe(type, d[0].def, a1);
   return Math.abs(hi.geo - lo.geo) > Math.max(0.25, lo.geo * 0.002) || lo.dims !== hi.dims || lo.hash !== hi.hash
     // marks drawn and read back (a chain's parts) show only in their geometry: weigh it apart from the pixels
-    || Math.abs(hi.lines - lo.lines) > Math.max(0.25, lo.lines * 0.002);
+    || Math.abs(hi.lines - lo.lines) > Math.max(0.25, lo.lines * 0.002)
+    // pictures stamped at a size (a Scatter of Bloom's petals) show only in the scale they are drawn at
+    || Math.abs(hi.scl - lo.scl) > Math.max(0.25, lo.scl * 0.002);
 }
 // 'astral' is a composite assembled in canvasRenderer from astral_fog and
 // astral_stars; probing the composite name directly is meaningless, so its

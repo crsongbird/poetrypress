@@ -157,7 +157,12 @@ export const PATTERN_STEPS = {
       PAT_SEL('color', 'Mark Colors', ['white', 'from the picture']),
       // (COUNT FOR THE PAGE: Count marks on the whole page, however large it is drawn — stars in a sky, a few sparkles —
       //  where per area, as it always was, a bigger page holds more of them)
-      PAT_SEL('per', 'Count Is', ['per area', 'for the page'])],
+      PAT_SEL('per', 'Count Is', ['per area', 'for the page']),
+      // (A SHEET: a picture of 4, 8 or 16 different things in cells — Bloom's sheet — each mark one of them at random, so
+      //  a field is never clones; BLACK IS CLEAR: a picture drawn on black, as Bloom draws, stamps its shape, not its square)
+      PAT_SEL('sheet', 'Picture Is', ['one picture', 'a sheet of 4', 'a sheet of 8', 'a sheet of 16']),
+      // (SIZE ×: Size's range, made larger, for marks that are whole things — a fallen flower, a bouquet's heads)
+      PAT_R('big', 'Size ×', 100, 100, 400), PAT_SEL('ground', 'Picture’s Ground', ['solid', 'black is clear'])],
     cost: () => 3,
     doc: 'Scatters copies of a mark across the page (dots, stars, sigils, glyphs or any picture), each with its own size, turn, brightness and, if you like, color.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
@@ -166,7 +171,7 @@ export const PATTERN_STEPS = {
       const pic = shape === 'picture' || tinted ? asImage(input(n, 1)) : null, glyphs = shape === 'glyph' ? (PAT_GLYPHS[P(n, 'glyphs', 'mixed')] || PAT_GLYPHS.mixed) : null;
       // (SIZE BY POINT: a map on Size's ⚙ sizes each mark by the map where it lands; the heights' blur takes its average)
       const count = P(n, 'per', 'per area') === 'for the page' ? Math.round(num(n, 'count', 60)) : Math.min(20000, Math.round(num(n, 'count', 60)/100*180*carea/1e6)), SZ = E.map(n, 'size', 20);
-      const R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12;
+      const BIG = num(n, 'big', 100)/100, R0 = (typeof SZ === 'number' ? SZ : SZ.reduce((a, b) => a + b, 0)/SZ.length)/100*unit*0.12*BIG;
       const vary = num(n, 'vary', 50)/100, turn = num(n, 'turn', 100)/100, clump = num(n, 'clump', 0)/100, fade = num(n, 'fade', 30)/100;
       const mk = () => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); return [c, x]; };
       const [mc, mx] = mk(), [ic, ix] = mk();
@@ -179,8 +184,16 @@ export const PATTERN_STEPS = {
       const marks = [];
       // a picture to stamp, as a small canvas
       let stamp = null;
+      const clear = shape === 'picture' && P(n, 'ground', 'solid') === 'black is clear'; let stampMask = null, cut = null;
+      if(clear && pic){ cut = new Float32Array(N); for(let i = 0; i < N; i++){ const m = Math.max(pic.r[i], pic.g[i], pic.b[i]); cut[i] = Math.min(1, m*120); } }
       if(pic && shape === 'picture'){ const s = document.createElement('canvas'); s.width = ww; s.height = wh; const sx = s.getContext('2d', CPU), im = sx.createImageData(ww, wh);
-        for(let i = 0; i < N; i++){ im.data[i*4] = pic.r[i]*255; im.data[i*4 + 1] = pic.g[i]*255; im.data[i*4 + 2] = pic.b[i]*255; im.data[i*4 + 3] = 255; } sx.putImageData(im, 0, 0); stamp = s; }
+        for(let i = 0; i < N; i++){ im.data[i*4] = pic.r[i]*255; im.data[i*4 + 1] = pic.g[i]*255; im.data[i*4 + 2] = pic.b[i]*255; im.data[i*4 + 3] = cut ? Math.max(0, Math.min(255, cut[i]*255)) : 255; } sx.putImageData(im, 0, 0); stamp = s;
+        if(cut){ const t = document.createElement('canvas'); t.width = ww; t.height = wh; const tx = t.getContext('2d', CPU), tm = tx.createImageData(ww, wh);
+          for(let i = 0; i < N; i++){ tm.data[i*4] = tm.data[i*4 + 1] = tm.data[i*4 + 2] = 255; tm.data[i*4 + 3] = Math.max(0, Math.min(255, cut[i]*255)); } tx.putImageData(tm, 0, 0); stampMask = t; } }
+      const cellsN = { 'a sheet of 4': 4, 'a sheet of 8': 8, 'a sheet of 16': 16 }[P(n, 'sheet', 'one picture')] || 1, sheetCols = cellsN >= 16 ? 4 : cellsN >= 8 ? 4 : cellsN >= 4 ? 2 : 1, sheetRows = Math.max(1, Math.round(cellsN/sheetCols));
+      const cellW = ww/sheetCols, cellH = wh/sheetRows, cellAsp = cellH/cellW;
+      const stampAt = (ctx, img, m) => { if(cellsN === 1){ ctx.drawImage(img, -1, -1, 2, 2); return; } const ci = m.cell, sxp = (ci % sheetCols)*cellW, syp = Math.floor(ci/sheetCols)*cellH;
+        ctx.drawImage(img, sxp, syp, cellW, cellH, -1, -cellAsp, 2, 2*cellAsp); };
       // Variation turns the throw without moving the seed (Filter Forge's local Variation)
       const v0 = Math.round(num(n, 'variation', 0)); let st = 0x9e3779b9 ^ Math.floor(Math.random()*4294967296) ^ Math.imul(v0 + 1, 2654435761);
       const rand = () => { st |= 0; st = st + 0x6D2B79F5 | 0; let t = Math.imul(st ^ st >>> 15, 1 | st); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; };
@@ -196,12 +209,12 @@ export const PATTERN_STEPS = {
           if(tries === 11) x = -1e9;
         }
         if(x < -1e8) continue;
-        const Rm = typeof SZ === 'number' ? R0 : SZ[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))]/100*unit*0.12;
+        const Rm = typeof SZ === 'number' ? R0 : SZ[Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0))]/100*unit*0.12*BIG;
         const r = Math.max(0.5, Rm*(1 - vary + vary*rand()*2*Math.min(1, 0.5 + rand())));
         let ang = (rand() - 0.5)*Math.PI*2*turn;
         if(way){ const q = Math.min(wh - 1, Math.max(0, y | 0))*ww + Math.min(ww - 1, Math.max(0, x | 0)); ang = way[q]*Math.PI*2 + (rand() - 0.5)*turn*0.6; }
         const g = Math.round(255*(1 - fade*rand())), id = Math.round(20 + rand()*235);
-        if(deferred){ marks.push({ x, y, r, ang, g, id, s0: st, glyph: glyphs && glyphs.length ? glyphs[Math.floor(rand()*glyphs.length)] : null }); continue; }
+        if(deferred){ marks.push({ x, y, r, ang, g, id, s0: st, glyph: glyphs && glyphs.length ? glyphs[Math.floor(rand()*glyphs.length)] : null, cell: cellsN > 1 ? Math.floor(rand()*cellsN) : 0 }); continue; }
         for(const [ctx, col] of [[mx, `rgb(${g},${g},${g})`], [ix, `rgb(${id},${id},${id})`]]){
           ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(r, r); ctx.fillStyle = ctx.strokeStyle = col;
           if(stamp){ if(ctx === mx){ ctx.globalAlpha = g/255; ctx.drawImage(stamp, -1, -1, 2, 2); } else ctx.fillRect(-1, -1, 2, 2); }
@@ -217,7 +230,8 @@ export const PATTERN_STEPS = {
             ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.ang); ctx.fillStyle = ctx.strokeStyle = col;
             if(m.glyph){ ctx.font = `${Math.max(1, m.r*2.2)}px ${GLYPH_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(m.glyph, 0, 0); }
             else { ctx.scale(m.r, m.r);
-              if(stamp){ if(isMark){ ctx.globalAlpha = ctx === cx ? 1 : m.g/255; if(ctx === cx && !tinted) ctx.globalAlpha = k; ctx.drawImage(stamp, -1, -1, 2, 2); } else ctx.fillRect(-1, -1, 2, 2); }
+              if(stamp){ if(isMark){ ctx.globalAlpha = ctx === cx ? 1 : m.g/255; if(ctx === cx && !tinted) ctx.globalAlpha = k; stampAt(ctx, ctx === mx && stampMask ? stampMask : stamp, m); }
+                else ctx.fillRect(-1, -1, 2, 2); }
               else { st = m.s0; patShape(ctx, shape, rand); } }     // (every pass draws the same sigil)
             ctx.restore(); }
         }

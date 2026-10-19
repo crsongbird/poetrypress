@@ -21,7 +21,7 @@ const runAll = (spec, w = 48) => A.evalAthanor(A.athanorGraphOf(spec), w, w, ctx
 // ---- Scatter, the rest (F2) ----
 const sc = S.STEPS.scatter;
 check('Scatter keeps its ⚙ ports where they were (no setting moved), and gains an In Color output',
-  sc.paramPorts.join() === 'count,size,vary,turn,clump,fade,variation' && S.paramPort('scatter', 'count') === 4 && sc.outs[3] === 'in color' && sc.outTypes[3] === 'image');
+  sc.paramPorts.join() === 'count,size,vary,turn,clump,fade,variation,big' && S.paramPort('scatter', 'count') === 4 && sc.outs[3] === 'in color' && sc.outTypes[3] === 'image');
 check('Scatter offers glyphs, which mark lies on top, and colors from the picture', sc.params.find(p => p[0] === 'shape')[4].options.includes('glyph')
   && ['glyphs', 'layers', 'color'].every(k => sc.params.find(p => p[0] === k)));
 { let texts = 0; const orig = globalThis.document.createElement;
