@@ -251,26 +251,88 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 7, paramPort('cracks', 'scale')], [2, 1, 7, paramPort('cracks', 'count')], [3, 1, 7, paramPort('cracks', 'spread')], [4, 1, 7, paramPort('cracks', 'wander')], [5, 1, 7, paramPort('cracks', 'age')],
       [6, 1, 7, 1], [1, 1, 11, paramPort('glaze', 'scale')], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
   // 🝆 Veins of Light: a network grown (space colonization) through a material's ways, glowing inside it
-  veins: { label: 'Veins of Light', div: 2, teach: 'Glowing wires grown through stone, sand, fibre or skin. Growth Medium makes the material (Material picks it) and says where something could creep through it: the seams between rock layers, the gaps between pebbles, the creases in skin. Tendrils grows a network from the dial\'s side of the page through those ways: each tip reaches toward the nearest open space and branches where it must (space colonization, the way leaf veins and tree crowns are modelled). Tint colors the material in your Medium Hue; the wires are cut into its heights (Math), the Light Engine lights it, and Blend screens the Glow Hue in where the network runs. Try: Material at Pebbles, then turn the dial.', nodes: [
-      ['knob', { slot: '1', name: 'Material', def: 10 }, 40, 40],                  // 1
-      ['knob', { slot: '2', name: 'Reach', def: 60 }, 40, 130],                    // 2
-      ['knob', { slot: '3', name: 'Branching', def: 50 }, 40, 220],                // 3
-      ['knob', { slot: '4', name: 'Glow', def: 70 }, 40, 310],                     // 4
-      ['knob', { slot: '5', name: 'Scale', def: 23 }, 40, 400],                    // 5  (100 of 40–300)
-      ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 490],                    // 6
-      ['dial', {}, 40, 580],                                                       // 7
-      ['hue', { slot: '1', name: 'Medium Hue' }, 40, 660], ['hue', { slot: '2', name: 'Glow Hue' }, 40, 740],   // 8, 9
-      ['matrix', { kind: 10, '~kind': '0,100', scale: 100, '~scale': '40,300', angle: 0 }, 300, 60],   // 10
-      ['tendrils', { amount: 60, '~amount': '0,100', branching: 50, '~branching': '0,100', roots: 2, inner: 0, slide: 0, '~slide': '-100,100', zoom: 100, '~zoom': '40,300', width: 100 }, 300, 320],   // 11
-      ['colour', { hex: '#17120F' }, 300, 560],                                    // 12 (the material's dark)
-      ['tint', {}, 560, 60],                                                       // 13
-      ['math', { op: 'subtract' }, 560, 240],                                      // 14 (the wires cut into it)
-      ['material', { relief: 45, gloss: 30, shine: 25, shadow: 55, occlusion: 45, ambient: 35 }, 800, 120],   // 15
-      ['blend', { mode: 'screen', opacity: 70, '~opacity': '0,100' }, 1040, 200],  // 16
-      ['surface', { name: 'Veins of Light', ground: 'colour' }, 1280, 220]],       // 17
-    wires: [[1, 1, 10, paramPort('matrix', 'kind')], [5, 1, 10, paramPort('matrix', 'scale')], [5, 1, 11, paramPort('tendrils', 'zoom')], [2, 1, 11, paramPort('tendrils', 'amount')], [3, 1, 11, paramPort('tendrils', 'branching')],
-      [6, 1, 11, paramPort('tendrils', 'slide')], [7, 1, 11, 2], [10, 3, 11, 1], [10, 1, 13, 1], [8, 1, 13, 2], [12, 1, 13, 3], [10, 2, 14, 1], [11, 1, 14, 2],
-      [13, 1, 15, 1], [14, 1, 15, 2], [15, 1, 16, 1], [9, 1, 16, 2], [11, 2, 16, 3], [4, 1, 16, paramPort('blend', 'opacity')], [16, 1, 17, 1]] },
+  veins: { label: 'Veins of Light', div: 2, teach: 'A network running through stone, sand, fibre or skin: not a tree but a web with loops, like a leaf\'s veins, a slime mould\'s tubes, a street plan or a circuit. Growth Medium makes the material (Material picks it, or the seed) and its ways. Network throws nodes along those ways, takes hubs from the poem\'s pauses (else the seed\'s), joins them by the Weave, widens each line by the flow it carries from the hubs (Hierarchy), and routes it from organic curves to circuit traces at 45° and 90° (Organic ↔ Circuit), with pads, buses and pulses. Blend lays the lines and pads into the material and inlays some of its closed loops with the second material; Math cuts the lines in as channels or raises them as wire; the Light Engine lights it from the dial; Glow lets the network shine into the lit grain, more as the dial\'s light sinks. Try: Weave at Streets, then Organic ↔ Circuit up.',
+    nodes: [
+      ['knob', { slot: '1', name: 'Material', def: 0 }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2', name: 'Weave', def: 0 }, 40, 150],                                                                                        // 2
+      ['knob', { slot: '3', name: 'Density', def: 45 }, 40, 260],                                                                                     // 3
+      ['knob', { slot: '4', name: 'Loops', def: 50 }, 40, 370],                                                                                       // 4
+      ['knob', { slot: '5', name: 'Organic ↔ Circuit', def: 65 }, 40, 480],                                                                           // 5
+      ['knob', { slot: '6', name: 'Hierarchy', def: 60 }, 40, 590],                                                                                   // 6
+      ['knob', { slot: '7', name: 'Glow', def: 65 }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8', name: 'Pulses', def: 30 }, 40, 810],                                                                                      // 8
+      ['dial', {}, 40, 920],                                                                                                                          // 9
+      ['poem', {}, 40, 1030],                                                                                                                         // 10
+      ['hue', { slot: '1', name: 'Material Hue' }, 40, 1140],                                                                                         // 11
+      ['hue', { slot: '2', name: 'Second Material Hue' }, 40, 1250],                                                                                  // 12
+      ['hue', { slot: '3', name: 'Line Hue' }, 40, 1360],                                                                                             // 13
+      ['hue', { slot: '4', name: 'Glow Hue' }, 40, 1470],                                                                                             // 14
+      ['hue', { slot: '5', name: 'Node Hue' }, 40, 1580],                                                                                             // 15
+      ['hue', { slot: '6', name: 'Pulse Hue' }, 40, 1690],                                                                                            // 16
+      ['matrix', { kind: 25, scale: 100, '~scale': '70,180', angle: 0, '~angle': '0,180', variant: 0, '~variant': '0,99' }, 700, 40],                 // 17
+      ['switch', { at: 16.7 }, 480, 40],                                                                                                              // 18
+      ['random', { lo: 0, hi: 100 }, 40, 1800],                                                                                                       // 19
+      ['maprange', { inLo: 16.7, inHi: 100, outLo: 0, outHi: 99.9 }, 260, 40],                                                                        // 20
+      ['random', { lo: 0, hi: 100 }, 40, 1910],                                                                                                       // 21
+      ['random', { lo: 0, hi: 100 }, 40, 2020],                                                                                                       // 22
+      ['random', { lo: 0, hi: 100 }, 40, 2130],                                                                                                       // 23
+      ['blur', { radius: 6 }, 920, 40],                                                                                                               // 24
+      ['network', { weave: 0, nodes: 120, '~nodes': '25,420', even: 60, '~even': '30,85', loops: 50, hubs: 3, '~hubs': '1,7', order: 60, style: 65, wander: 30, '~wander': '5,60', width: 100, '~width': '70,150', pads: 50, '~pads': '15,90', bus: 20, '~bus': '0,60', pulses: 30, variant: 0, '~variant': '0,99' }, 1360, 40],// 25
+      ['maprange', { outLo: 30, outHi: 100 }, 1140, 40],                                                                                              // 26
+      ['switch', { at: 14.3 }, 480, 150],                                                                                                             // 27
+      ['random', { lo: 0, hi: 100 }, 40, 2240],                                                                                                       // 28
+      ['maprange', { inLo: 14.3, inHi: 100, outLo: 0, outHi: 99.9 }, 260, 150],                                                                       // 29
+      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 30
+      ['random', { lo: 0, hi: 100 }, 40, 2460],                                                                                                       // 31
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 32
+      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 33
+      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 34
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 35
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 36
+      ['maprange', { outLo: 45, outHi: 100 }, 920, 150],                                                                                              // 37
+      ['blend', { mode: 'multiply', opacity: 100 }, 1140, 150],                                                                                       // 38
+      ['blend', { mode: 'multiply', opacity: 100 }, 1140, 260],                                                                                       // 39
+      ['threshold', { at: 80, '~at': '70,101', soft: 0 }, 1580, 40],                                                                                  // 40
+      ['random', { lo: 0, hi: 100 }, 40, 3120],                                                                                                       // 41
+      ['blend', { mode: 'normal', opacity: 80 }, 1800, 40],                                                                                           // 42
+      ['blend', { mode: 'normal', opacity: 100 }, 2020, 40],                                                                                          // 43
+      ['blend', { mode: 'normal', opacity: 100 }, 2240, 40],                                                                                          // 44
+      ['maprange', { outLo: 0, outHi: 30, '~outHi': '0,70' }, 1580, 150],                                                                             // 45
+      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 46
+      ['maprange', { outLo: 0, outHi: 40, '~outHi': '0,90' }, 1580, 260],                                                                             // 47
+      ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 48
+      ['math', { op: 'subtract' }, 1800, 150],                                                                                                        // 49
+      ['math', { op: 'max' }, 2020, 150],                                                                                                             // 50
+      ['material', { relief: 60, gloss: 35, shine: 45, shadow: 55, occlusion: 40, ambient: 40 }, 2460, 40],                                           // 51
+      ['math', { op: 'max' }, 1580, 370],                                                                                                             // 52
+      ['mix', { t: 70 }, 260, 260],                                                                                                                   // 53
+      ['blend', { mode: 'screen', opacity: 45 }, 2680, 40],                                                                                           // 54
+      ['math', { op: 'max' }, 1580, 480],                                                                                                             // 55
+      ['math', { op: 'max' }, 1800, 260],                                                                                                             // 56
+      ['blur', { radius: 3 }, 2020, 260],                                                                                                             // 57
+      ['maprange', { inLo: 0, inHi: 22, outLo: 0, outHi: 100 }, 2240, 150],                                                                           // 58
+      ['math', { op: 'max' }, 2460, 150],                                                                                                             // 59
+      ['maprange', { outLo: 60, outHi: 100 }, 2680, 150],                                                                                             // 60
+      ['maprange', { outLo: 100, outHi: 55 }, 260, 370],                                                                                              // 61
+      ['math', { op: 'multiply' }, 2900, 40],                                                                                                         // 62
+      ['glow', { radius: 16, aura: 70, strength: 70, '~strength': '0,100', auraK: 55, core: 45 }, 3340, 40],                                          // 63
+      ['math', { op: 'multiply' }, 3120, 40],                                                                                                         // 64
+      ['blend', { mode: 'screen', opacity: 100 }, 3560, 40],                                                                                          // 65
+      ['surface', { name: 'Veins of Light', ground: 'colour' }, 3780, 40]],                                                                           // 66
+    wires: [[19, 1, 18, 1], [1, 1, 20, 1], [20, 1, 18, 2], [1, 1, 18, 3], [18, 1, 17, paramPort('matrix', 'kind')], [21, 1, 17, paramPort('matrix', 'scale')],
+      [22, 1, 17, paramPort('matrix', 'angle')], [23, 1, 17, paramPort('matrix', 'variant')], [17, 3, 24, 1], [24, 1, 26, 1], [26, 1, 25, 1], [17, 3, 25, 2],
+      [10, 9, 25, 3], [9, 1, 25, 4], [28, 1, 27, 1], [2, 1, 29, 1], [29, 1, 27, 2], [2, 1, 27, 3], [27, 1, 25, paramPort('network', 'weave')],
+      [3, 1, 25, paramPort('network', 'nodes')], [4, 1, 25, paramPort('network', 'loops')], [5, 1, 25, paramPort('network', 'style')],
+      [6, 1, 25, paramPort('network', 'order')], [8, 1, 25, paramPort('network', 'pulses')], [30, 1, 25, paramPort('network', 'even')],
+      [31, 1, 25, paramPort('network', 'hubs')], [32, 1, 25, paramPort('network', 'wander')], [33, 1, 25, paramPort('network', 'width')],
+      [34, 1, 25, paramPort('network', 'pads')], [35, 1, 25, paramPort('network', 'bus')], [36, 1, 25, paramPort('network', 'variant')], [17, 1, 37, 1],
+      [11, 1, 38, 1], [37, 1, 38, 2], [12, 1, 39, 1], [37, 1, 39, 2], [25, 6, 40, 1], [41, 1, 40, paramPort('threshold', 'at')], [38, 1, 42, 1],
+      [39, 1, 42, 2], [40, 1, 42, 3], [42, 1, 43, 1], [13, 1, 43, 2], [25, 1, 43, 3], [43, 1, 44, 1], [15, 1, 44, 2], [25, 4, 44, 3], [25, 1, 45, 1],
+      [46, 1, 45, paramPort('maprange', 'outHi')], [25, 7, 47, 1], [48, 1, 47, paramPort('maprange', 'outHi')], [17, 2, 49, 1], [45, 1, 49, 2], [49, 1, 50, 1],
+      [47, 1, 50, 2], [44, 1, 51, 1], [50, 1, 51, 2], [25, 1, 52, 1], [25, 4, 52, 2], [52, 1, 51, 3], [9, 1, 51, 7], [13, 1, 53, 1], [14, 1, 53, 2],
+      [51, 1, 54, 1], [53, 1, 54, 2], [25, 2, 54, 3], [25, 2, 55, 1], [25, 4, 55, 2], [55, 1, 56, 1], [25, 5, 56, 2], [56, 1, 57, 1], [57, 1, 58, 1],
+      [56, 1, 59, 1], [58, 1, 59, 2], [51, 2, 60, 1], [9, 2, 61, 1], [60, 1, 62, 1], [61, 1, 62, 2], [54, 1, 63, 1], [59, 1, 63, 2], [14, 1, 63, 3],
+      [62, 1, 64, 1], [7, 1, 64, 2], [64, 1, 63, paramPort('glow', 'strength')], [63, 1, 65, 1], [16, 1, 65, 2], [25, 5, 65, 3], [65, 1, 66, 1]] },
   // 🝓 Circuit Board: Circuit Traces on the page's own backdrop; Threshold powers some traces (Charge), the Light Engine
   // lights the board, then what it gives off is screened over: the traces' glow, the Glow Hue's aura, data, sparks
   circuit: { label: 'Circuit Board', div: 2, poem: 'lines', teach: 'A circuit board drawn on the page itself. Circuit Traces routes it the way boards are routed by hand: chips first, then buses of parallel traces that run straight and turn together (Bends: square corners, or 45° chamfers), ending in vias and pads. Page Backdrop makes the board of your backdrop\'s colors; Blend lays the copper, the tinned pads, the chips and the silkscreen on it. Every trace has its own grey (Each Trace), so three Thresholds driven by Charge decide which are powered: colored in your Trace Hue first, then (the grey dimmed by Math, so Charge reaches it later) glowing, then sparking. The Light Engine raises and lights the board; then the light it gives off is screened over (Blend in Screen): the glow, the Glow Hue\'s aura, data running along the powered traces in your Data Hue, and sparks from Scatter. Era (slider 7) turns the board, chip by chip, toward the future\'s, then quantum ones, then the atomic (brass gears and valves), then magitech: crystals set in the board, light guides curving to their pins, summoning circles, holograms, and their own light (Arcana) glowing and sparking where Charge reaches it; Markings (slider 8) stamps it with names, revisions and the odd little picture. The Poem keeps it clear of your words: Circuit Traces cuts away what lies under the lines after the board is routed, so the rest stays where it was as you write. With Shape Aware ticked it is routed round your words instead. Try: Charge at 100, then Bends at 0 for square corners.', nodes: [

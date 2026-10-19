@@ -18,6 +18,12 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   or pressed flowers), Bouquets (posy, bundle, crown, wreath), Fallen Petals (wilting heads and petals on wood, linen
   or stone), Meadow (a hill of wildflowers under sky), Macro (one flower close, bokeh and dew, a second of its kind
   out of focus behind). Scatter can now throw a picture or a sheet of them, with black as clear. Species right? More?
+- VEINS OF LIGHT, REBUILT (branch `veins`, built on `florals`, sheets sent; back in the menu there): a network with
+  loops, not a tree. A new part, Network, joins nodes one of six ways (Weave: Tree + Loops, Relative, Gabriel, Slime,
+  Streets, Subdivided), widens each line by the flow it carries from the hubs (the poem's punctuation, else the seed's),
+  and routes it from organic curves to circuit traces (Organic ↔ Circuit), with pads, buses and pulses. Eight knobs
+  (Material and Weave each start at Seeded), six hues; the glow wakes as the dial's light sinks. Readings: Circuit
+  Marble, Leaf Lumen, Undercity. The Circuitry look moved to its new knobs.
 - THE HUES IN THREE GROUPS: Light Colors (Main Light, Rim Light, Ambient Light, beside the dial), Surface Colors (the
   surface's own, up to six, named by the surface; a Ground or Snow Hue joins them), Material Colors (Glow, Shine and
   Shadow Hues), each under a small heading that hides when none of its hues shows. Names right?
@@ -41,8 +47,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   marks — all fictional, as if through a window onto a world like ours but
   with its own lore and rules.
 - PAINTED LANDSCAPE: more variety in the water and land textures.
-- VEINS OF LIGHT (Ruby dislikes it): imagined as a network, circuitry running through things, not the first layer of a
-  Lichtenberg figure. Rebuild it, prior art first; until then it stays hidden from the menu.
 
 ## 3 · Found, not yet fixed
 - CONTOUR MAP at a quarter-size preview differs from its export more than

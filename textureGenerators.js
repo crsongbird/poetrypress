@@ -493,13 +493,14 @@ export const TEXTURE_PARAMS = {
                   // stamps, codes and a little picture (the board's Easter eggs), in room the board left
                   {key:'marks', label:'Markings',        min:0,  max:100, def:0,   unit:''}],
   // 🝆 Veins of Light (chains.js 'veins')
-  veins:         [{key:'zoom',  label:'Material',        min:0,  max:100, def:10,  unit:'', ticks:[10,30,50,70,90], names:['Strata','Pebbles','Sand','Fibres','Skin']},
-                  {key:'amt',   label:'Reach',           min:0,  max:100, def:60,  unit:''},
-                  {key:'form',  label:'Branching',       min:0,  max:100, def:50,  unit:''},
-                  {key:'shape', label:'Glow',            min:0,  max:100, def:70,  unit:''},
-                  {key:'hue',   label:'Scale',           min:40, max:300, def:100, unit:'%'},
-                  // the roots slid across the dial's side of the page (the dial says which side they grow from)
-                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
+  veins:         [{key:'material', label:'Material',     min:0,  max:100, def:0,   unit:'', ticks:[8,25,42,58,75,92], names:['Seeded','Strata','Pebbles','Sand','Fibres','Skin']},
+                  {key:'weave', label:'Weave',             min:0,  max:100, def:0,   unit:'', ticks:[7,21,36,50,64,79,93], names:['Seeded','Tree + Loops','Relative','Gabriel','Slime','Streets','Subdivided']},
+                  {key:'density', label:'Density',         min:0,  max:100, def:45,  unit:''},
+                  {key:'loops', label:'Loops',             min:0,  max:100, def:50,  unit:''},
+                  {key:'style', label:'Organic ↔ Circuit', min:0,  max:100, def:65,  unit:''},
+                  {key:'order', label:'Hierarchy',         min:0,  max:100, def:60,  unit:''},
+                  {key:'glow',  label:'Glow',              min:0,  max:100, def:65,  unit:''},
+                  {key:'pulses', label:'Pulses',           min:0,  max:100, def:30,  unit:''}],
   // ⎐ Knotwork (chains.js 'knotwork')
   knotwork:      [{key:'zoom',  label:'Size',            min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Strands',         min:3,  max:24,  def:6,   unit:''},
@@ -592,8 +593,8 @@ export const TEXTURE_CAPS = {
   // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
   circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
                    tintLabels:['Trace Hue','Data Hue'], tintDefaults:['accent1','accent2'] },
-  veins:         { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','lighten','luminosity'], light:true, dial:'Grow From & Light', material:true, tints:2,
-                   tintLabels:['Medium Hue','Glow Hue'], tintDefaults:['#B8A48C','#4FE3FF'] },
+  veins:         { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','lighten','luminosity'], light:true, dial:'Flow From & Light', material:true, tints:6,
+                   tintLabels:['Material Hue','Second Material Hue','Line Hue','Glow Hue','Node Hue','Pulse Hue'], tintDefaults:['#B8A48C','#8E7C68','#C8913A','#4FE3FF','#F2D27A','#DFFBFF'] },
   crackle:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], light:true, material:true, dial:'Impact & Light', tints:2,
                    tintLabels:['Glaze Hue','Body Hue'], tintDefaults:['#A9B4B0','#7A6A5E'] },
   knotwork:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2, genericTint:true,
@@ -964,7 +965,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
   } else if(type === 'circuit'){
     result = genChain(type, w, h, light, extra, accent1, accent2);   // (its hues, else the accents) Circuit Traces on the page's backdrop → Threshold (Charge) → Light Engine → glow, data, sparks (chains.js)
   } else if(type === 'veins'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);   // Matrix → Tendrils (space colonization) → Light Engine → glow (chains.js)
+    result = genChain(type, w, h, light, extra, tint1, tint2);   // Growth Medium → Network (a web with loops) → Light Engine → Glow (chains.js)
   } else if(type === 'crackle'){
     result = genChain(type, w, h, light, extra, tint1, tint2);   // Spreading Cracks → Glaze (chains.js)
   } else if(type === 'knotwork'){

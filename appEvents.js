@@ -4632,7 +4632,7 @@ commitHistory();
 // once shown; it and the shimmer above it keep moving even while the page
 // itself is busy (they run on the compositor).
 const WORKING_WORDS = {
-  veins: 'Growing the veins', circuit: 'Routing the traces', knotwork: 'Plaiting the knot', lichtenberg: 'Striking the arc', growth: 'Growing the line',
+  veins: 'Weaving the network', circuit: 'Routing the traces', knotwork: 'Plaiting the knot', lichtenberg: 'Striking the arc', growth: 'Growing the line',
   plainnoise: 'Stirring the noise', stripes: 'Ruling the stripes', polka: 'Spotting the dots', checker: 'Laying the squares', softgradient: 'Grading the light', cells: 'Growing the cells',
   bokeh: 'Convolving the bokeh', astral: 'Counting the stars', astral_fog: 'Thickening the nebula', astral_stars: 'Counting the stars',
   clouds: 'Folding the haze', magicparticles: 'Scattering the dust', embers: 'Throwing sparks', snow: 'Letting the snow settle',

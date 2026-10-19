@@ -589,10 +589,10 @@ export const PRESETS = [
     cardToggle: true, cardColor1: '#F2ECDC', cardOpacity: '60', cardBlend: 'source-over',
     spell: "🜥[[🜚]]{{🜃⎐🝊ᕕ🝢}}"
   },
-{ name: "Circuitry",   // surface: Veins of Light — wires grown through the gaps between pebbles
+{ name: "Circuitry",   // surface: Veins of Light — circuit traces run between pebbles
     bg1: "#0C0E10", text1: "#E8FFF4", outlineMode: "off", font: "Space Grotesk",
-    texture: true, textureType: "veins", textureOpacity: 90, textureBlend: 'source-over', texP1: 30, texP2: 70, texP3: 55, texP4: 80, texP5: 110, texP6: 0, textureLight: '300',
-    textureTint1: "#5A5650", textureTint2: "#4CFFC0",
+    texture: true, textureType: "veins", textureOpacity: 90, textureBlend: 'source-over', texP1: 42, texP2: 21, texP3: 55, texP4: 55, texP5: 88, texP6: 60, texP7: 80, texP8: 40, textureLight: '300',
+    textureTint1: "#5A5650", textureTint2: "#3A3834", textureTint3: "#2FA87E", textureTint4: "#4CFFC0", textureTint5: "#9EFFD8", textureTint6: "#E6FFF4",
     accent1: "#4CFFC0", accent2: "#FFB04C",
     cardToggle: true, cardColor1: '#0A0C0E', cardOpacity: '70', cardBlend: 'source-over',
     spell: "{{🜂}}Ᏹ[[🜚⎐🜞🝓🝢]]"

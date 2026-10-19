@@ -32,7 +32,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
 // Saturn–Kiviuq on: the Painted Ringworld and Ring in the Sky joined Sky & Cosmos
-check('the picker offers 81 textures (eight hidden: the Basics, the first Fractured Glaze and Veins of Light), and the Athanor\'s own', new Set(textureTypes).size === 82 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
+check('the picker offers 81 textures (seven hidden: the Basics and the first Fractured Glaze), and the Athanor\'s own', new Set(textureTypes).size === 82 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every pickable texture must declare exactly two labelled knobs
 const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
@@ -49,7 +49,7 @@ check('every texture declares two params, plus an optional third that must be Fo
     || (t === 'ringpaint' && d.length === 8 && d[2].label === 'World' && d[5].key === 'alt' && d[7].label === 'Brush')
     || (t === 'skyring' && d.length === 7 && d[4].label === 'Star Height' && d[6].label === 'Brush')
     // (Corvid Feathers: eight, its Bird first; the light to lay over: three, or four)
-    || (t === 'corvids' && d.length === 8 && d[0].key === 'bird') || (t === 'pixelspace' && d.length === 8 && d[0].key === 'pixel') || (t === 'webb' && d.length === 8 && d[0].key === 'amount') || (t === 'liminal' && d.length === 8 && d[0].key === 'reach') || (['imprints', 'bouquets', 'petals', 'meadow', 'macro'].includes(t) && d.length === 8) || (['dappled', 'windowlight', 'caustics', 'lightleaks'].includes(t) && d.length === 3)
+    || (t === 'corvids' && d.length === 8 && d[0].key === 'bird') || (t === 'pixelspace' && d.length === 8 && d[0].key === 'pixel') || (t === 'webb' && d.length === 8 && d[0].key === 'amount') || (t === 'liminal' && d.length === 8 && d[0].key === 'reach') || (t === 'veins' && d.length === 8 && d[0].key === 'material' && d[1].key === 'weave') || (['imprints', 'bouquets', 'petals', 'meadow', 'macro'].includes(t) && d.length === 8) || (['dappled', 'windowlight', 'caustics', 'lightleaks'].includes(t) && d.length === 3)
     // (Feathers: eight, each how much of one thing, Lift last)
     || (t === 'feathers' && d.length === 8 && d[2].key === 'fluff' && d[7].key === 'lift')
     // (Under Glass: eight, each a thing the glass catches, Cracks and Edge last but one and last)
@@ -59,7 +59,7 @@ check('every texture declares two params, plus an optional third that must be Fo
     || (t === 'dewwebs' && d.length === 8 && d[0].label === 'Webs' && d[6].label === 'Iridescence')
     // (Circuit Board's Era and Markings: seventh and eighth)
     || (t === 'circuit' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt' && d[6].key === 'era' && d[7].key === 'marks')
-    || ((t === 'wax' || t === 'stainedglass' || t === 'growth' || t === 'aurorasky' || t === 'knotwork' || t === 'veins') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
+    || ((t === 'wax' || t === 'stainedglass' || t === 'growth' || t === 'aurorasky' || t === 'knotwork') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
     // (Painted Landscape: Tilt, then Color — grey as it was, or painted in colour)
     || (t === 'landscape' && d.length === 6 && d[2].key === 'form' && d[3].key === 'tilt' && d[4].key === 'hue' && d[5].key === 'shape')
     || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash' || t === 'turing' || t === 'frost' || t === 'stripes' || t === 'cells') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')
