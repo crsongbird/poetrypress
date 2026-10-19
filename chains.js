@@ -367,14 +367,15 @@ export const TEXTURE_CHAINS = {
       ['facets', { zoom: 100, '~zoom': '50,400', amount: 0, '~amount': '0,240' }, 320, 100],   // 6
       ['surface', { name: 'Facet Field', ground: 'grey' }, 600, 120]],             // 7
     wires: [[1, 1, 6, paramPort('facets', 'zoom')], [2, 1, 6, paramPort('facets', 'amount')], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
-  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Light Dial is the View: where you look from. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: turn the dial slowly, and watch the disc tilt.', nodes: [
+  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Camera Dial is where you look from: its Turn turns the disc in the sky, its View tips it from face-on at the middle to edge-on at the rim, its zoom brings it closer. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: draw the camera dial slowly from the rim to the middle, and watch the disc open.', nodes: [
       ['knob', { slot: '1', name: 'Chaos', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Particles', def: 31 }, 40, 140],                // 2  (100 of 10–300)
       ['knob', { slot: '3', name: 'Jets', def: 0 }, 40, 240],                      // 3
-      ['dial', {}, 40, 340],                                                       // 4
-      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['camdial', {}, 40, 340],                                                    // 4  (the camera: where you see it from)
+      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100', turn: 0, '~turn': '0,360', view: 100, '~view': '0,100', lens: 100, '~lens': '25,400' }, 320, 100],   // 5
       ['surface', { name: 'Black Hole', ground: 'grey' }, 600, 120]],              // 6
-    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')],
+      [4, 1, 5, paramPort('blackhole', 'turn')], [4, 2, 5, paramPort('blackhole', 'view')], [4, 3, 5, paramPort('blackhole', 'lens')], [5, 1, 6, 1]] },
   moon: { label: 'Fractal Moon', canvas: true, teach: 'One part makes it: Fractal Moon, a moon whose maria and craters are fractal noise, in the phase of the seed, under a night sky of faint stars and drifting cloud. Fractal Depth adds finer and finer detail; Clouds draws cloud across it; Night Sky darkens the sky around. Try: Clouds at 0 and Night Sky at 100, for a clear night.', nodes: [
       ['knob', { slot: '1', name: 'Moon Size', def: 44 }, 40, 40],                 // 1  (100 of 60–150)
       ['knob', { slot: '2', name: 'Fractal Depth', def: 47 }, 40, 140],            // 2  (100 of 20–190)

@@ -111,7 +111,7 @@ check('it renders across the whole depth range', wthrew === null);
   const L = { ambient: 60, ambientHue: '#3050FFAA', rimDeg: 135, rimTilt: 100, rimHue: '#FF8040C0' };
   const key = (t, o) => T.textureKeyFor(t, 96, 96, { seed: 7, light: 315, lightTilt: 100, ...o });
   check('a surface they do not reach keys (and so draws) exactly as it did, whatever they are',
-    ['aurora', 'clouds', 'crystal', 'ringworld', 'linen'].every(t => key(t, L) === key(t, {})));
+    ['aurora', 'clouds', 'ringworld', 'linen'].every(t => key(t, L) === key(t, {})));
   check('…and at their "none" (the surface\'s own ambient, white hues, the rim light at alpha 0) neither does a surface they reach',
     rigged.every(t => key(t, { ambient: 100, ambientHue: '#FFFFFF', rimDeg: 200, rimTilt: 60, rimHue: '#CFE3FF00', tint6: '#FFFFFF' }) === key(t, {})));
   // measured, not guessed, on real pixels (the real canvas, if it is here): every surface they reach draws differently

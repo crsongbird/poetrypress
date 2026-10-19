@@ -6,7 +6,7 @@
  * ring, poured wax, raked substrate, crystal leaf.
  */
 import { drawStitch, pathFromPoints } from './stitches.js';
-import { litT, lightVec, dialVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
+import { lightRig, litT, lightVec, dialVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
 
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
@@ -1154,7 +1154,7 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     P.push({ nx, ny, c:nx*px+ny*py, wd:unit*(0.004+Math.random()*0.018), flash, ax:Math.cos(a), ay:Math.sin(a), mid:px*Math.cos(a)+py*Math.sin(a), len:unit*(0.15+Math.random()*0.5) }); }
   const veil=makeNoiseGrid(8,8), feathers=makeNoiseGrid(40,40);
   // the kept structure: everything that shapes it, and a trace of the seed's draws (the faces, the planes)
-  const lv0=lightVec(light==null?315:light), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',
+  const lv0=lightVec(light==null?315:light), rg=lightRig(), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',rg?JSON.stringify(rg):'',   // (the page's lights too: they light the facets)
     FRONT.F.length, FRONT.F[0].x, FRONT.F[FRONT.F.length-1].tone, BACK.F[0].y, P[0].c, P[P.length-1].len, veil[3], feathers[7]].join('|');
   let V, L;
   if(CRYSTAL_KEPT.key===keyC){ V=CRYSTAL_KEPT.V; L=CRYSTAL_KEPT.L; }

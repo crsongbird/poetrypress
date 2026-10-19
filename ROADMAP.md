@@ -102,10 +102,45 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
     without one.
   - Contour Map and Painted Landscape (a land seen from above or across;
     Painted Landscape's Tilt);
-  - Black Hole (the camera's orbit) and Night City (where you stand);
+  - Night City (where you stand);
   - Knotwork, Ruffled Growth and Discharge's Slide (a position along the
     light dial's line): a pan, perhaps, if it stays intuitive.
   - Prove: at the old knob's values the picture is unchanged (fingerprints).
+
+- **C6 · The lighting audit (Saturn–Aegir onward; every surface read and timed).** What each surface's light is, so
+  the next pass starts from facts, not guesses. Re-check a row when its surface changes.
+  - **Lit by the engine** (lightHeights, lightSparse, the Light Engine part, the Surface's heights; all can run on
+    the GPU, `gpuLightHeights` at 4096 px and up): brushstrokes, rainwater, sigils, crackedglaze, oldpaper, crystal
+    (facets; its fire and glints are its own), spangle, coldpress, guilloche, contour, turing, frost, ash, wax, dunes,
+    kintsugi, moss, landscape, tessellate, crackle, circuit, veins, knotwork, lichtenberg, growth, cells, skyring,
+    ringpaint, ringworld; glassrain (its shine only); cupring (a sheen, no shadow); stainedglass (the came; its panes
+    are lit by hand). These take the page's lights (`rig`) where the dial is a light; the Ringworlds' dial is the day.
+  - **Lit by hand, and right to be** (the engine would be slower on a CPU or wrong for the subject): clouds (a
+    volumetric march), water (Blinn glints, caustics), brokenglass and dewwebs (transparent glass, glints), flowers,
+    metalleaf, cards, underglass, chladni (grain facing + shadow splats), linen (its weave through `lightBasis`).
+  - **The dial is a direction or a place**: snow, rainstreaks, hatch, suminagashi, flowfield, aurora, aurorasky,
+    watercolour (directions), summoning (a place). Their guide on the page: appEvents `DIAL_GUIDES`.
+  - **Unlit by design**: bokeh, astral, magicparticles, embers, grain, halftone, mathnoise, inkbleed, cityscape, moon,
+    plainnoise, stripes, polka, checker, softgradient.
+  - **Speed:** no hand-lit surface would be faster on the engine. On a CPU the engine costs ~223 ms for a 768×960
+    field (~341 ms with a rim light, ~71 ms with no shadow and no occlusion); on a GPU about what the hand-lit ones
+    cost. The slow surfaces are slow for their simulations, not their light: Growth (~2.1 s), Landscape (~2.0 s),
+    Ringworld (~1.9 s), Lichtenberg (~1.6 s), Turing (~1.1 s) in Node. Worth measuring on a phone's GPU: lightSparse
+    makes one GPU call per piece (Sigils 8, Ash 6); one call for the whole field may be faster.
+  - Done from it: Crystal takes the page's lights (its kept structure was keyed without them, so it showed stale
+    light); seven engine-lit surfaces may be pulled past the rim (`lowLight`); the Black Hole is seen from the camera
+    dial (format 7).
+  - Still to do:
+    - **A pan on the camera dial** (a fourth axis, or the handle's place when View is 0), then onto it: the
+      Transmutation Circle's Position (now the light dial), the Slide knobs of Knotwork, Veins, Growth and
+      Lichtenberg (they slide along the light dial's line, so turning the light moves the figure), Growth's Zoom.
+    - Painted Landscape's Tilt onto the camera's View, once its Turn means something (a pan along the range).
+      Rain on Water's View likewise: rain is the same every way round, so its Turn needs a meaning first (C5).
+    - The Ringworlds' Altitude and Ring in the Sky's Star Height are camera heights on knobs; Aurora's Horizon a
+      vertical place. Judge each by its renders.
+    - Linen's `lightBasis` taught the rim and ambient; Stained Glass's panes lit with `lightLow` (they hold their
+      own elevation past the rim); Rain on Glass's shine through `litS` (a coloured rim shows white now).
+    - Check by eye that Growth grows toward its sun (the handle): it reads `genDial`, the light's travel.
 
 ### E · The randomizer
 
@@ -281,7 +316,7 @@ superseded) wait for Stage 4.
   what they unlock (§2 F).
 
 ### Stage 2 · Features: the engine, the controls, the poem
-- **C3, C4** lighting; **C5** the camera dial on more textures.
+- **C3, C4** lighting; **C5** the camera dial on more textures; **C6** what the lighting audit left to do.
 
 ### Stage 3 · Textures: built from the parts
 - **I**: the 36 Surface Studies become textures in the menu, each a chain

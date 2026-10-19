@@ -4,6 +4,20 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Bestla (2026-10-19)
+
+- **The Black Hole is seen from the camera dial.** Its Turn turns the disc
+  in the sky, its View tips it from face-on at the middle to edge-on at the
+  rim, and its zoom brings it closer. While the dial moves, a wireframe of
+  the disc shows over the page. Looks and presets made before keep their
+  pictures.
+- **Crystal takes the rim light and the Ambient slider.** Its facets light
+  with them, as the other engine-lit surfaces do.
+- **Seven more surfaces can be lit from below the horizon:** Veins of Light,
+  Knotwork, Lichtenberg, Ruffled Growth, Cells, Painted Landscape and Rain on
+  Water. Their light dial can be pulled past its rim for the low, raking
+  light the others have.
+
 ## Saturn–Aegir (2026-10-19)
 
 - **The light dial shows on the page what it places, before the picture is

@@ -663,15 +663,16 @@ Other parts of a look:
       ground; the Painted Ringworld's through its camera (`ringSunGuide`);
       the rim light's in the second accent.
     - *impact* (Crackle: where its cracks burst from), *place* (Transmutation
-      Circle: its centre and size), *disc* (Black Hole: how its disc is
-      seen), *arrow* (wind, rain, a flow, a run of pigment: its heading),
+      Circle: its centre and size), *arrow* (wind, rain, a flow, a run of
+      pigment: its heading),
       *axis* (hatching, breaths, aurora rays: their line).
     - A new surface whose dial places or heads something adds its entry to
       `DIAL_GUIDES` (check it against a render: the guide must match the
       picture). Every control on a dial must do what its handle suggests: a
       turn that changes nothing is worse than no dial.
   - Done: Lichtenberg, Ringworld, Broken Glass, Scrying Pool, Dune Ripples,
-    Moss on Stone. Waiting: ROADMAP C5.
+    Moss on Stone, Black Hole (format 7). Waiting: ROADMAP C5, C6 (the
+    lighting audit: which surface is lit how, and what moves next).
 - **The oblique camera's turn and lens** (texCore `obliqueFrame(ww, wh,
   tilt, hRange, cam)`, `cam {turn, zoom}`):
   - Turn spins the ground about the view's centre the way `groundCam`
@@ -1246,6 +1247,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     traced only where neighbours differ.
   - The sky is sampled at full size through the lens map.
   - Stars shear tangentially far from the hole: that's physics.
+  - Seen from the camera dial: Turn turns the disc (0 is the old light dial's
+    315°), View how edge-on, Zoom the lens (`lens` scales the hole). A graph
+    from before, whose part has no Turn, still reads the light dial.
 - **Cartomancy** (cartomancy.js, chain `cards`, canvas, ON_PAGE; its parts
   are `CARD_STEPS`; cartomancyTable.js gets its drawing kit `CRT_KIT` from
   cartomancy.js when it loads):

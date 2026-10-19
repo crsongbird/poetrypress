@@ -528,7 +528,7 @@ export function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
 // Light that came too close
 // goes the long way round the dark —
 // you see its back, bent up.
-export function genBlackHole(w,h,amt,zoom,light,form){
+export function genBlackHole(w,h,amt,zoom,light,form,lens=1){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   // A black hole RAY-TRACED, after Luminet (1979), Riazuelo's and Interstellar's
   // renderers (James et al. 2015) and Antonelli's "Starless": every working
@@ -558,7 +558,7 @@ export function genBlackHole(w,h,amt,zoom,light,form){
   const jets=Math.max(0, Math.min(1, form==null ? 0 : form)), chaos=zoom;
   const deg=light==null ? 315 : light, lv=lightVec(deg), view=Math.min(1, Math.hypot(lv.lx, lv.ly));
   const unit=Math.min(w,h), cx=w*(0.2+Math.random()*0.6), cy=h*(0.2+Math.random()*0.6);
-  const Rsh=unit*(0.055+Math.random()*0.03), S=Rsh/2.6;            // the shadow; pixels per horizon radius
+  const Rsh=unit*(0.055+Math.random()*0.03)*lens, S=Rsh/2.6;       // the shadow; pixels per horizon radius (the camera's zoom: the lens)
   const tilt0=(8+Math.random()*10)*Math.PI/180, elev=tilt0 + (Math.PI/2 - tilt0)*(1-view);
   const spin=(Math.random()-0.5)*0.15 + ((((deg-315+540)%360)+360)%360 - 180)*Math.PI/180;
   const dirSign=Math.random()<0.5?1:-1, cosR=Math.cos(spin), sinR=Math.sin(spin);

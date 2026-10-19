@@ -946,9 +946,10 @@ function applyPersisted(s){
 
 // a look's FORMAT: 2 since the dial took over Harsh Rain's slant and Silverpoint
 // Hatch's angle (their sliders took new jobs); 3 every blend for every surface; 4 Ringworld's day on the light dial and
-// Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic.
+// Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
+// from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 6;
+const LOOK_VERSION = 7;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -1013,7 +1014,14 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))); }
+function retireLook(s){ return retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))); }
+/** THE BLACK HOLE ON THE CAMERA DIAL (format 7; Ruby: any view belongs on the camera dial): it was seen from the light
+ *  dial, its turn 315° the disc level, its height how edge-on. A look from before keeps its picture: the dial's turn
+ *  past 315° becomes the camera's Turn, its height the camera's View, the lens as it was. */
+const blackHoleCamera = (light, tilt) => ({ cameraTurn: String(Math.round((((+(light ?? 315) || 0) - 315) % 360 + 360) % 360)),
+  cameraView: String(Math.round(Math.max(0, Math.min(100, tilt === undefined || tilt === '' || isNaN(+tilt) ? 100 : +tilt)))), cameraZoom: '100' });
+function retireFormat7Layer(L){ return L && L.textureType === 'blackhole' ? { ...L, ...blackHoleCamera(L.textureLight, L.textureLightTilt) } : L; }
+function retireFormat7(s){ if(!s || +s.lookVersion >= 7) return s; let o = retireFormat7Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat7Layer(o.baseLayer) }; return o; }
 /** THE DIAL'S HANDLE BECAME THE LIGHT (format 6; Ruby: the light dial "goes the opposite direction that I would expect"):
  *  most surfaces had been lit from the handle's other side (textureGenerators LIGHT_TURNED). A look, preset or reading
  *  made before is turned half round on such a surface, the main light and the rim alike, so it keeps its picture and
@@ -1646,8 +1654,9 @@ function applyPreset(p){
   { const ld = p.textureLight !== undefined ? (lightTurned(p) ? halfRound(p.textureLight) : p.textureLight) : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
     if(ld != null){ $('textureLight').value = String(ld); syncLightPad(); } }
   // and its camera: the preset's own, or where its texture's camera starts
-  { const d = cameraStart(p.textureType || $('textureType').value);
-    putCamera(p.cameraTurn ?? d.turn, p.cameraView ?? d.view, p.cameraZoom ?? d.zoom); }
+  // (a Black Hole preset from before format 7 says its view with the light dial: onto the camera, as its looks are)
+  { const d = cameraStart(p.textureType || $('textureType').value), bh = p.textureType === 'blackhole' && p.cameraTurn === undefined && p.textureLight !== undefined ? blackHoleCamera(p.textureLight, p.textureLightTilt) : {};
+    putCamera(p.cameraTurn ?? bh.cameraTurn ?? d.turn, p.cameraView ?? bh.cameraView ?? d.view, p.cameraZoom ?? bh.cameraZoom ?? d.zoom); }
 
   if(p.font){
     const idx = FONTS.findIndex(f=>f.family===p.font);
@@ -2621,14 +2630,12 @@ export function pageSunAt(deg, tilt, aspX, aspY){
  *   sun      the light, where it comes from (the dial laid on the page; the Painted Ringworld's through its camera)
  *   impact   where Crackle's cracks burst from (on the far side from the light, as the Spreading Cracks part strikes)
  *   place    where a thing stands (Transmutation Circle: its centre, by dialSquare, and its circle's size)
- *   disc     how a disc is seen (Black Hole: turned by the dial's way, edge-on at its rim, face-on at its middle)
  *   arrow    a heading the dial gives (wind, rain, a flow, a breath): `way` +1 toward the handle, −1 away from it
  *   axis     a line the dial lays (hatching, field lines): along the handle's line, or across it (`across`)
  *  (A surface whose dial is the day, Ringworld, has its camera's guide only.) */
 const DIAL_GUIDES = {
   crackle:     [{ k: 'sun' }, { k: 'impact' }],
   summoning:   [{ k: 'place' }],
-  blackhole:   [{ k: 'disc' }],
   snow:        [{ k: 'arrow', fall: true }],                 // (the wind blows from the handle, the flakes fall with it: Wind is how far)
   rainstreaks: [{ k: 'arrow', way: -1 }],                    // (the rain comes from the handle)
   hatch:       [{ k: 'axis' }],                              // (strokes along the handle's line)
@@ -2652,8 +2659,6 @@ export function dialGuidePlace(mark, deg, tilt, aspX, aspY, knobs = {}){
   if(mark.k === 'impact') return { x: aspX*(0.5 - hx*0.38), y: aspY*(0.5 - hy*0.38) };
   if(mark.k === 'place'){ const kk = Math.min(1, k), m = Math.max(Math.abs(hx), Math.abs(hy)) || 1;
     return { x: aspX*(0.5 + hx/m*kk/2), y: aspY*(0.5 + hy/m*kk/2), r: 0.34*(knobs.size || 100)/100 }; }
-  if(mark.k === 'disc'){ const view = Math.min(1, k), elev = (13 + 77*(1 - view))*Math.PI/180, spin = ((((deg - 315 + 540) % 360) + 360) % 360 - 180)*Math.PI/180;
-    return { x: aspX/2, y: aspY/2, r: 0.2, flat: Math.sin(elev), turn: spin }; }
   if(mark.k === 'arrow' || mark.k === 'axis'){ const s = mark.k === 'arrow' ? mark.way || 1 : 1;
     let t = [hx*s, hy*s];
     if(mark.fall){ const w = Math.max(0, Math.min(1, (knobs.wind ?? 50)/100)); t = [-hx*1.6*w, 1 - hy*1.6*w]; }   // (genSnow: gravity and the wind)
@@ -2717,8 +2722,6 @@ function drawDialGuide(on, linger){
     else if(mark.k === 'place') twice((pass, w) => { const r = p.r*u, cr = u*0.025; x.lineWidth = w;
       x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.setLineDash([u*0.02, u*0.015]); x.stroke(); x.setLineDash([]);
       x.beginPath(); x.moveTo(X - cr, Y); x.lineTo(X + cr, Y); x.moveTo(X, Y - cr); x.lineTo(X, Y + cr); x.stroke(); }, main);
-    else if(mark.k === 'disc') twice((pass, w) => { const r = p.r*u; x.lineWidth = w; x.beginPath(); x.ellipse(X, Y, r, Math.max(r*0.04, r*p.flat), p.turn, 0, Math.PI*2); x.stroke();
-      x.beginPath(); x.arc(X, Y, r*0.18, 0, Math.PI*2); pass ? x.fill() : x.stroke(); }, main);
     else if(mark.k === 'arrow' || mark.k === 'axis'){
       // a heading or a line through the page's middle; three of them, the outer two fainter, as wind or hatching reads
       const L = Math.min(aspX, aspY)*0.36*u, a = Math.atan2(p.dy, p.dx), nx = -p.dy, ny = p.dx;

@@ -6447,7 +6447,7 @@ function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
 // Light that came too close
 // goes the long way round the dark —
 // you see its back, bent up.
-function genBlackHole(w,h,amt,zoom,light,form){
+function genBlackHole(w,h,amt,zoom,light,form,lens=1){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   // A black hole RAY-TRACED, after Luminet (1979), Riazuelo's and Interstellar's
   // renderers (James et al. 2015) and Antonelli's "Starless": every working
@@ -6477,7 +6477,7 @@ function genBlackHole(w,h,amt,zoom,light,form){
   const jets=Math.max(0, Math.min(1, form==null ? 0 : form)), chaos=zoom;
   const deg=light==null ? 315 : light, lv=lightVec(deg), view=Math.min(1, Math.hypot(lv.lx, lv.ly));
   const unit=Math.min(w,h), cx=w*(0.2+Math.random()*0.6), cy=h*(0.2+Math.random()*0.6);
-  const Rsh=unit*(0.055+Math.random()*0.03), S=Rsh/2.6;            // the shadow; pixels per horizon radius
+  const Rsh=unit*(0.055+Math.random()*0.03)*lens, S=Rsh/2.6;       // the shadow; pixels per horizon radius (the camera's zoom: the lens)
   const tilt0=(8+Math.random()*10)*Math.PI/180, elev=tilt0 + (Math.PI/2 - tilt0)*(1-view);
   const spin=(Math.random()-0.5)*0.15 + ((((deg-315+540)%360)+360)%360 - 180)*Math.PI/180;
   const dirSign=Math.random()<0.5?1:-1, cosR=Math.cos(spin), sinR=Math.sin(spin);
@@ -7781,7 +7781,7 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
     P.push({ nx, ny, c:nx*px+ny*py, wd:unit*(0.004+Math.random()*0.018), flash, ax:Math.cos(a), ay:Math.sin(a), mid:px*Math.cos(a)+py*Math.sin(a), len:unit*(0.15+Math.random()*0.5) }); }
   const veil=makeNoiseGrid(8,8), feathers=makeNoiseGrid(40,40);
   // the kept structure: everything that shapes it, and a trace of the seed's draws (the faces, the planes)
-  const lv0=lightVec(light==null?315:light), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',
+  const lv0=lightVec(light==null?315:light), rg=lightRig(), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',rg?JSON.stringify(rg):'',   // (the page's lights too: they light the facets)
     FRONT.F.length, FRONT.F[0].x, FRONT.F[FRONT.F.length-1].tone, BACK.F[0].y, P[0].c, P[P.length-1].len, veil[3], feathers[7]].join('|');
   let V, L;
   if(CRYSTAL_KEPT.key===keyC){ V=CRYSTAL_KEPT.V; L=CRYSTAL_KEPT.L; }
@@ -12380,6 +12380,17 @@ function cameraGuide(kind, aspX, aspY, cam, ring){
     for(let k = -12; k <= 12; k++){ const a = k*L.W*0.5; run(t => proj(Math.cos(a), Math.sin(a), (t - 0.5)*L.W), 8, false); }
     return lines;
   }
+  if(kind === 'disc'){
+    // (the Black Hole's disc, as it is seen from the dial: Turn turns it in the sky, View tips it from face-on at the middle
+    //  to edge-on at the rim, Zoom sizes it; drawn at the page's middle, its place the seed's: rings at its inner and
+    //  outer edge and its dark heart)
+    const view = Math.min(1, Math.max(0, cam.view)/100), elev = (13 + 77*(1 - view))*Math.PI/180, spin = ((((cam.turn + 540) % 360) + 360) % 360 - 180)*Math.PI/180;
+    const k = Math.max(0.25, cam.zoom/100), cx = aspX/2, cy = aspY/2, flat = Math.sin(elev), c = Math.cos(spin), s = Math.sin(spin);
+    for(const [r, bold] of [[0.24*k, true], [0.12*k, false], [0.05*k, true]]){ const pts = [];
+      for(let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2, x = Math.cos(a)*r, y = Math.sin(a)*r*(r < 0.06*k ? 1 : flat); pts.push([cx + x*c - y*s, cy + x*s + y*c]); }
+      lines.push({ pts, bold }); }
+    return lines;
+  }
   if(kind === 'ellipse'){
     // (Ring in the Sky's ring, as it is drawn from the dial: Turn spins it, View raises the eye, Zoom sizes it; the
     //  band's two edges and its walls' inner edges, the far half bold)
@@ -14265,10 +14276,15 @@ const CHAOS_STEPS = {
       // (Shape Aware: round the words, a polished plate under them; in the letters, smaller facets)
       return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100*(1 - 0.55*(+E.ctx.fill || 0))), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null, E.ctx))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  // (the camera dial is where you see it from, Ruby's rule: Turn turns its disc in the sky, View how edge-on, Camera Zoom
+  //  the lens; a graph from before, with no Turn of its own, keeps the light dial's way and height, as it always had)
   blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 12,
-    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
-      return [withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100))]; },
+    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variation', 0, 0, 99),
+      CHAOS_R('turn', 'Turn', 0, 0, 360), CHAOS_R('view', 'View', 100, 0, 130), CHAOS_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), own = n.data && n.data.turn !== undefined && typeof dv !== 'number';
+      const light = typeof dv === 'number' ? dv*360 : own ? 315 + E.num(n, 'turn', 0) : (E.ctx.light ?? 315), lens = own ? Math.max(0.25, E.num(n, 'lens', 100)/100) : 1;
+      const draw = () => withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100, lens));
+      return [own ? withLightTilt(E.num(n, 'view', 100)/100, draw) : draw()]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
@@ -18242,14 +18258,15 @@ const TEXTURE_CHAINS = {
       ['facets', { zoom: 100, '~zoom': '50,400', amount: 0, '~amount': '0,240' }, 320, 100],   // 6
       ['surface', { name: 'Facet Field', ground: 'grey' }, 600, 120]],             // 7
     wires: [[1, 1, 6, paramPort('facets', 'zoom')], [2, 1, 6, paramPort('facets', 'amount')], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
-  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Light Dial is the View: where you look from. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: turn the dial slowly, and watch the disc tilt.', nodes: [
+  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Camera Dial is where you look from: its Turn turns the disc in the sky, its View tips it from face-on at the middle to edge-on at the rim, its zoom brings it closer. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: draw the camera dial slowly from the rim to the middle, and watch the disc open.', nodes: [
       ['knob', { slot: '1', name: 'Chaos', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Particles', def: 31 }, 40, 140],                // 2  (100 of 10–300)
       ['knob', { slot: '3', name: 'Jets', def: 0 }, 40, 240],                      // 3
-      ['dial', {}, 40, 340],                                                       // 4
-      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['camdial', {}, 40, 340],                                                    // 4  (the camera: where you see it from)
+      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100', turn: 0, '~turn': '0,360', view: 100, '~view': '0,100', lens: 100, '~lens': '25,400' }, 320, 100],   // 5
       ['surface', { name: 'Black Hole', ground: 'grey' }, 600, 120]],              // 6
-    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')],
+      [4, 1, 5, paramPort('blackhole', 'turn')], [4, 2, 5, paramPort('blackhole', 'view')], [4, 3, 5, paramPort('blackhole', 'lens')], [5, 1, 6, 1]] },
   moon: { label: 'Fractal Moon', canvas: true, teach: 'One part makes it: Fractal Moon, a moon whose maria and craters are fractal noise, in the phase of the seed, under a night sky of faint stars and drifting cloud. Fractal Depth adds finer and finer detail; Clouds draws cloud across it; Night Sky darkens the sky around. Try: Clouds at 0 and Night Sky at 100, for a clear night.', nodes: [
       ['knob', { slot: '1', name: 'Moon Size', def: 44 }, 40, 40],                 // 1  (100 of 60–150)
       ['knob', { slot: '2', name: 'Fractal Depth', def: 47 }, 40, 140],            // 2  (100 of 20–190)
@@ -20236,8 +20253,9 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
-  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:true, dial:'View', tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
+  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:100, zoom:100, guide:'disc' } },
   // water is tinted by the page itself: neutral by default, like all of Touch
   water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:35, zoom:100, guide:'plane' } },
@@ -20398,7 +20416,8 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit',
+  'veins', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'rainwater']) TEXTURE_CAPS[t].lowLight = true;   // (the last seven from the lighting audit: engine-lit, rigged, held at the rim)
 // THE DIAL AS A DIRECTION ONLY: where a texture reads only which way the dial points (a wind, a hatch, a flow), its
 // Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
 // guessed: each of these draws the same picture at every height.
@@ -20406,8 +20425,9 @@ for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminaga
 // THE PAGE'S LIGHTS (ROADMAP C1, C2: the dial's rim light, the Ambient slider under it, the Main Light, Rim Light and
 // Ambient Hues) for the surfaces the engine lights whose dial is a light. Measured, not guessed: each of these changes
 // under them (texCore withLightRig); the rest draw as they always did and never show them. (Linen Tooth, Stained Glass
-// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day.)
-for(const t of ['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
+// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day. Crystal's facets take them since its
+// kept structure is keyed on them: before, its cache showed the light it was first made with.)
+for(const t of ['crystal', 'circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
   'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
@@ -29216,7 +29236,7 @@ function genTessellate(w,h,amt,zoom,light,tint1,tint2,M3,GL,ctx){
 // Light that came too close
 // goes the long way round the dark —
 // you see its back, bent up.
-function genBlackHole(w,h,amt,zoom,light,form){
+function genBlackHole(w,h,amt,zoom,light,form,lens=1){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   // A black hole RAY-TRACED, after Luminet (1979), Riazuelo's and Interstellar's
   // renderers (James et al. 2015) and Antonelli's "Starless": every working
@@ -29246,7 +29266,7 @@ function genBlackHole(w,h,amt,zoom,light,form){
   const jets=Math.max(0, Math.min(1, form==null ? 0 : form)), chaos=zoom;
   const deg=light==null ? 315 : light, lv=lightVec(deg), view=Math.min(1, Math.hypot(lv.lx, lv.ly));
   const unit=Math.min(w,h), cx=w*(0.2+Math.random()*0.6), cy=h*(0.2+Math.random()*0.6);
-  const Rsh=unit*(0.055+Math.random()*0.03), S=Rsh/2.6;            // the shadow; pixels per horizon radius
+  const Rsh=unit*(0.055+Math.random()*0.03)*lens, S=Rsh/2.6;       // the shadow; pixels per horizon radius (the camera's zoom: the lens)
   const tilt0=(8+Math.random()*10)*Math.PI/180, elev=tilt0 + (Math.PI/2 - tilt0)*(1-view);
   const spin=(Math.random()-0.5)*0.15 + ((((deg-315+540)%360)+360)%360 - 180)*Math.PI/180;
   const dirSign=Math.random()<0.5?1:-1, cosR=Math.cos(spin), sinR=Math.sin(spin);
@@ -30550,7 +30570,7 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
     P.push({ nx, ny, c:nx*px+ny*py, wd:unit*(0.004+Math.random()*0.018), flash, ax:Math.cos(a), ay:Math.sin(a), mid:px*Math.cos(a)+py*Math.sin(a), len:unit*(0.15+Math.random()*0.5) }); }
   const veil=makeNoiseGrid(8,8), feathers=makeNoiseGrid(40,40);
   // the kept structure: everything that shapes it, and a trace of the seed's draws (the faces, the planes)
-  const lv0=lightVec(light==null?315:light), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',
+  const lv0=lightVec(light==null?315:light), rg=lightRig(), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',rg?JSON.stringify(rg):'',   // (the page's lights too: they light the facets)
     FRONT.F.length, FRONT.F[0].x, FRONT.F[FRONT.F.length-1].tone, BACK.F[0].y, P[0].c, P[P.length-1].len, veil[3], feathers[7]].join('|');
   let V, L;
   if(CRYSTAL_KEPT.key===keyC){ V=CRYSTAL_KEPT.V; L=CRYSTAL_KEPT.L; }
@@ -35149,6 +35169,17 @@ function cameraGuide(kind, aspX, aspY, cam, ring){
     for(let k = -12; k <= 12; k++){ const a = k*L.W*0.5; run(t => proj(Math.cos(a), Math.sin(a), (t - 0.5)*L.W), 8, false); }
     return lines;
   }
+  if(kind === 'disc'){
+    // (the Black Hole's disc, as it is seen from the dial: Turn turns it in the sky, View tips it from face-on at the middle
+    //  to edge-on at the rim, Zoom sizes it; drawn at the page's middle, its place the seed's: rings at its inner and
+    //  outer edge and its dark heart)
+    const view = Math.min(1, Math.max(0, cam.view)/100), elev = (13 + 77*(1 - view))*Math.PI/180, spin = ((((cam.turn + 540) % 360) + 360) % 360 - 180)*Math.PI/180;
+    const k = Math.max(0.25, cam.zoom/100), cx = aspX/2, cy = aspY/2, flat = Math.sin(elev), c = Math.cos(spin), s = Math.sin(spin);
+    for(const [r, bold] of [[0.24*k, true], [0.12*k, false], [0.05*k, true]]){ const pts = [];
+      for(let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2, x = Math.cos(a)*r, y = Math.sin(a)*r*(r < 0.06*k ? 1 : flat); pts.push([cx + x*c - y*s, cy + x*s + y*c]); }
+      lines.push({ pts, bold }); }
+    return lines;
+  }
   if(kind === 'ellipse'){
     // (Ring in the Sky's ring, as it is drawn from the dial: Turn spins it, View raises the eye, Zoom sizes it; the
     //  band's two edges and its walls' inner edges, the far half bold)
@@ -37034,10 +37065,15 @@ const CHAOS_STEPS = {
       // (Shape Aware: round the words, a polished plate under them; in the letters, smaller facets)
       return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100*(1 - 0.55*(+E.ctx.fill || 0))), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null, E.ctx))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  // (the camera dial is where you see it from, Ruby's rule: Turn turns its disc in the sky, View how edge-on, Camera Zoom
+  //  the lens; a graph from before, with no Turn of its own, keeps the light dial's way and height, as it always had)
   blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 12,
-    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
-      return [withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100))]; },
+    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variation', 0, 0, 99),
+      CHAOS_R('turn', 'Turn', 0, 0, 360), CHAOS_R('view', 'View', 100, 0, 130), CHAOS_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), own = n.data && n.data.turn !== undefined && typeof dv !== 'number';
+      const light = typeof dv === 'number' ? dv*360 : own ? 315 + E.num(n, 'turn', 0) : (E.ctx.light ?? 315), lens = own ? Math.max(0.25, E.num(n, 'lens', 100)/100) : 1;
+      const draw = () => withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100, lens));
+      return [own ? withLightTilt(E.num(n, 'view', 100)/100, draw) : draw()]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
@@ -41011,14 +41047,15 @@ const TEXTURE_CHAINS = {
       ['facets', { zoom: 100, '~zoom': '50,400', amount: 0, '~amount': '0,240' }, 320, 100],   // 6
       ['surface', { name: 'Facet Field', ground: 'grey' }, 600, 120]],             // 7
     wires: [[1, 1, 6, paramPort('facets', 'zoom')], [2, 1, 6, paramPort('facets', 'amount')], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
-  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Light Dial is the View: where you look from. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: turn the dial slowly, and watch the disc tilt.', nodes: [
+  blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Camera Dial is where you look from: its Turn turns the disc in the sky, its View tips it from face-on at the middle to edge-on at the rim, its zoom brings it closer. Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. Try: draw the camera dial slowly from the rim to the middle, and watch the disc open.', nodes: [
       ['knob', { slot: '1', name: 'Chaos', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
       ['knob', { slot: '2', name: 'Particles', def: 31 }, 40, 140],                // 2  (100 of 10–300)
       ['knob', { slot: '3', name: 'Jets', def: 0 }, 40, 240],                      // 3
-      ['dial', {}, 40, 340],                                                       // 4
-      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100' }, 320, 100],   // 5
+      ['camdial', {}, 40, 340],                                                    // 4  (the camera: where you see it from)
+      ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100', turn: 0, '~turn': '0,360', view: 100, '~view': '0,100', lens: 100, '~lens': '25,400' }, 320, 100],   // 5
       ['surface', { name: 'Black Hole', ground: 'grey' }, 600, 120]],              // 6
-    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')],
+      [4, 1, 5, paramPort('blackhole', 'turn')], [4, 2, 5, paramPort('blackhole', 'view')], [4, 3, 5, paramPort('blackhole', 'lens')], [5, 1, 6, 1]] },
   moon: { label: 'Fractal Moon', canvas: true, teach: 'One part makes it: Fractal Moon, a moon whose maria and craters are fractal noise, in the phase of the seed, under a night sky of faint stars and drifting cloud. Fractal Depth adds finer and finer detail; Clouds draws cloud across it; Night Sky darkens the sky around. Try: Clouds at 0 and Night Sky at 100, for a clear night.', nodes: [
       ['knob', { slot: '1', name: 'Moon Size', def: 44 }, 40, 40],                 // 1  (100 of 60–150)
       ['knob', { slot: '2', name: 'Fractal Depth', def: 47 }, 40, 140],            // 2  (100 of 20–190)
@@ -43005,8 +43042,9 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
-  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:true, dial:'View', tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
+  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:100, zoom:100, guide:'disc' } },
   // water is tinted by the page itself: neutral by default, like all of Touch
   water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:35, zoom:100, guide:'plane' } },
@@ -43167,7 +43205,8 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit',
+  'veins', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'rainwater']) TEXTURE_CAPS[t].lowLight = true;   // (the last seven from the lighting audit: engine-lit, rigged, held at the rim)
 // THE DIAL AS A DIRECTION ONLY: where a texture reads only which way the dial points (a wind, a hatch, a flow), its
 // Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
 // guessed: each of these draws the same picture at every height.
@@ -43175,8 +43214,9 @@ for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminaga
 // THE PAGE'S LIGHTS (ROADMAP C1, C2: the dial's rim light, the Ambient slider under it, the Main Light, Rim Light and
 // Ambient Hues) for the surfaces the engine lights whose dial is a light. Measured, not guessed: each of these changes
 // under them (texCore withLightRig); the rest draw as they always did and never show them. (Linen Tooth, Stained Glass
-// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day.)
-for(const t of ['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
+// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day. Crystal's facets take them since its
+// kept structure is keyed on them: before, its cache showed the light it was first made with.)
+for(const t of ['crystal', 'circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
   'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
@@ -44408,11 +44448,11 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Aegir';
+const RELEASE = 'Saturn–Bestla';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_xM1jgzH","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"YJnHzsfc","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"R8benyFh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"YtNY3Szl","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"_iSVcV3E","bokeh":"2ULWW1AF","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dewwebs":"cJgfSjJ_","dunes":"YJnHzsfc","embers":"IH3hkliS","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","linen":"R8benyFh","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"YtNY3Szl","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -45245,7 +45285,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · 7593bb2";
+const STAMP = "2026-10-19 · c528d26";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -50079,11 +50119,12 @@ const WIKI_PARTS = {
   },
   blackhole: {
     line: "A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.",
-    about: "Every pixel follows a ray of light back past the hole, bent by its gravity: the stars behind are lensed into arcs and rings, and the disc of hot matter round the hole is seen over it and, bent round, under it too. The dial is where you look from.",
-    ins: {"view from": "Where you look from (wire the Light Dial)."},
+    about: "Every pixel follows a ray of light back past the hole, bent by its gravity: the stars behind are lensed into arcs and rings, and the disc of hot matter round the hole is seen over it and, bent round, under it too. The camera dial is where you look from: its Turn turns the disc, its View tips it toward edge-on, its zoom brings it closer.",
+    ins: {"view from": "Where you look from, as a light dial's direction (from older graphs; unwired, Turn and View say it)."},
     outs: {"sky": "The hole, its disc and the lensed sky."},
-    set: {"zoom": "Chaos: how stirred the disc is.", "amount": "How full of particles the disc is.", "form": "Jets: beams fired from the poles, none at 0.", "variant": "Another sky, another disc."},
-    tips: ["Turn the dial slowly and watch the disc tilt."],
+    set: {"zoom": "Chaos: how stirred the disc is.", "amount": "How full of particles the disc is.", "form": "Jets: beams fired from the poles, none at 0.", "variant": "Another sky, another disc.",
+      "turn": "Turns the disc in the sky (wire the Camera Dial's Turn).", "view": "How edge-on you see it: face-on at 0, edge-on at 100 (wire the Camera Dial's View).", "lens": "Camera Zoom: how close (wire the Camera Dial's Zoom)."},
+    tips: ["Draw the camera dial slowly from its rim to its middle and watch the disc open."],
     see: ["part:starfield", "part:polar"],
   },
   moon: {
@@ -53363,9 +53404,10 @@ function applyPersisted(s){
 
 // a look's FORMAT: 2 since the dial took over Harsh Rain's slant and Silverpoint
 // Hatch's angle (their sliders took new jobs); 3 every blend for every surface; 4 Ringworld's day on the light dial and
-// Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic.
+// Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
+// from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 6;
+const LOOK_VERSION = 7;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -53430,7 +53472,14 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))); }
+function retireLook(s){ return retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))); }
+/** THE BLACK HOLE ON THE CAMERA DIAL (format 7; Ruby: any view belongs on the camera dial): it was seen from the light
+ *  dial, its turn 315° the disc level, its height how edge-on. A look from before keeps its picture: the dial's turn
+ *  past 315° becomes the camera's Turn, its height the camera's View, the lens as it was. */
+const blackHoleCamera = (light, tilt) => ({ cameraTurn: String(Math.round((((+(light ?? 315) || 0) - 315) % 360 + 360) % 360)),
+  cameraView: String(Math.round(Math.max(0, Math.min(100, tilt === undefined || tilt === '' || isNaN(+tilt) ? 100 : +tilt)))), cameraZoom: '100' });
+function retireFormat7Layer(L){ return L && L.textureType === 'blackhole' ? { ...L, ...blackHoleCamera(L.textureLight, L.textureLightTilt) } : L; }
+function retireFormat7(s){ if(!s || +s.lookVersion >= 7) return s; let o = retireFormat7Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat7Layer(o.baseLayer) }; return o; }
 /** THE DIAL'S HANDLE BECAME THE LIGHT (format 6; Ruby: the light dial "goes the opposite direction that I would expect"):
  *  most surfaces had been lit from the handle's other side (textureGenerators LIGHT_TURNED). A look, preset or reading
  *  made before is turned half round on such a surface, the main light and the rim alike, so it keeps its picture and
@@ -54063,8 +54112,9 @@ function applyPreset(p){
   { const ld = p.textureLight !== undefined ? (lightTurned(p) ? halfRound(p.textureLight) : p.textureLight) : (capsFor(p.textureType || $('textureType').value) || {}).lightDeg;
     if(ld != null){ $('textureLight').value = String(ld); syncLightPad(); } }
   // and its camera: the preset's own, or where its texture's camera starts
-  { const d = cameraStart(p.textureType || $('textureType').value);
-    putCamera(p.cameraTurn ?? d.turn, p.cameraView ?? d.view, p.cameraZoom ?? d.zoom); }
+  // (a Black Hole preset from before format 7 says its view with the light dial: onto the camera, as its looks are)
+  { const d = cameraStart(p.textureType || $('textureType').value), bh = p.textureType === 'blackhole' && p.cameraTurn === undefined && p.textureLight !== undefined ? blackHoleCamera(p.textureLight, p.textureLightTilt) : {};
+    putCamera(p.cameraTurn ?? bh.cameraTurn ?? d.turn, p.cameraView ?? bh.cameraView ?? d.view, p.cameraZoom ?? bh.cameraZoom ?? d.zoom); }
 
   if(p.font){
     const idx = FONTS.findIndex(f=>f.family===p.font);
@@ -55038,14 +55088,12 @@ function pageSunAt(deg, tilt, aspX, aspY){
  *   sun      the light, where it comes from (the dial laid on the page; the Painted Ringworld's through its camera)
  *   impact   where Crackle's cracks burst from (on the far side from the light, as the Spreading Cracks part strikes)
  *   place    where a thing stands (Transmutation Circle: its centre, by dialSquare, and its circle's size)
- *   disc     how a disc is seen (Black Hole: turned by the dial's way, edge-on at its rim, face-on at its middle)
  *   arrow    a heading the dial gives (wind, rain, a flow, a breath): `way` +1 toward the handle, −1 away from it
  *   axis     a line the dial lays (hatching, field lines): along the handle's line, or across it (`across`)
  *  (A surface whose dial is the day, Ringworld, has its camera's guide only.) */
 const DIAL_GUIDES = {
   crackle:     [{ k: 'sun' }, { k: 'impact' }],
   summoning:   [{ k: 'place' }],
-  blackhole:   [{ k: 'disc' }],
   snow:        [{ k: 'arrow', fall: true }],                 // (the wind blows from the handle, the flakes fall with it: Wind is how far)
   rainstreaks: [{ k: 'arrow', way: -1 }],                    // (the rain comes from the handle)
   hatch:       [{ k: 'axis' }],                              // (strokes along the handle's line)
@@ -55069,8 +55117,6 @@ function dialGuidePlace(mark, deg, tilt, aspX, aspY, knobs = {}){
   if(mark.k === 'impact') return { x: aspX*(0.5 - hx*0.38), y: aspY*(0.5 - hy*0.38) };
   if(mark.k === 'place'){ const kk = Math.min(1, k), m = Math.max(Math.abs(hx), Math.abs(hy)) || 1;
     return { x: aspX*(0.5 + hx/m*kk/2), y: aspY*(0.5 + hy/m*kk/2), r: 0.34*(knobs.size || 100)/100 }; }
-  if(mark.k === 'disc'){ const view = Math.min(1, k), elev = (13 + 77*(1 - view))*Math.PI/180, spin = ((((deg - 315 + 540) % 360) + 360) % 360 - 180)*Math.PI/180;
-    return { x: aspX/2, y: aspY/2, r: 0.2, flat: Math.sin(elev), turn: spin }; }
   if(mark.k === 'arrow' || mark.k === 'axis'){ const s = mark.k === 'arrow' ? mark.way || 1 : 1;
     let t = [hx*s, hy*s];
     if(mark.fall){ const w = Math.max(0, Math.min(1, (knobs.wind ?? 50)/100)); t = [-hx*1.6*w, 1 - hy*1.6*w]; }   // (genSnow: gravity and the wind)
@@ -55134,8 +55180,6 @@ function drawDialGuide(on, linger){
     else if(mark.k === 'place') twice((pass, w) => { const r = p.r*u, cr = u*0.025; x.lineWidth = w;
       x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.setLineDash([u*0.02, u*0.015]); x.stroke(); x.setLineDash([]);
       x.beginPath(); x.moveTo(X - cr, Y); x.lineTo(X + cr, Y); x.moveTo(X, Y - cr); x.lineTo(X, Y + cr); x.stroke(); }, main);
-    else if(mark.k === 'disc') twice((pass, w) => { const r = p.r*u; x.lineWidth = w; x.beginPath(); x.ellipse(X, Y, r, Math.max(r*0.04, r*p.flat), p.turn, 0, Math.PI*2); x.stroke();
-      x.beginPath(); x.arc(X, Y, r*0.18, 0, Math.PI*2); pass ? x.fill() : x.stroke(); }, main);
     else if(mark.k === 'arrow' || mark.k === 'axis'){
       // a heading or a line through the page's middle; three of them, the outer two fainter, as wind or hatching reads
       const L = Math.min(aspX, aspY)*0.36*u, a = Math.atan2(p.dy, p.dx), nx = -p.dy, ny = p.dx;

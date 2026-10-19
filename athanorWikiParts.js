@@ -1044,11 +1044,12 @@ export const WIKI_PARTS = {
   },
   blackhole: {
     line: "A black hole ray-traced against a starry sky: its light bent into rings, a disc of hot matter wrapped round it.",
-    about: "Every pixel follows a ray of light back past the hole, bent by its gravity: the stars behind are lensed into arcs and rings, and the disc of hot matter round the hole is seen over it and, bent round, under it too. The dial is where you look from.",
-    ins: {"view from": "Where you look from (wire the Light Dial)."},
+    about: "Every pixel follows a ray of light back past the hole, bent by its gravity: the stars behind are lensed into arcs and rings, and the disc of hot matter round the hole is seen over it and, bent round, under it too. The camera dial is where you look from: its Turn turns the disc, its View tips it toward edge-on, its zoom brings it closer.",
+    ins: {"view from": "Where you look from, as a light dial's direction (from older graphs; unwired, Turn and View say it)."},
     outs: {"sky": "The hole, its disc and the lensed sky."},
-    set: {"zoom": "Chaos: how stirred the disc is.", "amount": "How full of particles the disc is.", "form": "Jets: beams fired from the poles, none at 0.", "variant": "Another sky, another disc."},
-    tips: ["Turn the dial slowly and watch the disc tilt."],
+    set: {"zoom": "Chaos: how stirred the disc is.", "amount": "How full of particles the disc is.", "form": "Jets: beams fired from the poles, none at 0.", "variant": "Another sky, another disc.",
+      "turn": "Turns the disc in the sky (wire the Camera Dial's Turn).", "view": "How edge-on you see it: face-on at 0, edge-on at 100 (wire the Camera Dial's View).", "lens": "Camera Zoom: how close (wire the Camera Dial's Zoom)."},
+    tips: ["Draw the camera dial slowly from its rim to its middle and watch the disc open."],
     see: ["part:starfield", "part:polar"],
   },
   moon: {

@@ -14,7 +14,7 @@
  *
  * Fractured Glaze is the chain crazing + brushwork → glaze → surface.
  */
-import { makeNoiseGrid, sampleNoiseGrid, wordsRoom, lightHeights, litK, litS, withSeed, kitCanvas, CPU, cpx, canonArea, lightVec, kitWhole, wholeDial, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, wordsRoom, lightHeights, litK, litS, withSeed, withLightTilt, kitCanvas, CPU, cpx, canonArea, lightVec, kitWhole, wholeDial, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genSigils, genInkBleed, genTessellate, genBlackHole, genSummoningCircles } from './texChaos.js';
 
 const CHAOS_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -255,10 +255,15 @@ export const CHAOS_STEPS = {
       // (Shape Aware: round the words, a polished plate under them; in the letters, smaller facets)
       return [withSeed(chaosSeed(E, n), () => genTessellate(w, h, Math.max(0.02, E.num(n, 'amount', 0)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100*(1 - 0.55*(+E.ctx.fill || 0))), light, t1, t2, E.ctx.mat || null, E.ctx.glow || null, E.ctx))]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
+  // (the camera dial is where you see it from, Ruby's rule: Turn turns its disc in the sky, View how edge-on, Camera Zoom
+  //  the lens; a graph from before, with no Turn of its own, keeps the light dial's way and height, as it always had)
   blackhole: { cat: 'Textures', label: 'Black Hole', ins: ['view from'], outs: ['sky'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 12,
-    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
-      return [withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100))]; },
+    params: [CHAOS_R('zoom', 'Chaos', 100, 40, 250), CHAOS_R('amount', 'Particles', 100, 10, 300), CHAOS_R('form', 'Jets', 0), CHAOS_R('variant', 'Variation', 0, 0, 99),
+      CHAOS_R('turn', 'Turn', 0, 0, 360), CHAOS_R('view', 'View', 100, 0, 130), CHAOS_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12,
+    paint(E, n){ const { ww: w, wh: h } = E, dv = E.input(n, 1), own = n.data && n.data.turn !== undefined && typeof dv !== 'number';
+      const light = typeof dv === 'number' ? dv*360 : own ? 315 + E.num(n, 'turn', 0) : (E.ctx.light ?? 315), lens = own ? Math.max(0.25, E.num(n, 'lens', 100)/100) : 1;
+      const draw = () => withSeed(chaosSeed(E, n), () => genBlackHole(w, h, Math.max(0.02, E.num(n, 'amount', 100)/100), Math.max(0.25, E.num(n, 'zoom', 100)/100), light, E.num(n, 'form', 0)/100, lens));
+      return [own ? withLightTilt(E.num(n, 'view', 100)/100, draw) : draw()]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,

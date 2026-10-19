@@ -9,8 +9,10 @@ Recommendations".
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
 - THE DIAL'S GUIDE: a sun, an impact, a circle, a disc, arrows or lines over the page while the light dial moves, held
-  until the picture lands. Clear enough on a busy picture? Black Hole's disc is drawn at the page's middle (its place is
-  the seed's).
+  until the picture lands. Clear enough on a busy picture?
+- THE BLACK HOLE ON THE CAMERA DIAL (Turn, View, Zoom; a wireframe of its disc while it moves), its light dial gone.
+  Right? Its wireframe stands at the page's middle; the hole's own place is the seed's.
+- FEATHERS (sheet sent; branch `feathers`): ships on Ruby's yes. Which of the four readings, which sliders are missing?
 - THE STARTERS AND SURFACE STUDIES ON THE PAGE: in the Surface menu now, under 🜈 Athanor Starters and 🜍 Surface
   Studies (choosing one puts its graph on the page, its knobs on the sliders; the dice pass over them). Which studies
   read right, and what is each missing ("The surface studies are... hmmm.")? Orbit Script, Transmutation Engine and

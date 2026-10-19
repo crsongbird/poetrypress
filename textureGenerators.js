@@ -541,8 +541,9 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
-  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:true, dial:'View', tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
+  blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:100, zoom:100, guide:'disc' } },
   // water is tinted by the page itself: neutral by default, like all of Touch
   water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:35, zoom:100, guide:'plane' } },
@@ -703,7 +704,8 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit']) TEXTURE_CAPS[t].lowLight = true;
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit',
+  'veins', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'rainwater']) TEXTURE_CAPS[t].lowLight = true;   // (the last seven from the lighting audit: engine-lit, rigged, held at the rim)
 // THE DIAL AS A DIRECTION ONLY: where a texture reads only which way the dial points (a wind, a hatch, a flow), its
 // Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
 // guessed: each of these draws the same picture at every height.
@@ -711,8 +713,9 @@ for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminaga
 // THE PAGE'S LIGHTS (ROADMAP C1, C2: the dial's rim light, the Ambient slider under it, the Main Light, Rim Light and
 // Ambient Hues) for the surfaces the engine lights whose dial is a light. Measured, not guessed: each of these changes
 // under them (texCore withLightRig); the rest draw as they always did and never show them. (Linen Tooth, Stained Glass
-// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day.)
-for(const t of ['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
+// and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day. Crystal's facets take them since its
+// kept structure is keyed on them: before, its cache showed the light it was first made with.)
+for(const t of ['crystal', 'circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
   'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Material Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
