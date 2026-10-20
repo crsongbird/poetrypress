@@ -43,6 +43,7 @@ export const PK_SIZE = {
   clock: [40, 96, 8, 14], factory: [12, 25, 30, 60], watertower: [15, 35, 8, 14], capsule: [30, 60, 15, 25], megablock: [30, 50, 50, 100], geodome: [20, 55, 40, 110],
   observatory: [12, 40, 12, 40], turbine: [80, 160, 6, 8],
   helper: [1.0, 1.5], drone: [0.5, 1.0], crawler: [0.6, 1.0], sentry: [1.8, 2.8], walker: [2.5, 4.5], derelict: [10, 22],
+  fence: [0.9, 1.2], lamp: [3, 4.6], bench: [0.45, 0.5], mailbox: [1.1, 1.2], barrel: [0.9, 1.0], crate: [0.5, 1.1], sign: [1.8, 2.4], bicycle: [0.95, 1.05], hydrant: [0.6, 0.8],
   rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8] };
 // a size in its range, tall specimens rarer (u: a draw from 0 to 1)
 export const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
@@ -479,6 +480,46 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
 
 // ---------------- ROCKS AND THE BUILDERS' WORKS ----------------
 // a boulder in three facets: its top catching the light, its lit side, its shadow side; and its shadow on the ground
+// ---------------- SMALL THINGS, for close by (docs/prior-art/painted-ringworld.md §5.5) ----------------
+// What you find near your feet: a fence, a lamp, a bench, a mailbox, a barrel, a crate, a sign, a bicycle, a hydrant,
+// and now and then a person, for scale. Each at (X, Y), h its height in pixels, in the caller's lit colours.
+export const PK_PROPS = { wilds: ['fence', 'fence', 'sign', 'mailbox', 'figure'], cities: ['lamp', 'bench', 'hydrant', 'bicycle', 'sign', 'figure', 'mailbox'],
+  neon: ['lamp', 'sign', 'bicycle', 'crate', 'figure'], builders: ['lamp', 'crate', 'bench'], ruins: ['barrel', 'crate', 'sign', 'barrel', 'fence'], magic: ['lamp', 'fence', 'bench'] };
+export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
+  const sub = pkSub(R0), R = sub(1), sd = c.sd, ln = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = Math.max(px(0.5), wd); x.lineCap = 'round'; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+  if(kind === 'fence'){ // a run of pickets on two rails, leaning a little
+    const n = 5 + Math.floor(R()*5), sp = h*0.45, x0 = X - n*sp/2, lean = (R() - 0.5)*h*0.1;
+    ln([[x0, Y - h*0.35], [x0 + n*sp, Y - h*0.38 + lean]], pkCss(c.dark), h*0.07); ln([[x0, Y - h*0.75], [x0 + n*sp, Y - h*0.78 + lean]], pkCss(c.dark), h*0.07);
+    for(let k = 0; k <= n; k++){ const px0 = x0 + k*sp; pkPoly(x, [[px0 - h*0.05, Y], [px0 - h*0.05, Y - h*0.9], [px0, Y - h], [px0 + h*0.05, Y - h*0.9], [px0 + h*0.05, Y]], pkCss(k % 2 ? c.body : c.lit)); } return; }
+  if(kind === 'lamp'){ // a post, an arm, a head; its pool of light by night
+    ln([[X, Y], [X, Y - h]], pkCss(c.dark), h*0.04); ln([[X, Y - h], [X + h*0.18, Y - h*0.97]], pkCss(c.dark), h*0.03);
+    pkEll(x, X + h*0.2, Y - h*0.95, h*0.06, h*0.03, pkCss(night > 0.2 ? pkMix(c.glow, PK_WHITE, 0.5) : c.body));
+    if(night > 0.2){ pkGlow(x, X + h*0.2, Y - h*0.93, h*0.4, c.glow, 0.5*night); pkGlow(x, X + h*0.2, Y, h*0.45, c.glow, 0.25*night); } return; }
+  if(kind === 'bench'){ const w = h*3; ln([[X - w/2, Y - h*0.5], [X + w/2, Y - h*0.5]], pkCss(c.body), h*0.12); ln([[X - w/2, Y - h], [X + w/2, Y - h]], pkCss(c.lit), h*0.1);
+    ln([[X - w*0.4, Y], [X - w*0.4, Y - h]], pkCss(c.dark), h*0.07); ln([[X + w*0.4, Y], [X + w*0.4, Y - h]], pkCss(c.dark), h*0.07); return; }
+  if(kind === 'mailbox'){ ln([[X, Y], [X, Y - h*0.65]], pkCss(c.dark), h*0.08); pkEll(x, X, Y - h*0.78, h*0.28, h*0.16, pkCss(c.body)); pkEll(x, X + sd*h*0.06, Y - h*0.82, h*0.18, h*0.08, pkCss(c.lit));
+    pkPoly(x, [[X + h*0.22, Y - h*0.82], [X + h*0.22, Y - h*1.02], [X + h*0.34, Y - h*0.97], [X + h*0.26, Y - h*0.92]], pkCss([200, 50, 44])); return; }
+  if(kind === 'barrel'){ const w = h*0.6; pkPoly(x, [[X - w/2, Y], [X - w*0.6, Y - h/2], [X - w/2, Y - h], [X + w/2, Y - h], [X + w*0.6, Y - h/2], [X + w/2, Y]], pkCss(c.body));
+    pkPoly(x, [[X + sd*w*0.1, Y], [X + sd*w*0.2, Y - h/2], [X + sd*w*0.1, Y - h], [X + sd*w/2, Y - h], [X + sd*w*0.6, Y - h/2], [X + sd*w/2, Y]], pkCss(c.lit));
+    for(const v of [0.22, 0.78]) ln([[X - w*0.58, Y - h*v], [X + w*0.58, Y - h*v]], pkCss(c.dark), h*0.06); return; }
+  if(kind === 'crate'){ const w = h*1.1; pkPoly(x, [[X - w/2, Y], [X - w/2, Y - h], [X + w/2, Y - h], [X + w/2, Y]], pkCss(c.body)); pkPoly(x, [[X + sd*w/2, Y], [X + sd*w/2, Y - h], [X + sd*w*0.75, Y - h*0.9], [X + sd*w*0.75, Y + h*0.05]], pkCss(c.dark));
+    ln([[X - w/2, Y], [X + w/2, Y - h]], pkCss(c.dark), h*0.06); ln([[X - w/2, Y - h], [X + w/2, Y - h]], pkCss(c.lit), h*0.05); return; }
+  if(kind === 'sign'){ // a board on a post; its writing is only marks, as a sign seen too far to read
+    ln([[X, Y], [X, Y - h]], pkCss(c.dark), h*0.06); const w = h*0.9, tilt = (R() - 0.5)*h*0.12;
+    pkPoly(x, [[X - w/2, Y - h + tilt], [X + w/2, Y - h - tilt], [X + w/2, Y - h*0.6 - tilt], [X - w/2, Y - h*0.6 + tilt]], pkCss(R() < 0.5 ? c.lit : pkMix(c.body, c.glow, 0.4)));
+    for(let k = 0; k < 2; k++) ln([[X - w*0.35, Y - h*(0.88 - k*0.14)], [X + w*(0.1 + 0.25*R()), Y - h*(0.88 - k*0.14)]], pkCss(c.dark, 0.6), h*0.04); return; }
+  if(kind === 'bicycle'){ const r = h*0.32; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.04);
+    for(const s of [-1, 1]){ x.beginPath(); x.arc(X + s*h*0.55, Y - r, r, 0, Math.PI*2); x.stroke(); }
+    ln([[X - h*0.55, Y - r], [X - h*0.1, Y - h*0.75], [X + h*0.35, Y - h*0.75], [X + h*0.55, Y - r], [X, Y - r], [X - h*0.1, Y - h*0.75]], pkCss(c.body), h*0.05);
+    ln([[X + h*0.35, Y - h*0.75], [X + h*0.32, Y - h*0.95], [X + h*0.42, Y - h*0.95]], pkCss(c.dark), h*0.04); return; }
+  if(kind === 'hydrant'){ const w = h*0.4; pkPoly(x, [[X - w/2, Y], [X - w/2, Y - h*0.75], [X + w/2, Y - h*0.75], [X + w/2, Y]], pkCss([196, 52, 44])); pkEll(x, X, Y - h*0.78, w*0.55, h*0.16, pkCss([214, 70, 56]));
+    pkEll(x, X, Y - h*0.45, w*0.8, h*0.08, pkCss([170, 40, 36])); return; }
+  // a person, for scale (a capsule and a head, no face: the eye reads its size, not who it is)
+  const coat = [c.body, c.lit, pkMix(c.glow, c.body, 0.5), c.dark][Math.floor(R()*4)];
+  pkPoly(x, [[X - h*0.12, Y], [X - h*0.15, Y - h*0.72], [X + h*0.15, Y - h*0.72], [X + h*0.12, Y]], pkCss(coat));
+  pkDisc(x, X, Y - h*0.84, h*0.11, pkCss(c.dark)); pkPoly(x, [[X + sd*h*0.02, Y - h*0.1], [X + sd*h*0.03, Y - h*0.68], [X + sd*h*0.14, Y - h*0.68], [X + sd*h*0.11, Y - h*0.1]], pkCss(pkMix(coat, PK_WHITE, 0.2)));
+}
+
 // ---------------- ROBOTS AND DROIDS (as life, where they belong) ----------------
 // Shape language, as games use it: round, soft and big-eyed is a friend (a helper on its wheel, a drone humming along,
 // a crawler tending the pipes); angular, spiked, red-eyed and low is a threat (a sentry on its tripod, a walker stalking);
