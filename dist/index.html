@@ -18067,6 +18067,19 @@ function flVisitor(L, R, cx, cy, s, ang, kind, c, light){
       const knee = [u0 + Math.cos(a)*len*0.55, sd*0.12 + Math.sin(a)*len*0.55], foot = [knee[0] + Math.cos(a + sd*bend)*len*0.55, knee[1] + Math.sin(a + sd*bend)*len*0.55];
       line([[u0, sd*0.08], knee, foot], w, col, gloss); } };
   const dark = c[1], main = c[0], acc = c[2] || flMix(c[0], [255, 220, 120], 0.5), green = c[3];
+  if(kind === 'fairy'){
+
+
+    const core = flMix(acc, [255, 255, 255], 0.65), [x0, y0] = T(0, 0);
+    for(const [u, v, ru, rv, rot] of [[0.12, 0.34, 0.34, 0.12, -0.6], [0.12, -0.34, 0.34, 0.12, 0.6], [-0.1, 0.3, 0.26, 0.1, -1.0], [-0.1, -0.3, 0.26, 0.1, 1.0]]){
+      ell(L.pic, u, v, ru, rv, rot); L.pic.fillStyle = flCss(flMix(core, main, 0.25), 1, 0.55); L.pic.fill();
+      for(const [ctx, st] of [[L.mask, g8(0.75)], [L.gloss, g8(0.95)], [L.thick, g8(0.15)], [L.height, g8(0.6)], [L.face, g8(0.8)]]){ ell(ctx, u, v, ru, rv, rot); ctx.fillStyle = st; ctx.fill(); } }
+    const hg = L.mask.createRadialGradient(x0, y0, 0, x0, y0, s*0.9); hg.addColorStop(0, g8(0.5)); hg.addColorStop(1, g8(0.04));
+    L.mask.save(); L.mask.globalCompositeOperation = 'lighten'; L.mask.fillStyle = hg; L.mask.fillRect(x0 - s, y0 - s, s*2, s*2); L.mask.restore();
+    L.pic.save(); L.pic.globalCompositeOperation = 'screen'; const pg = L.pic.createRadialGradient(x0, y0, 0, x0, y0, s*0.9); pg.addColorStop(0, flCss(core, 1, 0.9)); pg.addColorStop(0.3, flCss(core, 1, 0.35)); pg.addColorStop(1, flCss(core, 1, 0));
+    L.pic.fillStyle = pg; L.pic.fillRect(x0 - s, y0 - s, s*2, s*2); L.pic.restore();
+    dome(0, 0, 0.12, 0.12, core, 0.95, 1, 0.3);
+    return; }
   if(kind === 'ladybird'){
     legs([[0.15, 1.2], [0, 1.6], [-0.15, 2.0]], 0.42, 0.035, flMix(dark, [0, 0, 0], 0.5), 0.5, 0.4);
     dome(0.42, 0, 0.12, 0.13, flMix(dark, [0, 0, 0], 0.4), 0.7, 0.4);
@@ -18147,8 +18160,8 @@ function genBloom(w, h, o){
     const cc = o.cols.map((c, k) => c || flHex(S.cols[k]));
     const many = o.cells > 1, cx = many ? (i + 0.5)*cw : (o.x ?? 0.5)*w, cy = many ? (j + 0.5)*ch : (o.y ?? 0.5)*h;
     const Rad = Math.min(cw, ch)*0.42*o.size*(many ? 0.75 + R()*0.3 : 1);
-    if(o.part === 'visitor'){ const kind = o.visitor ? FLORA_VISITORS[o.visitor - 1] : FLORA_VISITORS[Math.floor(R()*FLORA_VISITORS.length)];
-      const sz = { ladybird: 0.12, spider: 0.165, hoverfly: 0.15, ant: 0.12, aphids: 0.15, petal: 0.24, fluff: 0.22 }[kind];
+    if(o.part === 'visitor'){ const rv = o.visitor ? 0 : R(), kind = o.visitor ? FLORA_VISITORS[o.visitor - 1] : rv < 1/66 ? 'fairy' : FLORA_VISITORS[Math.min(FLORA_VISITORS.length - 1, Math.floor((rv - 1/66)/(1 - 1/66)*FLORA_VISITORS.length))];
+      const sz = { ladybird: 0.12, spider: 0.165, hoverfly: 0.15, ant: 0.12, aphids: 0.15, petal: 0.24, fluff: 0.22, fairy: 0.14 }[kind];
       flVisitor(L, R, cx, cy, Math.min(cw, ch)*0.42*o.size*sz*2, R()*6.283, kind, [cc[0], cc[2], cc[1], cc[3]], o.light); continue; }
     if(o.part === 'leaf'){ flLeaf(L, cx - Math.min(cw, ch)*0.35, cy + Math.min(cw, ch)*0.1, Math.min(cw, ch)*0.7*o.size, -0.4 + (R() - 0.5)*0.8, cc[3], R, o.stage > 0.6 ? (o.stage - 0.6)/0.4 : 0); continue; }
     const f = { sp: S, view: flClamp(o.view + (many ? (R() - 0.5)*0.4 : 0)), stage: flClamp(o.stage + (many ? (R() - 0.5)*0.25 : 0)), spin: R()*6.283, turn: many ? (R() - 0.5)*0.6 : (o.turn || 0),
@@ -18175,6 +18188,26 @@ function genBloom(w, h, o){
 
 const FLORA_STEPS = {
 
+
+
+  fairy: { cat: 'Marks', label: 'Fairy Light', ins: ['over', 'glow hue'], outs: ['picture', 'mask'], io: { ins: ['image', 'colour'], outs: ['image', 'field'] },
+    params: [FL_R('chance', 'How Often', 18), FL_R('size', 'Size', 100, 30, 400), FL_R('x0', 'Across From', 10), FL_R('x1', 'Across To', 90), FL_R('y0', 'Down From', 50), FL_R('y1', 'Down To', 85), FL_R('variant', 'Variation', 0, 0, 99)], cost: () => 2,
+    run(E, n){ const { ww, wh, num, input, ctx } = E, over = E.asImage(input(n, 1) ?? 0), N = ww*wh, M = new Float32Array(N);
+      const seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0, R = mulberry32((seed ^ 0xFA1E) >>> 0);
+      if(R() >= num(n, 'chance', 18)/100) return [over, M];
+      const g = input(n, 2), col = Array.isArray(g) && !g.none ? g.map(c => c*255) : [214, 236, 255];
+      const X = ww*(num(n, 'x0', 10) + (num(n, 'x1', 90) - num(n, 'x0', 10))*R())/100, Y = wh*(num(n, 'y0', 50) + (num(n, 'y1', 85) - num(n, 'y0', 50))*R())/100;
+      const s = E.px(38)*num(n, 'size', 100)/100, flap = R()*0.6, trail = R()*Math.PI*2;
+      const [c, x] = kitCanvas(ww, wh), glow = (cx, cy, r, a) => { const gr = x.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, flCss(flMix(col, [255, 255, 255], 0.5), 1, a)); gr.addColorStop(0.35, flCss(col, 1, a*0.35)); gr.addColorStop(1, flCss(col, 1, 0)); x.fillStyle = gr; x.fillRect(cx - r, cy - r, r*2, r*2); };
+      x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.globalCompositeOperation = 'lighter';
+      for(let k = 1; k <= 5; k++){ const d = s*1.4*k, tx = X - Math.cos(trail)*d, ty = Y - Math.sin(trail)*d + Math.sin(k*1.3)*s*0.4; glow(tx, ty, s*(0.5 - k*0.07), 0.5 - k*0.08); }
+      glow(X, Y, s*4, 0.35);
+      for(const [a, len] of [[-0.5 - flap, 1.1], [Math.PI + 0.5 + flap, 1.1], [-1.1 - flap*0.5, 0.8], [Math.PI + 1.1 + flap*0.5, 0.8]]){ x.save(); x.translate(X, Y); x.rotate(a); x.beginPath(); x.ellipse(s*len*0.55, 0, s*len*0.55, s*0.22, 0, 0, Math.PI*2); x.fillStyle = flCss(col, 1, 0.45); x.fill(); x.restore(); }
+      glow(X, Y, s*0.7, 1); x.beginPath(); x.arc(X, Y, s*0.22, 0, Math.PI*2); x.fillStyle = 'rgba(255,255,255,0.95)'; x.fill();
+      const L = E.readCanvas(c), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const lr = L.r[i], lg = L.g[i], lb = L.b[i]; M[i] = Math.min(1, Math.max(lr, lg, lb));
+        out.r[i] = 1 - (1 - over.r[i])*(1 - lr); out.g[i] = 1 - (1 - over.g[i])*(1 - lg); out.b[i] = 1 - (1 - over.b[i])*(1 - lb); }
+      c.width = 0; c.height = 0; return [out, M]; } },
   bloom: { cat: 'Marks', label: 'Bloom', ins: ['light from', 'petal hue', 'tip hue', 'center hue', 'foliage hue'], outs: ['picture', 'mask', 'height', 'thickness', 'center', 'petals', 'gloss', 'facing'],
     io: { ins: ['value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [[...FL_R('species', FLORA_SPECIES_LABEL, 0).slice(0, 4), { min: 0, max: 100, bands: FLORA_NAMES.map(nm => nm.replace(' (seeded)', '')) }], FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
@@ -23445,7 +23478,7 @@ const TEXTURE_CHAINS = {
       [32, 4, 34, 2], [32, 1, 34, 3], [29, 1, 37, 1], [36, 1, 37, 2], [32, 1, 39, 1], [38, 1, 39, 2], [37, 1, 40, 1], [39, 1, 40, 2], [40, 1, 35, 1],
       [29, 1, 41, 1], [32, 1, 41, 2], [35, 1, 42, 1], [41, 1, 42, 2], [34, 1, 43, 1], [42, 1, 43, 2], [15, 1, 43, 6], [9, 1, 43, 7],
       [6, 1, 43, 'relief'], [43, 1, 44, 1]] },
-  meadow: { label: 'Idyllic Meadow', div: 2, teach: 'A meadow on a summer day (docs/prior-art/florals.md §6), after Monet’s and Van Gogh’s poppy fields and Kazuo Oga’s soft greens: a high warm sky of cumulus, rolling land fading into the distance, grass leaning with one wind, flowers near and far, petals in the air. The Light Dial is the sun: it lights the clouds (Simple Lighting on their blurred shape), the grass blades, every flower, and a warm glow where it stands. The land is a Threshold of a Gradient raised by a broad noise (Horizon); its colour runs from the far land’s hue, faded toward the sky, to the grass’s. Grass is a Scatter of dashes leaning with the seed’s wind, larger near; far flowers are clumped dabs; near ones are two of Bloom’s sheets (the Species slider’s, and a habitat’s mix in the second hue) thrown larger nearer, the largest on top; petals are diamonds smeared along the wind (Wind). Try: the dial low behind the field.',
+  meadow: { label: 'Idyllic Meadow', div: 2, teach: 'A meadow on a summer day (docs/prior-art/florals.md §6), after Monet’s and Van Gogh’s poppy fields and Kazuo Oga’s soft greens: a high warm sky of cumulus, rolling land fading into the distance, grass leaning with one wind, flowers near and far, petals in the air. The Light Dial is the sun: it lights the clouds (Simple Lighting on their blurred shape), the grass blades, every flower, and a warm glow where it stands. The land is a Threshold of a Gradient raised by a broad noise (Horizon); its colour runs from the far land’s hue, faded toward the sky, to the grass’s. Grass is a Scatter of dashes leaning with the seed’s wind, larger near; far flowers are clumped dabs; near ones are two of Bloom’s sheets (the Species slider’s, and a habitat’s mix in the second hue) thrown larger nearer, the largest on top; petals are diamonds smeared along the wind (Wind). Now and then (about one seed in six) a Fairy Light drifts over the grass. Try: the dial low behind the field.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 150],
@@ -23572,7 +23605,8 @@ const TEXTURE_CHAINS = {
       ['motionblur', { length: 6, '~length': '0,20', angle: 20 }, 480, 2240],
       ['mix', { t: 35 }, 260, 3120],
       ['blend', { mode: 'normal', opacity: 90 }, 3340, 40],
-      ['surface', { name: 'Idyllic Meadow', ground: 'colour' }, 3560, 40]],
+      ['surface', { name: 'Idyllic Meadow', ground: 'colour' }, 3560, 40],
+      ['fairy', { chance: 18, size: 100, y0: 55, y1: 85 }, 3450, 160]],
     wires: [[17, 1, 18, 1], [19, 1, 18, 'outHi'], [16, 1, 21, 1], [18, 1, 21, 2], [21, 1, 20, 1], [5, 1, 20, 'at'],
       [16, 1, 22, 1], [5, 1, 22, 'lo'], [10, 1, 23, 1], [15, 1, 23, 2], [16, 1, 25, 1], [25, 1, 24, 1], [10, 1, 24, 2], [23, 1, 24, 3],
       [27, 1, 26, 'scale'], [26, 1, 28, 1], [29, 1, 28, 'length'], [28, 1, 30, 1],
@@ -23599,7 +23633,7 @@ const TEXTURE_CHAINS = {
       [109, 1, 115, 1], [114, 1, 115, 2], [113, 1, 116, 1], [115, 1, 116, 2], [116, 1, 107, 'y'], [107, 2, 117, 1], [117, 1, 118, 1],
       [16, 1, 119, 1], [118, 1, 120, 1], [119, 1, 120, 2], [100, 1, 121, 1], [15, 1, 121, 2], [120, 1, 121, 3], [66, 1, 122, 3],
       [4, 1, 122, 'count'], [122, 1, 123, 1], [3, 1, 123, 'length'], [13, 1, 124, 1], [15, 1, 124, 2],
-      [121, 1, 125, 1], [124, 1, 125, 2], [123, 1, 125, 3], [125, 1, 126, 1]] },
+      [121, 1, 125, 1], [124, 1, 125, 2], [123, 1, 125, 3], [125, 1, 127, 1], [127, 1, 126, 1]] },
   macro: { label: 'Macro Bloom', div: 2, v: 5, teach: 'One flower close, through a real lens (docs/prior-art/florals.md §8e). The camera dial frames it: Zoom from the whole flower in its setting to its heart filling the page, View tips it from face-on to the side, Turn says which way it tips and sets it toward that side’s third. Bloom draws it as maps, unlit, and the Light Engine lights them from the light dial: its heights, gloss, Facing and thinness, so light comes through thin petals (Translucency). Everything is painted sharp beside a depth map (the lights and the wash behind farthest, more flowers of its kind, the flower, a flower near the lens), and one Lens Blur focuses the whole scene as a lens does: Aperture how wide it is open, Focus where the plane of focus lies (its middle on the flower). Points of light behind (Lights Behind) become discs. Dew drops are little lenses; pollen dusts the heart. Draw order is depth order, and the same depth gives the shadows: read as heights (nearer higher) and lit twice by the Light Engine, with its shadow march and without, their ratio is the cast shadow alone, as a depth buffer gives it; a leaf crossing near the lens shadows the petals, a visitor the petal it stands on. The seed says whether the flower has its stem, and whether a blade of grass or leaves stand between the sun and it: out of the frame only their shadow falls; in it they cross near the lens, blurred. Now and then an insect visits, small, on a petal, lit with the flower: Visitors says how often (rare at its default, never more than two). Try: Aperture high and Focus low, to see the flower melt.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],
@@ -23987,7 +24021,7 @@ const TEXTURE_CHAINS = {
       [5, 1, 33, 'outHi'], [18, 1, 34, 1], [22, 4, 34, 2], [33, 1, 34, 3], [22, 4, 35, 1], [35, 1, 37, 1], [35, 2, 38, 1],
       [37, 1, 39, 1], [38, 1, 39, 2], [39, 1, 36, 1], [34, 1, 40, 1], [11, 1, 40, 2], [30, 1, 40, 3], [30, 1, 41, 1], [36, 1, 41, 2], [40, 1, 42, 1],
       [15, 1, 42, 2], [41, 1, 42, 3], [42, 1, 43, 1]] },
-  windsea: { label: 'Windward Sea', div: 2, v: 5, teach: 'A sea and sky in the cel-shaded look of the great sailing games (docs/prior-art/cel-shaded.md): light in a few flat bands, never a gradient. The seed picks the weather (clear, fair, overcast, now and then a storm: a slate sky, a choppy sea, wind everywhere); Weather leans it fairer or stormier. The Light Engine lights the clouds’ and islands’ heights from the dial, and a Posterize of its light (Toon Bands) with a Gradient Map gives each band a hue: shadow, key, bright edge. The clouds are Scatter’s domes heaped above the horizon, curled by two Twirls (Swirls). The wind is not painted on the sky: Streamers sweeps ribbons through the scene, gusts that end in tightening curls, near ones large and far ones small, lit in the same bands, their back faces a shade darker (Wind). The sea is three colours: a Gradient Map of the depth, and foam in flattened rounds and the waves’ long lines, thrown smaller the farther they lie (Foam, Waves). Islands rise where a Perlin reaches above the horizon (Islands). The sun stands where the dial lays it, and sets into the sea as its height sinks. Try: the dial low and behind, the Sky Hue orange.',
+  windsea: { label: 'Windward Sea', div: 2, v: 5, teach: 'A sea and sky in the cel-shaded look of the great sailing games (docs/prior-art/cel-shaded.md): light in a few flat bands, never a gradient. The seed picks the weather (clear, fair, overcast, now and then a storm: a slate sky, a choppy sea, wind everywhere); Weather leans it fairer or stormier. The Light Engine lights the clouds’ and islands’ heights from the dial, and a Posterize of its light (Toon Bands) with a Gradient Map gives each band a hue: shadow, key, bright edge. The clouds are Scatter’s domes heaped above the horizon, curled by two Twirls (Swirls). The wind is not painted on the sky: Streamers sweeps ribbons through the scene, gusts that end in tightening curls, near ones large and far ones small, lit in the same bands, their back faces a shade darker (Wind). The sea is three colours: a Gradient Map of the depth, and foam in flattened rounds and the waves’ long lines, thrown smaller the farther they lie (Foam, Waves). Islands rise where a Perlin reaches above the horizon (Islands). The sun stands where the dial lays it, and sets into the sea as its height sinks. Now and then (about one seed in six) a Fairy Light drifts over the sea. Try: the dial low and behind, the Sky Hue orange.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 150],
@@ -24140,7 +24174,8 @@ const TEXTURE_CHAINS = {
       ['mix', { t: 22 }, 260, 2900],
       ['blend', { mode: 'normal', opacity: 50 }, 2240, 480],
       ['blend', { mode: 'normal', opacity: 96 }, 4440, 40],
-      ['surface', { name: 'Windward Sea', ground: 'colour' }, 4660, 40]],
+      ['surface', { name: 'Windward Sea', ground: 'colour' }, 4660, 40],
+      ['fairy', { chance: 18, size: 100, y0: 35, y1: 70 }, 4550, 160]],
     wires: [[17, 1, 16, 1], [2, 1, 18, 1], [18, 1, 16, 'outLo'], [2, 1, 19, 1], [19, 1, 16, 'outHi'], [16, 1, 20, 1],
       [21, 1, 22, 1], [1, 1, 22, 'at'], [21, 1, 23, 1], [1, 1, 23, 'lo'], [21, 1, 24, 1], [10, 1, 24, 2],
       [10, 1, 25, 1], [13, 1, 25, 2], [25, 1, 24, 3], [10, 1, 26, 1], [13, 1, 26, 2], [26, 1, 24, 4], [9, 1, 27, 1], [28, 2, 30, 1], [29, 1, 30, 2],
@@ -24173,7 +24208,7 @@ const TEXTURE_CHAINS = {
       [1, 1, 131, 'horizon'], [141, 1, 131, 'length'], [142, 1, 131, 'curl'],
       [131, 2, 143, 1], [8, 1, 143, 'steps'], [143, 1, 145, 1], [145, 1, 144, 1], [13, 1, 146, 1], [10, 1, 146, 2], [146, 1, 144, 2],
       [13, 1, 147, 1], [10, 1, 147, 2], [147, 1, 144, 3], [13, 1, 144, 4], [131, 3, 148, 1], [13, 1, 149, 1], [12, 1, 149, 2], [144, 1, 150, 1],
-      [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 152, 1]] },
+      [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 153, 1], [153, 1, 152, 1]] },
   inkscroll: { label: 'Sunrise Scroll', div: 2, v: 5, teach: 'A land painted in ink on old paper, in the cel-shaded ink-wash look of the brush-painted games and the painters they loved (docs/prior-art/cel-shaded.md §7). Mountains stand band behind band, as in a mountain-and-water painting: each ridge a noise laid along the page (a Curve’s noise through a Profile Gradient), the far ones folded into sharp crags (Peaks). Each is a flat wash of ink, diluted by distance and tinted toward the Mountain Hue by Wash, lit by the Light Engine in bands (Toon Bands), its foot fading back to paper as mist (Mist), its ridge brushed in ink, thick and thin, broken by dry-brush streaks (Ink). The sky is graded across the top as a woodblock print’s straight-line gradation; a red sun stands where the dial lays it and sinks behind the mountains; long bands of mist with rounded ends drift across the sky, outlined (Clouds); cherry petals drift over all (Blossoms); the paper darkens at its edges with age (Age). Try: Wash at nothing for bare ink.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],
@@ -30522,7 +30557,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · f779a88";
+const STAMP = "2026-10-20 · e4baea4";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -35562,6 +35597,15 @@ const WIKI_PARTS = {
     set: { webs: 'How many webs (one at 0).', size: 'How big.', dew: 'How much dew: none (0) to heavy beading.', drops: 'How big the drops.', torn: 'How much of the spiral is torn away.', sag: 'How much the spiral sags between spokes.', irid: 'White glints (0) or the colours thin silk splits the light into (100).', threads: 'How close the spiral is wound.', width: 'How thick the silk is drawn.', variant: 'Other webs.' },
     tips: ['Screen the glints through a Blur for the soft bloom of a web in morning sun.', 'Turn Dew to 0 and Iridescence up for a dry web shimmering in colours.'],
     see: ['part:shards', 'part:dial'],
+  },
+  fairy: {
+    line: 'Now and then, on some seeds, a small fairy: a light with two pairs of wings, a soft glow and a short trail of sparks, laid over the picture.',
+    about: 'A nod to the old adventure games, where a fairy might drift across a field or a sea: never a character, only a small glowing light with wings. How Often is the share of seeds that have one (18: about one in six); the rest pass the picture through untouched. Across and Down say where on the page it may appear, as ranges, so it can be kept over the grass or the sea and out of the sky. It is screened on, so it only ever adds light.',
+    ins: { over: 'The picture to lay it on.', 'glow hue': 'The fairy’s light (empty: a pale blue-white).' },
+    outs: { picture: 'The picture, with the fairy when this seed has one.', mask: 'Where the fairy and its glow are.' },
+    set: { chance: 'How Often: the share of seeds with a fairy, from 0 (never) to 100 (always).', size: 'Its size.', x0: 'Across From: the left edge of where it may appear.', x1: 'Across To: the right edge.', y0: 'Down From: the top of where it may appear.', y1: 'Down To: the bottom.', variant: 'Another place, and another chance, for the same seed.' },
+    tips: ['Set How Often to 100 to see where it lands, then back down.'],
+    see: ['part:bloom'],
   },
   bloom: {
     line: 'A flower of a real species — a daisy, a poppy, a rose, a foxglove — drawn petal by petal and lit from the dial, from bud to wilted to seed head; or a sheet of them, or one petal or leaf, for Scatter to throw.',

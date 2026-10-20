@@ -16,7 +16,7 @@
  * A sheet (Sheet setting) draws 4, 8 or 16 different flowers in cells, so Scatter (its Picture Is: a sheet) throws a
  * field that is never clones. Part draws one petal or one leaf instead, for scattered petals and fallen leaves.
  */
-import { mulberry32, CPU, freeCanvas } from './texCore.js';
+import { mulberry32, CPU, freeCanvas, kitCanvas } from './texCore.js';
 import { flClamp, flHex, flMix, flCss, spcLeaf, spcBand, spcPrickles, spcHairs, SPC_LEAVES, SPC_STEM_LEAF } from './floraKit.js';
 
 const FL_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
@@ -363,6 +363,19 @@ function flVisitor(L, R, cx, cy, s, ang, kind, c, light){
       const knee = [u0 + Math.cos(a)*len*0.55, sd*0.12 + Math.sin(a)*len*0.55], foot = [knee[0] + Math.cos(a + sd*bend)*len*0.55, knee[1] + Math.sin(a + sd*bend)*len*0.55];
       line([[u0, sd*0.08], knee, foot], w, col, gloss); } };
   const dark = c[1], main = c[0], acc = c[2] || flMix(c[0], [255, 220, 120], 0.5), green = c[3];
+  if(kind === 'fairy'){
+    // A FAIRY (the old adventures' nod: a small light with two pairs of wings, never a character): a bright core, its
+    // wings thin and shining (translucent, glossy), and its glow on the petal round it, kept within its mask
+    const core = flMix(acc, [255, 255, 255], 0.65), [x0, y0] = T(0, 0);
+    for(const [u, v, ru, rv, rot] of [[0.12, 0.34, 0.34, 0.12, -0.6], [0.12, -0.34, 0.34, 0.12, 0.6], [-0.1, 0.3, 0.26, 0.1, -1.0], [-0.1, -0.3, 0.26, 0.1, 1.0]]){
+      ell(L.pic, u, v, ru, rv, rot); L.pic.fillStyle = flCss(flMix(core, main, 0.25), 1, 0.55); L.pic.fill();
+      for(const [ctx, st] of [[L.mask, g8(0.75)], [L.gloss, g8(0.95)], [L.thick, g8(0.15)], [L.height, g8(0.6)], [L.face, g8(0.8)]]){ ell(ctx, u, v, ru, rv, rot); ctx.fillStyle = st; ctx.fill(); } }
+    const hg = L.mask.createRadialGradient(x0, y0, 0, x0, y0, s*0.9); hg.addColorStop(0, g8(0.5)); hg.addColorStop(1, g8(0.04));
+    L.mask.save(); L.mask.globalCompositeOperation = 'lighten'; L.mask.fillStyle = hg; L.mask.fillRect(x0 - s, y0 - s, s*2, s*2); L.mask.restore();
+    L.pic.save(); L.pic.globalCompositeOperation = 'screen'; const pg = L.pic.createRadialGradient(x0, y0, 0, x0, y0, s*0.9); pg.addColorStop(0, flCss(core, 1, 0.9)); pg.addColorStop(0.3, flCss(core, 1, 0.35)); pg.addColorStop(1, flCss(core, 1, 0));
+    L.pic.fillStyle = pg; L.pic.fillRect(x0 - s, y0 - s, s*2, s*2); L.pic.restore();
+    dome(0, 0, 0.12, 0.12, core, 0.95, 1, 0.3);
+    return; }
   if(kind === 'ladybird'){
     legs([[0.15, 1.2], [0, 1.6], [-0.15, 2.0]], 0.42, 0.035, flMix(dark, [0, 0, 0], 0.5), 0.5, 0.4);
     dome(0.42, 0, 0.12, 0.13, flMix(dark, [0, 0, 0], 0.4), 0.7, 0.4);                                   // head
@@ -443,8 +456,8 @@ export function genBloom(w, h, o){
     const cc = o.cols.map((c, k) => c || flHex(S.cols[k]));
     const many = o.cells > 1, cx = many ? (i + 0.5)*cw : (o.x ?? 0.5)*w, cy = many ? (j + 0.5)*ch : (o.y ?? 0.5)*h;
     const Rad = Math.min(cw, ch)*0.42*o.size*(many ? 0.75 + R()*0.3 : 1);   // (one flower: Size of the page's shorter side; Across and Down place it)
-    if(o.part === 'visitor'){ const kind = o.visitor ? FLORA_VISITORS[o.visitor - 1] : FLORA_VISITORS[Math.floor(R()*FLORA_VISITORS.length)];
-      const sz = { ladybird: 0.12, spider: 0.165, hoverfly: 0.15, ant: 0.12, aphids: 0.15, petal: 0.24, fluff: 0.22 }[kind];   // (a little smaller than first drawn: Ruby)
+    if(o.part === 'visitor'){ const rv = o.visitor ? 0 : R(), kind = o.visitor ? FLORA_VISITORS[o.visitor - 1] : rv < 1/66 ? 'fairy' : FLORA_VISITORS[Math.min(FLORA_VISITORS.length - 1, Math.floor((rv - 1/66)/(1 - 1/66)*FLORA_VISITORS.length))];   // (one visitor in 66 a fairy: a nod, never a character)
+      const sz = { ladybird: 0.12, spider: 0.165, hoverfly: 0.15, ant: 0.12, aphids: 0.15, petal: 0.24, fluff: 0.22, fairy: 0.14 }[kind];   // (a little smaller than first drawn: Ruby)
       flVisitor(L, R, cx, cy, Math.min(cw, ch)*0.42*o.size*sz*2, R()*6.283, kind, [cc[0], cc[2], cc[1], cc[3]], o.light); continue; }
     if(o.part === 'leaf'){ flLeaf(L, cx - Math.min(cw, ch)*0.35, cy + Math.min(cw, ch)*0.1, Math.min(cw, ch)*0.7*o.size, -0.4 + (R() - 0.5)*0.8, cc[3], R, o.stage > 0.6 ? (o.stage - 0.6)/0.4 : 0); continue; }
     const f = { sp: S, view: flClamp(o.view + (many ? (R() - 0.5)*0.4 : 0)), stage: flClamp(o.stage + (many ? (R() - 0.5)*0.25 : 0)), spin: R()*6.283, turn: many ? (R() - 0.5)*0.6 : (o.turn || 0),
@@ -471,6 +484,26 @@ export function genBloom(w, h, o){
 
 export const FLORA_STEPS = {
   // BLOOM (the floral surfaces' process part): a flower of a real species, or a sheet of them, lit from the dial
+  // FAIRY LIGHT (Ruby: "both Hyrule Field and the wind waker need an occasional fairy"): now and then, on some seeds, a
+  // small light with two pairs of wings, a soft glow round it and a short trail of sparks, laid over what comes in
+  fairy: { cat: 'Marks', label: 'Fairy Light', ins: ['over', 'glow hue'], outs: ['picture', 'mask'], io: { ins: ['image', 'colour'], outs: ['image', 'field'] },
+    params: [FL_R('chance', 'How Often', 18), FL_R('size', 'Size', 100, 30, 400), FL_R('x0', 'Across From', 10), FL_R('x1', 'Across To', 90), FL_R('y0', 'Down From', 50), FL_R('y1', 'Down To', 85), FL_R('variant', 'Variation', 0, 0, 99)], cost: () => 2,
+    run(E, n){ const { ww, wh, num, input, ctx } = E, over = E.asImage(input(n, 1) ?? 0), N = ww*wh, M = new Float32Array(N);
+      const seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0, R = mulberry32((seed ^ 0xFA1E) >>> 0);
+      if(R() >= num(n, 'chance', 18)/100) return [over, M];   // (most seeds: no fairy)
+      const g = input(n, 2), col = Array.isArray(g) && !g.none ? g.map(c => c*255) : [214, 236, 255];
+      const X = ww*(num(n, 'x0', 10) + (num(n, 'x1', 90) - num(n, 'x0', 10))*R())/100, Y = wh*(num(n, 'y0', 50) + (num(n, 'y1', 85) - num(n, 'y0', 50))*R())/100;
+      const s = E.px(38)*num(n, 'size', 100)/100, flap = R()*0.6, trail = R()*Math.PI*2;
+      const [c, x] = kitCanvas(ww, wh), glow = (cx, cy, r, a) => { const gr = x.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, flCss(flMix(col, [255, 255, 255], 0.5), 1, a)); gr.addColorStop(0.35, flCss(col, 1, a*0.35)); gr.addColorStop(1, flCss(col, 1, 0)); x.fillStyle = gr; x.fillRect(cx - r, cy - r, r*2, r*2); };
+      x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh); x.globalCompositeOperation = 'lighter';
+      for(let k = 1; k <= 5; k++){ const d = s*1.4*k, tx = X - Math.cos(trail)*d, ty = Y - Math.sin(trail)*d + Math.sin(k*1.3)*s*0.4; glow(tx, ty, s*(0.5 - k*0.07), 0.5 - k*0.08); }
+      glow(X, Y, s*4, 0.35);
+      for(const [a, len] of [[-0.5 - flap, 1.1], [Math.PI + 0.5 + flap, 1.1], [-1.1 - flap*0.5, 0.8], [Math.PI + 1.1 + flap*0.5, 0.8]]){ x.save(); x.translate(X, Y); x.rotate(a); x.beginPath(); x.ellipse(s*len*0.55, 0, s*len*0.55, s*0.22, 0, 0, Math.PI*2); x.fillStyle = flCss(col, 1, 0.45); x.fill(); x.restore(); }
+      glow(X, Y, s*0.7, 1); x.beginPath(); x.arc(X, Y, s*0.22, 0, Math.PI*2); x.fillStyle = 'rgba(255,255,255,0.95)'; x.fill();
+      const L = E.readCanvas(c), out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+      for(let i = 0; i < N; i++){ const lr = L.r[i], lg = L.g[i], lb = L.b[i]; M[i] = Math.min(1, Math.max(lr, lg, lb));
+        out.r[i] = 1 - (1 - over.r[i])*(1 - lr); out.g[i] = 1 - (1 - over.g[i])*(1 - lg); out.b[i] = 1 - (1 - over.b[i])*(1 - lb); }
+      c.width = 0; c.height = 0; return [out, M]; } },
   bloom: { cat: 'Marks', label: 'Bloom', ins: ['light from', 'petal hue', 'tip hue', 'center hue', 'foliage hue'], outs: ['picture', 'mask', 'height', 'thickness', 'center', 'petals', 'gloss', 'facing'],
     io: { ins: ['value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [[...FL_R('species', FLORA_SPECIES_LABEL, 0).slice(0, 4), { min: 0, max: 100, bands: FLORA_NAMES.map(nm => nm.replace(' (seeded)', '')) }], FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
