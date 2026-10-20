@@ -1415,7 +1415,6 @@ body.is-mobile .app-header{ align-items:center; }
 /* slider readouts: quieter, and closer to their sliders */
 .field .range-val{ display:block; text-align:right; font-size:11px; line-height:1.1;
                    margin:1px 0 0; opacity:.62; }
-#textureOpacity{ width:100%; }
 
 /* the colour picker: no scrollbars from sub-pixel rounding */
 #clr-picker{ overflow:hidden !important; }
@@ -2445,17 +2444,28 @@ body.is-mobile .tool-row > .field.hue-head{ grid-column:2 !important; }
 body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !important; }
 
 /* THE SURFACE'S CONTROLS: its sliders and curves under one drop-down heading (Opacity stays outside it) */
-.controls-fold{ margin:4px 0 2px; }
-.controls-fold > summary{ cursor:pointer; list-style:none; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--accent-2); opacity:.85; padding:4px 0 2px; }
+/* (Ruby: plainly a drawer even when shut, with room above it): a bar across the panel, its count of sliders and a
+   chevron at its right; open, the bar joins the sliders beneath it */
+.controls-fold{ margin:12px 0 4px; padding:0 10px; box-sizing:border-box; border:1px solid color-mix(in srgb, var(--line) 80%, transparent); background:color-mix(in srgb, var(--bg-panel-2, #1a171d) 70%, transparent); }
+.controls-fold > summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; min-height:34px; padding:0 10px; margin:0 -10px;
+  font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); }
 .controls-fold > summary::-webkit-details-marker{ display:none; }
-.controls-fold > summary::after{ content:" ▾"; opacity:.7; }
-.controls-fold:not([open]) > summary::after{ content:" ▸"; }
+.controls-fold > summary .fold-count{ text-transform:none; letter-spacing:.02em; font-size:11.5px; color:var(--text-dim); opacity:.85; }
+.controls-fold > summary::after{ content:""; margin-left:auto; width:7px; height:7px; border-right:1.4px solid currentColor; border-bottom:1.4px solid currentColor;
+  transform:rotate(45deg) translate(-2px, -2px); transition:transform .18s; }
+.controls-fold:not([open]) > summary::after{ transform:rotate(-45deg); }
+.controls-fold[open] > summary{ border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.controls-fold > .field{ margin:6px 0 0; }
+.controls-fold > .field:last-of-type{ margin-bottom:8px; }
 .controls-fold > .field{ margin-top:6px; }
 
 /* THE INSCRIPTION'S EYE beside the editor's name */
 .card-title-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .card-title-row > .card-title{ flex:1 1 auto; margin:0; }
+
+/* THE TAB BAR (Ruby: "the same size, and everything lined up"): five equal tabs, each glyph fitted to the same box and
+   centred (index.html's viewBoxes), with a faint line between them, as the app's other buttons have */
+body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 
 </style>
 
@@ -2479,7 +2489,7 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
     <div class="card" data-tab="write">
       <!-- THE INSCRIPTION'S EYE (Ruby): the poem off the page and back, its words kept in the editor -->
-      <div class="card-title-row"><p class="card-title" data-str="card.incantation_editor_poetic_magick_l">  Incantation Editor (Poetic Magick Language)</p>
+      <div class="card-title-row"><p class="card-title" data-str="card.incantation_editor_poetic_magick_l">Inscription Editor (PML)</p>
         <input type="checkbox" class="eye" id="poemShown" checked title="Show the poem on the page (hidden, its words stay here)" aria-label="Show the poem on the page"></div>
       <div class="check-row editor-toggle">
         <input type="checkbox" id="highlightToggle" checked>
@@ -3241,7 +3251,7 @@ but bear with me, dear}]/jitter:200
           </div>
           <!-- THE SURFACE'S CONTROLS (Ruby): its sliders and curves under one drop-down heading; Opacity stays outside it -->
           <details class="controls-fold full" id="texControls" open>
-            <summary data-str="label.controls">Controls</summary>
+            <summary><span data-str="label.controls">Controls</span><span class="fold-count" id="texControlsCount"></span></summary>
             <div class="field full">
               <label id="texP1Label" data-str="label.x">—</label>
               <input type="range" id="texP1" min="0" max="100" value="100">
@@ -3925,11 +3935,11 @@ but bear with me, dear}]/jitter:200
   <nav class="tabbar" id="tabBar">
     <!-- writing on a phone: the PML guide as a sheet (the guide's card is put away while writing — the usability review) -->
     <button class="pml-tab" id="pmlTabBtn" type="button" aria-expanded="false" aria-controls="formattingGuidePanel" title="Show or hide the PML guide while you write" data-str="tab.pml">PML</button>
-    <button class="tab-btn active" data-tab="write" type="button" title="Write the poem in PML" data-str="tab.inscription"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z" stroke="currentColor" opacity="1.0"/><path d="M6.14 4.42A2.5 2.5 0 0 1 9.26 6.83V9.43h6.17V6.57A2.5 2.5 0 1 1 17.95 9.61H14.90v6.42h2.32A2.5 2.5 0 1 1 15.51 18.00V14.65H8.85v2.32A2.5 2.5 0 1 1 6.70 14.96H8.98V8.88H6.69A2.5 2.5 0 0 1 6.87 4.77Z" stroke="currentColor" opacity="0.72"/><path d="M6.75 4.61A2.5 2.5 0 0 1 9.23 6.79V9.26h5.95V7.22A2.5 2.5 0 1 1 17.88 8.87H14.72v5.41h3.10A2.5 2.5 0 1 1 15.11 18.02V14.94H8.94v2.89A2.5 2.5 0 1 1 6.27 15.57H9.42V9.64H6.32A2.5 2.5 0 0 1 6.50 3.78Z" stroke="currentColor" opacity="0.56"/><path d="M6.72 3.44A2.5 2.5 0 0 1 8.61 6.65V9.37h6.67V6.22A2.5 2.5 0 1 1 17.40 9.11H15.71v5.63h2.48A2.5 2.5 0 1 1 14.78 17.77V14.93H8.42v2.92A2.5 2.5 0 1 1 7.11 14.64H8.15V9.90H7.13A2.5 2.5 0 0 1 6.84 3.44Z" stroke="currentColor" opacity="0.4"/></svg></span>Inscription</button>
-    <button class="tab-btn" data-tab="style" type="button" title="Page shape, alignment and presets" data-str="tab.rituals"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="11.60" r="9.60" stroke="currentColor" opacity="1.0"/><path d="M12.24 20.77 7.06 5.05 20.77 14.65H3.44L16.99 4.30Z" stroke="currentColor" opacity="0.72"/><circle cx="11.91" cy="11.49" r="9.84" stroke="currentColor" opacity="0.72"/><path d="M12.20 20.76 6.16 4.66 20.38 14.46H2.96L18.02 5.14Z" stroke="currentColor" opacity="0.56"/><circle cx="11.42" cy="12.12" r="9.44" stroke="currentColor" opacity="0.56"/><path d="M11.37 20.09 6.56 5.21 21.22 14.61H3.83L17.29 4.23Z" stroke="currentColor" opacity="0.4"/><circle cx="11.32" cy="12.11" r="9.20" stroke="currentColor" opacity="0.4"/></svg></span>Rituals</button>
-    <button class="tab-btn" data-tab="type" type="button" title="Typeface, text colors and text effects" data-str="tab.thoughtforms"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.4V12.4" stroke="currentColor" opacity="1.0"/><path d="M2.4 16.1H21.6" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="20.00" r="2.25" stroke="currentColor" opacity="1.0"/><path d="M4.95 4.86H20.16L11.94 15.95Z" stroke="currentColor" opacity="0.72"/><path d="M12.28 7.85V12.79" stroke="currentColor" opacity="0.72"/><path d="M2.15 15.87H21.17" stroke="currentColor" opacity="0.72"/><circle cx="11.55" cy="20.49" r="2.12" stroke="currentColor" opacity="0.72"/><path d="M4.87 4.12H19.09L12.13 15.68Z" stroke="currentColor" opacity="0.56"/><path d="M11.88 6.89V13.02" stroke="currentColor" opacity="0.56"/><path d="M3.12 16.42H21.66" stroke="currentColor" opacity="0.56"/><circle cx="11.64" cy="20.51" r="2.16" stroke="currentColor" opacity="0.56"/><path d="M4.53 3.96H19.77L12.09 15.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.97 7.54V12.95" stroke="currentColor" opacity="0.4"/><path d="M2.65 15.60H21.60" stroke="currentColor" opacity="0.4"/><circle cx="11.85" cy="19.79" r="2.49" stroke="currentColor" opacity="0.4"/></svg></span>Thoughtforms</button>
-    <button class="tab-btn" data-tab="page" type="button" title="Backdrop, surfaces, border, inset box and vignette" data-str="tab.materia"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M11.87 3.13 20.73 11.72 12.10 21.61 2.14 11.88Z" stroke="currentColor" opacity="0.72"/><path d="M12.23 2.89 21.63 12.62 11.34 21.92 2.13 12.46Z" stroke="currentColor" opacity="0.56"/><path d="M12.24 2.89 20.75 12.09 12.13 21.01 2.85 11.62Z" stroke="currentColor" opacity="0.4"/></svg></span>Materia</button>
-    <button class="tab-btn" data-tab="more" type="button" title="Theme, saved spells and poems, and the Workbench" id="moreTabBtn"><span class="tab-swap"><span class="tab-face eso"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span><span data-str="tab.esoterica">Esoterica</span></span><span class="tab-face ret" aria-hidden="true"><span class="tab-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span><span class="ret-desk" data-str="tab.close">Close</span><span class="ret-phone" data-str="tab.done_writing">Done Writing</span></span></span></button>
+    <button class="tab-btn active" data-tab="write" type="button" title="Write the poem in PML" data-str="tab.inscription"><span class="tab-ico"><svg viewBox="1.50 1.69 20.96 20.96" fill="none" stroke="currentColor" stroke-width="1.40" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 4.2A2.5 2.5 0 0 1 9.1 6.7V9.1h5.9V6.6A2.5 2.5 0 1 1 17.5 9.1H15v5.9h2.4A2.5 2.5 0 1 1 15 17.4V15H9.1v2.4A2.5 2.5 0 1 1 6.6 15H9V9.1H6.6A2.5 2.5 0 0 1 6.6 4.2Z" stroke="currentColor" opacity="1.0"/><path d="M6.14 4.42A2.5 2.5 0 0 1 9.26 6.83V9.43h6.17V6.57A2.5 2.5 0 1 1 17.95 9.61H14.90v6.42h2.32A2.5 2.5 0 1 1 15.51 18.00V14.65H8.85v2.32A2.5 2.5 0 1 1 6.70 14.96H8.98V8.88H6.69A2.5 2.5 0 0 1 6.87 4.77Z" stroke="currentColor" opacity="0.72"/><path d="M6.75 4.61A2.5 2.5 0 0 1 9.23 6.79V9.26h5.95V7.22A2.5 2.5 0 1 1 17.88 8.87H14.72v5.41h3.10A2.5 2.5 0 1 1 15.11 18.02V14.94H8.94v2.89A2.5 2.5 0 1 1 6.27 15.57H9.42V9.64H6.32A2.5 2.5 0 0 1 6.50 3.78Z" stroke="currentColor" opacity="0.56"/><path d="M6.72 3.44A2.5 2.5 0 0 1 8.61 6.65V9.37h6.67V6.22A2.5 2.5 0 1 1 17.40 9.11H15.71v5.63h2.48A2.5 2.5 0 1 1 14.78 17.77V14.93H8.42v2.92A2.5 2.5 0 1 1 7.11 14.64H8.15V9.90H7.13A2.5 2.5 0 0 1 6.84 3.44Z" stroke="currentColor" opacity="0.4"/></svg></span>Inscription</button>
+    <button class="tab-btn" data-tab="style" type="button" title="Page shape, alignment and presets" data-str="tab.rituals"><span class="tab-ico"><svg viewBox="-0.08 -0.34 23.89 23.89" fill="none" stroke="currentColor" stroke-width="1.59" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.9 6.7 4.7 20.5 14.7H3.5L17.3 4.7Z" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="11.60" r="9.60" stroke="currentColor" opacity="1.0"/><path d="M12.24 20.77 7.06 5.05 20.77 14.65H3.44L16.99 4.30Z" stroke="currentColor" opacity="0.72"/><circle cx="11.91" cy="11.49" r="9.84" stroke="currentColor" opacity="0.72"/><path d="M12.20 20.76 6.16 4.66 20.38 14.46H2.96L18.02 5.14Z" stroke="currentColor" opacity="0.56"/><circle cx="11.42" cy="12.12" r="9.44" stroke="currentColor" opacity="0.56"/><path d="M11.37 20.09 6.56 5.21 21.22 14.61H3.83L17.29 4.23Z" stroke="currentColor" opacity="0.4"/><circle cx="11.32" cy="12.11" r="9.20" stroke="currentColor" opacity="0.4"/></svg></span>Rituals</button>
+    <button class="tab-btn" data-tab="type" type="button" title="Typeface, text colors and text effects" data-str="tab.thoughtforms"><span class="tab-ico"><svg viewBox="0.20 1.61 23.41 23.41" fill="none" stroke="currentColor" stroke-width="1.56" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.6H19.6L12 15.9Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.4V12.4" stroke="currentColor" opacity="1.0"/><path d="M2.4 16.1H21.6" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="20.00" r="2.25" stroke="currentColor" opacity="1.0"/><path d="M4.95 4.86H20.16L11.94 15.95Z" stroke="currentColor" opacity="0.72"/><path d="M12.28 7.85V12.79" stroke="currentColor" opacity="0.72"/><path d="M2.15 15.87H21.17" stroke="currentColor" opacity="0.72"/><circle cx="11.55" cy="20.49" r="2.12" stroke="currentColor" opacity="0.72"/><path d="M4.87 4.12H19.09L12.13 15.68Z" stroke="currentColor" opacity="0.56"/><path d="M11.88 6.89V13.02" stroke="currentColor" opacity="0.56"/><path d="M3.12 16.42H21.66" stroke="currentColor" opacity="0.56"/><circle cx="11.64" cy="20.51" r="2.16" stroke="currentColor" opacity="0.56"/><path d="M4.53 3.96H19.77L12.09 15.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.97 7.54V12.95" stroke="currentColor" opacity="0.4"/><path d="M2.65 15.60H21.60" stroke="currentColor" opacity="0.4"/><circle cx="11.85" cy="19.79" r="2.49" stroke="currentColor" opacity="0.4"/></svg></span>Thoughtforms</button>
+    <button class="tab-btn" data-tab="page" type="button" title="Backdrop, surfaces, border, inset box and vignette" data-str="tab.materia"><span class="tab-ico"><svg viewBox="0.18 0.61 23.40 23.40" fill="none" stroke="currentColor" stroke-width="1.56" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 21.3 12 12 21.3 2.7 12Z" stroke="currentColor" opacity="1.0"/><path d="M12 7.9 16.1 12 12 16.1 7.9 12Z" fill="currentColor" stroke="none"/><path d="M11.87 3.13 20.73 11.72 12.10 21.61 2.14 11.88Z" stroke="currentColor" opacity="0.72"/><path d="M12.23 2.89 21.63 12.62 11.34 21.92 2.13 12.46Z" stroke="currentColor" opacity="0.56"/><path d="M12.24 2.89 20.75 12.09 12.13 21.01 2.85 11.62Z" stroke="currentColor" opacity="0.4"/></svg></span>Materia</button>
+    <button class="tab-btn" data-tab="more" type="button" title="Theme, saved spells and poems, and the Workbench" id="moreTabBtn"><span class="tab-swap"><span class="tab-face eso"><span class="tab-ico"><svg viewBox="0.33 0.36 23.42 23.42" fill="none" stroke="currentColor" stroke-width="1.56" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z" stroke="currentColor" opacity="1.0"/><path d="M12 2.9v2.2M12 18.9v2.2" stroke="currentColor" opacity="1.0"/><circle cx="12.00" cy="12.00" r="3.30" stroke="currentColor" opacity="1.0"/><path d="M12.17 2.59 20.06 6.96v9.12L11.70 20.94 4.63 16.21v-9.04Z" stroke="currentColor" opacity="0.72"/><path d="M12.51 3.45v2.74M12.45 18.33v2.40" stroke="currentColor" opacity="0.72"/><circle cx="12.46" cy="11.77" r="3.45" stroke="currentColor" opacity="0.72"/><path d="M12.26 2.37 19.31 7.68v8.37L12.40 20.85 4.02 15.96v-9.51Z" stroke="currentColor" opacity="0.56"/><path d="M11.78 2.31v2.01M12.51 19.38v2.05" stroke="currentColor" opacity="0.56"/><circle cx="11.36" cy="11.26" r="3.28" stroke="currentColor" opacity="0.56"/><path d="M11.90 2.84 19.88 7.59v8.23L11.90 21.83 4.36 15.71v-9.83Z" stroke="currentColor" opacity="0.4"/><path d="M11.59 3.36v1.50M12.09 18.88v1.81" stroke="currentColor" opacity="0.4"/><circle cx="12.43" cy="11.81" r="3.27" stroke="currentColor" opacity="0.4"/></svg></span><span data-str="tab.esoterica">Esoterica</span></span><span class="tab-face ret" aria-hidden="true"><span class="tab-ico"><svg viewBox="1.62 1.02 21.36 21.36" fill="none" stroke="currentColor" stroke-width="1.42" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12.3" cy="11.7" r="8.9" opacity=".5"/><circle cx="11.7" cy="12.3" r="7.9" opacity=".32"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/><circle cx="12.2" cy="11.8" r="2.5" opacity=".45"/></svg></span><span class="ret-desk" data-str="tab.close">Close</span><span class="ret-phone" data-str="tab.done_writing">Done Writing</span></span></span></button>
   </nav>
 
 </div>
@@ -25429,7 +25439,7 @@ const UI_STRINGS = {
   'tab.done_writing':                          "Done Writing",
 
 
-  'card.incantation_editor_poetic_magick_l': "Incantation Editor (Poetic Magick Language)",
+  'card.incantation_editor_poetic_magick_l': "Inscription Editor (PML)",
   'card.arcane_guidance_pml_syntax':       "Arcane Guidance (PML Syntax)",
   'card.form_amp_bearing':                 "Form & Bearing",
   'card.builtin_presets':                  "Built-In Presets",
@@ -28736,7 +28746,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Ophelia';
+const RELEASE = 'Uranus–Bianca';
 
 const RELEASE_DATE = '2026-10-20';
 
@@ -29426,7 +29436,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · d02624f";
+const STAMP = "2026-10-20 · 879bb82";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -39325,6 +39335,8 @@ function syncTextureParams(useDefaults){
     setLabelText(label, def.label);
     out.textContent = paramReadout(def, +slider.value);
   });
+
+  { const c = $('texControlsCount'), n = defs.filter(d => d && !d.hidden).length; if(c) c.textContent = n ? `${n} slider${n === 1 ? '' : 's'}` : ''; }
   syncCurveControls();
 }
 

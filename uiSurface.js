@@ -54,6 +54,8 @@ export function syncTextureParams(useDefaults){
     setLabelText(label, def.label);            // (never textContent: it wiped the knob's padlock)
     out.textContent = paramReadout(def, +slider.value);
   });
+  // the drawer says what it holds, shut or open
+  { const c = $('texControlsCount'), n = defs.filter(d => d && !d.hidden).length; if(c) c.textContent = n ? `${n} slider${n === 1 ? '' : 's'}` : ''; }
   syncCurveControls();
 }
 // THE CURVE CONTROLS (ROADMAP D4, Filter Forge's Curve control): a graph's Curve Control parts that reach its Surface,

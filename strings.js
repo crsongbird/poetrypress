@@ -27,7 +27,7 @@ export const UI_STRINGS = {
   'tab.done_writing':                          "Done Writing",
 
   // ---- card ----
-  'card.incantation_editor_poetic_magick_l': "Incantation Editor (Poetic Magick Language)",
+  'card.incantation_editor_poetic_magick_l': "Inscription Editor (PML)",
   'card.arcane_guidance_pml_syntax':       "Arcane Guidance (PML Syntax)",
   'card.form_amp_bearing':                 "Form & Bearing",
   'card.builtin_presets':                  "Built-In Presets",

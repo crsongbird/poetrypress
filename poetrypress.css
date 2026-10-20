@@ -1382,7 +1382,6 @@ body.is-mobile .app-header{ align-items:center; }
 /* slider readouts: quieter, and closer to their sliders */
 .field .range-val{ display:block; text-align:right; font-size:11px; line-height:1.1;
                    margin:1px 0 0; opacity:.62; }
-#textureOpacity{ width:100%; }
 
 /* the colour picker: no scrollbars from sub-pixel rounding */
 #clr-picker{ overflow:hidden !important; }
@@ -2412,14 +2411,25 @@ body.is-mobile .tool-row > .field.hue-head{ grid-column:2 !important; }
 body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !important; }
 
 /* THE SURFACE'S CONTROLS: its sliders and curves under one drop-down heading (Opacity stays outside it) */
-.controls-fold{ margin:4px 0 2px; }
-.controls-fold > summary{ cursor:pointer; list-style:none; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--accent-2); opacity:.85; padding:4px 0 2px; }
+/* (Ruby: plainly a drawer even when shut, with room above it): a bar across the panel, its count of sliders and a
+   chevron at its right; open, the bar joins the sliders beneath it */
+.controls-fold{ margin:12px 0 4px; padding:0 10px; box-sizing:border-box; border:1px solid color-mix(in srgb, var(--line) 80%, transparent); background:color-mix(in srgb, var(--bg-panel-2, #1a171d) 70%, transparent); }
+.controls-fold > summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; min-height:34px; padding:0 10px; margin:0 -10px;
+  font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); }
 .controls-fold > summary::-webkit-details-marker{ display:none; }
-.controls-fold > summary::after{ content:" ▾"; opacity:.7; }
-.controls-fold:not([open]) > summary::after{ content:" ▸"; }
+.controls-fold > summary .fold-count{ text-transform:none; letter-spacing:.02em; font-size:11.5px; color:var(--text-dim); opacity:.85; }
+.controls-fold > summary::after{ content:""; margin-left:auto; width:7px; height:7px; border-right:1.4px solid currentColor; border-bottom:1.4px solid currentColor;
+  transform:rotate(45deg) translate(-2px, -2px); transition:transform .18s; }
+.controls-fold:not([open]) > summary::after{ transform:rotate(-45deg); }
+.controls-fold[open] > summary{ border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.controls-fold > .field{ margin:6px 0 0; }
+.controls-fold > .field:last-of-type{ margin-bottom:8px; }
 .controls-fold > .field{ margin-top:6px; }
 
 /* THE INSCRIPTION'S EYE beside the editor's name */
 .card-title-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .card-title-row > .card-title{ flex:1 1 auto; margin:0; }
+
+/* THE TAB BAR (Ruby: "the same size, and everything lined up"): five equal tabs, each glyph fitted to the same box and
+   centred (index.html's viewBoxes), with a faint line between them, as the app's other buttons have */
+body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var(--line) 60%, transparent); }

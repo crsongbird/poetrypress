@@ -4,6 +4,20 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Bianca (2026-10-20)
+
+- **The tab bar lines up**: the five tabs were already the same width, but
+  their glyphs were drawn at different sizes (the Inscription knot small,
+  the Rituals pentagram and the Materia diamond large) and the Thoughtforms
+  glyph sat low; each glyph now fills the same box at the same centre, with
+  the same weight of line, and a faint line parts the tabs, as the app's
+  other buttons are parted.
+- **The editor is called Inscription Editor (PML).**
+- **Controls is plainly a drawer**: a bar across the panel with room above
+  it, saying how many sliders it holds and with a chevron at its right,
+  shut or open.
+- **Opacity stops short of the edge**, as every other slider now does.
+
 ## Uranus–Ophelia (2026-10-20)
 
 - **An eye on the Incantation Editor** takes the poem off the page and puts
@@ -435,17 +449,3 @@ and every control behaving as it did.
     along (Silverpoint Hatch, Suminagashi, Aurora).
 - **The camera's wireframe stays up until the picture has landed** too,
   instead of fading after a moment.
-
-## Saturn–Thrymr (2026-10-19)
-
-- **The light dial's handle is the light.** Drag it round like a lamp
-  round the page: every surface is now lit from the handle's side, and its
-  shadows fall the other way. Many surfaces had been lit from the opposite
-  side (Crystal, Spangle, Crackle, Cells, Turing Pattern, Stained Glass,
-  Old Paper, Linen and others). Looks, presets and readings made before
-  keep their pictures: their light is turned half round when they open, so
-  the handle now stands where their light really is.
-- **🜚's spike points where the shadows fall,** out of the dial's far side
-  from the light. The rim light has a spike of its own, in its colour.
-- **Water's shadows fall away from the light** too. Ringworld's land is lit
-  from the handle's side, a little.

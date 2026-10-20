@@ -127,8 +127,11 @@ check('all five tabs carry a drawn SVG icon, not an emoji',
   tabs.length === 5 && tabs.every(t => t[2].includes('<svg') && !/[\u{1F300}-\u{1FAFF}]/u.test(t[2])));
 check('every tab icon is drawn scratchy — each stroke gone over more than once',
   tabs.every(t => (t[2].match(/<path|<circle/g) || []).length >= 3));
-check('every tab icon shares one viewBox and stroke weight',
-  tabs.every(t => t[2].includes('viewBox="0 0 24 24"') && t[2].includes('stroke-width="1.6"')));
+// (Ruby: "the same size, and everything lined up"): each glyph is fitted to its own square box, its line weight scaled
+// with the box, so all are drawn the same size, at the same centre, in the same weight
+check('every tab icon is fitted to a square box, its line drawn the same weight (1.6 in 24)',
+  tabs.every(t => [...t[2].matchAll(/<svg [^>]*>/g)].every(([tag]) => { const vb = (tag.match(/viewBox="([\d.\- ]+)"/) || [])[1], sw = +(tag.match(/stroke-width="([\d.]+)"/) || [])[1];
+    const [, , w, h] = (vb || '').split(' ').map(Number); return w > 0 && Math.abs(w - h) < 0.01 && Math.abs(sw - 1.6*w/24) < 0.011; })));
 
 
 for(const [title, shouldBeOpen] of [['Backdrop Color', true], ['Surface Texture', true], ['Border Options', false], ['Vignette Options', false]]){
