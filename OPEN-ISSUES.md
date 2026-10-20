@@ -8,55 +8,31 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- THE DIALS ALWAYS SHOW: the camera dial and Main / Rim (Main named for what the dial moves: Pos, Wind…) faded where a surface doesn't use them; the colours
-  two columns beneath. The Transmutation Circle placed by the camera dial (with its guide); Rain on Water's View and the
-  Painted Landscape's Tilt on the camera dial's View. Right?
-- MACRO BLOOM IN DEPTH ORDER: drawn back to front, and its shadows from the depth (a leaf near the lens shadows the
-  petals, an insect the petal it stands on); the stem, leaves overhead and the caster crossing near the lens are back.
-- LARGE GRAPHS ON FIREFOX (Ruby's crash): measured, one Macro Bloom render on a phone made 99 canvases, about 170
-  megapixels, and held up to 27 results of about 20 MB each: memory Chrome reclaimed in time and Firefox, it seems, did
-  not (there is no Firefox here to try it on). Now scratch canvases are given back at once, Firefox on a phone works on
-  a grid of at most a megapixel, slow surfaces come in two stages, and a render that runs out of memory is tried again
-  at half size. The Athanor holds 255 parts; step previews rest above 150. Does Firefox hold now?
-- MACRO BLOOM THROUGH A REAL LENS: one Lens Blur focuses the whole picture from a depth map (in front of the focus
-  blurs fast, behind it softens to a limit, the lights behind become discs; on the GPU where there is one). The camera
-  dial frames the flower with a wireframe guide (Zoom, View, Turn); the sliders are Species, Stage, Aperture, Focus,
-  Lights Behind, Dew, Translucency, Visitors, each one thing; insects rare (about one seed in eight), at most two, on a
-  petal, a quarter smaller. Right, and is the default blur creamy enough?
-- A RELOAD KEEPS THE LOOK: an empty poem no longer starts fresh (that was the opening look, the default theme and every
-  slider new); the surface and sliders come back with the page empty, and ⟲ is the fresh start. Right?
-- THE SURFACE MENU'S GROUPS, REARRANGED: Burnt Letter and Cup Ring to Paper & Grounds; Veins of Light and Moss on Stone
-  to Grown & Generated; Knotwork to Pattern & Order; Light, Sparks & Dust is now Light, Dust & Feathers (the two
-  feathers were there); the Paving Stones and Brick Wall starters to Materials & Craft; the Packet Rain study to Screens
-  & Signals. Anything else still in a strange place?
-- THE HUES IN THREE GROUPS: Light Colors (Main Light, Rim Light, Ambient Light, beside the dial), Surface Colors (the
-  surface's own, up to six, named by the surface; a Ground or Snow Hue joins them), Material Colors (Glow, Shine and
-  Shadow Hues), each under a small heading that hides when none of its hues shows. Names right?
-- THE BLACK HOLE: the light dial places it (its way from the page's middle, its height how far out; at the middle, the
-  page's middle), and the disc's wireframe stands there while either dial moves. The seed now also chooses hot spots in
-  the disc, how much nebula and dust lies behind, and sometimes a galaxy right behind it, lensed into arcs. Older looks
-  and Event Horizon keep their camera and stand at the page's middle.
-- DAPPLED LEAVES and WINDOW LIGHT now throw along the light (Window Light had the same quarter turn). The Light Dial part
-  has a third output, Way, for this.
-- THE PAINTED LANDSCAPE'S SUN follows the light dial (kept just above the horizon when the dial would set it lower).
-- WRITING ON A PHONE: drag the divider while the keyboard is up to size the preview again (at least three lines of poem
-  stay); a double-tap gives back the dozen lines.
+- THE PAINTED RINGWORLD PASS (branch ringpass): the camera sweeps and the world stays (the land as arcs at fixed
+  distances, every thing on a stream of its own, the sky's things in directions of the world, the stars panning); Works
+  turned well down; trees, buildings, rocks and works remade in a shared kit that Ring in the Sky's land
+  and Night City's skyline use too. The near ridges bow down at the frame's sides (the cost of being arcs): all right?
+- CARTOMANCY (branch cartomancy): the table blended over the page's backdrop (Overlay); the cards and coins lit by
+  the Light Engine from height and gloss maps.
+- CRYSTAL LEAF ON THE LIGHT ENGINE (branch crystal): a druse's maps (albedo seen through the faces and bent by them,
+  height, normals, gloss, the veil as translucency, the fire as light of its own); the Light Engine takes a Normal Map.
+- FAIRIES (branch fairies): about one seed in six, a small fairy light drifts over the Meadow's grass or the Windward
+  Sea; one Macro Bloom visitor in 66 is a fairy. A Fairy Light part for any graph.
+- THE SOUND PASS (branch sound; listen with Sound on): home raised to D4; a knob's marks rise with its value, its ends
+  knock, a double-tap reset falls a fifth; locks a latch; dice a tumble; bursts sound twice, then rest.
+- MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
+  grid. Does it hold?
 
 ## 2 · Ruby's notes to act on
-- A FAIRY now and then (Ruby: "both Hyrule Field and the wind waker need an occasional fairy showing up from the
-  game"): small, a glowing nod and never the character itself, in the Meadow and the Windward Sea, and in Macro Bloom
-  as a visitor at a 1-in-66 chance (small).
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a
   village of roofs and gates, fields under a great tree, a cursed land under red miasma.
 - THE GPU (Ruby: "implement most of these things on the GPU to accelerate rendering as much as inhumanly possible"):
   only the Light Engine's shadow march, occlusion and shine run on the GPU; blur, focal blur, warp, blend, posterize,
   Scatter and the rest of a graph run on the CPU. Move them (PERFORMANCE-AUDIT, ROADMAP).
-- CARTOMANCY: the clutter and its lighting read as cartoony — light the
-  table, cards and objects with the Light Engine (now a part). Scramble
-  everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,
-  marks — all fictional, as if through a window onto a world like ours but
-  with its own lore and rules.
+- CARTOMANCY (beyond the branch above): the table's objects still painted lit, to bring onto the Light Engine.
+  Scramble everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,
+  marks — all fictional, as if through a window onto a world like ours but with its own lore and rules.
 - PAINTED LANDSCAPE: more variety in the water and land textures.
 
 ## 3 · Found, not yet fixed
@@ -65,7 +41,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
-(nothing)
+- The Controls drawer says how many sliders it holds ("8 sliders"): keep the count, or let it go?
 
 ## 5 · Long horizon
 - A GAME, IN ITS OWN REPO SOMEDAY (Ruby, the extreme long term): a fork that explores the ringworlds, finds the idyllic

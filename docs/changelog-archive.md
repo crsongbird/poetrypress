@@ -2,6 +2,22 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Aegir (2026-10-19)
+
+- **The light dial shows on the page what it places, before the picture is
+  made.** While the dial moves, and until the new picture has landed, a
+  guide over the page shows:
+  - the light, as a sun where it comes from, on every lit surface (the rim
+    light's too, in its own colour);
+  - where Crackle's cracks burst from;
+  - where the Transmutation Circle stands, and how big it is;
+  - how the Black Hole's disc is seen;
+  - the way the wind, rain, flow or pigment runs (Snow, Harsh Rain, Flow
+    Lines, Silk Ribbons, Watercolour Wash), and the line the strokes lie
+    along (Silverpoint Hatch, Suminagashi, Aurora).
+- **The camera's wireframe stays up until the picture has landed** too,
+  instead of fading after a moment.
+
 ## Saturn–Thrymr (2026-10-19)
 
 - **The light dial's handle is the light.** Drag it round like a lamp
