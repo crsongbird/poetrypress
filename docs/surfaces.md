@@ -95,6 +95,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
 - **Cartomancy** (cartomancy.js, chain `cards`, canvas, ON_PAGE; its parts
   are `CARD_STEPS`; cartomancyTable.js gets its drawing kit `CRT_KIT` from
   cartomancy.js when it loads):
+  - **The table takes the page's colours** (Ruby: "always blend the table
+    generated against the page color gradient"): Table → Blend (Overlay) over
+    the Page Backdrop (`pageEnv`) → Card Deal.
+  - **Lit by the Light Engine** (Card Deal's Lit By): the cards and coins are
+    painted flat (`look.engine`: no baked shadows, sheen or glints), and the
+    deal hands on its Height (each card a step above what it lies on, so it
+    shades the ones beneath; coins domed, rimmed, their mark struck in; the
+    table's grain faintly) and Gloss (the stock's own, gilt and metal bright)
+    to a Light Engine (`crtPaintMaps`). The table's objects keep their own
+    painting for now, standing on low mounds in the height.
   - "STAKES" is how likely money lies on the table, and how much.
   - The seed picks a game (eleven `CARD_GAMES`), its players, the suits, the
     table, the card stock and the coinage.

@@ -22,8 +22,8 @@ check('the table, the card stock and the coinage come from their own lists, each
 check('what else is on the table: at least sixteen kinds, each placed on the table', Object.keys(TT.TABLE_OBJECTS).length >= 16
   && TT.crtTableObjects([], 1000, 1000, 110, 1).every(o => o.kind === 'object' && o.x >= 0 && o.x <= 1000));
 check('wear changes a card\'s outline: a tear cuts a corner; a ring stain cuts nothing', TT.crtCut({ kind: 'tear', corner: 2, size: 0.2, b: 0.5 }).corner === 2 && TT.crtCut({ kind: 'ring' }) === null);
-check('its parts are the Athanor\'s: Table, Card Deal (a picture and four suit colors in; a picture and its mask out) and Coins, and Table and Deal paint at full size',
-  S.STEPS.table && S.STEPS.deal && S.STEPS.coins && S.STEPS.deal.inTypes.slice(0, 5).join(',') === 'image,colour,colour,colour,colour' && S.STEPS.deal.outTypes.join(',') === 'image,field'
+check('its parts are the Athanor\'s: Table, Card Deal (a picture and four suit colors in; a picture, its mask, its height and gloss out) and Coins, and Table and Deal paint at full size',
+  S.STEPS.table && S.STEPS.deal && S.STEPS.coins && S.STEPS.deal.inTypes.slice(0, 5).join(',') === 'image,colour,colour,colour,colour' && S.STEPS.deal.outTypes.join(',') === 'image,field,field,field'
   && S.STEPS.coins.outTypes[1] === 'field' && typeof S.STEPS.table.paint === 'function' && typeof S.STEPS.deal.paint === 'function');
 {
   const d = A.athanorStarter('cards').drawflow.Home.data;

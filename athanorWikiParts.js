@@ -866,8 +866,8 @@ export const WIKI_PARTS = {
   deal: {
     line: 'Cards and coins from one of eleven games, laid on a table.',
     ins: { table: 'The table (Table part).', 'fire hue': 'First suit color.', 'water hue': 'Second suit.', 'air hue': 'Third suit.', 'earth hue': 'Fourth suit.' },
-    outs: { image: 'The table with cards.', mask: 'Where cards lie.' },
-    set: { game: 'Which game (seed: chosen by the seed).', stock: 'Card material.', gilt: 'Edge color.', suits: 'Number of suits.', coinage: 'Which coins.', count: 'Cards in play.', size: 'Card size.', scatter: 'How messy the layout is.', stakes: 'How much money is on the table.', clutter: 'Other objects on the table.', wear: 'Damage to the cards.' },
+    outs: { image: 'The table with cards.', mask: 'Where cards lie.', height: 'With Lit By on the Light Engine: how high everything stands (each card a thin step above what it lies on, coins domed with a raised rim and their mark struck in, the table\'s grain faintly). Wire it into a Light Engine\'s Height.', gloss: 'With Lit By on the Light Engine: what shines (the card stock\'s own gloss, gilt edges and metal bright, the table matte). Wire it into a Light Engine\'s Gloss Map.' },
+    set: { game: 'Which game (seed: chosen by the seed).', stock: 'Card material.', gilt: 'Edge color.', suits: 'Number of suits.', coinage: 'Which coins.', count: 'Cards in play.', size: 'Card size.', scatter: 'How messy the layout is.', stakes: 'How much money is on the table.', clutter: 'Other objects on the table.', wear: 'Damage to the cards.', lighting: 'Its Own Painting draws each card and coin already lit, with its shadows and sheen; The Light Engine draws them flat and hands on Height and Gloss, so a Light Engine lights them from the dial (shadows, rims and shine that follow the light).' },
   },
   objects: {
     line: 'Objects left on a table (candles, cups, dice, keys, letters…), laid on the input.',

@@ -50,7 +50,7 @@ function readings({ E, T }, type){
 }
 function draw({ T }, type, rd){
   const caps = T.capsFor(type), blend = rd.blend && caps.blends.includes(rd.blend) ? rd.blend : caps.blends[0], k = rd.knobs;
-  const o = { accent1: '#E07A8A', accent2: '#7A8AE8', seed: rd.seed, light: rd.light[0], lightTilt: rd.light[1], tint1: rd.tints[0] || null, tint2: rd.tints[1] || null, blend,
+  const o = { accent1: '#E07A8A', accent2: '#7A8AE8', env: ['#5A3A52', '#1E1A26'], seed: rd.seed, light: rd.light[0], lightTilt: rd.light[1], tint1: rd.tints[0] || null, tint2: rd.tints[1] || null, blend,
     ...Object.fromEntries(k.map((v, i) => ['p' + (i + 1), v])), ...(rd.camera ? { camera: rd.camera } : {}) };
   const page = createCanvas(GEN, GEN), c = page.getContext('2d');
   c.fillStyle = backFor(blend); c.fillRect(0, 0, GEN, GEN);
