@@ -29,6 +29,7 @@
 import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, pageSunAt, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh, genFeathers } from './texWhimsy.js';
 import { skyRingFrame } from './stepsGenerative.js';
+import { pkTree, pkSpire, pkMonolith, pkCrystals } from './paintKit.js';
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 /** The birds the Feathers part draws (its Bird setting, in fifths). */
@@ -930,22 +931,14 @@ function paintShapeLand(x, mk, dk, w, h, o){
   const nL = 3 + Math.round(o.layers*3), hy = h*o.horizon, rnd = (a, b) => a + (b - a)*R();
   const jit = (c, k = 0.07) => { const q = (R() - 0.5)*2*k; return q > 0 ? rsMix(c, [255, 255, 255], q) : rsMix(c, BLACK, -q); };
   // one tree, as a painter blocks it: a fir of stacked triangles, a round crown of facets, or a poplar; lit on the light's side
-  const tree = (X, Y, sz, fa, kind) => { const gc = rsMix(jit(GREEN, 0.1), AIR, fa*0.7), dark = rsMix(gc, BLACK, 0.3*(1 - fa)), lit = rsMix(gc, SUN, 0.28*(1 - fa*0.6)), sd = L[0] > 0 ? 1 : -1;
-    x.strokeStyle = rsCss(rsMix([70, 52, 40], AIR, fa*0.7)); x.lineWidth = Math.max(px(1), sz*0.08); x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - sz*0.4); x.stroke();
-    if(kind < 0.45){ for(let tier = 0; tier < 3; tier++){ const ty = Y - sz*(0.2 + tier*0.42), tw = sz*(0.42 - tier*0.1), th = sz*0.7;
-        rsPoly(x, [[X - tw, ty], [X, ty - th], [X + tw, ty]], rsCss(dark)); rsPoly(x, [[X, ty], [X, ty - th], [X + sd*tw, ty]], rsCss(lit)); } }
-    else if(kind < 0.75){ const r = sz*0.5, cy = Y - sz*0.75, pts = Array.from({ length: 7 }, (_, k) => { const a = k/7*Math.PI*2 + 0.3, rr = r*(0.85 + 0.25*R()); return [X + Math.cos(a)*rr, cy + Math.sin(a)*rr*0.9]; });
-      rsPoly(x, pts, rsCss(dark)); rsPoly(x, pts.map(([X1, Y1]) => [X + (X1 - X)*0.62 + L[0]*r*0.24, cy + (Y1 - cy)*0.62 + L[1]*r*0.24]), rsCss(lit)); }
-    else { const pw = sz*0.22, ph = sz*1.5; rsPoly(x, [[X, Y - sz*0.2], [X - pw, Y - sz*0.2 - ph*0.35], [X, Y - sz*0.2 - ph], [X + pw, Y - sz*0.2 - ph*0.35]], rsCss(dark));
-      rsPoly(x, [[X, Y - sz*0.2], [X + sd*pw, Y - sz*0.2 - ph*0.35], [X, Y - sz*0.2 - ph]], rsCss(lit)); } };
+  const tree = (X, Y, sz, fa, kind) => { const gc = rsMix(jit(GREEN, 0.1), AIR, fa*0.7), sd = L[0] > 0 ? 1 : -1;
+    const c = { trunk: rsMix([70, 52, 40], AIR, fa*0.7), dark: rsMix(gc, BLACK, 0.3*(1 - fa)), body: gc, lit: rsMix(gc, SUN, 0.28*(1 - fa*0.6)), glow: GLOW, sd, L };
+    pkTree(x, X, Y, sz*1.7, c, kind < 0.3 ? 'spruce' : kind < 0.45 ? 'pine' : kind < 0.75 ? 'broadleaf' : kind < 0.88 ? 'poplar' : 'birch', R, px); };
   // THE BUILDERS' SHAPES: a spire, a gate, a standing ring (the ring overhead, echoed), a monolith, crystals
   const structure = (ax, ay, s, fa) => { const kind = R(), m = rsMix(METAL, AIR, fa*0.75), md = rsMix(m, BLACK, 0.32*(1 - fa*0.5)), gl = rsMix(GLOW, AIR, fa*0.4), sd = L[0] > 0 ? 1 : -1;
     const glow = (X, Y, r) => { x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(gl, 0.8)); g.addColorStop(1, rsCss(gl, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); };
-    if(kind < 0.3){ const bw2 = unit*0.022*s, sh = unit*(0.16 + 0.16*R())*s;
-      rsPoly(x, [[ax - bw2*1.6, ay + bw2], [ax - bw2, ay - bw2*1.2], [ax + bw2, ay - bw2*1.2], [ax + bw2*1.6, ay + bw2]], rsCss(md));
-      rsPoly(x, [[ax - bw2, ay], [ax, ay - sh], [ax + bw2, ay]], rsCss(md)); rsPoly(x, [[ax, ay], [ax, ay - sh], [ax + sd*bw2, ay]], rsCss(m));
-      rsPoly(x, [[ax - bw2*0.75, ay - sh*0.42], [ax + bw2*0.75, ay - sh*0.42], [ax + bw2*0.6, ay - sh*0.47], [ax - bw2*0.6, ay - sh*0.47]], rsCss(gl, 0.85));
-      glow(ax, ay - sh, bw2*3); }
+    const pc = { body: m, lit: rsMix(m, SUN, 0.3), dark: md, glow: gl, glow2: gl, sd, L };
+    if(kind < 0.3){ pkSpire(x, ax, ay, unit*(0.16 + 0.16*R())*s, pc, false, R, px); }
     else if(kind < 0.52){ const gw = unit*(0.07 + 0.06*R())*s, gh = gw*(1.15 + 0.5*R()), th = gw*0.24, gy = ay + th*0.4, ry = gy - gh + gw/2;
       x.fillStyle = rsCss(md); x.beginPath(); x.moveTo(ax - gw/2, gy); x.lineTo(ax - gw/2, ry); x.arc(ax, ry, gw/2, Math.PI, 0); x.lineTo(ax + gw/2, gy);
       x.lineTo(ax + gw/2 - th, gy); x.lineTo(ax + gw/2 - th, ry); x.arc(ax, ry, gw/2 - th, 0, Math.PI, true); x.lineTo(ax - gw/2 + th, gy); x.closePath(); x.fill();
@@ -957,13 +950,8 @@ function paintShapeLand(x, mk, dk, w, h, o){
       x.fillStyle = rsCss(md); x.beginPath(); x.arc(ax, ccy, rr, 0, Math.PI*2); x.arc(ax, ccy, rr*0.74, 0, Math.PI*2, true); x.fill();
       const a0 = sd > 0 ? -Math.PI/2 : Math.PI/2; x.fillStyle = rsCss(m); x.beginPath(); x.arc(ax, ccy, rr, a0, a0 + Math.PI); x.arc(ax, ccy, rr*0.74, a0 + Math.PI, a0, true); x.closePath(); x.fill();
       x.strokeStyle = rsCss(gl, 0.9); x.lineWidth = Math.max(px(1.5), rr*0.06); x.beginPath(); x.arc(ax, ccy, rr*0.74, 0, Math.PI*2); x.stroke(); glow(ax, ccy, rr*0.9); }
-    else if(kind < 0.86){ const mw = unit*(0.014 + 0.012*R())*s, mh = unit*(0.07 + 0.08*R())*s, tl = mh*0.14*(R() < 0.5 ? 1 : -1);
-      rsPoly(x, [[ax - mw, ay + mw*0.5], [ax - mw, ay - mh], [ax + mw, ay - mh + tl], [ax + mw, ay + mw*0.5]], rsCss(sd > 0 ? md : m));
-      rsPoly(x, [[ax + mw, ay + mw*0.5], [ax + mw, ay - mh + tl], [ax + mw*1.6, ay - mh + tl + mw*0.35], [ax + mw*1.6, ay + mw*0.8]], rsCss(sd > 0 ? m : md)); }
-    else for(let q = 0; q < 3 + Math.floor(R()*3); q++){ const cs = unit*(0.012 + 0.012*R())*s, a = (R() - 0.5)*0.9, ox = (R() - 0.5)*cs*3, c2 = rsMix(rsMix(GLOW, [176, 146, 255], R()), AIR, fa*0.5);
-        const tipX = ax + ox + Math.sin(a)*cs*4, tipY = ay - Math.cos(a)*cs*4, nx = Math.cos(a)*cs, ny = Math.sin(a)*cs;
-        rsPoly(x, [[ax + ox - nx, ay - ny], [tipX, tipY], [ax + ox + nx, ay + ny], [ax + ox, ay + cs*0.5]], rsCss(rsMix(c2, BLACK, 0.3)));
-        rsPoly(x, [[ax + ox, ay + cs*0.5], [tipX, tipY], [ax + ox + sd*nx, ay + sd*ny]], rsCss(c2)); glow(tipX, tipY, cs*1.5); } };
+    else if(kind < 0.86) pkMonolith(x, ax, ay, unit*(0.07 + 0.08*R())*s, pc, 1, R, px);
+    else pkCrystals(x, ax, ay, unit*0.018*s, [rsMix(GLOW, AIR, fa*0.5), rsMix([176, 146, 255], AIR, fa*0.5)], pc, 3 + Math.floor(R()*3), R, px); };
   for(let i = 0; i < nL; i++){
     const t = nL > 1 ? i/(nL - 1) : 1, base = hy + (h - hy)*Math.pow(t, 1.15)*0.82, amp = h*(0.03 + 0.2*o.height)*(1 - 0.5*t);
     const fa = Math.pow(1 - t, 1.2)*(0.35 + 0.65*o.haze), col = rsMix(rsMix(Lh, BLACK, 0.1 + 0.42*t), AIR, fa*0.8);

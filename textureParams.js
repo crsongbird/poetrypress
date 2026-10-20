@@ -208,7 +208,7 @@ export const TEXTURE_PARAMS = {
                   // who and what: the seed's own world, or one chosen; Mixed lays three side by side
                   sliderOf('world', 'World', 0, { ticks:[0,14,29,43,57,71,86,100], names:['By the Seed','Wilds','Cities','Neon','Builders','Magic','Ruins','Mixed'] }),
                   sliderOf('shape', 'Life', 50),
-                  sliderOf('form', 'Works', 50),
+                  sliderOf('form', 'Works', 35),
                   sliderOf('alt', 'Altitude', 15),
                   sliderOf('paint', 'Paint', 0),
                   sliderOf('brush', 'Brush', 37, { ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry'] })],

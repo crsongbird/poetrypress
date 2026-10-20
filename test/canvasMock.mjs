@@ -48,7 +48,7 @@ export function makeMockContext(w, h){
     fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, lineCap: 'butt', lineJoin: 'miter',
     imageSmoothingEnabled: true,
     _stats: stats,
-    save(){}, restore(){}, beginPath(){}, closePath(){},
+    save(){}, restore(){}, beginPath(){}, closePath(){}, clip(){},
     translate(x,y){ assertFinite('translate', x, y); },
     rotate(angle){ assertFinite('rotate', angle); stats.rotSum += Math.abs(angle); stats.rotSigned += angle; },
     moveTo(x,y){ assertFinite('moveTo', x, y); ctx._lastX = x; ctx._lastY = y; },

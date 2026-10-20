@@ -5,6 +5,7 @@
  * frustration, silverpoint hatch, metal leaf, waking grain.
  */
 import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx, lightVec, scaleNow, canonDiv, lightHeights, litK } from './texCore.js';
+import { pkSilhouette } from './paintKit.js';
 
 // The flower's FORM, as keyframes of a few numbers. The Form knob (0–1)
 // blends continuously between neighbours, so every position in between is a
@@ -337,9 +338,13 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
 
   const windows=(x,top,bw,bh,density)=>{
     const cw=Math.max(3,unit*0.006), ch=Math.max(3,unit*0.008), gap=cw*0.9;
+    const lit=[[],[],[]];
     for(let yy=top+ch; yy<ground-ch*1.5; yy+=ch+gap*1.1)
       for(let xx=x+gap; xx<x+bw-cw-gap*0.3; xx+=cw+gap)
-        if(Math.random()<density){ ctx.globalAlpha=0.55+Math.random()*0.45; ctx.fillStyle=rgb(win); ctx.fillRect(xx,yy,cw,ch); }
+        if(Math.random()<density){ const a=0.55+Math.random()*0.45; lit[Math.min(2, Math.floor((a-0.55)/0.15))].push(xx,yy); }
+    // (the lit panes in three brightnesses, each one path: far fewer fills than a pane at a time)
+    ctx.fillStyle=rgb(win);
+    lit.forEach((P,b)=>{ if(!P.length) return; ctx.globalAlpha=0.625+b*0.15; ctx.beginPath(); for(let i=0;i<P.length;i+=2) ctx.rect(P[i],P[i+1],cw,ch); ctx.fill(); });
   };
   // a downtown: buildings rise toward one point along the skyline
   const peakX=w*(0.2+Math.random()*0.6), peakW=w*(0.18+Math.random()*0.22);
@@ -350,36 +355,23 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
     while(x<w){
       const type=types[Math.floor(Math.random()*types.length)];
       let bw=unit*(0.035+Math.random()*0.06)*scale, bh=H*scale*(0.25+Math.random()*0.75)*(0.55+0.85*Math.exp(-(((x-peakX)/peakW)**2)));
-      if(type==='block'||type==='warehouse') { bw*=1.8; bh*=0.45; }
+      if(type==='block'||type==='warehouse'||type==='brick') { bw*=type==='brick'?1.3:1.8; bh*=type==='brick'?0.6:0.45; }
+      if(type==='twin') bw*=1.4;
       if(type==='house'){ bw=unit*0.022*scale; bh=unit*0.02*scale; }
       const top=ground-bh;
       ctx.globalAlpha=alpha; ctx.fillStyle=grey(tone);
-      ctx.beginPath();
-      if(type==='setback'){                               // stepped, like an old tower
-        const s1=bw*0.18, s2=bw*0.34;
-        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.35); ctx.lineTo(x+s1,top+bh*0.35); ctx.lineTo(x+s1,top+bh*0.12);
-        ctx.lineTo(x+s2,top+bh*0.12); ctx.lineTo(x+s2,top); ctx.lineTo(x+bw-s2,top); ctx.lineTo(x+bw-s2,top+bh*0.12);
-        ctx.lineTo(x+bw-s1,top+bh*0.12); ctx.lineTo(x+bw-s1,top+bh*0.35); ctx.lineTo(x+bw,top+bh*0.35); ctx.lineTo(x+bw,ground);
-      } else if(type==='dome'){
-        ctx.rect(x,top+bw*0.3,bw,bh-bw*0.3); ctx.moveTo(x+bw,top+bw*0.3); ctx.arc(x+bw/2,top+bw*0.3,bw/2,0,Math.PI,true);
-      } else if(type==='house'){
-        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.4); ctx.lineTo(x+bw/2,top-bh*0.2); ctx.lineTo(x+bw,top+bh*0.4); ctx.lineTo(x+bw,ground);
-      } else if(type==='warehouse'){
-        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.3); ctx.quadraticCurveTo(x+bw/2,top-bh*0.1,x+bw,top+bh*0.3); ctx.lineTo(x+bw,ground);
-      } else {
-        ctx.rect(x,top,bw,bh);
-      }
-      ctx.fill();
-      if(type==='spire'){ ctx.fillRect(x+bw/2-unit*0.0015, top-bh*0.18, unit*0.003, bh*0.18);
-        ctx.beginPath(); ctx.moveTo(x+bw*0.2,top); ctx.lineTo(x+bw/2,top-bh*0.1); ctx.lineTo(x+bw*0.8,top); ctx.fill(); }
-      if(density>0 && type!=='warehouse') windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1));
+      const draws=[]; pkSilhouette(ctx, x, ground, bw, bh, type, ()=>{ const v=Math.random(); draws.push(v); return v; }, cpx);
+      // (its windows only on the building: its own outline, drawn again with the same draws, as the clip)
+      if(density>0 && type!=='warehouse'){ const shaped = type!=='tower' && type!=='block' && type!=='spire'; let k=0; if(shaped){ ctx.save(); pkSilhouette(ctx, x, ground, bw, bh, type, ()=>draws[k++], cpx, true); }
+        windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1)); if(shaped) ctx.restore(); }
       if(type!=='house') tallest=Math.max(tallest, bh);
       x+=bw;                                              // flush: no gaps
     }
     return tallest;
   };
 
-  const types = scene==='fields' ? ['tower','block','setback'] : ['tower','tower','setback','spire','block','dome'];
+  // (the skyline's kinds, from the shared painted things: paintKit.js)
+  const types = scene==='fields' ? ['tower','block','setback','brick','house'] : ['tower','tower','setback','deco','slant','twin','brick','spire','block','dome'];
   const f = scene==='fields' ? 0.7 : 1;
   // four layers, each nearer one darker, larger and more lit
   const layers=[
