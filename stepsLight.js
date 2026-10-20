@@ -55,7 +55,10 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
   // (a light at its own height, whatever the page's dial says: Ringworld's dial is its camera, and its star its own light)
   // (the page's ambient slider reaches it; the page's rim light is its second light, below)
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient' });
+  // (a NORMAL MAP, when one is wired: each point's facing given outright — a crystal's faces, a hammered sheet — while the
+  //  heights still cast the shadows and keep the hollows)
+  const normals = o.normals && o.normals.length >= gw*gh*3 ? o.normals : null;
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient', normals });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
@@ -66,7 +69,7 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   let K2 = null, S2 = null;
   if(o.second){ const n = o.secondSoft > 0.02 ? 3 : 1, w = o.secondSoft*60; K2 = new Float32Array(K.length); S2 = new Float32Array(K.length);
     for(let q = 0; q < n; q++){ const d = deg + o.secondTurn + (n > 1 ? (q - 1)*w/2 : 0);
-      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false }));
+      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false, normals }));
       for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
   // TRANSLUCENCY: light that went in comes out a little way off (subsurface scattering, as wax, jade and skin do):
   // the shading softened by a blur of itself, its shadows lifted, its shine spread wider and dimmer
@@ -460,8 +463,8 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 export const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4', 'translucency:4'],
-    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue', 'normal map'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4', 'translucency:4'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour', 'image'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130),
       LT_R('second', 'Second Light', 0, -100, 100), LT_R('secondTurn', 'Second Light From', 180, 0, 360), LT_R('secondHeight', 'Second Light Height', 120, 0, 130),
@@ -475,6 +478,9 @@ export const LIGHT_STEPS = {
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
       const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
+      if(E.input(n, 10) != null){ const [nc, nx] = kitPicture(E.input(n, 10), gw, gh), d = nx.getImageData(0, 0, gw, gh).data, NM = new Float32Array(gw*gh*3);
+        for(let i = 0; i < gw*gh; i++){ const x = d[i*4]/127.5 - 1, y = d[i*4 + 1]/127.5 - 1, z = Math.max(1e-3, d[i*4 + 2]/127.5 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
+        o.normals = NM; nc.width = 0; nc.height = 0; }
       const { K, S, A, K2, S2 } = ltLight(H, gw, gh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null;
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
@@ -494,6 +500,10 @@ export const LIGHT_STEPS = {
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
       // its gloss map input, else a map on Gloss's ⚙ (both a gloss per point)
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
+      // its normal map: a picture whose red, green and blue are each point's facing (x, y and z, from -1 to 1 as 0 to 1)
+      if(E.input(n, 10) != null){ const nm = E.asImage(E.input(n, 10)), NM = new Float32Array(N*3);
+        for(let i = 0; i < N; i++){ const x = nm.r[i]*2 - 1, y = nm.g[i]*2 - 1, z = Math.max(1e-3, nm.b[i]*2 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
+        o.normals = NM; }
       const { K, S, A, K2, S2, TR, BD } = ltLight(H, ww, wh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null, out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);

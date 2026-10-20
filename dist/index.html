@@ -11290,6 +11290,97 @@ function touchPigment(D, img, ww, wh, col, wet, light){
   return out;
 }
 
+
+
+
+
+
+
+
+
+
+function druseMaps(ww, wh, o){
+  const unit = Math.min(ww, wh), N = ww*wh, zoom = o.zoom, clarity = o.clarity, fire = o.fire, ph = o.phantoms, inc = o.inclusions;
+  const la = ((o.light == null ? 315 : o.light) - 90)*Math.PI/180, SX = -Math.cos(la), SY = -Math.sin(la), R = Math.random;
+  const faces = cs => { const gx = Math.ceil(ww/cs) + 2, gy = Math.ceil(wh/cs) + 2, F = [];
+    for(let j = 0; j < gy; j++) for(let i = 0; i < gx; i++){ const t = R();
+      F.push({ x: (i - 1 + 0.1 + R()*0.8)*cs, y: (j - 1 + 0.1 + R()*0.8)*cs, tone: t, ghost: R() < 0.45, rot: R()*Math.PI/3, slope: 0.45 + R()*0.5, h: R()*cs*0.4, film: R(), stri: 0.4 + R()*1.2 }); }
+    return { cs, gx, gy, F }; };
+  const near = (S, x, y, out) => { const ci = Math.floor(x/S.cs) + 1, cj = Math.floor(y/S.cs) + 1; let d1 = 1e18, d2 = 1e18, f1 = null, f2 = null;
+    for(let b = cj - 1; b <= cj + 1; b++){ if(b < 0 || b >= S.gy) continue; for(let a = ci - 1; a <= ci + 1; a++){ if(a < 0 || a >= S.gx) continue; const f = S.F[b*S.gx + a], ex = x - f.x, ey = y - f.y, dd = ex*ex + ey*ey;
+      if(dd < d1){ d2 = d1; f2 = f1; d1 = dd; f1 = f; } else if(dd < d2){ d2 = dd; f2 = f; } } }
+    out.f = f1; out.edge = f2 ? (d2 - d1)/(2*Math.sqrt((f2.x - f1.x)**2 + (f2.y - f1.y)**2)) : 1e9; return out; };
+  const FRONT = faces(unit*0.42*zoom), BACK = faces(unit*0.27*zoom);
+  const np = Math.round(3 + fire*12), P = [];
+  for(let k = 0; k < np; k++){ const a = R()*Math.PI, nx = -Math.sin(a), ny = Math.cos(a), px = R()*ww, py = R()*wh;
+    const meet = Math.abs(nx*SX + ny*SY), flash = (0.25 + 0.75*Math.pow(1 - meet, 2))*(0.15 + 0.85*R()**1.5);
+    P.push({ nx, ny, c: nx*px + ny*py, wd: unit*(0.004 + R()*0.018), flash, ax: Math.cos(a), ay: Math.sin(a), mid: px*Math.cos(a) + py*Math.sin(a), len: unit*(0.15 + R()*0.5) }); }
+  const veil = makeNoiseGrid(8, 8), feathers = makeNoiseGrid(40, 40);
+
+  let IL = null;
+  if(inc > 0.02){ const [lay, lc] = kitCanvas(ww, wh), sprays = Math.round(1 + inc*5), px = o.px; lc.lineCap = 'round';
+    for(let s2 = 0; s2 < sprays; s2++){ const cx = R()*ww, cy = R()*wh, a0 = R()*Math.PI, n = Math.round(4 + inc*22), deep = 0.35 + R()*0.65;
+      for(let k = 0; k < n; k++){ const a = a0 + (R() - 0.5)*0.5, L2 = unit*(0.05 + R()*0.2), ox = cx + (R() - 0.5)*unit*0.15, oy = cy + (R() - 0.5)*unit*0.15;
+        lc.strokeStyle = `rgba(${o.IN[0]},${o.IN[1]},${o.IN[2]},${Math.min(1, (0.7 + R()*0.3)*(1.25 - deep*0.45))})`; lc.lineWidth = px(1.8 + R()*2.2);
+        lc.beginPath(); lc.moveTo(ox, oy); lc.lineTo(ox + Math.cos(a)*L2, oy + Math.sin(a)*L2); lc.stroke(); } }
+    for(let k = 0, nb = Math.round(inc*120); k < nb; k++){ const x = R()*ww, y = R()*wh, r = px(4 + R()*R()*22);
+      lc.strokeStyle = 'rgba(20,14,28,0.55)'; lc.lineWidth = r*0.28; lc.beginPath(); lc.arc(x, y, r, 0, Math.PI*2); lc.stroke();
+      lc.fillStyle = 'rgba(255,255,255,0.7)'; lc.beginPath(); lc.arc(x - SX*r*0.35, y - SY*r*0.35, r*0.22, 0, Math.PI*2); lc.fill(); }
+    IL = lc.getImageData(0, 0, ww, wh).data; lay.width = 0; lay.height = 0; }
+
+  const INS = o.inside;
+  const albedo = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, H = new Float32Array(N), G = new Float32Array(N), VEIL = new Float32Array(N);
+  const FIRE = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, FE = new Float32Array(N);
+  const NRM = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+  const REFR = unit*0.12, R3 = Math.sqrt(3)/2, SEC = [0, 1, 2, 3, 4, 5].map(s => (s + 0.5)*Math.PI/3), nA = { f: null, edge: 0 }, nB = { f: null, edge: 0 };
+  for(const f of FRONT.F){ const dc = new Float64Array(12); for(let k = 0; k < 6; k++){ const m = SEC[k] + f.rot; dc[k*2] = Math.cos(m); dc[k*2 + 1] = Math.sin(m); } f.dc = dc; }
+  const thinS = unit*0.0016, striS = Math.max(1, unit*0.004), backS = unit*0.004, CR = o.CR, IN = o.IN, seen = 0.5 + 0.5*clarity;
+  const hueC = [0, 1, 2].map(c => Math.max(0.04, CR[c]/255)), hueIn = hueC.map(h => Math.pow(h, 0.45));
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x, A = near(FRONT, x, y, nA), f = A.f, dx = x - f.x, dy = y - f.y, rr = Math.sqrt(dx*dx + dy*dy), Rf = FRONT.cs*0.62;
+    let best = -2, mx = 1, my = 0; const DC = f.dc; for(let k = 0; k < 12; k += 2){ const dd = dx*DC[k] + dy*DC[k + 1]; if(dd > best){ best = dd; mx = DC[k]; my = DC[k + 1]; } }
+    const along = dx*mx + dy*my, across = Math.abs(dx*my - dy*mx);
+
+    const stri = Math.sin(along/striS + f.film*6)*0.05*f.stri;
+    H[i] = (f.h - f.slope*along*(1 + stri))/unit;
+    { const sl = f.slope*(1 + stri), nz = 1/Math.sqrt(1 + sl*sl); NRM.r[i] = 0.5 + 0.5*mx*sl*nz; NRM.g[i] = 0.5 + 0.5*my*sl*nz; NRM.b[i] = 0.5 + 0.5*nz; }
+
+
+    let v = 0.14 + 0.1*f.tone + 0.22*Math.max(0, 1 - along/Rf*0.8);
+    const g0 = rr/(Rf*0.55); v += 0.22*clarity*Math.exp(-(g0*g0));
+    const ox = mx*f.slope*REFR, oy = my*f.slope*REFR, B = near(BACK, x + ox, y + oy, nB);
+    v += 0.07*B.f.tone + 0.3*Math.exp(-B.edge/backS)*clarity*0.7;
+    if(ph > 0.02 && f.ghost){ const st = Rf*0.22, k = along/st; if(k > 0.6 && k < 3.6){ const q = k - Math.floor(k), e = Math.min(q, 1 - q)*st/thinS; v += Math.exp(-(e*e))*ph*0.4; } }
+
+    const ridge = Math.max(0, 0.5*along - R3*across); v += 0.25*Math.exp(-ridge/thinS) + 0.2*Math.exp(-A.edge/thinS);
+    let r = 0, g = 0, b = 0; const vv = Math.min(1.2, v);
+    for(let c = 0; c < 3; c++){ const t = Math.pow(hueC[c], 1.2 - Math.min(1, vv)); const val = vv*t; if(c === 0) r = val; else if(c === 1) g = val; else b = val; }
+
+    const sx = Math.round(x + ox*0.6), sy = Math.round(y + oy*0.6);
+    if(sx >= 0 && sy >= 0 && sx < ww && sy < wh){ const j = sy*ww + sx;
+      if(INS){ const a = 0.55*clarity; r = r*(1 - a) + INS.r[j]*hueIn[0]*a; g = g*(1 - a) + INS.g[j]*hueIn[1]*a; b = b*(1 - a) + INS.b[j]*hueIn[2]*a; }
+      if(IL){ const q = j*4, a = IL[q + 3]/255*seen; if(a > 0){ r = r*(1 - a) + IL[q]/255*hueIn[0]*a; g = g*(1 - a) + IL[q + 1]/255*hueIn[1]*a; b = b*(1 - a) + IL[q + 2]/255*hueIn[2]*a; } } }
+
+    const cloud = (1 - clarity)*(0.35 + 0.65*sampleNoiseGrid(veil, 8, 8, x/ww*7, y/wh*7))*(0.7 + 0.3*sampleNoiseGrid(feathers, 40, 40, x/ww*39, y/wh*39));
+    r = r*(1 - cloud*0.55) + cloud*0.6; g = g*(1 - cloud*0.55) + cloud*0.6; b = b*(1 - cloud*0.55) + cloud*0.6;
+    albedo.r[i] = r; albedo.g[i] = g; albedo.b[i] = b; VEIL[i] = cloud;
+
+    G[i] = Math.max(0, (0.92 - 0.25*Math.exp(-A.edge/(thinS*3)))*(1 - 0.6*cloud));
+
+    let fr = 0, fg = 0, fb = 0;
+    if(fire > 0.02) for(let k = 0; k < P.length; k++){ const p = P[k], d = x*p.nx + y*p.ny - p.c; if(Math.abs(d) > p.wd*7) continue;
+      const al = x*p.ax + y*p.ay - p.mid; if(Math.abs(al) > p.len) continue;
+      const fade = Math.sin(Math.PI*0.5*(1 - Math.abs(al)/p.len)), str = p.flash*fade*(0.3 + 0.7*fire), dw = d/p.wd, dh = d/(p.wd*5), core = Math.exp(-(dw*dw))*str*0.75, halo = Math.exp(-(dh*dh))*str*0.12;
+      const t = Math.max(0, Math.min(1, 0.5 + d/(p.wd*2.5)*0.5)), dsp = 0.3 + 0.7*fire;
+      fr += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 3)))*1.5); fg += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 2)))*1.5); fb += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 1)))*1.5); }
+
+    if(fire > 0.05){ const t = 0.5 + 0.5*Math.sin(along/Rf*9 + f.film*9), k2 = 0.05*fire;
+      fr += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 3)))*k2; fg += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 2)))*k2; fb += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 1)))*k2; }
+    FIRE.r[i] = fr; FIRE.g[i] = fg; FIRE.b[i] = fb; FE[i] = Math.max(fr, fg, fb);
+  }
+  return { albedo, H, G, VEIL, FIRE, FE, NRM };
+}
+
 const TOUCH_STEPS = {
 
   coldpress: kitWhole({ cat: 'Textures', label: 'Cold Press', ins: ['light from'], outs: ['paper'], io: { ins: ['value'], outs: ['image'] },
@@ -11345,6 +11436,16 @@ const TOUCH_STEPS = {
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 70), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
       const ph = wholeShare(E, n, 'phantoms', 30), inc = wholeShare(E, n, 'inclusions', 20);
       return () => genCrystalLeaf(w, h, a, z, light, t1, t2, f, ph, inc, E.ctx.mat || null, E.ctx.glow || null); }),
+
+
+  druse: { cat: 'Textures', label: 'Crystal Druse', ins: ['inside', 'crystal hue', 'inclusion hue'], outs: ['albedo', 'height', 'gloss', 'veil', 'fire', 'fire mask', 'normals'],
+    io: { ins: ['image', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'image', 'field', 'image'] },
+    params: [TOUCH_R('zoom', 'Point Size', 100, 40, 300), TOUCH_R('clarity', 'Clarity', 70), TOUCH_R('fire', 'Fire', 50), TOUCH_R('phantoms', 'Phantoms', 30), TOUCH_R('inclusions', 'Inclusions', 20), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 9,
+    run(E, n){ const { ww, wh, num, input, ctx } = E, rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d, ins = input(n, 1);
+      const M = druseMaps(ww, wh, { zoom: num(n, 'zoom', 100)/100, clarity: num(n, 'clarity', 70)/100, fire: num(n, 'fire', 50)/100, phantoms: num(n, 'phantoms', 30)/100, inclusions: num(n, 'inclusions', 20)/100,
+        light: ctx.light ?? 315, px: E.px, CR: rgb(input(n, 2), [185, 166, 216]), IN: rgb(input(n, 3), [217, 164, 65]), inside: ins == null ? null : E.asImage(ins) });
+      const H01 = new Float32Array(M.H.length); for(let i = 0; i < H01.length; i++) H01[i] = Math.max(0, Math.min(1, 0.62 + M.H[i]*1.5));
+      return [M.albedo, H01, M.G, M.VEIL, M.FIRE, M.FE, M.NRM]; } },
   marbling: kitWhole({ cat: 'Textures', label: 'Suminagashi', ins: ['breath from', 'ink hue', 'second ink hue'], outs: ['marbling'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Ring Size', 100, 50, 250), TOUCH_R('amount', 'Drops', 100, 30, 250), TOUCH_R('form', 'Breath', 40), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 10 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40);
@@ -16264,7 +16365,10 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
 
 
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient' });
+
+
+  const normals = o.normals && o.normals.length >= gw*gh*3 ? o.normals : null;
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient', normals });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
@@ -16275,7 +16379,7 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   let K2 = null, S2 = null;
   if(o.second){ const n = o.secondSoft > 0.02 ? 3 : 1, w = o.secondSoft*60; K2 = new Float32Array(K.length); S2 = new Float32Array(K.length);
     for(let q = 0; q < n; q++){ const d = deg + o.secondTurn + (n > 1 ? (q - 1)*w/2 : 0);
-      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false }));
+      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false, normals }));
       for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
 
 
@@ -16669,8 +16773,8 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4', 'translucency:4'],
-    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue', 'normal map'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4', 'translucency:4'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour', 'image'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130),
       LT_R('second', 'Second Light', 0, -100, 100), LT_R('secondTurn', 'Second Light From', 180, 0, 360), LT_R('secondHeight', 'Second Light Height', 120, 0, 130),
@@ -16684,6 +16788,9 @@ const LIGHT_STEPS = {
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
       const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
+      if(E.input(n, 10) != null){ const [nc, nx] = kitPicture(E.input(n, 10), gw, gh), d = nx.getImageData(0, 0, gw, gh).data, NM = new Float32Array(gw*gh*3);
+        for(let i = 0; i < gw*gh; i++){ const x = d[i*4]/127.5 - 1, y = d[i*4 + 1]/127.5 - 1, z = Math.max(1e-3, d[i*4 + 2]/127.5 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
+        o.normals = NM; nc.width = 0; nc.height = 0; }
       const { K, S, A, K2, S2 } = ltLight(H, gw, gh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null;
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
@@ -16703,6 +16810,10 @@ const LIGHT_STEPS = {
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
 
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
+
+      if(E.input(n, 10) != null){ const nm = E.asImage(E.input(n, 10)), NM = new Float32Array(N*3);
+        for(let i = 0; i < N; i++){ const x = nm.r[i]*2 - 1, y = nm.g[i]*2 - 1, z = Math.max(1e-3, nm.b[i]*2 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
+        o.normals = NM; }
       const { K, S, A, K2, S2, TR, BD } = ltLight(H, ww, wh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null, out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
@@ -22675,18 +22786,21 @@ const TEXTURE_CHAINS = {
       ['spangle', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 0, '~form': '0,100', irregular: 40, '~irregular': '0,100', brushing: 0, '~brushing': '0,100' }, 320, 100],
       ['surface', { name: 'Metal Spangle', ground: 'grey' }, 600, 120]],
     wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'irregular'], [5, 1, 8, 'brushing'], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
-  crystal: { label: 'Crystal Leaf', canvas: true, teach: 'Looking into a crystal, close up. One part makes it: Crystal Leaf cuts a few large faces, each lit from its edge by the Light Dial and fading inward, with a second set behind them seen through by refraction; Fire flashes where light meets an inner face, split into its colors. Phantoms are ghost crystals inside, Inclusions needles and bubbles. Try: Clarity at 100 and Fire at 100.', nodes: [
+  crystal: { label: 'Crystal Leaf', div: 2, teach: 'Looking into a crystal druse, close up, lit from its maps (Ruby: "reflectance, albedo, displacement, distortion"). Crystal Druse cuts the points (six-sided pyramids with growth lines across their faces) and hands on what each map holds: the Albedo, what the eye sees inside the stone (its hue deepening inward, the crystals behind seen through the face that bends them, phantoms of the smaller points it once was, and the Inclusions, needles and bubbles seen through the faces); the Height; the Gloss of the polish; the Veil, where it is milky; and the Fire, light split into its colors on the inner planes. A Light Engine lights the albedo from the Normals (each face\'s facing, so every face turns to the Light Dial on its own), the Height (the shadows between the points) and the Gloss (the shine on the polish), the Veil turned over is its Translucency, and the Fire is screened on as light of its own. Try: Clarity at 100 and Fire at 100, then turn the Light Dial.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 140],
       ['knob', { slot: '3' }, 40, 240],
       ['knob', { slot: '4' }, 40, 340],
       ['knob', { slot: '5' }, 40, 440],
-      ['dial', {}, 40, 540],
       ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],
       ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],
-      ['crystal', { zoom: 100, '~zoom': '40,300', amount: 70, '~amount': '0,100', form: 50, '~form': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],
-      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 600, 120]],
-    wires: [[1, 1, 9, 'zoom'], [2, 1, 9, 'amount'], [3, 1, 9, 'form'], [4, 1, 9, 'phantoms'], [5, 1, 9, 'inclusions'], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
+      ['druse', { zoom: 100, '~zoom': '40,300', clarity: 70, '~clarity': '0,100', fire: 50, '~fire': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],
+      ['invert', {}, 600, 360],
+      ['material', { relief: 110, gloss: 80, shine: 80, shadow: 55, occlusion: 45, ambient: 45, translucency: 45 }, 880, 100],
+      ['blend', { mode: 'screen', opacity: 100 }, 1160, 120],
+      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 1440, 140]],
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'clarity'], [3, 1, 8, 'fire'], [4, 1, 8, 'phantoms'], [5, 1, 8, 'inclusions'], [6, 1, 8, 2], [7, 1, 8, 3],
+      [8, 1, 10, 1], [8, 2, 10, 2], [8, 3, 10, 3], [8, 7, 10, 10], [8, 4, 9, 1], [9, 1, 10, 'translucency'], [10, 1, 11, 1], [8, 5, 11, 2], [11, 1, 12, 1]] },
   suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 140],
@@ -29835,7 +29949,7 @@ const RELEASE = 'Uranus–Bianca';
 
 const RELEASE_DATE = '2026-10-20';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"YYynm3Sp","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -30522,7 +30636,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 66bb61e";
+const STAMP = "2026-10-20 · acdfb0b";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -34922,7 +35036,7 @@ const WIKI_PARTS = {
   material: {
     line: 'The full lighting engine: lights a picture by a height map from the dial, with shadows, shine and soft occlusion.',
     about: 'The Light Engine is what makes surfaces look physical. Give it a picture (the color) and a height map (the shape), and it lights the shape from the dial as a game engine would: slopes facing the light brighten, shadows fall behind raised parts, crevices darken (ambient occlusion), and shiny areas catch highlights.',
-    ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).', 'ambient hue': 'The color of the light that comes from everywhere (the sky’s, a room’s): it tints the whole surface by Ambient’s share, and the shaded sides most, where little else reaches. Empty or white: neutral, as before. For a subtle cast, lower Ambient or pick a paler hue.', 'second light hue': 'The second light’s color (empty: white). A cool rim against a warm key is the classic portrait’s light.' },
+    ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'normal map': 'Optional: each point’s facing given outright, as a picture (red, green and blue are its x, y and z, from −1 to 1 as dark to light), for shapes with sharp faces (a crystal’s, a hammered sheet’s) that a height map smooths. The height still casts the shadows.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).', 'ambient hue': 'The color of the light that comes from everywhere (the sky’s, a room’s): it tints the whole surface by Ambient’s share, and the shaded sides most, where little else reaches. Empty or white: neutral, as before. For a subtle cast, lower Ambient or pick a paler hue.', 'second light hue': 'The second light’s color (empty: white). A cool rim against a warm key is the classic portrait’s light.' },
     outs: { image: 'The lit picture.', light: 'The lighting alone, as gray.', highlight: 'The shine alone.' },
     set: { relief: 'How tall the heights are (a map on its ⚙: taller in some places than others).', gloss: 'How tight the highlights are (a map on its ⚙ works as the gloss map does).', shine: 'How bright the highlights are.', shadow: 'How dark cast shadows are.', occlusion: 'How dark crevices get.', ambient: 'Light that reaches everywhere, filling the shadows.', translucency: 'Light passing into the surface and back out (wax, skin). A map on its ⚙ (a newer graph) is how thin each point is: there the light wraps round the shading, a band of the surface’s own colour lies where light turns to shadow, and light comes through in its colour, more as the dial sinks low or a second light shines from behind (a thin petal or leaf, backlit).', from: 'Where the light’s height comes from: the page’s dial (as every lit surface takes it), or its own Light Height, for a graph whose dial does something else (Ringworld’s is its camera).', height: 'The light’s own height, when Light Height From says so: 0 straight overhead, 100 at the horizon, past that lower still, with long shadows.', second: 'A second light beside the dial’s, as a photographer’s rim light or backlight: how strong (0: none, as before; below 0 it draws light out, for a shadowed side darker still).', secondTurn: 'Where the second light comes from, turned from the dial’s light: 180 straight behind (a backlight, edges glowing), 90 from the side.', secondHeight: 'How high the second light stands, read as Light Height is: 0 straight overhead (it lights everything), 100 low, past 100 lower still, until it only grazes the edges facing it, as a rim light does (120, as it starts).', secondSoft: 'How wide the second light is: 0 a point (crisp), higher a broad light (softer edges and shadows), at three times the work.', secondKind: 'What the second light gives: light and shine, the light alone (no highlight), or the shine alone (a glint without lighting).' },
     tips: ['Don’t also wire the height into the Surface: it would be lit twice.', 'For a rim light: Second Light 70, From 180, Height 120, and a pale hue: the edges turned away from the dial catch a thin line of light.',
@@ -35319,6 +35433,15 @@ const WIKI_PARTS = {
     set: {"zoom": "Crystal Size: how large a grain is.", "amount": "Dendrites: how feathered the grains are.", "form": "Terraces: flat grains at 0, stepped bismuth with its oxide colors at 100.", "irregular": "Irregularity: orderly grains like snowflakes at 0, uneven sizes and bent, missing arms toward 100.", "brushing": "Brushing: fine lines brushed across the metal.", "variant": "Other grains."},
     tips: ["Turn the dial slowly and watch the grains flash one by one."],
     see: ["part:cells", "part:material", "part:crystal"],
+  },
+  druse: {
+    line: "A crystal druse as maps: its points' albedo, height, normals and gloss, its milky veil and its fire, for a Light Engine to light.",
+    about: "Close up inside a geode: a crust of crystal points, each a six-sided pyramid with growth lines across its faces. Instead of drawing the crystal already lit, it hands on what each map holds, as a game engine's material does. The Albedo is what the eye sees inside the stone, with no light in it: the hue deepening toward the edges of each point and glowing toward its heart, the crystals behind seen through the face (each face's tilt bends where the eye lands: refraction), phantoms of the smaller points it once was, and what lies inside, seen through the faces and bent the same way: its own needles and bubbles, or any picture wired into Inside. The Height is the points' shape (for the shadows between them), the Normals each face's facing (so every face turns to the light on its own), the Gloss the polish, dulled where it is milky, the Veil the milk itself, and the Fire the light split into its colors on the inner planes, as light of its own. Wire Albedo, Height, Gloss and Normals into a Light Engine, the Veil turned over (Invert) into its Translucency, and screen the Fire over what it makes.",
+    ins: {"inside": "Optional: a picture lying inside the stone, seen through the faces and bent by them (the inclusions are drawn over it).", "crystal hue": "The stone (empty: a pale violet).", "inclusion hue": "The needles inside it (empty: a rutile gold)."},
+    outs: {"albedo": "What the eye sees inside the stone, unlit.", "height": "The points' shape, for shadows.", "gloss": "How polished each point is.", "veil": "Where it is milky (white).", "fire": "The fire, as light of its own: screen it on.", "fire mask": "Where the fire is, as gray.", "normals": "Each face's facing, as a normal map for a Light Engine."},
+    set: {"zoom": "Point Size.", "clarity": "Clarity: milky and veiled at 0, clear and deep at 100.", "fire": "Fire: how much light flashes inside.", "phantoms": "Phantoms: ghost points nested in the faces.", "inclusions": "Inclusions: needles and bubbles inside.", "variation": "Another crystal with the same settings."},
+    tips: ["Wire a Starfield into Inside for a crystal with a night sky inside it.", "Turn the Light Dial: each face lights on its own."],
+    see: ["part:material", "part:crystal"],
   },
   crystal: {
     line: "Looking into a clear crystal: cut faces, light caught inside as fire, ghost crystals and needles within.",

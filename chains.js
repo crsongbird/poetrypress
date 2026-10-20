@@ -560,18 +560,21 @@ export const TEXTURE_CHAINS = {
       ['spangle', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 0, '~form': '0,100', irregular: 40, '~irregular': '0,100', brushing: 0, '~brushing': '0,100' }, 320, 100],   // 8
       ['surface', { name: 'Metal Spangle', ground: 'grey' }, 600, 120]],   // 9
     wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'irregular'], [5, 1, 8, 'brushing'], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
-  crystal: { label: 'Crystal Leaf', canvas: true, teach: 'Looking into a crystal, close up. One part makes it: Crystal Leaf cuts a few large faces, each lit from its edge by the Light Dial and fading inward, with a second set behind them seen through by refraction; Fire flashes where light meets an inner face, split into its colors. Phantoms are ghost crystals inside, Inclusions needles and bubbles. Try: Clarity at 100 and Fire at 100.', nodes: [
+  crystal: { label: 'Crystal Leaf', div: 2, teach: 'Looking into a crystal druse, close up, lit from its maps (Ruby: "reflectance, albedo, displacement, distortion"). Crystal Druse cuts the points (six-sided pyramids with growth lines across their faces) and hands on what each map holds: the Albedo, what the eye sees inside the stone (its hue deepening inward, the crystals behind seen through the face that bends them, phantoms of the smaller points it once was, and the Inclusions, needles and bubbles seen through the faces); the Height; the Gloss of the polish; the Veil, where it is milky; and the Fire, light split into its colors on the inner planes. A Light Engine lights the albedo from the Normals (each face\'s facing, so every face turns to the Light Dial on its own), the Height (the shadows between the points) and the Gloss (the shine on the polish), the Veil turned over is its Translucency, and the Fire is screened on as light of its own. Try: Clarity at 100 and Fire at 100, then turn the Light Dial.', nodes: [
       ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–300)
       ['knob', { slot: '2' }, 40, 140],                // 2  (70 of 0–100)
       ['knob', { slot: '3' }, 40, 240],                // 3  (50 of 0–100)
       ['knob', { slot: '4' }, 40, 340],                // 4  (30 of 0–100)
       ['knob', { slot: '5' }, 40, 440],                // 5  (20 of 0–100)
-      ['dial', {}, 40, 540],                                                       // 6
-      ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],                // 7
-      ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],                // 8
-      ['crystal', { zoom: 100, '~zoom': '40,300', amount: 70, '~amount': '0,100', form: 50, '~form': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],   // 9
-      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 600, 120]],   // 10
-    wires: [[1, 1, 9, 'zoom'], [2, 1, 9, 'amount'], [3, 1, 9, 'form'], [4, 1, 9, 'phantoms'], [5, 1, 9, 'inclusions'], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
+      ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],                // 6
+      ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],                // 7
+      ['druse', { zoom: 100, '~zoom': '40,300', clarity: 70, '~clarity': '0,100', fire: 50, '~fire': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],   // 8
+      ['invert', {}, 600, 360],                                                    // 9 (the clear stone lets the light through: the veil turned over)
+      ['material', { relief: 110, gloss: 80, shine: 80, shadow: 55, occlusion: 45, ambient: 45, translucency: 45 }, 880, 100],   // 10 (the page's rim light its second light)
+      ['blend', { mode: 'screen', opacity: 100 }, 1160, 120],                      // 11 (the fire, light of its own)
+      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 1440, 140]],   // 12
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'clarity'], [3, 1, 8, 'fire'], [4, 1, 8, 'phantoms'], [5, 1, 8, 'inclusions'], [6, 1, 8, 2], [7, 1, 8, 3],
+      [8, 1, 10, 1], [8, 2, 10, 2], [8, 3, 10, 3], [8, 7, 10, 10], [8, 4, 9, 1], [9, 1, 10, 'translucency'], [10, 1, 11, 1], [8, 5, 11, 2], [11, 1, 12, 1]] },
   suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
       ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–250)
       ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 30–250)

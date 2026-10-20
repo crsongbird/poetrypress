@@ -105,6 +105,97 @@ function touchPigment(D, img, ww, wh, col, wet, light){
   return out;
 }
 
+// What fills the stone: CRYSTAL DRUSE's geometry and what it sees through itself, as maps for the Light Engine or a
+// Surface (Ruby: "couldn't the crystal renderer be improved with reflectance, albedo, displacement, distortion"). The
+// points of a druse (six-sided pyramids, each with growth lines across its faces) are the HEIGHT; what the eye sees
+// inside each point is the ALBEDO: the stone's hue deepening inward, the crystals behind seen through the face's tilt
+// (refraction: each face bends what lies behind it), phantoms (smaller points it once was) and the inclusions — rutile
+// needles and fluid bubbles drawn on their own layer and seen through the faces, bent where each face tilts. GLOSS is
+// the polish (dulled where it is milky), the VEIL the milk itself, and FIRE the dispersion where light meets an inner
+// plane: an emission, coloured, strongest where the plane grazes the light. Nothing in the albedo is lit: the light is
+// the Light Engine's or the Surface's, from the height and gloss.
+function druseMaps(ww, wh, o){
+  const unit = Math.min(ww, wh), N = ww*wh, zoom = o.zoom, clarity = o.clarity, fire = o.fire, ph = o.phantoms, inc = o.inclusions;
+  const la = ((o.light == null ? 315 : o.light) - 90)*Math.PI/180, SX = -Math.cos(la), SY = -Math.sin(la), R = Math.random;
+  const faces = cs => { const gx = Math.ceil(ww/cs) + 2, gy = Math.ceil(wh/cs) + 2, F = [];
+    for(let j = 0; j < gy; j++) for(let i = 0; i < gx; i++){ const t = R();
+      F.push({ x: (i - 1 + 0.1 + R()*0.8)*cs, y: (j - 1 + 0.1 + R()*0.8)*cs, tone: t, ghost: R() < 0.45, rot: R()*Math.PI/3, slope: 0.45 + R()*0.5, h: R()*cs*0.4, film: R(), stri: 0.4 + R()*1.2 }); }
+    return { cs, gx, gy, F }; };
+  const near = (S, x, y, out) => { const ci = Math.floor(x/S.cs) + 1, cj = Math.floor(y/S.cs) + 1; let d1 = 1e18, d2 = 1e18, f1 = null, f2 = null;
+    for(let b = cj - 1; b <= cj + 1; b++){ if(b < 0 || b >= S.gy) continue; for(let a = ci - 1; a <= ci + 1; a++){ if(a < 0 || a >= S.gx) continue; const f = S.F[b*S.gx + a], ex = x - f.x, ey = y - f.y, dd = ex*ex + ey*ey;
+      if(dd < d1){ d2 = d1; f2 = f1; d1 = dd; f1 = f; } else if(dd < d2){ d2 = dd; f2 = f; } } }
+    out.f = f1; out.edge = f2 ? (d2 - d1)/(2*Math.sqrt((f2.x - f1.x)**2 + (f2.y - f1.y)**2)) : 1e9; return out; };
+  const FRONT = faces(unit*0.42*zoom), BACK = faces(unit*0.27*zoom);
+  const np = Math.round(3 + fire*12), P = [];
+  for(let k = 0; k < np; k++){ const a = R()*Math.PI, nx = -Math.sin(a), ny = Math.cos(a), px = R()*ww, py = R()*wh;
+    const meet = Math.abs(nx*SX + ny*SY), flash = (0.25 + 0.75*Math.pow(1 - meet, 2))*(0.15 + 0.85*R()**1.5);
+    P.push({ nx, ny, c: nx*px + ny*py, wd: unit*(0.004 + R()*0.018), flash, ax: Math.cos(a), ay: Math.sin(a), mid: px*Math.cos(a) + py*Math.sin(a), len: unit*(0.15 + R()*0.5) }); }
+  const veil = makeNoiseGrid(8, 8), feathers = makeNoiseGrid(40, 40);
+  // the inclusions' own layer (needles in sprays at their own depths, bubbles), read back to be seen through the faces
+  let IL = null;
+  if(inc > 0.02){ const [lay, lc] = kitCanvas(ww, wh), sprays = Math.round(1 + inc*5), px = o.px; lc.lineCap = 'round';
+    for(let s2 = 0; s2 < sprays; s2++){ const cx = R()*ww, cy = R()*wh, a0 = R()*Math.PI, n = Math.round(4 + inc*22), deep = 0.35 + R()*0.65;
+      for(let k = 0; k < n; k++){ const a = a0 + (R() - 0.5)*0.5, L2 = unit*(0.05 + R()*0.2), ox = cx + (R() - 0.5)*unit*0.15, oy = cy + (R() - 0.5)*unit*0.15;
+        lc.strokeStyle = `rgba(${o.IN[0]},${o.IN[1]},${o.IN[2]},${Math.min(1, (0.7 + R()*0.3)*(1.25 - deep*0.45))})`; lc.lineWidth = px(1.8 + R()*2.2);
+        lc.beginPath(); lc.moveTo(ox, oy); lc.lineTo(ox + Math.cos(a)*L2, oy + Math.sin(a)*L2); lc.stroke(); } }
+    for(let k = 0, nb = Math.round(inc*120); k < nb; k++){ const x = R()*ww, y = R()*wh, r = px(4 + R()*R()*22);
+      lc.strokeStyle = 'rgba(20,14,28,0.55)'; lc.lineWidth = r*0.28; lc.beginPath(); lc.arc(x, y, r, 0, Math.PI*2); lc.stroke();
+      lc.fillStyle = 'rgba(255,255,255,0.7)'; lc.beginPath(); lc.arc(x - SX*r*0.35, y - SY*r*0.35, r*0.22, 0, Math.PI*2); lc.fill(); }
+    IL = lc.getImageData(0, 0, ww, wh).data; lay.width = 0; lay.height = 0; }
+  // what lies behind the stone (a picture wired into Inside), seen through it
+  const INS = o.inside;
+  const albedo = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, H = new Float32Array(N), G = new Float32Array(N), VEIL = new Float32Array(N);
+  const FIRE = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, FE = new Float32Array(N);
+  const NRM = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };   // (each point's facing, as a normal map: x, y, z from -1..1 as 0..1)
+  const REFR = unit*0.12, R3 = Math.sqrt(3)/2, SEC = [0, 1, 2, 3, 4, 5].map(s => (s + 0.5)*Math.PI/3), nA = { f: null, edge: 0 }, nB = { f: null, edge: 0 };
+  for(const f of FRONT.F){ const dc = new Float64Array(12); for(let k = 0; k < 6; k++){ const m = SEC[k] + f.rot; dc[k*2] = Math.cos(m); dc[k*2 + 1] = Math.sin(m); } f.dc = dc; }
+  const thinS = unit*0.0016, striS = Math.max(1, unit*0.004), backS = unit*0.004, CR = o.CR, IN = o.IN, seen = 0.5 + 0.5*clarity;
+  const hueC = [0, 1, 2].map(c => Math.max(0.04, CR[c]/255)), hueIn = hueC.map(h => Math.pow(h, 0.45));
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x, A = near(FRONT, x, y, nA), f = A.f, dx = x - f.x, dy = y - f.y, rr = Math.sqrt(dx*dx + dy*dy), Rf = FRONT.cs*0.62;
+    let best = -2, mx = 1, my = 0; const DC = f.dc; for(let k = 0; k < 12; k += 2){ const dd = dx*DC[k] + dy*DC[k + 1]; if(dd > best){ best = dd; mx = DC[k]; my = DC[k + 1]; } }
+    const along = dx*mx + dy*my, across = Math.abs(dx*my - dy*mx);
+    // HEIGHT: the point's six faces about its apex, rippled by growth lines
+    const stri = Math.sin(along/striS + f.film*6)*0.05*f.stri;
+    H[i] = (f.h - f.slope*along*(1 + stri))/unit;
+    { const sl = f.slope*(1 + stri), nz = 1/Math.sqrt(1 + sl*sl); NRM.r[i] = 0.5 + 0.5*mx*sl*nz; NRM.g[i] = 0.5 + 0.5*my*sl*nz; NRM.b[i] = 0.5 + 0.5*nz; }
+    // ALBEDO: inside the stone — deep at the edges of each point, glowing toward its heart, the crystals behind seen
+    // through the face (its tilt bends where the eye lands), phantoms nested inside; nothing here is lit
+    let v = 0.14 + 0.1*f.tone + 0.22*Math.max(0, 1 - along/Rf*0.8);
+    const g0 = rr/(Rf*0.55); v += 0.22*clarity*Math.exp(-(g0*g0));
+    const ox = mx*f.slope*REFR, oy = my*f.slope*REFR, B = near(BACK, x + ox, y + oy, nB);
+    v += 0.07*B.f.tone + 0.3*Math.exp(-B.edge/backS)*clarity*0.7;
+    if(ph > 0.02 && f.ghost){ const st = Rf*0.22, k = along/st; if(k > 0.6 && k < 3.6){ const q = k - Math.floor(k), e = Math.min(q, 1 - q)*st/thinS; v += Math.exp(-(e*e))*ph*0.4; } }
+    // the edges between faces, worn pale (a property of the stone, not of the light)
+    const ridge = Math.max(0, 0.5*along - R3*across); v += 0.25*Math.exp(-ridge/thinS) + 0.2*Math.exp(-A.edge/thinS);
+    let r = 0, g = 0, b = 0; const vv = Math.min(1.2, v);
+    for(let c = 0; c < 3; c++){ const t = Math.pow(hueC[c], 1.2 - Math.min(1, vv)); const val = vv*t; if(c === 0) r = val; else if(c === 1) g = val; else b = val; }
+    // what lies inside, bent by the face (the inclusions; or the picture wired into Inside)
+    const sx = Math.round(x + ox*0.6), sy = Math.round(y + oy*0.6);
+    if(sx >= 0 && sy >= 0 && sx < ww && sy < wh){ const j = sy*ww + sx;
+      if(INS){ const a = 0.55*clarity; r = r*(1 - a) + INS.r[j]*hueIn[0]*a; g = g*(1 - a) + INS.g[j]*hueIn[1]*a; b = b*(1 - a) + INS.b[j]*hueIn[2]*a; }
+      if(IL){ const q = j*4, a = IL[q + 3]/255*seen; if(a > 0){ r = r*(1 - a) + IL[q]/255*hueIn[0]*a; g = g*(1 - a) + IL[q + 1]/255*hueIn[1]*a; b = b*(1 - a) + IL[q + 2]/255*hueIn[2]*a; } } }
+    // VEIL: the milk where it is not clear, feathered
+    const cloud = (1 - clarity)*(0.35 + 0.65*sampleNoiseGrid(veil, 8, 8, x/ww*7, y/wh*7))*(0.7 + 0.3*sampleNoiseGrid(feathers, 40, 40, x/ww*39, y/wh*39));
+    r = r*(1 - cloud*0.55) + cloud*0.6; g = g*(1 - cloud*0.55) + cloud*0.6; b = b*(1 - cloud*0.55) + cloud*0.6;
+    albedo.r[i] = r; albedo.g[i] = g; albedo.b[i] = b; VEIL[i] = cloud;
+    // GLOSS: polished faces, the valleys between points a little duller, the milk duller still
+    G[i] = Math.max(0, (0.92 - 0.25*Math.exp(-A.edge/(thinS*3)))*(1 - 0.6*cloud));
+    // FIRE: light caught on the inner planes, split into its colours — an emission, there whatever the face's own light
+    let fr = 0, fg = 0, fb = 0;
+    if(fire > 0.02) for(let k = 0; k < P.length; k++){ const p = P[k], d = x*p.nx + y*p.ny - p.c; if(Math.abs(d) > p.wd*7) continue;
+      const al = x*p.ax + y*p.ay - p.mid; if(Math.abs(al) > p.len) continue;
+      const fade = Math.sin(Math.PI*0.5*(1 - Math.abs(al)/p.len)), str = p.flash*fade*(0.3 + 0.7*fire), dw = d/p.wd, dh = d/(p.wd*5), core = Math.exp(-(dw*dw))*str*0.75, halo = Math.exp(-(dh*dh))*str*0.12;
+      const t = Math.max(0, Math.min(1, 0.5 + d/(p.wd*2.5)*0.5)), dsp = 0.3 + 0.7*fire;
+      fr += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 3)))*1.5); fg += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 2)))*1.5); fb += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 1)))*1.5); }
+    // a thin-film sheen on the faces (iridescence), part of the fire
+    if(fire > 0.05){ const t = 0.5 + 0.5*Math.sin(along/Rf*9 + f.film*9), k2 = 0.05*fire;
+      fr += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 3)))*k2; fg += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 2)))*k2; fb += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 1)))*k2; }
+    FIRE.r[i] = fr; FIRE.g[i] = fg; FIRE.b[i] = fb; FE[i] = Math.max(fr, fg, fb);
+  }
+  return { albedo, H, G, VEIL, FIRE, FE, NRM };
+}
+
 export const TOUCH_STEPS = {
   // 🜚 the older Touch textures, each one part (kitWhole: drawn as it always was, under the texture's own seed + Variant)
   coldpress: kitWhole({ cat: 'Textures', label: 'Cold Press', ins: ['light from'], outs: ['paper'], io: { ins: ['value'], outs: ['image'] },
@@ -160,6 +251,16 @@ export const TOUCH_STEPS = {
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 70), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
       const ph = wholeShare(E, n, 'phantoms', 30), inc = wholeShare(E, n, 'inclusions', 20);
       return () => genCrystalLeaf(w, h, a, z, light, t1, t2, f, ph, inc, E.ctx.mat || null, E.ctx.glow || null); }),
+  // CRYSTAL DRUSE (druseMaps): a druse's points as maps — albedo, height, gloss, the milk's veil and the fire — for a Light
+  // Engine to light; what lies inside (its inclusions, or a picture wired into Inside) seen through the faces, bent
+  druse: { cat: 'Textures', label: 'Crystal Druse', ins: ['inside', 'crystal hue', 'inclusion hue'], outs: ['albedo', 'height', 'gloss', 'veil', 'fire', 'fire mask', 'normals'],
+    io: { ins: ['image', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'image', 'field', 'image'] },
+    params: [TOUCH_R('zoom', 'Point Size', 100, 40, 300), TOUCH_R('clarity', 'Clarity', 70), TOUCH_R('fire', 'Fire', 50), TOUCH_R('phantoms', 'Phantoms', 30), TOUCH_R('inclusions', 'Inclusions', 20), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 9,
+    run(E, n){ const { ww, wh, num, input, ctx } = E, rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d, ins = input(n, 1);
+      const M = druseMaps(ww, wh, { zoom: num(n, 'zoom', 100)/100, clarity: num(n, 'clarity', 70)/100, fire: num(n, 'fire', 50)/100, phantoms: num(n, 'phantoms', 30)/100, inclusions: num(n, 'inclusions', 20)/100,
+        light: ctx.light ?? 315, px: E.px, CR: rgb(input(n, 2), [185, 166, 216]), IN: rgb(input(n, 3), [217, 164, 65]), inside: ins == null ? null : E.asImage(ins) });
+      const H01 = new Float32Array(M.H.length); for(let i = 0; i < H01.length; i++) H01[i] = Math.max(0, Math.min(1, 0.62 + M.H[i]*1.5));
+      return [M.albedo, H01, M.G, M.VEIL, M.FIRE, M.FE, M.NRM]; } },
   marbling: kitWhole({ cat: 'Textures', label: 'Suminagashi', ins: ['breath from', 'ink hue', 'second ink hue'], outs: ['marbling'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Ring Size', 100, 50, 250), TOUCH_R('amount', 'Drops', 100, 30, 250), TOUCH_R('form', 'Breath', 40), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 10 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40);
