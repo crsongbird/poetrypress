@@ -1808,6 +1808,12 @@ body.is-mobile .shortcut-btn{ display:none; }
 .sheet-veil[hidden]{ display:none; }
 .sheet{ background:var(--bg-panel, #17141c); color:var(--text-main, #eee); border:1px solid var(--accent); border-radius:0; padding:16px 20px; max-width:min(560px, 92vw); max-height:calc(var(--vvh, 100vh) * 0.86); overflow:auto; box-shadow:0 18px 50px -20px rgba(0,0,0,0.8); }
 .sheet-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:18px; letter-spacing:0.04em; margin-bottom:10px; color:var(--accent); }
+/* the Moving Image sheet: a label and its choice to a row */
+.moving-sheet{ width:min(420px, 92vw); }
+.moving-row{ display:grid; grid-template-columns:7.5em 1fr; align-items:center; gap:10px; margin:8px 0; }
+.moving-row[hidden]{ display:none; }
+.moving-row select{ width:100%; min-width:0; }
+.moving-note{ min-height:1.4em; }
 .keys{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:13px; }
 .keys dt{ white-space:nowrap; opacity:0.9; }
 .keys dd{ margin:0; opacity:0.85; }
@@ -3964,7 +3970,7 @@ but bear with me, dear}]/jitter:200
       <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
       <button class="reset-view-btn" id="filmBtn" type="button" title="Show or hide the history filmstrip (H)" aria-label="History filmstrip">🎞</button>
       <div class="filmstrip" id="filmstrip" aria-label="History: click a frame to go back to it"></div>
-      <button class="download-btn" id="downloadBtn" data-str="button.downloadBtn">Save image</button>
+      <button class="download-btn" id="downloadBtn" title="Save the image (Ctrl+S). Hold, or right-click, for a Moving Image." data-str="button.downloadBtn">Save image</button>
     </div>
   </div>
   <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
@@ -4038,6 +4044,47 @@ but bear with me, dear}]/jitter:200
         <dt><kbd>Esc</kbd></dt><dd>Close this sheet</dd>
       </dl>
       <p class="hint">Keys work unless you are typing in a field.</p>
+    </div>
+  </div>
+
+  <!-- THE MOVING IMAGE (Ruby: "a subtle video export panel that doesn't show up on the main user interface"): opened by a
+       long press or a right-click on Save image; the page as a short film (uiMoving.js) -->
+  <div class="sheet-veil" id="movingSheet" hidden>
+    <div class="sheet moving-sheet" role="dialog" aria-labelledby="movingTitle">
+      <div class="sheet-title" id="movingTitle" data-str="moving.title">Moving Image</div>
+      <p class="hint" data-str="moving.hint">The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.</p>
+      <div class="moving-row"><label for="movingMove" data-str="moving.move">Move</label>
+        <select id="movingMove">
+          <option value="camera" data-str="moving.camera">Camera round</option>
+          <option value="light" data-str="moving.light_round">Light round</option>
+          <option value="look" data-str="moving.look">To another look</option>
+          <option value="lookback" data-str="moving.lookback">To another look and back</option>
+        </select></div>
+      <div class="moving-row" id="movingLookRow" hidden><label for="movingLook" data-str="moving.other">The other look</label><select id="movingLook"></select></div>
+      <div class="moving-row"><label for="movingSize" data-str="moving.size">Size</label>
+        <select id="movingSize">
+          <option value="page" data-str="moving.page">The page</option>
+          <option value="wide" data-str="moving.wide">Wide, 1920 × 1080</option>
+          <option value="tall" data-str="moving.tall">Tall, 1080 × 1920</option>
+          <option value="square" data-str="moving.square">Square, 1080 × 1080</option>
+        </select></div>
+      <div class="moving-row"><label for="movingLength" data-str="moving.length">Length</label>
+        <select id="movingLength">
+          <option value="6" data-str="moving.s6">6 seconds</option>
+          <option value="12" selected data-str="moving.s12">12 seconds</option>
+          <option value="24" data-str="moving.s24">24 seconds</option>
+        </select></div>
+      <div class="moving-row"><label for="movingFormat" data-str="moving.format">Format</label>
+        <select id="movingFormat">
+          <option value="mp4" data-str="moving.mp4">MP4 video</option>
+          <option value="webm" data-str="moving.webm">WebM video</option>
+          <option value="png" data-str="moving.png">PNG frames, zipped</option>
+        </select></div>
+      <p class="hint moving-note" id="movingNote" aria-live="polite"></p>
+      <div class="btn-row">
+        <button class="btn-major" id="movingMake" type="button" data-str="moving.make">Make the film</button>
+        <button class="ghost" id="movingClose" type="button" data-str="moving.close">Close</button>
+      </div>
     </div>
   </div>
 
@@ -28764,6 +28811,30 @@ const UI_STRINGS = {
   'option.vellum':                             "Vellum",
 
   'kept.keep':                             "Keep",
+
+  'moving.title':                          "Moving Image",
+  'moving.hint':                           "The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.",
+  'moving.move':                           "Move",
+  'moving.camera':                         "Camera round",
+  'moving.light_round':                    "Light round",
+  'moving.look':                           "To another look",
+  'moving.lookback':                       "To another look and back",
+  'moving.other':                          "The other look",
+  'moving.size':                           "Size",
+  'moving.page':                           "The page",
+  'moving.wide':                           "Wide, 1920 × 1080",
+  'moving.tall':                           "Tall, 1080 × 1920",
+  'moving.square':                         "Square, 1080 × 1080",
+  'moving.length':                         "Length",
+  'moving.s6':                             "6 seconds",
+  'moving.s12':                            "12 seconds",
+  'moving.s24':                            "24 seconds",
+  'moving.format':                         "Format",
+  'moving.mp4':                            "MP4 video",
+  'moving.webm':                           "WebM video",
+  'moving.png':                            "PNG frames, zipped",
+  'moving.make':                           "Make the film",
+  'moving.close':                          "Close",
 };
 
 
@@ -28918,6 +28989,23 @@ const EYE_OFF = {
   borderToggle: 'The border is off. Change anything here to switch it on, or tap the eye.',
   cardToggle: 'The inset box is off. Change anything here to switch it on, or tap the eye.',
   vignetteToggle: 'The vignette is off. Change anything here to switch it on, or tap the eye.',
+};
+ 
+const MOVING = {
+  light: 'Light round',
+  day: 'A day passing (the light round)',
+  before: 'The look before the last change',
+  make: 'Make the film',
+  stop: 'Stop',
+  frame: 'Drawing frame {name}…',
+  finishing: 'Putting the film together…',
+  made: 'Saved: {name}.',
+  stopped: 'Stopped. Nothing was saved.',
+  failed: 'The film couldn’t be made in this browser. The PNG frames may work.',
+  noLook: 'Choose the other look first.',
+  tooBig: 'The frames passed 4 GB, more than a zip holds. Try a shorter film or a smaller size.',
+  noCodec: 'This browser can’t make {name} at this size. Try WebM, a smaller size, or the PNG frames.',
+  noEncoder: 'This browser has no video encoder, so the film is saved as PNG frames in a zip.',
 };
 const PAGE_SAYS = {
   sizeClamped: 'Page size set to {name} px. Each side can be 256 to 4096 px.',
@@ -31763,7 +31851,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Perdita';
+const RELEASE = 'Uranus–Puck';
 
 const RELEASE_DATE = '2026-10-20';
 
@@ -31967,6 +32055,157 @@ function withAltText(dataURL, text){
     let s = ''; for(let i = 0; i < out.length; i += 0x8000) s += String.fromCharCode.apply(null, out.subarray(i, i + 0x8000));
     return 'data:image/jpeg;base64,' + btoa(s);
   } catch(e){ return dataURL; }
+}
+
+
+/* ==== moving.js ==== */
+const HEX = /^#[0-9a-f]{6}$/i;
+const numOf = v => (typeof v === 'number' ? v : (typeof v === 'string' && v.trim() !== '' && isFinite(+v) ? +v : NaN));
+const ANGLED = /angle|turn|light$|rim$/i;
+
+
+
+
+
+
+function blendLooks(a, b, t, side, snap = () => false){
+  const out = {};
+  for(const k of new Set([...Object.keys(a || {}), ...Object.keys(b || {})])){
+    const va = a ? a[k] : undefined, vb = b ? b[k] : undefined;
+    if(va === undefined){ out[k] = vb; continue; }
+    if(vb === undefined){ out[k] = va; continue; }
+    out[k] = blendValue(k, va, vb, t, side, snap);
+  }
+  return out;
+}
+function blendValue(k, va, vb, t, side, snap){
+  if(va && vb && typeof va === 'object' && typeof vb === 'object' && !Array.isArray(va) && !Array.isArray(vb)) return blendLooks(va, vb, t, side, snap);
+  const whole = side ? vb : va;
+  if(/seed/i.test(k) || snap(k)) return whole;
+  if(typeof va === 'string' && typeof vb === 'string' && HEX.test(va) && HEX.test(vb)) return blendHex(va, vb, t);
+  const na = numOf(va), nb = numOf(vb);
+  if(isNaN(na) || isNaN(nb) || typeof va === 'boolean' || typeof vb === 'boolean') return whole;
+  let d = nb - na; if(ANGLED.test(k)) d = ((d % 360) + 540) % 360 - 180;
+  let v = Math.round((na + d*t)*1000)/1000; if(ANGLED.test(k)) v = (v % 360 + 360) % 360;
+  return typeof va === 'string' ? String(v) : v;
+}
+function blendHex(a, b, t){
+  const c = (h, i) => parseInt(h.slice(1 + 2*i, 3 + 2*i), 16);
+  return '#' + [0, 1, 2].map(i => Math.round(c(a, i) + (c(b, i) - c(a, i))*t).toString(16).padStart(2, '0')).join('');
+}
+ 
+function wholeChanges(a, b, snap = () => false){
+  const out = [];
+  const walk = (x, y, at) => { for(const k of new Set([...Object.keys(x || {}), ...Object.keys(y || {})])){ const va = x[k], vb = y[k];
+    if(va === undefined || vb === undefined || va === vb) continue;
+    if(va && vb && typeof va === 'object' && typeof vb === 'object' && !Array.isArray(va)){ walk(va, vb, at + k + '.'); continue; }
+    if(blendValue(k, va, vb, 0.5, 0, snap) !== blendValue(k, va, vb, 0.5, 1, snap)) out.push(at + k); } };
+  walk(a || {}, b || {}, '');
+  return out;
+}
+ 
+function moveAt(i, n, back){
+  const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : Math.min(1, i/Math.max(1, n - 1));
+  return 0.5 - 0.5*Math.cos(Math.PI*s);
+}
+
+
+
+const enc = new TextEncoder();
+const u8 = n => new Uint8Array(n);
+function cat(parts){ let n = 0; for(const p of parts) n += p.length; const o = u8(n); let at = 0; for(const p of parts){ o.set(p, at); at += p.length; } return o; }
+const be32 = v => { const o = u8(4); new DataView(o.buffer).setUint32(0, v >>> 0); return o; };
+const be16 = v => { const o = u8(2); new DataView(o.buffer).setUint16(0, v & 0xffff); return o; };
+const le32 = v => { const o = u8(4); new DataView(o.buffer).setUint32(0, v >>> 0, true); return o; };
+const le16 = v => { const o = u8(2); new DataView(o.buffer).setUint16(0, v & 0xffff, true); return o; };
+
+
+
+const CRC_TABLE = (() => { const t = new Uint32Array(256);
+  for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t; })();
+function crc32(bytes, crc = 0){
+  let c = ~crc >>> 0;
+  for(let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return ~c >>> 0;
+}
+
+
+
+
+function zipParts(entries){
+  const parts = [], central = []; let at = 0;
+  const DOS_TIME = 0, DOS_DATE = ((2026 - 1980) << 9) | (10 << 5) | 20;
+  for(const e of entries){
+    const name = enc.encode(e.name);
+    const local = cat([le32(0x04034b50), le16(20), le16(0x0800), le16(0), le16(DOS_TIME), le16(DOS_DATE), le32(e.crc), le32(e.size), le32(e.size), le16(name.length), le16(0), name]);
+    central.push(cat([le32(0x02014b50), le16(20), le16(20), le16(0x0800), le16(0), le16(DOS_TIME), le16(DOS_DATE), le32(e.crc), le32(e.size), le32(e.size), le16(name.length), le16(0), le16(0), le16(0), le16(0), le32(0), le32(at), name]));
+    parts.push(local, e.data); at += local.length + e.size;
+  }
+  const dir = cat(central);
+  parts.push(dir, cat([le32(0x06054b50), le16(0), le16(0), le16(entries.length), le16(entries.length), le32(dir.length), le32(at), le16(0)]));
+  return parts;
+}
+
+
+
+const box = (type, ...parts) => { const body = cat(parts); return cat([be32(8 + body.length), enc.encode(type), body]); };
+const full = (type, version, flags, ...parts) => box(type, new Uint8Array([version, flags >> 16 & 255, flags >> 8 & 255, flags & 255]), ...parts);
+const MATRIX = cat([be32(0x00010000), be32(0), be32(0), be32(0), be32(0x00010000), be32(0), be32(0), be32(0), be32(0x40000000)]);
+
+
+
+
+function mp4Parts({ width, height, fps, avcC, frames }){
+  const scale = fps*1000, delta = 1000, n = frames.length, dur = n*delta;
+  const moov = chunkAt => box('moov',
+    full('mvhd', 0, 0, be32(0), be32(0), be32(scale), be32(dur), be32(0x00010000), be16(0x0100), u8(10), MATRIX, u8(24), be32(2)),
+    box('trak',
+      full('tkhd', 0, 3, be32(0), be32(0), be32(1), be32(0), be32(dur), u8(8), be16(0), be16(0), be16(0), be16(0), MATRIX, be32(width << 16), be32(height << 16)),
+      box('mdia',
+        full('mdhd', 0, 0, be32(0), be32(0), be32(scale), be32(dur), be16(0x55c4), be16(0)),
+        full('hdlr', 0, 0, be32(0), enc.encode('vide'), u8(12), enc.encode('Moving Image\0')),
+        box('minf',
+          full('vmhd', 0, 1, u8(8)),
+          box('dinf', full('dref', 0, 0, be32(1), full('url ', 0, 1))),
+          box('stbl',
+            full('stsd', 0, 0, be32(1), box('avc1', u8(6), be16(1), u8(16), be16(width), be16(height), be32(0x00480000), be32(0x00480000), be32(0), be16(1),
+              u8(32), be16(0x18), be16(0xffff), box('avcC', avcC))),
+            full('stts', 0, 0, be32(1), be32(n), be32(delta)),
+            full('stss', 0, 0, be32(frames.filter(f => f.key).length), ...frames.map((f, i) => f.key ? be32(i + 1) : null).filter(Boolean)),
+            full('stsc', 0, 0, be32(1), be32(1), be32(n), be32(1)),
+            full('stsz', 0, 0, be32(0), be32(n), ...frames.map(f => be32(f.data.length))),
+            full('stco', 0, 0, be32(1), be32(chunkAt)))))));
+  const ftyp = box('ftyp', enc.encode('isom'), be32(512), enc.encode('isomiso2avc1mp41'));
+  const size = frames.reduce((s, f) => s + f.data.length, 0);
+  const head = moov(0).length, m = moov(ftyp.length + head + 8);
+  return [ftyp, m, cat([be32(8 + size), enc.encode('mdat')]), ...frames.map(f => f.data)];
+}
+
+
+
+const ebmlId = id => { const o = []; for(let v = id; v > 0; v = Math.floor(v/256)) o.unshift(v & 255); return new Uint8Array(o); };
+const ebmlSize = n => { const o = u8(8); o[0] = 0x01; let v = n; for(let i = 7; i > 0; i--){ o[i] = v % 256; v = Math.floor(v/256); } return o; };
+const el = (id, ...parts) => { const body = cat(parts.map(p => typeof p === 'string' ? enc.encode(p) : p)); return cat([ebmlId(id), ebmlSize(body.length), body]); };
+const uint = n => { const o = []; let v = n; do { o.unshift(v % 256); v = Math.floor(v/256); } while(v > 0); return new Uint8Array(o); };
+const f64 = v => { const o = u8(8); new DataView(o.buffer).setFloat64(0, v); return o; };
+ 
+function webmBytes({ width, height, fps, codec, frames }){
+  const ms = i => Math.round(i*1000/fps), clusters = [];
+  for(let i = 0; i < frames.length;){
+    const start = i, blocks = [];
+    do { const rel = ms(i) - ms(start), f = frames[i];
+      blocks.push(el(0xA3, new Uint8Array([0x81, rel >> 8 & 255, rel & 255, f.key ? 0x80 : 0]), f.data)); i++;
+    } while(i < frames.length && !frames[i].key && ms(i) - ms(start) < 30000);
+    clusters.push(el(0x1F43B675, el(0xE7, uint(ms(start))), ...blocks));
+  }
+  return cat([
+    el(0x1A45DFA3, el(0x4286, uint(1)), el(0x42F7, uint(1)), el(0x42F2, uint(4)), el(0x42F3, uint(8)), el(0x4282, 'webm'), el(0x4287, uint(4)), el(0x4285, uint(2))),
+    el(0x18538067,
+      el(0x1549A966, el(0x2AD7B1, uint(1000000)), el(0x4D80, 'PoetryPress'), el(0x5741, 'PoetryPress'), el(0x4489, f64(ms(frames.length)))),
+      el(0x1654AE6B, el(0xAE, el(0xD7, uint(1)), el(0x73C5, uint(1)), el(0x83, uint(1)), el(0x86, codec), el(0x23E383, uint(Math.round(1e9/fps))),
+        el(0xE0, el(0xB0, uint(width)), el(0xBA, uint(height))))),
+      ...clusters)]);
 }
 
 
@@ -32486,7 +32725,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 00b943b";
+const STAMP = "2026-10-20 · e303967";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -43216,6 +43455,161 @@ function modalPrompt(opts){
 }
 
 
+/* ==== uiMoving.js ==== */
+const MOVING_FPS = 30;
+const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
+
+const MOVING_FADE = [0.38, 0.62];
+const movingRun = { busy: false, stop: false };
+
+const movingNote = text => { const n = $('movingNote'); if(n) n.textContent = text || ''; };
+ 
+function movingLooks(){
+  const out = [];
+  if(state.history && state.history.index > 0) out.push({ value: 'history', label: MOVING.before, look: () => JSON.parse(state.history.stack[state.history.index - 1]) });
+  for(const rec of readStore(SPELL_KEY)) if(rec && rec.settings) out.push({ value: 'spell:' + rec.name, label: rec.name, look: () => stripToLook({ ...rec.settings, spell: rec.spell }) });
+  return out;
+}
+ 
+function openMoving(){
+  const sheet = $('movingSheet'); if(!sheet) return;
+  const type = ($('textureType') || {}).value, on = !!($('textureToggle') || {}).checked, caps = (on && capsFor(type)) || {};
+  const move = $('movingMove'), opt = v => move && [...move.options].find(o => o.value === v);
+  if(opt('camera')) opt('camera').disabled = !caps.camera;
+  if(opt('light')){ opt('light').disabled = !caps.light; opt('light').textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light; }
+  const looks = movingLooks(), pick = $('movingLook');
+  if(pick){ pick.innerHTML = ''; for(const l of looks){ const o = document.createElement('option'); o.value = l.value; o.textContent = l.label; pick.appendChild(o); } }
+  for(const v of ['look', 'lookback']) if(opt(v)) opt(v).disabled = !looks.length;
+  if(move && move.selectedOptions && move.selectedOptions[0] && move.selectedOptions[0].disabled){ const first = [...move.options].find(o => !o.disabled); if(first) move.value = first.value; }
+  const fmt = $('movingFormat'), coded = typeof VideoEncoder !== 'undefined';
+  if(fmt){ for(const o of fmt.options) if(o.value !== 'png') o.disabled = !coded; if(!coded) fmt.value = 'png'; }
+  paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
+  sheet.hidden = false;
+}
+function closeMoving(){ if(movingRun.busy){ movingRun.stop = true; return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+ 
+function paintMoving(){
+  const m = ($('movingMove') || {}).value, row = $('movingLookRow');
+  if(row) row.hidden = !(m === 'look' || m === 'lookback');
+  const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? MOVING.stop : MOVING.make;
+  for(const id of ['movingMove', 'movingLook', 'movingSize', 'movingLength', 'movingFormat']){ const el = $(id); if(el) el.disabled = movingRun.busy; }
+}
+ 
+async function movingCodec(fmt, w, h){
+  if(typeof VideoEncoder === 'undefined') return null;
+  const bitrate = Math.round(Math.min(40e6, Math.max(4e6, w*h*MOVING_FPS*0.15)));
+  const tries = fmt === 'mp4' ? ['avc1.640028', 'avc1.640033', 'avc1.640034', 'avc1.4d0028', 'avc1.4d0033', 'avc1.420028'] : ['vp09.00.40.08', 'vp09.00.50.08', 'vp09.00.51.08', 'vp8'];
+  for(const codec of tries){
+    const cfg = { codec, width: w, height: h, bitrate, framerate: MOVING_FPS, ...(fmt === 'mp4' ? { avc: { format: 'avc' } } : {}) };
+    try { const r = await VideoEncoder.isConfigSupported(cfg); if(r && r.supported) return cfg; } catch(e){   }
+  }
+  return null;
+}
+ 
+function movingSink(fmt, cfg, w, h){
+  if(fmt === 'png'){
+    const entries = []; let total = 0;
+    return {
+      add: async (canvas, i) => { const blob = await new Promise(r => canvas.toBlob(r, 'image/png')); const bytes = new Uint8Array(await blob.arrayBuffer());
+        total += bytes.length; if(total > 3.9e9) throw new Error('too big');
+        entries.push({ name: 'frame-' + String(i).padStart(4, '0') + '.png', size: bytes.length, crc: crc32(bytes), data: blob }); },
+      done: async () => new Blob(zipParts(entries), { type: 'application/zip' }), drop: () => {} };
+  }
+  const frames = [], stamps = []; let avcC = null, failed = null;
+  const encoder = new VideoEncoder({ error: e => { failed = e; }, output: (chunk, meta) => {
+    const data = new Uint8Array(chunk.byteLength); chunk.copyTo(data); frames.push({ data, key: chunk.type === 'key' }); stamps.push(chunk.timestamp);
+    const d = meta && meta.decoderConfig && meta.decoderConfig.description;
+    if(d && !avcC) avcC = d instanceof ArrayBuffer ? new Uint8Array(d.slice(0)) : new Uint8Array(d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength)); } });
+  encoder.configure(cfg);
+  return {
+    add: async (canvas, i) => {
+      if(failed) throw failed;
+      const vf = new VideoFrame(canvas, { timestamp: Math.round(i*1e6/MOVING_FPS), duration: Math.round(1e6/MOVING_FPS), alpha: 'discard' });
+      encoder.encode(vf, { keyFrame: i % (MOVING_FPS*2) === 0 }); vf.close();
+      while(encoder.encodeQueueSize > 3) await new Promise(r => setTimeout(r, 4));
+    },
+    done: async () => {
+      await encoder.flush(); encoder.close(); if(failed) throw failed;
+
+      if(stamps.some((s, i) => i && s < stamps[i - 1])) throw new Error('reordered frames');
+      if(fmt === 'mp4'){ if(!avcC) throw new Error('no avcC'); return new Blob(mp4Parts({ width: w, height: h, fps: MOVING_FPS, avcC, frames }), { type: 'video/mp4' }); }
+      return new Blob([webmBytes({ width: w, height: h, fps: MOVING_FPS, codec: cfg.codec === 'vp8' ? 'V_VP8' : 'V_VP9', frames })], { type: 'video/webm' });
+    },
+    drop: () => { try { encoder.close(); } catch(e){   } } };
+}
+
+
+
+
+
+function movingDay(a0, tilt0){
+  const h = t => t <= 100 ? 1 - t/100 : -(t - 100)/30, h0 = Math.max(-1, Math.min(1, h(tilt0))), th0 = Math.asin(h0);
+  return u => { const th = th0 + u*Math.PI*2, up = Math.sin(th), rising = Math.cos(th) >= 0;
+    return [((rising ? a0 : a0 + 180) % 360 + 360) % 360, up >= 0 ? 100 - 100*up : 100 - 30*up]; };
+}
+
+async function movingFrame(){ render(); await texturesSettled(); render(); }
+ 
+async function makeMoving(){
+  if(movingRun.busy){ movingRun.stop = true; return; }
+  const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, n = (+$('movingLength').value || 12)*MOVING_FPS;
+  let [w, h] = MOVING_SIZES[$('movingSize').value] || [state.page.exportW || canvas.width, state.page.exportH || canvas.height];
+  if(fmt !== 'png'){
+    const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }
+  const start = serializeCurrentSettings(), looked = move === 'look' || move === 'lookback';
+  const other = looked ? movingLooks().find(l => l.value === ($('movingLook') || {}).value) : null;
+  if(looked && !other){ movingNote(MOVING.noLook); return; }
+  const cfg = fmt === 'png' ? null : await movingCodec(fmt, w, h);
+  if(fmt !== 'png' && !cfg){ movingNote(fill(MOVING.noCodec, fmt.toUpperCase())); return; }
+  const end = other ? other.look() : null, snap = k => { const el = $(k) || $(k + 'Hex'); return !!(el && el.tagName === 'SELECT'); };
+  const fades = end ? wholeChanges(start, end, snap).filter(k => k !== 'lookName' && k !== 'spell') : [];
+  const pw = canvas.width, ph = canvas.height, num = id => parseFloat(($(id) || {}).value) || 0, cam0 = num('cameraTurn'), light0 = num('textureLight'), tilt0 = num('textureLightTilt');
+  const day = move === 'light' && (capsFor(($('textureType') || {}).value) || {}).dial === 'Daylight' ? movingDay(light0, tilt0) : null;
+  const sink = movingSink(fmt, cfg, w, h);
+  let spare = null, made = null;
+  movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving');
+  if(document.body && document.body.classList) document.body.classList.add('saving');
+  try {
+    canvas.width = w; canvas.height = h; setDrafting(false); clearTimeout(draftTimer); setRenderScale(1, [w, h]);
+    for(let i = 0; i < n && !movingRun.stop; i++){
+      if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
+      else if(day){ const [a, tl] = day(i/n); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); }
+      else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360);
+      else {
+        const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
+        if(mid){
+          restoreSettings(blendLooks(start, end, t, 0, snap)); await movingFrame();
+          spare = spare || document.createElement('canvas'); spare.width = w; spare.height = h; spare.getContext('2d').drawImage(canvas, 0, 0);
+          restoreSettings(blendLooks(start, end, t, 1, snap)); await movingFrame();
+          const u = (t - MOVING_FADE[0])/(MOVING_FADE[1] - MOVING_FADE[0]), x = canvas.getContext('2d');
+          x.save(); x.globalAlpha = 1 - u*u*(3 - 2*u); x.drawImage(spare, 0, 0); x.restore();
+          await sink.add(canvas, i); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`)); continue;
+        }
+        restoreSettings(blendLooks(start, end, t, t < 0.5 ? 0 : 1, snap));
+      }
+      await movingFrame(); await sink.add(canvas, i);
+      movingNote(fill(MOVING.frame, `${i + 1} / ${n}`));
+    }
+    if(!movingRun.stop){ movingNote(MOVING.finishing); made = await sink.done(); }
+  } catch(err){
+    sink.drop(); made = null; movingNote(err && err.message === 'too big' ? MOVING.tooBig : MOVING.failed);
+    if(typeof console !== 'undefined') console.warn('Moving Image:', err && err.message);
+  } finally {
+    if(looked) restoreSettings(start);
+    else for(const [id, v] of [['cameraTurn', cam0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
+    canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
+    if(document.body && document.body.classList) document.body.classList.remove('saving');
+    const stopped = movingRun.stop; movingRun.busy = false; movingRun.stop = false; setWorking(null); paintMoving(); render();
+    if(stopped && !made){ sink.drop(); movingNote(MOVING.stopped); }
+  }
+  if(!made) return;
+  const link = document.createElement('a'), url = URL.createObjectURL(made);
+  link.download = `poetrypress-${generateFilenameBase()}-${Math.floor(Date.now()/1000)}.${fmt === 'png' ? 'zip' : fmt}`; link.href = url; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  movingNote(fill(MOVING.made, (made.size/1e6).toFixed(1) + ' MB'));
+}
+
+
 /* ==== appEvents.js ==== */
 const TRY_GRAPH = /^(starter|study):/;
 
@@ -43613,6 +44007,7 @@ if($('randomSurfaceBtn') && $('randomSurfaceBtn').addEventListener) $('randomSur
 });
 
 $('downloadBtn').addEventListener('click', async ()=>{
+  if(state.ui.heldSave){ state.ui.heldSave = false; return; }
   if(state.ui.saving) return;
   const base = generateFilenameBase();
   const ts = Math.floor(Date.now()/1000);
@@ -43650,6 +44045,23 @@ $('downloadBtn').addEventListener('click', async ()=>{
 
   offerAltText(state.ui.lastAlt);
 });
+
+
+{ const save = $('downloadBtn'); let timer = 0;
+  if(save && save.addEventListener){
+    save.addEventListener('pointerdown', () => { state.ui.heldSave = false; clearTimeout(timer);
+      timer = setTimeout(() => { state.ui.heldSave = true; haptic('drawer'); openMoving(); }, 550); });
+    for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) save.addEventListener(ev, () => clearTimeout(timer));
+    save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave) openMoving(); });
+  }
+  if($('movingMove') && $('movingMove').addEventListener) $('movingMove').addEventListener('change', paintMoving);
+  if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
+  if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
+  if($('movingSheet') && $('movingSheet').addEventListener){
+    $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
+    $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
+  }
+}
 
 
 
@@ -44639,7 +45051,7 @@ for(const type of ['input', 'change']){
 }
 document.addEventListener('click', (e)=>{
   const t = e.target && e.target.closest ? e.target.closest('button, .preset-btn, .radio-btn') : null;
-  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn') commitSoon();
+  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet'))) commitSoon();
 }, true);
 if($('shortcutBtn') && $('shortcutBtn').addEventListener) $('shortcutBtn').addEventListener('click', () => showShortcuts(true));
 if($('shortcutSheet') && $('shortcutSheet').addEventListener) $('shortcutSheet').addEventListener('click', (e) => { if(e.target === $('shortcutSheet')) showShortcuts(false); });
@@ -44655,6 +45067,7 @@ document.addEventListener('keydown', (e)=>{
   }
   if(e.altKey) return;
   const sheetOpen = $('shortcutSheet') && !$('shortcutSheet').hidden;
+  if($('movingSheet') && !$('movingSheet').hidden) return;
   if(e.key === 'Escape'){ if(sheetOpen) showShortcuts(false); return; }
   if(e.key === '?'){ e.preventDefault(); showShortcuts(!sheetOpen); return; }
   if(sheetOpen) return;

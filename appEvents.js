@@ -33,6 +33,7 @@ import { graphScattersGlyphs } from './stepsPatterns.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
+import { closeMoving, makeMoving, openMoving, paintMoving } from './uiMoving.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, retireOldPanel, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
@@ -467,6 +468,7 @@ if($('randomSurfaceBtn') && $('randomSurfaceBtn').addEventListener) $('randomSur
 });
 
 $('downloadBtn').addEventListener('click', async ()=>{
+  if(state.ui.heldSave){ state.ui.heldSave = false; return; }   // (held: the Moving Image sheet opened instead)
   if(state.ui.saving) return;
   const base = generateFilenameBase();
   const ts = Math.floor(Date.now()/1000);
@@ -504,6 +506,23 @@ $('downloadBtn').addEventListener('click', async ()=>{
   // clipboard is the person's — the usability review)
   offerAltText(state.ui.lastAlt);
 });
+
+// THE MOVING IMAGE (uiMoving.js): Save held, or right-clicked, opens its sheet; nothing on the page moves for it
+{ const save = $('downloadBtn'); let timer = 0;
+  if(save && save.addEventListener){
+    save.addEventListener('pointerdown', () => { state.ui.heldSave = false; clearTimeout(timer);
+      timer = setTimeout(() => { state.ui.heldSave = true; haptic('drawer'); openMoving(); }, 550); });
+    for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) save.addEventListener(ev, () => clearTimeout(timer));
+    save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave) openMoving(); });
+  }
+  if($('movingMove') && $('movingMove').addEventListener) $('movingMove').addEventListener('change', paintMoving);
+  if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
+  if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
+  if($('movingSheet') && $('movingSheet').addEventListener){
+    $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
+    $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
+  }
+}
 
 // ---------- settings: save and restore (the Workbench JSON, spells) ----------
 
@@ -1493,7 +1512,7 @@ for(const type of ['input', 'change']){
 }
 document.addEventListener('click', (e)=>{
   const t = e.target && e.target.closest ? e.target.closest('button, .preset-btn, .radio-btn') : null;
-  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn') commitSoon();
+  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet'))) commitSoon();   // (a film's frames are not history)
 }, true);
 if($('shortcutBtn') && $('shortcutBtn').addEventListener) $('shortcutBtn').addEventListener('click', () => showShortcuts(true));
 if($('shortcutSheet') && $('shortcutSheet').addEventListener) $('shortcutSheet').addEventListener('click', (e) => { if(e.target === $('shortcutSheet')) showShortcuts(false); });
@@ -1509,6 +1528,7 @@ document.addEventListener('keydown', (e)=>{
   }
   if(e.altKey) return;
   const sheetOpen = $('shortcutSheet') && !$('shortcutSheet').hidden;
+  if($('movingSheet') && !$('movingSheet').hidden) return;   // (the Moving Image sheet takes its own keys)
   if(e.key === 'Escape'){ if(sheetOpen) showShortcuts(false); return; }
   if(e.key === '?'){ e.preventDefault(); showShortcuts(!sheetOpen); return; }
   if(sheetOpen) return;

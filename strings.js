@@ -340,6 +340,30 @@ export const UI_STRINGS = {
   'option.vellum':                             "Vellum",
   // ---- the Athanor's bar ----
   'kept.keep':                             "Keep",
+  // ---- the Moving Image sheet (a long press or a right-click on Save image) ----
+  'moving.title':                          "Moving Image",
+  'moving.hint':                           "The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.",
+  'moving.move':                           "Move",
+  'moving.camera':                         "Camera round",
+  'moving.light_round':                    "Light round",
+  'moving.look':                           "To another look",
+  'moving.lookback':                       "To another look and back",
+  'moving.other':                          "The other look",
+  'moving.size':                           "Size",
+  'moving.page':                           "The page",
+  'moving.wide':                           "Wide, 1920 × 1080",
+  'moving.tall':                           "Tall, 1080 × 1920",
+  'moving.square':                         "Square, 1080 × 1080",
+  'moving.length':                         "Length",
+  'moving.s6':                             "6 seconds",
+  'moving.s12':                            "12 seconds",
+  'moving.s24':                            "24 seconds",
+  'moving.format':                         "Format",
+  'moving.mp4':                            "MP4 video",
+  'moving.webm':                           "WebM video",
+  'moving.png':                            "PNG frames, zipped",
+  'moving.make':                           "Make the film",
+  'moving.close':                          "Close",
 };
 
 /**
@@ -494,6 +518,23 @@ export const EYE_OFF = {
   borderToggle: 'The border is off. Change anything here to switch it on, or tap the eye.',
   cardToggle: 'The inset box is off. Change anything here to switch it on, or tap the eye.',
   vignetteToggle: 'The vignette is off. Change anything here to switch it on, or tap the eye.',
+};
+/** The Moving Image sheet's changing words ({name}: a count, a format, a size). */
+export const MOVING = {
+  light: 'Light round',
+  day: 'A day passing (the light round)',
+  before: 'The look before the last change',
+  make: 'Make the film',
+  stop: 'Stop',
+  frame: 'Drawing frame {name}…',
+  finishing: 'Putting the film together…',
+  made: 'Saved: {name}.',
+  stopped: 'Stopped. Nothing was saved.',
+  failed: 'The film couldn’t be made in this browser. The PNG frames may work.',
+  noLook: 'Choose the other look first.',
+  tooBig: 'The frames passed 4 GB, more than a zip holds. Try a shorter film or a smaller size.',
+  noCodec: 'This browser can’t make {name} at this size. Try WebM, a smaller size, or the PNG frames.',
+  noEncoder: 'This browser has no video encoder, so the film is saved as PNG frames in a zip.',
 };
 export const PAGE_SAYS = {
   sizeClamped: 'Page size set to {name} px. Each side can be 256 to 4096 px.',

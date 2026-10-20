@@ -1775,6 +1775,12 @@ body.is-mobile .shortcut-btn{ display:none; }
 .sheet-veil[hidden]{ display:none; }
 .sheet{ background:var(--bg-panel, #17141c); color:var(--text-main, #eee); border:1px solid var(--accent); border-radius:0; padding:16px 20px; max-width:min(560px, 92vw); max-height:calc(var(--vvh, 100vh) * 0.86); overflow:auto; box-shadow:0 18px 50px -20px rgba(0,0,0,0.8); }
 .sheet-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:18px; letter-spacing:0.04em; margin-bottom:10px; color:var(--accent); }
+/* the Moving Image sheet: a label and its choice to a row */
+.moving-sheet{ width:min(420px, 92vw); }
+.moving-row{ display:grid; grid-template-columns:7.5em 1fr; align-items:center; gap:10px; margin:8px 0; }
+.moving-row[hidden]{ display:none; }
+.moving-row select{ width:100%; min-width:0; }
+.moving-note{ min-height:1.4em; }
 .keys{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:13px; }
 .keys dt{ white-space:nowrap; opacity:0.9; }
 .keys dd{ margin:0; opacity:0.85; }

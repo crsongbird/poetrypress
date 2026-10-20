@@ -8,6 +8,9 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- THE MOVING IMAGE: is the sheet where it should be (hold Save, or right-click it), and are the moves the right ones?
+  More could follow (the camera walked along the ring, the seed's weather changing, a slow zoom). A browser without an
+  H.264 encoder offers WebM or the PNG frames.
 - MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
   grid. Does it hold?
 
@@ -16,11 +19,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   detail in the distance (terraces on the steep land, a settlement's lights at night); more placing rules between
   kinds (trees kept back from a house, farmland in rings round a town); more robots; a bridge of hard light as one
   more rare nod; more interactions nobody asked for.
-- MOVING IMAGE (Ruby, 2026-10-20: yes to the plan): a long-press (or right-click) on Save opens a small sheet, Moving
-  Image. First moves: Camera round (a seamless 360° loop) and From this look to another (every control blended between
-  two saved looks); frames drawn offline and stitched by the browser's own encoder (WebCodecs) and a small muxer of our
-  own; the page, 1080p wide, 1080×1920 tall or square; 6, 12 or 24 s at 30 fps; MP4, WebM or a zip of PNG frames. The
-  poem is drawn when it's shown (the existing switch), and the credit line always.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a

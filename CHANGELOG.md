@@ -4,6 +4,27 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Puck (2026-10-20)
+
+- **Moving Image.** Hold Save image (or right-click it) for a small sheet that makes the page into a short film, drawn
+  frame by frame at full quality: the poem when it is shown, the credit line always. Moves: **Camera round** (a
+  seamless turn of the camera, for a surface that has one), **Light round** (on the Ringworld, **a day passing**: the
+  sun up over noon, down to dusk, through the night and back to dawn), and **To another look**, or **there and back**,
+  easing every control from this look to one of your spells or to the look before your last change, and fading across
+  where the surface itself changes. Wide (1920 × 1080), tall (1080 × 1920), square or the page's own size; 6, 12 or 24
+  seconds at 30 frames a second; an MP4, a WebM, or the PNG frames in a zip. Every loop ends where it began, so it
+  repeats without a seam. Nothing is downloaded to make it: the browser's own video encoder does the work, and a
+  browser without one still makes the PNG frames.
+
+### Under the hood
+- moving.js: `blendLooks`, `wholeChanges` and `moveAt`, and the containers written byte by byte (`mp4Parts`, with its
+  index before the frames; `webmBytes`; `zipParts`, stored, with `crc32`). uiMoving.js: the sheet and `makeMoving`,
+  the frames drawn offline at the film's size and given to WebCodecs' encoder. A click in the sheet is not a step of
+  history. A new suite, test/moving.test.mjs, reads each container back.
+- A film at the page's own size is held to 4K's area; the PNG frames stop short of a zip's 4 GB. Prior art:
+  docs/prior-art/moving-image.md.
+- Pruned the stylesheet: every declaration verified in use (none removed).
+
 ## Uranus–Perdita (2026-10-20)
 
 - **Eight views.** Everything in the Ringworld now turns a way of its own (a house toward its street, a car along its
@@ -486,25 +507,3 @@ and every control behaving as it did.
   3D space (a gust with a curl, a spiral, a loop, a wave) and seen through
   a camera; it hands on maps (the ribbons, how they face the light, which
   face shows, how near) for a graph to light.
-
-## Saturn–Gridr (2026-10-19)
-
-- **Macro Bloom has visitors.** Most seeds bring something near the
-  flower's heart, as real macro photographs so often do: a ladybird, a
-  jumping spider, a hoverfly, an ant, aphids, a fallen petal or a seed's
-  fluff, in a new Visitor Hue. Each is lit with the flower: a ladybird's
-  shell shines, a spider's eyes catch the light, a hoverfly's wings let it
-  through, and each casts its shadow on the petal.
-- **Dew drops are little lenses**: a dark rim, a highlight, and a bright
-  tail beyond each drop where it focuses the light.
-- **Shadows from outside the frame**: a blade of grass or leaves between
-  the sun and the flower cast a soft shadow along the light, and now and
-  then cross the frame close to the lens.
-- **Typing redraws sooner**: the page is drawn 250 ms after the last key.
-- The Second Bokeh Hue is replaced by the Visitor Hue; the second bokeh
-  now follows the first and the key light.
-- **Under the hood:** reviewed the tests. The knob probe now sees a
-  picture stamped at a size (the flowers' petal sizes were invisible to
-  it), and draws at 360 px instead of 600 (as telling, and the slowest
-  suite a fifth quicker); the tests that named the Emotional Seed now use
-  other starters; the starter and texture counts follow what is there.

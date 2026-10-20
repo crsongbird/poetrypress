@@ -149,6 +149,7 @@ const ORDER = [
   'release.js',           // the release's name (§Build)
   'altText.js',           // the saved image's alt text, in words
   'jpegMeta.js',          // ...carried inside the JPEG (XMP)
+  'moving.js',            // the Moving Image: looks blended, the MP4, WebM and zip written
   'murmur.js',            // soft interface sounds (off until turned on)
   'glyphs.js',            // drawn symbols inside canvas text
   'pmlVars.js',           // §Variables, resolved before PML
@@ -177,6 +178,7 @@ const ORDER = [
   'uiSurface.js',         // the surface's sliders, tools, readings and menus
   'uiSkins.js',             // the surface's controls as knobs and faders, haptics, the display line
   'uiControls.js',        // the PML editor, effects, border, moon, frame, seeds, theme, sounds, Grimoire
+  'uiMoving.js',          // the Moving Image sheet: the page as a short film
   'appEvents.js',         // entry point, needs everything
 ];
 

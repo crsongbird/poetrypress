@@ -1439,7 +1439,7 @@ but bear with me, dear}]/jitter:200
       <button class="reset-view-btn history-btn" id="redoBtn" type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
       <button class="reset-view-btn" id="filmBtn" type="button" title="Show or hide the history filmstrip (H)" aria-label="History filmstrip">🎞</button>
       <div class="filmstrip" id="filmstrip" aria-label="History: click a frame to go back to it"></div>
-      <button class="download-btn" id="downloadBtn" data-str="button.downloadBtn">Save image</button>
+      <button class="download-btn" id="downloadBtn" title="Save the image (Ctrl+S). Hold, or right-click, for a Moving Image." data-str="button.downloadBtn">Save image</button>
     </div>
   </div>
   <div class="drag-handle" id="dragHandle" title="Drag to resize the preview"><span class="drag-grip"></span></div>
@@ -1513,6 +1513,47 @@ but bear with me, dear}]/jitter:200
         <dt><kbd>Esc</kbd></dt><dd>Close this sheet</dd>
       </dl>
       <p class="hint">Keys work unless you are typing in a field.</p>
+    </div>
+  </div>
+
+  <!-- THE MOVING IMAGE (Ruby: "a subtle video export panel that doesn't show up on the main user interface"): opened by a
+       long press or a right-click on Save image; the page as a short film (uiMoving.js) -->
+  <div class="sheet-veil" id="movingSheet" hidden>
+    <div class="sheet moving-sheet" role="dialog" aria-labelledby="movingTitle">
+      <div class="sheet-title" id="movingTitle" data-str="moving.title">Moving Image</div>
+      <p class="hint" data-str="moving.hint">The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.</p>
+      <div class="moving-row"><label for="movingMove" data-str="moving.move">Move</label>
+        <select id="movingMove">
+          <option value="camera" data-str="moving.camera">Camera round</option>
+          <option value="light" data-str="moving.light_round">Light round</option>
+          <option value="look" data-str="moving.look">To another look</option>
+          <option value="lookback" data-str="moving.lookback">To another look and back</option>
+        </select></div>
+      <div class="moving-row" id="movingLookRow" hidden><label for="movingLook" data-str="moving.other">The other look</label><select id="movingLook"></select></div>
+      <div class="moving-row"><label for="movingSize" data-str="moving.size">Size</label>
+        <select id="movingSize">
+          <option value="page" data-str="moving.page">The page</option>
+          <option value="wide" data-str="moving.wide">Wide, 1920 × 1080</option>
+          <option value="tall" data-str="moving.tall">Tall, 1080 × 1920</option>
+          <option value="square" data-str="moving.square">Square, 1080 × 1080</option>
+        </select></div>
+      <div class="moving-row"><label for="movingLength" data-str="moving.length">Length</label>
+        <select id="movingLength">
+          <option value="6" data-str="moving.s6">6 seconds</option>
+          <option value="12" selected data-str="moving.s12">12 seconds</option>
+          <option value="24" data-str="moving.s24">24 seconds</option>
+        </select></div>
+      <div class="moving-row"><label for="movingFormat" data-str="moving.format">Format</label>
+        <select id="movingFormat">
+          <option value="mp4" data-str="moving.mp4">MP4 video</option>
+          <option value="webm" data-str="moving.webm">WebM video</option>
+          <option value="png" data-str="moving.png">PNG frames, zipped</option>
+        </select></div>
+      <p class="hint moving-note" id="movingNote" aria-live="polite"></p>
+      <div class="btn-row">
+        <button class="btn-major" id="movingMake" type="button" data-str="moving.make">Make the film</button>
+        <button class="ghost" id="movingClose" type="button" data-str="moving.close">Close</button>
+      </div>
     </div>
   </div>
 
