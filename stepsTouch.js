@@ -216,7 +216,7 @@ export const TOUCH_STEPS = {
         }
         return [F]; }); } },
   // MENISCUS: the poured field's surface — flat-topped, round-edged, lumpy where thick (its own lumps, from the seed)
-  meniscus: { cat: 'Shape', label: 'Meniscus', ins: ['amount'], outs: ['height', 'coverage', 'thin', 'thick'], io: { ins: ['field'], outs: ['field', 'field', 'field', 'field'] },
+  meniscus: { cat: 'Shape', label: 'Meniscus', ins: ['amount'], outs: ['height', 'coverage', 'thin', 'thick'], req: true, io: { ins: ['field'], outs: ['field', 'field', 'field', 'field'] },
     params: [TOUCH_R('viscosity', 'Viscosity', 45), TOUCH_R('height', 'Height', 50), TOUCH_R('lumps', 'Lumps', 50), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 2,
     run(E, n){ const { ww, wh, N, num, input, asField, ctx } = E, F = asField(input(n, 1)); if(!F) return null;
       const visc = num(n, 'viscosity', 45)/100, hk = num(n, 'height', 50)/50, lk = num(n, 'lumps', 50)/50;
@@ -234,7 +234,7 @@ export const TOUCH_STEPS = {
     params: [TOUCH_R('amount', 'Pigment', 100, 30, 250), TOUCH_R('size', 'Wash Size', 100, 40, 250), TOUCH_R('wet', 'Wetness', 50), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     run(E, n){ const { ww, wh, num, ctx } = E, seed = ((ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
       return withSeed(seed, () => touchWashes(ww, wh, num(n, 'amount', 100)/100, num(n, 'size', 100)/100, num(n, 'wet', 50)/100)); } },
-  pigment: { cat: 'Light & Color', label: 'Pigment', ins: ['paper', 'density', 'color', 'runs to'], outs: ['image'], io: { ins: ['image', 'field', 'colour', 'value'], outs: ['image'] },
+  pigment: { cat: 'Light & Color', label: 'Pigment', ins: ['paper', 'density', 'color', 'runs to'], outs: ['image'], req: true, io: { ins: ['image', 'field', 'colour', 'value'], outs: ['image'] },
     params: [TOUCH_R('wet', 'Wetness', 50)], cost: () => 4,
     run(E, n){ const { ww, wh, input, num, asField, asImage, ctx } = E, D = asField(input(n, 2)); if(!D) return null;
       const img = asImage(input(n, 1) ?? 1), c = input(n, 3), col = Array.isArray(c) ? c : [0.18, 0.36, 0.54], dv = input(n, 4);
@@ -265,7 +265,7 @@ export const TOUCH_STEPS = {
   // round the hill and home.
   // CONTOUR LINES: the isolines of any gray map (d3-contour's maps, found per pixel: how far the value is from its
   // level, against the slope, so a line keeps one width on steep and gentle ground); every Nth an index line, heavier
-  contours: { cat: 'Marks', label: 'Contour Lines', ins: ['height'], outs: ['lines'],
+  contours: { cat: 'Marks', label: 'Contour Lines', ins: ['height'], outs: ['lines'], req: true,
     params: [TOUCH_R('levels', 'Levels', 20, 3, 60), TOUCH_R('weight', 'Line Weight', 100, 25, 400), TOUCH_R('index', 'Heavy Line Every', 5, 0, 10), TOUCH_R('strength', 'Strength', 90)], cost: () => 2,
     run(E, n){ const { ww, wh, N, unit, num, input, asField } = E, H = asField(input(n, 1)); if(!H) return null;
       // a line finer than half a cell is drawn half a cell wide but fainter, so a small preview keeps the export's weight
@@ -358,6 +358,7 @@ export const TOUCH_STEPS = {
     } },
 
   cloth: { cat: 'Textures', label: 'Cloth & Details', ins: ['shade', 'sheen', 'fabric hue', 'light hue'], outs: ['image'],
+    io: { ins: ['field', 'field', 'colour', 'colour'], outs: ['image'] },
     params: [TOUCH_R('details', 'Details', 42), TOUCH_R('scale', 'Scale', 100, 50, 400)], cost: () => 18,
     // The cloth, coloured: Fabric Hue colours it, Light Hue the light on it.
     // DETAILS run stitching → slubs → buttons → rivets: real things on the

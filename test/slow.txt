@@ -1,0 +1,4 @@
+test/textureElements.test.mjs
+test/textureParams.test.mjs
+test/textureFingerprints.test.mjs
+test/blendsAndTints.test.mjs

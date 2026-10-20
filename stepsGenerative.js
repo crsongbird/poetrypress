@@ -2279,7 +2279,7 @@ export const GEN_STEPS = {
       const o = { rings: E.num(n, 'rings', 40)/100, figure: E.num(n, 'figure', 50)/100, light: Array.isArray(a) ? a : [0.80, 0.64, 0.45], dark: Array.isArray(b) ? b : [0.42, 0.26, 0.15],
         cam: groundCam(E.ww/E.unit, E.wh/E.unit, E.num(n, 'turn', 0), E.num(n, 'view', 0), E.num(n, 'lens', 100)) };
       return withSeed(genSeed(E, n), () => genWood(E.ww, E.wh, E.unit, o)); } },
-  burn: { cat: 'Light & Color', label: 'Burn', ins: ['picture', 'channels', 'glow'], outs: ['picture', 'height'], io: { ins: ['image', 'field', 'colour'], outs: ['image', 'field'] },
+  burn: { cat: 'Light & Color', label: 'Burn', ins: ['picture', 'channels', 'glow'], outs: ['picture', 'height'], req: true, io: { ins: ['image', 'field', 'colour'], outs: ['image', 'field'] },
     params: [GEN_R('material', 'Charred · Embers · Acrylic', 0), GEN_R('scorch', 'Scorch', 50), GEN_R('depth', 'Depth', 50), GEN_R('etch', 'Etched', 0)], cost: () => 3,
     run(E, n){ const { N, unit } = E, ch = E.asField(E.input(n, 2)); if(!ch) return null;
       const pic = E.asImage(E.input(n, 1) ?? 0.6), gv = E.input(n, 3), m = E.num(n, 'material', 0)/100, sc = E.num(n, 'scorch', 50)/100, dp = E.num(n, 'depth', 50)/100, et = E.num(n, 'etch', 0)/100;

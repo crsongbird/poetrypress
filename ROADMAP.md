@@ -60,7 +60,7 @@ finished, delete it from here and from OPEN-ISSUES.md. Don't leave a history.
 | Map / Curve / Numeric components; ports colored by type | Five wire kinds: gray map, picture, color, number, **curve** (green, dotted) | ✅ (curves added in Jupiter–Hegemone) |
 | Parameter mapping (a picture on a setting varies it point by point) | ⚙ ports. In v3 graphs a map is per point for the settings a part declares (`maps`; the wiki marks them "by point"); v2 graphs average it | ✅ (a setting that can't vary, such as a count of octaves, takes the average) |
 | Remappers (limit or reverse a control's range per target; one slider, many ranges) | `'~key': 'lo,hi'` per wired ⚙ (lo > hi reverses) | ✅ engine; ⇄ Reverse and two handles in the menu (Saturn–Erriapus) |
-| Required inputs (red; a stand-in image keeps the rest working) | `STEP_REQUIRED`: a red port with "!", and a "!"-in-a-circle stand-in in step previews only | ✅ |
+| Required inputs (red; a stand-in image keeps the rest working) | a part's `req`: a red port with "!", and a "!"-in-a-circle stand-in in step previews only | ✅ |
 | Result: Simple vs Surface (lit by Surface Color, Height, Reflectivity, Reflection Blur, Metallic) | Surface: picture, height, reflectivity, reflection blur, metallic and emission (Saturn–Albiorix); the Light Engine as a part | ✅ (environment reflections: C4) |
 | Render channels (Final, Diffuse, Bump, Normal, Specular, Metallic, Occlusion) | The preview's channel menu: Final, Height, Normal, Occlusion, Specular (view only); step previews show each part's first output | ✅ (Saturn–Greip) |
 | Global Size (all distances relative; resolution-independent) | Canonical pixels everywhere; the Surface's **Size** (25–400) scales a graph | ✅ |
@@ -430,9 +430,8 @@ built while the next part is being written. The order that matters is that
 
 - A change in what a graph draws → a new ATHANOR_VERSION. Starters take the
   newest; texture chains keep theirs (their pictures never change).
-- A new part needs: STEP_PARTS entry, STEP_RUN, a STEP_DOCS sentence (teacher
-  to student), STEP_IO for non-field ports, STEP_COST, STEP_REQUIRED if it
-  needs its first input, a test in test/filterforge.test.mjs or its own file,
+- A new part needs: one object (params, run, `io` for non-field ports, `cost`,
+  `req` if it needs its first input), its wiki line (teacher to student), a test in test/filterforge.test.mjs or its own file,
   and a render looked at by eye.
 - A new wire kind: VALUE_TYPES, FORGE_TYPE_COLOURS/NAMES, `--t-<kind>` in
   both themes, help text, and conversions in athanor.js (asField, asImage,

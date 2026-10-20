@@ -233,7 +233,7 @@ default.
 
 | File | Role |
 |---|---|
-| `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
+| `steps.js` | THE PARTS: the general library (`STEP_PARTS`, each part one object) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes. Touch: also the glass (Scratches, Smudges, Window Reflection, Shatter, Glass Pane) |
 | `stepsFlora.js` | the floral surfaces' Bloom (`FLORA_STEPS`): a flower of one of 23 species, or a sheet of them, petal by petal, lit from the dial |
 | `stepsLens.js` | Lens Blur (`LENS_STEPS`): a thin-lens focal plane from a depth map, gathered on a golden-angle spiral (background capped at twice the point's own disc), lights brighter than white first; on the GPU through texCore's `gpuKernel`, else the same gather on the CPU |
@@ -831,12 +831,9 @@ avoided because the work is large. ROADMAP.md (Stage 3) keeps the one list
 of menu textures that aren't chains yet; the hygiene test keeps it the code's.
 
 ### 6.2 · Anatomy of a part
-A part is `{ cat, label, ins, outs, params, run(E, n) }`:
-- **Where it is defined:**
-  - in steps.js, across `STEP_PARTS`, `STEP_RUN`, `STEP_IO`,
-    `STEP_COST` and `STEP_REQUIRED`;
-  - or in one family object (`TOUCH_STEPS`, …) carrying its own `cost`
-    and `io`.
+A part is one object, `{ cat, label, ins, outs, params, cost, io, req, maps, run(E, n) }`, in steps.js's
+`STEP_PARTS` or a family's (`TOUCH_STEPS`, …): `cost` its weight (1 if it doesn't say), `io` its port types where
+they aren't gray maps, `req: true` if it needs its first input, `maps` its settings that take a map.
 - **Its doc and its wiki page:** every part has an entry in
   `athanorWikiParts.js` (`WIKI_PARTS`): `line` (one instructive sentence,
   shown in the parts list and menus: the one copy of the part's description),
@@ -916,7 +913,7 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
   - v3: map inputs (§6.4). A v3 graph is also told its grid's divisor
     (`div`), so `E.px` and `E.carea` are true canonical sizes and counts;
     older graphs keep the old (coarser) reading.
-  - v4: more settings take maps (those marked `key:4` in `STEP_MAPS`).
+  - v4: more settings take maps (those marked `key:4` in a part's `maps`).
     Kept results are keyed by the version, so a v3 graph never borrows a v4
     result.
   - v5 (Saturn–Paaliaq): GROUPS and PORTS BY NAME. Neither changes a
@@ -1005,8 +1002,7 @@ The full study and what is still to do are in ROADMAP.md §1.
   of it set by `'~key': 'lo,hi'`. lo > hi reverses it (Filter Forge's
   remapper).
 - **Map inputs** (v3 graphs on): a gray map on a ⚙ is per point for the
-  settings a part declares (`STEP_MAPS` in steps.js, or a family part's
-  `maps`; `key:4` from v4), read with `E.map`/`E.at`. The evaluator maps only those; the wiki
+  settings a part declares (its `maps`; `key:4` from v4), read with `E.map`/`E.at`. The evaluator maps only those; the wiki
   marks them "by point" and the setting's menu says so. Any other setting,
   and every setting in a v2 graph, takes the map's average.
   - A number from `E.map` keeps the old code path, so a v2 graph draws
@@ -1016,7 +1012,7 @@ The full study and what is still to do are in ROADMAP.md §1.
   - Laid where a map goes, a curve runs across the page left to right.
   - Where a number goes, it gives its mean.
   - In previews it is drawn as its graph.
-- **Required inputs** (`STEP_REQUIRED`):
+- **Required inputs** (a part's `req`):
   - The editor marks an empty one red.
   - Step previews (`ctx.all`, with their own cache keys) substitute a "!"
     stand-in.
@@ -1173,11 +1169,11 @@ the test to the new intent; never weaken it just to pass.
 2. Define it (§6.2):
    - its params;
    - `run` (and `paint` if it works in canvas passes);
-   - `STEP_IO` for anything that isn't a gray map;
-   - `STEP_COST`;
-   - `STEP_REQUIRED` if it needs its first input.
+   - `io` for anything that isn't a gray map;
+   - `cost`;
+   - `req: true` if it needs its first input.
 3. Read per-point settings with `E.map` where the loop allows, and declare
-   them (`STEP_MAPS` or the part's `maps`). A setting that already exists
+   them (the part's `maps`). A setting that already exists
    and starts to take a map does so from a new graph version (`key:5`…),
    so an older graph still reads it whole.
 4. Add a test (test/filterforge.test.mjs or the part's own suite).

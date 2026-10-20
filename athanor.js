@@ -45,7 +45,7 @@ import { ATHANOR_STUDIES } from './athanorStudies.js';
 // the part can use it so (E.map); v2 took the picture's average. The textures' own chains stay v2, so
 // they draw exactly as they did.
 // v4: more settings take a map point by point (Blur's Radius, the noises' Scale, Motion Blur, Grow & Shrink,
-// Twirl, Edge Detect, Scatter's Size, the lights' Relief and the Light Engine's Gloss: steps.js STEP_MAPS,
+// Twirl, Edge Detect, Scatter's Size, the lights' Relief and the Light Engine's Gloss: each part's `maps` (steps.js),
 // `name:4`); a v3 graph still reads those whole, as it did.
 // v5: GROUPS and PORTS BY NAME (ROADMAP A3, A10). A group's own graph is another of the editor's modules (Drawflow's
 // drawflow.<name>), and a v5 graph is saved with its ports by name ('in:field', 'set:scale', 'out:image'), so a part
