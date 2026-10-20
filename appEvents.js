@@ -35,12 +35,12 @@ import { attachChooser } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES } from './effects.js';
-import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
+import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, retireOldPanel, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
 import { render, scheduleRender, noteUserActivity, TYPING_SETTLE_MS, setRenderScale, resetBackBuffer, setSurfaceSource, fontIndexByName, invalidateTextMeasurements } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, textureKeyFor, peekTexture } from './textureGenerators.js';
 import { seedFromText } from './seedWords.js';
-import { createVault, stripToLook } from './vault.js';
+import { createVault, stripToLook, readStore, writeStore, POEM_KEY } from './vault.js';
 import { applyTheme, savedTheme } from './theme.js';
 import { registerServiceWorker } from './pwa.js';
 import { moonPhase, moonGlyph, phaseName } from './moon.js';
@@ -1407,6 +1407,11 @@ try {
     localStorage.setItem(FIRST_VISIT_KEY, '1');
   }
 } catch(e){ /* storage refused: the app works the same without the examples */ }
+// the instrument panel seeded before Saturn–Gunnlod still named the spell's runes: that line goes (retireOldPanel)
+try {
+  const poems = readStore(POEM_KEY);
+  if(poems.some(p => p && retireOldPanel(p.text) !== p.text)) writeStore(POEM_KEY, poems.map(p => p && typeof p.text === 'string' ? { ...p, text: retireOldPanel(p.text) } : p));
+} catch(e){ /* storage refused: nothing to mend */ }
 try { restoreDraft(); } catch(e){ /* a draft never stops the app opening: the welcome page stands */ }
 if(typeof window !== 'undefined' && window.addEventListener){
   window.addEventListener('load', () => { reconcileControls(); setTimeout(reconcileControls, 2500); }, { once: true });

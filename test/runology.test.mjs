@@ -8,7 +8,7 @@ import { readFileSync } from 'fs';
 import { check, done } from './harness.mjs';
 const R = await import('../runology.js');
 const { resolvePmlVariables } = await import('../pmlVars.js');
-const { DEV_TEMPLATE } = await import('../appOptions.js');
+const { DEV_TEMPLATE, retireOldPanel } = await import('../appOptions.js');
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 check('twenty-two Archetypes in four tiers and Quintessence, twelve Accent Runes, eleven Chroma',
@@ -41,4 +41,11 @@ check('their fonts are loaded and in the glyph stack (Math, Runic, Music, Canadi
   ['Noto+Sans+Math', 'Noto+Sans+Runic', 'Noto+Music', 'Noto+Sans+Canadian+Aboriginal', 'Noto+Sans+Cherokee'].every(f => src('index.html').includes(f))
   && ['Noto Sans Runic', 'Noto Music', 'Noto Sans Canadian Aboriginal', 'Noto Sans Cherokee'].every(f => src('spell.js').includes(f)));
 
+// a panel seeded before that keeps the runes' names in the Grimoire and the draft: they are mended on opening
+const OLD_LINE = '-# \\[\u00a7Spell\\] \u00a7SpellRunes // {\u00a7Today}\'s Moon Phase';
+check('an old seeded panel loses the runes\' names; the template and any other §SpellRunes are left alone',
+  retireOldPanel(OLD_LINE) === '-# \\[\u00a7Spell\\] // {\u00a7Today}\'s Moon Phase' && retireOldPanel(DEV_TEMPLATE) === DEV_TEMPLATE
+  && retireOldPanel('my §SpellRunes here') === 'my §SpellRunes here' && retireOldPanel(null) === null);
+check('the opening mends the Grimoire and the draft', /retireOldPanel\(p\.text\)/.test(readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'))
+  && /retireOldPanel\(d\.poem\)/.test(readFileSync(new URL('../uiGuard.js', import.meta.url), 'utf8')));
 done();

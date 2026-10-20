@@ -687,6 +687,11 @@ export function getActiveRadioValue(containerId){
 export const DEV_TEMPLATE = "## <\u00a7UVIcon PoetryPress/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90> \u00a7Reading\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7SeedPhrase] \u00b7 \u00a7TextureSeed  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
 /** The Grimoire's title for it. */
 export const DEV_TEMPLATE_TITLE = 'PoetryPress Instrument Panel';
+/** The instrument panel as it was seeded before Saturn–Gunnlod named the spell's runes after the spell
+ *  ("[spell] (Dyna · Time · Order …) //"); that line was taken out of the template, but a copy seeded earlier, in the
+ *  Grimoire or the draft, still says it (Ruby, 2026-10-19: "I thought we removed this"). Only that exact line is
+ *  touched: §SpellRunes written anywhere else stays. */
+export function retireOldPanel(text){ return typeof text === 'string' ? text.replace(/(\\\[\u00a7Spell\\\]) \u00a7SpellRunes \/\//g, '$1 //') : text; }
 /**
  * THE OPENING PAGE (Ruby's own words): what PoetryPress is and how to begin,
  * written in PML so it shows the markup off as it explains it.

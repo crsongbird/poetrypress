@@ -3,7 +3,7 @@
  *
  * Split from appEvents.js (its wiring, the listeners, stays there, in the order it runs).
  */
-import { $, ASPECTS, WELCOME_POEM } from './appOptions.js';
+import { $, ASPECTS, WELCOME_POEM, retireOldPanel } from './appOptions.js';
 import { invalidateTextMeasurements, render, scheduleRender } from './canvasRenderer.js';
 import { state } from './uiState.js';
 import { stripToLook } from './vault.js';
@@ -153,7 +153,7 @@ export function restoreDraft(){
   // a look that fails the check is passed over quietly (no dialog at start-up); one that throws is rolled back by safeRestore
   if(!checkLook(d.look, 'The draft').ok || !safeRestore(d.look, 'The draft')) return false;
   try { restoreShape(d.look); } catch(e){ /* the default shape stands */ }
-  if(d.poem !== WELCOME_POEM){ $('poemText').value = d.poem; repaintEditor(); }
+  if(d.poem !== WELCOME_POEM){ $('poemText').value = retireOldPanel(d.poem); repaintEditor(); }
   return true;
 }
 // THE BROWSER'S OWN MEMORY OF THE CONTROLS: on a reload a browser may put back the controls' last values by itself,
