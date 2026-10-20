@@ -942,6 +942,9 @@ background) don't belong in it.
   default.** A texture Ruby liked keeps its exact look at its defaults: a new
   idea becomes a knob, or a new texture. A better or faster method may
   replace it once Ruby approves the test renders (§8).
+- **Be creative** (Ruby, 2026-10-20: "you are allowed to be creative and express yourself while working on this
+  project"). Think about interactions first, and surprise Ruby with them: the sun slipping behind Saturn, a
+  lighthouse lit at dusk, a fairy drawn to a lantern. What nobody asked for, but the world would do, is welcome.
 - **Do the work** rather than talking about it: attention is finite.
 - **Find the cause** instead of guessing twice. Screenshots are evidence:
   read them closely. Prove a fix by rendering or measuring it.

@@ -163,13 +163,6 @@ if(canvasOK){
   check('The Arch\'s Saturn: always draws something never does', seeds.slice(0, 4).every(s => drawn('always', s) !== drawn('never', s)));
   check(`…by the seed, about one ring in four orbits Saturn (${saturnine.length} of 24), the others exactly as never`, saturnine.length >= 2 && saturnine.length <= 12
     && saturnine.every(s => drawn('by the seed', s) === drawn('always', s)));
-  // …and Ringworld's (Ringworld View's Saturn), in the opening shot
-  const seen = (saturn, seed) => { const g = A.athanorStarter('ringworld');
-    for(const n of Object.values(A.athanorNodes(g))) if(n.name === 'ringview') n.data = { ...n.data, saturn };
-    const img = A.evalAthanor(g, 72, 72, { seed, knobs: [], tints: [], camera: { turn: 40, view: 55, zoom: 100 } }, {});
-    let sum = 0; for(let i = 0; i < img.r.length; i++) sum += img.r[i] + img.g[i]*2 + img.b[i]*3; return sum.toFixed(3); };
-  const S = await import('../texCore.js'), plain = [1, 2, 3, 5, 6, 7].find(s => S.seedChoice(s, 'ring saturn')() >= 0.25);
-  check('Ringworld View\'s Saturn: always shows it in the opening shot, never doesn\'t; a seed without it is as never', seen('always', plain) !== seen('never', plain) && seen('by the seed', plain) === seen('never', plain));
   globalThis.document = doc; }
 
 done();

@@ -715,7 +715,7 @@ export const TEXTURE_GROUPS = [
   { glyph: '🜚', name: 'Light, Dust & Feathers', types: ['bokeh', 'corvids', 'feathers', 'magicparticles', 'clouds', 'embers', 'aurora'] },
   { glyph: 'ᕕ', name: 'Light to Lay Over', types: ['dappled', 'lightleaks', 'caustics', 'windowlight'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
-  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'pixelspace', 'skyring', 'ringworld', 'webb'] },
+  { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'pixelspace', 'skyring', 'webb'] },
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'liminal', 'cityscape', 'landscape', 'water', 'inkscroll', 'windsea'] },
   { glyph: 'ᘓ', name: 'Flowers', types: ['botline', 'bouquets', 'ditsy', 'petals', 'imprints', 'meadow', 'flowers', 'macro'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },

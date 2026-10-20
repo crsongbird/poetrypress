@@ -15,9 +15,23 @@ prints it).
 - **Up to ten sliders a surface**, where the rack uses the room well; an Athanor graph's Knob has slots 1–10.
 - **A locked control looks held**: it fades, its ring breaks into dashes, its reset with it.
 - **Haptics on a phone**: a light tick as a tab changes or a drawer opens, and a good buzz when a long save is done.
-- **The Painted Ringworld, reworked so the camera can sweep**: the world stays where it is and is seen from another
-  angle. Works turned well down. Its trees, buildings, rocks and works remade in a shared kit that Ring in the Sky's
-  land and Night City's skyline use too (Art Deco crowns, slanted and twin tops, water towers).
+- **The Painted Ringworld, reworked.** Straight ridges again, and the spans and bridges of light as they were.
+  Everything stands in the world: trees, buildings, rocks, grass and the small things to find are sown in places of
+  their own, so the camera sweeps and the world stays. It is painted as a game engine draws: what nearer hills and
+  things hide is found first and never drawn, the rest painted back to front, each standing on ground that shows.
+  Everything has a size in metres, so a cottage, a spruce and a tower stand in true proportion (no more buildings the
+  size of shrubs), and a city rises away from you into a skyline. Works turned well down.
+- **A far bigger painted kit**, shared by the Painted Ringworld, Ring in the Sky and Night City: 23 kinds of tree,
+  chosen by the land's climate (dry country, warm, jungle, the cold heights, a magic world's fey places with giant
+  mushrooms and crystal trees), and 31 of building, from cottages, barns, windmills and stave churches to pagodas,
+  torii, castles, lighthouses, cathedrals, mosques, clock towers, factories, capsule towers, megablocks, geodomes,
+  observatories and wind turbines. The wilds have villages and farms.
+- **Drapery, a new surface**: a sheet of cloth simulated as it hangs or falls (from a rod in gathers, from two
+  corners, from one, twisted, or seen from above over a hidden form, crumpled, laid flat) in nine fabrics, silk to
+  velvet. Its weave follows every fold, and the Light Engine lights it from its maps: satin shines, burlap doesn't,
+  light comes through the gaps. New parts for any graph: Drape, Weave Maps and Detail Normals.
+- **The 3D Ringworld is retired**: it led to the Painted Ringworld, which takes its place. Looks made with it open as
+  the Painted Ringworld, keeping their band, landforms, altitude, builders, camera and day.
 - **Cartomancy on the Light Engine**: the table always blended over the page's own backdrop, the cards and coins lit
   from height and gloss maps, so their shadows, rims and shine follow the light dial.
 - **Crystal Leaf, remade on the Light Engine**: a druse seen through its faces, the inclusions inside the stone, each
@@ -31,10 +45,9 @@ prints it).
 
 ### Under the hood
 - `tools/still.mjs` sweeps every slider of every surface on a phone and names anything on the page that moves.
-- paintKit.js: the painted things the three skylines share. Research for the ring's next pass: real sizes for 33 trees,
-  62 buildings, rocks and small things, and how games build big kits from few parts
-  (docs/prior-art/painted-ringworld.md).
-- Plans recorded: the cloth surfaces as graphs on a cloth simulation (docs/renderer-pass.md).
+- paintKit.js: the painted things the three skylines share, each with a size in metres (`PK_SIZE`). Research: real
+  sizes for 33 trees, 62 buildings, rocks and small things, and how games build big kits from few parts
+  (docs/prior-art/painted-ringworld.md); cloth simulation, folds and woven sheen (docs/prior-art/cloth.md).
 - Work happens on main now, without feature branches.
 - Housekeeping: pruned the stylesheet.
 

@@ -193,7 +193,6 @@ export const TEXTURE_PARAMS = {
                   sliderOf('form', 'Wetness', 0)],
   halftone:      [sliderOf('zoom', 'Dot Scale', 100, { min:50, max:400, unit:'%' }),
                   sliderOf('amt', 'Dot Weight', 100, { min:30, max:240, unit:'%' })],
-  // RINGWORLD (chains.js 'ringworld'; Ruby: the camera on the camera dial, the day on the light dial; who built it, by the seed or chosen)
   // ◯ RING IN THE SKY (chains.js 'skyring'; Ruby: "a beautiful background layer … simplified, but cosmic"): the camera dial moves the ring
   skyring:       [sliderOf('zoom', 'Ring Width', 45),
                   sliderOf('amt', 'Stars', 50),
@@ -212,19 +211,6 @@ export const TEXTURE_PARAMS = {
                   sliderOf('alt', 'Altitude', 15),
                   sliderOf('paint', 'Paint', 0),
                   sliderOf('brush', 'Brush', 37, { ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry'] })],
-  ringworld:     [sliderOf('zoom', 'Band Width', 45),
-                  // the land's relief, its rim walls and the mountains against them, and the seed's own landforms (ranges at the walls, peaks, mesas, boulders, pinnacles, stone arches)
-                  sliderOf('amt', 'Landforms', 50),
-                  sliderOf('form', 'Seas', 40),
-                  // how built-up the ring is: the builders' works, and past a quarter, cities whoever built it
-                  sliderOf('shape', 'Cities', 25),
-                  sliderOf('hue', 'Atmosphere', 50),
-                  // who built the ring (its works, its lights): the seed's own pair, or one chosen
-                  sliderOf('builders', 'Builders', 0, { ticks:[0,20,40,60,80,100], names:['By the Seed','Wilds','Engineers','Cities','Magi','Ruins'] }),
-                  sliderOf('alt', 'Altitude', 15),
-                  // ships in the sky (the middle: what the builders fly), and past it lanes of small craft; busier streets at night
-                  // (where across the band you stand is the seed's now; the lens is the camera dial's zoom)
-                  sliderOf('traffic', 'Traffic', 50)],
   // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon
   rainwater:     [sliderOf('zoom', 'Ripple Size', 100, { min:40, max:250, unit:'%' }),
                   sliderOf('amt', 'Rain', 50),

@@ -12,10 +12,16 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   grid. Does it hold?
 
 ## 2 · Ruby's notes to act on
-- THE PAINTED RINGWORLD (Ruby's favorite; its code kept portable for a game someday): back to straight ridges (the
-  arcs looked worse); the spans and bridges as they were; things placed in the world, sorted back to front, culled
-  where nearer land hides them, standing on the ground that shows. The kit far more varied for every world, each
-  thing sized in metres so no building is shrub-sized (docs/prior-art/painted-ringworld.md §5).
+- THE RING, NEXT (Ruby, 2026-10-20): a game engine's world store (every thing's place, size and sprite held once per
+  seed, read through the view transform; nothing jumps at any altitude or zoom); placement by relationships between
+  kinds (what stands near what, on what ground); more detail in the distance; unfinished stretches with scaffolding;
+  walls by their builders, with writing and graffiti; computerized bits; robots and droids, cute and threatening, as
+  life where they belong; nods to Halo and Fallout in original designs, rare or common by how loud they are;
+  close-up kits with their bases detailed and small things near you, buildings kept back unless detailed; the sun
+  behind Saturn (an eclipse, a sunrise), and more interactions nobody asked for.
+- RETIRE THE 3D RINGWORLD (Ruby: "it was a good concept, it's what led to this").
+- LINEN TOOTH: remade completely on the cloth parts and the Light Engine.
+- SLIDERS WITH NAMED MARKS: held to their marks by default; no blue box when held; easier to grab.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a

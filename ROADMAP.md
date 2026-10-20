@@ -110,7 +110,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 - **C5 · The camera dial for other textures** (a standing goal: AGENTS
   "The two dials"; Ruby: any tilt, pan or position slider belongs on the
   camera dial, any light on the light dial). Done for Lichtenberg Figures,
-  Ringworld, Broken Glass, Scrying Pool, Dune Ripples and Moss on Stone.
+  the Painted Ringworld, Broken Glass, Scrying Pool, Dune Ripples and Moss on Stone.
   Still to judge, each by its renders:
   - Rain on Water: its View knob, but rain is the same every way round,
     so the dial's Turn would change nothing. It needs a turn that means
@@ -129,8 +129,8 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
     the GPU, `gpuLightHeights` at 4096 px and up): brushstrokes, rainwater, sigils, crackedglaze, oldpaper, crystal
     (facets; its fire and glints are its own), spangle, coldpress, guilloche, contour, turing, frost, ash, wax, dunes,
     kintsugi, moss, landscape, tessellate, crackle, circuit, veins, knotwork, lichtenberg, growth, cells, skyring,
-    ringpaint, ringworld; glassrain (its shine only); cupring (a sheen, no shadow); stainedglass (the came; its panes
-    are lit by hand). These take the page's lights (`rig`) where the dial is a light; the Ringworlds' dial is the day.
+    ringpaint; glassrain (its shine only); cupring (a sheen, no shadow); stainedglass (the came; its panes
+    are lit by hand). These take the page's lights (`rig`) where the dial is a light; the Ringworld's dial is the day.
   - **Lit by hand, and right to be** (the engine would be slower on a CPU or wrong for the subject): clouds (a
     volumetric march), water (Blinn glints, caustics), brokenglass and dewwebs (transparent glass, glints), flowers,
     metalleaf, cards, underglass, chladni (grain facing + shadow splats), linen (its weave through `lightBasis`).
@@ -141,7 +141,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
   - **Speed:** no hand-lit surface would be faster on the engine. On a CPU the engine costs ~223 ms for a 768×960
     field (~341 ms with a rim light, ~71 ms with no shadow and no occlusion); on a GPU about what the hand-lit ones
     cost. The slow surfaces are slow for their simulations, not their light: Growth (~2.1 s), Landscape (~2.0 s),
-    Ringworld (~1.9 s), Lichtenberg (~1.6 s), Turing (~1.1 s) in Node. Worth measuring on a phone's GPU: lightSparse
+    Lichtenberg (~1.6 s), Turing (~1.1 s) in Node. Worth measuring on a phone's GPU: lightSparse
     makes one GPU call per piece (Sigils 8, Ash 6); one call for the whole field may be faster.
   - Done from it: Crystal takes the page's lights (its kept structure was keyed without them, so it showed stale
     light); seven engine-lit surfaces may be pulled past the rim (`lowLight`); the Black Hole is seen from the camera
@@ -152,7 +152,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
       Lichtenberg (they slide along the light dial's line, so turning the light moves the figure), Growth's Zoom.
     - Painted Landscape's Tilt onto the camera's View, once its Turn means something (a pan along the range).
       Rain on Water's View likewise: rain is the same every way round, so its Turn needs a meaning first (C5).
-    - The Ringworlds' Altitude and Ring in the Sky's Star Height are camera heights on knobs; Aurora's Horizon a
+    - The Painted Ringworld's Altitude and Ring in the Sky's Star Height are camera heights on knobs; Aurora's Horizon a
       vertical place. Judge each by its renders.
     - Linen's `lightBasis` taught the rim and ambient; Stained Glass's panes lit with `lightLow` (they hold their
       own elevation past the rim); Rain on Glass's shine through `litS` (a coloured rim shows white now).
@@ -395,7 +395,7 @@ superseded) wait for Stage 4.
     (aircraft and contrails, birds, balloons, dragons, witches), seeded.
   - Some presets blend the overlays tastefully over other surfaces (Ruby, approving Corvid Feathers and the light
     overlays): Feathers, Corvid Feathers, Dappled Leaves, Window Light, Pool Caustics, Light Leaks.
-  - Presets for Ringworld (Ruby: in this pass), Rain on Water, Circuit
+  - Presets for the Painted Ringworld (Ruby: in this pass), Rain on Water, Circuit
     Board's eras and Markings (the Circuitry preset could wear Circuit Board
     instead of Veins of Light), Lichtenberg's camera, and Under Glass over
     another surface (Two Surfaces).

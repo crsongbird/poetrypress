@@ -378,10 +378,6 @@ export const TEXTURE_ELEMENTS = {
     earth: { name: 'Fallen Ring',  k: [45, 75, 86, 25, 70, 25, 30, 62], t: ['#B8874E', '#D9B48A'], cam: [60, 50, 100], light: [250, 100] } },
   // (its knobs Band Width, Landforms, Seas, Cities, Atmosphere, Builders (40 Engineers, 80 Magi, 100 Ruins), Altitude, Traffic;
   //  its light the day: [which way dusk comes, how far from noon])
-  ringworld: { def: 'wind', wind: { name: 'Ringworld' },
-    fire:  { name: 'Burning Arch', k: [55, 70, 25, 40, 70, 40, 40, 70],  t: ['#B8643A', '#E8885A'], cam: [40, 55, 100], light: [90, 100] },
-    water: { name: 'Ocean Ring',   k: [65, 40, 75, 45, 60, 80, 55, 35],  t: ['#5E8F6A', '#7FB4E6'], cam: [330, 50, 84], light: [90, 30] },
-    earth: { name: 'Iron Desert',  k: [40, 80, 5, 60, 30, 100, 30, 10],  t: ['#C8925A', '#D9B48A'], cam: [15, 48, 110], light: [270, 16] } },
   // Dewy Webs: its knobs Webs, Size, Dew, Drop Size, Torn, Sag, Iridescence, Threads
   dewwebs: { def: 'water', water: { name: 'Dewy Webs' },
     fire:  { name: 'Golden Hour Web', k: [20, 150, 55, 110, 10, 40, 75, 50], t: ['#FFD9A0', '#2A1600'], blend: 'screen', light: [250, 115] },

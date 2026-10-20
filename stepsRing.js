@@ -190,21 +190,29 @@ function rgPaintArch(x, mk, V){
   // THE STAR, at the ring's middle (so on the arch's own line), and the SHADOW SQUARES circling close about it: they
   // stand between it and the land, and make its nights (where you stand under one, it hides the star)
   const sp = V.sun.at;
+  const paintSun = () => { if(!sp) return; const rs = unit*0.018, SC = [255, 246, 226];
+    x.save(); x.globalCompositeOperation = 'screen';
+    for(const [r, a] of [[rs*18, 0.3], [rs*6, 0.6]]){ const gl = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); gl.addColorStop(0, rsCss(SC, a)); gl.addColorStop(0.2, rsCss(SC, a*0.35)); gl.addColorStop(1, rsCss(SC, 0)); x.fillStyle = gl; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); }
+    const R = rgRand(s, 804); for(let k = 0; k < 12; k++){ const a = k/12*Math.PI*2 + R()*0.2, Lr = rs*(k % 2 ? 4 : 9)*(0.8 + 0.4*R()), wd = rs*0.2;
+      rsPoly(x, [[sp[0] + Math.cos(a + Math.PI/2)*wd, sp[1] + Math.sin(a + Math.PI/2)*wd], [sp[0] + Math.cos(a)*Lr, sp[1] + Math.sin(a)*Lr], [sp[0] - Math.cos(a + Math.PI/2)*wd, sp[1] - Math.sin(a + Math.PI/2)*wd]], rsCss(SC, 0.4)); }
+    x.restore(); x.fillStyle = rsCss(SC); x.beginPath(); x.arc(sp[0], sp[1], rs, 0, Math.PI*2); x.fill(); };
+  // (the sun first: Saturn passes in front of it. Ruby: "put the sun behind Saturn and do a sunrise": as the sun nears
+  //  its disc, Saturn turns its night side to us, ringed with lit air, its rings backlit and shining)
+  paintSun();
   if(satSky){ // SATURN in the sky, lit from the ring's star (or the light dial's side when the star is out of sight);
     // now and then ENCELADUS beside it, its plume rising (Ruby's favorite moon)
     // (it hangs in one direction of the world, so turning the camera turns past it: the way the camera faces by default
     //  (Turn 50°, View 55), give or take, and high enough to be framed there)
     const rS = F*(0.1 + 0.11*SC_()), az = (50 + (SC_() - 0.5)*70)*Math.PI/180, el = (18 + 22*SC_())*Math.PI/180, P0 = skyAt(az, el), X = P0 ? P0[0] : -1e4, Y = P0 ? P0[1] : -1e4, axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
     const sun = sp ? [sp[0] - X, sp[1] - Y] : V.sun.screen, sa = 0.62 + 0.38*(1 - kday);
-    if(P0) paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday) });
+    const ecl = sp && P0 ? 1 - rsSmooth(rS*0.55, rS*1.5, Math.hypot(sp[0] - X, sp[1] - Y)) : 0;
+    if(P0) paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday), eclipse: ecl });
+    // (the sun just past its limb: a single bright bead of light where it slips out, as a diamond ring)
+    if(ecl > 0.05 && ecl < 0.95 && sp){ const d = Math.hypot(sp[0] - X, sp[1] - Y) || 1, bx = X + (sp[0] - X)/d*rS, by = Y + (sp[1] - Y)/d*rS, k = 1 - Math.abs(ecl - 0.5)*2;
+      rgGlow(x, bx, by, rS*0.8*k, [255, 248, 232], 0.95*k); rgGlow(x, bx, by, rS*0.2, [255, 255, 255], k);
+      if(k > 0.3) for(let q = 0; q < 4; q++){ const an = q*Math.PI/2 + 0.4, Lr = rS*(q % 2 ? 0.5 : 1.1)*k; rsPoly(x, [[bx - Math.sin(an)*px(1.2), by + Math.cos(an)*px(1.2)], [bx + Math.cos(an)*Lr, by + Math.sin(an)*Lr], [bx + Math.sin(an)*px(1.2), by - Math.cos(an)*px(1.2)], [bx - Math.cos(an)*Lr, by - Math.sin(an)*Lr]], rsCss([255, 252, 240], 0.7*k)); } }
     if(SC_() < 0.45 && P0){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
       paintEnceladus(x, X + ex*Math.cos(axis) - ey*Math.sin(axis), Y + ex*Math.sin(axis) + ey*Math.cos(axis), Math.max(px(3), rS*0.05), { axis, sun, alpha: sa, px }); } }
-  if(sp){ const rs = unit*0.018, SC = [255, 246, 226];
-    x.save(); x.globalCompositeOperation = 'screen';
-    for(const [r, a] of [[rs*18, 0.3], [rs*6, 0.6]]){ const gl = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); gl.addColorStop(0, rsCss(SC, a)); gl.addColorStop(0.2, rsCss(SC, a*0.35)); gl.addColorStop(1, rsCss(SC, 0)); x.fillStyle = gl; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); }
-    const R = rgRand(s, 804); for(let k = 0; k < 12; k++){ const a = k/12*Math.PI*2 + R()*0.2, Lr = rs*(k % 2 ? 4 : 9)*(0.8 + 0.4*R()), wd = rs*0.2;
-      rsPoly(x, [[sp[0] + Math.cos(a + Math.PI/2)*wd, sp[1] + Math.sin(a + Math.PI/2)*wd], [sp[0] + Math.cos(a)*Lr, sp[1] + Math.sin(a)*Lr], [sp[0] - Math.cos(a + Math.PI/2)*wd, sp[1] - Math.sin(a + Math.PI/2)*wd]], rsCss(SC, 0.4)); }
-    x.restore(); x.fillStyle = rsCss(SC); x.beginPath(); x.arc(sp[0], sp[1], rs, 0, Math.PI*2); x.fill(); }
   const nsq = Math.round(Math.PI*2/L.per);
   for(let k = 0; k < nsq; k++){ const ph0 = (L.q0 + k*L.per)*L.side, ph1 = (L.q0 + (k + RING_COV)*L.per)*L.side, edge = [], back = [];
     for(let q = 0; q <= 8; q++){ const ph = ph0 + (ph1 - ph0)*q/8, X = RING_SQR*Math.cos(ph), Y = RING_SQR*Math.sin(ph), a = proj(X, Y, -W*0.3), b = proj(X, Y, W*0.3); if(!a || !b){ edge.length = 0; break; } edge.push(a); back.push(b); }

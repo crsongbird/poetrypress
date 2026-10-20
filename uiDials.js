@@ -235,7 +235,6 @@ const DIAL_GUIDES = {
   aurora:      [{ k: 'arrow', way: 1 }],                     // (Hem Hue to Curtain Hue, toward the handle)
   aurorasky:   [{ k: 'axis', lean: true }],                  // (the rays' tops lean toward the handle's side)
   watercolour: [{ k: 'arrow', way: 1, tilted: true }],       // (the pigment runs toward the handle, more as it lowers)
-  ringworld:   [],
   landscape:   [{ k: 'sun' }],      // (its painted sun follows the dial, kept above the horizon)
 };
 export function dialGuideMarks(type){

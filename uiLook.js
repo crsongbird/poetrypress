@@ -199,7 +199,19 @@ export function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))))); }
+function retireLook(s){ return retireRingworld(retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))))))); }
+/** THE 3D RINGWORLD RETIRED (Ruby, 2026-10-20: "it was a good concept, it's what led to this"): its looks open as the
+ *  Painted Ringworld, keeping what carries over: Band Width, Landforms and Altitude, who built it as the World, how
+ *  built-up it was as Works; the camera and the day as they were. */
+function retireRingworldLayer(L){
+  if(!L || L.textureType !== 'ringworld') return L;
+  const n = (v, d) => (v === undefined || v === null || v === '' || isNaN(+v)) ? d : +v;
+  const world = [0, 14, 57, 29, 71, 86][Math.max(0, Math.min(5, Math.round(n(L.texP6, 0)/20)))];
+  const o = { ...L, textureType: 'ringpaint', texP1: String(n(L.texP1, 45)), texP2: String(n(L.texP2, 50)), texP3: String(world), texP4: '50',
+    texP5: String(Math.round(Math.max(0, Math.min(100, 10 + n(L.texP4, 25)*0.8)))), texP6: String(n(L.texP7, 15)), texP7: '0', texP8: '37' };
+  delete o.texP9; delete o.texP10; return o;
+}
+function retireRingworld(s){ if(!s) return s; let o = retireRingworldLayer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireRingworldLayer(o.baseLayer) }; return o; }
 /** FLORAL IMPRINTS IN FIFTEEN MEDIA (format 9; Ruby: "everything from white chalk to cyanotype …"): Misregistration's
  *  place is the Medium's (an old look: By the Seed, as its seed chose before); the Paper Hue goes (the page is the paper
  *  now), the Ink and Second Ink Hues lead, and an ink left at its old default is left empty, the medium's own. */

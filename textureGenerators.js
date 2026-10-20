@@ -70,7 +70,7 @@ export const SURFACE_HUE_KEYS = ['textureTint1', 'textureTint2', 'textureTint9',
 export const LIGHT_TURNED = new Set(['circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'metalleaf', 'brushstrokes',
   'glassrain', 'rainwater', 'sigils', 'crackedglaze', 'oldpaper', 'crystal', 'spangle', 'tessellate', 'cards', 'linen', 'coldpress', 'cupring', 'guilloche',
   'chladni', 'contour', 'stainedglass', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']);
-export const LIGHT_KEPT_PARTS = ['ringsky', 'ringarch', 'ringland', 'ringview', 'shards', 'dewwebs', 'shaft', 'glasspane', 'shapeland', 'lotus', 'water',
+export const LIGHT_KEPT_PARTS = ['ringsky', 'ringarch', 'ringland', 'shards', 'dewwebs', 'shaft', 'glasspane', 'shapeland', 'lotus', 'water',
   'curtains', 'ribbons', 'streaks', 'hatching', 'marbling', 'flowlines', 'particles', 'transmutation', 'blackhole', 'washes', 'pigment'];
 // the two common blend lists; ledBlends(x, set) puts a surface's default first and keeps the rest in order
 const GREY_BLENDS = ['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'];
@@ -206,8 +206,6 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse', seeded:{ turn:[0, 360], view:[8, 70], zoom:[80, 145] } } },
   ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
-  ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },   // (View: overhead to across the water)
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
@@ -414,7 +412,7 @@ const CHAIN_TINTS = {
   ...chainTintSet('tint1 tint2', ['meadow', 'ditsy', 'botline', 'windsea', 'inkscroll', 'dappled', 'windowlight', 'caustics']),
   ...chainTintSet('tint1 tint2', ['lightleaks', 'feathers', 'flowers', 'inkbleed', 'crackedglaze', 'bokeh', 'tessellate', 'rainstreaks']),
   ...chainTintSet('tint1 tint2', ['veins', 'crackle', 'lichtenberg', 'growth', 'linen', 'oldpaper', 'stainedglass', 'suminagashi']),
-  ...chainTintSet('tint1 tint2', ['skyring', 'ringpaint', 'ringworld', 'rainwater', 'ash', 'dunes', 'kintsugi', 'moss']),
+  ...chainTintSet('tint1 tint2', ['skyring', 'ringpaint', 'rainwater', 'ash', 'dunes', 'kintsugi', 'moss']),
   ...chainTintSet('tint1 tint2', ['landscape', 'cityscape', 'aurora', 'cards', 'metalleaf', 'crystal', 'drapery']),
   ...chainTintSet('tint1 tint2|#E8A0B8', ['macro']),
   ...chainTintSet('accent1 accent2', ['embers', 'magicparticles', 'circuit']),
@@ -478,7 +476,7 @@ function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tin
  * in the light slot unnoticed.
  */
 // the Zen Garden was retired: looks saved with it open as Dune Ripples
-const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle', crucible: 'athanor' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
+const RETIRED = { whorl: 'dunes', foxing: 'oldpaper', foldghost: 'oldpaper', crystalleaf: 'spangle', crucible: 'athanor', ringworld: 'ringpaint' };   // Crystal Leaf's metal became Metal Spangle; the new crystal is 'crystal'
 /** A texture's cache key — shared by the page and the texture worker, so a
  *  texture made in the worker files where the page will look for it. */
 export function textureKeyFor(type, w, h, opts = {}){ return describeRequest(type, w, h, opts).key; }

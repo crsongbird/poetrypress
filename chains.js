@@ -2574,8 +2574,6 @@ export const TEXTURE_CHAINS = {
     wires: [[1, 1, 5, 'scale'], [2, 1, 5, 'growth'], [3, 1, 5, 'pattern'], [4, 1, 7, 'relief'],
       [5, 1, 6, 1], [6, 1, 7, 1], [5, 1, 7, 2], [7, 1, 8, 1]] },
   // 🜁 Rain on Water: Raindrops (each drop a ring wave, the newest splashing) → the water's colour by distance → Light Engine → Glow
-  // ◯ RINGWORLD (Ruby: a halo landscape, a Niven ringworld, but abstract; lit by its star, so the dial is the camera and one
-  // slider the light): Ringworld View maps the world; Noise at Coordinates lays land and cloud on it; the rest is colour and light
   // ◯ Painted Ringworld (Ruby: "an abstract ring world on a space background and then something made of shapes then
   // painted in the foreground and blend it"): flat shapes, blocked in, then painted over with Oil Paint's brushes
   skyring: { label: 'Ring in the Sky', canvas: true, teach: 'A ringworld seen from out in space, as a simple, cosmic picture to lay behind a poem (Ruby: "that simplified, but cosmic"). Starfield lays the stars. Ring in the Sky paints the ring round its star as a solid band in flat blocks: across the far side its land, facing the star, land, sea and white cloud, striped with the nights the shadow squares cast, between the rim walls that hold its air; across the near side its hull, passing in front of the star; the air it holds glowing faintly about it; the nebula\'s washes and the air of your Sky Hue rising from below. The Camera Dial moves the ring: Turn spins it, View raises your eye from edge-on to looking down into it, Zoom sizes it; Star Height raises or lowers it on the page. The Light Dial shades the hull. Paint lays Oil Paint over it with the Brush you choose; at 0 it stays flat. Try: wire Land of Shapes after Ring in the Sky for a land under it, or turn View down for the ring edge-on across the star.', nodes: [
@@ -2622,106 +2620,6 @@ export const TEXTURE_CHAINS = {
       [9, 2, 16, 5], [9, 1, 16, 6], [9, 2, 17, 5], [9, 1, 17, 6], [10, 1, 16, 2], [10, 2, 16, 3], [10, 3, 16, 4], [10, 1, 17, 2], [10, 2, 17, 3], [10, 3, 17, 4],
       [11, 1, 16, 7], [11, 1, 17, 7], [12, 1, 16, 8], [12, 1, 17, 8], [13, 1, 16, 9], [13, 1, 17, 9], [14, 1, 16, 10], [14, 1, 17, 10],
       [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [18, 2, 19, 2], [19, 1, 20, 1]] },
-  ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. One ring in four orbits Saturn (Ringworld View\'s Saturn setting): it hangs huge in the sky beyond, laid over the stars by its Saturn Cover, behind the shadow squares and the air. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
-      ['knob', { slot: '1' }, 40, 40],                 // 1
-      ['knob', { slot: '2' }, 40, 120],                 // 2  (the relief, the walls, the land's own forms)
-      ['knob', { slot: '3' }, 40, 200],                      // 3
-      ['knob', { slot: '4' }, 40, 280],                    // 4  (how much the builders built; past 25, cities)
-      ['knob', { slot: '5' }, 40, 360],                // 5
-      ['knob', { slot: '6', name: 'Builders', def: 0, kind: 'steps', steps: 6, names: 'By the Seed, Wilds, Engineers, Cities, Magi, Ruins' }, 40, 440],   // 6
-      ['knob', { slot: '7' }, 40, 520],                  // 7
-      ['knob', { slot: '8' }, 40, 600],                   // 8  (ships; past the middle, lanes of them)
-      ['hue', { slot: '1', name: 'Land Hue' }, 40, 700], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 780],   // 9, 10
-      ['ringview', { band: 45, '~band': '0,100', walls: 25, '~walls': '0,50', placeBy: 'where the seed says', landforms: 50, '~landforms': '0,100', cities: 25, '~cities': '0,100', traffic: 50, '~traffic': '0,100', altitude: 15, '~altitude': '0,100', lens: 75, '~lens': '30,120',
-        daylight: 80, '~daylight': '0,100', air: 50, '~air': '0,100' }, 300, 300],   // 11
-      ['mapnoise', { size: 22, octaves: 14, rough: 78, ridges: 30, '~ridges': '0,85', warp: 45, steep: 25, '~steep': '8,60' }, 560, 120],   // 12 (the land's heights, and how steep)
-      ['mapnoise', { size: 18, '~size': '8,40', octaves: 8, rough: 62, warp: 90, variation: 5 }, 560, 560],   // 13 (the clouds, where you see them float)
-      ['mapnoise', { size: 45, octaves: 5, rough: 55, warp: 40, variation: 11 }, 560, 340],  // 14 (wet or dry)
-      ['threshold', { at: 42, '~at': '25,60', soft: 2 }, 800, 40],                  // 15 (land, above the sea)
-      ['maprange', { inLo: 42, '~inLo': '25,60', inHi: 92 }, 800, 140],             // 16 (height above the sea)
-      ['maprange', { inLo: 5, inHi: 42, '~inHi': '25,60' }, 800, 240],              // 17 (depth: deep → shallows)
-      ['colour', { hex: '#D9D2C2' }, 800, 340], ['colour', { hex: '#04101A' }, 800, 420], ['colour', { hex: '#B59A6A' }, 800, 500],   // 18 stone, 19 the deep, 20 dry land
-      ['mix', { t: 50 }, 1040, 420],                                                // 21 (dry or green)
-      ['maprange', { inLo: 40, inHi: 100 }, 1040, 140],                             // 22 (only the heights turn to stone)
-      ['mix', { t: 50 }, 1280, 140], ['tint', {}, 1280, 260],                       // 23 (land: stone on the heights), 24 (water)
-      ['mix', { t: 50 }, 1520, 200],                                                // 25 (land or sea)
-      ['colour', { hex: '#2B303A' }, 1280, 380], ['colour', { hex: '#9AA3B0' }, 1280, 460], ['tint', {}, 1520, 400],   // 26, 27, 28 (the walls' metal)
-      ['mix', { t: 50 }, 1760, 220],                                                // 29 (with the walls)
-      ['number', { value: 0 }, 1760, 380],                                          // 30 (the light from above: the star overhead)
-      ['material', { relief: 90, '~relief': '30,200', gloss: 30, shine: 25, shadow: 55, occlusion: 35, ambient: 40, from: 'its own height', height: 45, '~height': '115,25' }, 2000, 220],   // 31
-      ['maprange', { inLo: 62, '~inLo': '85,40', inHi: 95 }, 1040, 600],            // 32 (where there is cloud)
-      ['invert', {}, 1040, 700], ['math', { op: 'multiply' }, 1280, 620],           // 33, 34 (no cloud on the walls)
-      ['colour', { hex: '#F3F5F8' }, 1760, 620], ['mix', { t: 50 }, 2240, 260],     // 35, 36 (clouds over the ground)
-      ['maprange', { outLo: 20, outHi: 100 }, 1760, 760],                           // 37 (the light the shadow squares leave; the arch lights the night a little)
-      ['blend', { mode: 'multiply', opacity: 100 }, 2480, 260],                     // 38 (night where they hide the star)
-      ['blend', { mode: 'multiply', opacity: 100 }, 2000, 860],                     // 39 (the air's color, lit by the day about the camera)
-      ['mix', { t: 50 }, 2720, 260],                                                // 40 (the air between: haze)
-      ['starfield', {}, 2000, 980], ['colour', { hex: '#06070B' }, 2000, 1080], ['mix', { t: 50 }, 2240, 980],   // 41, 42, 43 (space: stars, the shadow squares)
-      ['maprange', { inHi: 11 }, 2240, 860], ['blend', { mode: 'screen', opacity: 100 }, 2480, 980],   // 44, 45 (the sky: the air before them, glowing where it is lit)
-      ['mix', { t: 50 }, 2960, 280],                                                // 46 (ground or sky)
-      ['gradmap', { stops: 5, c1: '#FFF3DC', c2: '#FFE2A0', c3: '#FFB27A', c4: '#DCE8FF', c5: '#FFFFFF', blend: 'bands' }, 2960, 460], ['blend', { mode: 'screen', opacity: 100 }, 3200, 280],   // 47, 48 (the star, its color by the seed)
-      ['surface', { name: 'Ringworld', ground: 'colour' }, 3680, 300],             // 49
-      // THE STRUCTURES: fine works laid over the land, seen by their own light where it is night
-      ['mapnoise', { size: 6, octaves: 3, rough: 50, ridges: 100, variation: 23 }, 1040, 1100],   // 50
-      ['maprange', { inLo: 90, inHi: 99 }, 1280, 1100], ['invert', {}, 1280, 1200],   // 51 (the works' lines), 52 (night)
-      ['math', { op: 'multiply' }, 1520, 1100], ['math', { op: 'multiply' }, 1760, 1100],   // 53, 54
-      ['colour', { hex: '#9FE7FF' }, 2960, 640], ['blend', { mode: 'screen', opacity: 100 }, 3440, 280],   // 55, 56
-      // the land's own slopes: bare stone where steep, and shaded so (the star overhead lights the flats most)
-      ['maprange', { inLo: 30, inHi: 58 }, 800, 600],                               // 57 (wet or dry, decided)
-      ['maprange', { inLo: 55, inHi: 95 }, 800, 700], ['math', { op: 'max' }, 1040, 200],   // 58 (steep), 59 (high or steep: stone)
-      ['maprange', { outLo: 100, outHi: 45 }, 1520, 760], ['blend', { mode: 'multiply', opacity: 100 }, 1760, 300],   // 60 (how lit by slope), 61
-      ['math', { op: 'multiply' }, 1280, 760],   // 62 (slopes on land only: the sea lies flat)
-      ['maprange', { outLo: 10, outHi: 100 }, 1760, 860],   // 63 (the day about the camera, with the arch's own light at night)
-      ['maprange', { outLo: 100, outHi: 12 }, 1760, 1180], ['blend', { mode: 'multiply', opacity: 100 }, 2000, 1180],   // 64, 65 (stars fade by day)
-      ['camdial', {}, 40, 880],   // 66 (the camera: the Camera Dial — where you look, how far up, and the lens)
-      // THE CONSTRUCTION AND THE WORLD, by the seed (Ruby: never bare): spill mountains along the rims, the unfinished floor's
-      // scaffolding and the void through it, the spires' beacons, now and then the world's seam; the dry land's color,
-      // the land's shapes and the clouds' size each drawn by a Random Number
-      ['number', { value: 50 }, 800, 1300], ['math', { op: 'difference' }, 1040, 1300],   // 67, 68 (how far across from the middle)
-      ['maprange', { inLo: 30, inHi: 50, outHi: 40, '~outHi': '0,57.5' }, 1280, 1300], ['math', { op: 'multiply' }, 1520, 1300], ['math', { op: 'add' }, 1760, 1300],   // 69, 70, 71 (the spill mountains, raised on the land)
-      ['math', { op: 'max' }, 2720, 1100],                                         // 72 (space, and the void under the open floor)
-      ['colour', { hex: '#7FD8FF' }, 3200, 640], ['blend', { mode: 'screen', opacity: 55 }, 3440, 460],   // 73, 74 (the seam)
-      ['colour', { hex: '#FF5A4A' }, 3200, 760], ['blend', { mode: 'screen', opacity: 100 }, 3680, 460],   // 75, 76 (the beacons)
-      ['mix', { t: 50 }, 2000, 400],                                                // 77 (the scaffolding's beams)
-      ['random', { lo: 0, hi: 100 }, 560, 1400], ['gradmap', { stops: 5, c1: '#B59A6A', c2: '#A8583A', c3: '#D8D2C4', c4: '#7A5A8A', c5: '#5E7A70', blend: 'bands' }, 800, 1400],   // 78, 79 (the dry land's color)
-      ['random', { lo: 10, hi: 90 }, 300, 1500], ['random', { lo: 0, hi: 100 }, 300, 1580],   // 80 (the land's twist), 81 (the clouds' size)
-      // THE DAY on the Light Dial (its height the time, its direction which way dusk comes), and the depth: clouds float over
-      // the land and shade it below them; the builders' city, works and lights
-      ['dial', {}, 40, 960],                                                        // 82
-      ['mapnoise', { size: 18, '~size': '8,40', octaves: 8, rough: 62, warp: 90, variation: 5 }, 800, 1700],   // 83 (the clouds again, straight over the floor: their shadows)
-      ['maprange', { inLo: 62, '~inLo': '85,40', inHi: 95 }, 1040, 1700], ['math', { op: 'multiply' }, 1280, 1700],   // 84, 85 (where shade falls; none on the walls)
-      ['blur', { radius: 3 }, 1520, 1700], ['maprange', { outLo: 100, outHi: 60 }, 1760, 1700], ['blend', { mode: 'multiply', opacity: 100 }, 2000, 1700],   // 86, 87, 88 (the shade, soft)
-      ['mix', { t: 50 }, 2000, 1460], ['colour', { hex: '#B7B5B0' }, 1760, 1460], ['math', { op: 'multiply' }, 1760, 1540],   // 89, 90, 91 (the city's blocks, on land only)
-      ['blend', { mode: 'multiply', opacity: 100 }, 1520, 1460],                    // 92 (the works shaded by their own form)
-      ['blend', { mode: 'multiply', opacity: 100 }, 3440, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3680, 1300], ['blend', { mode: 'screen', opacity: 100 }, 3920, 1300],   // 93, 94, 95 (the city's lights on land; the other lights)
-      ['random', { lo: 0, hi: 100 }, 2720, 460],                                    // 96 (the star's color)
-      // THE LAND'S OWN FORMS are rock, not metal (its peaks' heads snow): the dry land's color and the stone's, by the land noise
-      ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860],   // 97 (rock), 98 (metal or rock), 99 (snow)
-      // SATURN (one ring in four orbits it: Ringworld View's Saturn), laid over the stars, behind the shadow squares and the air
-      ['mix', { t: 50 }, 2120, 1260]],                                               // 100
-    wires: [[66, 1, 11, 1], [66, 2, 11, 2], [66, 3, 11, 3], [4, 1, 11, 'build'], [4, 1, 11, 'cities'], [2, 1, 11, 'landforms'], [8, 1, 11, 'traffic'],
-      [11, 2, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [2, 1, 69, 'outHi'], [69, 1, 70, 1], [12, 1, 70, 2], [12, 1, 71, 1], [70, 1, 71, 2],
-      [78, 1, 79, 1], [80, 1, 12, 'warp'], [81, 1, 13, 'size'], [1, 1, 11, 'band'], [2, 1, 11, 'walls'], [7, 1, 11, 'altitude'],
-      [6, 1, 11, 'builders'], [5, 1, 11, 'air'], [82, 2, 11, 4], [82, 1, 11, 5],
-      [11, 1, 12, 1], [11, 2, 12, 2], [11, 4, 12, 3], [2, 1, 12, 'ridges'],
-      [11, 21, 13, 1], [11, 22, 13, 2], [11, 23, 13, 3], [11, 1, 14, 1], [11, 2, 14, 2], [11, 4, 14, 3],
-      [71, 1, 15, 1], [3, 1, 15, 'at'], [71, 1, 16, 1], [3, 1, 16, 'inLo'], [71, 1, 17, 1], [3, 1, 17, 'inHi'],
-      [79, 1, 21, 1], [9, 1, 21, 2], [14, 1, 57, 1], [57, 1, 21, 3], [16, 1, 22, 1], [12, 2, 58, 1], [22, 1, 59, 1], [58, 1, 59, 2],
-      [21, 1, 23, 1], [18, 1, 23, 2], [59, 1, 23, 3], [17, 1, 24, 1], [10, 1, 24, 2], [19, 1, 24, 3],
-      [24, 1, 25, 1], [23, 1, 25, 2], [15, 1, 25, 3],
-      [71, 1, 28, 1], [27, 1, 28, 2], [26, 1, 28, 3], [25, 1, 29, 1], [92, 1, 29, 2], [11, 6, 29, 3], [29, 1, 77, 1], [92, 1, 77, 2], [11, 12, 77, 3], [79, 1, 97, 1], [18, 1, 97, 2], [12, 1, 97, 3], [28, 1, 98, 1], [97, 1, 98, 2], [11, 25, 98, 3], [98, 1, 99, 1], [35, 1, 99, 2], [11, 26, 99, 3], [99, 1, 92, 1], [11, 20, 92, 2],
-      [89, 1, 61, 1], [60, 1, 61, 2], [77, 1, 89, 1], [90, 1, 89, 2], [91, 1, 89, 3], [11, 17, 91, 1], [15, 1, 91, 2], [12, 2, 62, 1], [15, 1, 62, 2], [62, 1, 60, 1], [61, 1, 31, 1], [16, 1, 31, 2], [2, 1, 12, 'steep'], [30, 1, 31, 7], [2, 1, 31, 'relief'], [11, 11, 31, 'height'],
-      [13, 1, 32, 1], [5, 1, 32, 'inLo'], [11, 6, 33, 1], [32, 1, 34, 1], [11, 24, 34, 2],
-      [88, 1, 36, 1], [35, 1, 36, 2], [34, 1, 36, 3],
-      [11, 8, 37, 1], [36, 1, 38, 1], [37, 1, 38, 2], [10, 1, 39, 1], [11, 11, 63, 1], [63, 1, 39, 2],
-      [38, 1, 40, 1], [39, 1, 40, 2], [11, 10, 40, 3],
-      [41, 1, 65, 1], [11, 11, 64, 1], [64, 1, 65, 2], [100, 1, 43, 1], [65, 1, 100, 1], [11, 27, 100, 2], [11, 28, 100, 3], [42, 1, 43, 2], [11, 9, 43, 3], [11, 16, 44, 1], [43, 1, 45, 1], [39, 1, 45, 2], [44, 1, 45, 3],
-      [40, 1, 46, 1], [45, 1, 46, 2], [72, 1, 46, 3], [11, 5, 72, 1], [11, 13, 72, 2],
-      [46, 1, 48, 1], [47, 1, 48, 2], [11, 7, 48, 3], [48, 1, 74, 1], [73, 1, 74, 2], [11, 14, 74, 3], [74, 1, 76, 1], [75, 1, 76, 2], [11, 15, 76, 3],
-      [11, 1, 50, 1], [11, 2, 50, 2], [11, 4, 50, 3], [50, 1, 51, 1], [11, 8, 52, 1], [51, 1, 53, 1], [52, 1, 53, 2], [53, 1, 54, 1], [4, 1, 54, 2],
-      [76, 1, 56, 1], [55, 1, 56, 2], [54, 1, 56, 3], [56, 1, 94, 1], [93, 1, 94, 2], [11, 18, 93, 1], [15, 1, 93, 2], [94, 1, 95, 1], [11, 19, 95, 2], [95, 1, 49, 1],
-      [96, 1, 47, 1], [11, 1, 83, 1], [11, 2, 83, 2], [11, 4, 83, 3], [81, 1, 83, 'size'], [83, 1, 84, 1], [5, 1, 84, 'inLo'], [84, 1, 85, 1], [33, 1, 85, 2],
-      [85, 1, 86, 1], [86, 1, 87, 1], [31, 1, 88, 1], [87, 1, 88, 2]] },
   rainwater: { label: 'Rain on Water', div: 2, teach: 'Rain falling on still water. Raindrops makes every drop that has fallen in the last moment: a ring wave spreading from where it struck, a short packet of ripples that weakens as it widens, the newest still splashing. It hands on three maps: the ripples as heights, the splashes, and how far off each point of the water lies. Tint colors the water by that distance (your Water Hue near, the Sky Hue it reflects toward the horizon), and Displace bends that reflection through the ripples; the Light Engine raises the ripples and catches the light on them; Glow makes the splashes sparkle. View looks from overhead (0) across the water toward the horizon, where the rings grow small and the water calms. Try: Spread at 100 for wide old rings, or wire Raindrops\' Ripples into a Displace to see the poem through the water.', nodes: [
       ['knob', { slot: '1' }, 40, 40],               // 1  (100 of 40–250)
       ['knob', { slot: '2' }, 40, 140],                     // 2

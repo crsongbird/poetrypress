@@ -26,7 +26,7 @@ const WORKING_WORDS = {
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', drapery: 'Hanging the cloth', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',
-  water: 'Stilling the pool', glassrain: 'Beading the glass', rainwater: 'Letting the rain fall', ringworld: 'Raising the arch', ringpaint: 'Painting the ring', skyring: 'Hanging the ring', frost: 'Growing the frost', contour: 'Surveying the contours',
+  water: 'Stilling the pool', glassrain: 'Beading the glass', rainwater: 'Letting the rain fall', ringpaint: 'Painting the ring', skyring: 'Hanging the ring', frost: 'Growing the frost', contour: 'Surveying the contours',
   watercolour: 'Wetting the wash', athanor: 'Stoking the athanor', athanorsteps: 'Showing each step', saving: 'Pressing the page at full size',
 };
 let workShowT = 0, workHideT = 0, workShownAt = 0;

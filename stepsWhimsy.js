@@ -805,12 +805,14 @@ export function paintSaturn(x, X, Y, r, o = {}){
   const sl = Math.hypot(...(o.sun || [0.8, -0.6])) || 1, sun = (o.sun || [0.8, -0.6]).map(v => v/sl), sx = sun[0]*Math.cos(axis) + sun[1]*Math.sin(axis);
   const frame = () => { x.translate(X, Y); x.rotate(axis); };
   // the rings, one half (the far half first, behind the globe), and the globe's shadow across them, away from the sun
-  const rings = far => {
-    for(const [r0, r1, c, al] of RINGS){ x.save(); frame(); x.scale(1, open); x.strokeStyle = rsCss(c, al*a); x.lineWidth = (r1 - r0)*r;
+  // (backlit, in an eclipse, the rings shine as their dust scatters the light forward: the thin ones brightest)
+  const rings = (far, ec = 0) => {
+    for(const [r0, r1, c, al] of RINGS){ x.save(); frame(); x.scale(1, open); x.strokeStyle = rsCss(ec > 0 ? rsMix(c, [255, 244, 222], 0.5*ec) : c, (ec > 0 ? al + (1 - al)*0.6*ec : al)*a); x.lineWidth = (r1 - r0)*r;
       x.beginPath(); x.arc(0, 0, (r0 + r1)/2*r, far ? Math.PI : 0, far ? Math.PI*2 : Math.PI); x.stroke(); x.restore(); }
     if(Math.abs(sx) > 0.15){ x.save(); frame(); x.scale(1, open); x.beginPath(); x.rect(sx > 0 ? -2.4*r : 0, far ? -r : 0, 2.4*r, r); x.clip();
       x.strokeStyle = rsCss(SPACE, 0.55*a); x.lineWidth = (2.27 - 1.24)*r; x.beginPath(); x.arc(0, 0, 1.755*r, far ? Math.PI : 0, far ? Math.PI*2 : Math.PI); x.stroke(); x.restore(); } };
-  rings(true);
+  const ec = Math.max(0, Math.min(1, o.eclipse || 0));
+  rings(true, ec);
   // the globe: its bands along the rings, darker toward the poles, the night side away from the sun, the rings' shadow
   x.fillStyle = rsCss(o.behind || SPACE); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill();
   x.save(); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.clip(); frame();
@@ -821,8 +823,19 @@ export function paintSaturn(x, X, Y, r, o = {}){
   x.save(); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.clip();
   x.fillStyle = rsCss(SPACE, 0.62*a); x.beginPath(); x.arc(X - sun[0]*r*1.25, Y - sun[1]*r*1.25, r*1.02, 0, Math.PI*2); x.fill();
   x.fillStyle = rsCss(SPACE, 0.22*a); x.beginPath(); x.arc(X - sun[0]*r*0.85, Y - sun[1]*r*0.85, r*1.02, 0, Math.PI*2); x.fill();
+  // ECLIPSE (o.eclipse, 0..1: the sun behind the globe, as Cassini saw it from Saturn's shadow): the face toward us all
+  // night, only a thin limb of sunlit air round it, brightest on the sun's side
+  if(ec > 0){ x.fillStyle = rsCss(SPACE, 0.88*ec*a); x.fillRect(X - r, Y - r, 2*r, 2*r); }
   x.restore();
-  rings(false);
+  if(ec > 0){ const L = o.limb || [255, 236, 200]; x.save(); x.globalCompositeOperation = 'screen';
+    // the air round the limb, lit through (a ring of light), and the dust of the faint outer rings glowing round it all
+    const g = x.createRadialGradient(X, Y, r*0.96, X, Y, r*1.18); g.addColorStop(0, rsCss(L, 0)); g.addColorStop(0.2, rsCss(L, 0.75*ec*a)); g.addColorStop(1, rsCss(L, 0));
+    x.fillStyle = g; x.beginPath(); x.arc(X, Y, r*1.18, 0, Math.PI*2); x.fill();
+    const t = x.createRadialGradient(X + sun[0]*r*0.9, Y + sun[1]*r*0.9, 0, X + sun[0]*r*0.9, Y + sun[1]*r*0.9, r*0.9); t.addColorStop(0, rsCss(L, 0.5*ec*a)); t.addColorStop(1, rsCss(L, 0));
+    x.fillStyle = t; x.fillRect(X - r*2, Y - r*2, r*4, r*4);
+    x.save(); frame(); x.scale(1, open); x.strokeStyle = rsCss(o.tint ? rsMix(L, o.tint, 0.3) : L, 0.07*ec*a); x.lineWidth = r*0.45; x.beginPath(); x.arc(0, 0, 3.4*r, 0, Math.PI*2); x.stroke(); x.restore();
+    x.restore(); }
+  rings(false, ec);
 }
 // ENCELADUS (Ruby's favorite moon, home of the kitsune): small and white, its night side grey-blue, blue tiger stripes at
 // its south pole and the plume rising from them, a fan of faint jets. (X, Y), r; o.axis the way its north points on the

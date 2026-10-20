@@ -200,7 +200,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   in front) and `paintEnceladus` (white, tiger stripes, the plume).
   - Painted Ringworld: one ring in four orbits Saturn (The Arch's Saturn), and
     now and then Enceladus beside it; otherwise the far planet is sometimes
-    Saturn. Ringworld likewise (Ringworld View's Saturn).
+    Saturn.
   - Starfield's small Saturn follows its Atmosphere: in space a ringed disk,
     under air (Aurora's) a faint point (Ruby: "much dimmer and fainter").
   - Starfield: about one sky in thirty-six, a small Saturn among the stars
@@ -367,98 +367,6 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   of the air it holds one wide faint stroke. The camera guide is 'ellipse'
   (Star Height from the knob keyed `height`). Land of Shapes, made for its
   first painting, stays an Athanor part: wired after it, a land beneath.
-- **Ringworld** (chain `ringworld`, Sky & Cosmos; Ruby: abstract, lit by
-  its star; the camera dial the camera, the light dial the day):
-  - Ringworld View (`genRingView`) follows each pixel's ray to the floor, a
-    rim wall, the star, the shadow squares or space, and hands on MAPS (along
-    and across in band widths, distance, detail, daylight, air). It draws
-    nothing; Noise at Coordinates lays the land and clouds on those maps.
-  - The camera dial is the camera (turn: where you look round the ring;
-    view: how far up; zoom: the lens). Where across the band you stand is
-    the seed's (`ringPlaceOf`, the part's Stand set to "where the seed
-    says"; an Athanor graph keeps Stand At).
-  - **The eight sliders** (Ruby kept eight; format 5 turned Stand At into
-    Traffic): Band Width, **Landforms** (the relief, the rim walls at half
-    its range, the spill mountains, and the land's own forms), Seas,
-    **Cities** (the works' amount as Structures was; past 25 `moreCity`
-    spreads city cover and towers whoever built the ring), Atmosphere,
-    Builders, Altitude, **Traffic** (ships ×0–2.5, its middle the old count;
-    past it lanes of small craft; the streets' lamps).
-  - The light dial is the day (`caps.dial: 'Daylight'`, `lowLight`): its
-    height is the time (the middle noon, the rim dusk, past it night), its
-    direction which side dusk comes from (`L.side`). The part maps it onto
-    Daylight (the slider is gone; old looks: format 4). The Light Engine
-    takes its own light height from Daylight Here, as the star never moves.
-  - Daylight places the shadow squares: 0 midnight, 50 the dusk line, 100
-    noon. The haze is lit by the day where the camera stands; stars fade by
-    day.
-  - **Builders** (the sixth slider: By the Seed, Wilds, Engineers, Cities,
-    Magi, Ruins; `RING_WORKS` weights per builder). Everything of theirs is
-    a primitive in `L.prims` (beams, ship ellipsoids, crystal octahedra,
-    pillars of light, circles, trails, engines), each count and size from
-    the seed's own stream (`ringRand`), sizes power-law so a few are huge.
-    Cities are a third map (`ringCity`: blocks by day, lamps and windows at
-    night). The shadow-square size (`RING_SQS`) and the ring's spin
-    (`L.side`) come from the seed too.
-  - Rays test only what lies in their 16-pixel tile (`ringBin`): a long
-    thing is binned by its two ends' projections (clipped to the near
-    plane) widened by its width, the rest by a bounding cube. Looking
-    straight up once took 1.7 s; keep the binning when adding works.
-  - Clouds are their own crossing of a layer just under the air
-    (`Rc`), with their shadow laid on the far land (outs 21–24).
-  - **Arches** (Ruby: "as if they contain the atmosphere", then "only in
-    some designs … only always edge to edge"): every ring raises one or two
-    forms, by its builders (`RING_ARCHES`): spans from wall top to wall top,
-    each holding a field (`k: 7`, a glow in its plane, brighter edge-on and
-    along the arch); flying buttresses in rows (a quarter ellipse from under
-    a wall's top to a pier); arcades on piers with a deck, along the ring or
-    across it; gates; the land's own stone arches (rock, heaviest at the
-    feet). All are tubes of thick beams whose joints overlap (`tube`). Domes
-    of glass (`k: 8`, glow only, the rim catching light) stand over the city.
-  - **Nothing floats but the ships** (Ruby: "artistic cohesion, nothing
-    floating"): crystals grow from the land in clusters, sunk a third; a
-    standing ring of light rests on a stone plinth; a ruin's arch breaks in
-    its middle and stands as two stubs (`brk`), never a loose piece; the
-    floating isles are gone. Nothing stands where the camera is, nor looms
-    over it (a tower, mesa or stone closer than its height; an arch about
-    it): seen from under them, with their feet out of the frame, they read
-    as slabs in the sky.
-  - **The Forerunners' way** (Ruby: Halo, "push it more that way"): the
-    Engineers' lights are blue; rim towers stand on the walls' tops (`rt`),
-    and bars of hard light run from wall to wall (`br`, a `k: 3` glow with
-    `even`).
-  - **Landforms** (`RING_LANDS`: alpine, mesa country, boulder fields,
-    hoodoos, karst, mixed, by the seed): ranges along both walls' feet
-    (Ruby: "better landforms around the border mountains": a peak with two
-    lower shoulders and foothills before it, never above the wall's top),
-    peaks (cones, snow on the tall ones), mesas and pinnacles (beams with
-    `cap`: the ray meets the flat top too), boulders (rock ellipsoids, half
-    sunk, never larger than a tenth of their distance), the karst's stone
-    arches. Rock works hand on `rock` and `snow` (outs 25, 26) and their own
-    Across (`ac`: where they stand, rising with height), so the land noise
-    lays stone on them; the chain mixes the walls' metal toward rock by it.
-  - Corner rays are shared between pixels for its edges; keep `Math.hypot`
-    out of its loops (it was a third of the time).
-  - **The construction** (`ringBuild`, from the seed; Ruby: never bare):
-    spires (tapering towers along each spot's own up, beacons at their tips),
-    scaffolding (unfinished floor: a lattice box-filtered by the pixel's
-    footprint, the void seen through it), spill mountains (in the chain:
-    Across → Map Range → × the land → added, by Landforms). Cities raises the
-    builders' works;
-    at 0 a few still stand. About one ring in fifty shows the world's seam.
-  - **Saturn** (Ruby: "Ringworld should sometimes be orbiting Saturn"; one
-    ring in four by `seedChoice(seed, 'ring saturn')`, or the part's Saturn
-    setting): `ringSaturn` fixes it in the world where the opening shot
-    (turn 40, view 55) looks, a little off by the seed, 6–11° across;
-    `ringSatSee` meets each space ray with its globe (banded by latitude, lit
-    by the star at the ring's middle, the rings' shadow on it) and its ring
-    plane (`RING_SAT_BANDS`: C, B, the Cassini gap, A and Encke's; the globe's
-    shadow on them), and now and then Enceladus. Outputs 27 and 28 (saturn,
-    saturn cover); the chain mixes it over the stars (part 100), before the
-    shadow squares and the air.
-  - The air is sampled densely where it is (near the camera, near the far
-    floor) and thins away past the walls; an even spacing stepped past the
-    thin air beside a low wall and left a black band.
 - **Rain on Water** (chain `rainwater`, Weather): Raindrops → Tint (sky to
   water by distance) → Displace by the ripples → Material → Glow on the
   splashes.

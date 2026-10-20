@@ -227,20 +227,16 @@ check('importing the same spell twice does not duplicate it',
   load({ ...base, texture: true, textureType: 'rainstreaks', texP2: '30', textureLight: '200' });
   s = save();
   check('a new look is left as it is', s.textureLight === '200' && +s.texP2 === 30);
-  // format 4: Ringworld's Daylight slider onto the light dial (noon at its middle, dusk at its rim, past it night)
+  // the 3D Ringworld retired (Ruby): its looks open as the Painted Ringworld, after the old formats' translations
   load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '80', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
   s = save();
-  check('an old Ringworld look: Daylight 80 becomes the light dial at 40 (morning), the sixth slider Builders by the seed', +s.textureLightTilt === 40 && +s.texP6 === 0 && s.cameraTurn === '40');
-  load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '20', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
-  s = save();
-  check('…and Daylight 20 (night) past the dial\'s rim', +s.textureLightTilt === 118);
+  check('an old Ringworld look opens as the Painted Ringworld: Daylight 80 still the light dial at 40 (morning), the camera as it was', s.textureType === 'ringpaint' && +s.textureLightTilt === 40 && s.cameraTurn === '40');
   load({ ...old, lookVersion: 3, texture: true, textureType: 'circuit', texP7: '100' });
   s = save();
   check('an old Circuit Board look at Magitech (four eras) stays the board it was: Atomic, at 75 of five eras', +s.texP7 === 75);
-  // format 5: Ringworld's Stand At became Traffic (its middle: the ships as they were)
-  load({ ...old, lookVersion: 4, texture: true, textureType: 'ringworld', texP2: '70', texP4: '40', texP8: '-60', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
+  load({ ...old, lookVersion: 4, texture: true, textureType: 'ringworld', texP2: '70', texP4: '40', texP7: '30', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
   s = save();
-  check('an old Ringworld look: Stand At gives way to Traffic at its middle; Terrain and Structures carry on as Landforms and Cities', +s.texP8 === 50 && +s.texP2 === 70 && +s.texP4 === 40);
+  check('…its Landforms and Altitude carry on, its Cities as Works', s.textureType === 'ringpaint' && +s.texP2 === 70 && +s.texP6 === 30 && +s.texP5 === 42);
   // format 4: the Tilt sliders onto the camera dial (Dune Ripples' fourth, Moss on Stone's fourth, Scrying Pool's sixth)
   load({ ...old, lookVersion: 3, texture: true, textureType: 'dunes', texP1: '140', texP4: '60', cameraTurn: '90', cameraView: '0', cameraZoom: '100' });
   s = save();
