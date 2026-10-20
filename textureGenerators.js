@@ -323,7 +323,6 @@ const GLOWS = {
   cityscape:   'city glow: the sky above the lights, lit from below',
   frost:       'moonlight caught in the ice',
   astral:      'airglow: the sky\'s own faint light, in slow waves',
-  linen:       'luminous thread in the stitching',
   circuit:     'an aura round the glowing traces, as if the board were lit from within',
 };
 for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { label: 'Glow Hue', role: 'glow', def: '#000000', why };

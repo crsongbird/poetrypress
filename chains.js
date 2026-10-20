@@ -131,17 +131,21 @@ export const TEXTURE_CHAINS = {
   // 🜚 Linen: the weave (a normal map, lit by the dial) → the cloth coloured
   // and its details laid on as heights, lit. Its grid keeps the threads at
   // least three pixels apart, and no finer (a preview no longer pays the export's price)
-  linen: { label: 'Linen Tooth', teach: 'Weave makes the threads, as shading and sheen. Cloth & Details colors them with two Hues and adds seams and stitching, lit by the dial. The Knobs are this texture\'s sliders on the page. Try: move the Weave knob from silk to burlap.', grid: (w, h, S, k) => weaveGridDiv(w, h, S, (50 + (k[0] ?? 14.3)*3.5)/100), nodes: [
-      ['knob', { slot: '1' }, 40, 40],              // 1
-      ['knob', { slot: '2' }, 40, 300],                 // 2
-      ['knob', { slot: '3' }, 40, 170],                   // 3
-      ['weave', { weave: 50, scale: 100 }, 320, 60],                              // 4
-      ['hue', { slot: '1', name: 'Fabric Hue' }, 320, 300],                       // 5
-      ['hue', { slot: '2', name: 'Light Hue' }, 320, 420],                        // 6
-      ['cloth', { details: 42, scale: 100 }, 600, 140],                           // 7
-      ['surface', { name: 'Linen Tooth', ground: 'grey' }, 880, 180]],            // 8
-    wires: [[3, 1, 4, 'weave'], [1, 1, 4, 'scale'], [1, 1, 7, 'scale'], [2, 1, 7, 'details'],
-      [4, 1, 7, 1], [4, 2, 7, 2], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
+  linen: { label: 'Linen Tooth', div: 2, teach: 'Cloth laid flat under the poem, remade on the cloth parts and lit from its maps. Drape lays a sheet down (Hang on Laid Flat) and lets it settle with as many soft creases as Creases asks, as stiff or as supple as its Fabric. Weave Maps lays the threads along it, over and under as the fabric\'s loom lays them (silk and satin fine and smooth, linen slubbed, denim twilled, canvas in pairs, tweed in a herringbone, burlap open), and hands on their height, gloss, tone and gaps. The Fabric Hue is coloured by the threads\' Tone (Blend, Soft Light); Detail Normals lays the threads over the creases\' facing; a Light Engine lights it all from the Light Dial in the Light Hue, satin shining and burlap not. Try: Fabric on Burlap, Weave Scale high, the dial low.', nodes: [
+      ['knob', { slot: '1' }, 40, 40],              // 1  Weave Scale
+      ['knob', { slot: '2' }, 40, 140],             // 2  Creases
+      ['knob', { slot: '3' }, 40, 240],             // 3  Fabric
+      ['hue', { slot: '1', name: 'Fabric Hue' }, 40, 360],                        // 4
+      ['hue', { slot: '2', name: 'Light Hue' }, 40, 440],                         // 5
+      ['drape', { hang: 93, fabric: 39, '~fabric': '0,100', folds: 30, '~folds': '0,100', detail: 40, wrinkles: 40, '~wrinkles': '0,100' }, 320, 60],   // 6
+      ['weavemaps', { fabric: 39, '~fabric': '0,100', size: 100, '~size': '50,400' }, 600, 60],   // 7
+      ['blend', { mode: 'soft-light', opacity: 70 }, 880, 40],                     // 8 (the fabric's hue, coloured by the threads)
+      ['detailnormals', { strength: 30 }, 880, 200],                               // 9 (the threads over the creases' facing)
+      ['material', { relief: 100, gloss: 35, shine: 25, shadow: 50, occlusion: 50, ambient: 40, translucency: 15 }, 1160, 60],   // 10
+      ['surface', { name: 'Linen Tooth', ground: 'grey' }, 1440, 120]],           // 11
+    wires: [[1, 1, 7, 'size'], [2, 1, 6, 'folds'], [2, 1, 6, 'wrinkles'], [3, 1, 6, 'fabric'], [3, 1, 7, 'fabric'],
+      [6, 3, 7, 1], [6, 4, 7, 2], [4, 1, 8, 1], [7, 3, 8, 2], [6, 2, 9, 1], [7, 1, 9, 2],
+      [8, 1, 10, 1], [6, 1, 10, 2], [7, 2, 10, 3], [5, 1, 10, 6], [9, 1, 10, 10], [7, 4, 10, 'translucency'], [10, 1, 11, 1]] },
   // ∆ Fractured Glaze: the crazing (heights, glaze, grime, the finest cracks)
   // and the brushwork (how thick it was painted) → the glaze lit and coloured
   crackedglaze: { label: 'Fractured Glaze', div: 2, teach: 'Crazing makes four maps of cracked glaze: its heights, the glaze, grime in the cracks, and the finest cracks. Brushwork says how thickly the glaze was painted. Glaze lights and colors all of these with two Hues. Try: raise Enameling to see the glaze age and peel.', nodes: [
@@ -583,19 +587,19 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '1' }, 40, 40],                // 1  Fabric
       ['knob', { slot: '2' }, 40, 140],               // 2  Hang
       ['knob', { slot: '3' }, 40, 240],               // 3  Folds
-      ['knob', { slot: '4' }, 40, 340],               // 4  Threads
+      ['knob', { slot: '4' }, 40, 340],               // 4  Thread Size
       ['knob', { slot: '5' }, 40, 440],               // 5  Wrinkles
       ['hue', { slot: '1', name: 'Warp Hue' }, 40, 560],                    // 6
       ['hue', { slot: '2', name: 'Weft Hue' }, 40, 640],                    // 7
       ['hue', { slot: '3', name: 'Ground Hue' }, 40, 720],                  // 8
       ['drape', { fabric: 39, '~fabric': '0,100', hang: 7, '~hang': '0,100', folds: 50, '~folds': '0,100', detail: 40, wrinkles: 50, '~wrinkles': '0,100' }, 320, 60],   // 9
-      ['weavemaps', { fabric: 39, '~fabric': '0,100', threads: 250, '~threads': '25,400' }, 600, 60],   // 10
+      ['weavemaps', { fabric: 39, '~fabric': '0,100', size: 40, '~size': '25,400' }, 600, 60],   // 10
       ['gradmap', {}, 880, 40],                                                    // 11 (the weft's hue to the warp's)
       ['detailnormals', { strength: 18 }, 880, 200],                               // 12 (the threads' relief over the folds' facing)
       ['material', { relief: 100, gloss: 40, shine: 22, shadow: 55, occlusion: 60, ambient: 30, translucency: 15 }, 1160, 60],   // 13
       ['blend', { mode: 'normal', opacity: 100 }, 1440, 120],                      // 14 (the cloth over the ground behind it)
       ['surface', { name: 'Drapery', ground: 'colour' }, 1720, 140]],   // 15
-    wires: [[1, 1, 9, 'fabric'], [1, 1, 10, 'fabric'], [2, 1, 9, 'hang'], [3, 1, 9, 'folds'], [4, 1, 10, 'threads'], [5, 1, 9, 'wrinkles'],
+    wires: [[1, 1, 9, 'fabric'], [1, 1, 10, 'fabric'], [2, 1, 9, 'hang'], [3, 1, 9, 'folds'], [4, 1, 10, 'size'], [5, 1, 9, 'wrinkles'],
       [9, 3, 10, 1], [9, 4, 10, 2], [10, 3, 11, 1], [7, 1, 11, 2], [6, 1, 11, 3], [9, 2, 12, 1], [10, 1, 12, 2],
       [11, 1, 13, 1], [9, 1, 13, 2], [10, 2, 13, 3], [12, 1, 13, 10], [10, 4, 13, 'translucency'],
       [8, 1, 14, 1], [13, 1, 14, 2], [9, 6, 14, 3], [14, 1, 15, 1]] },

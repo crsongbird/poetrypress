@@ -93,6 +93,20 @@ export function clSettle(o){
       set(id(i, j), x*cr - z*sr, lift + (hang === 'crumpled' ? 0.12 : hang === 'laid flat' ? 0.03 : 0.02)*(bumps(u, v) + 1), x*sr + z*cr); }
   }
   for(const k of pins) W[k] = 0;
+  // LAID FLAT needs no settling: a sheet lying on a table is the sheet, with the soft rises of cloth set down and the
+  // creases of having been folded (once across, once down, now and then again), as linen kept in a drawer has
+  if(hang === 'laid flat'){
+    const b2 = (() => { const g = 14, Lt = new Float64Array((g + 1)*(g + 1)); for(let q = 0; q < Lt.length; q++) Lt[q] = R()*2 - 1;
+      return (u, v) => { const x = u*g, y = v*g, i0 = Math.min(g - 1, x | 0), j0 = Math.min(g - 1, y | 0), fx = x - i0, fy = y - j0, sx = fx*fx*(3 - 2*fx), sy = fy*fy*(3 - 2*fy);
+        return (Lt[j0*(g + 1) + i0]*(1 - sx) + Lt[j0*(g + 1) + i0 + 1]*sx)*(1 - sy) + (Lt[(j0 + 1)*(g + 1) + i0]*(1 - sx) + Lt[(j0 + 1)*(g + 1) + i0 + 1]*sx)*sy; }; })();
+    const lines = [[0, 0.5 + (R() - 0.5)*0.1], [1, 0.5 + (R() - 0.5)*0.1]]; if(R() < 0.5) lines.push([R() < 0.5 ? 0 : 1, 0.25 + (R() - 0.5)*0.06]);
+    const amp = 0.006 + 0.03*folds, cw = 0.012 + 0.01*(1 - folds);
+    for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ const u = i/(C - 1), v = j/(Rr - 1), k = id(i, j);
+      let h = amp*(bumps(u, v)*0.7 + b2(u, v)*0.3);
+      for(const [ax, at] of lines){ const d = Math.abs((ax ? v : u) - at), t = Math.max(0, 1 - d/cw); h += (ax ? -1 : 1)*amp*0.6*t*t; }
+      P[k*3] = (u - 0.5); P[k*3 + 1] = h; P[k*3 + 2] = (v - 0.5)*o.aspect; }
+    return { P, C, Rr, view: 'top', fill: true, CU: new Float64Array(n), CV: new Float64Array(n) };
+  }
   // the form beneath (a sphere and a lower box-ish bump): where it is, by the seed
   const form = { x: (R() - 0.5)*0.2, z: (R() - 0.5)*0.2*o.aspect, r: 0.2 + 0.08*folds + 0.04*R() };
   // ---- THE CONSTRAINTS: structural, shear, bending (skip-one), each a distance at rest in the flat sheet ----
@@ -276,12 +290,12 @@ export const CLOTH_STEPS = {
       return [HT, nrm, M.U, M.V, gather, M.MASK, M.BACK]; } },
   weavemaps: { cat: 'Textures', label: 'Weave Maps', ins: ['u', 'v'], outs: ['height', 'gloss', 'tone', 'gaps'],
     params: [CL_R('fabric', 'Fabric: ' + CL_FABRICS.join(' · '), 40), ['draft', 'Weave', 'select', 'the fabric’s', { options: ['the fabric’s', 'plain', 'twill', 'satin', 'basket', 'herringbone'] }],
-      CL_R('threads', 'Threads', 100, 25, 400), CL_R('slub', 'Slub', 100, 0, 200), CL_R('variation', 'Variation', 0, 0, 99)],
+      CL_R('size', 'Thread Size', 100, 25, 400), CL_R('slub', 'Slub', 100, 0, 200), CL_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 3,
     run(E, n){ const { ww, wh, num } = E, P = E.P || ((nn, k, d) => nn.params && nn.params[k] != null ? nn.params[k] : d);
       const F = { ...CL_FABRIC[clPick(CL_FABRICS, num(n, 'fabric', 40))] }, dr = P(n, 'draft', 'the fabric’s');
       if(['plain', 'twill', 'satin', 'basket', 'herringbone'].includes(dr)) F.draft = dr;
-      F.threads *= num(n, 'threads', 100)/100; F.slub *= num(n, 'slub', 100)/100;
+      F.threads *= 100/Math.max(5, num(n, 'size', 100)); F.slub *= num(n, 'slub', 100)/100;
       // (threads across the PAGE: a cloth's u runs 0..1 across it; the page's own place runs across its short side)
       const U = E.asField(E.input(n, 1)), V = E.asField(E.input(n, 2)), seed = ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variation', 0))*7919) >>> 0) ^ 0x3ea7) >>> 0;
       const R = clWeave(ww, wh, U, V, F, seed);

@@ -20,7 +20,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   close-up kits with their bases detailed and small things near you, buildings kept back unless detailed; the sun
   behind Saturn (an eclipse, a sunrise), and more interactions nobody asked for.
 - RETIRE THE 3D RINGWORLD (Ruby: "it was a good concept, it's what led to this").
-- LINEN TOOTH: remade completely on the cloth parts and the Light Engine.
 - SLIDERS WITH NAMED MARKS: held to their marks by default; no blue box when held; easier to grab.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the

@@ -250,13 +250,13 @@ export const TEXTURE_PARAMS = {
   drapery:       [sliderOf('fabric', 'Fabric', 39, { ticks:[6,17,28,39,50,61,72,83,94], names:['Silk','Satin','Muslin','Linen','Denim','Canvas','Tweed','Burlap','Velvet'] }),
                   sliderOf('hang', 'Hang', 7, { ticks:[7,21,36,50,64,79,93], names:['From a Rod','From Two Corners','From One Corner','Twisted','Over a Hidden Form','Crumpled','Laid Flat'] }),
                   sliderOf('folds', 'Folds', 50),
-                  sliderOf('threads', 'Threads', 250, { min:25, max:400, unit:'%' }),
+                  sliderOf('size', 'Thread Size', 40, { min:25, max:400, unit:'%' }),
                   sliderOf('wrinkles', 'Wrinkles', 50)],
+  // LINEN TOOTH (chains.js 'linen'; remade on the cloth parts, Ruby: "completely remake this in the cloth and lighting engine")
   linen:         [sliderOf('zoom', 'Weave Scale', 100, { min:50, max:400, unit:'%' }),
-                  // stitching → slubs → buttons → rivets
-                  sliderOf('amt', 'Details', 42, { ticks:[15,42,68,95] }),
-                  // silk → twill → linen → canvas → burlap
-                  sliderOf('form', 'Weave', 50, { ticks:[0,25,50,75,100] })],
+                  // the soft creases of cloth laid down
+                  sliderOf('amt', 'Creases', 30),
+                  sliderOf('form', 'Fabric', 39, { ticks:[6,17,28,39,50,61,72,83,94], names:['Silk','Satin','Muslin','Linen','Denim','Canvas','Tweed','Burlap','Velvet'] })],
   oldpaper:      [sliderOf('zoom', 'Scale', 100, { min:40, max:400, unit:'%' }),
                   // folds across the sheet; past three-quarters they tear
                   sliderOf('amt', 'Folds', 35),

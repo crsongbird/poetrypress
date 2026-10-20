@@ -135,7 +135,7 @@ export function applyPersisted(s){
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
 // from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 9;
+const LOOK_VERSION = 10;
 export function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -199,7 +199,16 @@ export function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireRingworld(retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))))))); }
+function retireLook(s){ return retireRingworld(retireFormat10(retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))))))); }
+/** LINEN TOOTH REMADE ON THE CLOTH PARTS (format 10; Ruby: "completely remake this in the cloth and lighting engine"):
+ *  its Weave (silk → twill → linen → canvas → burlap) is the Fabric now, nine of them (the nearest: twill is denim), and
+ *  Details (stitching, slubs, buttons, rivets) gives way to Creases, at their gentle default. */
+function retireFormat10Layer(L){
+  if(!L || L.textureType !== 'linen') return L;
+  const v = +L.texP3, f = isNaN(v) ? 50 : v, k = Math.max(0, Math.min(4, Math.round(f/25)));
+  return { ...L, texP3: String([6, 50, 39, 61, 83][k]), texP2: '30' };
+}
+function retireFormat10(s){ if(!s || +s.lookVersion >= 10) return s; let o = retireFormat10Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat10Layer(o.baseLayer) }; return o; }
 /** THE 3D RINGWORLD RETIRED (Ruby, 2026-10-20: "it was a good concept, it's what led to this"): its looks open as the
  *  Painted Ringworld, keeping what carries over: Band Width, Landforms and Altitude, who built it as the World, how
  *  built-up it was as Works; the camera and the day as they were. */

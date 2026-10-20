@@ -30,6 +30,9 @@ prints it).
   corners, from one, twisted, or seen from above over a hidden form, crumpled, laid flat) in nine fabrics, silk to
   velvet. Its weave follows every fold, and the Light Engine lights it from its maps: satin shines, burlap doesn't,
   light comes through the gaps. New parts for any graph: Drape, Weave Maps and Detail Normals.
+- **Linen Tooth, remade on the cloth parts and the Light Engine**: cloth laid flat with the creases of having been
+  folded and the soft rises of cloth set down, its threads woven as each of nine fabrics weaves them (silk to velvet),
+  lit from its maps. Weave is now Fabric, and Details gives way to Creases; older looks keep their nearest fabric.
 - **The sun can slip behind Saturn.** Turn the light dial until the sun meets it: Saturn turns its night side to you,
   ringed with lit air, its rings backlit and shining, a bead of light where the sun slips out.
 - **The 3D Ringworld is retired**: it led to the Painted Ringworld, which takes its place. Looks made with it open as
