@@ -9557,14 +9557,14 @@ function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,
     lc.lineCap='round';
     for(let s2=0;s2<sprays;s2++){ const cx=Math.random()*ww, cy=Math.random()*wh, a0=Math.random()*Math.PI, n=Math.round(4+inc*22), deep=0.35+Math.random()*0.65;
       for(let k=0;k<n;k++){ const a=a0+(Math.random()-0.5)*0.5, L2=U*(0.05+Math.random()*0.2), ox=cx+(Math.random()-0.5)*U*0.15, oy=cy+(Math.random()-0.5)*U*0.15;
-        lc.strokeStyle=`rgba(${IN.r},${IN.g},${IN.b},${Math.min(1, (0.7+Math.random()*0.3)*(1.25-deep*0.45))})`; lc.lineWidth=Math.max(0.9, cpx(1.8+Math.random()*2.2)*px);
+        lc.strokeStyle=`rgba(${IN.r},${IN.g},${IN.b},${Math.min(1, (0.7+Math.random()*0.3)*(1.25-deep*0.45))})`; lc.lineWidth=cpx(1.8+Math.random()*2.2)*px;
         lc.beginPath(); lc.moveTo(ox, oy); lc.lineTo(ox+Math.cos(a)*L2, oy+Math.sin(a)*L2); lc.stroke();
         const gl=Math.pow(Math.abs(Math.sin(a-la)), 4);
-        if(gl>0.2){ lc.strokeStyle=`rgba(255,248,225,${0.5*gl})`; lc.lineWidth=Math.max(0.5, cpx(0.9)*px);
+        if(gl>0.2){ lc.strokeStyle=`rgba(255,248,225,${0.5*gl})`; lc.lineWidth=cpx(0.9)*px;
           lc.beginPath(); lc.moveTo(ox+Math.cos(a)*L2*0.35, oy+Math.sin(a)*L2*0.35); lc.lineTo(ox+Math.cos(a)*L2*0.55, oy+Math.sin(a)*L2*0.55); lc.stroke(); } } }
     const nb=Math.round(inc*120);
     for(let k=0;k<nb;k++){ const x=Math.random()*ww, y=Math.random()*wh, r=cpx(2+Math.random()*Math.random()*11)*px*2;
-      lc.strokeStyle='rgba(20,14,28,0.55)'; lc.lineWidth=Math.max(0.6, r*0.28); lc.beginPath(); lc.arc(x,y,r,0,Math.PI*2); lc.stroke();
+      lc.strokeStyle='rgba(20,14,28,0.55)'; lc.lineWidth=r*0.28; lc.beginPath(); lc.arc(x,y,r,0,Math.PI*2); lc.stroke();
       lc.fillStyle='rgba(255,255,255,0.7)'; lc.beginPath(); lc.arc(x-SX*r*0.35, y-SY*r*0.35, r*0.22, 0, Math.PI*2); lc.fill(); }
     IL=lc.getImageData(0,0,ww,wh).data; lay.width=0; lay.height=0;
   }
@@ -29835,7 +29835,7 @@ const RELEASE = 'Uranus–Bianca';
 
 const RELEASE_DATE = '2026-10-20';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"YYynm3Sp","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -30522,7 +30522,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 752069f";
+const STAMP = "2026-10-20 · 66bb61e";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

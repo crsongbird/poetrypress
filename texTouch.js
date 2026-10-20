@@ -1230,14 +1230,14 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     lc.lineCap='round';
     for(let s2=0;s2<sprays;s2++){ const cx=Math.random()*ww, cy=Math.random()*wh, a0=Math.random()*Math.PI, n=Math.round(4+inc*22), deep=0.35+Math.random()*0.65;
       for(let k=0;k<n;k++){ const a=a0+(Math.random()-0.5)*0.5, L2=U*(0.05+Math.random()*0.2), ox=cx+(Math.random()-0.5)*U*0.15, oy=cy+(Math.random()-0.5)*U*0.15;
-        lc.strokeStyle=`rgba(${IN.r},${IN.g},${IN.b},${Math.min(1, (0.7+Math.random()*0.3)*(1.25-deep*0.45))})`; lc.lineWidth=Math.max(0.9, cpx(1.8+Math.random()*2.2)*px);
+        lc.strokeStyle=`rgba(${IN.r},${IN.g},${IN.b},${Math.min(1, (0.7+Math.random()*0.3)*(1.25-deep*0.45))})`; lc.lineWidth=cpx(1.8+Math.random()*2.2)*px;
         lc.beginPath(); lc.moveTo(ox, oy); lc.lineTo(ox+Math.cos(a)*L2, oy+Math.sin(a)*L2); lc.stroke();
         const gl=Math.pow(Math.abs(Math.sin(a-la)), 4);              // a needle across the light glints
-        if(gl>0.2){ lc.strokeStyle=`rgba(255,248,225,${0.5*gl})`; lc.lineWidth=Math.max(0.5, cpx(0.9)*px);
+        if(gl>0.2){ lc.strokeStyle=`rgba(255,248,225,${0.5*gl})`; lc.lineWidth=cpx(0.9)*px;
           lc.beginPath(); lc.moveTo(ox+Math.cos(a)*L2*0.35, oy+Math.sin(a)*L2*0.35); lc.lineTo(ox+Math.cos(a)*L2*0.55, oy+Math.sin(a)*L2*0.55); lc.stroke(); } } }
     const nb=Math.round(inc*120);
     for(let k=0;k<nb;k++){ const x=Math.random()*ww, y=Math.random()*wh, r=cpx(2+Math.random()*Math.random()*11)*px*2;
-      lc.strokeStyle='rgba(20,14,28,0.55)'; lc.lineWidth=Math.max(0.6, r*0.28); lc.beginPath(); lc.arc(x,y,r,0,Math.PI*2); lc.stroke();
+      lc.strokeStyle='rgba(20,14,28,0.55)'; lc.lineWidth=r*0.28; lc.beginPath(); lc.arc(x,y,r,0,Math.PI*2); lc.stroke();
       lc.fillStyle='rgba(255,255,255,0.7)'; lc.beginPath(); lc.arc(x-SX*r*0.35, y-SY*r*0.35, r*0.22, 0, Math.PI*2); lc.fill(); }
     IL=lc.getImageData(0,0,ww,wh).data; lay.width=0; lay.height=0;
   }
