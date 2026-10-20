@@ -4419,10 +4419,17 @@ try { restoreDraft(); } catch(e){ /* a draft never stops the app opening: the we
 // after the app has set them and without an event (Ruby saw one surface's slider names over another's values, the
 // other drawn). Once the page has loaded, the controls are read as they stand and put back through the app's own
 // path, so the names, readouts and hues agree with what is drawn.
+// Firefox on a phone revives a discarded tab by putting its fields back AFTER the page has loaded (session restore),
+// still without an event (Ruby: the Materia controls only caught up after switching surfaces): so they are read again a
+// moment after loading and whenever the page comes back into view, and the surface's own controls are put right each
+// time Materia opens (a light pass: names, readouts, swatches, dials; no values change).
 function reconcileControls(){ try { restoreSettings(serializeCurrentSettings()); scheduleRender(); } catch(e){ /* the page stands as it is */ } }
+function resyncSurfaceControls(){ try { syncTextureParams(false); syncTextureTools(false); syncCameraPad(); refreshUi(); scheduleRender(); } catch(e){ /* the page stands as it is */ } }
 if(typeof window !== 'undefined' && window.addEventListener){
-  window.addEventListener('load', reconcileControls, { once: true });
-  window.addEventListener('pageshow', e => { if(e && e.persisted) reconcileControls(); }); }
+  window.addEventListener('load', () => { reconcileControls(); setTimeout(reconcileControls, 2500); }, { once: true });
+  window.addEventListener('pageshow', e => { if(e && e.persisted) reconcileControls(); });
+  if(typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') resyncSurfaceControls(); });
+  for(const b of (document.querySelectorAll ? document.querySelectorAll('.tab-btn[data-tab="page"]') : [])) b.addEventListener('click', resyncSurfaceControls); }
 // every way a poem or look changes passes through one of these (typing, sliders, presets, the
 // Grimoire, spells, JSON, undo); the save reads the page as it is when the moment is up
 for(const type of ['input', 'change', 'click', 'keydown']) document.addEventListener(type, saveDraftSoon, true);
