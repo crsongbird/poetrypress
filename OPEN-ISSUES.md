@@ -8,17 +8,16 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- THE MOVING IMAGE: is the sheet where it should be (hold Save, or right-click it), and are the moves the right ones?
-  More could follow (the camera walked along the ring, the seed's weather changing, a slow zoom). A browser without an
-  H.264 encoder offers WebM or the PNG frames.
 - MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
   grid. Does it hold?
 
 ## 2 · Ruby's notes to act on
-- THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, a less cartoony hand throughout; more
-  detail in the distance (terraces on the steep land, a settlement's lights at night); more placing rules between
-  kinds (trees kept back from a house, farmland in rings round a town); more robots; a bridge of hard light as one
-  more rare nod; more interactions nobody asked for.
+- THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
+  interactions nobody asked for. The countryside is newly in (fields, terraces, flocks, boats, a town's lights by
+  night): look at it in a wide view from a little height, and say what it needs.
+- TURNED THINGS IN DEPTH (Ruby, 2026-10-20, for later): some of the eight views look cheap (a sprite squeezed flat).
+  Each turned thing should be drawn as a solid in three-dimensional space, though painted flat: its sides, top and
+  ends foreshortened and lit as the rest of the flat objects are, matching their style.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a

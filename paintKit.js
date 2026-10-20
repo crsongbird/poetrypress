@@ -81,7 +81,8 @@ export const PK_SIZE = {
   cargo: [1.2, 2.4], solar: [2, 2.6], dish: [6, 12], beacon: [5, 10], pipes: [1.5, 2.5], tripod: [1.4, 1.6], menhir: [1.8, 4.5], dolmen: [1.8, 2.6], fairyring: [0.12, 0.16], wisp: [0.3, 0.4], flower: [3, 5],
   toadstool: [2.5, 4], moongate: [3, 4],
   warden: [1.0, 1.4], gate: [14, 22], pod: [3, 4], spire: [90, 160], cogdoor: [8, 11], diner: [5, 6.5], car: [1.4, 1.6], suit: [6, 8], caps: [0.12, 0.15],
-  rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8] };
+  rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8], sheep: [0.75, 0.9], boat: [1.6, 2.6],
+  harvester: [2.4, 3.2], shepherd: [0.7, 0.9], lamplighter: [2.4, 2.8], crab: [0.4, 0.7] };
 // a size in its range, tall specimens rarer (u: a draw from 0 to 1)
 export const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
 // the archetype a style raises, by weight (the caller may choose it first, to size it before it is drawn)
@@ -888,7 +889,73 @@ const PK_WRITTEN = ['sign', 'milestone'];
 // (those with a back of their own, drawn when the camera stands behind them: the plain backs of signs, of the vending machines)
 const PK_BACKED = ['sign', 'milestone', 'vending'];
 const PK_BOXLIKE = ['vending', 'phonebox', 'busstop', 'container', 'crate', 'cargo', 'mailbox', 'beehives', 'trough', 'shrine'];
+// ---------------- THINGS IN THREE DIMENSIONS ----------------
+// (Ruby: "think about them in three-dimensional space even though they are two-dimensional"): a thing built of solids in
+// its own frame (u along it, from its back to its front; v across it; z up), every point carried to the page as the eye
+// sees it turned (c.view: cs, sn of the angle between its facing and the way to the eye) and seen a little from above,
+// so a hull foreshortens, a body's far legs hide behind it and its near ones stand in front; then painted flat, a face
+// lit or shaded by the side it turns to the light. s: pixels per unit of the frame
+const PK_TILT = 0.26;
+const pkSpace = (X, Y, s, view) => { const cs = view ? view.cs : 0, sn = view ? view.sn : 1;
+  return { cs, sn, P: (u, v, z) => [X + (u*sn + v*cs)*s, Y + (u*cs - v*sn)*s*PK_TILT - z*s], depth: (u, v) => u*cs - v*sn,
+    // a face whose outward normal in the frame is (nu, nv): is it toward the eye, and how lit (from -1 shade to 1 light)
+    faces: (nu, nv) => nu*cs - nv*sn > 0.02, light: (nu, nv, sd) => Math.max(-1, Math.min(1, (nu*sn + nv*cs)*sd)) }; };
+// a box in the frame, from (u0, v0, z0) to (u1, v1, z1): its sides toward the eye, then its top, each in its light
+function pkBox3(x, S, u0, u1, v0, v1, z0, z1, m, sd){
+  const sides = [[1, 0, [[u1, v0], [u1, v1]]], [-1, 0, [[u0, v1], [u0, v0]]], [0, 1, [[u1, v1], [u0, v1]]], [0, -1, [[u0, v0], [u1, v0]]]];
+  for(const [nu, nv, [[ua, va], [ub, vb]]] of sides) if(S.faces(nu, nv)){ const k = S.light(nu, nv, sd), col = k > 0 ? pkMix(m.body, m.lit, k) : pkMix(m.body, m.dark, -k);
+    pkPoly(x, [S.P(ua, va, z0), S.P(ub, vb, z0), S.P(ub, vb, z1), S.P(ua, va, z1)], pkCss(col)); }
+  pkPoly(x, [S.P(u0, v0, z1), S.P(u1, v0, z1), S.P(u1, v1, z1), S.P(u0, v1, z1)], pkCss(pkMix(m.lit, PK_WHITE, 0.12))); }
+export const PK_SOLIDS = ['sheep', 'boat'];
+// the solid small things: a sheep on four legs, a boat on the water, each drawn in the round (pkSpace)
+function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
+  const sub = pkSub(R0), R = sub(1), sd = c.sd, S = pkSpace(X, Y, h, c.view), near = h > px(10);
+  if(kind === 'sheep'){ // a sheep: its fleece a cloud over four thin dark legs, its head down to graze or up to look
+    const wool = pkMat(c, R() < 0.12 ? [70, 62, 58] : [222, 214, 196], 0.8), skin = pkMat(c, R() < 0.5 ? [40, 36, 36] : [214, 190, 170], 0.8), L = 0.75, B = 0.32, grazing = R() < 0.6;
+    pkEll(x, X - sd*h*0.2, Y, h*(0.45*Math.abs(S.sn) + 0.25), h*0.1, pkCss(PK_BLACK, 0.2));
+    const legs = [[L*0.32, B*0.5], [L*0.32, -B*0.5], [-L*0.32, B*0.5], [-L*0.32, -B*0.5]].sort((p, q) => S.depth(...p) - S.depth(...q));
+    const leg = ([u, v]) => { const [ax, ay] = S.P(u, v, 0), [bx, by] = S.P(u, v, 0.5); x.strokeStyle = pkCss(skin.dark); x.lineWidth = Math.max(px(0.5), h*0.07); x.lineCap = 'round'; x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx, by); x.stroke(); };
+    const headAt = grazing ? [L*0.62, 0, 0.32] : [L*0.62, 0, 0.82], head = () => { const [hx, hy] = S.P(...headAt), [nx, ny] = S.P(L*0.42, 0, 0.66);
+      x.strokeStyle = pkCss(wool.body); x.lineWidth = Math.max(px(0.6), h*0.2); x.beginPath(); x.moveTo(nx, ny); x.lineTo(hx, hy); x.stroke();
+      pkEll(x, hx, hy, h*(0.1 + 0.06*Math.abs(S.sn)), h*0.11, pkCss(skin.body)); if(near) for(const e of [-1, 1]){ const [ex, ey] = S.P(headAt[0] - 0.04, e*0.1, headAt[2] + 0.06); pkEll(x, ex, ey, h*0.05, h*0.025, pkCss(skin.dark)); } };
+    const front = S.depth(L*0.6, 0) > 0;
+    for(const p of legs) if(S.depth(...p) < 0) leg(p);
+    if(!front) head();
+    // (the fleece: a body of small curls, shaded on the side from the light, brightest on top toward it)
+    const [cx, cy] = S.P(0, 0, 0.66), rx = h*(L*0.5*Math.abs(S.sn) + B*0.55*Math.abs(S.cs) + 0.14), ry = h*0.3;
+    pkEll(x, cx, cy, rx, ry, pkCss(wool.dark)); pkEll(x, cx + sd*rx*0.12, cy - ry*0.12, rx*0.86, ry*0.82, pkCss(wool.body));
+    if(near){ for(let q = 0; q < 14; q++){ const a = R()*Math.PI*2, d = Math.sqrt(R()); pkDisc(x, cx + Math.cos(a)*rx*0.8*d, cy + Math.sin(a)*ry*0.75*d, Math.min(rx, ry)*0.22, pkCss(Math.cos(a)*sd > 0.2 ? wool.lit : wool.body, 0.85)); } }
+    else pkEll(x, cx + sd*rx*0.3, cy - ry*0.3, rx*0.4, ry*0.4, pkCss(wool.lit));
+    for(const p of legs) if(S.depth(...p) >= 0) leg(p);
+    if(front) head(); return; }
+  // a boat moored on the water: a hull of planks (a rowing boat, a fishing boat with its wheelhouse, or a small sailing
+  // boat with its mast and furled sail), its gunwale an outline foreshortened as it turns, the inside of the hull showing
+  // when seen from above, its reflection broken in the water below it
+  const type = R() < 0.45 ? 'row' : R() < 0.55 ? 'sail' : 'fish', L = type === 'row' ? 1.6 : 2.6, B = type === 'row' ? 0.55 : 0.8, H = 0.32;
+  const paint = pkMat(c, [[226, 222, 208], [60, 96, 132], [170, 60, 48], [70, 110, 80], [214, 180, 70]][Math.floor(R()*5)], 0.75), wood = pkMat(c, PK_WOOD, 0.75);
+  const rim = n => { const pts = []; for(let q = 0; q <= n; q++){ const t = q/n*Math.PI*2, cu = Math.cos(t), sv = Math.sin(t); pts.push([cu*L/2*(cu > 0 ? 1 : 0.85), sv*B/2*(cu > 0 ? Math.sqrt(1 - cu*0.8) : 1)]); } return pts; };
+  const top = rim(24), keel = top.map(([u, v]) => [u*0.86, v*0.55]);
+  // (the reflection first, darker and broken by ripples)
+  for(let q = 0; q < 4; q++){ const [rx, ry] = S.P(0, 0, -0.12 - q*0.12); x.fillStyle = pkCss(pkMix(paint.dark, c.air || PK_BLACK, 0.5), 0.3 - q*0.06); x.fillRect(rx - h*(L*0.5*Math.abs(S.sn) + B*0.5*Math.abs(S.cs))*(1 - q*0.15), ry, h*(L*Math.abs(S.sn) + B*Math.abs(S.cs))*(1 - q*0.15), Math.max(px(0.5), h*0.05)); }
+  // (the hull's planks, face by face, the far ones first)
+  const quads = []; for(let q = 0; q < top.length - 1; q++){ const [u0, v0] = top[q], [u1, v1] = top[q + 1], nu = (v1 - v0), nv = -(u1 - u0), nl = Math.hypot(nu, nv) || 1;
+    quads.push({ d: S.depth((u0 + u1)/2, (v0 + v1)/2), nu: nu/nl, nv: nv/nl, pts: [S.P(keel[q][0], keel[q][1], 0), S.P(keel[q + 1][0], keel[q + 1][1], 0), S.P(u1, v1, H), S.P(u0, v0, H)] }); }
+  quads.sort((p, q) => p.d - q.d);
+  for(const f of quads){ const k = S.light(f.nu, f.nv, sd), col = k > 0 ? pkMix(paint.body, paint.lit, k*0.8) : pkMix(paint.body, paint.dark, -k*0.8); pkPoly(x, f.pts, pkCss(col)); }
+  // (the inside, seen from above: its floor of boards and its thwarts)
+  pkPoly(x, top.map(([u, v]) => S.P(u*0.92, v*0.85, H*0.95)), pkCss(wood.dark));
+  if(near){ x.strokeStyle = pkCss(wood.body); x.lineWidth = Math.max(px(0.4), h*0.06); x.beginPath(); for(const u of [-0.3, 0.25]){ const [ax, ay] = S.P(u, -B*0.4, H*0.9), [bx, by] = S.P(u, B*0.4, H*0.9); x.moveTo(ax, ay); x.lineTo(bx, by); } x.stroke(); }
+  x.strokeStyle = pkCss(paint.lit); x.lineWidth = Math.max(px(0.4), h*0.04); x.beginPath(); top.forEach(([u, v], q) => { const [px0, py] = S.P(u, v, H); q ? x.lineTo(px0, py) : x.moveTo(px0, py); }); x.stroke();
+  if(type === 'fish') pkBox3(x, S, -L*0.3, L*0.05, -B*0.28, B*0.28, H, H + 0.55, pkMat(c, PK_CREAM, 0.7), sd);
+  if(type === 'sail'){ const [mx, my] = S.P(L*0.15, 0, H), [tx, ty] = S.P(L*0.15, 0, H + 2.2), [bx, by] = S.P(-L*0.35, 0, H + 0.35);
+    x.strokeStyle = pkCss(wood.dark); x.lineWidth = Math.max(px(0.5), h*0.05); x.beginPath(); x.moveTo(mx, my); x.lineTo(tx, ty); x.moveTo(mx, my - h*0.35); x.lineTo(bx, by); x.stroke();
+    // (its sail furled along the boom, or set, a triangle in the boat's own plane, narrowed as the boat turns end on)
+    if(R() < 0.5) pkPoly(x, [[tx, ty + h*0.1], [mx, my - h*0.4], [bx, by - h*0.05]], pkCss(pkMix(pkMat(c, [236, 228, 210], 0.8).body, sd*(S.sn) > 0 ? PK_WHITE : PK_BLACK, 0.12)));
+    else { x.strokeStyle = pkCss(pkMat(c, [236, 228, 210], 0.8).body); x.lineWidth = Math.max(px(0.6), h*0.1); x.beginPath(); x.moveTo(mx, my - h*0.38); x.lineTo(bx, by - h*0.05); x.stroke(); } }
+  if(night > 0.3 && type !== 'row') pkGlow(x, ...S.P(L*0.1, 0, H + 0.8), h*0.6, c.glow, 0.4*night);
+}
 export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
+  if(PK_SOLIDS.includes(kind)){ pkSolidProp(x, X, Y, h, c, kind, R0, px, night); return; }
   if(c.view){ const { cs, sn } = c.view, cc = { ...c, view: null };
     if(PK_SIDE_NATIVE.includes(kind)){ if(Math.abs(sn) < 0.38){ pkPropEnd(x, X, Y, h, cc, kind, R0, px, night, cs >= 0); return; }
       x.save(); x.translate(X, 0); x.scale((sn >= 0 ? 1 : -1)*(0.45 + 0.55*Math.abs(sn)), 1); x.translate(-X, 0); pkProp(x, X, Y, h, sn >= 0 ? cc : pkFlip(cc), kind, R0, px, night); x.restore(); return; }
@@ -1513,6 +1580,37 @@ export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
     dot(X + sd*bw*0.72, by - h*0.05, Math.max(px(0.5), h*0.035));
     if(h > px(12)){ for(const [lx, f] of [[-0.4, -1], [-0.15, 1], [0.15, -1], [0.4, 1]]) pkDisc(x, X + lx*bw + f*h*0.12, by - h*0.15, h*0.035, pkCss(pkMix(c.dark, PK_BLACK, 0.3))); x.strokeStyle = pkCss(c.dark, 0.6); x.lineWidth = Math.max(px(0.3), h*0.008); x.beginPath(); for(const u of [-0.2, 0.05, 0.25]){ x.moveTo(X + u*bw, by - h*0.12); x.lineTo(X + u*bw, by + h*0.05); } x.stroke(); }
     return; }
+  if(kind === 'harvester'){ // a harvester droid at work in the corn: a long body on tracks, its reel turning at the front, a chute over the side,
+    // a pale eye in its cab; drawn in the round (pkSpace), the reel across the way it goes
+    const S = pkSpace(X, Y, h, c.view), body = pkMat({ ...c, mat: c.mat }, [[210, 170, 60], [200, 70, 50], [120, 150, 90]][Math.floor(R()*3)], 0.7), dk = pkMat(c, PK_IRON, 0.8), L = 1.6, B = 0.7;
+    const parts = [[() => pkBox3(x, S, -L/2, L/2, -B/2, -B*0.25, 0, 0.3, dk, sd), S.depth(0, -B*0.4)], [() => pkBox3(x, S, -L/2, L/2, B*0.25, B/2, 0, 0.3, dk, sd), S.depth(0, B*0.4)],
+      [() => pkBox3(x, S, -L*0.45, L*0.3, -B*0.3, B*0.3, 0.2, 0.7, body, sd), S.depth(-0.05, 0)], [() => pkBox3(x, S, -L*0.1, L*0.22, -B*0.22, B*0.22, 0.7, 1.0, pkMat(c, [180, 200, 210], 0.6), sd), S.depth(0.06, 0)],
+      [() => { pkBox3(x, S, L*0.3, L*0.55, -B*0.75, B*0.75, 0.05, 0.35, dk, sd); const [ax, ay] = S.P(L*0.48, -B*0.7, 0.32), [bx, by] = S.P(L*0.48, B*0.7, 0.32); x.strokeStyle = pkCss(body.lit); x.lineWidth = Math.max(px(0.5), h*0.06); x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx, by); x.stroke(); }, S.depth(L*0.45, 0)],
+      [() => { const [ax, ay] = S.P(-L*0.2, B*0.3, 0.6), [bx, by] = S.P(-L*0.2, B*0.95, 0.95); x.strokeStyle = pkCss(body.dark); x.lineWidth = Math.max(px(0.5), h*0.08); x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx, by); x.stroke(); }, S.depth(-L*0.2, B*0.6)]];
+    parts.sort((p, q) => p[1] - q[1]).forEach(p => p[0]());
+    if(S.depth(L*0.1, 0) > -0.2) dot(...S.P(L*0.2, 0, 0.88), Math.max(px(0.5), h*0.05));
+    if(night > 0.3){ const [lx, ly] = S.P(L*0.55, 0, 0.3); pkGlow(x, lx, ly, h*0.8, pkMix(c.glow, PK_WHITE, 0.6), 0.35*night); }
+    return; }
+  if(kind === 'shepherd'){ // a shepherd droid, the flock's: a low four-legged body like a dog's, a round head held high, one ear-aerial, its eye kind
+    const bw = h*1.0, by = Y - h*0.55; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.07); x.lineCap = 'round'; x.beginPath();
+    for(const lx of [-0.38, -0.22, 0.22, 0.38]){ x.moveTo(X + lx*bw, by); x.lineTo(X + lx*bw*1.05, Y); } x.stroke();
+    pkEll(x, X, by, bw*0.45, h*0.18, pkCss(c.body)); pkEll(x, X + sd*bw*0.1, by - h*0.06, bw*0.32, h*0.09, pkCss(c.lit));
+    const hx = X + bw*0.5, hy = Y - h*0.95; x.strokeStyle = pkCss(c.body); x.lineWidth = Math.max(px(0.6), h*0.14); x.beginPath(); x.moveTo(X + bw*0.35, by - h*0.05); x.lineTo(hx, hy + h*0.1); x.stroke();
+    pkDisc(x, hx, hy, h*0.2, pkCss(c.body)); pkDisc(x, hx + sd*h*0.05, hy - h*0.05, h*0.12, pkCss(c.lit)); dot(hx + h*0.08, hy, Math.max(px(0.5), h*0.05));
+    x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.4), h*0.03); x.beginPath(); x.moveTo(hx - h*0.08, hy - h*0.16); x.lineTo(hx - h*0.2, hy - h*0.45); x.stroke(); pkDisc(x, hx - h*0.2, hy - h*0.45, h*0.04, pkCss(eyeCol));
+    x.beginPath(); x.moveTo(X - bw*0.45, by - h*0.05); x.lineTo(X - bw*0.62, by - h*0.3); x.stroke(); return; }
+  if(kind === 'lamplighter'){ // the lamplighter, out at dusk: a tall thin droid on a single wheel, a long pole in its hand with a little flame at its end
+    const m = pkMat({ ...c }, [120, 110, 96], 0.6); pkDisc(x, X, Y - h*0.06, h*0.06, pkCss(c.dark));
+    pkPoly(x, [[X - h*0.08, Y - h*0.1], [X - h*0.1, Y - h*0.7], [X + h*0.1, Y - h*0.7], [X + h*0.08, Y - h*0.1]], pkCss(m.body)); pkPoly(x, [[X + sd*h*0.01, Y - h*0.12], [X + sd*h*0.02, Y - h*0.68], [X + sd*h*0.1, Y - h*0.68], [X + sd*h*0.08, Y - h*0.12]], pkCss(m.lit));
+    pkEll(x, X, Y - h*0.8, h*0.11, h*0.1, pkCss(m.body)); pkPoly(x, [[X - h*0.16, Y - h*0.86], [X, Y - h*0.98], [X + h*0.16, Y - h*0.86]], pkCss(m.dark)); dot(X + h*0.04, Y - h*0.8, Math.max(px(0.4), h*0.03));
+    const tx = X + h*0.45, ty = Y - h*1.15; x.strokeStyle = pkCss(PK_WOOD); x.lineWidth = Math.max(px(0.4), h*0.025); x.beginPath(); x.moveTo(X + h*0.08, Y - h*0.5); x.lineTo(tx, ty); x.stroke();
+    pkGlow(x, tx, ty, h*(0.15 + 0.3*night), [255, 190, 110], 0.5 + 0.4*night); pkDisc(x, tx, ty - h*0.02, Math.max(px(0.5), h*0.02), pkCss([255, 236, 190])); return; }
+  if(kind === 'crab'){ // a beachcomber: a crab-like droid, low and wide on six legs, a basket on its back, sorting the tideline
+    const w = h*1.6, by = Y - h*0.45; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.4), h*0.06); x.lineCap = 'round'; x.beginPath();
+    for(const lx of [-0.45, -0.3, -0.15, 0.15, 0.3, 0.45]){ const kx = X + lx*w*1.2; x.moveTo(X + lx*w*0.5, by); x.lineTo(kx, by - h*0.2); x.lineTo(kx + Math.sign(lx)*h*0.1, Y); } x.stroke();
+    pkEll(x, X, by, w*0.38, h*0.22, pkCss(c.body)); pkEll(x, X + sd*w*0.08, by - h*0.08, w*0.24, h*0.1, pkCss(c.lit));
+    pkPoly(x, [[X - w*0.2, by - h*0.15], [X - w*0.16, by - h*0.55], [X + w*0.12, by - h*0.55], [X + w*0.16, by - h*0.15]], pkCss(pkMat(c, PK_WOOD, 0.7).body));
+    for(const e of [-1, 1]){ x.beginPath(); x.moveTo(X + e*w*0.12, by - h*0.1); x.lineTo(X + e*w*0.16, by - h*0.4); x.stroke(); dot(X + e*w*0.16, by - h*0.42, Math.max(px(0.4), h*0.04)); } return; }
   // a derelict: a giant, fallen long ago, kneeling, one arm on the ground, rust and moss on it, its eye long dark
   const rust = pkMix(c.body, [140, 80, 50], 0.45), moss = pkMix(c.dark, [70, 100, 60], 0.4);
   pkPoly(x, [[X - h*0.35, Y], [X - h*0.3, Y - h*0.35], [X - h*0.05, Y - h*0.38], [X, Y]], pkCss(c.dark));                       // the knee

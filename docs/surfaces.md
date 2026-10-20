@@ -347,6 +347,19 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     a bike, a signal), poles carry wires along the main roads out of town, and buildings and trees keep off them. The
     Clutter knob (`V.clutter`) sets all the small things and boards, apart from Works. Things are set into the ground a
     little; the ruins' wrecks half buried (`sink`, clipped at the ground).
+  - **The countryside** (Ruby: "farmland in rings round a town", "terraces", "a settlement's lights at night", "trees
+    kept back from a house"; docs/prior-art/ringworld-countryside.md): the store lays fields (`out.fields`) round each
+    gathering of houses (the farms' hearts, where the houses gather as the buildings are placed), on each farm's own
+    lines, thinning outward, never over a neighbour's; each a crop of its climate (`RG_CROPS`), hedged, walled or
+    bunded; on the steep, terraces stepped along the contour. The land paints them piece by piece with the ridges, as
+    the ways (a wash near you, so the land's relief shows through). What a field holds is placed in its frame: bales,
+    ricks, a flock (`pkSolidProp`'s sheep) and its shepherd droid, a scarecrow, hives, a harvester. Trees keep back from
+    a house's walls and out of the fields, except along a hedge. On a town's shore, boats moored at their jetties (ways
+    laid as a deck); where the builders were, now and then a bridge of hard light across the water. By night a house
+    too far to draw, a lamp, and the lights between the houses (`glim`) are points of light, coming on through the dusk.
+  - **Things in three dimensions** (`pkSpace`, `pkBox3`): the newest things are built of solids in their own frame and
+    carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the harvester); the
+    way the eight views will go for the rest (OPEN-ISSUES).
   - **Eight views** (Ruby: "at least eight… front, sides, back, and the half-turned states… mirrored the other direction,
     except for the ones that have text"): each thing in the store has a `face`, the way it turns (a house its street, a
     car along its kerb, a board the road), and `viewOf` gives how it is turned from the camera. A building is narrowed

@@ -487,8 +487,15 @@ function rgHenge(x, o, P, c, R, px){
 const RG_WAYMAT = { cities: [['asphalt', 6], ['cobble', 1.2], ['brick', 1]], neon: [['asphalt', 1]], ruins: [['asphalt', 3], ['gravel', 1], ['cobble', 0.6]],
   wilds: [['earth', 3], ['gravel', 2], ['flag', 0.6]], magic: [['flag', 2], ['moss', 1.5], ['earth', 1]], builders: [['light', 2], ['pale', 1.5]] };
 const RG_WAYHALF = { asphalt: 4, cobble: 3, brick: 3, gravel: 2.2, earth: 1.5, flag: 1.6, moss: 1.2, light: 2.2, pale: 3, ley: 1.5 };
-const RG_WAYCOL = { asphalt: [92, 92, 98], cobble: [138, 128, 116], brick: [150, 86, 66], gravel: [176, 166, 146], earth: [150, 124, 92], flag: [168, 164, 152], moss: [104, 128, 86], light: [214, 220, 230], pale: [214, 210, 196] };
+const RG_WAYCOL = { jetty: [130, 102, 74], asphalt: [92, 92, 98], cobble: [138, 128, 116], brick: [150, 86, 66], gravel: [176, 166, 146], earth: [150, 124, 92], flag: [168, 164, 152], moss: [104, 128, 86], light: [214, 220, 230], pale: [214, 210, 196] };
 const RG_LIT_WAYS = ['asphalt', 'cobble', 'brick', 'pale', 'flag'];
+// THE CROPS a field shows (docs/prior-art/ringworld-countryside.md): its colour; its rows (or furrows) every so many
+// metres and their colour; a hay field's mowing stripes; a paddy's water; the moonflowers' light by night
+const RG_CROPS = { wheat: { c: [214, 184, 100] }, barley: { c: [200, 190, 128] }, stubble: { c: [206, 184, 128], row: [6, [184, 158, 102]] },
+  hay: { c: [150, 170, 90], stripe: [10, [178, 192, 112]] }, pasture: { c: [104, 146, 72] }, ploughed: { c: [124, 94, 66], row: [1.6, [92, 68, 48]] },
+  rapeseed: { c: [234, 210, 52] }, maize: { c: [88, 128, 56], row: [1.5, [66, 98, 44]] }, lavender: { c: [126, 106, 168], row: [1.2, [176, 156, 118]] },
+  vines: { c: [150, 128, 96], row: [2.6, [80, 110, 58]] }, rice: { c: [118, 156, 112], water: true, row: [0.7, [96, 150, 70]] }, tea: { c: [74, 110, 62], row: [1.6, [52, 88, 48]] },
+  garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, moonflower: { c: [178, 186, 226], row: [2, [138, 148, 200]], glow: true }, fallow: { c: [146, 136, 94] } };
 const RG_STREET_KINDS = ['lamp', 'hydrant', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'scooter'];
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
@@ -542,10 +549,16 @@ function rgStore(V){
   rgRoadsOf(V).forEach((rd, ri) => { const R = rgRand(s, 1300, ri), step = 20*M, mat = { road: 'asphalt', neon: 'asphalt', path: 'light', broken: 'asphalt', ley: 'ley', trail: 'earth' }[rd.kind];
     addWay(rd.along ? walk(-W*0.32, rd.at, 0, W*0.64, step, [W*0.32, rd.at], R) : walk(rd.at, -W*0.46, Math.PI/2, W*0.95, step, [rd.at, W*0.46], R), mat, rd.w, true, R); });
   // (the towns': from the heart of each town Works raises, two to five ways out, and one on to the nearest other town)
-  const hubs = []; { const C = W*0.05, Rr = W*0.25; for(let i = Math.floor(-Rr/C); i <= Math.ceil(Rr/C); i++) for(let j = Math.floor((L.z0 - Rr)/C); j <= Math.ceil((L.z0 + Rr)/C); j++){
+  const hubs = [], farms = []; { const C = W*0.05, Rr = W*0.25; for(let i = Math.floor(-Rr/C); i <= Math.ceil(Rr/C); i++) for(let j = Math.floor((L.z0 - Rr)/C); j <= Math.ceil((L.z0 + Rr)/C); j++){
     const a = (i + 0.5)*C, z = (j + 0.5)*C; if(Math.abs(z) > W*0.46 || Math.hypot(a, z - L.z0) > Rr) continue; const w = V.worldAt(a, z), t = townAt(w, a, z); if(t < (w === 'wilds' || w === 'magic' ? 0.1 : 0.25)) continue;
     let top = true; for(const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const a2 = a + di*C, z2 = z + dj*C; if(townAt(V.worldAt(a2, z2), a2, z2) > t){ top = false; break; } }
     if(!top || T.true(a, z, W*0.003) <= TR.sea || mnHash(i, j, s + 65) > 0.15 + 0.7*V.works) continue; hubs.push([a, z, w, t]); } }
+  // (the farms' hearts: wherever the houses gather, as the buildings below are placed, a village or a town's edge)
+  const villageAt = (w, a, z) => w === 'wilds' ? 0.7*V.cityAt(a, z, 0.12*(0.3 + 0.9*V.works)) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
+  { const C = W*0.03, Rr = W*0.3; for(let i = Math.floor(-Rr/C); i <= Math.ceil(Rr/C); i++) for(let j = Math.floor((L.z0 - Rr)/C); j <= Math.ceil((L.z0 + Rr)/C); j++){
+    const a = (i + 0.5)*C, z = (j + 0.5)*C; if(Math.abs(z) > W*0.46 || Math.hypot(a, z - L.z0) > Rr) continue; const w = V.worldAt(a, z), t = villageAt(w, a, z); if(t < 0.06) continue;
+    let top = true; for(const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const a2 = a + di*C, z2 = z + dj*C; if(villageAt(V.worldAt(a2, z2), a2, z2) > t){ top = false; break; } }
+    if(top && T.true(a, z, W*0.003) > TR.sea) farms.push([a, z, w, Math.min(1, t*2)]); } }
   hubs.forEach(([a, z, w, t], hi) => { const R = rgRand(s, 1310, hi), n = 2 + Math.floor(R()*(0.5 + 2.5*V.works)), mat = pickMat(w, R), step = (w === 'wilds' || w === 'magic' ? 14 : 12)*M;
     for(let k = 0; k < n; k++) addWay(walk(a, z, k/n*Math.PI*2 + R()*0.8, (120 + 380*R()*t)*M, step, null, R), k === 0 || R() < 0.7 ? mat : pickMat(w, R), w, false, R);
     let near = null, nd = Infinity; hubs.forEach((h2, hj) => { if(hj <= hi) return; const d = Math.hypot(h2[0] - a, h2[1] - z); if(d < nd){ nd = d; near = h2; } });
@@ -565,13 +578,6 @@ function rgStore(V){
     while(i + 1 < P.length){ const p = P[i], q = P[i + 1], du = (q.u - p.u) || 1; if(q.u < next){ i++; continue; } const t = (next - p.u)/du;
       fn(p.a + (q.a - p.a)*t, p.z + (q.z - p.z)*t, -(q.z - p.z)/du, (q.a - p.a)/du, next, p.dec); next += step; } };
   out.ways = ways;
-  sow(1, W*0.0036, W*0.02, W*2.5, 4, (a, z, r, R) => {
-    const w = V.worldAt(a, z), P = RG_PROF[w], tot = P.tr + P.de + P.gt; if(!tot) return null;
-    // (fewer trees where a town stands, none under water)
-    const town = V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works)); if(T.true(a, z, W*0.004) <= TR.sea || !offWay(a, z, 2*M)) return null;
-    if(R() > Math.min(1, V.forestAt(a, z)*V.life*1.25*tot)*(r < W*0.01 ? 0.35 : 1)*(1 - 0.85*town)) return null;
-    const u = R()*tot, kind = u < P.de ? 'dead' : u < P.de + P.gt ? 'glow' : (T2 => T2[Math.floor(R()*T2.length)])(floraAt(w, a, z));
-    return { c: 'tree', w, kind, hM: pkMetres(kind, R()) }; });
   // BUILDINGS: where the cities are (and in the wilds, a few villages and farms); each archetype chosen first, then sized
   // in metres (tall ones where the city is densest, as a downtown rises), so a house is a house and a tower a tower
   sow(2, W*0.009, W*0.03, W*3, 2, (a, z, r, R) => {
@@ -588,6 +594,104 @@ function rgStore(V){
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
     if(!offWay(a, z, wM*M*0.5 + 2*M)) return null; // (a building fronts its way; it never stands in it)
     return { c: 'bldg', w, kind, hM, wM, face: faceOf(a, z, R()) }; });
+  // (a town's lights by night, between its houses: streets, yards, windows too small to be houses, out to the far
+  //  side of the land; few in the ruins, a fire here and there)
+  sow(14, W*0.005, W*0.03, W*2.5, 2, (a, z, r, R) => { const w = V.worldAt(a, z), ci = w === 'wilds' ? V.cityAt(a, z, 0.12) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
+    if(ci < 0.1 || R() > ci*(w === 'ruins' ? 0.12 : 0.9) || T.true(a, z, W*0.004) <= TR.sea) return null; return { c: 'glim', w, big: R() < 0.15 ? 1.5 : 1 }; });
+  // WHAT THE HOUSES HOLD ROUND THEM (Ruby: "more placing rules … trees kept back from a house"): each building's
+  // footprint, so a tree keeps a few metres back from its walls and a field from its yard
+  const BB = W*0.004, bbins = new Map();
+  for(const o of out) if(o.c === 'bldg'){ const k = Math.floor(o.a/BB) + ',' + Math.floor(o.z/BB); if(!bbins.has(k)) bbins.set(k, []); bbins.get(k).push(o); }
+  const nearBldg = (a, z, room) => { const bi = Math.floor(a/BB), bj = Math.floor(z/BB);
+    for(let di = -1; di <= 1; di++) for(let dj = -1; dj <= 1; dj++){ const L2 = bbins.get((bi + di) + ',' + (bj + dj)); if(L2) for(const o of L2) if(Math.hypot(a - o.a, z - o.z) - o.wM*M*0.6 < room) return true; }
+    return false; };
+  // FIELDS (Ruby: "farmland in rings round a town"; docs/prior-art/ringworld-countryside.md): round each town Works
+  // raises, past its last houses, the land is farmed before it is forest, as von Thünen drew it: a patchwork of fields
+  // laid out on the town's own lines, thinning with distance, each a crop its climate grows (wheat, barley, hay, pasture,
+  // the plough, rapeseed, maize; lavender and vines in dry country; rice in the warm and wet; the builders' gardens, the
+  // magic world's moonflowers, the ruins' fallow), hedged in wet country, walled in dry; and on the steep near a town,
+  // terraces stepped along the contours. In them, what a field holds: bales on the stubble, ricks in the hay, a flock on
+  // the pasture with its shepherd, a scarecrow, hives by the flowers, a harvester at work
+  const fields = [], FBIN = W*0.006, fbins = new Map();
+  const cropOf = (w, a, z, e, R) => { const dr = V.dryAt(a, z), cold = e > TR.snow*0.32, u = R();
+    if(w === 'ruins') return u < 0.75 ? 'fallow' : 'wheat'; if(w === 'builders') return u < 0.6 ? 'garden' : 'pasture'; if(w === 'magic') return u < 0.45 ? 'moonflower' : u < 0.7 ? 'wheat' : 'pasture';
+    if(cold) return u < 0.5 ? 'pasture' : u < 0.8 ? 'hay' : 'ploughed';
+    if(dr > 0.62) return u < 0.3 ? 'lavender' : u < 0.6 ? 'vines' : u < 0.85 ? 'wheat' : 'stubble';
+    if(dr < 0.38 && mnValue(a/(W*0.3) + 2.2, z/(W*0.3) - 6.1, s + 81) > 0.58) return u < 0.85 ? 'rice' : 'pasture';
+    return ['wheat', 'wheat', 'barley', 'stubble', 'hay', 'pasture', 'pasture', 'ploughed', 'rapeseed', 'maize'][Math.floor(u*10)]; };
+  const inField = (a, z, room = 0) => { const L2 = fbins.get(Math.floor(a/FBIN) + ',' + Math.floor(z/FBIN)); if(!L2) return null;
+    for(const f of L2){ const da = a - f.a, dz = z - f.z, u = da*f.ux + dz*f.uz, v = -da*f.uz + dz*f.ux; if(Math.abs(u) < f.hl + room && Math.abs(v) < f.hw + room) return f; } return null; };
+  farms.forEach(([a0, z0, w, t], hi) => { if(w === 'neon') return;
+    const R = rgRand(s, 1400, hi), th = R()*Math.PI, ux = Math.cos(th), uz = Math.sin(th), strips = R() < 0.35;
+    const cu = (strips ? 160 + 80*R() : 90 + 70*R())*M, cv = strips ? cu*(0.22 + 0.12*R()) : cu*(0.6 + 0.5*R()), Rf = (350 + 550*R())*M*(0.6 + t), nu = Math.ceil(Rf/cu), nv = Math.ceil(Rf/cv);
+    for(let i = -nu; i <= nu; i++) for(let j = -nv; j <= nv; j++){
+      const lu = (i + (j & 1)*0.5*(strips ? 0 : 1))*cu, lv = j*cv, dist = Math.hypot(lu, lv); if(dist > Rf || R() > 1.1 - Math.pow(dist/Rf, 2)) continue;
+      const a = a0 + lu*ux - lv*uz, z = z0 + lu*uz + lv*ux; if(Math.abs(z) > W*0.47) continue;
+      const g = ground(a, z); if(g.wet || g.coast || (w !== 'wilds' && w !== 'magic' && villageAt(w, a, z) > 0.4) || V.forestAt(a, z) > 0.55) continue;   // (a village's fields come up to its houses; a town's begin past its streets)
+      const hl = cu*(0.4 + 0.08*R()), hw = cv*(0.36 + 0.1*R()); if(nearBldg(a, z, Math.min(hl, hw)*0.9) || !offWay(a, z, Math.min(hl, hw)*0.9)) continue;
+      // (one farm's fields never lie over its neighbour's)
+      if([[0, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([p, q]) => inField(a + p*hl*ux - q*hw*uz, z + p*hl*uz + q*hw*ux, 2*M))) continue;
+      let f;
+      if(g.slope < 0.28) f = { a, z, ux, uz, hl, hw, w, crop: cropOf(w, a, z, g.e, R), step: 0 };
+      else if(g.slope < 1.1 && w !== 'builders' && w !== 'ruins'){   // (too steep to plough: terraced along the contour)
+        const d = W*0.003, ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d), gl = Math.hypot(ex, ez) || 1, dr = V.dryAt(a, z);
+        f = { a, z, ux: -ez/gl, uz: ex/gl, hl: hl*0.8, hw: hw*0.8, w, crop: dr < 0.42 ? 'rice' : dr > 0.6 ? 'vines' : 'tea', step: (3 + 3*R())*M/Math.max(0.6, g.slope) }; }
+      else continue;
+      f.edge = f.step ? (f.crop === 'rice' ? 'bund' : 'wall') : f.crop === 'rice' ? 'bund' : w === 'builders' ? 'none' : V.dryAt(a, z) > 0.5 || g.slope > 0.15 ? 'wall' : 'hedge';
+      f.i = fields.length; fields.push(f);
+      const ext = Math.max(f.hl, f.hw); for(let bi = Math.floor((a - ext)/FBIN); bi <= Math.floor((a + ext)/FBIN); bi++) for(let bj = Math.floor((z - ext)/FBIN); bj <= Math.floor((z + ext)/FBIN); bj++){ const k = bi + ',' + bj; if(!fbins.has(k)) fbins.set(k, []); fbins.get(k).push(f); } } });
+  out.fields = fields;
+  // THE SHORE (Ruby: "more interactions nobody asked for"): where a town comes down to the water, a boat or two moored
+  // off it, each at the end of a wooden jetty run out from the bank; along the tideline now and then a beachcomber
+  // droid sorting what the sea left; and where the builders were, or their ruins, now and then a BRIDGE OF HARD LIGHT
+  // across the water, from bank to bank, as level as their roads (the nod: Halo's hard-light bridges)
+  { const dirs = Array.from({ length: 12 }, (_, q) => [Math.cos(q/12*Math.PI*2), Math.sin(q/12*Math.PI*2)]);
+    // (from a point on the bank, the way out to deep water: how far the bank runs before the water, how far to land beyond)
+    const across = (a, z, ca, sa, max) => { let wetAt = -1; for(let u = 3*M; u < max; u += 3*M){ const a2 = a + ca*u, z2 = z + sa*u; if(Math.abs(z2) > W*0.47) return null; const wt = T.true(a2, z2, W*0.002) <= TR.sea;
+      if(wt && wetAt < 0) wetAt = u; else if(!wt && wetAt >= 0) return { wetAt, land: u }; } return wetAt >= 0 ? { wetAt, land: null } : null; };
+    const deck = (pts, mat, w, half, e) => { let u = 0; ways.push({ mat, w, half, main: false, i: ways.length, deck: e, pts: pts.map(([a, z], q) => { if(q) u += Math.hypot(a - pts[q - 1][0], z - pts[q - 1][1]); return { a, z, u, dec: 0 }; }) }); };
+    sow(15, W*0.008, W*0.02, W*0.3, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(w === 'neon' || w === 'builders') return null; const g = ground(a, z); if(g.wet || !g.coast || townAt(w, a, z) < 0.04 || R() > 0.6*(0.3 + 0.7*Math.min(1, CL))) return null;
+      let best = null; for(const [ca, sa] of dirs){ const q = across(a, z, ca, sa, 60*M); if(q && (!best || q.wetAt < best.q.wetAt)) best = { q, ca, sa }; } if(!best || best.q.wetAt > 30*M) return null;
+      const { ca, sa } = best, len = best.q.wetAt + (8 + 12*R())*M, end = [a + ca*len, z + sa*len]; if(T.true(end[0], end[1], W*0.002) > TR.sea) return null;
+      const steps = Math.max(2, Math.ceil(len/(4*M))), pts = Array.from({ length: steps + 1 }, (_, q) => [a + ca*len*q/steps, z + sa*len*q/steps]);
+      if(w !== 'ruins') deck(pts, 'jetty', w, 1.1*M, TR.sea + 1.0*M);
+      const n = w === 'ruins' ? 0 : 1 + Math.floor(R()*2), side = R() < 0.5 ? 1 : -1;
+      for(let k = 0; k < n; k++){ const ba = end[0] - ca*k*4*M + (-sa)*side*(2.6 + 0.4*k)*M, bz = end[1] - sa*k*4*M + ca*side*(2.6 + 0.4*k)*M;
+        out.push({ c: 'prop', w, kind: 'boat', hM: pkMetres('boat', R()), a: ba, z: bz, r: Math.hypot(ba, bz - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(sa, ca) + (R() - 0.5)*0.4, afloat: true }); }
+      if(R() < 0.15) return { c: 'bot', w, kind: 'crab', hM: pkMetres('crab', R()) };
+      return null; });
+    sow(16, W*0.02, W*0.04, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z), p = { builders: 0.5, ruins: 0.25, magic: 0.1 }[w] ?? 0.03; if(R() > p*(0.3 + V.works)) return null;
+      const g = ground(a, z); if(g.wet || !g.coast) return null; let best = null;
+      for(const [ca, sa] of dirs){ const q = across(a, z, ca, sa, 500*M); if(q && q.land && q.land - q.wetAt > 30*M && (!best || q.land < best.q.land)) best = { q, ca, sa }; }
+      if(!best) return null; const { ca, sa } = best, len = best.q.land + 6*M, b = [a + ca*len, z + sa*len], e = Math.max(T.true(a, z, W*0.002), T.true(b[0], b[1], W*0.002)) + 1.5*M;
+      const steps = Math.max(2, Math.ceil(len/(8*M))); deck(Array.from({ length: steps + 1 }, (_, q) => [a + ca*len*q/steps, z + sa*len*q/steps]), 'hardlight', w, 2.4*M, e); return null; }); }
+  // (what each field holds, placed in its own frame: bales in rows on the stubble, a rick or two in the hay, a flock on
+  //  the pasture and now and then its shepherd, a scarecrow in the corn, hives along the flowers, a harvester at work;
+  //  and along a hedge, now and then a tree left standing in it)
+  { const CLF = 0.3 + 0.7*Math.min(1, CL);
+    for(const f of fields){ const R = rgRand(s, 1410, f.i), at2 = (u, v) => [f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux];
+      const put = (kind, u, v, extra = {}) => { const [a, z] = at2(u, v); if(Math.abs(z) > W*0.485) return; out.push({ c: kind === 'shepherd' || kind === 'harvester' ? 'bot' : 'prop', w: f.w, kind, hM: pkMetres(kind, R()), a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(f.uz, f.ux) + (R() < 0.5 ? 0 : Math.PI), ...extra }); };
+      if(f.step) continue;
+      if(f.crop === 'stubble' && R() < 0.8*CLF){ const n = 4 + Math.floor(R()*10), rows = 1 + Math.floor(R()*3); for(let k = 0; k < n; k++) put('haybale', (R()*2 - 1)*f.hl*0.85, ((k % rows) + 0.5)/rows*f.hw*1.6 - f.hw*0.8 + (R() - 0.5)*f.hw*0.1); }
+      if(f.crop === 'hay' && R() < 0.6*CLF){ const n = 1 + Math.floor(R()*3); for(let k = 0; k < n; k++) put('haystack', (R()*2 - 1)*f.hl*0.7, (R()*2 - 1)*f.hw*0.6); }
+      if(f.crop === 'pasture' && R() < 0.55*CLF){ const cu = (R()*2 - 1)*f.hl*0.6, cv = (R()*2 - 1)*f.hw*0.5, n = 3 + Math.floor(R()*10);
+        for(let k = 0; k < n; k++){ const an = R()*Math.PI*2, rd = (2 + 14*Math.sqrt(R()))*M; put('sheep', cu + Math.cos(an)*rd, cv + Math.sin(an)*rd*0.7, { face: R()*Math.PI*2 }); }
+        if(R() < 0.25) put('shepherd', cu + 18*M, cv); }
+      if((f.crop === 'wheat' || f.crop === 'maize' || f.crop === 'barley') && R() < 0.12*CLF) put('scarecrow', (R()*2 - 1)*f.hl*0.5, (R()*2 - 1)*f.hw*0.5);
+      if((f.crop === 'wheat' || f.crop === 'barley') && f.w !== 'ruins' && R() < 0.06) put('harvester', (R()*2 - 1)*f.hl*0.6, (R()*2 - 1)*f.hw*0.5, { face: Math.atan2(f.uz, f.ux) });
+      if((f.crop === 'lavender' || f.crop === 'rapeseed' || f.crop === 'moonflower') && R() < 0.3*CLF) put('beehives', f.hl + 2*M, (R()*2 - 1)*f.hw*0.8);
+      if(f.crop === 'stubble' && f.w !== 'ruins' && R() < 0.04*CLF) put('tractor', f.hl - 6*M, (R()*2 - 1)*f.hw*0.7);
+      if(f.edge === 'hedge') for(let k = 0, n = Math.floor(f.hl*2/(25*M)); k < n; k++) if(R() < 0.18*V.life*2){ const side = R() < 0.5 ? -1 : 1, kind = ['broadleaf', 'broadleaf', 'poplar', 'birch'][Math.floor(R()*4)];
+        put(kind, -f.hl + (k + 0.5)*f.hl*2/n, side*(f.hw + 1.2*M), {}); out[out.length - 1].c = 'tree'; } } }
+  sow(1, W*0.0036, W*0.02, W*2.5, 4, (a, z, r, R) => {
+    const w = V.worldAt(a, z), P = RG_PROF[w], tot = P.tr + P.de + P.gt; if(!tot) return null;
+    // (fewer trees where a town stands, none under water)
+    const town = V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works)); if(T.true(a, z, W*0.004) <= TR.sea || !offWay(a, z, 2*M) || inField(a, z, -2*M)) return null;
+    if(R() > Math.min(1, V.forestAt(a, z)*V.life*1.25*tot)*(r < W*0.01 ? 0.35 : 1)*(1 - 0.85*town)) return null;
+    const u = R()*tot, kind = u < P.de ? 'dead' : u < P.de + P.gt ? 'glow' : (T2 => T2[Math.floor(R()*T2.length)])(floraAt(w, a, z)), hM = pkMetres(kind, R());
+    // (kept back from a house: its crown clear of the walls, by a few metres)
+    if(nearBldg(a, z, (3 + hM*0.22)*M)) return null;
+    return { c: 'tree', w, kind, hM }; });
   // ROCKS: boulders where the land is rough
   // (boulders gather where the land is steep, as scree under a slope)
   sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope))) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
@@ -613,7 +717,7 @@ function rgStore(V){
   //  windpump and its trough on dry pasture; stone walls on the steep and dry, hedges on the low and wet; the town's
   //  furniture in town; wisps by water; the poles along the roads, below. The large ones are seen from further off)
   const propFits = (k, w, g, a, z, ci) => { const fo = V.forestAt(a, z), dr = V.dryAt(a, z);
-    switch(k){ case 'haybale': case 'haystack': case 'scarecrow': case 'tractor': case 'beehives': case 'grainbin': return fo < 0.4 && g.slope < 0.3 && ci < 0.3;
+    switch(k){ case 'haybale': case 'haystack': case 'scarecrow': case 'tractor': case 'beehives': return false; case 'grainbin': return fo < 0.4 && g.slope < 0.3 && ci < 0.3 && !!inField(a, z, 40*M);   // (the field's own things stand in its fields)
       case 'windpump': case 'trough': return dr > 0.45 && g.slope < 0.35; case 'wall': return g.slope > 0.15 || dr > 0.5; case 'hedge': return dr < 0.55 && g.slope < 0.4;
       case 'well': case 'shrine': case 'mailbox': case 'wishing': return ci > 0.03; case 'busstop': case 'kiosk': case 'signal': case 'phonebox': case 'vending': case 'cart': return ci > 0.15;
       case 'wisp': return g.coast || g.rise < -0.2; case 'fairyring': return fo > 0.2 && g.slope < 0.25; case 'solar': case 'dish': return g.slope < 0.25; case 'pole': return false; default: return true; } };
@@ -630,10 +734,12 @@ function rgStore(V){
   // stop, a food cart; now and then a signal, a sign, a phone box, vending machines, a kiosk; mailboxes along the village
   // lanes; in the ruins rusted cars sunk into the verge, barrels, tank traps across the way; out in the country, the
   // poles that carry the wires along the main roads. Each faces the way. All of it by Clutter
-  for(const wy of ways){ const w = wy.w, R = rgRand(s, 1200, wy.i), kerb = wy.half + 1.6*M, side = () => R() < 0.5 ? 1 : -1;
+  for(const wy of ways){ if(wy.deck !== undefined) continue; const w = wy.w, R = rgRand(s, 1200, wy.i), kerb = wy.half + 1.6*M, side = () => R() < 0.5 ? 1 : -1;
     const put = (kind, a, z, nx, nz, sd2, off = 0, extra = {}) => { const a2 = a + nx*sd2*(kerb + off), z2 = z + nz*sd2*(kerb + off); if(Math.abs(z2) > W*0.485 || ground(a2, z2).wet) return null;
       const o = { c: 'prop', w, kind, hM: pkMetres(kind, R()), a: a2, z: z2, r: Math.hypot(a2, z2 - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nz*sd2, -nx*sd2), ...extra }; out.push(o); return o; };
-    if(RG_LIT_WAYS.includes(wy.mat) && w !== 'wilds'){ let k = 0; along(wy, 25*M, (a, z, nx, nz, u, dec) => { k++; if(inTown(w, a, z) && dec < 0.7 && R() < Math.min(1, 0.3 + 1.4*V.clutter)) put('lamp', a, z, nx, nz, k % 2 ? 1 : -1); }); }
+    if(RG_LIT_WAYS.includes(wy.mat) && w !== 'wilds'){ let k = 0; along(wy, 25*M, (a, z, nx, nz, u, dec) => { k++; if(inTown(w, a, z) && dec < 0.7 && R() < Math.min(1, 0.3 + 1.4*V.clutter)){ put('lamp', a, z, nx, nz, k % 2 ? 1 : -1);
+      // (and now and then, beside a lamp, the lamplighter on its round: seen only about dusk)
+      if(w !== 'neon' && R() < 0.012*V.life*2){ const o = put('lamplighter', a + nz*1.2*M, z - nx*1.2*M, nx, nz, k % 2 ? 1 : -1, 0.6*M); if(o) o.c = 'bot'; } } }); }
     along(wy, 16*M, (a, z, nx, nz, u, dec) => { const town = inTown(w, a, z);
       if((w === 'cities' || w === 'neon') && town){ if(R() < 0.1*CL) put('parked', a, z, nx, nz, side(), -0.7*M); if(R() < 0.04*CL) put('hydrant', a, z, nx, nz, side(), 0.4*M);
         if(R() < 0.035*CL){ const s2 = side(); put(R() < 0.35 ? 'busstop' : 'bench', a, z, nx, nz, s2, 1.6*M); if(R() < 0.6) put('bicycle', a + nz*3*M, z - nx*3*M, nx, nz, s2, 1.2*M); }
@@ -792,8 +898,16 @@ function rgPaintLand(x, mk, dk, V){
   // by their own draw), and is drawn as seen from where the eye is: the angle between its facing and the way to the eye
   const viewOf = o => { const face = o.face ?? (o.rs % 62832)/10000, rel = face - Math.atan2(L.z0 - o.z, -o.a); return { cs: Math.cos(rel), sn: Math.sin(rel) }; };
   const mirrored = (X, draw) => { x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); draw(); x.restore(); };
+  // A SETTLEMENT'S LIGHTS (Ruby: "a settlement's lights at night"): a house too far off to draw is a window's light at
+  // night, a street lamp a point on its string of them; they come on one by one through the dusk (each its own moment,
+  // by its stream), warm or cold by its world's lights, the brightest with a little bloom
+  const nightDot = (o, f, l, wday, haze, big = 1) => { const nt = 1 - rsSmooth(0.3, 0.7, wday); if(nt < 0.15 || (o.rs % 997)/997 > nt*1.4 - 0.15) return;
+    const X = f[0], Y = stand(l, X, f[1]) - px(0.6)*big; if(!vis(l, X - px(1), X + px(1), Y - px(2), Y + px(1))) return;
+    const lights = V.lightsOf(o.w), col = rsMix(o.rs & 2 ? lights[0] : lights[1] || lights[0], AIR, haze*0.5), r = px(0.55 + 0.5*((o.rs >> 3) % 3)/2)*big;
+    x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.35), Math.min(1, nt*1.3)); x.fillRect(X - r, Y - r, r*2, r*2);
+    if((o.rs & 12) === 12) rgGlow(x, X, Y, r*5, col, 0.35*nt); };
   const rgPaintThing = (o, l, dd) => {
-    const f = foot(o.a, o.z); if(!f || f[3] <= TR.sea) return;
+    const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs);
     if(o.c === 'tree'){ const h = o.hM*f[2]; if(h < px(1.6) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || h < px(4) ? null : [X - h*0.13, X + h*0.13, Y - h*0.8, Y - h*0.4])) return;
@@ -802,7 +916,7 @@ function rgPaintLand(x, mk, dk, V){
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), wday, haze, AIR), glow: c.glow, sd: c.sd, L: LT };
       // (a tree has no front: half of them are drawn mirrored, their light kept where it is)
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
-    if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2) || h > wh*0.75) return;
+    if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > wh*0.75) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd, X + wd, Y - h*1.3, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
       const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: viewOf(o) }, PK_STYLE[o.w], night, R, rgPx, o.kind);
       // CLOSE BY, its foot (the building's base detailed, Ruby: "close-up versions with details for their base"): a door
@@ -833,7 +947,8 @@ function rgPaintLand(x, mk, dk, V){
     if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h < px(3) || h > wh*0.6) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - bw/2, X + bw/2, Y - h, Y)) return;
       pkBoard(x, X, Y, m, { ...colsOf(o.w, wday, haze), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
-    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*(RG_WIDE.includes(o.kind) ? 0.12 : 0.35)) return;
+    if(o.c === 'glim'){ nightDot(o, f, l, wday, haze, o.big); return; }
+    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > wh*(RG_WIDE.includes(o.kind) ? 0.12 : 0.35)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
       // (set into the ground a little, always; the ruins' wrecks and bikes half buried, clipped where the ground meets them)
       const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : viewOf(o) };
@@ -843,7 +958,10 @@ function rgPaintLand(x, mk, dk, V){
       if(o.next){ const f2 = foot(o.next[0], o.next[1]); if(f2) pkWires(x, [X, Y - h*0.95], [f2[0], f2[1] - o.hM*f2[2]*0.95], h, c, rgPx); } return; }
     if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.5) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
-      const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+      const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
+      if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;   // (out only about dusk, on its round)
+      if(o.kind === 'harvester'){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: viewOf(o) }, o.kind, R, rgPx, nt); return; }
+      if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     // small life: found rather than seen
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.2) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y < px(4) || Y > wh*0.95 || !vis(l, X - hh, X + hh, Y - hh*1.4, Y)) return;
@@ -890,7 +1008,7 @@ function rgPaintLand(x, mk, dk, V){
   const drawWays = (dn, df) => store.ways.forEach((wy, wi) => { let run = [], decs = [];
     const flush = () => { if(run.length >= 2) paintWay(wy, run, decs); run = []; decs = []; };
     for(const pc of wayPieces[wi]){ if(!(pc.dd > dn && pc.dd <= df) || pc.p.dec > 0.8){ flush(); continue; }
-      for(const P of run.length ? [pc.q] : [pc.p, pc.q]){ const e = Math.max(TR.sea, T(P.a, P.z, W*0.002)) + W*0.00003, A = at(P.a - pc.nx*wy.half, P.z - pc.nz*wy.half, e), B = at(P.a + pc.nx*wy.half, P.z + pc.nz*wy.half, e);
+      for(const P of run.length ? [pc.q] : [pc.p, pc.q]){ const e = wy.deck ?? Math.max(TR.sea, T(P.a, P.z, W*0.002)) + W*0.00003, A = at(P.a - pc.nx*wy.half, P.z - pc.nz*wy.half, e), B = at(P.a + pc.nx*wy.half, P.z + pc.nz*wy.half, e);
         if(!A || !B){ flush(); continue; } run.push([A, B]); decs.push(P.dec); } }
     flush(); });
   // A WAY'S PIECE PAINTED in its material: asphalt (a centre line on the main roads), cobbles, brick laid across,
@@ -912,12 +1030,63 @@ function rgPaintLand(x, mk, dk, V){
     if(wy.mat === 'earth'){ for(const t of [0.3, 0.7]) line(run.map((_, q) => mix(q, t)), rsCss(lit([110, 88, 64]), 0.6), Math.max(px(0.5), wpx*0.8)); line(ctr, rsCss(lit([96, 126, 70]), 0.5), Math.max(px(0.5), wpx*0.9)); }
     else if(wy.mat === 'asphalt' && wy.main) line(ctr, rsCss([236, 230, 200], 0.75), wpx, [wpx*4, wpx*4]);
     else if(wy.mat === 'light' || wy.mat === 'ley'){ x.save(); x.globalCompositeOperation = 'screen'; if(wy.mat === 'light'){ line(L2, rsCss(c.glow, 0.5), wpx*1.2); line(R2, rsCss(c.glow, 0.5), wpx*1.2); } else { line(ctr, rsCss(c.glow, 0.22), wpx*4); line(ctr, rsCss(c.glow, 0.7), wpx*1.1); } x.restore(); }
+    // (a jetty: its planks across, the posts under its edges down into the water; a bridge of hard light: a pale sheet of
+    //  light, its edges burning, faint chevrons along it, nothing beneath)
+    if(wy.mat === 'jetty'){ for(let q = 0; q < run.length; q++){ const wq = wid(q); if(wq > px(4)) line([mix(q, 0), mix(q, 1)], rsCss(lit([70, 54, 40]), 0.6), Math.max(px(0.4), wq*0.05));
+      for(const t of [0.05, 0.95]){ const [X, Y] = mix(q, t); line([[X, Y], [X, Y + Math.max(px(1), wq*0.7)]], rsCss(lit([60, 46, 34])), Math.max(px(0.5), wq*0.08)); } } }
+    if(wy.mat === 'hardlight'){ const hl = rsMix(c.glow, [150, 230, 255], 0.6); x.save(); x.globalCompositeOperation = 'screen'; rsPoly(x, poly, rsCss(hl, 0.2));
+      line(L2, rsCss(hl, 0.85), Math.max(px(0.8), wpx*1.2)); line(R2, rsCss(hl, 0.85), Math.max(px(0.8), wpx*1.2)); line(L2, rsCss(hl, 0.25), wpx*5); line(R2, rsCss(hl, 0.25), wpx*5);
+      for(let q = 1; q < run.length - 1; q += 2){ if(wid(q) < px(6)) continue; const A = mix(q, 0.2), B = mix(q, 0.8), Cn = mix(Math.min(run.length - 1, q + 1), 0.5); line([A, Cn, B], rsCss(hl, 0.35), Math.max(px(0.5), wpx*0.6)); } x.restore(); }
     if(wy.w === 'neon' && wy.mat === 'asphalt'){ x.save(); x.globalCompositeOperation = 'screen'; line(L2, rsCss(c.glow2, 0.35), wpx*1.6); line(R2, rsCss(c.glow, 0.35), wpx*1.6); x.restore(); }
     // (wear: where it is worn, cracks across it and potholes in it, weeds along its edges)
     for(let q = 0; q < run.length; q++){ const dc = decs[q]; if(dc < 0.4) continue; const wq = wid(q);
       if(Rm() < dc){ const A = mix(q, 0.1 + 0.3*Rm()), B = mix(Math.min(run.length - 1, q + 1), 0.5 + 0.4*Rm()); line([A, [(A[0] + B[0])/2 + (Rm() - 0.5)*wq*0.2, (A[1] + B[1])/2], B], rsCss(lit([30, 28, 26]), 0.6), Math.max(px(0.4), wpx*0.6)); }
       if(dc > 0.55 && Rm() < 0.5 && wq > px(6)){ const [X, Y] = mix(q, 0.2 + 0.6*Rm()); x.fillStyle = rsCss(lit([40, 36, 32]), 0.7); x.beginPath(); x.ellipse(X, Y, wq*0.12, wq*0.05, 0, 0, Math.PI*2); x.fill(); }
       if(wq > px(5)) for(const t of [0.02, 0.98]) if(Rm() < dc){ const [X, Y] = mix(q, t), gh = Math.min(px(6), wq*0.12); x.fillStyle = rsCss(lit([70, 104, 58]), 0.85); x.beginPath(); x.moveTo(X - gh*0.5, Y); x.lineTo(X, Y - gh); x.lineTo(X + gh*0.5, Y); x.fill(); } } };
+
+  // THE FIELDS on the floor (the store's), as the ways are: each cut into pieces, finer near you, each piece lying on
+  // the land between its corners and drawn with the ridge before it; a crop's colour mottled by the land's own noise,
+  // its rows or furrows where they can be seen (along the field's length), a hay field's mowing stripes, a paddy's
+  // water holding the sky; terraces stepped down the slope; and round each, its hedge or its wall standing up from the
+  // ground, a paddy's low bund
+  const fieldPieces = []; for(const f of store.fields){ const dist = Math.hypot(f.a, f.z - L.z0), ext = Math.max(f.hl, f.hw); if(keep(f.a, f.z, ext) == null || dist > W*0.8) continue;
+    const sz = Math.max(W*0.0005, dist*0.06), nu = Math.max(1, Math.min(10, Math.ceil(f.hl*2/sz))), nv = Math.max(1, Math.min(10, Math.ceil(f.hw*2/sz)));
+    for(let i = 0; i < nu; i++) for(let j = 0; j < nv; j++){ const u0 = -f.hl + 2*f.hl*i/nu, u1 = -f.hl + 2*f.hl*(i + 1)/nu, v0 = -f.hw + 2*f.hw*j/nv, v1 = -f.hw + 2*f.hw*(j + 1)/nv, um = (u0 + u1)/2, vm = (v0 + v1)/2;
+      fieldPieces.push({ f, u0, u1, v0, v1, dd: cutOf(f.a + um*f.ux - vm*f.uz, f.z + um*f.uz + vm*f.ux) }); } }
+  const drawFields = (dn, df) => { for(const pc of fieldPieces) if(pc.dd > dn && pc.dd <= df) paintFieldPiece(pc); };
+  const paintFieldPiece = ({ f, u0, u1, v0, v1 }) => {
+    const wa = (u, v) => [f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux], M1 = W*0.00025, lift = W*0.00002;
+    const P = (u, v, up = 0) => { const [a, z] = wa(u, v); return at(a, z, Math.max(TR.sea, T(a, z, W*0.002)) + lift + up); };
+    const q = [P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)]; if(q.some(p => !p)) return;
+    const [am, zm] = wa((u0 + u1)/2, (v0 + v1)/2), day = ringDay(L, am), haze = hazeOf(Math.hypot(am, zm - L.z0)), lit = col => rgLit(V, col, day, haze, AIR), C = RG_CROPS[f.crop] || RG_CROPS.pasture;
+    const n1 = mnValue(am/(W*0.004) + f.i*0.37, zm/(W*0.004), s + 83), ppm = W*0.00025*F/q[0][2];
+    // (near you a field is a wash over the land, so the land's own rise and fall shows through it; further off, its colour)
+    const near0 = 0.3 + 0.7*rsSmooth(120*M1, 520*M1, Math.hypot(am, zm - L.z0));
+    let base = rsMix(C.c, n1 > 0.5 ? [255, 250, 230] : [0, 0, 0], Math.abs(n1 - 0.5)*0.16); if(C.water) base = rsMix(base, AIR, 0.15);
+    rsPoly(x, q.map(p => [p[0], p[1]]), rsCss(lit(base), near0));
+    if(C.water && ppm > px(0.05)){ x.save(); x.globalCompositeOperation = 'screen'; rsPoly(x, q.map(p => [p[0], p[1]]), rsCss(rsMix(AIR, [255, 255, 255], 0.3), 0.18*day + 0.04)); x.restore(); }
+    // (rows, furrows, mowing stripes or terrace steps: lines along the field's length, at their spacing across it)
+    const step = f.step || (C.row ? C.row[0]*M1 : C.stripe ? C.stripe[0]*M1 : 0);
+    if(step && step*ppm/M1 > px(1.6)){ const k0 = Math.ceil((v0 + f.hw)/step), k1 = Math.floor((v1 + f.hw)/step);
+      if(k1 - k0 < 60) for(let k = k0; k <= k1; k++){ const v = -f.hw + k*step, A = P(u0, v), B = P(u1, v); if(!A || !B) continue;
+        if(f.step){ const wdt = Math.max(px(0.6), step*ppm/M1*0.22); x.strokeStyle = rsCss(lit(rsMix(base, [0, 0, 0], 0.35)), 0.8); x.lineWidth = wdt; x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
+          x.strokeStyle = rsCss(lit(rsMix(base, [255, 248, 230], 0.25)), 0.7); x.lineWidth = Math.max(px(0.4), wdt*0.35); x.beginPath(); x.moveTo(A[0], A[1] - wdt*0.6); x.lineTo(B[0], B[1] - wdt*0.6); x.stroke(); continue; }
+        const rc = C.row ? C.row[1] : C.stripe[1]; if(C.stripe && k % 2) continue;
+        x.strokeStyle = rsCss(lit(rc), C.stripe ? 0.55 : 0.75); x.lineWidth = Math.max(px(0.4), step*ppm/M1*(C.stripe ? 0.5 : 0.35)); x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke(); } }
+    if(C.glow){ const nt = 1 - rsSmooth(0.3, 0.7, day); if(nt > 0.2){ const [cx, cy] = [(q[0][0] + q[2][0])/2, (q[0][1] + q[2][1])/2]; rgGlow(x, cx, cy, Math.hypot(q[2][0] - q[0][0], q[2][1] - q[0][1])*0.6, colsOf(f.w, day, haze).glow, 0.25*nt); } }
+    // (its hedge or wall, along whichever of the field's own edges this piece lies on, standing up from the ground)
+    const edges = []; if(v0 <= -f.hw + 1e-9) edges.push([u0, v0, u1, v0]); if(v1 >= f.hw - 1e-9) edges.push([u0, v1, u1, v1]); if(u0 <= -f.hl + 1e-9) edges.push([u0, v0, u0, v1]); if(u1 >= f.hl - 1e-9) edges.push([u1, v0, u1, v1]);
+    if(f.edge === 'none' || !edges.length) return;
+    const H = f.edge === 'hedge' ? 1.6*M1 : f.edge === 'wall' ? 1.1*M1 : 0.3*M1, col = f.edge === 'hedge' ? rsMix([62, 102, 56], V.land, 0.3) : f.edge === 'wall' ? [150, 144, 132] : rsMix(C.c, [120, 104, 80], 0.6);
+    for(const [ua, va, ub, vb] of edges){ const A = P(ua, va), B = P(ub, vb), A2 = P(ua, va, H), B2 = P(ub, vb, H); if(!A || !B || !A2 || !B2) continue;
+      if(A[1] - A2[1] < px(0.8)){ x.strokeStyle = rsCss(lit(rsMix(col, [0, 0, 0], 0.2)), 0.7); x.lineWidth = Math.max(px(0.5), A[1] - A2[1]); x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke(); continue; }
+      rsPoly(x, [[A[0], A[1]], [B[0], B[1]], [B2[0], B2[1]], [A2[0], A2[1]]], rsCss(lit(rsMix(col, [0, 0, 0], 0.18))));
+      x.strokeStyle = rsCss(lit(rsMix(col, [255, 246, 226], 0.22))); x.lineWidth = Math.max(px(0.4), (A[1] - A2[1])*0.25); x.beginPath(); x.moveTo(A2[0], A2[1]); x.lineTo(B2[0], B2[1]); x.stroke();
+      // (near, a hedge's top is ragged with leaves; a wall's stones show)
+      const len = Math.hypot(B[0] - A[0], B[1] - A[1]), hh = A[1] - A2[1]; if(hh > px(4)){ const Rh = mulberry32((f.i*977 + Math.round(ua*1e4) + Math.round(va*1e4)) >>> 0), n = Math.min(40, Math.floor(len/(hh*0.5)));
+        for(let k = 0; k < n; k++){ const t = (k + Rh())/n, X = A2[0] + (B2[0] - A2[0])*t, Y = A2[1] + (B2[1] - A2[1])*t;
+          if(f.edge === 'hedge') rsPoly(x, [[X - hh*0.3, Y + hh*0.1], [X, Y - hh*(0.15 + 0.25*Rh())], [X + hh*0.3, Y + hh*0.1]], rsCss(lit(rsMix(col, Rh() < 0.5 ? [255, 246, 226] : [0, 0, 0], 0.15))));
+          else { x.fillStyle = rsCss(lit(rsMix(col, Rh() < 0.5 ? [255, 246, 226] : [0, 0, 0], 0.18)), 0.8); x.fillRect(X - hh*0.25, Y + hh*(0.15 + 0.6*Rh()), hh*0.45, hh*0.2); } } } } };
 
   // ---- 4. BACK TO FRONT ----
   const bySlot = lay.map(() => []);
@@ -951,7 +1120,7 @@ function rgPaintLand(x, mk, dk, V){
         // town), the land below a crest is a mosaic of fields, each its crop's colour by where it lies (ripe, green,
         // fallow, now and then in flower), hedged with a dark line; far off, at the scale a painter shows them
         const fw = V.worldAt(am, zm);
-        if((fw === 'wilds' || fw === 'cities' || fw === 'builders') && d > W*0.03 && d < W*2.2 && p0.ec < TR.snow*0.4 && V.forestAt(am, zm) < 0.35 && V.cityAt(am, zm, RG_PROF[fw].cv*(0.3 + 0.9*V.works)) < 0.2 && V.dryAt(am, zm) < 0.68){
+        if((fw === 'wilds' || fw === 'cities' || fw === 'builders') && d > W*0.5 && d < W*2.2 && p0.ec < TR.snow*0.4 && V.forestAt(am, zm) < 0.35 && V.cityAt(am, zm, RG_PROF[fw].cv*(0.3 + 0.9*V.works)) < 0.2 && V.dryAt(am, zm) < 0.68){
           const CROPS = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]], cs = W*0.012, hedge = rsCss(rsMix(dark, BLACK, 0.2), 0.5);
           for(let b = 0; b < 3; b++){ const v0 = 0.18 + b*0.26, v1 = v0 + 0.22, fi = Math.floor(am/cs), fj = Math.floor(zm/cs) + b*7, hv = mnHash(fi, fj, s + 77);
             if(hv < 0.25) continue; const crop = CROPS[Math.min(4, Math.floor(hv*hv*5.6))], fc = rgLit(V, rsMix(gc, crop, 0.45), day, haze, AIR);
@@ -959,7 +1128,7 @@ function rgPaintLand(x, mk, dk, V){
             rsPoly(x, [A, B, C2, D], rsCss(fc, 0.75)); x.strokeStyle = hedge; x.lineWidth = Math.max(px(0.6), depth*0.012); x.beginPath(); x.moveTo(D[0], D[1]); x.lineTo(C2[0], C2[1]); x.stroke(); } } }
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
     // then the roads and the things between this ridge and the next nearer one, far to near
-    const dn = li + 1 < lay.length ? lay[li + 1].d : 0; drawWays(dn, d);
+    const dn = li + 1 < lay.length ? lay[li + 1].d : 0; drawFields(dn, d); drawWays(dn, d);
     bySlot[li].sort((p, q) => q.dd - p.dd); for(const t of bySlot[li]){ if(t.o) drawWork(t.o, l); else if(t.ok){ cur = t; t.draw(l); } }
     // (in fog, rain or snow the air thickens between each ridge and the next, so the far ridges sink into it, layer on layer)
     if(MIST && li < lay.length - 2){ x.fillStyle = rsCss(MISTC, MIST); x.fillRect(0, 0, ww, wh); }
