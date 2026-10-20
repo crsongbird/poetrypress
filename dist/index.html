@@ -1891,6 +1891,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 /* each node's own result, at its foot (Step previews on) */
 .forge-node-preview{ display:none; width:calc(100% - 20px); height:auto; aspect-ratio:1; margin:6px 10px 2px; background:#808080; image-rendering:auto; }
 .forge-canvas.steps-on .forge-node-preview{ display:block; }
+.forge-canvas.steps-on.steps-many .forge-node-preview{ display:none; }   /* (above 150 parts the step previews rest: forge.js) */
 .forge-canvas .drawflow .drawflow-node.forge-output .forge-node-preview, .forge-canvas .drawflow .drawflow-node.forge-inputs .forge-node-preview{ display:none; }
 /* THE DOCK: what it makes, bottom right over the grid — no wider than its preview */
 .forge-dock{ --pv:232px; position:absolute; right:10px; bottom:10px; z-index:5; width:var(--pv); background:var(--fg-panel); border:1px solid var(--fg-line); padding:6px; box-shadow:0 14px 30px -16px rgba(0,0,0,.85); }
@@ -3491,6 +3492,12 @@ function canonArea(w, h){ return (w * h) / (SCALE * SCALE); }
  *  with S, so the grid stays the export's grid at any size (never finer, so
  *  a preview never costs more than the export to compute). */
 function canonDiv(d){ return Math.max(1, d * SCALE); }
+// THE GRID'S CEILING (Ruby: large graphs crashed Firefox on a phone, fine in Chrome): where memory is short, a graph
+// or chain works on a grid of at most this many pixels, drawn up to the page (the texture service sets it per job)
+let GRID_CAP = Infinity;
+function setGridCap(px){ GRID_CAP = px > 0 ? px : Infinity; }
+/** A grid divisor raised, if need be, so a w × h page's grid stays under the ceiling. */
+function cappedDiv(div, w, h){ return Math.max(div, Math.sqrt(w*h/GRID_CAP)); }
 
 /**
  * The light's direction across the page, scaled by how LOW it is: 1 at the
@@ -3765,6 +3772,12 @@ function gpuLightHeights(H, ww, wh, P){
     return res;
   } catch(e){ GPU = null; return null; }
 }
+
+// ---------- SCRATCH CANVASES GIVEN BACK (Ruby: large graphs crashed Firefox on a phone) ----------
+// A canvas a part draws on and reads once is let go of at once: width and height 0 free its pixels now, in every
+// browser, rather than whenever the garbage collector next notices it (one Macro Bloom on a phone made 99 canvases,
+// about 170 megapixels, every render).
+function freeCanvas(...cs){ for(const c0 of cs){ const c = c0 && c0.canvas ? c0.canvas : c0; if(c && typeof c === 'object'){ try { c.width = 0; c.height = 0; } catch(e){ /* a canvas already gone */ } } } }   // (a canvas, or a context's)
 
 // ---------- GPU KERNELS: a graph's per-pixel passes on WebGL2 (ROADMAP C9) ----------
 // One shared context (beside the lighting's own), one compiled program per kernel. A kernel is a fragment shader that
@@ -16930,8 +16943,10 @@ const FLORA_STEPS = {
       if(o.albedo && o.part !== 'visitor'){ const unit = Math.min(ww, wh), inside = (F, r) => { const N = F.length, FM = new Float32Array(N); for(let i = 0; i < N; i++) FM[i] = F[i]*M[i];
           const a = E.boxBlur(FM, r), b = E.boxBlur(M, r), out = new Float32Array(N); for(let i = 0; i < N; i++) out[i] = M[i] > 0.004 ? Math.min(1, a[i]/Math.max(1e-4, b[i])) : 0; return out; };
         const sm = o.size*unit*(sh > 1 ? 0.5 : 1);
-        return [E.readCanvas(pic), M, inside(Hf, Math.max(1, sm*0.012)), E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), inside(Ff, Math.max(1, sm*0.016))]; }
-      return [E.readCanvas(pic), M, Hf, E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), Ff]; } },
+        const res = [E.readCanvas(pic), M, inside(Hf, Math.max(1, sm*0.012)), E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), inside(Ff, Math.max(1, sm*0.016))];
+        freeCanvas(pic, mask, height, thick, cen, ids, gloss, face); return res; }
+      const res = [E.readCanvas(pic), M, Hf, E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), Ff];
+      freeCanvas(pic, mask, height, thick, cen, ids, gloss, face); return res; } },
 };
 
 
@@ -17181,6 +17196,7 @@ const PATTERN_STEPS = {
       let colour = cc ? readCanvas(cc) : markF;
       if(vc && colour.r){ const V = E.lum(readCanvas(vc));
         for(let i = 0; i < N; i++){ const v = V[i]; if(v > 0.02 && v < 0.98){ const u = 1/v; colour.r[i] = Math.min(1, colour.r[i]*u); colour.g[i] = Math.min(1, colour.g[i]*u); colour.b[i] = Math.min(1, colour.b[i]*u); } } }
+      freeCanvas(mc, ic, cc, vc);
       return [markF, E.boxBlur(markF, Math.max(1, R0*0.18)), each, colour];
     } },
 
@@ -21327,7 +21343,7 @@ const TEXTURE_CHAINS = {
       [16, 1, 119, 1], [118, 1, 120, 1], [119, 1, 120, 2], [100, 1, 121, 1], [15, 1, 121, 2], [120, 1, 121, 3], [66, 1, 122, 3],
       [4, 1, 122, paramPort('scatter', 'count')], [122, 1, 123, 1], [3, 1, 123, paramPort('motionblur', 'length')], [13, 1, 124, 1], [15, 1, 124, 2],
       [121, 1, 125, 1], [124, 1, 125, 2], [123, 1, 125, 3], [125, 1, 126, 1]] },
-  macro: { label: 'Macro Bloom', div: 2, v: 5, teach: 'One flower close, through a real lens (docs/prior-art/florals.md §8e). The camera dial frames it: Zoom from the whole flower in its setting to its heart filling the page, View tips it from face-on to the side, Turn says which way it tips and sets it toward that side’s third. Bloom draws it as maps, unlit, and the Light Engine lights them from the light dial: its heights, gloss, Facing and thinness, so light comes through thin petals (Translucency). Everything is painted sharp beside a depth map (the lights and the wash behind farthest, more flowers of its kind, the flower, a flower near the lens), and one Lens Blur focuses the whole scene as a lens does: Aperture how wide it is open, Focus where the plane of focus lies (its middle on the flower). Points of light behind (Lights Behind) become discs. Dew drops are little lenses; pollen dusts the heart; a blade of grass between the sun and the flower may cast a soft shadow on it. Now and then an insect visits, small, on a petal, lit with the flower: Visitors says how often (rare at its default, never more than two). Try: Aperture high and Focus low, to see the flower melt.',
+  macro: { label: 'Macro Bloom', div: 2, v: 5, teach: 'One flower close, through a real lens (docs/prior-art/florals.md §8e). The camera dial frames it: Zoom from the whole flower in its setting to its heart filling the page, View tips it from face-on to the side, Turn says which way it tips and sets it toward that side’s third. Bloom draws it as maps, unlit, and the Light Engine lights them from the light dial: its heights, gloss, Facing and thinness, so light comes through thin petals (Translucency). Everything is painted sharp beside a depth map (the lights and the wash behind farthest, more flowers of its kind, the flower, a flower near the lens), and one Lens Blur focuses the whole scene as a lens does: Aperture how wide it is open, Focus where the plane of focus lies (its middle on the flower). Points of light behind (Lights Behind) become discs. Dew drops are little lenses; pollen dusts the heart. Draw order is depth order, and the same depth gives the shadows: read as heights (nearer higher) and lit twice by the Light Engine, with its shadow march and without, their ratio is the cast shadow alone, as a depth buffer gives it; a leaf crossing near the lens shadows the petals, a visitor the petal it stands on. The seed says whether the flower has its stem, and whether a blade of grass or leaves stand between the sun and it: out of the frame only their shadow falls; in it they cross near the lens, blurred. Now and then an insect visits, small, on a petal, lit with the flower: Visitors says how often (rare at its default, never more than two). Try: Aperture high and Focus low, to see the flower melt.',
     nodes: [
       ['knob', { slot: '1', name: 'Species', def: 27 }, 40, 40],                                                                                      // 1
       ['knob', { slot: '2', name: 'Stage', def: 45 }, 40, 150],                                                                                       // 2
@@ -21374,151 +21390,182 @@ const TEXTURE_CHAINS = {
       ['math', { op: 'subtract' }, 700, 370],                                                                                                         // 43
       ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 44
       ['blend', { mode: 'screen', opacity: 100 }, 1360, 40],                                                                                          // 45
-      ['bloom', { species: 27, view: 25, '~view': '0,100', stage: 45, size: 110, '~size': '45,300', stem: 0, jitter: 40, x: 50, y: 50, lit: 100, turn: 0, '~turn': '0,100' }, 700, 480],// 46
-      ['maprange', { outLo: 8, outHi: 46 }, 260, 1030],                                                                                               // 47
-      ['threshold', { at: 30, soft: 20 }, 1140, 150],                                                                                                 // 48
-      ['blur', { radius: 6 }, 920, 260],                                                                                                              // 49
-      ['maprange', { outLo: 100, outHi: 40 }, 260, 1140],                                                                                             // 50
-      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 13 }, 1140, 260],                // 51
-      ['mix', { t: 55 }, 260, 1250],                                                                                                                  // 52
-      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 53
-      ['math', { op: 'sine' }, 260, 1360],                                                                                                            // 54
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 370],                                                                                               // 55
-      ['math', { op: 'subtract' }, 700, 590],                                                                                                         // 56
-      ['math', { op: 'add' }, 700, 700],                                                                                                              // 57
-      ['math', { op: 'sine' }, 260, 1470],                                                                                                            // 58
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 480],                                                                                               // 59
-      ['math', { op: 'subtract' }, 700, 810],                                                                                                         // 60
-      ['math', { op: 'add' }, 700, 920],                                                                                                              // 61
-      ['threshold', { at: 90, soft: 0 }, 480, 590],                                                                                                   // 62
-      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 63
-      ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 64
-      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 65
-      ['maprange', { outLo: 100, outHi: 75 }, 260, 1580],                                                                                             // 66
-      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 31 }, 1140, 370],                // 67
-      ['mix', { t: 55 }, 260, 1690],                                                                                                                  // 68
-      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 69
-      ['math', { op: 'sine' }, 260, 1800],                                                                                                            // 70
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 590],                                                                                               // 71
-      ['math', { op: 'subtract' }, 700, 1030],                                                                                                        // 72
-      ['math', { op: 'add' }, 700, 1140],                                                                                                             // 73
-      ['math', { op: 'sine' }, 260, 1910],                                                                                                            // 74
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 700],                                                                                               // 75
-      ['math', { op: 'subtract' }, 700, 1250],                                                                                                        // 76
-      ['math', { op: 'add' }, 700, 1360],                                                                                                             // 77
-      ['threshold', { at: 90, soft: 0 }, 480, 700],                                                                                                   // 78
-      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 79
-      ['math', { op: 'multiply' }, 1360, 260],                                                                                                        // 80
-      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 81
-      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 82
-      ['math', { op: 'max' }, 2020, 40],                                                                                                              // 83
-      ['material', { relief: 120, gloss: 30, shine: 45, shadow: 50, occlusion: 45, ambient: 32, translucency: 50, '~translucency': '0,100', second: 55, secondTurn: 180, secondHeight: 120 }, 3120, 40],// 84
-      ['perlin', { scale: 70, '~scale': '45,110', details: 4, rough: 60, contrast: 40 }, 260, 2020],                                                  // 85
-      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 86
-      ['maprange', { outLo: 0, outHi: 8 }, 480, 810],                                                                                                 // 87
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 920, 810],                                                                           // 88
-      ['math', { op: 'multiply' }, 1140, 480],                                                                                                        // 89
-      ['blend', { mode: 'normal', opacity: 100 }, 1800, 150],                                                                                         // 90
-      ['blend', { mode: 'normal', opacity: 100 }, 2020, 150],                                                                                         // 91
-      ['math', { op: 'subtract' }, 1800, 260],                                                                                                        // 92
-      ['math', { op: 'multiply' }, 2020, 260],                                                                                                        // 93
-      ['math', { op: 'multiply' }, 1800, 370],                                                                                                        // 94
-      ['math', { op: 'add' }, 2240, 40],                                                                                                              // 95
-      ['math', { op: 'subtract' }, 2020, 370],                                                                                                        // 96
-      ['math', { op: 'multiply' }, 2460, 40],                                                                                                         // 97
-      ['math', { op: 'multiply' }, 2020, 480],                                                                                                        // 98
-      ['math', { op: 'add' }, 2680, 40],                                                                                                              // 99
-      ['math', { op: 'multiply' }, 920, 920],                                                                                                         // 100
-      ['math', { op: 'add' }, 1140, 590],                                                                                                             // 101
-      ['math', { op: 'multiply' }, 1800, 480],                                                                                                        // 102
-      ['math', { op: 'multiply' }, 2020, 590],                                                                                                        // 103
-      ['math', { op: 'add' }, 2240, 150],                                                                                                             // 104
-      ['math', { op: 'add' }, 2460, 150],                                                                                                             // 105
-      ['math', { op: 'subtract' }, 1800, 590],                                                                                                        // 106
-      ['math', { op: 'multiply' }, 2020, 700],                                                                                                        // 107
-      ['math', { op: 'multiply' }, 1800, 700],                                                                                                        // 108
-      ['math', { op: 'add' }, 2240, 260],                                                                                                             // 109
-      ['math', { op: 'subtract' }, 2020, 810],                                                                                                        // 110
-      ['math', { op: 'multiply' }, 2460, 260],                                                                                                        // 111
-      ['math', { op: 'multiply' }, 2020, 920],                                                                                                        // 112
-      ['math', { op: 'add' }, 2680, 150],                                                                                                             // 113
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 370],                                                                          // 114
-      ['math', { op: 'subtract' }, 1800, 810],                                                                                                        // 115
-      ['math', { op: 'multiply' }, 2020, 1030],                                                                                                       // 116
-      ['math', { op: 'multiply' }, 1800, 920],                                                                                                        // 117
-      ['math', { op: 'add' }, 2240, 370],                                                                                                             // 118
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 480],                                                                          // 119
-      ['math', { op: 'subtract' }, 2020, 1140],                                                                                                       // 120
-      ['math', { op: 'multiply' }, 2460, 370],                                                                                                        // 121
-      ['math', { op: 'multiply' }, 2020, 1250],                                                                                                       // 122
-      ['math', { op: 'add' }, 2680, 260],                                                                                                             // 123
-      ['blend', { mode: 'multiply', opacity: 100 }, 2900, 40],                                                                                        // 124
-      ['math', { op: 'multiply' }, 2900, 150],                                                                                                        // 125
-      ['blur', { radius: 1 }, 2460, 480],                                                                                                             // 126
-      ['math', { op: 'max' }, 2240, 480],                                                                                                             // 127
-      ['blend', { mode: 'normal', opacity: 100 }, 3340, 40],                                                                                          // 128
-      ['dial', {}, 40, 3120],                                                                                                                         // 129
-      ['math', { op: 'sine' }, 260, 2130],                                                                                                            // 130
-      ['math', { op: 'sine' }, 260, 2240],                                                                                                            // 131
-      ['scatter', { shape: 'dash', count: 1, '~count': '0,3', size: 160, '~size': '90,240', vary: 40, turn: 100, clump: 0, fade: 0, per: 'for the page' }, 260, 2350],// 132
-      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 133
+      ['bloom', { species: 27, view: 25, '~view': '0,100', stage: 45, size: 110, '~size': '45,300', stem: 0, '~stem': '0,100', jitter: 40, x: 50, y: 50, lit: 100, turn: 0, '~turn': '0,100' }, 700, 480],// 46
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 47
+      ['maprange', { outLo: 8, outHi: 46 }, 260, 1030],                                                                                               // 48
+      ['threshold', { at: 30, soft: 20 }, 1140, 150],                                                                                                 // 49
+      ['blur', { radius: 6 }, 920, 260],                                                                                                              // 50
+      ['maprange', { outLo: 100, outHi: 40 }, 260, 1140],                                                                                             // 51
+      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 13 }, 1140, 260],                // 52
+      ['mix', { t: 55 }, 260, 1250],                                                                                                                  // 53
+      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 54
+      ['math', { op: 'sine' }, 260, 1360],                                                                                                            // 55
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 370],                                                                                               // 56
+      ['math', { op: 'subtract' }, 700, 590],                                                                                                         // 57
+      ['math', { op: 'add' }, 700, 700],                                                                                                              // 58
+      ['math', { op: 'sine' }, 260, 1470],                                                                                                            // 59
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 480],                                                                                               // 60
+      ['math', { op: 'subtract' }, 700, 810],                                                                                                         // 61
+      ['math', { op: 'add' }, 700, 920],                                                                                                              // 62
+      ['threshold', { at: 90, soft: 0 }, 480, 590],                                                                                                   // 63
+      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 64
+      ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 65
+      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 66
+      ['maprange', { outLo: 100, outHi: 75 }, 260, 1580],                                                                                             // 67
+      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 31 }, 1140, 370],                // 68
+      ['mix', { t: 55 }, 260, 1690],                                                                                                                  // 69
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 70
+      ['math', { op: 'sine' }, 260, 1800],                                                                                                            // 71
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 590],                                                                                               // 72
+      ['math', { op: 'subtract' }, 700, 1030],                                                                                                        // 73
+      ['math', { op: 'add' }, 700, 1140],                                                                                                             // 74
+      ['math', { op: 'sine' }, 260, 1910],                                                                                                            // 75
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 700],                                                                                               // 76
+      ['math', { op: 'subtract' }, 700, 1250],                                                                                                        // 77
+      ['math', { op: 'add' }, 700, 1360],                                                                                                             // 78
+      ['threshold', { at: 90, soft: 0 }, 480, 700],                                                                                                   // 79
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 80
+      ['math', { op: 'multiply' }, 1360, 260],                                                                                                        // 81
+      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 82
+      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 83
+      ['math', { op: 'max' }, 2020, 40],                                                                                                              // 84
+      ['material', { relief: 120, gloss: 30, shine: 45, shadow: 50, occlusion: 45, ambient: 32, translucency: 50, '~translucency': '0,100', second: 55, secondTurn: 180, secondHeight: 120 }, 3120, 40],// 85
+      ['perlin', { scale: 70, '~scale': '45,110', details: 4, rough: 60, contrast: 40 }, 260, 2020],                                                  // 86
+      ['random', { lo: 0, hi: 100 }, 40, 3120],                                                                                                       // 87
+      ['maprange', { outLo: 0, outHi: 8 }, 480, 810],                                                                                                 // 88
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 920, 810],                                                                           // 89
+      ['math', { op: 'multiply' }, 1140, 480],                                                                                                        // 90
+      ['blend', { mode: 'normal', opacity: 100 }, 1800, 150],                                                                                         // 91
+      ['blend', { mode: 'normal', opacity: 100 }, 2020, 150],                                                                                         // 92
+      ['math', { op: 'subtract' }, 1800, 260],                                                                                                        // 93
+      ['math', { op: 'multiply' }, 2020, 260],                                                                                                        // 94
+      ['math', { op: 'multiply' }, 1800, 370],                                                                                                        // 95
+      ['math', { op: 'add' }, 2240, 40],                                                                                                              // 96
+      ['math', { op: 'subtract' }, 2020, 370],                                                                                                        // 97
+      ['math', { op: 'multiply' }, 2460, 40],                                                                                                         // 98
+      ['math', { op: 'multiply' }, 2020, 480],                                                                                                        // 99
+      ['math', { op: 'add' }, 2680, 40],                                                                                                              // 100
+      ['math', { op: 'multiply' }, 920, 920],                                                                                                         // 101
+      ['math', { op: 'add' }, 1140, 590],                                                                                                             // 102
+      ['math', { op: 'multiply' }, 1800, 480],                                                                                                        // 103
+      ['math', { op: 'multiply' }, 2020, 590],                                                                                                        // 104
+      ['math', { op: 'add' }, 2240, 150],                                                                                                             // 105
+      ['math', { op: 'add' }, 2460, 150],                                                                                                             // 106
+      ['math', { op: 'subtract' }, 1800, 590],                                                                                                        // 107
+      ['math', { op: 'multiply' }, 2020, 700],                                                                                                        // 108
+      ['math', { op: 'multiply' }, 1800, 700],                                                                                                        // 109
+      ['math', { op: 'add' }, 2240, 260],                                                                                                             // 110
+      ['math', { op: 'subtract' }, 2020, 810],                                                                                                        // 111
+      ['math', { op: 'multiply' }, 2460, 260],                                                                                                        // 112
+      ['math', { op: 'multiply' }, 2020, 920],                                                                                                        // 113
+      ['math', { op: 'add' }, 2680, 150],                                                                                                             // 114
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 370],                                                                          // 115
+      ['math', { op: 'subtract' }, 1800, 810],                                                                                                        // 116
+      ['math', { op: 'multiply' }, 2020, 1030],                                                                                                       // 117
+      ['math', { op: 'multiply' }, 1800, 920],                                                                                                        // 118
+      ['math', { op: 'add' }, 2240, 370],                                                                                                             // 119
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 480],                                                                          // 120
+      ['math', { op: 'subtract' }, 2020, 1140],                                                                                                       // 121
+      ['math', { op: 'multiply' }, 2460, 370],                                                                                                        // 122
+      ['math', { op: 'multiply' }, 2020, 1250],                                                                                                       // 123
+      ['math', { op: 'add' }, 2680, 260],                                                                                                             // 124
+      ['blend', { mode: 'multiply', opacity: 100 }, 2900, 40],                                                                                        // 125
+      ['math', { op: 'multiply' }, 2900, 150],                                                                                                        // 126
+      ['blur', { radius: 1 }, 2460, 480],                                                                                                             // 127
+      ['math', { op: 'max' }, 2240, 480],                                                                                                             // 128
+      ['blend', { mode: 'normal', opacity: 100 }, 3340, 40],                                                                                          // 129
+      ['dial', {}, 40, 3230],                                                                                                                         // 130
+      ['math', { op: 'sine' }, 260, 2130],                                                                                                            // 131
+      ['math', { op: 'sine' }, 260, 2240],                                                                                                            // 132
+      ['scatter', { shape: 'dash', count: 1, '~count': '0,3', size: 160, '~size': '90,240', vary: 40, turn: 100, clump: 0, fade: 0, per: 'for the page' }, 260, 2350],// 133
       ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 134
-      ['offset', { x: 0, y: 0, '~x': '-7,7', '~y': '-7,7' }, 480, 920],                                                                               // 135
-      ['blur', { radius: 22 }, 700, 1470],                                                                                                            // 136
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 50 }, 920, 1030],                                                                         // 137
-      ['blend', { mode: 'multiply', opacity: 100 }, 3560, 40],                                                                                        // 138
-      ['scatter', { shape: 'dot', count: 30, '~count': '0,160', size: 3, '~size': '2,6', vary: 80, clump: 60, fade: 10, per: 'for the page' }, 920, 1140],// 139
-      ['light', { relief: 90, gloss: 90, shadow: 40 }, 1140, 700],                                                                                    // 140
-      ['offset', { x: 0, y: 0, '~x': '-1.4,1.4', '~y': '-1.4,1.4' }, 1140, 810],                                                                      // 141
-      ['blur', { radius: 2 }, 1580, 260],                                                                                                             // 142
-      ['math', { op: 'subtract' }, 1360, 590],                                                                                                        // 143
-      ['edges', { strength: 100 }, 1140, 920],                                                                                                        // 144
-      ['math', { op: 'multiply' }, 1800, 1030],                                                                                                       // 145
-      ['blend', { mode: 'screen', opacity: 75 }, 3780, 40],                                                                                           // 146
-      ['maprange', { inLo: 0, inHi: 40, outLo: 0, outHi: 60 }, 1360, 700],                                                                            // 147
-      ['blend', { mode: 'multiply', opacity: 30 }, 4000, 40],                                                                                         // 148
-      ['mix', { t: 30 }, 260, 2460],                                                                                                                  // 149
-      ['maprange', { outLo: 0, outHi: 35 }, 1140, 1030],                                                                                              // 150
-      ['blend', { mode: 'multiply', opacity: 100 }, 4220, 40],                                                                                        // 151
-      ['math', { op: 'multiply' }, 1360, 810],                                                                                                        // 152
-      ['blend', { mode: 'screen', opacity: 90 }, 4440, 40],                                                                                           // 153
-      ['blur', { radius: 10 }, 920, 1250],                                                                                                            // 154
-      ['scatter', { shape: 'dot', count: 80, '~count': '0,260', size: 1.5, '~size': '1,3', vary: 70, clump: 85, fade: 30, per: 'for the page' }, 1360, 920],// 155
-      ['maprange', { inLo: 0, inHi: 35, outLo: 0, outHi: 100 }, 1140, 1140],                                                                          // 156
-      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 157
-      ['mix', { t: 55 }, 260, 2570],                                                                                                                  // 158
-      ['blend', { mode: 'normal', opacity: 85 }, 4660, 40],                                                                                           // 159
-      ['bloom', { species: 27, view: 20, '~view': '0,60', stage: 45, size: 260, '~size': '180,320', stem: 0, jitter: 50, x: 50, '~x': '0,100', y: 50, '~y': '0,100', variant: 9, lit: 0 }, 260, 2680],// 160
-      ['random', { lo: 0, hi: 100 }, 40, 3560],                                                                                                       // 161
-      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 162
-      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 163
-      ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 164
-      ['threshold', { at: 55, soft: 0 }, 260, 2790],                                                                                                  // 165
-      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 166
-      ['math', { op: 'multiply' }, 480, 1030],                                                                                                        // 167
-      ['shape', { form: 'vignette', size: 100, soft: 60 }, 40, 4110],                                                                                 // 168
-      ['maprange', { outLo: 100, outHi: 0 }, 260, 2900],                                                                                              // 169
-      ['math', { op: 'multiply' }, 700, 1580],                                                                                                        // 170
-      ['blend', { mode: 'normal', opacity: 100 }, 4880, 40],                                                                                          // 171
-      ['math', { op: 'multiply' }, 1800, 1140],                                                                                                       // 172
-      ['math', { op: 'add' }, 2020, 1360],                                                                                                            // 173
-      ['maprange', { inLo: 0, inHi: 100, outLo: 42, outHi: 36 }, 2240, 590],                                                                          // 174
-      ['number', { value: 78 }, 40, 4220],                                                                                                            // 175
-      ['math', { op: 'subtract' }, 700, 1690],                                                                                                        // 176
-      ['math', { op: 'multiply' }, 920, 1360],                                                                                                        // 177
-      ['math', { op: 'multiply' }, 700, 1800],                                                                                                        // 178
-      ['math', { op: 'add' }, 1140, 1250],                                                                                                            // 179
-      ['math', { op: 'subtract' }, 2680, 370],                                                                                                        // 180
-      ['math', { op: 'multiply' }, 2900, 260],                                                                                                        // 181
-      ['math', { op: 'multiply' }, 2680, 480],                                                                                                        // 182
-      ['math', { op: 'add' }, 3120, 150],                                                                                                             // 183
-      ['number', { value: 4 }, 40, 4330],                                                                                                             // 184
-      ['math', { op: 'subtract' }, 920, 1470],                                                                                                        // 185
-      ['math', { op: 'multiply' }, 3340, 150],                                                                                                        // 186
-      ['math', { op: 'multiply' }, 920, 1580],                                                                                                        // 187
-      ['math', { op: 'add' }, 3560, 150],                                                                                                             // 188
-      ['lensblur', { focus: 40, '~focus': '18,62', aperture: 60, size: 110, blades: 0, highlights: 100 }, 5100, 40],                                  // 189
-      ['surface', { name: 'Macro Bloom', ground: 'colour' }, 5320, 40]],                                                                              // 190
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 135
+      ['bloom', { species: 27, part: 70, sheet: 34, stage: 40, jitter: 60, variant: 21 }, 260, 2460],                                                 // 136
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 3, '~count': '0,6', size: 80, '~size': '50,110', big: 300, vary: 50, turn: 100, clump: 50, fade: 0, per: 'for the page', sheet: 'a sheet of 4' }, 480, 920],// 137
+      ['random', { lo: 0, hi: 100 }, 40, 3560],                                                                                                       // 138
+      ['mapswitch', { soft: 0 }, 920, 1030],                                                                                                          // 139
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 140
+      ['number', { value: 0 }, 40, 3780],                                                                                                             // 141
+      ['math', { op: 'max' }, 700, 1470],                                                                                                             // 142
+      ['threshold', { at: 68, soft: 0 }, 260, 2570],                                                                                                  // 143
+      ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 144
+      ['math', { op: 'subtract' }, 480, 1030],                                                                                                        // 145
+      ['offset', { x: 0, y: 0, '~x': '-7,7', '~y': '-7,7' }, 1140, 700],                                                                              // 146
+      ['blur', { radius: 22 }, 1360, 590],                                                                                                            // 147
+      ['math', { op: 'multiply' }, 1580, 260],                                                                                                        // 148
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 50 }, 1800, 1030],                                                                        // 149
+      ['blend', { mode: 'multiply', opacity: 100 }, 3560, 40],                                                                                        // 150
+      ['math', { op: 'multiply' }, 1140, 810],                                                                                                        // 151
+      ['scatter', { shape: 'dot', count: 30, '~count': '0,160', size: 3, '~size': '2,6', vary: 80, clump: 60, fade: 10, per: 'for the page' }, 920, 1140],// 152
+      ['light', { relief: 90, gloss: 90, shadow: 40 }, 1140, 920],                                                                                    // 153
+      ['offset', { x: 0, y: 0, '~x': '-1.4,1.4', '~y': '-1.4,1.4' }, 1140, 1030],                                                                     // 154
+      ['blur', { radius: 2 }, 1580, 370],                                                                                                             // 155
+      ['math', { op: 'subtract' }, 1360, 700],                                                                                                        // 156
+      ['edges', { strength: 100 }, 1140, 1140],                                                                                                       // 157
+      ['math', { op: 'multiply' }, 1800, 1140],                                                                                                       // 158
+      ['blend', { mode: 'screen', opacity: 75 }, 3780, 40],                                                                                           // 159
+      ['maprange', { inLo: 0, inHi: 40, outLo: 0, outHi: 60 }, 1360, 810],                                                                            // 160
+      ['blend', { mode: 'multiply', opacity: 30 }, 4000, 40],                                                                                         // 161
+      ['mix', { t: 30 }, 260, 2680],                                                                                                                  // 162
+      ['maprange', { outLo: 0, outHi: 35 }, 1140, 1250],                                                                                              // 163
+      ['blend', { mode: 'multiply', opacity: 100 }, 4220, 40],                                                                                        // 164
+      ['math', { op: 'multiply' }, 1360, 920],                                                                                                        // 165
+      ['blend', { mode: 'screen', opacity: 90 }, 4440, 40],                                                                                           // 166
+      ['blur', { radius: 10 }, 920, 1250],                                                                                                            // 167
+      ['scatter', { shape: 'dot', count: 80, '~count': '0,260', size: 1.5, '~size': '1,3', vary: 70, clump: 85, fade: 30, per: 'for the page' }, 1360, 1030],// 168
+      ['maprange', { inLo: 0, inHi: 35, outLo: 0, outHi: 100 }, 1140, 1360],                                                                          // 169
+      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 170
+      ['mix', { t: 55 }, 260, 2790],                                                                                                                  // 171
+      ['blend', { mode: 'normal', opacity: 85 }, 4660, 40],                                                                                           // 172
+      ['bloom', { species: 27, view: 20, '~view': '0,60', stage: 45, size: 260, '~size': '180,320', stem: 0, jitter: 50, x: 50, '~x': '0,100', y: 50, '~y': '0,100', variant: 9, lit: 0 }, 260, 2900],// 173
+      ['random', { lo: 0, hi: 100 }, 40, 4110],                                                                                                       // 174
+      ['random', { lo: 0, hi: 100 }, 40, 4220],                                                                                                       // 175
+      ['random', { lo: 0, hi: 100 }, 40, 4330],                                                                                                       // 176
+      ['random', { lo: 0, hi: 100 }, 40, 4440],                                                                                                       // 177
+      ['threshold', { at: 55, soft: 0 }, 260, 3010],                                                                                                  // 178
+      ['random', { lo: 0, hi: 100 }, 40, 4550],                                                                                                       // 179
+      ['math', { op: 'multiply' }, 480, 1140],                                                                                                        // 180
+      ['shape', { form: 'vignette', size: 100, soft: 60 }, 40, 4660],                                                                                 // 181
+      ['maprange', { outLo: 100, outHi: 0 }, 260, 3120],                                                                                              // 182
+      ['math', { op: 'multiply' }, 700, 1580],                                                                                                        // 183
+      ['blend', { mode: 'normal', opacity: 100 }, 4880, 40],                                                                                          // 184
+      ['mix', { t: 30 }, 260, 3230],                                                                                                                  // 185
+      ['blend', { mode: 'normal', opacity: 95 }, 5100, 40],                                                                                           // 186
+      ['math', { op: 'multiply' }, 1800, 1250],                                                                                                       // 187
+      ['math', { op: 'add' }, 2020, 1360],                                                                                                            // 188
+      ['maprange', { inLo: 0, inHi: 100, outLo: 42, outHi: 36 }, 2240, 590],                                                                          // 189
+      ['number', { value: 78 }, 40, 4770],                                                                                                            // 190
+      ['math', { op: 'subtract' }, 700, 1690],                                                                                                        // 191
+      ['math', { op: 'multiply' }, 920, 1360],                                                                                                        // 192
+      ['math', { op: 'multiply' }, 700, 1800],                                                                                                        // 193
+      ['math', { op: 'add' }, 1140, 1470],                                                                                                            // 194
+      ['math', { op: 'subtract' }, 2680, 370],                                                                                                        // 195
+      ['math', { op: 'multiply' }, 2900, 260],                                                                                                        // 196
+      ['math', { op: 'multiply' }, 2680, 480],                                                                                                        // 197
+      ['math', { op: 'add' }, 3120, 150],                                                                                                             // 198
+      ['number', { value: 4 }, 40, 4880],                                                                                                             // 199
+      ['math', { op: 'subtract' }, 920, 1470],                                                                                                        // 200
+      ['math', { op: 'multiply' }, 3340, 150],                                                                                                        // 201
+      ['math', { op: 'multiply' }, 920, 1580],                                                                                                        // 202
+      ['math', { op: 'add' }, 3560, 150],                                                                                                             // 203
+      ['number', { value: 8 }, 40, 4990],                                                                                                             // 204
+      ['math', { op: 'subtract' }, 1360, 1140],                                                                                                       // 205
+      ['math', { op: 'multiply' }, 3780, 150],                                                                                                        // 206
+      ['math', { op: 'multiply' }, 1360, 1250],                                                                                                       // 207
+      ['math', { op: 'add' }, 4000, 150],                                                                                                             // 208
+      ['blur', { radius: 2 }, 4440, 150],                                                                                                             // 209
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 4220, 150],                                                                          // 210
+      ['material', { relief: 200, gloss: 0, shine: 0, shadow: 100, occlusion: 0, ambient: 0 }, 4660, 150],                                            // 211
+      ['material', { relief: 200, gloss: 0, shine: 0, shadow: 0, occlusion: 0, ambient: 0 }, 4660, 260],                                              // 212
+      ['math', { op: 'divide' }, 4880, 150],                                                                                                          // 213
+      ['threshold', { at: 35, soft: 6 }, 4440, 260],                                                                                                  // 214
+      ['math', { op: 'subtract' }, 4220, 260],                                                                                                        // 215
+      ['math', { op: 'subtract' }, 5100, 150],                                                                                                        // 216
+      ['math', { op: 'multiply' }, 5320, 40],                                                                                                         // 217
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 42 }, 5540, 40],                                                                          // 218
+      ['blend', { mode: 'multiply', opacity: 100 }, 5760, 40],                                                                                        // 219
+      ['lensblur', { focus: 40, '~focus': '18,62', aperture: 60, size: 110, blades: 0, highlights: 100 }, 5980, 40],                                  // 220
+      ['surface', { name: 'Macro Bloom', ground: 'colour' }, 6200, 40]],                                                                              // 221
     wires: [[10, 1, 17, 1], [10, 1, 19, 1], [18, 1, 19, 2], [17, 1, 20, 1], [19, 1, 21, 1], [23, 1, 22, paramPort('perlin', 'scale')], [22, 1, 24, 1],
       [24, 1, 25, 1], [15, 1, 26, 1], [14, 1, 26, 2], [26, 1, 25, 2], [15, 1, 25, 3], [15, 1, 27, 1], [11, 1, 27, 2], [27, 1, 25, 4], [9, 1, 28, 1],
       [13, 1, 28, 2], [14, 1, 28, 4], [15, 1, 28, 5], [1, 1, 28, paramPort('bloom', 'species')], [29, 1, 28, paramPort('bloom', 'view')],
@@ -21528,45 +21575,52 @@ const TEXTURE_CHAINS = {
       [42, 1, 43, 1], [37, 1, 43, 2], [36, 1, 44, 1], [43, 1, 44, 2], [40, 1, 45, 1], [41, 1, 45, 2], [44, 1, 45, 3], [9, 1, 46, 1], [13, 1, 46, 2],
       [14, 1, 46, 4], [15, 1, 46, 5], [1, 1, 46, paramPort('bloom', 'species')], [2, 1, 46, paramPort('bloom', 'stage')],
       [10, 3, 46, paramPort('bloom', 'size')], [10, 2, 46, paramPort('bloom', 'view')], [10, 1, 46, paramPort('bloom', 'turn')],
-      [20, 1, 46, paramPort('bloom', 'x')], [21, 1, 46, paramPort('bloom', 'y')], [10, 3, 47, 1], [46, 2, 49, 1], [49, 1, 48, 1], [8, 1, 50, 1], [9, 1, 51, 1],
-      [12, 1, 51, 2], [12, 1, 52, 1], [16, 1, 52, 2], [52, 1, 51, 3], [14, 1, 51, 4], [15, 1, 51, 5], [10, 3, 51, paramPort('bloom', 'size')], [53, 1, 54, 1],
-      [54, 1, 55, 1], [20, 1, 56, 1], [47, 1, 56, 2], [56, 1, 55, paramPort('maprange', 'outLo')], [20, 1, 57, 1], [47, 1, 57, 2],
-      [57, 1, 55, paramPort('maprange', 'outHi')], [55, 1, 51, paramPort('bloom', 'x')], [53, 1, 58, 1], [18, 1, 58, 2], [58, 1, 59, 1], [21, 1, 60, 1],
-      [47, 1, 60, 2], [60, 1, 59, paramPort('maprange', 'outLo')], [21, 1, 61, 1], [47, 1, 61, 2], [61, 1, 59, paramPort('maprange', 'outHi')],
-      [59, 1, 51, paramPort('bloom', 'y')], [63, 1, 62, 1], [50, 1, 62, paramPort('threshold', 'at')], [51, 2, 64, 1], [62, 1, 64, 2], [64, 1, 65, 1],
-      [48, 1, 65, 2], [8, 1, 66, 1], [9, 1, 67, 1], [12, 1, 67, 2], [12, 1, 68, 1], [16, 1, 68, 2], [68, 1, 67, 3], [14, 1, 67, 4], [15, 1, 67, 5],
-      [10, 3, 67, paramPort('bloom', 'size')], [69, 1, 70, 1], [70, 1, 71, 1], [20, 1, 72, 1], [47, 1, 72, 2], [72, 1, 71, paramPort('maprange', 'outLo')],
-      [20, 1, 73, 1], [47, 1, 73, 2], [73, 1, 71, paramPort('maprange', 'outHi')], [71, 1, 67, paramPort('bloom', 'x')], [69, 1, 74, 1], [18, 1, 74, 2],
-      [74, 1, 75, 1], [21, 1, 76, 1], [47, 1, 76, 2], [76, 1, 75, paramPort('maprange', 'outLo')], [21, 1, 77, 1], [47, 1, 77, 2],
-      [77, 1, 75, paramPort('maprange', 'outHi')], [75, 1, 67, paramPort('bloom', 'y')], [79, 1, 78, 1], [66, 1, 78, paramPort('threshold', 'at')],
-      [67, 2, 80, 1], [78, 1, 80, 2], [80, 1, 81, 1], [48, 1, 81, 2], [81, 1, 82, 1], [62, 1, 82, 2], [65, 1, 83, 1], [82, 1, 83, 2],
-      [86, 1, 85, paramPort('perlin', 'scale')], [85, 1, 87, 1], [46, 4, 88, 1], [88, 1, 89, 1], [46, 2, 89, 2], [46, 1, 90, 1], [51, 1, 90, 2],
-      [65, 1, 90, 3], [90, 1, 91, 1], [67, 1, 91, 2], [82, 1, 91, 3], [42, 1, 92, 1], [65, 1, 92, 2], [46, 8, 93, 1], [92, 1, 93, 2], [51, 8, 94, 1],
-      [65, 1, 94, 2], [93, 1, 95, 1], [94, 1, 95, 2], [42, 1, 96, 1], [82, 1, 96, 2], [95, 1, 97, 1], [96, 1, 97, 2], [67, 8, 98, 1], [82, 1, 98, 2],
-      [97, 1, 99, 1], [98, 1, 99, 2], [87, 1, 100, 1], [46, 2, 100, 2], [46, 3, 101, 1], [100, 1, 101, 2], [51, 3, 102, 1], [65, 1, 102, 2], [67, 3, 103, 1],
-      [82, 1, 103, 2], [102, 1, 104, 1], [103, 1, 104, 2], [101, 1, 105, 1], [104, 1, 105, 2], [42, 1, 106, 1], [65, 1, 106, 2], [46, 7, 107, 1],
-      [106, 1, 107, 2], [51, 7, 108, 1], [65, 1, 108, 2], [107, 1, 109, 1], [108, 1, 109, 2], [42, 1, 110, 1], [82, 1, 110, 2], [109, 1, 111, 1],
-      [110, 1, 111, 2], [67, 7, 112, 1], [82, 1, 112, 2], [111, 1, 113, 1], [112, 1, 113, 2], [51, 4, 114, 1], [42, 1, 115, 1], [65, 1, 115, 2],
-      [89, 1, 116, 1], [115, 1, 116, 2], [114, 1, 117, 1], [65, 1, 117, 2], [116, 1, 118, 1], [117, 1, 118, 2], [67, 4, 119, 1], [42, 1, 120, 1],
-      [82, 1, 120, 2], [118, 1, 121, 1], [120, 1, 121, 2], [119, 1, 122, 1], [82, 1, 122, 2], [121, 1, 123, 1], [122, 1, 123, 2], [91, 1, 124, 1],
-      [99, 1, 124, 2], [124, 1, 84, 1], [105, 1, 84, 2], [113, 1, 84, 3], [16, 1, 84, 6], [9, 1, 84, 7], [123, 1, 125, 1], [7, 1, 125, 2],
-      [125, 1, 84, paramPort('material', 'translucency')], [46, 2, 127, 1], [83, 1, 127, 2], [127, 1, 126, 1], [45, 1, 128, 1], [84, 1, 128, 2],
-      [126, 1, 128, 3], [129, 3, 130, 1], [18, 1, 130, 2], [129, 3, 131, 1], [133, 1, 132, paramPort('scatter', 'count')],
-      [134, 1, 132, paramPort('scatter', 'size')], [132, 1, 135, 1], [130, 1, 135, paramPort('offset', 'x')], [131, 1, 135, paramPort('offset', 'y')],
-      [135, 1, 136, 1], [136, 1, 137, 1], [128, 1, 138, 1], [137, 1, 138, 2], [126, 1, 138, 3], [46, 2, 139, 2], [6, 1, 139, paramPort('scatter', 'count')],
-      [139, 2, 140, 1], [9, 1, 140, 2], [139, 1, 141, 1], [130, 1, 141, paramPort('offset', 'x')], [131, 1, 141, paramPort('offset', 'y')], [141, 1, 143, 1],
-      [139, 1, 143, 2], [143, 1, 142, 1], [139, 1, 144, 1], [142, 1, 145, 1], [46, 2, 145, 2], [138, 1, 146, 1], [16, 1, 146, 2], [145, 1, 146, 3],
-      [144, 1, 147, 1], [146, 1, 148, 1], [14, 1, 148, 2], [147, 1, 148, 3], [13, 1, 149, 1], [15, 1, 149, 2], [139, 1, 150, 1], [148, 1, 151, 1],
-      [149, 1, 151, 2], [150, 1, 151, 3], [140, 2, 152, 1], [139, 1, 152, 2], [151, 1, 153, 1], [16, 1, 153, 2], [152, 1, 153, 3], [46, 5, 154, 1],
-      [154, 1, 156, 1], [156, 1, 155, 2], [157, 1, 155, paramPort('scatter', 'count')], [14, 1, 158, 1], [16, 1, 158, 2], [153, 1, 159, 1], [158, 1, 159, 2],
-      [155, 1, 159, 3], [9, 1, 160, 1], [13, 1, 160, 2], [14, 1, 160, 4], [15, 1, 160, 5], [1, 1, 160, paramPort('bloom', 'species')],
-      [161, 1, 160, paramPort('bloom', 'view')], [162, 1, 160, paramPort('bloom', 'size')], [163, 1, 160, paramPort('bloom', 'x')],
-      [164, 1, 160, paramPort('bloom', 'y')], [166, 1, 165, 1], [160, 2, 167, 1], [165, 1, 167, 2], [168, 1, 169, 1], [167, 1, 170, 1], [169, 1, 170, 2],
-      [159, 1, 171, 1], [160, 1, 171, 2], [170, 1, 171, 3], [51, 3, 172, 1], [65, 1, 172, 2], [46, 3, 173, 1], [172, 1, 173, 2], [173, 1, 174, 1],
-      [42, 1, 176, 1], [31, 1, 176, 2], [42, 1, 177, 1], [176, 1, 177, 2], [175, 1, 178, 1], [31, 1, 178, 2], [177, 1, 179, 1], [178, 1, 179, 2],
-      [42, 1, 180, 1], [126, 1, 180, 2], [179, 1, 181, 1], [180, 1, 181, 2], [174, 1, 182, 1], [126, 1, 182, 2], [181, 1, 183, 1], [182, 1, 183, 2],
-      [42, 1, 185, 1], [170, 1, 185, 2], [183, 1, 186, 1], [185, 1, 186, 2], [184, 1, 187, 1], [170, 1, 187, 2], [186, 1, 188, 1], [187, 1, 188, 2],
-      [171, 1, 189, 1], [188, 1, 189, 2], [3, 1, 189, paramPort('lensblur', 'aperture')], [4, 1, 189, paramPort('lensblur', 'focus')], [189, 1, 190, 1]] },
+      [20, 1, 46, paramPort('bloom', 'x')], [21, 1, 46, paramPort('bloom', 'y')], [47, 1, 46, paramPort('bloom', 'stem')], [10, 3, 48, 1], [46, 2, 50, 1],
+      [50, 1, 49, 1], [8, 1, 51, 1], [9, 1, 52, 1], [12, 1, 52, 2], [12, 1, 53, 1], [16, 1, 53, 2], [53, 1, 52, 3], [14, 1, 52, 4], [15, 1, 52, 5],
+      [10, 3, 52, paramPort('bloom', 'size')], [54, 1, 55, 1], [55, 1, 56, 1], [20, 1, 57, 1], [48, 1, 57, 2], [57, 1, 56, paramPort('maprange', 'outLo')],
+      [20, 1, 58, 1], [48, 1, 58, 2], [58, 1, 56, paramPort('maprange', 'outHi')], [56, 1, 52, paramPort('bloom', 'x')], [54, 1, 59, 1], [18, 1, 59, 2],
+      [59, 1, 60, 1], [21, 1, 61, 1], [48, 1, 61, 2], [61, 1, 60, paramPort('maprange', 'outLo')], [21, 1, 62, 1], [48, 1, 62, 2],
+      [62, 1, 60, paramPort('maprange', 'outHi')], [60, 1, 52, paramPort('bloom', 'y')], [64, 1, 63, 1], [51, 1, 63, paramPort('threshold', 'at')],
+      [52, 2, 65, 1], [63, 1, 65, 2], [65, 1, 66, 1], [49, 1, 66, 2], [8, 1, 67, 1], [9, 1, 68, 1], [12, 1, 68, 2], [12, 1, 69, 1], [16, 1, 69, 2],
+      [69, 1, 68, 3], [14, 1, 68, 4], [15, 1, 68, 5], [10, 3, 68, paramPort('bloom', 'size')], [70, 1, 71, 1], [71, 1, 72, 1], [20, 1, 73, 1], [48, 1, 73, 2],
+      [73, 1, 72, paramPort('maprange', 'outLo')], [20, 1, 74, 1], [48, 1, 74, 2], [74, 1, 72, paramPort('maprange', 'outHi')],
+      [72, 1, 68, paramPort('bloom', 'x')], [70, 1, 75, 1], [18, 1, 75, 2], [75, 1, 76, 1], [21, 1, 77, 1], [48, 1, 77, 2],
+      [77, 1, 76, paramPort('maprange', 'outLo')], [21, 1, 78, 1], [48, 1, 78, 2], [78, 1, 76, paramPort('maprange', 'outHi')],
+      [76, 1, 68, paramPort('bloom', 'y')], [80, 1, 79, 1], [67, 1, 79, paramPort('threshold', 'at')], [68, 2, 81, 1], [79, 1, 81, 2], [81, 1, 82, 1],
+      [49, 1, 82, 2], [82, 1, 83, 1], [63, 1, 83, 2], [66, 1, 84, 1], [83, 1, 84, 2], [87, 1, 86, paramPort('perlin', 'scale')], [86, 1, 88, 1],
+      [46, 4, 89, 1], [89, 1, 90, 1], [46, 2, 90, 2], [46, 1, 91, 1], [52, 1, 91, 2], [66, 1, 91, 3], [91, 1, 92, 1], [68, 1, 92, 2], [83, 1, 92, 3],
+      [42, 1, 93, 1], [66, 1, 93, 2], [46, 8, 94, 1], [93, 1, 94, 2], [52, 8, 95, 1], [66, 1, 95, 2], [94, 1, 96, 1], [95, 1, 96, 2], [42, 1, 97, 1],
+      [83, 1, 97, 2], [96, 1, 98, 1], [97, 1, 98, 2], [68, 8, 99, 1], [83, 1, 99, 2], [98, 1, 100, 1], [99, 1, 100, 2], [88, 1, 101, 1], [46, 2, 101, 2],
+      [46, 3, 102, 1], [101, 1, 102, 2], [52, 3, 103, 1], [66, 1, 103, 2], [68, 3, 104, 1], [83, 1, 104, 2], [103, 1, 105, 1], [104, 1, 105, 2],
+      [102, 1, 106, 1], [105, 1, 106, 2], [42, 1, 107, 1], [66, 1, 107, 2], [46, 7, 108, 1], [107, 1, 108, 2], [52, 7, 109, 1], [66, 1, 109, 2],
+      [108, 1, 110, 1], [109, 1, 110, 2], [42, 1, 111, 1], [83, 1, 111, 2], [110, 1, 112, 1], [111, 1, 112, 2], [68, 7, 113, 1], [83, 1, 113, 2],
+      [112, 1, 114, 1], [113, 1, 114, 2], [52, 4, 115, 1], [42, 1, 116, 1], [66, 1, 116, 2], [90, 1, 117, 1], [116, 1, 117, 2], [115, 1, 118, 1],
+      [66, 1, 118, 2], [117, 1, 119, 1], [118, 1, 119, 2], [68, 4, 120, 1], [42, 1, 121, 1], [83, 1, 121, 2], [119, 1, 122, 1], [121, 1, 122, 2],
+      [120, 1, 123, 1], [83, 1, 123, 2], [122, 1, 124, 1], [123, 1, 124, 2], [92, 1, 125, 1], [100, 1, 125, 2], [125, 1, 85, 1], [106, 1, 85, 2],
+      [114, 1, 85, 3], [16, 1, 85, 6], [9, 1, 85, 7], [124, 1, 126, 1], [7, 1, 126, 2], [126, 1, 85, paramPort('material', 'translucency')], [46, 2, 128, 1],
+      [84, 1, 128, 2], [128, 1, 127, 1], [45, 1, 129, 1], [85, 1, 129, 2], [127, 1, 129, 3], [130, 3, 131, 1], [18, 1, 131, 2], [130, 3, 132, 1],
+      [134, 1, 133, paramPort('scatter', 'count')], [135, 1, 133, paramPort('scatter', 'size')], [9, 1, 136, 1], [15, 1, 136, 5], [136, 1, 137, 1],
+      [138, 1, 137, paramPort('scatter', 'count')], [140, 1, 139, 1], [141, 1, 139, 2], [133, 1, 139, 3], [137, 1, 139, 4], [133, 1, 142, 1], [137, 1, 142, 2],
+      [142, 1, 139, 5], [144, 1, 143, 1], [42, 1, 145, 1], [143, 1, 145, 2], [139, 1, 146, 1], [131, 1, 146, paramPort('offset', 'x')],
+      [132, 1, 146, paramPort('offset', 'y')], [146, 1, 147, 1], [147, 1, 148, 1], [145, 1, 148, 2], [148, 1, 149, 1], [129, 1, 150, 1], [149, 1, 150, 2],
+      [127, 1, 150, 3], [139, 1, 151, 1], [143, 1, 151, 2], [46, 2, 152, 2], [6, 1, 152, paramPort('scatter', 'count')], [152, 2, 153, 1], [9, 1, 153, 2],
+      [152, 1, 154, 1], [131, 1, 154, paramPort('offset', 'x')], [132, 1, 154, paramPort('offset', 'y')], [154, 1, 156, 1], [152, 1, 156, 2], [156, 1, 155, 1],
+      [152, 1, 157, 1], [155, 1, 158, 1], [46, 2, 158, 2], [150, 1, 159, 1], [16, 1, 159, 2], [158, 1, 159, 3], [157, 1, 160, 1], [159, 1, 161, 1],
+      [14, 1, 161, 2], [160, 1, 161, 3], [13, 1, 162, 1], [15, 1, 162, 2], [152, 1, 163, 1], [161, 1, 164, 1], [162, 1, 164, 2], [163, 1, 164, 3],
+      [153, 2, 165, 1], [152, 1, 165, 2], [164, 1, 166, 1], [16, 1, 166, 2], [165, 1, 166, 3], [46, 5, 167, 1], [167, 1, 169, 1], [169, 1, 168, 2],
+      [170, 1, 168, paramPort('scatter', 'count')], [14, 1, 171, 1], [16, 1, 171, 2], [166, 1, 172, 1], [171, 1, 172, 2], [168, 1, 172, 3], [9, 1, 173, 1],
+      [13, 1, 173, 2], [14, 1, 173, 4], [15, 1, 173, 5], [1, 1, 173, paramPort('bloom', 'species')], [174, 1, 173, paramPort('bloom', 'view')],
+      [175, 1, 173, paramPort('bloom', 'size')], [176, 1, 173, paramPort('bloom', 'x')], [177, 1, 173, paramPort('bloom', 'y')], [179, 1, 178, 1],
+      [173, 2, 180, 1], [178, 1, 180, 2], [181, 1, 182, 1], [180, 1, 183, 1], [182, 1, 183, 2], [172, 1, 184, 1], [173, 1, 184, 2], [183, 1, 184, 3],
+      [15, 1, 185, 1], [14, 1, 185, 2], [184, 1, 186, 1], [185, 1, 186, 2], [151, 1, 186, 3], [52, 3, 187, 1], [66, 1, 187, 2], [46, 3, 188, 1],
+      [187, 1, 188, 2], [188, 1, 189, 1], [42, 1, 191, 1], [31, 1, 191, 2], [42, 1, 192, 1], [191, 1, 192, 2], [190, 1, 193, 1], [31, 1, 193, 2],
+      [192, 1, 194, 1], [193, 1, 194, 2], [42, 1, 195, 1], [127, 1, 195, 2], [194, 1, 196, 1], [195, 1, 196, 2], [189, 1, 197, 1], [127, 1, 197, 2],
+      [196, 1, 198, 1], [197, 1, 198, 2], [42, 1, 200, 1], [183, 1, 200, 2], [198, 1, 201, 1], [200, 1, 201, 2], [199, 1, 202, 1], [183, 1, 202, 2],
+      [201, 1, 203, 1], [202, 1, 203, 2], [42, 1, 205, 1], [151, 1, 205, 2], [203, 1, 206, 1], [205, 1, 206, 2], [204, 1, 207, 1], [151, 1, 207, 2],
+      [206, 1, 208, 1], [207, 1, 208, 2], [208, 1, 210, 1], [210, 1, 209, 1], [42, 1, 211, 1], [209, 1, 211, 2], [9, 1, 211, 7], [42, 1, 212, 1],
+      [209, 1, 212, 2], [9, 1, 212, 7], [211, 2, 213, 1], [212, 2, 213, 2], [42, 1, 215, 1], [208, 1, 215, 2], [215, 1, 214, 1], [42, 1, 216, 1],
+      [213, 1, 216, 2], [216, 1, 217, 1], [214, 1, 217, 2], [217, 1, 218, 1], [186, 1, 219, 1], [218, 1, 219, 2], [219, 1, 220, 1], [208, 1, 220, 2],
+      [3, 1, 220, paramPort('lensblur', 'aperture')], [4, 1, 220, paramPort('lensblur', 'focus')], [220, 1, 221, 1]] },
   ditsy: { label: 'Ditsy Print', div: 2, teach: 'A small floral print all over cloth, as the cotton day dresses of the 1930s and Liberty’s Tana Lawn have it (docs/prior-art/florals.md §8): tiny flowers at random, never in rows, a sprig of leaf between. Bloom draws a sheet of sixteen heads face on and pressed flat (a print has no depth), once in each of three colours; Scatter throws each sheet over the cloth (Flowers, Flower Size, Clustering, Turn), cut out by black; Colors says how many of the three print, and a Threshold of it lets the second and third in. Bloom’s single leaves are the sprigs. Canvas Weave, through a Map Range, gives the cloth its weave (Cloth). Try: a dark ground and Colors high.',
     nodes: [
       ['knob', { slot: '1', name: 'Flowers', def: 55 }, 40, 40],                                                                                      // 1
@@ -22456,7 +22510,7 @@ function athanorVersion(graph){
  * grid (up to three times coarser; it is soft, never stuck); past the node
  * limit it is not made at all, and the editor says why.
  */
-const ATHANOR_LIMITS = { nodes: 96, cost: 160 };   // (Ruby: 96 parts, now a graph holds only its work in flight)
+const ATHANOR_LIMITS = { nodes: 255, cost: 160, previews: 150 };   // (Ruby: 255 parts, rendered in stages (textureService); the step previews only up to 150)
 function athanorBudget(graph){
   const nodes = Object.values(athanorFlat(graph).nodes);   // (a group counts every part inside it)
   let cost = 0;
@@ -22883,6 +22937,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     draw(x);
     const d = x.getImageData(0, 0, ww, wh).data, o = new Float32Array(N);
     for(let i = 0; i < N; i++) o[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
+    c.width = 0; c.height = 0;   // (its pixels let go of at once: texCore freeCanvas)
     return o;
   };
   const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
@@ -23091,7 +23146,7 @@ function layoutAthanor(data, spread = 1){
  * real ports, within the limits. Returns { ok, graph, problems } — the graph
  * cleaned (what can be kept is kept), or ok:false when nothing safe remains.
  */
-const ATHANOR_MAX_JSON = 256*1024;
+const ATHANOR_MAX_JSON = 640*1024;   // (room for 255 parts: about 2.5 KB each, wires and settings)
 function validateGraph(json){
   const problems = [];
   if(json == null || json === '') return { ok: true, graph: null, problems };
@@ -24465,7 +24520,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   // and counts are canonical, so the finer grid draws the same picture, finer.
   const fine = athanorAA(extra.graph || '') === 'all pixels' && athanorVersion(extra.graph || '') >= 3 && !B.tooMany;
   const k = fine ? Math.min(3, Math.max(1, Math.sqrt(B.cost*4/ATHANOR_LIMITS.cost)))/2 : B.scale;
-  const div = canonDiv(2)*k, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const div = cappedDiv(canonDiv(2)*k, w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
@@ -24529,7 +24584,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
-  const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const div = cappedDiv(chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
@@ -24639,6 +24694,8 @@ self.onmessage = (e) => {
   try {
     // cpuLight: light (and run the graph's GPU passes) on the CPU even where the GPU is there (to compare, or as a fallback)
     setGpuLight(!(opts && opts.cpuLight)); setGpuPasses(!(opts && opts.cpuLight));
+    // gridCap: a phone short of memory (Firefox's) works graphs on a smaller grid (texCore setGridCap)
+    setGridCap(opts && opts.gridCap);
     const canvas = getTextureCanvas(type, w, h, opts);
     clearTextureCache();                         // the page caches; a transferred canvas is emptied
     const bitmap = canvas.transferToImageBitmap();
@@ -26068,7 +26125,7 @@ but bear with me, dear}]/jitter:200
             <option value="occlusion" data-str="option.channel_occlusion">Occlusion</option>
             <option value="specular" data-str="option.channel_specular">Specular</option>
           </select>
-          <label class="forge-check" title="Show a small preview of each part's result"><input type="checkbox" id="forgeSteps"> Steps</label>
+          <label class="forge-check" title="Show a small preview of each part's result (they rest above 150 parts)"><input type="checkbox" id="forgeSteps"> Steps</label>
           <button type="button" class="forge-seed-btn" id="forgeSeedBtn" title="New texture seed (shared with the page); every part that uses chance changes">⟳ Seed</button>
           <button type="button" class="forge-help-btn" id="forgeHelpBtn" aria-expanded="false" aria-controls="forgeDoc" title="Show or hide the wiki: how the Athanor works, and a page for every part">?</button>
         </div>
@@ -30004,6 +30061,12 @@ function canonArea(w, h){ return (w * h) / (SCALE * SCALE); }
  *  with S, so the grid stays the export's grid at any size (never finer, so
  *  a preview never costs more than the export to compute). */
 function canonDiv(d){ return Math.max(1, d * SCALE); }
+// THE GRID'S CEILING (Ruby: large graphs crashed Firefox on a phone, fine in Chrome): where memory is short, a graph
+// or chain works on a grid of at most this many pixels, drawn up to the page (the texture service sets it per job)
+let GRID_CAP = Infinity;
+function setGridCap(px){ GRID_CAP = px > 0 ? px : Infinity; }
+/** A grid divisor raised, if need be, so a w × h page's grid stays under the ceiling. */
+function cappedDiv(div, w, h){ return Math.max(div, Math.sqrt(w*h/GRID_CAP)); }
 
 /**
  * The light's direction across the page, scaled by how LOW it is: 1 at the
@@ -30278,6 +30341,12 @@ function gpuLightHeights(H, ww, wh, P){
     return res;
   } catch(e){ GPU = null; return null; }
 }
+
+// ---------- SCRATCH CANVASES GIVEN BACK (Ruby: large graphs crashed Firefox on a phone) ----------
+// A canvas a part draws on and reads once is let go of at once: width and height 0 free its pixels now, in every
+// browser, rather than whenever the garbage collector next notices it (one Macro Bloom on a phone made 99 canvases,
+// about 170 megapixels, every render).
+function freeCanvas(...cs){ for(const c0 of cs){ const c = c0 && c0.canvas ? c0.canvas : c0; if(c && typeof c === 'object'){ try { c.width = 0; c.height = 0; } catch(e){ /* a canvas already gone */ } } } }   // (a canvas, or a context's)
 
 // ---------- GPU KERNELS: a graph's per-pixel passes on WebGL2 (ROADMAP C9) ----------
 // One shared context (beside the lighting's own), one compiled program per kernel. A kernel is a fragment shader that
@@ -43232,8 +43301,10 @@ const FLORA_STEPS = {
       if(o.albedo && o.part !== 'visitor'){ const unit = Math.min(ww, wh), inside = (F, r) => { const N = F.length, FM = new Float32Array(N); for(let i = 0; i < N; i++) FM[i] = F[i]*M[i];
           const a = E.boxBlur(FM, r), b = E.boxBlur(M, r), out = new Float32Array(N); for(let i = 0; i < N; i++) out[i] = M[i] > 0.004 ? Math.min(1, a[i]/Math.max(1e-4, b[i])) : 0; return out; };
         const sm = o.size*unit*(sh > 1 ? 0.5 : 1);
-        return [E.readCanvas(pic), M, inside(Hf, Math.max(1, sm*0.012)), E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), inside(Ff, Math.max(1, sm*0.016))]; }
-      return [E.readCanvas(pic), M, Hf, E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), Ff]; } },
+        const res = [E.readCanvas(pic), M, inside(Hf, Math.max(1, sm*0.012)), E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), inside(Ff, Math.max(1, sm*0.016))];
+        freeCanvas(pic, mask, height, thick, cen, ids, gloss, face); return res; }
+      const res = [E.readCanvas(pic), M, Hf, E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), Ff];
+      freeCanvas(pic, mask, height, thick, cen, ids, gloss, face); return res; } },
 };
 
 
@@ -43483,6 +43554,7 @@ const PATTERN_STEPS = {
       let colour = cc ? readCanvas(cc) : markF;
       if(vc && colour.r){ const V = E.lum(readCanvas(vc));
         for(let i = 0; i < N; i++){ const v = V[i]; if(v > 0.02 && v < 0.98){ const u = 1/v; colour.r[i] = Math.min(1, colour.r[i]*u); colour.g[i] = Math.min(1, colour.g[i]*u); colour.b[i] = Math.min(1, colour.b[i]*u); } } }
+      freeCanvas(mc, ic, cc, vc);
       return [markF, E.boxBlur(markF, Math.max(1, R0*0.18)), each, colour];
     } },
 
@@ -47840,7 +47912,7 @@ const TEXTURE_CHAINS = {
       [16, 1, 119, 1], [118, 1, 120, 1], [119, 1, 120, 2], [100, 1, 121, 1], [15, 1, 121, 2], [120, 1, 121, 3], [66, 1, 122, 3],
       [4, 1, 122, paramPort('scatter', 'count')], [122, 1, 123, 1], [3, 1, 123, paramPort('motionblur', 'length')], [13, 1, 124, 1], [15, 1, 124, 2],
       [121, 1, 125, 1], [124, 1, 125, 2], [123, 1, 125, 3], [125, 1, 126, 1]] },
-  macro: { label: 'Macro Bloom', div: 2, v: 5, teach: 'One flower close, through a real lens (docs/prior-art/florals.md §8e). The camera dial frames it: Zoom from the whole flower in its setting to its heart filling the page, View tips it from face-on to the side, Turn says which way it tips and sets it toward that side’s third. Bloom draws it as maps, unlit, and the Light Engine lights them from the light dial: its heights, gloss, Facing and thinness, so light comes through thin petals (Translucency). Everything is painted sharp beside a depth map (the lights and the wash behind farthest, more flowers of its kind, the flower, a flower near the lens), and one Lens Blur focuses the whole scene as a lens does: Aperture how wide it is open, Focus where the plane of focus lies (its middle on the flower). Points of light behind (Lights Behind) become discs. Dew drops are little lenses; pollen dusts the heart; a blade of grass between the sun and the flower may cast a soft shadow on it. Now and then an insect visits, small, on a petal, lit with the flower: Visitors says how often (rare at its default, never more than two). Try: Aperture high and Focus low, to see the flower melt.',
+  macro: { label: 'Macro Bloom', div: 2, v: 5, teach: 'One flower close, through a real lens (docs/prior-art/florals.md §8e). The camera dial frames it: Zoom from the whole flower in its setting to its heart filling the page, View tips it from face-on to the side, Turn says which way it tips and sets it toward that side’s third. Bloom draws it as maps, unlit, and the Light Engine lights them from the light dial: its heights, gloss, Facing and thinness, so light comes through thin petals (Translucency). Everything is painted sharp beside a depth map (the lights and the wash behind farthest, more flowers of its kind, the flower, a flower near the lens), and one Lens Blur focuses the whole scene as a lens does: Aperture how wide it is open, Focus where the plane of focus lies (its middle on the flower). Points of light behind (Lights Behind) become discs. Dew drops are little lenses; pollen dusts the heart. Draw order is depth order, and the same depth gives the shadows: read as heights (nearer higher) and lit twice by the Light Engine, with its shadow march and without, their ratio is the cast shadow alone, as a depth buffer gives it; a leaf crossing near the lens shadows the petals, a visitor the petal it stands on. The seed says whether the flower has its stem, and whether a blade of grass or leaves stand between the sun and it: out of the frame only their shadow falls; in it they cross near the lens, blurred. Now and then an insect visits, small, on a petal, lit with the flower: Visitors says how often (rare at its default, never more than two). Try: Aperture high and Focus low, to see the flower melt.',
     nodes: [
       ['knob', { slot: '1', name: 'Species', def: 27 }, 40, 40],                                                                                      // 1
       ['knob', { slot: '2', name: 'Stage', def: 45 }, 40, 150],                                                                                       // 2
@@ -47887,151 +47959,182 @@ const TEXTURE_CHAINS = {
       ['math', { op: 'subtract' }, 700, 370],                                                                                                         // 43
       ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 44
       ['blend', { mode: 'screen', opacity: 100 }, 1360, 40],                                                                                          // 45
-      ['bloom', { species: 27, view: 25, '~view': '0,100', stage: 45, size: 110, '~size': '45,300', stem: 0, jitter: 40, x: 50, y: 50, lit: 100, turn: 0, '~turn': '0,100' }, 700, 480],// 46
-      ['maprange', { outLo: 8, outHi: 46 }, 260, 1030],                                                                                               // 47
-      ['threshold', { at: 30, soft: 20 }, 1140, 150],                                                                                                 // 48
-      ['blur', { radius: 6 }, 920, 260],                                                                                                              // 49
-      ['maprange', { outLo: 100, outHi: 40 }, 260, 1140],                                                                                             // 50
-      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 13 }, 1140, 260],                // 51
-      ['mix', { t: 55 }, 260, 1250],                                                                                                                  // 52
-      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 53
-      ['math', { op: 'sine' }, 260, 1360],                                                                                                            // 54
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 370],                                                                                               // 55
-      ['math', { op: 'subtract' }, 700, 590],                                                                                                         // 56
-      ['math', { op: 'add' }, 700, 700],                                                                                                              // 57
-      ['math', { op: 'sine' }, 260, 1470],                                                                                                            // 58
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 480],                                                                                               // 59
-      ['math', { op: 'subtract' }, 700, 810],                                                                                                         // 60
-      ['math', { op: 'add' }, 700, 920],                                                                                                              // 61
-      ['threshold', { at: 90, soft: 0 }, 480, 590],                                                                                                   // 62
-      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 63
-      ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 64
-      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 65
-      ['maprange', { outLo: 100, outHi: 75 }, 260, 1580],                                                                                             // 66
-      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 31 }, 1140, 370],                // 67
-      ['mix', { t: 55 }, 260, 1690],                                                                                                                  // 68
-      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 69
-      ['math', { op: 'sine' }, 260, 1800],                                                                                                            // 70
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 590],                                                                                               // 71
-      ['math', { op: 'subtract' }, 700, 1030],                                                                                                        // 72
-      ['math', { op: 'add' }, 700, 1140],                                                                                                             // 73
-      ['math', { op: 'sine' }, 260, 1910],                                                                                                            // 74
-      ['maprange', { outLo: 40, outHi: 60 }, 920, 700],                                                                                               // 75
-      ['math', { op: 'subtract' }, 700, 1250],                                                                                                        // 76
-      ['math', { op: 'add' }, 700, 1360],                                                                                                             // 77
-      ['threshold', { at: 90, soft: 0 }, 480, 700],                                                                                                   // 78
-      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 79
-      ['math', { op: 'multiply' }, 1360, 260],                                                                                                        // 80
-      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 81
-      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 82
-      ['math', { op: 'max' }, 2020, 40],                                                                                                              // 83
-      ['material', { relief: 120, gloss: 30, shine: 45, shadow: 50, occlusion: 45, ambient: 32, translucency: 50, '~translucency': '0,100', second: 55, secondTurn: 180, secondHeight: 120 }, 3120, 40],// 84
-      ['perlin', { scale: 70, '~scale': '45,110', details: 4, rough: 60, contrast: 40 }, 260, 2020],                                                  // 85
-      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 86
-      ['maprange', { outLo: 0, outHi: 8 }, 480, 810],                                                                                                 // 87
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 920, 810],                                                                           // 88
-      ['math', { op: 'multiply' }, 1140, 480],                                                                                                        // 89
-      ['blend', { mode: 'normal', opacity: 100 }, 1800, 150],                                                                                         // 90
-      ['blend', { mode: 'normal', opacity: 100 }, 2020, 150],                                                                                         // 91
-      ['math', { op: 'subtract' }, 1800, 260],                                                                                                        // 92
-      ['math', { op: 'multiply' }, 2020, 260],                                                                                                        // 93
-      ['math', { op: 'multiply' }, 1800, 370],                                                                                                        // 94
-      ['math', { op: 'add' }, 2240, 40],                                                                                                              // 95
-      ['math', { op: 'subtract' }, 2020, 370],                                                                                                        // 96
-      ['math', { op: 'multiply' }, 2460, 40],                                                                                                         // 97
-      ['math', { op: 'multiply' }, 2020, 480],                                                                                                        // 98
-      ['math', { op: 'add' }, 2680, 40],                                                                                                              // 99
-      ['math', { op: 'multiply' }, 920, 920],                                                                                                         // 100
-      ['math', { op: 'add' }, 1140, 590],                                                                                                             // 101
-      ['math', { op: 'multiply' }, 1800, 480],                                                                                                        // 102
-      ['math', { op: 'multiply' }, 2020, 590],                                                                                                        // 103
-      ['math', { op: 'add' }, 2240, 150],                                                                                                             // 104
-      ['math', { op: 'add' }, 2460, 150],                                                                                                             // 105
-      ['math', { op: 'subtract' }, 1800, 590],                                                                                                        // 106
-      ['math', { op: 'multiply' }, 2020, 700],                                                                                                        // 107
-      ['math', { op: 'multiply' }, 1800, 700],                                                                                                        // 108
-      ['math', { op: 'add' }, 2240, 260],                                                                                                             // 109
-      ['math', { op: 'subtract' }, 2020, 810],                                                                                                        // 110
-      ['math', { op: 'multiply' }, 2460, 260],                                                                                                        // 111
-      ['math', { op: 'multiply' }, 2020, 920],                                                                                                        // 112
-      ['math', { op: 'add' }, 2680, 150],                                                                                                             // 113
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 370],                                                                          // 114
-      ['math', { op: 'subtract' }, 1800, 810],                                                                                                        // 115
-      ['math', { op: 'multiply' }, 2020, 1030],                                                                                                       // 116
-      ['math', { op: 'multiply' }, 1800, 920],                                                                                                        // 117
-      ['math', { op: 'add' }, 2240, 370],                                                                                                             // 118
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 480],                                                                          // 119
-      ['math', { op: 'subtract' }, 2020, 1140],                                                                                                       // 120
-      ['math', { op: 'multiply' }, 2460, 370],                                                                                                        // 121
-      ['math', { op: 'multiply' }, 2020, 1250],                                                                                                       // 122
-      ['math', { op: 'add' }, 2680, 260],                                                                                                             // 123
-      ['blend', { mode: 'multiply', opacity: 100 }, 2900, 40],                                                                                        // 124
-      ['math', { op: 'multiply' }, 2900, 150],                                                                                                        // 125
-      ['blur', { radius: 1 }, 2460, 480],                                                                                                             // 126
-      ['math', { op: 'max' }, 2240, 480],                                                                                                             // 127
-      ['blend', { mode: 'normal', opacity: 100 }, 3340, 40],                                                                                          // 128
-      ['dial', {}, 40, 3120],                                                                                                                         // 129
-      ['math', { op: 'sine' }, 260, 2130],                                                                                                            // 130
-      ['math', { op: 'sine' }, 260, 2240],                                                                                                            // 131
-      ['scatter', { shape: 'dash', count: 1, '~count': '0,3', size: 160, '~size': '90,240', vary: 40, turn: 100, clump: 0, fade: 0, per: 'for the page' }, 260, 2350],// 132
-      ['random', { lo: 0, hi: 100 }, 40, 3230],                                                                                                       // 133
+      ['bloom', { species: 27, view: 25, '~view': '0,100', stage: 45, size: 110, '~size': '45,300', stem: 0, '~stem': '0,100', jitter: 40, x: 50, y: 50, lit: 100, turn: 0, '~turn': '0,100' }, 700, 480],// 46
+      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 47
+      ['maprange', { outLo: 8, outHi: 46 }, 260, 1030],                                                                                               // 48
+      ['threshold', { at: 30, soft: 20 }, 1140, 150],                                                                                                 // 49
+      ['blur', { radius: 6 }, 920, 260],                                                                                                              // 50
+      ['maprange', { outLo: 100, outHi: 40 }, 260, 1140],                                                                                             // 51
+      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 13 }, 1140, 260],                // 52
+      ['mix', { t: 55 }, 260, 1250],                                                                                                                  // 53
+      ['random', { lo: 0, hi: 100 }, 40, 2680],                                                                                                       // 54
+      ['math', { op: 'sine' }, 260, 1360],                                                                                                            // 55
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 370],                                                                                               // 56
+      ['math', { op: 'subtract' }, 700, 590],                                                                                                         // 57
+      ['math', { op: 'add' }, 700, 700],                                                                                                              // 58
+      ['math', { op: 'sine' }, 260, 1470],                                                                                                            // 59
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 480],                                                                                               // 60
+      ['math', { op: 'subtract' }, 700, 810],                                                                                                         // 61
+      ['math', { op: 'add' }, 700, 920],                                                                                                              // 62
+      ['threshold', { at: 90, soft: 0 }, 480, 590],                                                                                                   // 63
+      ['random', { lo: 0, hi: 100 }, 40, 2790],                                                                                                       // 64
+      ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 65
+      ['math', { op: 'multiply' }, 1580, 40],                                                                                                         // 66
+      ['maprange', { outLo: 100, outHi: 75 }, 260, 1580],                                                                                             // 67
+      ['bloom', { species: 27, part: 100, size: 110, '~size': '45,300', x: 50, y: 50, lit: 100, visitor: 0, variant: 31 }, 1140, 370],                // 68
+      ['mix', { t: 55 }, 260, 1690],                                                                                                                  // 69
+      ['random', { lo: 0, hi: 100 }, 40, 2900],                                                                                                       // 70
+      ['math', { op: 'sine' }, 260, 1800],                                                                                                            // 71
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 590],                                                                                               // 72
+      ['math', { op: 'subtract' }, 700, 1030],                                                                                                        // 73
+      ['math', { op: 'add' }, 700, 1140],                                                                                                             // 74
+      ['math', { op: 'sine' }, 260, 1910],                                                                                                            // 75
+      ['maprange', { outLo: 40, outHi: 60 }, 920, 700],                                                                                               // 76
+      ['math', { op: 'subtract' }, 700, 1250],                                                                                                        // 77
+      ['math', { op: 'add' }, 700, 1360],                                                                                                             // 78
+      ['threshold', { at: 90, soft: 0 }, 480, 700],                                                                                                   // 79
+      ['random', { lo: 0, hi: 100 }, 40, 3010],                                                                                                       // 80
+      ['math', { op: 'multiply' }, 1360, 260],                                                                                                        // 81
+      ['math', { op: 'multiply' }, 1580, 150],                                                                                                        // 82
+      ['math', { op: 'multiply' }, 1800, 40],                                                                                                         // 83
+      ['math', { op: 'max' }, 2020, 40],                                                                                                              // 84
+      ['material', { relief: 120, gloss: 30, shine: 45, shadow: 50, occlusion: 45, ambient: 32, translucency: 50, '~translucency': '0,100', second: 55, secondTurn: 180, secondHeight: 120 }, 3120, 40],// 85
+      ['perlin', { scale: 70, '~scale': '45,110', details: 4, rough: 60, contrast: 40 }, 260, 2020],                                                  // 86
+      ['random', { lo: 0, hi: 100 }, 40, 3120],                                                                                                       // 87
+      ['maprange', { outLo: 0, outHi: 8 }, 480, 810],                                                                                                 // 88
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 920, 810],                                                                           // 89
+      ['math', { op: 'multiply' }, 1140, 480],                                                                                                        // 90
+      ['blend', { mode: 'normal', opacity: 100 }, 1800, 150],                                                                                         // 91
+      ['blend', { mode: 'normal', opacity: 100 }, 2020, 150],                                                                                         // 92
+      ['math', { op: 'subtract' }, 1800, 260],                                                                                                        // 93
+      ['math', { op: 'multiply' }, 2020, 260],                                                                                                        // 94
+      ['math', { op: 'multiply' }, 1800, 370],                                                                                                        // 95
+      ['math', { op: 'add' }, 2240, 40],                                                                                                              // 96
+      ['math', { op: 'subtract' }, 2020, 370],                                                                                                        // 97
+      ['math', { op: 'multiply' }, 2460, 40],                                                                                                         // 98
+      ['math', { op: 'multiply' }, 2020, 480],                                                                                                        // 99
+      ['math', { op: 'add' }, 2680, 40],                                                                                                              // 100
+      ['math', { op: 'multiply' }, 920, 920],                                                                                                         // 101
+      ['math', { op: 'add' }, 1140, 590],                                                                                                             // 102
+      ['math', { op: 'multiply' }, 1800, 480],                                                                                                        // 103
+      ['math', { op: 'multiply' }, 2020, 590],                                                                                                        // 104
+      ['math', { op: 'add' }, 2240, 150],                                                                                                             // 105
+      ['math', { op: 'add' }, 2460, 150],                                                                                                             // 106
+      ['math', { op: 'subtract' }, 1800, 590],                                                                                                        // 107
+      ['math', { op: 'multiply' }, 2020, 700],                                                                                                        // 108
+      ['math', { op: 'multiply' }, 1800, 700],                                                                                                        // 109
+      ['math', { op: 'add' }, 2240, 260],                                                                                                             // 110
+      ['math', { op: 'subtract' }, 2020, 810],                                                                                                        // 111
+      ['math', { op: 'multiply' }, 2460, 260],                                                                                                        // 112
+      ['math', { op: 'multiply' }, 2020, 920],                                                                                                        // 113
+      ['math', { op: 'add' }, 2680, 150],                                                                                                             // 114
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 370],                                                                          // 115
+      ['math', { op: 'subtract' }, 1800, 810],                                                                                                        // 116
+      ['math', { op: 'multiply' }, 2020, 1030],                                                                                                       // 117
+      ['math', { op: 'multiply' }, 1800, 920],                                                                                                        // 118
+      ['math', { op: 'add' }, 2240, 370],                                                                                                             // 119
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 1360, 480],                                                                          // 120
+      ['math', { op: 'subtract' }, 2020, 1140],                                                                                                       // 121
+      ['math', { op: 'multiply' }, 2460, 370],                                                                                                        // 122
+      ['math', { op: 'multiply' }, 2020, 1250],                                                                                                       // 123
+      ['math', { op: 'add' }, 2680, 260],                                                                                                             // 124
+      ['blend', { mode: 'multiply', opacity: 100 }, 2900, 40],                                                                                        // 125
+      ['math', { op: 'multiply' }, 2900, 150],                                                                                                        // 126
+      ['blur', { radius: 1 }, 2460, 480],                                                                                                             // 127
+      ['math', { op: 'max' }, 2240, 480],                                                                                                             // 128
+      ['blend', { mode: 'normal', opacity: 100 }, 3340, 40],                                                                                          // 129
+      ['dial', {}, 40, 3230],                                                                                                                         // 130
+      ['math', { op: 'sine' }, 260, 2130],                                                                                                            // 131
+      ['math', { op: 'sine' }, 260, 2240],                                                                                                            // 132
+      ['scatter', { shape: 'dash', count: 1, '~count': '0,3', size: 160, '~size': '90,240', vary: 40, turn: 100, clump: 0, fade: 0, per: 'for the page' }, 260, 2350],// 133
       ['random', { lo: 0, hi: 100 }, 40, 3340],                                                                                                       // 134
-      ['offset', { x: 0, y: 0, '~x': '-7,7', '~y': '-7,7' }, 480, 920],                                                                               // 135
-      ['blur', { radius: 22 }, 700, 1470],                                                                                                            // 136
-      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 50 }, 920, 1030],                                                                         // 137
-      ['blend', { mode: 'multiply', opacity: 100 }, 3560, 40],                                                                                        // 138
-      ['scatter', { shape: 'dot', count: 30, '~count': '0,160', size: 3, '~size': '2,6', vary: 80, clump: 60, fade: 10, per: 'for the page' }, 920, 1140],// 139
-      ['light', { relief: 90, gloss: 90, shadow: 40 }, 1140, 700],                                                                                    // 140
-      ['offset', { x: 0, y: 0, '~x': '-1.4,1.4', '~y': '-1.4,1.4' }, 1140, 810],                                                                      // 141
-      ['blur', { radius: 2 }, 1580, 260],                                                                                                             // 142
-      ['math', { op: 'subtract' }, 1360, 590],                                                                                                        // 143
-      ['edges', { strength: 100 }, 1140, 920],                                                                                                        // 144
-      ['math', { op: 'multiply' }, 1800, 1030],                                                                                                       // 145
-      ['blend', { mode: 'screen', opacity: 75 }, 3780, 40],                                                                                           // 146
-      ['maprange', { inLo: 0, inHi: 40, outLo: 0, outHi: 60 }, 1360, 700],                                                                            // 147
-      ['blend', { mode: 'multiply', opacity: 30 }, 4000, 40],                                                                                         // 148
-      ['mix', { t: 30 }, 260, 2460],                                                                                                                  // 149
-      ['maprange', { outLo: 0, outHi: 35 }, 1140, 1030],                                                                                              // 150
-      ['blend', { mode: 'multiply', opacity: 100 }, 4220, 40],                                                                                        // 151
-      ['math', { op: 'multiply' }, 1360, 810],                                                                                                        // 152
-      ['blend', { mode: 'screen', opacity: 90 }, 4440, 40],                                                                                           // 153
-      ['blur', { radius: 10 }, 920, 1250],                                                                                                            // 154
-      ['scatter', { shape: 'dot', count: 80, '~count': '0,260', size: 1.5, '~size': '1,3', vary: 70, clump: 85, fade: 30, per: 'for the page' }, 1360, 920],// 155
-      ['maprange', { inLo: 0, inHi: 35, outLo: 0, outHi: 100 }, 1140, 1140],                                                                          // 156
-      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 157
-      ['mix', { t: 55 }, 260, 2570],                                                                                                                  // 158
-      ['blend', { mode: 'normal', opacity: 85 }, 4660, 40],                                                                                           // 159
-      ['bloom', { species: 27, view: 20, '~view': '0,60', stage: 45, size: 260, '~size': '180,320', stem: 0, jitter: 50, x: 50, '~x': '0,100', y: 50, '~y': '0,100', variant: 9, lit: 0 }, 260, 2680],// 160
-      ['random', { lo: 0, hi: 100 }, 40, 3560],                                                                                                       // 161
-      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 162
-      ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 163
-      ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 164
-      ['threshold', { at: 55, soft: 0 }, 260, 2790],                                                                                                  // 165
-      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 166
-      ['math', { op: 'multiply' }, 480, 1030],                                                                                                        // 167
-      ['shape', { form: 'vignette', size: 100, soft: 60 }, 40, 4110],                                                                                 // 168
-      ['maprange', { outLo: 100, outHi: 0 }, 260, 2900],                                                                                              // 169
-      ['math', { op: 'multiply' }, 700, 1580],                                                                                                        // 170
-      ['blend', { mode: 'normal', opacity: 100 }, 4880, 40],                                                                                          // 171
-      ['math', { op: 'multiply' }, 1800, 1140],                                                                                                       // 172
-      ['math', { op: 'add' }, 2020, 1360],                                                                                                            // 173
-      ['maprange', { inLo: 0, inHi: 100, outLo: 42, outHi: 36 }, 2240, 590],                                                                          // 174
-      ['number', { value: 78 }, 40, 4220],                                                                                                            // 175
-      ['math', { op: 'subtract' }, 700, 1690],                                                                                                        // 176
-      ['math', { op: 'multiply' }, 920, 1360],                                                                                                        // 177
-      ['math', { op: 'multiply' }, 700, 1800],                                                                                                        // 178
-      ['math', { op: 'add' }, 1140, 1250],                                                                                                            // 179
-      ['math', { op: 'subtract' }, 2680, 370],                                                                                                        // 180
-      ['math', { op: 'multiply' }, 2900, 260],                                                                                                        // 181
-      ['math', { op: 'multiply' }, 2680, 480],                                                                                                        // 182
-      ['math', { op: 'add' }, 3120, 150],                                                                                                             // 183
-      ['number', { value: 4 }, 40, 4330],                                                                                                             // 184
-      ['math', { op: 'subtract' }, 920, 1470],                                                                                                        // 185
-      ['math', { op: 'multiply' }, 3340, 150],                                                                                                        // 186
-      ['math', { op: 'multiply' }, 920, 1580],                                                                                                        // 187
-      ['math', { op: 'add' }, 3560, 150],                                                                                                             // 188
-      ['lensblur', { focus: 40, '~focus': '18,62', aperture: 60, size: 110, blades: 0, highlights: 100 }, 5100, 40],                                  // 189
-      ['surface', { name: 'Macro Bloom', ground: 'colour' }, 5320, 40]],                                                                              // 190
+      ['random', { lo: 0, hi: 100 }, 40, 3450],                                                                                                       // 135
+      ['bloom', { species: 27, part: 70, sheet: 34, stage: 40, jitter: 60, variant: 21 }, 260, 2460],                                                 // 136
+      ['scatter', { shape: 'picture', ground: 'black is clear', count: 3, '~count': '0,6', size: 80, '~size': '50,110', big: 300, vary: 50, turn: 100, clump: 50, fade: 0, per: 'for the page', sheet: 'a sheet of 4' }, 480, 920],// 137
+      ['random', { lo: 0, hi: 100 }, 40, 3560],                                                                                                       // 138
+      ['mapswitch', { soft: 0 }, 920, 1030],                                                                                                          // 139
+      ['random', { lo: 0, hi: 100 }, 40, 3670],                                                                                                       // 140
+      ['number', { value: 0 }, 40, 3780],                                                                                                             // 141
+      ['math', { op: 'max' }, 700, 1470],                                                                                                             // 142
+      ['threshold', { at: 68, soft: 0 }, 260, 2570],                                                                                                  // 143
+      ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 144
+      ['math', { op: 'subtract' }, 480, 1030],                                                                                                        // 145
+      ['offset', { x: 0, y: 0, '~x': '-7,7', '~y': '-7,7' }, 1140, 700],                                                                              // 146
+      ['blur', { radius: 22 }, 1360, 590],                                                                                                            // 147
+      ['math', { op: 'multiply' }, 1580, 260],                                                                                                        // 148
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 50 }, 1800, 1030],                                                                        // 149
+      ['blend', { mode: 'multiply', opacity: 100 }, 3560, 40],                                                                                        // 150
+      ['math', { op: 'multiply' }, 1140, 810],                                                                                                        // 151
+      ['scatter', { shape: 'dot', count: 30, '~count': '0,160', size: 3, '~size': '2,6', vary: 80, clump: 60, fade: 10, per: 'for the page' }, 920, 1140],// 152
+      ['light', { relief: 90, gloss: 90, shadow: 40 }, 1140, 920],                                                                                    // 153
+      ['offset', { x: 0, y: 0, '~x': '-1.4,1.4', '~y': '-1.4,1.4' }, 1140, 1030],                                                                     // 154
+      ['blur', { radius: 2 }, 1580, 370],                                                                                                             // 155
+      ['math', { op: 'subtract' }, 1360, 700],                                                                                                        // 156
+      ['edges', { strength: 100 }, 1140, 1140],                                                                                                       // 157
+      ['math', { op: 'multiply' }, 1800, 1140],                                                                                                       // 158
+      ['blend', { mode: 'screen', opacity: 75 }, 3780, 40],                                                                                           // 159
+      ['maprange', { inLo: 0, inHi: 40, outLo: 0, outHi: 60 }, 1360, 810],                                                                            // 160
+      ['blend', { mode: 'multiply', opacity: 30 }, 4000, 40],                                                                                         // 161
+      ['mix', { t: 30 }, 260, 2680],                                                                                                                  // 162
+      ['maprange', { outLo: 0, outHi: 35 }, 1140, 1250],                                                                                              // 163
+      ['blend', { mode: 'multiply', opacity: 100 }, 4220, 40],                                                                                        // 164
+      ['math', { op: 'multiply' }, 1360, 920],                                                                                                        // 165
+      ['blend', { mode: 'screen', opacity: 90 }, 4440, 40],                                                                                           // 166
+      ['blur', { radius: 10 }, 920, 1250],                                                                                                            // 167
+      ['scatter', { shape: 'dot', count: 80, '~count': '0,260', size: 1.5, '~size': '1,3', vary: 70, clump: 85, fade: 30, per: 'for the page' }, 1360, 1030],// 168
+      ['maprange', { inLo: 0, inHi: 35, outLo: 0, outHi: 100 }, 1140, 1360],                                                                          // 169
+      ['random', { lo: 0, hi: 100 }, 40, 4000],                                                                                                       // 170
+      ['mix', { t: 55 }, 260, 2790],                                                                                                                  // 171
+      ['blend', { mode: 'normal', opacity: 85 }, 4660, 40],                                                                                           // 172
+      ['bloom', { species: 27, view: 20, '~view': '0,60', stage: 45, size: 260, '~size': '180,320', stem: 0, jitter: 50, x: 50, '~x': '0,100', y: 50, '~y': '0,100', variant: 9, lit: 0 }, 260, 2900],// 173
+      ['random', { lo: 0, hi: 100 }, 40, 4110],                                                                                                       // 174
+      ['random', { lo: 0, hi: 100 }, 40, 4220],                                                                                                       // 175
+      ['random', { lo: 0, hi: 100 }, 40, 4330],                                                                                                       // 176
+      ['random', { lo: 0, hi: 100 }, 40, 4440],                                                                                                       // 177
+      ['threshold', { at: 55, soft: 0 }, 260, 3010],                                                                                                  // 178
+      ['random', { lo: 0, hi: 100 }, 40, 4550],                                                                                                       // 179
+      ['math', { op: 'multiply' }, 480, 1140],                                                                                                        // 180
+      ['shape', { form: 'vignette', size: 100, soft: 60 }, 40, 4660],                                                                                 // 181
+      ['maprange', { outLo: 100, outHi: 0 }, 260, 3120],                                                                                              // 182
+      ['math', { op: 'multiply' }, 700, 1580],                                                                                                        // 183
+      ['blend', { mode: 'normal', opacity: 100 }, 4880, 40],                                                                                          // 184
+      ['mix', { t: 30 }, 260, 3230],                                                                                                                  // 185
+      ['blend', { mode: 'normal', opacity: 95 }, 5100, 40],                                                                                           // 186
+      ['math', { op: 'multiply' }, 1800, 1250],                                                                                                       // 187
+      ['math', { op: 'add' }, 2020, 1360],                                                                                                            // 188
+      ['maprange', { inLo: 0, inHi: 100, outLo: 42, outHi: 36 }, 2240, 590],                                                                          // 189
+      ['number', { value: 78 }, 40, 4770],                                                                                                            // 190
+      ['math', { op: 'subtract' }, 700, 1690],                                                                                                        // 191
+      ['math', { op: 'multiply' }, 920, 1360],                                                                                                        // 192
+      ['math', { op: 'multiply' }, 700, 1800],                                                                                                        // 193
+      ['math', { op: 'add' }, 1140, 1470],                                                                                                            // 194
+      ['math', { op: 'subtract' }, 2680, 370],                                                                                                        // 195
+      ['math', { op: 'multiply' }, 2900, 260],                                                                                                        // 196
+      ['math', { op: 'multiply' }, 2680, 480],                                                                                                        // 197
+      ['math', { op: 'add' }, 3120, 150],                                                                                                             // 198
+      ['number', { value: 4 }, 40, 4880],                                                                                                             // 199
+      ['math', { op: 'subtract' }, 920, 1470],                                                                                                        // 200
+      ['math', { op: 'multiply' }, 3340, 150],                                                                                                        // 201
+      ['math', { op: 'multiply' }, 920, 1580],                                                                                                        // 202
+      ['math', { op: 'add' }, 3560, 150],                                                                                                             // 203
+      ['number', { value: 8 }, 40, 4990],                                                                                                             // 204
+      ['math', { op: 'subtract' }, 1360, 1140],                                                                                                       // 205
+      ['math', { op: 'multiply' }, 3780, 150],                                                                                                        // 206
+      ['math', { op: 'multiply' }, 1360, 1250],                                                                                                       // 207
+      ['math', { op: 'add' }, 4000, 150],                                                                                                             // 208
+      ['blur', { radius: 2 }, 4440, 150],                                                                                                             // 209
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 0 }, 4220, 150],                                                                          // 210
+      ['material', { relief: 200, gloss: 0, shine: 0, shadow: 100, occlusion: 0, ambient: 0 }, 4660, 150],                                            // 211
+      ['material', { relief: 200, gloss: 0, shine: 0, shadow: 0, occlusion: 0, ambient: 0 }, 4660, 260],                                              // 212
+      ['math', { op: 'divide' }, 4880, 150],                                                                                                          // 213
+      ['threshold', { at: 35, soft: 6 }, 4440, 260],                                                                                                  // 214
+      ['math', { op: 'subtract' }, 4220, 260],                                                                                                        // 215
+      ['math', { op: 'subtract' }, 5100, 150],                                                                                                        // 216
+      ['math', { op: 'multiply' }, 5320, 40],                                                                                                         // 217
+      ['maprange', { inLo: 0, inHi: 100, outLo: 100, outHi: 42 }, 5540, 40],                                                                          // 218
+      ['blend', { mode: 'multiply', opacity: 100 }, 5760, 40],                                                                                        // 219
+      ['lensblur', { focus: 40, '~focus': '18,62', aperture: 60, size: 110, blades: 0, highlights: 100 }, 5980, 40],                                  // 220
+      ['surface', { name: 'Macro Bloom', ground: 'colour' }, 6200, 40]],                                                                              // 221
     wires: [[10, 1, 17, 1], [10, 1, 19, 1], [18, 1, 19, 2], [17, 1, 20, 1], [19, 1, 21, 1], [23, 1, 22, paramPort('perlin', 'scale')], [22, 1, 24, 1],
       [24, 1, 25, 1], [15, 1, 26, 1], [14, 1, 26, 2], [26, 1, 25, 2], [15, 1, 25, 3], [15, 1, 27, 1], [11, 1, 27, 2], [27, 1, 25, 4], [9, 1, 28, 1],
       [13, 1, 28, 2], [14, 1, 28, 4], [15, 1, 28, 5], [1, 1, 28, paramPort('bloom', 'species')], [29, 1, 28, paramPort('bloom', 'view')],
@@ -48041,45 +48144,52 @@ const TEXTURE_CHAINS = {
       [42, 1, 43, 1], [37, 1, 43, 2], [36, 1, 44, 1], [43, 1, 44, 2], [40, 1, 45, 1], [41, 1, 45, 2], [44, 1, 45, 3], [9, 1, 46, 1], [13, 1, 46, 2],
       [14, 1, 46, 4], [15, 1, 46, 5], [1, 1, 46, paramPort('bloom', 'species')], [2, 1, 46, paramPort('bloom', 'stage')],
       [10, 3, 46, paramPort('bloom', 'size')], [10, 2, 46, paramPort('bloom', 'view')], [10, 1, 46, paramPort('bloom', 'turn')],
-      [20, 1, 46, paramPort('bloom', 'x')], [21, 1, 46, paramPort('bloom', 'y')], [10, 3, 47, 1], [46, 2, 49, 1], [49, 1, 48, 1], [8, 1, 50, 1], [9, 1, 51, 1],
-      [12, 1, 51, 2], [12, 1, 52, 1], [16, 1, 52, 2], [52, 1, 51, 3], [14, 1, 51, 4], [15, 1, 51, 5], [10, 3, 51, paramPort('bloom', 'size')], [53, 1, 54, 1],
-      [54, 1, 55, 1], [20, 1, 56, 1], [47, 1, 56, 2], [56, 1, 55, paramPort('maprange', 'outLo')], [20, 1, 57, 1], [47, 1, 57, 2],
-      [57, 1, 55, paramPort('maprange', 'outHi')], [55, 1, 51, paramPort('bloom', 'x')], [53, 1, 58, 1], [18, 1, 58, 2], [58, 1, 59, 1], [21, 1, 60, 1],
-      [47, 1, 60, 2], [60, 1, 59, paramPort('maprange', 'outLo')], [21, 1, 61, 1], [47, 1, 61, 2], [61, 1, 59, paramPort('maprange', 'outHi')],
-      [59, 1, 51, paramPort('bloom', 'y')], [63, 1, 62, 1], [50, 1, 62, paramPort('threshold', 'at')], [51, 2, 64, 1], [62, 1, 64, 2], [64, 1, 65, 1],
-      [48, 1, 65, 2], [8, 1, 66, 1], [9, 1, 67, 1], [12, 1, 67, 2], [12, 1, 68, 1], [16, 1, 68, 2], [68, 1, 67, 3], [14, 1, 67, 4], [15, 1, 67, 5],
-      [10, 3, 67, paramPort('bloom', 'size')], [69, 1, 70, 1], [70, 1, 71, 1], [20, 1, 72, 1], [47, 1, 72, 2], [72, 1, 71, paramPort('maprange', 'outLo')],
-      [20, 1, 73, 1], [47, 1, 73, 2], [73, 1, 71, paramPort('maprange', 'outHi')], [71, 1, 67, paramPort('bloom', 'x')], [69, 1, 74, 1], [18, 1, 74, 2],
-      [74, 1, 75, 1], [21, 1, 76, 1], [47, 1, 76, 2], [76, 1, 75, paramPort('maprange', 'outLo')], [21, 1, 77, 1], [47, 1, 77, 2],
-      [77, 1, 75, paramPort('maprange', 'outHi')], [75, 1, 67, paramPort('bloom', 'y')], [79, 1, 78, 1], [66, 1, 78, paramPort('threshold', 'at')],
-      [67, 2, 80, 1], [78, 1, 80, 2], [80, 1, 81, 1], [48, 1, 81, 2], [81, 1, 82, 1], [62, 1, 82, 2], [65, 1, 83, 1], [82, 1, 83, 2],
-      [86, 1, 85, paramPort('perlin', 'scale')], [85, 1, 87, 1], [46, 4, 88, 1], [88, 1, 89, 1], [46, 2, 89, 2], [46, 1, 90, 1], [51, 1, 90, 2],
-      [65, 1, 90, 3], [90, 1, 91, 1], [67, 1, 91, 2], [82, 1, 91, 3], [42, 1, 92, 1], [65, 1, 92, 2], [46, 8, 93, 1], [92, 1, 93, 2], [51, 8, 94, 1],
-      [65, 1, 94, 2], [93, 1, 95, 1], [94, 1, 95, 2], [42, 1, 96, 1], [82, 1, 96, 2], [95, 1, 97, 1], [96, 1, 97, 2], [67, 8, 98, 1], [82, 1, 98, 2],
-      [97, 1, 99, 1], [98, 1, 99, 2], [87, 1, 100, 1], [46, 2, 100, 2], [46, 3, 101, 1], [100, 1, 101, 2], [51, 3, 102, 1], [65, 1, 102, 2], [67, 3, 103, 1],
-      [82, 1, 103, 2], [102, 1, 104, 1], [103, 1, 104, 2], [101, 1, 105, 1], [104, 1, 105, 2], [42, 1, 106, 1], [65, 1, 106, 2], [46, 7, 107, 1],
-      [106, 1, 107, 2], [51, 7, 108, 1], [65, 1, 108, 2], [107, 1, 109, 1], [108, 1, 109, 2], [42, 1, 110, 1], [82, 1, 110, 2], [109, 1, 111, 1],
-      [110, 1, 111, 2], [67, 7, 112, 1], [82, 1, 112, 2], [111, 1, 113, 1], [112, 1, 113, 2], [51, 4, 114, 1], [42, 1, 115, 1], [65, 1, 115, 2],
-      [89, 1, 116, 1], [115, 1, 116, 2], [114, 1, 117, 1], [65, 1, 117, 2], [116, 1, 118, 1], [117, 1, 118, 2], [67, 4, 119, 1], [42, 1, 120, 1],
-      [82, 1, 120, 2], [118, 1, 121, 1], [120, 1, 121, 2], [119, 1, 122, 1], [82, 1, 122, 2], [121, 1, 123, 1], [122, 1, 123, 2], [91, 1, 124, 1],
-      [99, 1, 124, 2], [124, 1, 84, 1], [105, 1, 84, 2], [113, 1, 84, 3], [16, 1, 84, 6], [9, 1, 84, 7], [123, 1, 125, 1], [7, 1, 125, 2],
-      [125, 1, 84, paramPort('material', 'translucency')], [46, 2, 127, 1], [83, 1, 127, 2], [127, 1, 126, 1], [45, 1, 128, 1], [84, 1, 128, 2],
-      [126, 1, 128, 3], [129, 3, 130, 1], [18, 1, 130, 2], [129, 3, 131, 1], [133, 1, 132, paramPort('scatter', 'count')],
-      [134, 1, 132, paramPort('scatter', 'size')], [132, 1, 135, 1], [130, 1, 135, paramPort('offset', 'x')], [131, 1, 135, paramPort('offset', 'y')],
-      [135, 1, 136, 1], [136, 1, 137, 1], [128, 1, 138, 1], [137, 1, 138, 2], [126, 1, 138, 3], [46, 2, 139, 2], [6, 1, 139, paramPort('scatter', 'count')],
-      [139, 2, 140, 1], [9, 1, 140, 2], [139, 1, 141, 1], [130, 1, 141, paramPort('offset', 'x')], [131, 1, 141, paramPort('offset', 'y')], [141, 1, 143, 1],
-      [139, 1, 143, 2], [143, 1, 142, 1], [139, 1, 144, 1], [142, 1, 145, 1], [46, 2, 145, 2], [138, 1, 146, 1], [16, 1, 146, 2], [145, 1, 146, 3],
-      [144, 1, 147, 1], [146, 1, 148, 1], [14, 1, 148, 2], [147, 1, 148, 3], [13, 1, 149, 1], [15, 1, 149, 2], [139, 1, 150, 1], [148, 1, 151, 1],
-      [149, 1, 151, 2], [150, 1, 151, 3], [140, 2, 152, 1], [139, 1, 152, 2], [151, 1, 153, 1], [16, 1, 153, 2], [152, 1, 153, 3], [46, 5, 154, 1],
-      [154, 1, 156, 1], [156, 1, 155, 2], [157, 1, 155, paramPort('scatter', 'count')], [14, 1, 158, 1], [16, 1, 158, 2], [153, 1, 159, 1], [158, 1, 159, 2],
-      [155, 1, 159, 3], [9, 1, 160, 1], [13, 1, 160, 2], [14, 1, 160, 4], [15, 1, 160, 5], [1, 1, 160, paramPort('bloom', 'species')],
-      [161, 1, 160, paramPort('bloom', 'view')], [162, 1, 160, paramPort('bloom', 'size')], [163, 1, 160, paramPort('bloom', 'x')],
-      [164, 1, 160, paramPort('bloom', 'y')], [166, 1, 165, 1], [160, 2, 167, 1], [165, 1, 167, 2], [168, 1, 169, 1], [167, 1, 170, 1], [169, 1, 170, 2],
-      [159, 1, 171, 1], [160, 1, 171, 2], [170, 1, 171, 3], [51, 3, 172, 1], [65, 1, 172, 2], [46, 3, 173, 1], [172, 1, 173, 2], [173, 1, 174, 1],
-      [42, 1, 176, 1], [31, 1, 176, 2], [42, 1, 177, 1], [176, 1, 177, 2], [175, 1, 178, 1], [31, 1, 178, 2], [177, 1, 179, 1], [178, 1, 179, 2],
-      [42, 1, 180, 1], [126, 1, 180, 2], [179, 1, 181, 1], [180, 1, 181, 2], [174, 1, 182, 1], [126, 1, 182, 2], [181, 1, 183, 1], [182, 1, 183, 2],
-      [42, 1, 185, 1], [170, 1, 185, 2], [183, 1, 186, 1], [185, 1, 186, 2], [184, 1, 187, 1], [170, 1, 187, 2], [186, 1, 188, 1], [187, 1, 188, 2],
-      [171, 1, 189, 1], [188, 1, 189, 2], [3, 1, 189, paramPort('lensblur', 'aperture')], [4, 1, 189, paramPort('lensblur', 'focus')], [189, 1, 190, 1]] },
+      [20, 1, 46, paramPort('bloom', 'x')], [21, 1, 46, paramPort('bloom', 'y')], [47, 1, 46, paramPort('bloom', 'stem')], [10, 3, 48, 1], [46, 2, 50, 1],
+      [50, 1, 49, 1], [8, 1, 51, 1], [9, 1, 52, 1], [12, 1, 52, 2], [12, 1, 53, 1], [16, 1, 53, 2], [53, 1, 52, 3], [14, 1, 52, 4], [15, 1, 52, 5],
+      [10, 3, 52, paramPort('bloom', 'size')], [54, 1, 55, 1], [55, 1, 56, 1], [20, 1, 57, 1], [48, 1, 57, 2], [57, 1, 56, paramPort('maprange', 'outLo')],
+      [20, 1, 58, 1], [48, 1, 58, 2], [58, 1, 56, paramPort('maprange', 'outHi')], [56, 1, 52, paramPort('bloom', 'x')], [54, 1, 59, 1], [18, 1, 59, 2],
+      [59, 1, 60, 1], [21, 1, 61, 1], [48, 1, 61, 2], [61, 1, 60, paramPort('maprange', 'outLo')], [21, 1, 62, 1], [48, 1, 62, 2],
+      [62, 1, 60, paramPort('maprange', 'outHi')], [60, 1, 52, paramPort('bloom', 'y')], [64, 1, 63, 1], [51, 1, 63, paramPort('threshold', 'at')],
+      [52, 2, 65, 1], [63, 1, 65, 2], [65, 1, 66, 1], [49, 1, 66, 2], [8, 1, 67, 1], [9, 1, 68, 1], [12, 1, 68, 2], [12, 1, 69, 1], [16, 1, 69, 2],
+      [69, 1, 68, 3], [14, 1, 68, 4], [15, 1, 68, 5], [10, 3, 68, paramPort('bloom', 'size')], [70, 1, 71, 1], [71, 1, 72, 1], [20, 1, 73, 1], [48, 1, 73, 2],
+      [73, 1, 72, paramPort('maprange', 'outLo')], [20, 1, 74, 1], [48, 1, 74, 2], [74, 1, 72, paramPort('maprange', 'outHi')],
+      [72, 1, 68, paramPort('bloom', 'x')], [70, 1, 75, 1], [18, 1, 75, 2], [75, 1, 76, 1], [21, 1, 77, 1], [48, 1, 77, 2],
+      [77, 1, 76, paramPort('maprange', 'outLo')], [21, 1, 78, 1], [48, 1, 78, 2], [78, 1, 76, paramPort('maprange', 'outHi')],
+      [76, 1, 68, paramPort('bloom', 'y')], [80, 1, 79, 1], [67, 1, 79, paramPort('threshold', 'at')], [68, 2, 81, 1], [79, 1, 81, 2], [81, 1, 82, 1],
+      [49, 1, 82, 2], [82, 1, 83, 1], [63, 1, 83, 2], [66, 1, 84, 1], [83, 1, 84, 2], [87, 1, 86, paramPort('perlin', 'scale')], [86, 1, 88, 1],
+      [46, 4, 89, 1], [89, 1, 90, 1], [46, 2, 90, 2], [46, 1, 91, 1], [52, 1, 91, 2], [66, 1, 91, 3], [91, 1, 92, 1], [68, 1, 92, 2], [83, 1, 92, 3],
+      [42, 1, 93, 1], [66, 1, 93, 2], [46, 8, 94, 1], [93, 1, 94, 2], [52, 8, 95, 1], [66, 1, 95, 2], [94, 1, 96, 1], [95, 1, 96, 2], [42, 1, 97, 1],
+      [83, 1, 97, 2], [96, 1, 98, 1], [97, 1, 98, 2], [68, 8, 99, 1], [83, 1, 99, 2], [98, 1, 100, 1], [99, 1, 100, 2], [88, 1, 101, 1], [46, 2, 101, 2],
+      [46, 3, 102, 1], [101, 1, 102, 2], [52, 3, 103, 1], [66, 1, 103, 2], [68, 3, 104, 1], [83, 1, 104, 2], [103, 1, 105, 1], [104, 1, 105, 2],
+      [102, 1, 106, 1], [105, 1, 106, 2], [42, 1, 107, 1], [66, 1, 107, 2], [46, 7, 108, 1], [107, 1, 108, 2], [52, 7, 109, 1], [66, 1, 109, 2],
+      [108, 1, 110, 1], [109, 1, 110, 2], [42, 1, 111, 1], [83, 1, 111, 2], [110, 1, 112, 1], [111, 1, 112, 2], [68, 7, 113, 1], [83, 1, 113, 2],
+      [112, 1, 114, 1], [113, 1, 114, 2], [52, 4, 115, 1], [42, 1, 116, 1], [66, 1, 116, 2], [90, 1, 117, 1], [116, 1, 117, 2], [115, 1, 118, 1],
+      [66, 1, 118, 2], [117, 1, 119, 1], [118, 1, 119, 2], [68, 4, 120, 1], [42, 1, 121, 1], [83, 1, 121, 2], [119, 1, 122, 1], [121, 1, 122, 2],
+      [120, 1, 123, 1], [83, 1, 123, 2], [122, 1, 124, 1], [123, 1, 124, 2], [92, 1, 125, 1], [100, 1, 125, 2], [125, 1, 85, 1], [106, 1, 85, 2],
+      [114, 1, 85, 3], [16, 1, 85, 6], [9, 1, 85, 7], [124, 1, 126, 1], [7, 1, 126, 2], [126, 1, 85, paramPort('material', 'translucency')], [46, 2, 128, 1],
+      [84, 1, 128, 2], [128, 1, 127, 1], [45, 1, 129, 1], [85, 1, 129, 2], [127, 1, 129, 3], [130, 3, 131, 1], [18, 1, 131, 2], [130, 3, 132, 1],
+      [134, 1, 133, paramPort('scatter', 'count')], [135, 1, 133, paramPort('scatter', 'size')], [9, 1, 136, 1], [15, 1, 136, 5], [136, 1, 137, 1],
+      [138, 1, 137, paramPort('scatter', 'count')], [140, 1, 139, 1], [141, 1, 139, 2], [133, 1, 139, 3], [137, 1, 139, 4], [133, 1, 142, 1], [137, 1, 142, 2],
+      [142, 1, 139, 5], [144, 1, 143, 1], [42, 1, 145, 1], [143, 1, 145, 2], [139, 1, 146, 1], [131, 1, 146, paramPort('offset', 'x')],
+      [132, 1, 146, paramPort('offset', 'y')], [146, 1, 147, 1], [147, 1, 148, 1], [145, 1, 148, 2], [148, 1, 149, 1], [129, 1, 150, 1], [149, 1, 150, 2],
+      [127, 1, 150, 3], [139, 1, 151, 1], [143, 1, 151, 2], [46, 2, 152, 2], [6, 1, 152, paramPort('scatter', 'count')], [152, 2, 153, 1], [9, 1, 153, 2],
+      [152, 1, 154, 1], [131, 1, 154, paramPort('offset', 'x')], [132, 1, 154, paramPort('offset', 'y')], [154, 1, 156, 1], [152, 1, 156, 2], [156, 1, 155, 1],
+      [152, 1, 157, 1], [155, 1, 158, 1], [46, 2, 158, 2], [150, 1, 159, 1], [16, 1, 159, 2], [158, 1, 159, 3], [157, 1, 160, 1], [159, 1, 161, 1],
+      [14, 1, 161, 2], [160, 1, 161, 3], [13, 1, 162, 1], [15, 1, 162, 2], [152, 1, 163, 1], [161, 1, 164, 1], [162, 1, 164, 2], [163, 1, 164, 3],
+      [153, 2, 165, 1], [152, 1, 165, 2], [164, 1, 166, 1], [16, 1, 166, 2], [165, 1, 166, 3], [46, 5, 167, 1], [167, 1, 169, 1], [169, 1, 168, 2],
+      [170, 1, 168, paramPort('scatter', 'count')], [14, 1, 171, 1], [16, 1, 171, 2], [166, 1, 172, 1], [171, 1, 172, 2], [168, 1, 172, 3], [9, 1, 173, 1],
+      [13, 1, 173, 2], [14, 1, 173, 4], [15, 1, 173, 5], [1, 1, 173, paramPort('bloom', 'species')], [174, 1, 173, paramPort('bloom', 'view')],
+      [175, 1, 173, paramPort('bloom', 'size')], [176, 1, 173, paramPort('bloom', 'x')], [177, 1, 173, paramPort('bloom', 'y')], [179, 1, 178, 1],
+      [173, 2, 180, 1], [178, 1, 180, 2], [181, 1, 182, 1], [180, 1, 183, 1], [182, 1, 183, 2], [172, 1, 184, 1], [173, 1, 184, 2], [183, 1, 184, 3],
+      [15, 1, 185, 1], [14, 1, 185, 2], [184, 1, 186, 1], [185, 1, 186, 2], [151, 1, 186, 3], [52, 3, 187, 1], [66, 1, 187, 2], [46, 3, 188, 1],
+      [187, 1, 188, 2], [188, 1, 189, 1], [42, 1, 191, 1], [31, 1, 191, 2], [42, 1, 192, 1], [191, 1, 192, 2], [190, 1, 193, 1], [31, 1, 193, 2],
+      [192, 1, 194, 1], [193, 1, 194, 2], [42, 1, 195, 1], [127, 1, 195, 2], [194, 1, 196, 1], [195, 1, 196, 2], [189, 1, 197, 1], [127, 1, 197, 2],
+      [196, 1, 198, 1], [197, 1, 198, 2], [42, 1, 200, 1], [183, 1, 200, 2], [198, 1, 201, 1], [200, 1, 201, 2], [199, 1, 202, 1], [183, 1, 202, 2],
+      [201, 1, 203, 1], [202, 1, 203, 2], [42, 1, 205, 1], [151, 1, 205, 2], [203, 1, 206, 1], [205, 1, 206, 2], [204, 1, 207, 1], [151, 1, 207, 2],
+      [206, 1, 208, 1], [207, 1, 208, 2], [208, 1, 210, 1], [210, 1, 209, 1], [42, 1, 211, 1], [209, 1, 211, 2], [9, 1, 211, 7], [42, 1, 212, 1],
+      [209, 1, 212, 2], [9, 1, 212, 7], [211, 2, 213, 1], [212, 2, 213, 2], [42, 1, 215, 1], [208, 1, 215, 2], [215, 1, 214, 1], [42, 1, 216, 1],
+      [213, 1, 216, 2], [216, 1, 217, 1], [214, 1, 217, 2], [217, 1, 218, 1], [186, 1, 219, 1], [218, 1, 219, 2], [219, 1, 220, 1], [208, 1, 220, 2],
+      [3, 1, 220, paramPort('lensblur', 'aperture')], [4, 1, 220, paramPort('lensblur', 'focus')], [220, 1, 221, 1]] },
   ditsy: { label: 'Ditsy Print', div: 2, teach: 'A small floral print all over cloth, as the cotton day dresses of the 1930s and Liberty’s Tana Lawn have it (docs/prior-art/florals.md §8): tiny flowers at random, never in rows, a sprig of leaf between. Bloom draws a sheet of sixteen heads face on and pressed flat (a print has no depth), once in each of three colours; Scatter throws each sheet over the cloth (Flowers, Flower Size, Clustering, Turn), cut out by black; Colors says how many of the three print, and a Threshold of it lets the second and third in. Bloom’s single leaves are the sprigs. Canvas Weave, through a Map Range, gives the cloth its weave (Cloth). Try: a dark ground and Colors high.',
     nodes: [
       ['knob', { slot: '1', name: 'Flowers', def: 55 }, 40, 40],                                                                                      // 1
@@ -48969,7 +49079,7 @@ function athanorVersion(graph){
  * grid (up to three times coarser; it is soft, never stuck); past the node
  * limit it is not made at all, and the editor says why.
  */
-const ATHANOR_LIMITS = { nodes: 96, cost: 160 };   // (Ruby: 96 parts, now a graph holds only its work in flight)
+const ATHANOR_LIMITS = { nodes: 255, cost: 160, previews: 150 };   // (Ruby: 255 parts, rendered in stages (textureService); the step previews only up to 150)
 function athanorBudget(graph){
   const nodes = Object.values(athanorFlat(graph).nodes);   // (a group counts every part inside it)
   let cost = 0;
@@ -49396,6 +49506,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     draw(x);
     const d = x.getImageData(0, 0, ww, wh).data, o = new Float32Array(N);
     for(let i = 0; i < N; i++) o[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
+    c.width = 0; c.height = 0;   // (its pixels let go of at once: texCore freeCanvas)
     return o;
   };
   const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
@@ -49604,7 +49715,7 @@ function layoutAthanor(data, spread = 1){
  * real ports, within the limits. Returns { ok, graph, problems } — the graph
  * cleaned (what can be kept is kept), or ok:false when nothing safe remains.
  */
-const ATHANOR_MAX_JSON = 256*1024;
+const ATHANOR_MAX_JSON = 640*1024;   // (room for 255 parts: about 2.5 KB each, wires and settings)
 function validateGraph(json){
   const problems = [];
   if(json == null || json === '') return { ok: true, graph: null, problems };
@@ -50978,7 +51089,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   // and counts are canonical, so the finer grid draws the same picture, finer.
   const fine = athanorAA(extra.graph || '') === 'all pixels' && athanorVersion(extra.graph || '') >= 3 && !B.tooMany;
   const k = fine ? Math.min(3, Math.max(1, Math.sqrt(B.cost*4/ATHANOR_LIMITS.cost)))/2 : B.scale;
-  const div = canonDiv(2)*k, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const div = cappedDiv(canonDiv(2)*k, w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
@@ -51042,7 +51153,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
-  const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const div = cappedDiv(chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
@@ -51666,6 +51777,15 @@ let crashes = 0; const MAX_CRASHES = 4;
 // there a slot's stale job is never joined by its newest, and only one large picture is made at a time
 const FRUGAL = typeof matchMedia === 'function' && (() => { try { return matchMedia('(pointer: coarse)').matches; } catch(e){ return false; } })();
 const LARGE = 360000;            // pixels: anything bigger than a tile or a preview
+// FIREFOX ON A PHONE (Ruby: large graphs took Firefox down, Chrome fine on the same phone): Gecko frees canvas and
+// typed-array memory later than Chrome under pressure, so there a graph or chain works on a grid of at most a megapixel
+// (texCore setGridCap), drawn up to the page
+const GECKO = typeof navigator !== 'undefined' && /Gecko\/\d/.test(navigator.userAgent || '') && /Firefox\//.test(navigator.userAgent || '');
+const PHONE_GRID_CAP = FRUGAL && GECKO ? 1000000 : 0;
+// STAGES (Ruby: "render them in stages"): a texture whose last making took longer than STAGE_OVER_MS comes first as a
+// quarter-size draft (half each side, about four times faster), shown at once, then at full size
+const STAGE_OVER_MS = 900;
+const halfJob = (type, w, h, opts) => { const hw = Math.ceil(w/2), hh = Math.ceil(h/2), o = { ...opts, scale: (opts && opts.scale || 1)/2 }; return { key: textureKeyFor(type, hw, hh, o), type, w: hw, h: hh, opts: o }; };
 const large = j => j && j.w*j.h > LARGE;
 let pool = null, broken = false, nextId = 1, workerSrc = null, shownCount = 0, lastShown = '';
 const inflight = new Map();      // slot → { id, key, type, job, worker, started }
@@ -51725,7 +51845,8 @@ function spawn(){
     if(crashes > MAX_CRASHES){ broken = true; for(const x of pool || []) try { x.w.terminate(); } catch(_){} pool = null; flushOnPage(); return; }
     const i = pool ? pool.indexOf(entry) : -1;
     if(i >= 0) pool[i] = spawn();
-    if(f && inflight.get(f.slot) === f){ inflight.delete(f.slot); if(!wanted.has(f.slot)) wanted.set(f.slot, f.job); }
+    // (a large job that took its worker down is tried again at half size: a phone short of memory still gets a picture)
+    if(f && inflight.get(f.slot) === f){ inflight.delete(f.slot); if(!wanted.has(f.slot)) wanted.set(f.slot, large(f.job) ? halfJob(f.job.type, f.job.w, f.job.h, f.job.opts) : f.job); }
     // the crash may have been memory: let the big cached textures go first
     dropLargeTextures(1024*1024*4);
     setTimeout(pump, 200);
@@ -51748,6 +51869,7 @@ function boot(){
 
 /** The texture for `slot`: cached, or being made (the slot's last one meanwhile). */
 function requestTexture(slot, type, w, h, opts){
+  if(PHONE_GRID_CAP) opts = { ...opts, gridCap: PHONE_GRID_CAP };
   if(drafting && (genMs.get(type) || 0) > DRAFT_OVER_MS && !(opts && opts.final)){
     w = Math.ceil(w/2); h = Math.ceil(h/2); opts = { ...opts, scale: (opts && opts.scale || 1)/2 };
   }
@@ -51776,7 +51898,14 @@ function requestTexture(slot, type, w, h, opts){
     return prev && prev.type === type ? prev.tex : null;
   }
   const busyJob = inflight.get(slot);
-  if(!(busyJob && busyJob.key === key)){ wanted.set(slot, { key, type, w, h, opts }); pump(); }
+  if(!(busyJob && (busyJob.key === key || (busyJob.job.then && busyJob.job.then.key === key)))){
+    const full = { key, type, w, h, opts };
+    // (a slow texture, not a final one: its draft first, unless the draft is already made or the drag is drafting)
+    const slow = (genMs.get(type) || 0) > STAGE_OVER_MS && !(opts && opts.final) && !drafting && w*h > LARGE;
+    const d = slow ? halfJob(type, w, h, opts) : null;
+    if(d && !peekTexture(d.key)) wanted.set(slot, { ...d, then: full });
+    else { if(d){ lastGood.set(slot, { type, tex: peekTexture(d.key) }); } wanted.set(slot, full); }
+    pump(); }
   const prev = lastGood.get(slot);
   return prev && prev.type === type ? prev.tex : null;      // the old look meanwhile; nothing if the texture changed
 }
@@ -51815,8 +51944,10 @@ function arrived(entry, e){
   if(current) inflight.delete(f.slot);
   let tex = bitmap;
   if(!tex && current){ tex = getTextureCanvas(f.job.type, f.job.w, f.job.h, f.job.opts); if(typeof console !== 'undefined') console.warn('texture worker:', error); }
+  // (a draft landed: its full picture is wished for next, unless something newer was wished for meanwhile)
+  if(f.job.then && current && !wanted.has(f.slot)) wanted.set(f.slot, f.job.then);
   if(tex){
-    genMs.set(f.type, now() - f.started);
+    if(!f.job.then) genMs.set(f.type, now() - f.started);
     storeTexture(f.key, tex);
     // interim results show while nothing newer has; the picture never steps back
     if(id > (shownSeq.get(f.slot) || 0)){ shownSeq.set(f.slot, id); lastGood.set(f.slot, { type: f.type, tex }); shownCount++; lastShown = (tex.width || 0) + 'px'; onReady(); }
@@ -51882,11 +52013,11 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Beli';
+const RELEASE = 'Saturn–Gerd';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-19';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"EmRc7jEo","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"xgw5D-MU"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"xgw5D-MU"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -52719,7 +52850,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-19 · e45e12f";
+const STAMP = "2026-10-20 · 2c5c7da";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -58972,7 +59103,11 @@ async function openForge(deps){
     const previews = () => {
       clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c, ($('forgeChannel') || {}).value || 'final'); } catch(e){} }, 250);
       clearTimeout(stepsT);
-      if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
+      // (above ATHANOR_LIMITS.previews parts the step previews rest: a graph that large is drawn in stages, and its
+      //  previews' every-part picture is the memory a phone lacks)
+      const many = (() => { try { return athanorBudget(deps.bench()).nodes > ATHANOR_LIMITS.previews; } catch(e){ return false; } })();
+      area.classList.toggle('steps-many', many);
+      if(area.classList.contains('steps-on') && deps.steps && !many) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
     };
     const paintSteps = (sheet, ids, t, cols) => ids.forEach((id, i) => { const cv = area.querySelector(`#node-${id} .forge-node-preview`); if(!cv) return;
       const x = cv.getContext('2d'); x.imageSmoothingEnabled = true; x.clearRect(0, 0, cv.width, cv.height); x.drawImage(sheet, (i % cols)*t, Math.floor(i/cols)*t, t, t, 0, 0, cv.width, cv.height); });
@@ -63838,7 +63973,8 @@ function previewAthanor(json, cv, channel){
 /** The STEP PREVIEWS: every node's own result, as one sheet of tiles made in the worker. */
 function athanorStepSheet(json, paint){
   const ids = athanorStepIds(json); if(!ids.length) return;
-  const T = 64, { cols, rows } = athanorSheetLayout(ids.length);
+  // (the whole sheet at most 512 px a side (Ruby): a large graph's previews smaller, so the every-part picture stays light)
+  const { cols, rows } = athanorSheetLayout(ids.length), T = Math.max(24, Math.min(64, Math.floor(512/Math.max(cols, rows))));
   whenTexture('athanorSteps', 'athanorsteps', cols*T, rows*T, athanorOpts(json, T), sheet => paint(sheet, ids, T, cols));
 }
 // KEPT SURFACES in the texture menu (🜉 Yours): each by name, after "From the

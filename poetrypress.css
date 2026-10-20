@@ -1858,6 +1858,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 /* each node's own result, at its foot (Step previews on) */
 .forge-node-preview{ display:none; width:calc(100% - 20px); height:auto; aspect-ratio:1; margin:6px 10px 2px; background:#808080; image-rendering:auto; }
 .forge-canvas.steps-on .forge-node-preview{ display:block; }
+.forge-canvas.steps-on.steps-many .forge-node-preview{ display:none; }   /* (above 150 parts the step previews rest: forge.js) */
 .forge-canvas .drawflow .drawflow-node.forge-output .forge-node-preview, .forge-canvas .drawflow .drawflow-node.forge-inputs .forge-node-preview{ display:none; }
 /* THE DOCK: what it makes, bottom right over the grid — no wider than its preview */
 .forge-dock{ --pv:232px; position:absolute; right:10px; bottom:10px; z-index:5; width:var(--pv); background:var(--fg-panel); border:1px solid var(--fg-line); padding:6px; box-shadow:0 14px 30px -16px rgba(0,0,0,.85); }

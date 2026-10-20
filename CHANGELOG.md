@@ -4,6 +4,31 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Gerd (2026-10-19)
+
+- **Macro Bloom is drawn in depth order, and casts its shadows from the
+  depth.** Everything nearer the lens is drawn over what lies behind it, and
+  the same depth gives the shadows, as a game engine's depth buffer does: a
+  leaf crossing near the lens shadows the petals, an insect shadows the
+  petal it stands on, and all of it turns with the light. The far
+  background is too far away to catch a flower's shadow.
+- **Back in Macro Bloom**: the stem (the seed's whether), leaves overhead
+  as well as a blade of grass between the sun and the flower, and now and
+  then that blade or those leaves crossing the frame near the lens, blurred
+  by it.
+- **The Athanor holds up to 255 parts.** A slow surface now comes in two
+  stages: a quarter-size draft at once, then the full picture.
+- **Large graphs on Firefox on a phone**: a part's scratch canvas gives its
+  memory back as soon as it has been read, and there a graph works on a
+  grid of at most a megapixel, drawn up to the page. A render that runs out
+  of memory is tried again at half size instead of taking the page down.
+- **Step previews**: above 150 parts they rest; below, the whole sheet of
+  them is at most 512 pixels a side.
+- **Under the hood:** pruned the stylesheet (every declaration it questioned
+  still mattered somewhere; nothing removed). The test canvas keeps what was
+  drawn on a canvas that has been given back, so the knob probes still see
+  it.
+
 ## Saturn–Beli (2026-10-19)
 
 - **Macro Bloom is seen through a real lens.** Everything in the picture

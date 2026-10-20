@@ -11,7 +11,7 @@
  * the source files it runs as a module worker.
  */
 import { getTextureCanvas, clearTextureCache } from './textureGenerators.js';
-import { setGpuLight, setGpuPasses, setGpuSoftware } from './texCore.js';
+import { setGpuLight, setGpuPasses, setGpuSoftware, setGridCap } from './texCore.js';
 
 // the generators make canvases with document.createElement; here, OffscreenCanvas
 if(typeof document === 'undefined') globalThis.document = { createElement: () => new OffscreenCanvas(1, 1) };
@@ -23,6 +23,8 @@ self.onmessage = (e) => {
   try {
     // cpuLight: light (and run the graph's GPU passes) on the CPU even where the GPU is there (to compare, or as a fallback)
     setGpuLight(!(opts && opts.cpuLight)); setGpuPasses(!(opts && opts.cpuLight));
+    // gridCap: a phone short of memory (Firefox's) works graphs on a smaller grid (texCore setGridCap)
+    setGridCap(opts && opts.gridCap);
     const canvas = getTextureCanvas(type, w, h, opts);
     clearTextureCache();                         // the page caches; a transferred canvas is emptied
     const bitmap = canvas.transferToImageBitmap();

@@ -8,6 +8,13 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- MACRO BLOOM IN DEPTH ORDER: drawn back to front, and its shadows from the depth (a leaf near the lens shadows the
+  petals, an insect the petal it stands on); the stem, leaves overhead and the caster crossing near the lens are back.
+- LARGE GRAPHS ON FIREFOX (Ruby's crash): measured, one Macro Bloom render on a phone made 99 canvases, about 170
+  megapixels, and held up to 27 results of about 20 MB each: memory Chrome reclaimed in time and Firefox, it seems, did
+  not (there is no Firefox here to try it on). Now scratch canvases are given back at once, Firefox on a phone works on
+  a grid of at most a megapixel, slow surfaces come in two stages, and a render that runs out of memory is tried again
+  at half size. The Athanor holds 255 parts; step previews rest above 150. Does Firefox hold now?
 - MACRO BLOOM THROUGH A REAL LENS: one Lens Blur focuses the whole picture from a depth map (in front of the focus
   blurs fast, behind it softens to a limit, the lights behind become discs; on the GPU where there is one). The camera
   dial frames the flower with a wireframe guide (Zoom, View, Turn); the sliders are Species, Stage, Aperture, Focus,

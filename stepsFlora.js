@@ -16,7 +16,7 @@
  * A sheet (Sheet setting) draws 4, 8 or 16 different flowers in cells, so Scatter (its Picture Is: a sheet) throws a
  * field that is never clones. Part draws one petal or one leaf instead, for scattered petals and fallen leaves.
  */
-import { mulberry32, CPU } from './texCore.js';
+import { mulberry32, CPU, freeCanvas } from './texCore.js';
 
 const FL_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const flClamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
@@ -481,6 +481,8 @@ export const FLORA_STEPS = {
       if(o.albedo && o.part !== 'visitor'){ const unit = Math.min(ww, wh), inside = (F, r) => { const N = F.length, FM = new Float32Array(N); for(let i = 0; i < N; i++) FM[i] = F[i]*M[i];
           const a = E.boxBlur(FM, r), b = E.boxBlur(M, r), out = new Float32Array(N); for(let i = 0; i < N; i++) out[i] = M[i] > 0.004 ? Math.min(1, a[i]/Math.max(1e-4, b[i])) : 0; return out; };
         const sm = o.size*unit*(sh > 1 ? 0.5 : 1);
-        return [E.readCanvas(pic), M, inside(Hf, Math.max(1, sm*0.012)), E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), inside(Ff, Math.max(1, sm*0.016))]; }
-      return [E.readCanvas(pic), M, Hf, E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), Ff]; } },
+        const res = [E.readCanvas(pic), M, inside(Hf, Math.max(1, sm*0.012)), E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), inside(Ff, Math.max(1, sm*0.016))];
+        freeCanvas(pic, mask, height, thick, cen, ids, gloss, face); return res; }
+      const res = [E.readCanvas(pic), M, Hf, E.asField(E.readCanvas(thick)), E.asField(E.readCanvas(cen)), E.asField(E.readCanvas(ids)), E.asField(E.readCanvas(gloss)), Ff];
+      freeCanvas(pic, mask, height, thick, cen, ids, gloss, face); return res; } },
 };

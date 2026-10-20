@@ -32,6 +32,15 @@ let crashes = 0; const MAX_CRASHES = 4;
 // there a slot's stale job is never joined by its newest, and only one large picture is made at a time
 const FRUGAL = typeof matchMedia === 'function' && (() => { try { return matchMedia('(pointer: coarse)').matches; } catch(e){ return false; } })();
 const LARGE = 360000;            // pixels: anything bigger than a tile or a preview
+// FIREFOX ON A PHONE (Ruby: large graphs took Firefox down, Chrome fine on the same phone): Gecko frees canvas and
+// typed-array memory later than Chrome under pressure, so there a graph or chain works on a grid of at most a megapixel
+// (texCore setGridCap), drawn up to the page
+const GECKO = typeof navigator !== 'undefined' && /Gecko\/\d/.test(navigator.userAgent || '') && /Firefox\//.test(navigator.userAgent || '');
+const PHONE_GRID_CAP = FRUGAL && GECKO ? 1000000 : 0;
+// STAGES (Ruby: "render them in stages"): a texture whose last making took longer than STAGE_OVER_MS comes first as a
+// quarter-size draft (half each side, about four times faster), shown at once, then at full size
+const STAGE_OVER_MS = 900;
+const halfJob = (type, w, h, opts) => { const hw = Math.ceil(w/2), hh = Math.ceil(h/2), o = { ...opts, scale: (opts && opts.scale || 1)/2 }; return { key: textureKeyFor(type, hw, hh, o), type, w: hw, h: hh, opts: o }; };
 const large = j => j && j.w*j.h > LARGE;
 let pool = null, broken = false, nextId = 1, workerSrc = null, shownCount = 0, lastShown = '';
 const inflight = new Map();      // slot → { id, key, type, job, worker, started }
@@ -91,7 +100,8 @@ function spawn(){
     if(crashes > MAX_CRASHES){ broken = true; for(const x of pool || []) try { x.w.terminate(); } catch(_){} pool = null; flushOnPage(); return; }
     const i = pool ? pool.indexOf(entry) : -1;
     if(i >= 0) pool[i] = spawn();
-    if(f && inflight.get(f.slot) === f){ inflight.delete(f.slot); if(!wanted.has(f.slot)) wanted.set(f.slot, f.job); }
+    // (a large job that took its worker down is tried again at half size: a phone short of memory still gets a picture)
+    if(f && inflight.get(f.slot) === f){ inflight.delete(f.slot); if(!wanted.has(f.slot)) wanted.set(f.slot, large(f.job) ? halfJob(f.job.type, f.job.w, f.job.h, f.job.opts) : f.job); }
     // the crash may have been memory: let the big cached textures go first
     dropLargeTextures(1024*1024*4);
     setTimeout(pump, 200);
@@ -114,6 +124,7 @@ function boot(){
 
 /** The texture for `slot`: cached, or being made (the slot's last one meanwhile). */
 export function requestTexture(slot, type, w, h, opts){
+  if(PHONE_GRID_CAP) opts = { ...opts, gridCap: PHONE_GRID_CAP };
   if(drafting && (genMs.get(type) || 0) > DRAFT_OVER_MS && !(opts && opts.final)){
     w = Math.ceil(w/2); h = Math.ceil(h/2); opts = { ...opts, scale: (opts && opts.scale || 1)/2 };
   }
@@ -142,7 +153,14 @@ export function requestTexture(slot, type, w, h, opts){
     return prev && prev.type === type ? prev.tex : null;
   }
   const busyJob = inflight.get(slot);
-  if(!(busyJob && busyJob.key === key)){ wanted.set(slot, { key, type, w, h, opts }); pump(); }
+  if(!(busyJob && (busyJob.key === key || (busyJob.job.then && busyJob.job.then.key === key)))){
+    const full = { key, type, w, h, opts };
+    // (a slow texture, not a final one: its draft first, unless the draft is already made or the drag is drafting)
+    const slow = (genMs.get(type) || 0) > STAGE_OVER_MS && !(opts && opts.final) && !drafting && w*h > LARGE;
+    const d = slow ? halfJob(type, w, h, opts) : null;
+    if(d && !peekTexture(d.key)) wanted.set(slot, { ...d, then: full });
+    else { if(d){ lastGood.set(slot, { type, tex: peekTexture(d.key) }); } wanted.set(slot, full); }
+    pump(); }
   const prev = lastGood.get(slot);
   return prev && prev.type === type ? prev.tex : null;      // the old look meanwhile; nothing if the texture changed
 }
@@ -181,8 +199,10 @@ function arrived(entry, e){
   if(current) inflight.delete(f.slot);
   let tex = bitmap;
   if(!tex && current){ tex = getTextureCanvas(f.job.type, f.job.w, f.job.h, f.job.opts); if(typeof console !== 'undefined') console.warn('texture worker:', error); }
+  // (a draft landed: its full picture is wished for next, unless something newer was wished for meanwhile)
+  if(f.job.then && current && !wanted.has(f.slot)) wanted.set(f.slot, f.job.then);
   if(tex){
-    genMs.set(f.type, now() - f.started);
+    if(!f.job.then) genMs.set(f.type, now() - f.started);
     storeTexture(f.key, tex);
     // interim results show while nothing newer has; the picture never steps back
     if(id > (shownSeq.get(f.slot) || 0)){ shownSeq.set(f.slot, id); lastGood.set(f.slot, { type: f.type, tex }); shownCount++; lastShown = (tex.width || 0) + 'px'; onReady(); }

@@ -140,8 +140,10 @@ function assertFinite(fnName, ...vals){
 export function makeMockCanvas(){
   let w=0, h=0, cachedCtx=null;
   return {
-    get width(){ return w; }, set width(v){ w=v; cachedCtx=null; },
-    get height(){ return h; }, set height(v){ h=v; cachedCtx=null; },
+    // (a canvas given back (width or height 0: texCore freeCanvas) keeps what was drawn on it, for the probes that sum
+    //  every canvas's drawing; any other resize starts a fresh context, as a real canvas clears)
+    get width(){ return w; }, set width(v){ w=v; if(v > 0) cachedCtx=null; },
+    get height(){ return h; }, set height(v){ h=v; if(v > 0) cachedCtx=null; },
     getContext(){
       if(!cachedCtx) cachedCtx = makeMockContext(w,h);
       return cachedCtx;

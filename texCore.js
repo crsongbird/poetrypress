@@ -179,6 +179,12 @@ export function canonArea(w, h){ return (w * h) / (SCALE * SCALE); }
  *  with S, so the grid stays the export's grid at any size (never finer, so
  *  a preview never costs more than the export to compute). */
 export function canonDiv(d){ return Math.max(1, d * SCALE); }
+// THE GRID'S CEILING (Ruby: large graphs crashed Firefox on a phone, fine in Chrome): where memory is short, a graph
+// or chain works on a grid of at most this many pixels, drawn up to the page (the texture service sets it per job)
+let GRID_CAP = Infinity;
+export function setGridCap(px){ GRID_CAP = px > 0 ? px : Infinity; }
+/** A grid divisor raised, if need be, so a w × h page's grid stays under the ceiling. */
+export function cappedDiv(div, w, h){ return Math.max(div, Math.sqrt(w*h/GRID_CAP)); }
 
 /**
  * The light's direction across the page, scaled by how LOW it is: 1 at the
@@ -453,6 +459,12 @@ function gpuLightHeights(H, ww, wh, P){
     return res;
   } catch(e){ GPU = null; return null; }
 }
+
+// ---------- SCRATCH CANVASES GIVEN BACK (Ruby: large graphs crashed Firefox on a phone) ----------
+// A canvas a part draws on and reads once is let go of at once: width and height 0 free its pixels now, in every
+// browser, rather than whenever the garbage collector next notices it (one Macro Bloom on a phone made 99 canvases,
+// about 170 megapixels, every render).
+export function freeCanvas(...cs){ for(const c0 of cs){ const c = c0 && c0.canvas ? c0.canvas : c0; if(c && typeof c === 'object'){ try { c.width = 0; c.height = 0; } catch(e){ /* a canvas already gone */ } } } }   // (a canvas, or a context's)
 
 // ---------- GPU KERNELS: a graph's per-pixel passes on WebGL2 (ROADMAP C9) ----------
 // One shared context (beside the lighting's own), one compiled program per kernel. A kernel is a fragment shader that

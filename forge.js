@@ -330,7 +330,11 @@ export async function openForge(deps){
     const previews = () => {
       clearTimeout(thumbT); thumbT = setTimeout(() => { const c = $('forgePreview'); if(c && deps.preview) try { deps.preview(deps.bench(), c, ($('forgeChannel') || {}).value || 'final'); } catch(e){} }, 250);
       clearTimeout(stepsT);
-      if(area.classList.contains('steps-on') && deps.steps) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
+      // (above ATHANOR_LIMITS.previews parts the step previews rest: a graph that large is drawn in stages, and its
+      //  previews' every-part picture is the memory a phone lacks)
+      const many = (() => { try { return athanorBudget(deps.bench()).nodes > ATHANOR_LIMITS.previews; } catch(e){ return false; } })();
+      area.classList.toggle('steps-many', many);
+      if(area.classList.contains('steps-on') && deps.steps && !many) stepsT = setTimeout(() => { try { deps.steps(deps.bench(), paintSteps); } catch(e){} }, 450);
     };
     const paintSteps = (sheet, ids, t, cols) => ids.forEach((id, i) => { const cv = area.querySelector(`#node-${id} .forge-node-preview`); if(!cv) return;
       const x = cv.getContext('2d'); x.imageSmoothingEnabled = true; x.clearRect(0, 0, cv.width, cv.height); x.drawImage(sheet, (i % cols)*t, Math.floor(i/cols)*t, t, t, 0, 0, cv.width, cv.height); });

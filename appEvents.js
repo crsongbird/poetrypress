@@ -3825,7 +3825,8 @@ function previewAthanor(json, cv, channel){
 /** The STEP PREVIEWS: every node's own result, as one sheet of tiles made in the worker. */
 function athanorStepSheet(json, paint){
   const ids = athanorStepIds(json); if(!ids.length) return;
-  const T = 64, { cols, rows } = athanorSheetLayout(ids.length);
+  // (the whole sheet at most 512 px a side (Ruby): a large graph's previews smaller, so the every-part picture stays light)
+  const { cols, rows } = athanorSheetLayout(ids.length), T = Math.max(24, Math.min(64, Math.floor(512/Math.max(cols, rows))));
   whenTexture('athanorSteps', 'athanorsteps', cols*T, rows*T, athanorOpts(json, T), sheet => paint(sheet, ids, T, cols));
 }
 // KEPT SURFACES in the texture menu (🜉 Yours): each by name, after "From the

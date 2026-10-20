@@ -431,6 +431,21 @@ Built [est]:
   Behind, Dew, Translucency, Visitors, each one thing. Insects: rare at the default (about one seed in eight), at most
   two, on a petal partway out from the heart, a quarter smaller than before.
 
+Ruby's next look (same day): "Did we lose the other details (the stem and etc) and are you batching draw order for
+proper depth rendering or nah? … Depth order will help with occlusion and shadow casting as well in that scene … we are
+using the flower renderer to test all the corner cases for the lighting and camera engine so it behaves how a texture
+artist or shader artist familiar with these editors might expect." Built [est]:
+- **Draw order is depth order**, back to front, and the one depth map says the same: the far wash and lights, the
+  flowers behind, the flower (its heart nearer than its tips) with its stem and visitors, a leaf or a blade crossing the
+  frame near the lens, the corner flower nearest.
+- **Shadows from the depth, as a depth buffer gives them** (screen-space shadows): the depth read as heights, nearer
+  higher, lit twice by the Light Engine (its shadow march on, then off) with the flat shading cancelled in their ratio,
+  so only the cast shadow is left; received only by what is near (the flower, its stem, its visitors), the far hedge
+  being too far to take a shadow from a flower. A leaf crossing near the lens shadows the petals; a visitor shadows the
+  petal it stands on; all of it turns with the light.
+- **Back again**: the stem (the seed's whether), leaves overhead as well as a blade of grass, and the caster crossing the
+  frame near the lens as a real object the lens blurs.
+
 Sources (this section):
 - GPU Gems 3, ch. 28, "Practical Post-Process Depth of Field": https://developer.nvidia.com/gpugems/gpugems3/part-iv-image-effects/chapter-28-practical-post-process-depth-field
 - Notes on Jimenez, "Next Generation Post Processing in Call of Duty: Advanced Warfare": https://scrapbox.io/0b5vr/Next_Generation_Post_Processing_in_Call_of_Duty:_Advanced_Warfare

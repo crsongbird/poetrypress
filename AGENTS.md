@@ -955,11 +955,16 @@ A part is `{ cat, label, ins, outs, params, run(E, n) }`:
 - **Safety** (`validateGraph`):
   - A graph holds only its work in flight: each part's result is let go once
     every part that reads it has run (the step previews keep them all).
-  - At most 256 KB (`ATHANOR_MAX_JSON`) and 96 nodes; twice that is refused
+  - At most 640 KB (`ATHANOR_MAX_JSON`) and 255 nodes; twice that is refused
     outright.
   - Unknown steps, bad wires and out-of-range params are reported and fixed.
   - Every param is clamped.
   - The work budget draws a heavy graph on a coarser grid.
+  - Above 150 nodes (`ATHANOR_LIMITS.previews`) the step previews rest; below, the step sheet is at most 512 px a side.
+  - Memory (Firefox on a phone): a part's scratch canvas is given back the moment it is read (texCore `freeCanvas`:
+    width and height 0); on Firefox on a phone a graph works on a grid of at most a megapixel (texCore `setGridCap`,
+    set per job by textureService); a slow texture comes first as a quarter-size draft, then at full size (stages); a
+    worker that dies on a large job tries it again at half size.
 - **Every chain, starter and study carries TEACH:** a few lines the Athanor
   shows when it opens.
 - **Surface Studies** (athanorStudies.js): written with a small builder

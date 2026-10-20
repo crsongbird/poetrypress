@@ -17,7 +17,7 @@
  * Each carries its doc, ports, cost and whether its first input is required.
  * Names here are pat/PAT_: the bundle is one scope.
  */
-import { CPU, chamferDistance } from './texCore.js';
+import { CPU, chamferDistance, freeCanvas } from './texCore.js';
 import { LORE } from './symbolLore.js';
 import { GLYPH_FONT } from './spell.js';
 
@@ -244,6 +244,7 @@ export const PATTERN_STEPS = {
       let colour = cc ? readCanvas(cc) : markF;
       if(vc && colour.r){ const V = E.lum(readCanvas(vc));
         for(let i = 0; i < N; i++){ const v = V[i]; if(v > 0.02 && v < 0.98){ const u = 1/v; colour.r[i] = Math.min(1, colour.r[i]*u); colour.g[i] = Math.min(1, colour.g[i]*u); colour.b[i] = Math.min(1, colour.b[i]*u); } } }
+      freeCanvas(mc, ic, cc, vc);
       return [markF, E.boxBlur(markF, Math.max(1, R0*0.18)), each, colour];
     } },
 

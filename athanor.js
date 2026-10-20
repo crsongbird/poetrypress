@@ -63,7 +63,7 @@ export function athanorVersion(graph){
  * grid (up to three times coarser; it is soft, never stuck); past the node
  * limit it is not made at all, and the editor says why.
  */
-export const ATHANOR_LIMITS = { nodes: 96, cost: 160 };   // (Ruby: 96 parts, now a graph holds only its work in flight)
+export const ATHANOR_LIMITS = { nodes: 255, cost: 160, previews: 150 };   // (Ruby: 255 parts, rendered in stages (textureService); the step previews only up to 150)
 export function athanorBudget(graph){
   const nodes = Object.values(athanorFlat(graph).nodes);   // (a group counts every part inside it)
   let cost = 0;
@@ -490,6 +490,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     draw(x);
     const d = x.getImageData(0, 0, ww, wh).data, o = new Float32Array(N);
     for(let i = 0; i < N; i++) o[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255;
+    c.width = 0; c.height = 0;   // (its pixels let go of at once: texCore freeCanvas)
     return o;
   };
   const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
@@ -698,7 +699,7 @@ export function layoutAthanor(data, spread = 1){
  * real ports, within the limits. Returns { ok, graph, problems } — the graph
  * cleaned (what can be kept is kept), or ok:false when nothing safe remains.
  */
-export const ATHANOR_MAX_JSON = 256*1024;
+export const ATHANOR_MAX_JSON = 640*1024;   // (room for 255 parts: about 2.5 KB each, wires and settings)
 export function validateGraph(json){
   const problems = [];
   if(json == null || json === '') return { ok: true, graph: null, problems };

@@ -33,7 +33,7 @@
 import { TEXTURES } from './tunables.js';
 import { evalAthanor, athanorHash, athanorBudget, athanorStarter, athanorVersion, athanorStepIds, athanorAA, ATHANOR_LIMITS, ATHANOR_CHANNELS } from './athanor.js';
 import { TEXTURE_CHAINS } from './chains.js';
-import { withSeed, withScale, withPage, wordsRoom, withLightTilt, withLightRig, lightRigOf, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv } from './texCore.js';
+import { withSeed, withScale, withPage, wordsRoom, withLightTilt, withLightRig, lightRigOf, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv, cappedDiv } from './texCore.js';
 import { genAstralFog, genAstralStars } from './texWhimsy.js';
 
 /**
@@ -1312,7 +1312,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   // and counts are canonical, so the finer grid draws the same picture, finer.
   const fine = athanorAA(extra.graph || '') === 'all pixels' && athanorVersion(extra.graph || '') >= 3 && !B.tooMany;
   const k = fine ? Math.min(3, Math.max(1, Math.sqrt(B.cost*4/ATHANOR_LIMITS.cost)))/2 : B.scale;
-  const div = canonDiv(2)*k, ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const div = cappedDiv(canonDiv(2)*k, w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
@@ -1376,7 +1376,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
-  const div = chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
+  const div = cappedDiv(chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
