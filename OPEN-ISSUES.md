@@ -8,6 +8,8 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- FAIRIES (branch fairies): about one seed in six, a small fairy light drifts over the Meadow's grass or the Windward
+  Sea; one Macro Bloom visitor in 66 is a fairy. A Fairy Light part for any graph.
 - THE PAINTED RINGWORLD PASS (branch ringpass): the camera sweeps and the world stays (the land as arcs at fixed
   distances, every thing on a stream of its own, the sky's things in directions of the world, the stars panning); Works
   turned well down; trees, buildings, rocks and works remade in a shared kit that Ring in the Sky's land

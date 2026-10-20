@@ -1399,6 +1399,15 @@ export const WIKI_PARTS = {
     tips: ['Screen the glints through a Blur for the soft bloom of a web in morning sun.', 'Turn Dew to 0 and Iridescence up for a dry web shimmering in colours.'],
     see: ['part:shards', 'part:dial'],
   },
+  fairy: {
+    line: 'Now and then, on some seeds, a small fairy: a light with two pairs of wings, a soft glow and a short trail of sparks, laid over the picture.',
+    about: 'A nod to the old adventure games, where a fairy might drift across a field or a sea: never a character, only a small glowing light with wings. How Often is the share of seeds that have one (18: about one in six); the rest pass the picture through untouched. Across and Down say where on the page it may appear, as ranges, so it can be kept over the grass or the sea and out of the sky. It is screened on, so it only ever adds light.',
+    ins: { over: 'The picture to lay it on.', 'glow hue': 'The fairy’s light (empty: a pale blue-white).' },
+    outs: { picture: 'The picture, with the fairy when this seed has one.', mask: 'Where the fairy and its glow are.' },
+    set: { chance: 'How Often: the share of seeds with a fairy, from 0 (never) to 100 (always).', size: 'Its size.', x0: 'Across From: the left edge of where it may appear.', x1: 'Across To: the right edge.', y0: 'Down From: the top of where it may appear.', y1: 'Down To: the bottom.', variant: 'Another place, and another chance, for the same seed.' },
+    tips: ['Set How Often to 100 to see where it lands, then back down.'],
+    see: ['part:bloom'],
+  },
   bloom: {
     line: 'A flower of a real species — a daisy, a poppy, a rose, a foxglove — drawn petal by petal and lit from the dial, from bud to wilted to seed head; or a sheet of them, or one petal or leaf, for Scatter to throw.',
     about: 'Each species is laid out as botany lays it (docs/prior-art/florals.md): rays round a disc of florets set by the golden angle (daisy, sunflower), a few broad petals in whorls (poppy, tulip, lily), a double’s spiral of petals small and upright inside, broad and open outside (rose, peony), bells along a spike (bluebell, foxglove), a ball of florets (clover, hydrangea), an umbel of lace. Every petal is a curved surface, cupped or curled back, lit from the dial, drawn back to front. Its Stage runs from a bud, through the open flower, to petals drooping and browning at their edges, the outer ones fallen, to a bare seed head.',
