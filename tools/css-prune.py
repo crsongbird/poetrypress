@@ -122,12 +122,16 @@ NORMALIZE = r"""(items) => {
 SNAPSHOT = r"""() => {
   const kill = document.getElementById('__freeze') || Object.assign(document.createElement('style'), { id: '__freeze', textContent: '*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important}' });
   if(!kill.isConnected) document.head.appendChild(kill);
+  // each element keyed by where it is (its id, or its tag and place among its siblings, up to one with an id), so an
+  // element the page adds or removes on its own between two snapshots doesn't shift every other one
+  const keyOf = el => { const parts = []; for(let e = el; e && e.nodeType === 1; e = e.parentElement){ if(e.id){ parts.push('#' + e.id); break; }
+    const p = e.parentElement; parts.push(e.tagName + (p ? ':' + [...p.children].indexOf(e) : '')); } return parts.reverse().join('>'); };
   const out = [];
   document.querySelectorAll('*').forEach((el, idx) => {
-    if(!el.getClientRects().length) { out.push(null); return; }
+    if(!el.getClientRects().length) { out.push([keyOf(el), idx, null]); return; }
     const rows = [];
     for(const ps of [null, '::before', '::after']){ const cs = getComputedStyle(el, ps); let s = ''; for(let k = 0; k < cs.length; k++) s += cs[k] + ':' + cs.getPropertyValue(cs[k]) + ';'; rows.push(s); }
-    out.push(rows);
+    out.push([keyOf(el), idx, rows]);
   });
   return out;
 }"""
@@ -156,14 +160,17 @@ async def verify(b, css_new, sels=()):
         await page.evaluate(SWAP, css_old); await asyncio.sleep(0.3)
         again = await page.evaluate(SNAPSHOT)
         diffs = []
-        for i, (x, y) in enumerate(zip(before, after)):
-            if x == y or (i < len(again) and again[i] == y): continue
+        B = { k: r for k, _, r in before }; G = { k: r for k, _, r in again }
+        for key, i, y in after:
+            # (an element only one snapshot has came or went on its own: the page's doing, not the sheet's)
+            if key not in B: continue
+            x = B[key]
+            if x == y or (key in G and G[key] == y): continue
             if x is None or y is None: diffs.append((i, 'drawn', ['(shown or hidden)'])); continue
             for k, ps in enumerate(['', '::before', '::after']):
                 if x[k] != y[k]:
                     px, py = props_of(x[k]), props_of(y[k])
                     diffs.append((i, ps, sorted(p for p in set(px) | set(py) if px.get(p) != py.get(p))))
-        if len(before) != len(after): diffs.append((-1, '', ['(element count changed)']))
         if diffs:
             bad[name] = diffs
             await page.evaluate(SWAP, css_new)
