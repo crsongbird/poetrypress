@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Perdita (2026-10-20)
+
+- **Eight views.** Everything in the Ringworld now turns a way of its own (a house toward its street, a car along its
+  kerb, a bench to its path, a billboard to the road) and is drawn as the camera sees it: from the front, half turned,
+  side on, from behind. Houses narrow as they turn and show a side wall in sun or shade; round things (yurts, domes,
+  trulli, oast houses) look the same all round. A car met head on shows its headlamps, from behind its tail lights;
+  tractors, carts, bicycles and benches the same. A billboard from behind shows its bracing and the bare backs of its
+  sheets; a road sign its blank back; vending machines their vents. Anything turned the other way is mirrored, with its
+  light still on the sun's side, except what carries writing. Trees are mirrored by the seed, so a row of one kind
+  varies.
+
+### Under the hood
+- `viewOf` in the Ringworld's painter; `pkFlip`, `pkPropEnd`, `PK_SIDE_NATIVE`, `PK_WRITTEN`, `PK_BACKED`,
+  `PK_BOXLIKE` and `PK_ROUND` in the paint kit; buildings, the ways' furniture and the boards keep a `face`.
+
 ## Uranus–Belinda (2026-10-20)
 
 - **Ways, not a grid.** The Ringworld's streets were a grid laid over every town; now they are ways, and fewer: the

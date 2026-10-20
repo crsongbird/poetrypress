@@ -347,6 +347,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     a bike, a signal), poles carry wires along the main roads out of town, and buildings and trees keep off them. The
     Clutter knob (`V.clutter`) sets all the small things and boards, apart from Works. Things are set into the ground a
     little; the ruins' wrecks half buried (`sink`, clipped at the ground).
+  - **Eight views** (Ruby: "at least eight… front, sides, back, and the half-turned states… mirrored the other direction,
+    except for the ones that have text"): each thing in the store has a `face`, the way it turns (a house its street, a
+    car along its kerb, a board the road), and `viewOf` gives how it is turned from the camera. A building is narrowed
+    as it turns and shows the side it turns toward, lit or shaded by the sun's side; the round ones (`PK_ROUND`) are
+    the same from every side. Cars, tractors, carts, bicycles and benches (`PK_SIDE_NATIVE`) are drawn end on when met
+    head on or from behind (`pkPropEnd`), otherwise narrowed and mirrored. Boards, signs and milestones are never
+    mirrored and show their bare backs from behind (`PK_BACKED`, `c.back`). Whatever is mirrored keeps its light on
+    the sun's side (`pkFlip`). Trees are mirrored by the seed.
   - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow; heaps of
     cloud lit from the sun's side, rain in veils, lightning, a rainbow opposite a low sun, rays from a low or clouded
     sun, the sun's glare low over the land, mist thickening between the ridges, rain and snow falling over it all.

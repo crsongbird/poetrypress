@@ -6359,9 +6359,10 @@ function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
 
 
 function pkBox(x, X, Y, top, wd, c, dep){
-  const w2 = wd/2, side = dep*c.sd;
+
+  const vs = c.vside || c.sd, w2 = wd/2, side = dep*vs*(c.vdep ?? 1);
   pkShade(x, [[X - w2, Y], [X - w2, top], [X + w2, top], [X + w2, Y]], c.body, top, Y, 0.13);
-  pkShade(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top], [X + c.sd*w2 + side, top + Math.abs(side)*0.3], [X + c.sd*w2 + side, Y]], pkMix(c.body, c.lit, 0.55), top, Y, 0.16);
+  pkShade(x, [[X + vs*w2, Y], [X + vs*w2, top], [X + vs*w2 + side, top + Math.abs(side)*0.3], [X + vs*w2 + side, Y]], vs === c.sd ? pkMix(c.body, c.lit, 0.55) : pkMix(c.body, c.dark, 0.45), top, Y, 0.16);
   return [X - w2, top, wd, Y - top];
 }
 
@@ -6660,7 +6661,16 @@ const PK_BUILT = {
     if(o.detail){ pkBar(x, X - w2*0.4, Y - h*0.62, wd*0.6, h*0.08, PK_WHITE, o.px, 0.85); pkType(x, ['SPINWARD', 'ARCHVALE', 'NOONDALE', 'RIMSIDE'][Math.floor(o.R()*4)], X - w2*0.1, Y - h*0.555, h*0.07, wd*0.55, m.dark, o.px);
       if(o.fine){ x.fillStyle = pkCss(m.dark, 0.3); for(let k = 1; k < 10; k++) x.fillRect(X - w2*0.4 + wd*0.6*k/10, bt, Math.max(o.px(0.3), wd*0.004), Y - bt); } } }
 };
+
+
+
+
+
+const PK_ROUND = ['yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle'];
 function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
+  if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null };
+  if(c.view && !c.vdep){ const { cs, sn } = c.view, f = Math.max(0.34, Math.abs(cs)); x.save(); x.translate(X, 0); x.scale(f, 1); x.translate(-X, 0);
+    pkBuilding(x, X, Y, h, wdt, { ...c, view: null, vside: sn >= 0 ? 1 : -1, vdep: Math.max(0.05, Math.abs(sn))*1.6/f }, style, night, R0, px, kind0); x.restore(); return; }
   const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5), RD = sub(6);
   const kind = (k => kind0 || k)(pkArchOf(style, R()));
 
@@ -6788,7 +6798,7 @@ function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   else {
     const sl = R() < 0.4 ? h*0.08*(R() < 0.5 ? 1 : -1) : 0, lob = Y - Math.min(h*0.07, wdt*0.45);
     pkShade(x, [[X - w2, Y], [X - w2, top + Math.max(0, sl)], [X + w2, top + Math.max(0, -sl)], [X + w2, Y]], c.body, top, Y, 0.1);
-    pkPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top + Math.max(0, c.sd > 0 ? -sl : sl)], [X + c.sd*(w2 + dep), top + Math.abs(dep)*0.3 + Math.max(0, c.sd > 0 ? -sl : sl)], [X + c.sd*(w2 + dep), Y]], pkCss(pkMix(c.body, c.lit, 0.5)));
+    { const vs = c.vside || c.sd, dp = dep*(c.vdep ?? 1); pkPoly(x, [[X + vs*w2, Y], [X + vs*w2, top + Math.max(0, vs > 0 ? -sl : sl)], [X + vs*(w2 + dp), top + Math.abs(dp)*0.3 + Math.max(0, vs > 0 ? -sl : sl)], [X + vs*(w2 + dp), Y]], pkCss(vs === c.sd ? pkMix(c.body, c.lit, 0.5) : pkMix(c.body, c.dark, 0.45))); }
     if(detail){ pkWindows(x, X - w2, top + Math.abs(sl), wdt, lob - top - Math.abs(sl), c, night, lit, RW, px, neon ? 'neon' : 'mullion');
       x.fillStyle = pkCss(night > 0.2 ? pkMix(c.glow, ink, 0.3) : ink, 0.85); x.fillRect(X - w2*0.92, lob, wdt*0.92, Y - lob); bar(X - w2, lob - px(0.5), wdt, (Y - lob)*0.1, c.lit, 0.8);
       if(fine && !sl){ pkBox(x, X + wdt*(RT() - 0.5)*0.3, top, top - h*0.03, wdt*0.4, { ...c, body: pkMix(c.body, c.dark, 0.3) }, dep*0.3); } }
@@ -6827,11 +6837,51 @@ const PK_PROPS = {
   ruins: ['barrel', 'barrel', 'crate', 'sign', 'fence', 'rubble', 'rubble', 'column', 'hulk', 'hulk', 'container', 'traps', 'statue', 'pole'],
   magic: ['lamp', 'fence', 'bench', 'menhir', 'menhir', 'dolmen', 'fairyring', 'wisp', 'wisp', 'flower', 'toadstool', 'moongate', 'wishing', 'cairn'] };
 
+
+
+function pkPropEnd(x, X, Y, h, c, kind, R0, px, night, front){
+  const R = pkSub(R0)(1), steel = pkMat(c, PK_STEEL, 0.65), iron = pkMat(c, PK_IRON, 0.7), wheelB = (wx, wy, w, hh) => { x.fillStyle = pkCss(pkMix(PK_IRON, PK_BLACK, 0.5)); x.fillRect(wx - w/2, wy - hh, w, hh); };
+  if(kind === 'parked' || kind === 'hulk'){ const hulk = kind === 'hulk', m = hulk ? pkMat(c, PK_RUST, 0.7) : pkMat(c, [[180, 40, 40], [40, 60, 110], [210, 210, 214], [30, 32, 36], [120, 130, 100], [200, 170, 70]][Math.floor(R()*6)], 0.7), w = h*1.2, yb = Y + (hulk ? h*0.08 : 0);
+    for(const s of [-1, 1]) wheelB(X + s*w*0.36, yb, w*0.16, h*0.3);
+    pkShade(x, [[X - w*0.5, yb - h*0.18], [X - w*0.5, yb - h*0.55], [X - w*0.36, yb - h*0.62], [X - w*0.3, yb - h*0.96], [X + w*0.3, yb - h*0.96], [X + w*0.36, yb - h*0.62], [X + w*0.5, yb - h*0.55], [X + w*0.5, yb - h*0.18]], m.body, yb - h, yb, 0.2);
+    pkPoly(x, [[X - w*0.27, yb - h*0.9], [X + w*0.27, yb - h*0.9], [X + w*0.33, yb - h*0.62], [X - w*0.33, yb - h*0.62]], pkCss(hulk ? PK_BLACK : pkMix(c.air || m.lit, PK_BLACK, 0.3), hulk ? 0.75 : 0.9));
+    const lc = front ? (night > 0.2 && !hulk ? pkMix(c.glow, PK_WHITE, 0.7) : [230, 226, 200]) : [200, 40, 40]; for(const s of [-1, 1]){ pkBar(x, X + s*w*0.38 - w*0.07, yb - h*0.47, w*0.14, h*0.08, hulk ? PK_BLACK : lc, px); if(front && night > 0.2 && !hulk) pkGlow(x, X + s*w*0.38, yb - h*0.43, h*0.6, c.glow, 0.4*night); }
+    pkBar(x, X - w*0.48, yb - h*0.24, w*0.96, h*0.06, front ? steel.lit : m.dark, px); if(front && !hulk) pkBar(x, X - w*0.15, yb - h*0.4, w*0.3, h*0.1, pkMix(m.dark, PK_BLACK, 0.3), px); return; }
+  if(kind === 'tractor'){ const m = pkMat(c, [[170, 50, 40], [60, 110, 60], [50, 80, 140], [210, 170, 50]][Math.floor(R()*4)], 0.75); for(const s of [-1, 1]) wheelB(X + s*h*0.42, Y, h*0.18, h*0.64);
+    pkShade(x, [[X - h*0.18, Y - h*0.2], [X - h*0.18, Y - h*0.6], [X + h*0.18, Y - h*0.6], [X + h*0.18, Y - h*0.2]], m.body, Y - h*0.6, Y);
+    pkPoly(x, [[X - h*0.3, Y - h*0.6], [X - h*0.28, Y - h], [X + h*0.28, Y - h], [X + h*0.3, Y - h*0.6]], pkCss(pkMix(m.dark, PK_BLACK, 0.2))); pkPoly(x, [[X - h*0.24, Y - h*0.64], [X - h*0.22, Y - h*0.95], [X + h*0.22, Y - h*0.95], [X + h*0.24, Y - h*0.64]], pkCss(pkMix(c.air || m.lit, PK_BLACK, 0.3), 0.85)); return; }
+  if(kind === 'bicycle' || kind === 'scooter'){ const m = pkMat(c, [[40, 70, 120], [170, 40, 40], [40, 40, 44]][Math.floor(R()*3)], 0.7); x.strokeStyle = pkCss(PK_IRON); x.lineWidth = Math.max(px(0.5), h*0.05);
+    x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.66); x.stroke(); x.strokeStyle = pkCss(m.body); x.lineWidth = Math.max(px(0.5), h*0.06); x.beginPath(); x.moveTo(X, Y - h*0.3); x.lineTo(X, Y - h*0.9); x.stroke();
+    x.strokeStyle = pkCss(PK_IRON); x.lineWidth = Math.max(px(0.5), h*0.04); x.beginPath(); x.moveTo(X - h*0.25, Y - h*0.92); x.lineTo(X + h*0.25, Y - h*0.92); x.stroke(); return; }
+  if(kind === 'cart'){ const m = pkMat(c, [[200, 60, 50], [230, 220, 200], [60, 120, 160]][Math.floor(R()*3)], 0.7); for(const s of [-1, 1]) wheelB(X + s*h*0.2, Y, h*0.05, h*0.2);
+    pkShade(x, [[X - h*0.2, Y - h*0.12], [X - h*0.2, Y - h*0.48], [X + h*0.2, Y - h*0.48], [X + h*0.2, Y - h*0.12]], m.body, Y - h*0.48, Y); x.fillStyle = pkCss(pkMat(c, [220, 70, 60], 0.75).body); x.beginPath(); x.ellipse(X, Y - h*0.86, h*0.55, h*0.14, 0, Math.PI, 0); x.fill();
+    x.strokeStyle = pkCss(steel.dark); x.lineWidth = Math.max(px(0.4), h*0.02); x.beginPath(); x.moveTo(X, Y - h*0.48); x.lineTo(X, Y - h*0.86); x.stroke(); return; }
+
+  const m = pkMat(c, R() < 0.5 ? PK_WOOD : PK_GREENPAINT, 0.7); x.strokeStyle = pkCss(iron.body); x.lineWidth = Math.max(px(0.5), h*0.07); x.lineCap = 'round';
+  x.beginPath(); x.moveTo(X - h*0.2, Y); x.lineTo(X - h*0.1, Y - h*0.5); x.lineTo(X + h*0.2, Y - h*0.5); x.moveTo(X + h*0.18, Y); x.lineTo(X + h*0.1, Y - h*0.5); x.moveTo(X - h*0.1, Y - h*0.5); x.lineTo(X - h*0.2, Y - h); x.stroke();
+  pkBar(x, X - h*0.12, Y - h*0.55, h*0.34, h*0.08, m.body, px); pkBar(x, X - h*0.24, Y - h*0.95, h*0.1, h*0.32, m.lit, px);
+}
+
 const PK_PROPS_BIG = ['windpump', 'grainbin', 'haystack', 'tractor', 'dish', 'beacon', 'solar', 'container', 'statue', 'dolmen', 'flower', 'toadstool', 'moongate', 'well', 'wishing', 'shrine', 'busstop', 'kiosk', 'menhir', 'column'];
 
 function pkWires(x, A, B, h, c, px){ const d = Math.hypot(B[0] - A[0], B[1] - A[1]); if(d > h*12 || d < px(2)) return; x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.5), 0.6); x.lineWidth = Math.max(px(0.3), h*0.003); x.beginPath();
   for(const s of [-0.08, 0, 0.08]){ x.moveTo(A[0] + s*h, A[1] + h*0.05); x.quadraticCurveTo((A[0] + B[0])/2, Math.max(A[1], B[1]) + d*0.05, B[0] + s*h*0.6, B[1] + h*0.04); } x.stroke(); }
+
+
+
+
+const pkFlip = c => ({ ...c, sd: -c.sd, L: c.L ? [-c.L[0], c.L[1]] : c.L });
+const PK_SIDE_NATIVE = ['parked', 'hulk', 'tractor', 'scooter', 'bicycle', 'cart', 'bench'];
+const PK_WRITTEN = ['sign', 'milestone'];
+
+const PK_BACKED = ['sign', 'milestone', 'vending'];
+const PK_BOXLIKE = ['vending', 'phonebox', 'busstop', 'container', 'crate', 'cargo', 'mailbox', 'beehives', 'trough', 'shrine'];
 function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
+  if(c.view){ const { cs, sn } = c.view, cc = { ...c, view: null };
+    if(PK_SIDE_NATIVE.includes(kind)){ if(Math.abs(sn) < 0.38){ pkPropEnd(x, X, Y, h, cc, kind, R0, px, night, cs >= 0); return; }
+      x.save(); x.translate(X, 0); x.scale((sn >= 0 ? 1 : -1)*(0.45 + 0.55*Math.abs(sn)), 1); x.translate(-X, 0); pkProp(x, X, Y, h, sn >= 0 ? cc : pkFlip(cc), kind, R0, px, night); x.restore(); return; }
+    const f = PK_BOXLIKE.includes(kind) || PK_WRITTEN.includes(kind) ? Math.max(0.4, Math.abs(cs)) : 1, m = PK_WRITTEN.includes(kind) ? 1 : (sn >= 0 ? 1 : -1);
+    x.save(); x.translate(X, 0); x.scale(f*m, 1); x.translate(-X, 0); pkProp(x, X, Y, h, { ...(m < 0 ? pkFlip(cc) : cc), back: PK_BACKED.includes(kind) && cs < 0 }, kind, R0, px, night); x.restore(); return; }
   const sub = pkSub(R0), R = sub(1), RD = sub(2), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), near = h > px(14), fine = h > px(40);
   const ln = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = Math.max(px(0.5), wd); x.lineCap = 'round'; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
   const box = (x0, y0, w, hh, m, k = 0.16) => { pkShade(x, [[x0, y0 + hh], [x0, y0], [x0 + w, y0], [x0 + w, y0 + hh]], m.body, y0, y0 + hh, k); };
@@ -6901,11 +6951,12 @@ function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
       if(near){ for(let k = 1; k < 4; k++) pkBar(x, bx, by - h + h*k/4, w, h*0.015, wood.dark, px, 0.5); ln([[bx + w*0.06, by - h*0.06], [bx + w*0.94, by - h*0.94]], pkCss(wood.dark), h*0.06); pkBar(x, bx, by - h, w, h*0.08, wood.lit, px, 0.8); } } return; }
   case 'sign': {
     const m = pkMat(c, R() < 0.5 ? [40, 100, 70] : [40, 70, 130], 0.75), w = h*0.7, bh = h*0.28, by = Y - h; box(X - h*0.02, Y - h, h*0.04, h, steel, 0.2);
+    if(c.back){ box(X - w/2, by, w, bh, steel, 0.1); pkBar(x, X - h*0.03, by + bh*0.2, h*0.06, bh*0.6, iron.body, px); return; }
     box(X - w/2, by, w, bh, m, 0.1); x.strokeStyle = pkCss(PK_WHITE, 0.85); x.lineWidth = Math.max(px(0.3), bh*0.05); x.strokeRect(X - w/2 + bh*0.06, by + bh*0.06, w - bh*0.12, bh*0.88);
     const dir = R() < 0.5 ? -1 : 1, txt = ['SPINWARD', 'RIMWARD', 'HUBWARD', 'TOWN 3', 'ARCH VIEW', 'NO EXIT'][Math.floor(R()*6)];
     pkType(x, txt, X + dir*-w*0.08, by + bh*0.68, bh*0.42, w*0.65, pkMix(PK_WHITE, m.body, 0.1), px); ln([[X + dir*w*0.3, by + bh*0.5], [X + dir*w*0.42, by + bh*0.5]], pkCss(PK_WHITE, 0.85), bh*0.1); return; }
   case 'milestone': { const m = pkMat(c, [222, 218, 206], 0.7); pkShade(x, [[X - h*0.22, Y], [X - h*0.22, Y - h*0.75], [X, Y - h], [X + h*0.22, Y - h*0.75], [X + h*0.22, Y]], m.body, Y - h, Y, 0.2);
-    pkType(x, String(1 + Math.floor(R()*99)), X, Y - h*0.45, h*0.28, h*0.4, PK_BLACK, px); return; }
+    if(!c.back) pkType(x, String(1 + Math.floor(R()*99)), X, Y - h*0.45, h*0.28, h*0.4, PK_BLACK, px); return; }
   case 'cairn': {
 
     let cy = Y, ox = 0; for(let k = 0, n = 4 + Math.floor(R()*4); k < n; k++){ const u = k/n, w = h*0.5*(1 - u*0.65)*(0.8 + 0.4*R()), th = h/n*(0.9 + 0.3*R()); ox += (R() - 0.5)*w*0.3; const cx = X + ox, j = () => (R() - 0.5)*w*0.12;
@@ -6963,7 +7014,8 @@ function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     if(near){ x.fillStyle = pkCss(glowOn ? pkMix(c.glow, PK_WHITE, 0.4) : pkMix(c.air || m.lit, PK_BLACK, 0.3), 0.85); for(let r = 0; r < 6; r++) for(let k = 0; k < 3; k++) x.fillRect(X - w*0.36 + k*w*0.25, Y - h*0.78 + r*h*0.1, w*0.2, h*0.08); } return; }
   case 'vending': {
     const n = 1 + Math.floor(R()*3), w = h*0.55; for(let k = 0; k < n; k++){ const bx = X + (k - (n - 1)/2)*w*1.05, m = pkMat(c, [[230, 230, 236], [180, 40, 40], [40, 90, 160], [240, 190, 40]][Math.floor(R()*4)], 0.6);
-      box(bx - w/2, Y - h, w, h, m, 0.12); pkPoly(x, [[bx - w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.45], [bx - w*0.4, Y - h*0.45]], pkCss(glowOn ? pkMix(lamp, PK_WHITE, 0.3) : pkMix(c.air || m.lit, PK_WHITE, 0.2)));
+      box(bx - w/2, Y - h, w, h, m, 0.12); if(c.back){ for(let r = 0; r < 5; r++) pkBar(x, bx - w*0.3, Y - h*(0.85 - r*0.06), w*0.6, h*0.02, m.dark, px, 0.7); if(near) ln([[bx + w*0.3, Y - h*0.3], [bx + w*0.42, Y - h*0.1], [bx + w*0.5, Y]], pkCss(PK_BLACK, 0.8), h*0.015); continue; }
+      pkPoly(x, [[bx - w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.45], [bx - w*0.4, Y - h*0.45]], pkCss(glowOn ? pkMix(lamp, PK_WHITE, 0.3) : pkMix(c.air || m.lit, PK_WHITE, 0.2)));
       if(near) for(let r = 0; r < 4; r++) for(let q = 0; q < 5; q++) pkBar(x, bx - w*0.36 + q*w*0.15, Y - h*(0.88 - r*0.11), w*0.09, h*0.07, [[200, 40, 50], [40, 120, 200], [240, 200, 60], [60, 160, 90], [240, 240, 240]][(q + r*2) % 5], px, 0.9);
       pkBar(x, bx - w*0.3, Y - h*0.2, w*0.6, h*0.08, PK_BLACK, px, 0.7); if(glowOn) pkGlow(x, bx, Y - h*0.6, h*0.8, pkMix(lamp, PK_WHITE, 0.3), 0.35*night); } return; }
   case 'signal': {
@@ -7314,6 +7366,9 @@ function pkBoardArt(x, B, fx, fy, fw, fh, p, c, R, px, night, tube){
 
 
 function pkBoard(x, X, Y, m, c, id, R0, px, night = 0, aged = 0){
+
+
+  if(c.view){ const { cs } = c.view; x.save(); x.translate(X, 0); x.scale(Math.max(0.1, Math.abs(cs)), 1); x.translate(-X, 0); pkBoard(x, X, Y, m, { ...c, view: null, back: cs < 0 }, id, R0, px, night, aged); x.restore(); return; }
   const sub = pkSub(R0), R = sub(1), RS = sub(2), RA = sub(3), ser = id && id.serial, B = ser ? { fmt: 'serial', pal: ['#c1121f', '#ffffff', '#111111'], say: [id.serial[id.k]], art: 'none', worlds: [] } : PK_BOARDS[id]; if(!B) return;
   const [fwM, fhM, upM] = PK_FMT[B.fmt], fw = fwM*m, fh = fhM*m, up = upM*m, fx = X - fw/2, fy = Y - up - fh, fmt = B.fmt;
   if(fw < px(2)) return;
@@ -7363,6 +7418,12 @@ function pkBoard(x, X, Y, m, c, id, R0, px, night = 0, aged = 0){
       if(words[1]) pkType(x, words[1], tx, ty + ts*1.1 + (BB.art === 'glyphs' ? uh*0.06 : 0), ts*0.5, mw, BB.art === 'glyphs' ? PK_BLACK : neon ? pkMix(PP[1], [70, 70, 80], 1 - lit) : ink, px, { align: al, face: face0, weight: 'normal', tube: neon }); }
     if(neon && lit > 0.5) pkGlow(x, face[0] + face[2]/2, face[1] + face[3]/2, Math.max(face[2], face[3])*0.7, PP[0], 0.3);
     x.restore(); };
+  if(c.back){
+    const bk = fmt === 'slab' ? frame : fmt === 'timber' || fmt === 'barn' || fmt === 'shingle' || fmt === 'bottle' || fmt === 'map' || fmt === 'serial' ? wood : steel;
+    x.fillStyle = pkCss(pkMix(bk.body, bk.dark, 0.3)); x.fillRect(face[0], face[1], face[2], face[3]);
+    if(face[3] > px(8)){ x.strokeStyle = pkCss(bk.dark, 0.8); x.lineWidth = Math.max(px(0.4), face[3]*0.03); x.beginPath(); x.moveTo(face[0], face[1]); x.lineTo(face[0] + face[2], face[1] + face[3]); x.moveTo(face[0] + face[2], face[1]); x.lineTo(face[0], face[1] + face[3]);
+      for(let k = 1; k < 4; k++){ x.moveTo(face[0] + face[2]*k/4, face[1]); x.lineTo(face[0] + face[2]*k/4, face[1] + face[3]); } x.stroke(); }
+    return; }
   draw(B, P);
 
   if(!neon && fmt !== 'slab' && fh > px(8)){
@@ -18400,11 +18461,14 @@ function rgStore(V){
     let near = null, nd = Infinity; hubs.forEach((h2, hj) => { if(hj <= hi) return; const d = Math.hypot(h2[0] - a, h2[1] - z); if(d < nd){ nd = d; near = h2; } });
     if(near && nd < 1400*M) addWay(walk(a, z, Math.atan2(near[1] - z, near[0] - a), nd*1.6, step*1.5, [near[0], near[1]], R), w === 'ruins' ? 'gravel' : w === 'cities' || w === 'neon' ? 'asphalt' : 'earth', w, false, R); });
 
-  const wayGap = (a, z) => { const bi = Math.floor(a/BIN), bj = Math.floor(z/BIN); let best = Infinity;
+  let wayAt = null;
+  const wayGap = (a, z) => { const bi = Math.floor(a/BIN), bj = Math.floor(z/BIN); let best = Infinity; wayAt = null;
     for(let di = -1; di <= 1; di++) for(let dj = -1; dj <= 1; dj++){ const L2 = bins.get((bi + di) + ',' + (bj + dj)); if(!L2) continue;
-      for(const [wy, i] of L2){ const p = wy.pts[i], q = wy.pts[i + 1], dx = q.a - p.a, dz = q.z - p.z, l2 = dx*dx + dz*dz || 1, t = Math.max(0, Math.min(1, ((a - p.a)*dx + (z - p.z)*dz)/l2));
-        best = Math.min(best, Math.hypot(a - p.a - dx*t, z - p.z - dz*t) - wy.half); } }
+      for(const [wy, i] of L2){ const p = wy.pts[i], q = wy.pts[i + 1], dx = q.a - p.a, dz = q.z - p.z, l2 = dx*dx + dz*dz || 1, t = Math.max(0, Math.min(1, ((a - p.a)*dx + (z - p.z)*dz)/l2)), g = Math.hypot(a - p.a - dx*t, z - p.z - dz*t) - wy.half;
+        if(g < best){ best = g; wayAt = [p.a + dx*t, p.z + dz*t]; } } }
     return best; };
+
+  const faceOf = (a, z, u) => { const g = wayGap(a, z); return g < 60*M && wayAt ? Math.atan2(wayAt[1] - z, wayAt[0] - a) : u*Math.PI*2; };
   const offWay = (a, z, room) => wayGap(a, z) > room;
 
   const along = (wy, step, fn, start = step/2) => { const P = wy.pts; let next = start, i = 0;
@@ -18433,7 +18497,7 @@ function rgStore(V){
 
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
     if(!offWay(a, z, wM*M*0.5 + 2*M)) return null;
-    return { c: 'bldg', w, kind, hM, wM }; });
+    return { c: 'bldg', w, kind, hM, wM, face: faceOf(a, z, R()) }; });
 
 
   sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope))) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
@@ -18516,10 +18580,10 @@ function rgStore(V){
       for(let i = 0; i < spots.length; i += 2){ const [a0, z0, nx, nz] = spots[i], sd2 = R() < 0.5 ? -1 : 1, off = wy.half + (5 + 6*R())*M, a = a0 + nx*sd2*off, z = z0 + nz*sd2*off;
         if(Math.abs(z) > W*0.485) continue; const r = Math.hypot(a, z - L.z0); if(r > W*0.3) continue; const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || g.slope > 0.6) continue;
         if((w === 'wilds' || w === 'ruins') && R() < 0.03*CL && i + 5 < spots.length){ const v = Math.floor(R()*PK_SERIALS.length), ag = age(w, R);
-          for(let k = 0; k < 5; k++){ const [ak0, zk0, nkx, nkz] = spots[i + k], ak = ak0 + nkx*sd2*off, zk = zk0 + nkz*sd2*off; out.push({ c: 'board', w, kind: 'serial', v, k, aged: ag, hM: pkBoardSize('serial')[1], wM: pkBoardSize('serial')[0], a: ak, z: zk, r: Math.hypot(ak, zk - L.z0), rs: (R()*4294967296) >>> 0 }); }
+          for(let k = 0; k < 5; k++){ const [ak0, zk0, nkx, nkz] = spots[i + k], ak = ak0 + nkx*sd2*off, zk = zk0 + nkz*sd2*off; out.push({ c: 'board', w, kind: 'serial', v, k, aged: ag, hM: pkBoardSize('serial')[1], wM: pkBoardSize('serial')[0], a: ak, z: zk, r: Math.hypot(ak, zk - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nkz*sd2, -nkx*sd2) }); }
           i += 6; continue; }
         if(R() > (BOARD[w] || 0)*CL) continue; const id = pkBoardOf(w, R()); if(!id || PK_SMALL_BOARDS.includes(PK_BOARDS[id].fmt)) continue;
-        const [bw, bh] = pkBoardSize(id); out.push({ c: 'board', w, kind: id, aged: age(w, R), hM: bh, wM: bw, a, z, r, rs: (R()*4294967296) >>> 0 }); } });
+        const [bw, bh] = pkBoardSize(id); out.push({ c: 'board', w, kind: id, aged: age(w, R), hM: bh, wM: bw, a, z, r, rs: (R()*4294967296) >>> 0, face: Math.atan2(-nz*sd2, -nx*sd2) }); } });
 
     sow(12, W*0.012, W*0.03, W*0.35, 1, (a, z, r, R) => { const w = V.worldAt(a, z), ci = w === 'wilds' ? V.cityAt(a, z, 0.12) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
       if(ci < 0.04 || ci > 0.75 || R() > (BOARD[w] || 0)*1.2*CL) return null; const g = ground(a, z); if(g.wet || g.slope > 0.45) return null;
@@ -18633,17 +18697,24 @@ function rgPaintLand(x, mk, dk, V){
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
   const nearCut = wh*0.6;
 
+
+
+
+  const viewOf = o => { const face = o.face ?? (o.rs % 62832)/10000, rel = face - Math.atan2(L.z0 - o.z, -o.a); return { cs: Math.cos(rel), sn: Math.sin(rel) }; };
+  const mirrored = (X, draw) => { x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); draw(); x.restore(); };
   const rgPaintThing = (o, l, dd) => {
     const f = foot(o.a, o.z); if(!f || f[3] <= TR.sea) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs);
     if(o.c === 'tree'){ const h = o.hM*f[2]; if(h < px(1.6) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || h < px(4) ? null : [X - h*0.13, X + h*0.13, Y - h*0.8, Y - h*0.4])) return;
       const green = rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, wday, haze);
-      pkTree(x, X, Y, h, { trunk: rgLit(V, [70, 52, 40], wday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), wday, haze, AIR), body: rgLit(V, green, wday, haze, AIR),
-        lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), wday, haze, AIR), glow: c.glow, sd: c.sd, L: LT }, o.kind, R, rgPx); return; }
+      const tc = { trunk: rgLit(V, [70, 52, 40], wday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), wday, haze, AIR), body: rgLit(V, green, wday, haze, AIR),
+        lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), wday, haze, AIR), glow: c.glow, sd: c.sd, L: LT };
+
+      if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2) || h > wh*0.75) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd, X + wd, Y - h*1.3, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, cb, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: viewOf(o) }, PK_STYLE[o.w], night, R, rgPx, o.kind);
 
 
       const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -18667,22 +18738,22 @@ function rgPaintLand(x, mk, dk, V){
       if(E.loud && loudDrawn >= 1) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*(o.kind === 'warden' ? 4.2 : o.kind === 'spire' ? 1.1 : 1.8), Y)) return;
       if(E.loud) loudDrawn++;
-      const c = colsOf(o.w, wday, haze); pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+      const c = colsOf(o.w, wday, haze), vw = viewOf(o); if(vw.sn < 0 && o.kind !== 'diner') mirrored(X, () => pkEgg(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, wday, haze); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
     if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h < px(3) || h > wh*0.6) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - bw/2, X + bw/2, Y - h, Y)) return;
-      pkBoard(x, X, Y, m, colsOf(o.w, wday, haze), o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
+      pkBoard(x, X, Y, m, { ...colsOf(o.w, wday, haze), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
     if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*(RG_WIDE.includes(o.kind) ? 0.12 : 0.35)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
 
-      const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = o.next ? { ...c, noWires: true } : c;
+      const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : viewOf(o) };
       if(o.sink){ x.save(); x.beginPath(); x.rect(X - h*6, Y - h*6, h*12, h*6 + h*0.02); x.clip(); pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); x.restore(); }
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
 
       if(o.next){ const f2 = foot(o.next[0], o.next[1]); if(f2) pkWires(x, [X, Y - h*0.95], [f2[0], f2[1] - o.hM*f2[2]*0.95], h, c, rgPx); } return; }
     if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.5) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
-      const c = colsOf(o.w, wday, haze); pkRobot(x, X, Y + h*0.02, h, { ...c, eye: c.glow }, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+      const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
 
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.2) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y < px(4) || Y > wh*0.95 || !vis(l, X - hh, X + hh, Y - hh*1.4, Y)) return;
@@ -31692,11 +31763,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Belinda';
+const RELEASE = 'Uranus–Perdita';
 
 const RELEASE_DATE = '2026-10-20';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"QCySiyiM","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"_wKNvKI6","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -32415,7 +32486,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 29de7c0";
+const STAMP = "2026-10-20 · 00b943b";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

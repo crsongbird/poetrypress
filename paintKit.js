@@ -371,9 +371,10 @@ function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
 // a box: its face to you, shaded from the sky down to the ground, and its side toward the light catching it, with the
 // shadow it casts
 function pkBox(x, X, Y, top, wd, c, dep){
-  const w2 = wd/2, side = dep*c.sd;
+  // (its side shown is the one the view turns toward you, c.vside, where the caller gives a view; else the light's)
+  const vs = c.vside || c.sd, w2 = wd/2, side = dep*vs*(c.vdep ?? 1);
   pkShade(x, [[X - w2, Y], [X - w2, top], [X + w2, top], [X + w2, Y]], c.body, top, Y, 0.13);
-  pkShade(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top], [X + c.sd*w2 + side, top + Math.abs(side)*0.3], [X + c.sd*w2 + side, Y]], pkMix(c.body, c.lit, 0.55), top, Y, 0.16);
+  pkShade(x, [[X + vs*w2, Y], [X + vs*w2, top], [X + vs*w2 + side, top + Math.abs(side)*0.3], [X + vs*w2 + side, Y]], vs === c.sd ? pkMix(c.body, c.lit, 0.55) : pkMix(c.body, c.dark, 0.45), top, Y, 0.16);
   return [X - w2, top, wd, Y - top];
 }
 // (kind0: the archetype, when the caller chose it to size the building; the draw that would have chosen it is still
@@ -672,7 +673,16 @@ const PK_BUILT = {
     if(o.detail){ pkBar(x, X - w2*0.4, Y - h*0.62, wd*0.6, h*0.08, PK_WHITE, o.px, 0.85); pkType(x, ['SPINWARD', 'ARCHVALE', 'NOONDALE', 'RIMSIDE'][Math.floor(o.R()*4)], X - w2*0.1, Y - h*0.555, h*0.07, wd*0.55, m.dark, o.px);
       if(o.fine){ x.fillStyle = pkCss(m.dark, 0.3); for(let k = 1; k < 10; k++) x.fillRect(X - w2*0.4 + wd*0.6*k/10, bt, Math.max(o.px(0.3), wd*0.004), Y - bt); } } }
 };
+// EIGHT VIEWS (Ruby: "these objects should have more than one view … front, sides, back, and the half-turned states …
+// mirrored the other direction, except the ones that have text"): a caller may give c.view = { cs, sn }, the cosine and
+// sine of the angle between the way a thing faces and the way to the eye. A building is then drawn as the eye sees it:
+// its face narrowed as it turns away (|cs|), its side shown on the side turned toward you, deeper as it turns (|sn|)
+// the round buildings, the same from any side
+const PK_ROUND = ['yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle'];
 export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
+  if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null }; // (round: the same from every side)
+  if(c.view && !c.vdep){ const { cs, sn } = c.view, f = Math.max(0.34, Math.abs(cs)); x.save(); x.translate(X, 0); x.scale(f, 1); x.translate(-X, 0);
+    pkBuilding(x, X, Y, h, wdt, { ...c, view: null, vside: sn >= 0 ? 1 : -1, vdep: Math.max(0.05, Math.abs(sn))*1.6/f }, style, night, R0, px, kind0); x.restore(); return; }
   const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5), RD = sub(6);
   const kind = (k => kind0 || k)(pkArchOf(style, R()));
   // each building its own material (warm stone, brick, concrete, blue glass, dark steel), laid over the world's own
@@ -800,7 +810,7 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   else { // 'glass': a tower of glass over a lobby, a slanted or stepped top, its plant, a mast
     const sl = R() < 0.4 ? h*0.08*(R() < 0.5 ? 1 : -1) : 0, lob = Y - Math.min(h*0.07, wdt*0.45);
     pkShade(x, [[X - w2, Y], [X - w2, top + Math.max(0, sl)], [X + w2, top + Math.max(0, -sl)], [X + w2, Y]], c.body, top, Y, 0.1);
-    pkPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top + Math.max(0, c.sd > 0 ? -sl : sl)], [X + c.sd*(w2 + dep), top + Math.abs(dep)*0.3 + Math.max(0, c.sd > 0 ? -sl : sl)], [X + c.sd*(w2 + dep), Y]], pkCss(pkMix(c.body, c.lit, 0.5)));
+    { const vs = c.vside || c.sd, dp = dep*(c.vdep ?? 1); pkPoly(x, [[X + vs*w2, Y], [X + vs*w2, top + Math.max(0, vs > 0 ? -sl : sl)], [X + vs*(w2 + dp), top + Math.abs(dp)*0.3 + Math.max(0, vs > 0 ? -sl : sl)], [X + vs*(w2 + dp), Y]], pkCss(vs === c.sd ? pkMix(c.body, c.lit, 0.5) : pkMix(c.body, c.dark, 0.45))); }
     if(detail){ pkWindows(x, X - w2, top + Math.abs(sl), wdt, lob - top - Math.abs(sl), c, night, lit, RW, px, neon ? 'neon' : 'mullion');
       x.fillStyle = pkCss(night > 0.2 ? pkMix(c.glow, ink, 0.3) : ink, 0.85); x.fillRect(X - w2*0.92, lob, wdt*0.92, Y - lob); bar(X - w2, lob - px(0.5), wdt, (Y - lob)*0.1, c.lit, 0.8);
       if(fine && !sl){ pkBox(x, X + wdt*(RT() - 0.5)*0.3, top, top - h*0.03, wdt*0.4, { ...c, body: pkMix(c.body, c.dark, 0.3) }, dep*0.3); } }
@@ -838,12 +848,52 @@ export const PK_PROPS = {
   builders: ['lamp', 'crate', 'bench', 'cargo', 'cargo', 'solar', 'solar', 'dish', 'beacon', 'pipes', 'tripod'],
   ruins: ['barrel', 'barrel', 'crate', 'sign', 'fence', 'rubble', 'rubble', 'column', 'hulk', 'hulk', 'container', 'traps', 'statue', 'pole'],
   magic: ['lamp', 'fence', 'bench', 'menhir', 'menhir', 'dolmen', 'fairyring', 'wisp', 'wisp', 'flower', 'toadstool', 'moongate', 'wishing', 'cairn'] };
+// the side-drawn small things seen END-ON (front, toward you: its lamps; back: its tail): a car's width, roof and glass,
+// headlights or tail lights, its wheels at the corners; a tractor between its great wheels; a bike or scooter a thin
+// upright with its bars; a cart's end under its umbrella; a bench's end, seat and back in profile
+function pkPropEnd(x, X, Y, h, c, kind, R0, px, night, front){
+  const R = pkSub(R0)(1), steel = pkMat(c, PK_STEEL, 0.65), iron = pkMat(c, PK_IRON, 0.7), wheelB = (wx, wy, w, hh) => { x.fillStyle = pkCss(pkMix(PK_IRON, PK_BLACK, 0.5)); x.fillRect(wx - w/2, wy - hh, w, hh); };
+  if(kind === 'parked' || kind === 'hulk'){ const hulk = kind === 'hulk', m = hulk ? pkMat(c, PK_RUST, 0.7) : pkMat(c, [[180, 40, 40], [40, 60, 110], [210, 210, 214], [30, 32, 36], [120, 130, 100], [200, 170, 70]][Math.floor(R()*6)], 0.7), w = h*1.2, yb = Y + (hulk ? h*0.08 : 0);
+    for(const s of [-1, 1]) wheelB(X + s*w*0.36, yb, w*0.16, h*0.3);
+    pkShade(x, [[X - w*0.5, yb - h*0.18], [X - w*0.5, yb - h*0.55], [X - w*0.36, yb - h*0.62], [X - w*0.3, yb - h*0.96], [X + w*0.3, yb - h*0.96], [X + w*0.36, yb - h*0.62], [X + w*0.5, yb - h*0.55], [X + w*0.5, yb - h*0.18]], m.body, yb - h, yb, 0.2);
+    pkPoly(x, [[X - w*0.27, yb - h*0.9], [X + w*0.27, yb - h*0.9], [X + w*0.33, yb - h*0.62], [X - w*0.33, yb - h*0.62]], pkCss(hulk ? PK_BLACK : pkMix(c.air || m.lit, PK_BLACK, 0.3), hulk ? 0.75 : 0.9));
+    const lc = front ? (night > 0.2 && !hulk ? pkMix(c.glow, PK_WHITE, 0.7) : [230, 226, 200]) : [200, 40, 40]; for(const s of [-1, 1]){ pkBar(x, X + s*w*0.38 - w*0.07, yb - h*0.47, w*0.14, h*0.08, hulk ? PK_BLACK : lc, px); if(front && night > 0.2 && !hulk) pkGlow(x, X + s*w*0.38, yb - h*0.43, h*0.6, c.glow, 0.4*night); }
+    pkBar(x, X - w*0.48, yb - h*0.24, w*0.96, h*0.06, front ? steel.lit : m.dark, px); if(front && !hulk) pkBar(x, X - w*0.15, yb - h*0.4, w*0.3, h*0.1, pkMix(m.dark, PK_BLACK, 0.3), px); return; }
+  if(kind === 'tractor'){ const m = pkMat(c, [[170, 50, 40], [60, 110, 60], [50, 80, 140], [210, 170, 50]][Math.floor(R()*4)], 0.75); for(const s of [-1, 1]) wheelB(X + s*h*0.42, Y, h*0.18, h*0.64);
+    pkShade(x, [[X - h*0.18, Y - h*0.2], [X - h*0.18, Y - h*0.6], [X + h*0.18, Y - h*0.6], [X + h*0.18, Y - h*0.2]], m.body, Y - h*0.6, Y);
+    pkPoly(x, [[X - h*0.3, Y - h*0.6], [X - h*0.28, Y - h], [X + h*0.28, Y - h], [X + h*0.3, Y - h*0.6]], pkCss(pkMix(m.dark, PK_BLACK, 0.2))); pkPoly(x, [[X - h*0.24, Y - h*0.64], [X - h*0.22, Y - h*0.95], [X + h*0.22, Y - h*0.95], [X + h*0.24, Y - h*0.64]], pkCss(pkMix(c.air || m.lit, PK_BLACK, 0.3), 0.85)); return; }
+  if(kind === 'bicycle' || kind === 'scooter'){ const m = pkMat(c, [[40, 70, 120], [170, 40, 40], [40, 40, 44]][Math.floor(R()*3)], 0.7); x.strokeStyle = pkCss(PK_IRON); x.lineWidth = Math.max(px(0.5), h*0.05);
+    x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.66); x.stroke(); x.strokeStyle = pkCss(m.body); x.lineWidth = Math.max(px(0.5), h*0.06); x.beginPath(); x.moveTo(X, Y - h*0.3); x.lineTo(X, Y - h*0.9); x.stroke();
+    x.strokeStyle = pkCss(PK_IRON); x.lineWidth = Math.max(px(0.5), h*0.04); x.beginPath(); x.moveTo(X - h*0.25, Y - h*0.92); x.lineTo(X + h*0.25, Y - h*0.92); x.stroke(); return; }
+  if(kind === 'cart'){ const m = pkMat(c, [[200, 60, 50], [230, 220, 200], [60, 120, 160]][Math.floor(R()*3)], 0.7); for(const s of [-1, 1]) wheelB(X + s*h*0.2, Y, h*0.05, h*0.2);
+    pkShade(x, [[X - h*0.2, Y - h*0.12], [X - h*0.2, Y - h*0.48], [X + h*0.2, Y - h*0.48], [X + h*0.2, Y - h*0.12]], m.body, Y - h*0.48, Y); x.fillStyle = pkCss(pkMat(c, [220, 70, 60], 0.75).body); x.beginPath(); x.ellipse(X, Y - h*0.86, h*0.55, h*0.14, 0, Math.PI, 0); x.fill();
+    x.strokeStyle = pkCss(steel.dark); x.lineWidth = Math.max(px(0.4), h*0.02); x.beginPath(); x.moveTo(X, Y - h*0.48); x.lineTo(X, Y - h*0.86); x.stroke(); return; }
+  // a bench's end: its iron end in profile, the seat and the back as short bars
+  const m = pkMat(c, R() < 0.5 ? PK_WOOD : PK_GREENPAINT, 0.7); x.strokeStyle = pkCss(iron.body); x.lineWidth = Math.max(px(0.5), h*0.07); x.lineCap = 'round';
+  x.beginPath(); x.moveTo(X - h*0.2, Y); x.lineTo(X - h*0.1, Y - h*0.5); x.lineTo(X + h*0.2, Y - h*0.5); x.moveTo(X + h*0.18, Y); x.lineTo(X + h*0.1, Y - h*0.5); x.moveTo(X - h*0.1, Y - h*0.5); x.lineTo(X - h*0.2, Y - h); x.stroke();
+  pkBar(x, X - h*0.12, Y - h*0.55, h*0.34, h*0.08, m.body, px); pkBar(x, X - h*0.24, Y - h*0.95, h*0.1, h*0.32, m.lit, px);
+}
 // the kinds large enough to be seen from further off (the caller sows them on a coarser grid)
 export const PK_PROPS_BIG = ['windpump', 'grainbin', 'haystack', 'tractor', 'dish', 'beacon', 'solar', 'container', 'statue', 'dolmen', 'flower', 'toadstool', 'moongate', 'well', 'wishing', 'shrine', 'busstop', 'kiosk', 'menhir', 'column'];
 // wires from one pole's top A to the next's B (h the near pole's height): three, sagging, thin as they are
 export function pkWires(x, A, B, h, c, px){ const d = Math.hypot(B[0] - A[0], B[1] - A[1]); if(d > h*12 || d < px(2)) return; x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.5), 0.6); x.lineWidth = Math.max(px(0.3), h*0.003); x.beginPath();
   for(const s of [-0.08, 0, 0.08]){ x.moveTo(A[0] + s*h, A[1] + h*0.05); x.quadraticCurveTo((A[0] + B[0])/2, Math.max(A[1], B[1]) + d*0.05, B[0] + s*h*0.6, B[1] + h*0.04); } x.stroke(); }
+// (the small things seen as the eye sees them: those drawn side-on, a car, a bench, a bike, end-on as they turn to face
+//  you or away, half-turned between; boxes narrowed as they turn; the rest mirrored by the side they turn, except
+//  what carries writing)
+// (a mirrored thing keeps its light where it is: its lit side swapped before it is drawn, so the mirror puts it back)
+export const pkFlip = c => ({ ...c, sd: -c.sd, L: c.L ? [-c.L[0], c.L[1]] : c.L });
+const PK_SIDE_NATIVE = ['parked', 'hulk', 'tractor', 'scooter', 'bicycle', 'cart', 'bench'];
+const PK_WRITTEN = ['sign', 'milestone'];
+// (those with a back of their own, drawn when the camera stands behind them: the plain backs of signs, of the vending machines)
+const PK_BACKED = ['sign', 'milestone', 'vending'];
+const PK_BOXLIKE = ['vending', 'phonebox', 'busstop', 'container', 'crate', 'cargo', 'mailbox', 'beehives', 'trough', 'shrine'];
 export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
+  if(c.view){ const { cs, sn } = c.view, cc = { ...c, view: null };
+    if(PK_SIDE_NATIVE.includes(kind)){ if(Math.abs(sn) < 0.38){ pkPropEnd(x, X, Y, h, cc, kind, R0, px, night, cs >= 0); return; }
+      x.save(); x.translate(X, 0); x.scale((sn >= 0 ? 1 : -1)*(0.45 + 0.55*Math.abs(sn)), 1); x.translate(-X, 0); pkProp(x, X, Y, h, sn >= 0 ? cc : pkFlip(cc), kind, R0, px, night); x.restore(); return; }
+    const f = PK_BOXLIKE.includes(kind) || PK_WRITTEN.includes(kind) ? Math.max(0.4, Math.abs(cs)) : 1, m = PK_WRITTEN.includes(kind) ? 1 : (sn >= 0 ? 1 : -1);
+    x.save(); x.translate(X, 0); x.scale(f*m, 1); x.translate(-X, 0); pkProp(x, X, Y, h, { ...(m < 0 ? pkFlip(cc) : cc), back: PK_BACKED.includes(kind) && cs < 0 }, kind, R0, px, night); x.restore(); return; }
   const sub = pkSub(R0), R = sub(1), RD = sub(2), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), near = h > px(14), fine = h > px(40);
   const ln = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = Math.max(px(0.5), wd); x.lineCap = 'round'; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
   const box = (x0, y0, w, hh, m, k = 0.16) => { pkShade(x, [[x0, y0 + hh], [x0, y0], [x0 + w, y0], [x0 + w, y0 + hh]], m.body, y0, y0 + hh, k); };
@@ -911,13 +961,14 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   case 'crate': { // wooden crates: planks and battens, one stacked on another now and then
     const n = R() < 0.4 ? 2 : 1; for(let q = 0; q < n; q++){ const w = h*1.1, bx = X - w/2 + (q ? w*0.15 : 0), by = Y - q*h; box(bx, by - h, w, h, wood, 0.2); side(bx, by - h, w, h, w*0.25, wood);
       if(near){ for(let k = 1; k < 4; k++) pkBar(x, bx, by - h + h*k/4, w, h*0.015, wood.dark, px, 0.5); ln([[bx + w*0.06, by - h*0.06], [bx + w*0.94, by - h*0.94]], pkCss(wood.dark), h*0.06); pkBar(x, bx, by - h, w, h*0.08, wood.lit, px, 0.8); } } return; }
-  case 'sign': { // a road sign on its pole: a direction board in green or blue with white letters, an arrow
+  case 'sign': { // a road sign on its pole: a direction board in green or blue with white letters, an arrow (from behind, its bare back)
     const m = pkMat(c, R() < 0.5 ? [40, 100, 70] : [40, 70, 130], 0.75), w = h*0.7, bh = h*0.28, by = Y - h; box(X - h*0.02, Y - h, h*0.04, h, steel, 0.2);
+    if(c.back){ box(X - w/2, by, w, bh, steel, 0.1); pkBar(x, X - h*0.03, by + bh*0.2, h*0.06, bh*0.6, iron.body, px); return; }
     box(X - w/2, by, w, bh, m, 0.1); x.strokeStyle = pkCss(PK_WHITE, 0.85); x.lineWidth = Math.max(px(0.3), bh*0.05); x.strokeRect(X - w/2 + bh*0.06, by + bh*0.06, w - bh*0.12, bh*0.88);
     const dir = R() < 0.5 ? -1 : 1, txt = ['SPINWARD', 'RIMWARD', 'HUBWARD', 'TOWN 3', 'ARCH VIEW', 'NO EXIT'][Math.floor(R()*6)];
     pkType(x, txt, X + dir*-w*0.08, by + bh*0.68, bh*0.42, w*0.65, pkMix(PK_WHITE, m.body, 0.1), px); ln([[X + dir*w*0.3, by + bh*0.5], [X + dir*w*0.42, by + bh*0.5]], pkCss(PK_WHITE, 0.85), bh*0.1); return; }
   case 'milestone': { const m = pkMat(c, [222, 218, 206], 0.7); pkShade(x, [[X - h*0.22, Y], [X - h*0.22, Y - h*0.75], [X, Y - h], [X + h*0.22, Y - h*0.75], [X + h*0.22, Y]], m.body, Y - h, Y, 0.2);
-    pkType(x, String(1 + Math.floor(R()*99)), X, Y - h*0.45, h*0.28, h*0.4, PK_BLACK, px); return; }
+    if(!c.back) pkType(x, String(1 + Math.floor(R()*99)), X, Y - h*0.45, h*0.28, h*0.4, PK_BLACK, px); return; }
   case 'cairn': { // stones stacked, smaller upward
     // (each stone its own rough block, set a little off the one below, its top catching the light)
     let cy = Y, ox = 0; for(let k = 0, n = 4 + Math.floor(R()*4); k < n; k++){ const u = k/n, w = h*0.5*(1 - u*0.65)*(0.8 + 0.4*R()), th = h/n*(0.9 + 0.3*R()); ox += (R() - 0.5)*w*0.3; const cx = X + ox, j = () => (R() - 0.5)*w*0.12;
@@ -975,7 +1026,8 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     if(near){ x.fillStyle = pkCss(glowOn ? pkMix(c.glow, PK_WHITE, 0.4) : pkMix(c.air || m.lit, PK_BLACK, 0.3), 0.85); for(let r = 0; r < 6; r++) for(let k = 0; k < 3; k++) x.fillRect(X - w*0.36 + k*w*0.25, Y - h*0.78 + r*h*0.1, w*0.2, h*0.08); } return; }
   case 'vending': { // vending machines side by side: an upper window lit with rows of coloured drinks, the slot, a glow by night
     const n = 1 + Math.floor(R()*3), w = h*0.55; for(let k = 0; k < n; k++){ const bx = X + (k - (n - 1)/2)*w*1.05, m = pkMat(c, [[230, 230, 236], [180, 40, 40], [40, 90, 160], [240, 190, 40]][Math.floor(R()*4)], 0.6);
-      box(bx - w/2, Y - h, w, h, m, 0.12); pkPoly(x, [[bx - w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.45], [bx - w*0.4, Y - h*0.45]], pkCss(glowOn ? pkMix(lamp, PK_WHITE, 0.3) : pkMix(c.air || m.lit, PK_WHITE, 0.2)));
+      box(bx - w/2, Y - h, w, h, m, 0.12); if(c.back){ for(let r = 0; r < 5; r++) pkBar(x, bx - w*0.3, Y - h*(0.85 - r*0.06), w*0.6, h*0.02, m.dark, px, 0.7); if(near) ln([[bx + w*0.3, Y - h*0.3], [bx + w*0.42, Y - h*0.1], [bx + w*0.5, Y]], pkCss(PK_BLACK, 0.8), h*0.015); continue; }
+      pkPoly(x, [[bx - w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.92], [bx + w*0.4, Y - h*0.45], [bx - w*0.4, Y - h*0.45]], pkCss(glowOn ? pkMix(lamp, PK_WHITE, 0.3) : pkMix(c.air || m.lit, PK_WHITE, 0.2)));
       if(near) for(let r = 0; r < 4; r++) for(let q = 0; q < 5; q++) pkBar(x, bx - w*0.36 + q*w*0.15, Y - h*(0.88 - r*0.11), w*0.09, h*0.07, [[200, 40, 50], [40, 120, 200], [240, 200, 60], [60, 160, 90], [240, 240, 240]][(q + r*2) % 5], px, 0.9);
       pkBar(x, bx - w*0.3, Y - h*0.2, w*0.6, h*0.08, PK_BLACK, px, 0.7); if(glowOn) pkGlow(x, bx, Y - h*0.6, h*0.8, pkMix(lamp, PK_WHITE, 0.3), 0.35*night); } return; }
   case 'signal': { // a traffic light: its pole, a dark head of three lamps, one of them lit
@@ -1326,6 +1378,9 @@ function pkBoardArt(x, B, fx, fy, fw, fh, p, c, R, px, night, tube){
 // serial verse: { serial: [lines], k }); its state by its own stream: lit or not, faded, peeling, torn to an older
 // board beneath, half-pasted with the crew still on the catwalk
 export function pkBoard(x, X, Y, m, c, id, R0, px, night = 0, aged = 0){
+  // (seen as the eye sees it, c.view: its face narrowed as it turns, and from behind its bare back; never mirrored, as
+  //  it carries writing)
+  if(c.view){ const { cs } = c.view; x.save(); x.translate(X, 0); x.scale(Math.max(0.1, Math.abs(cs)), 1); x.translate(-X, 0); pkBoard(x, X, Y, m, { ...c, view: null, back: cs < 0 }, id, R0, px, night, aged); x.restore(); return; }
   const sub = pkSub(R0), R = sub(1), RS = sub(2), RA = sub(3), ser = id && id.serial, B = ser ? { fmt: 'serial', pal: ['#c1121f', '#ffffff', '#111111'], say: [id.serial[id.k]], art: 'none', worlds: [] } : PK_BOARDS[id]; if(!B) return;
   const [fwM, fhM, upM] = PK_FMT[B.fmt], fw = fwM*m, fh = fhM*m, up = upM*m, fx = X - fw/2, fy = Y - up - fh, fmt = B.fmt;
   if(fw < px(2)) return;
@@ -1375,6 +1430,12 @@ export function pkBoard(x, X, Y, m, c, id, R0, px, night = 0, aged = 0){
       if(words[1]) pkType(x, words[1], tx, ty + ts*1.1 + (BB.art === 'glyphs' ? uh*0.06 : 0), ts*0.5, mw, BB.art === 'glyphs' ? PK_BLACK : neon ? pkMix(PP[1], [70, 70, 80], 1 - lit) : ink, px, { align: al, face: face0, weight: 'normal', tube: neon }); }
     if(neon && lit > 0.5) pkGlow(x, face[0] + face[2]/2, face[1] + face[3]/2, Math.max(face[2], face[3])*0.7, PP[0], 0.3);
     x.restore(); };
+  if(c.back){ // from behind: the back of its face, braced across, the bare backs of its sheets or planks
+    const bk = fmt === 'slab' ? frame : fmt === 'timber' || fmt === 'barn' || fmt === 'shingle' || fmt === 'bottle' || fmt === 'map' || fmt === 'serial' ? wood : steel;
+    x.fillStyle = pkCss(pkMix(bk.body, bk.dark, 0.3)); x.fillRect(face[0], face[1], face[2], face[3]);
+    if(face[3] > px(8)){ x.strokeStyle = pkCss(bk.dark, 0.8); x.lineWidth = Math.max(px(0.4), face[3]*0.03); x.beginPath(); x.moveTo(face[0], face[1]); x.lineTo(face[0] + face[2], face[1] + face[3]); x.moveTo(face[0] + face[2], face[1]); x.lineTo(face[0], face[1] + face[3]);
+      for(let k = 1; k < 4; k++){ x.moveTo(face[0] + face[2]*k/4, face[1]); x.lineTo(face[0] + face[2]*k/4, face[1] + face[3]); } x.stroke(); }
+    return; }
   draw(B, P);
   // ---- what time has done to it ----
   if(!neon && fmt !== 'slab' && fh > px(8)){
