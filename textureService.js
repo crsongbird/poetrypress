@@ -36,7 +36,8 @@ const LARGE = 360000;            // pixels: anything bigger than a tile or a pre
 // typed-array memory later than Chrome under pressure, so there a graph or chain works on a grid of at most a megapixel
 // (texCore setGridCap), drawn up to the page
 const GECKO = typeof navigator !== 'undefined' && /Gecko\/\d/.test(navigator.userAgent || '') && /Firefox\//.test(navigator.userAgent || '');
-const PHONE_GRID_CAP = FRUGAL && GECKO ? 1000000 : 0;
+// (and any phone, at a little more: Ruby saw Macro Bloom take Chrome's worker down on a phone at the saved size)
+const PHONE_GRID_CAP = FRUGAL ? (GECKO ? 1000000 : 1600000) : 0;
 // STAGES (Ruby: "render them in stages"): a texture whose last making took longer than STAGE_OVER_MS comes first as a
 // quarter-size draft (half each side, about four times faster), shown at once, then at full size
 const STAGE_OVER_MS = 900;
