@@ -4,6 +4,9 @@ Ruby: "Suggest design improvements and improvements to the technology underlying
 that would reduce the size of the code base or the complexity without losing any features or design characteristics …
 this includes improvements to the testing suite and to the design protocol."
 
+**Status:** shipped in Saturn–Alvaldi: 1–4, 6, 7 (the refactors but one record per surface), 8–9 (the page: 5.6 MB →
+2.7 MB) and 10 (tests timed, two at a time, `--quick`). Next: 5, 11–17.
+
 Every number below was measured on the tree (wc, grep, node loading the modules); the two largest claims were checked
 twice. No proposal changes a picture or removes a feature: each says how that is proved.
 

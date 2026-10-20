@@ -66,8 +66,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
-- SMALLER AND SIMPLER (docs/SIMPLIFY.md, ROADMAP S): which first? Suggested: the refactors (S1, each proved by unchanged
-  pictures), then the page phones download (S2: −2.8 MB), then the tests (S3), then the protocol (S4).
+(nothing)
 
 ## 5 · Long horizon
 - THE SATURN RELEASE (Ruby): once every texture is taken apart into parts, a
@@ -99,6 +98,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   laptop or a tablet.
 
 ## 6 · Next (no input needed)
+- SMALLER AND SIMPLER, continued (ROADMAP S): one record per surface; the tests' one sweep, shared harness and
+  behaviour instead of source; appEvents split; the protocol trimmed, a review tool, the changelog archived.
 - EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon): only Deep Field is left (ROADMAP.md Stage 3).
   It is two layers, each blended with the page in turn, so one graph can't draw it exactly: it waits for a
   graph that can hand the page more than one layer. Then the whole-texture parts are taken apart (§2 J):
@@ -111,8 +112,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   Athanor's surface has no Light/Dark remap of its own yet.
 - The Athanor's GPU passes (blur, warp inside a graph).
 - Dream Bloom's convolution on the GPU (PERFORMANCE-AUDIT "Next on the GPU").
-- Split appEvents.js into modules — the tests read its source
-  by regex, so they move with it.
 - THE NEXT TEST REVIEW (left by Saturn–Tarqeq's and Saturn–Mundilfari's, larger rewrites): persistenceCoverage slices
   appEvents' functions out of its source (rewrite on audit.test's save-and-load harness, every control in index.html);
   poem.test's renderer checks (the layout record, Text Clearing) as behavior; mobileCss's phone invariants into
