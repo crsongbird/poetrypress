@@ -8,22 +8,15 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- FAIRIES (branch fairies): about one seed in six, a small fairy light drifts over the Meadow's grass or the Windward
-  Sea; one Macro Bloom visitor in 66 is a fairy. A Fairy Light part for any graph.
-- THE PAINTED RINGWORLD PASS (branch ringpass): the camera sweeps and the world stays (the land as arcs at fixed
-  distances, every thing on a stream of its own, the sky's things in directions of the world, the stars panning); Works
-  turned well down; trees, buildings, rocks and works remade in a shared kit that Ring in the Sky's land
-  and Night City's skyline use too. The near ridges bow down at the frame's sides (the cost of being arcs): all right?
-- CARTOMANCY (branch cartomancy): the table blended over the page's backdrop (Overlay); the cards and coins lit by
-  the Light Engine from height and gloss maps.
-- CRYSTAL LEAF ON THE LIGHT ENGINE (branch crystal): a druse's maps (albedo seen through the faces and bent by them,
-  height, normals, gloss, the veil as translucency, the fire as light of its own); the Light Engine takes a Normal Map.
-- THE SOUND PASS (branch sound; listen with Sound on): home raised to D4; a knob's marks rise with its value, its ends
-  knock, a double-tap reset falls a fifth; locks a latch; dice a tumble; bursts sound twice, then rest.
 - MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
   grid. Does it hold?
 
 ## 2 · Ruby's notes to act on
+- THE PAINTED RINGWORLD (Ruby's favorite; its code kept portable for a game someday): back to straight ridges (the
+  arcs looked worse); the spans and bridges as they were; things placed in the world, sorted back to front, culled
+  where nearer land hides them, standing on the ground that shows. The kit far more varied for every world, each
+  thing sized in metres so no building is shrub-sized (docs/prior-art/painted-ringworld.md §5).
+- GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a
   village of roofs and gates, fields under a great tree, a cursed land under red miasma.
@@ -41,7 +34,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
-- The Controls drawer says how many sliders it holds ("8 sliders"): keep the count, or let it go?
+- Nothing.
 
 ## 5 · Long horizon
 - A GAME, IN ITS OWN REPO SOMEDAY (Ruby, the extreme long term): a fork that explores the ringworlds, finds the idyllic

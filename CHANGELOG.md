@@ -4,6 +4,40 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Desdemona (2026-10-20)
+
+- **Nothing shakes while a control is used.** Dragging a fader whose value is a name (Species, say) once resized its
+  column, and every knob beside it moved; the columns are now a fixed width. The display line keeps its room and only
+  fades in and out. A value is said once: on the display line while the control moves, at the fader's foot otherwise.
+  The Controls heading counts its sliders only while it is closed.
+- **Knobs turn as a thumb moves round them**, in an arc: the angle swept about a knob's middle turns it by as much
+  (near the middle, up and down still works).
+- **Up to ten sliders a surface**, where the rack uses the room well; an Athanor graph's Knob has slots 1–10.
+- **A locked control looks held**: it fades, its ring breaks into dashes, its reset with it.
+- **Haptics on a phone**: a light tick as a tab changes or a drawer opens, and a good buzz when a long save is done.
+- **The Painted Ringworld, reworked so the camera can sweep**: the world stays where it is and is seen from another
+  angle. Works turned well down. Its trees, buildings, rocks and works remade in a shared kit that Ring in the Sky's
+  land and Night City's skyline use too (Art Deco crowns, slanted and twin tops, water towers).
+- **Cartomancy on the Light Engine**: the table always blended over the page's own backdrop, the cards and coins lit
+  from height and gloss maps, so their shadows, rims and shine follow the light dial.
+- **Crystal Leaf, remade on the Light Engine**: a druse seen through its faces, the inclusions inside the stone, each
+  face turning to the light on its own, the clear stone translucent, its fire a light of its own. The Light Engine
+  takes a Normal Map.
+- **Fairies**: now and then a small fairy light drifts over the Idyllic Meadow's grass or the Windward Sea, and one
+  Macro Bloom visitor in 66 is a fairy. Fairy Light, a part for any graph.
+- **Sounds, retuned**: home raised to D4, where a phone's speaker carries it; a knob's marks rise with its value, its
+  ends knock, a reset falls a fifth; locks a latch, dice a tumble; bursts sound twice, then rest; nothing while the
+  page is hidden, and the person's own music keeps playing where the browser allows.
+
+### Under the hood
+- `tools/still.mjs` sweeps every slider of every surface on a phone and names anything on the page that moves.
+- paintKit.js: the painted things the three skylines share. Research for the ring's next pass: real sizes for 33 trees,
+  62 buildings, rocks and small things, and how games build big kits from few parts
+  (docs/prior-art/painted-ringworld.md).
+- Plans recorded: the cloth surfaces as graphs on a cloth simulation (docs/renderer-pass.md).
+- Work happens on main now, without feature branches.
+- Housekeeping: pruned the stylesheet.
+
 ## Uranus–Cressida (2026-10-20)
 
 - **The surface's controls are a rack.** Its sliders are drawn as the light and camera dials are:
@@ -470,17 +504,3 @@ and every control behaving as it did.
   still mattered somewhere; nothing removed). The roadmap records Ruby's rules
   for the new surfaces: built in the Athanor from general parts, varied by
   the seed, every colour on a hue input.
-
-## Saturn–Bestla (2026-10-19)
-
-- **The Black Hole is seen from the camera dial.** Its Turn turns the disc
-  in the sky, its View tips it from face-on at the middle to edge-on at the
-  rim, and its zoom brings it closer. While the dial moves, a wireframe of
-  the disc shows over the page. Looks and presets made before keep their
-  pictures.
-- **Crystal takes the rim light and the Ambient slider.** Its facets light
-  with them, as the other engine-lit surfaces do.
-- **Seven more surfaces can be lit from below the horizon:** Veins of Light,
-  Knotwork, Lichtenberg, Ruffled Growth, Cells, Painted Landscape and Rain on
-  Water. Their light dial can be pulled past its rim for the low, raking
-  light the others have.

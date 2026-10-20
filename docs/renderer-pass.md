@@ -36,10 +36,8 @@ the presets pass.
   - wax, rainwater, petals, bouquets, growth, turing, knotwork and contour;
   - windsea, botline, ditsy, hatch, rainstreaks, halftone, pixelspace, liminal and webb;
   - meadow, and the four light overlays.
-- In progress (Ruby to judge):
-  - Crystal Leaf: branch `crystal`;
-  - Cartomancy: branch `cartomancy`;
-  - the Painted Ringworld, Ring in the Sky's land and Night City's skyline: branch `ringpass`.
+- Merged (2026-10-20): Crystal Leaf, Cartomancy, and the Painted Ringworld with Ring in the Sky's land and Night City's
+  skyline (the ring's land and its kit are being reworked: ROADMAP Stage 3).
 
 ---
 
@@ -154,8 +152,11 @@ All of these use the Light Engine, so they gain the page's rim light, the ambien
 **Chladni Sand**
 - A Chladni field part, then a Scatter of grains carrying height.
 
-**Linen Tooth**
-- The Weave's shading into height and its sheen into gloss, for the Light Engine.
+**Linen Tooth, and the cloth surfaces** (Ruby, 2026-10-20: "replace those with node graphs and run a full cloth
+simulation now for half the cost")
+- The weave as a graph of general parts: threads as height and gloss for the Light Engine, never a shading drawn on.
+- The cloth itself draped by a simulation (a mass-spring grid, pinned where it hangs, settling under gravity into
+  folds), handed on as height and normals so the weave follows the folds.
 
 **Dream Bloom**
 - Scatter orbs (R0.4) through Lens Blur, in place of its own convolution (OPEN-ISSUES §6).
