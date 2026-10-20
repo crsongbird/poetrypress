@@ -4,6 +4,36 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Geirrod (2026-10-20)
+
+Nothing you see changes in this release: it is the rest of the work to make
+the code smaller and simpler, with every surface drawing exactly as before
+and every control behaving as it did.
+
+### Under the hood
+- The interface's code is split along its sections: appEvents.js keeps the
+  wiring (every listener and every call made as the page starts, in the
+  same order) and goes from 4,805 lines to about 1,550; its functions live
+  in eleven modules beside it (the look, locks, layers, the surface's
+  controls, the dials, the layout, history, dialogs, the Athanor's place in
+  the page, the other controls, the working line). Those modules hold
+  declarations only, and a test keeps it so.
+- Reviewed the tests: every suite shares one check harness instead of its
+  own copy, and the few checks that read the interface's code read all of it
+  as one. A new click-through check (tools/smoke.mjs) presses every kind of
+  control on a desk and on a phone and reports any page error: none, before
+  the split or after.
+- The protocol: AGENTS.md keeps the rules (2,061 lines → about 920); the long
+  reference moved beside it to docs/ (light, the page's machinery, the
+  Athanor's graphs and editor, each surface's notes, the pitfalls), read when
+  its subject is touched.
+- One review sheet for every round (tools/review.mjs): a surface's four
+  readings, four seeds, the light turned round and the camera moved, and with
+  `--ref` the older readings above them.
+- The changelog keeps the newest twenty releases; the older ones are in
+  docs/changelog-archive.md.
+- An unused helper (a moon glyph as a data URI) was found and removed.
+
 ## Saturn–Alvaldi (2026-10-20)
 
 - **The page is half the size**: 2.7 MB instead of 5.6 MB (about 0.8 MB

@@ -66,7 +66,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
-(nothing)
+- RELEASE NAMES: Saturn's named moons end with the next release (Thiazzi). Which list comes after it: Uranus's moons
+  (Cordelia, Ophelia, Bianca…, by distance), Neptune's, or something else?
 
 ## 5 · Long horizon
 - THE SATURN RELEASE (Ruby): once every texture is taken apart into parts, a
@@ -98,8 +99,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   laptop or a tablet.
 
 ## 6 · Next (no input needed)
-- SMALLER AND SIMPLER, continued (ROADMAP S): one record per surface; the tests' one sweep, shared harness and
-  behaviour instead of source; appEvents split; the protocol trimmed, a review tool, the changelog archived.
+- SMALLER AND SIMPLER, continued (ROADMAP S): one record per surface (the menu built from the groups); the texture
+  suites' one sweep (measured: it would save about a minute of the three); persistenceCoverage on behaviour, not
+  slices of the source; AGENTS.md from ~920 lines to ~600 (each rule said once).
 - EVERY TEXTURE INTO THE ATHANOR (Ruby's long horizon): only Deep Field is left (ROADMAP.md Stage 3).
   It is two layers, each blended with the page in turn, so one graph can't draw it exactly: it waits for a
   graph that can hand the page more than one layer. Then the whole-texture parts are taken apart (§2 J):

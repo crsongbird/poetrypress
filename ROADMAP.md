@@ -323,12 +323,10 @@ Easter eggs).
 Nothing here changes a picture or removes a feature; each step is proved by a snapshot and unchanged fingerprints.
 - **S1 · Refactors, left:** **one record per surface**: label, group, sliders, caps,
   hues, readings, alt words and working words in one place, the menu built from the groups.
-- **S3 · Tests, left:** one texture sweep for fingerprints and knob checks
-  (~760 → ~425 renders), export-size renders for 2–3 surfaces; a shared harness; tests that read behaviour, not
-  appEvents' source; then appEvents.js split along its banners (4,805 → ~1,200 lines in the entry).
-- **S4 · The protocol:** AGENTS.md to ~600 lines (per-surface notes beside each surface, light, page machinery and
-  pitfalls in their own docs, each rule once, enforced rules as one line and a test's name); one review tool that makes
-  every round's sheets; the changelog archived past ~20 releases.
+- **S3 · Tests, left:** one texture sweep for fingerprints and knob checks (~760 → ~425 renders; about a minute of
+  the three the suite now takes), export-size renders for 2–3 surfaces; persistenceCoverage on behaviour.
+- **S4 · The protocol, left:** AGENTS.md from ~920 lines to ~600: each rule said once, enforced rules as one line and
+  a test's name.
 
 ## 3 · Order of work: four stages, presets last (Ruby)
 
