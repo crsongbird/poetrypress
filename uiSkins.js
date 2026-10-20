@@ -199,12 +199,12 @@ export function faderSkin(input){
   if(typeof document.createElementNS !== 'function') return null;
   const wrap = document.createElement('div'); wrap.className = 'sk-fader'; wrap.setAttribute('aria-hidden', 'true');
   const strip = document.createElement('div'); strip.className = 'sk-strip';
-  const svg = skSvg('svg'); svg.setAttribute('viewBox', '0 0 40 160'); svg.setAttribute('preserveAspectRatio', 'none');
+  const svg = skSvg('svg'); svg.setAttribute('viewBox', '0 0 30 160'); svg.setAttribute('preserveAspectRatio', 'none');
   const P = SKIN_FEEL.faderPad, Y = f => 160 - P - f*(160 - 2*P);
   const track = skSvg('line', 'sk-track'), fill = skSvg('line', 'sk-arc'), limb = skSvg('g', 'sk-ticks'), cap = skSvg('g', 'sk-cap');
-  track.setAttribute('x1', 24); track.setAttribute('x2', 24); track.setAttribute('y1', P); track.setAttribute('y2', 160 - P);
-  fill.setAttribute('x1', 24); fill.setAttribute('x2', 24); fill.setAttribute('y2', 160 - P);
-  cap.innerHTML = '<line x1="13" y1="0" x2="35" y2="0"/><path d="M24 -4.5 L28.5 0 L24 4.5 L19.5 0 Z"/>';
+  track.setAttribute('x1', 18); track.setAttribute('x2', 18); track.setAttribute('y1', P); track.setAttribute('y2', 160 - P);
+  fill.setAttribute('x1', 18); fill.setAttribute('x2', 18); fill.setAttribute('y2', 160 - P);
+  cap.innerHTML = '<line x1="8" y1="0" x2="28" y2="0"/><path d="M18 -4.5 L22.5 0 L18 4.5 L13.5 0 Z"/>';
   svg.append(track, limb, fill, cap); strip.appendChild(svg); wrap.appendChild(strip);
   const names = document.createElement('div'); names.className = 'sk-names'; wrap.appendChild(names);
   const paint = () => {
@@ -214,7 +214,7 @@ export function faderSkin(input){
     if(limb._key !== key){ limb._key = key;
       limb.classList.toggle('dense', marks.length > 12);   // (two dozen species: small dots, not a ladder of rings)
       limb.innerHTML = marks.map(v => { const big = !named && def != null && Math.abs(v - def) < (hi - lo)/20;
-        return `<circle cx="8" cy="${Y((v - lo)/(hi - lo)).toFixed(2)}" r="${marks.length > 12 ? 1.3 : named || big ? 2.2 : 1.4}" class="${named ? 'named' : big ? 'def' : ''}"/>`; }).join('');
+        return `<circle cx="5" cy="${Y((v - lo)/(hi - lo)).toFixed(2)}" r="${marks.length > 12 ? 1.3 : named || big ? 2.2 : 1.4}" class="${named ? 'named' : big ? 'def' : ''}"/>`; }).join('');
       // the names beside their marks, when there are few enough to read (more, and the display line says which)
       names.innerHTML = named && nm.length && nm.length <= 8 ? marks.map((v, i) => `<button type="button" tabindex="-1" style="top:${(Y((v - lo)/(hi - lo))/160*100).toFixed(2)}%">${skEsc(nm[i] || '')}</button>`).join('') : '';
       wrap.classList.toggle('named', !!names.innerHTML); }
@@ -232,20 +232,42 @@ export function faderSkin(input){
 }
 
 // ---- THE RACK: which way each of the Controls fold's sliders is drawn ----
-/** Which way each slider is drawn (Ruby: "the most compact but also usable UI possible"):
- *  - three or fewer: rows, the plain sliders (most precise; research §6.1);
- *  - more, a rack: a slider with marks is a fader (it picks among kinds, and its marks read down its side), as many as
- *    the width holds (each two knobs tall, so four at most, the fewest marks first); the rest are knobs (amounts);
- *  - a slider may declare itself (`as` in textureParams.js: 'knob', 'fader' or 'slider'), and is drawn so in a rack.
- *  `mode`: 'auto', 'rows' or 'rack' (the layout button). */
+/** Which way each slider is drawn (Ruby's rules, 2026-10-19: "the most compact but also usable UI possible"):
+ *  - three or fewer: sliders, each a row; four: four knobs in a row;
+ *  - more: a rack two rows tall and four wide. A slider with marks is a FADER (one column, both rows, at the far right);
+ *    any other a KNOB (one cell), the knobs clustering to the left. Four faders fill the rack as eight knobs do; four
+ *    knobs and two faders fill it too. Faders only where there are two rows.
+ *  - what doesn't fit is a SLIDER, on a row of its own under the rack (the last ones first): eight with two marked are
+ *    four knobs, two faders and two sliders (Ruby's optimal eight).
+ *  - a slider may declare itself (`as` in textureParams.js: 'knob', 'fader' or 'slider').
+ *  `mode`: 'auto', 'rows' or 'rack' (the layout button). Returns each field with `as` and, for a fader, its `col`; the
+ *  list carries `knobCols` and `faders` (the rack's columns). */
+export const RACK = { cols: 4, rows: 2 };
 export function rackPlan(fields, width, mode){
   const shown = fields.filter(f => f.shown);
-  const rack = mode === 'rack' || (mode !== 'rows' && shown.length >= 4);
-  if(!rack) return shown.map(f => ({ ...f, as: 'row' }));
-  const room = Math.max(1, Math.min(4, Math.floor(width/96)));
+  if(mode === 'rows' || (mode !== 'rack' && shown.length <= 3)) return shown.map(f => ({ ...f, as: 'row' }));
   const said = f => f.declared === 'slider' ? 'row' : f.declared;
-  const faders = [...shown.filter(f => said(f) === 'fader'), ...shown.filter(f => !f.declared && f.ticks >= 2).sort((a, b) => a.ticks - b.ticks)].slice(0, room);
-  return shown.map(f => ({ ...f, as: said(f) === 'row' ? 'row' : faders.includes(f) ? 'fader' : 'knob' }));
+  const cells = RACK.cols*RACK.rows;
+  let sliders = shown.filter(f => said(f) === 'row');
+  const rest = shown.filter(f => !sliders.includes(f));
+  // (four, or fewer once the declared sliders are set apart: one row of knobs, no faders)
+  const oneRow = rest.length <= RACK.cols;
+  let faders = oneRow ? [] : rest.filter(f => said(f) === 'fader' || (!f.declared && f.ticks >= 2));
+  // as many faders as leave room for the rest, and never fewer than two where there are marks to give them: eight with
+  // two or more marked are four knobs, two faders, two sliders. A marked one past that is a knob (its marks on its limb).
+  const most = Math.min(RACK.cols, Math.max(2, cells - rest.length));
+  if(faders.length > most){ const keep = [...faders.filter(f => said(f) === 'fader'), ...faders.filter(f => said(f) !== 'fader').sort((a, b) => a.ticks - b.ticks)].slice(0, most); faders = faders.filter(f => keep.includes(f)); }
+  let knobs = rest.filter(f => !faders.includes(f) && !sliders.includes(f));
+  // what overflows the rack goes to sliders, the last knobs first (a declared knob or fader stays as long as it fits)
+  while(knobs.length + 2*faders.length > cells && knobs.length){ const k = [...knobs].reverse().find(f => !f.declared) || knobs[knobs.length - 1]; knobs = knobs.filter(f => f !== k); sliders = [...sliders, k]; }
+  // (a lone row of knobs beside a fader is no rack: faders only where there are two rows)
+  if(faders.length && knobs.length + 2*faders.length <= RACK.cols){ knobs = [...knobs, ...faders]; faders = []; }
+  // the knobs cluster: one row of up to four alone, else two rows (as many columns as that takes); the faders at their right
+  const knobCols = !knobs.length ? 0 : !faders.length && knobs.length <= RACK.cols ? knobs.length : Math.ceil(knobs.length/RACK.rows);
+  const fcol = new Map(faders.map((f, k) => [f, knobCols + 1 + k]));
+  const plan = shown.map(f => ({ ...f, as: faders.includes(f) ? 'fader' : knobs.includes(f) ? 'knob' : 'row', col: fcol.get(f) || null }));
+  plan.knobCols = knobCols; plan.faders = faders.length;
+  return plan;
 }
 let skRackMode = 'auto';
 export function setRackMode(m){ skRackMode = ['auto', 'rows', 'rack'].includes(m) ? m : 'auto'; }
@@ -259,9 +281,17 @@ export function layoutControls(){
     return { i, input, field, shown: !!field && field.style.display !== 'none', ticks: skTicks(input).length, declared: input._skinAs || null }; }).filter(f => f.input && f.field);
   const plan = rackPlan(fields, fold.clientWidth || 360, skRackMode);
   fold.classList.toggle('rack', plan.some(p => p.as !== 'row'));
+  // the rack's columns: the knobs' (even shares) then one for each fader, as wide as its names need
+  const body = document.getElementById('texControlsBody');
+  if(body && body.style) body.style.gridTemplateColumns = plan.some(p => p.as !== 'row')
+    ? [...Array(plan.knobCols || 0).fill('minmax(64px, 1fr)'), ...Array(plan.faders || 0).fill('auto')].join(' ') || '1fr' : '';
+  // (two rows, each at least a knob tall, when the rack has two: a fader stands in both)
+  if(body && body.style) body.style.gridTemplateRows = plan.faders || plan.filter(p => p.as === 'knob').length > RACK.cols ? 'minmax(92px, auto) minmax(92px, auto)' : '';
   for(const f of fields){
     const p = plan.find(q => q.i === f.i), as = p ? p.as : 'row';
     f.field.classList.toggle('as-knob', as === 'knob'); f.field.classList.toggle('as-fader', as === 'fader'); f.field.classList.toggle('as-row', as === 'row');
+    // a fader stands in its own column at the right, both rows; a knob finds its own cell
+    if(f.field.style){ f.field.style.gridColumn = as === 'fader' && p.col ? String(p.col) : ''; f.field.style.gridRow = as === 'fader' ? '1 / span 2' : ''; }
     for(const [kind, make] of [['knob', knobSkin], ['fader', faderSkin]]){
       const sk = f.input['_' + kind + 'Skin'];
       if(as === kind){ const k = make(f.input); if(k && k.parentNode !== f.field) f.field.insertBefore(k, f.field.firstChild); }

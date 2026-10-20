@@ -179,7 +179,7 @@ export const TEXTURE_PARAMS = {
                   sliderOf('fluff', 'Fluff', 15),
                   sliderOf('curl', 'Curl', 30),
                   sliderOf('splits', 'Splits', 30),
-                  sliderOf('marks', 'Markings', 0, { ticks:[0,33,66,100], names:['Plain','Bars','Bars','Eyes'] }),
+                  sliderOf('marks', 'Markings', 0, { ticks:[0,33,60,100], names:['Plain','Light Bars','Bold Bars','Eyes'] }),
                   sliderOf('depth', 'Depth', 50),
                   sliderOf('lift', 'Lift', 50)],
   flowers:       [sliderOf('zoom', 'Bloom Size', 150, { min:50, max:450, unit:'%' }),
