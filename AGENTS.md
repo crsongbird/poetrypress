@@ -25,7 +25,8 @@ Related files:
 - **OPEN-ISSUES.md**: open items only.
 - **CHANGELOG.md**: the newest twenty releases (older ones: docs/changelog-archive.md).
 - **docs/**: the long reference, read when you touch its subject: light.md, ui-machinery.md, athanor.md,
-  surfaces.md (each surface's notes), pitfalls.md; SIMPLIFY.md; prior-art/ (the research behind each surface).
+  surfaces.md (each surface's notes), pitfalls.md; SIMPLIFY.md; prior-art/ (the research behind each surface);
+  renderer-pass.md (every surface onto the new renderer) and scene-ideas.md (scenes to build), both ROADMAP Stage 3.
 - **PERFORMANCE-AUDIT.md**: the measurements.
 - **PML.md**: the markup.
 - **README.md**: for people, not builders. Keep it brief, with room left for
