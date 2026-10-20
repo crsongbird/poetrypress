@@ -19,6 +19,7 @@ import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
 import { KEPT, FORGE_BAR, fill } from './strings.js';
+import { WIKI_PARTS } from './athanorWikiParts.js';
 import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiWalkNeighbors, wikiWalks, WIKI_FIGURES } from './athanorWiki.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
@@ -26,7 +27,7 @@ const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow
 
 // ---- the parts: every node a step of steps.js (shared with the textures
 // rebuilt as chains) — ports, params and category as the editor shows them
-export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: s.doc || '', ins: s.ins, outs: s.outs, params: s.params,
+export const FORGE_NODES = Object.fromEntries(Object.entries(STEPS).map(([k, s]) => [k, { cat: s.cat, label: s.label, doc: (WIKI_PARTS[k] || {}).line || '', ins: s.ins, outs: s.outs, params: s.params,
   inTypes: s.inTypes, outTypes: s.outTypes, dataIns: s.dataIns, paramPorts: s.paramPorts, required: s.required || [], maps: s.maps || [], mapsSince: s.mapsSince || {}, hidden: !!s.hidden }]));
 export const FORGE_CATEGORIES = STEP_CATEGORIES;
 /**

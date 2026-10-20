@@ -2137,7 +2137,6 @@ export const GEN_STEPS = {
   // DIFFRACTION SPIKES (Webb's process part): a telescope's stars, six and two spikes or four
   spikes: { cat: 'Marks', label: 'Diffraction Spikes', ins: ['where'], outs: ['stars', 'spikes', 'tips'], io: { ins: ['field'], outs: ['field', 'field', 'field'] },
     params: [GEN_R('style', 'Telescope: Webb · Hubble', 0), GEN_R('count', 'Spiked Stars', 30), GEN_R('length', 'Spike Length', 50), GEN_R('dots', 'Other Stars', 50), GEN_R('turn', 'Turn', 0, -30, 30), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 3,
-    doc: 'A starfield as a space telescope sees it: the brightest few with diffraction spikes (Webb’s six and two, or Hubble’s four), soft stars and pinpoints; the spikes alone, and their outer parts, to colour apart.',
     run(E, n){ const { ww, wh, unit, num } = E, w = E.input(n, 1);
       const o = { seed: genSeed(E, n) ^ 0x5b1c, style: SPIKE_STYLES[Math.min(1, Math.floor(num(n, 'style', 0)/50))], count: num(n, 'count', 30)/100, length: num(n, 'length', 50)/100, dots: num(n, 'dots', 50)/100,
         turn: num(n, 'turn', 0), where: w == null ? null : E.asField(w) };
@@ -2147,7 +2146,6 @@ export const GEN_STEPS = {
     io: { ins: ['value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [GEN_R('world', 'World: Seeded · Gas · Rocky · Ice · Cratered · Molten', 0), GEN_R('frame', 'Framing: Seeded · Centred · Close · Horizon · Eclipse · Belt · System · Black Hole · Pulsar', 0),
       GEN_R('size', 'Size', 100, 40, 250), GEN_R('moons', 'Moons', 40), GEN_R('ring', 'Rings', 50), GEN_R('detail', 'Detail', 50), GEN_R('turn', 'Turn', 0, -90, 90), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
-    doc: 'Worlds in the light: a planet’s disc, its terminator from the dial, bands or continents or craters wrapped round it, rings with a near and a far half and their shadows, the air at its rim; framed by the seed.',
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1), h = E.input(n, 2), sixth = (k, m) => Math.min(m - 1, Math.floor(num(n, k, 0)/100*m));
       const o = { seed: genSeed(E, n) ^ 0x51ab, world: ORB_WORLDS[sixth('world', 6)], frame: ORB_FRAMES[sixth('frame', 9)], size: num(n, 'size', 100)/100, moons: num(n, 'moons', 40)/100,
         ring: num(n, 'ring', 50)/100, detail: num(n, 'detail', 50)/100, turn: num(n, 'turn', 0)*Math.PI/180, toward: { x: -dial.x, y: -dial.y },
@@ -2163,7 +2161,6 @@ export const GEN_STEPS = {
       GEN_R('lens', 'Lens', 75, 30, 120), GEN_R('place', 'Stand At', 0, -100, 100), GEN_R('daylight', 'Daylight', 80), GEN_R('air', 'Air', 50), GEN_R('build', 'Construction', 35),
       GEN_R('builders', 'Builders: Seed · Wilds · Engineers · Cities · Magi · Ruins', 0), GEN_R('landforms', 'Landforms', 50), GEN_R('cities', 'Cities', 25), GEN_R('traffic', 'Traffic', 50),
       ['placeBy', 'Stand', 'select', 'at Stand At', { options: ['at Stand At', 'where the seed says'] }], ['saturn', 'Saturn', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }]], cost: () => 9,
-    doc: 'A ringworld seen from its floor: maps of what each pixel looks at — the ground near you, the ring rising far off into the arch overhead, its rim walls, the star, the shadow squares, what its builders raised, open space.',
     // (a dial wired in is the camera — the Camera Dial: its turn where you look round the ring, its view how far up (at the
     //  middle, straight up at the arch; at the rim, level; past it, a little down), its zoom the lens. The Light Dial is
     //  the day: its height the time (overhead noon, at the rim dusk, past it night), its direction which way dusk comes)
@@ -2178,7 +2175,6 @@ export const GEN_STEPS = {
   // looks, and how much of it a pixel spans — for Noise at Coordinates (or a Lookup) to lay anything on the same plank
   groundview: { cat: 'Shape', label: 'Ground Coordinates', ins: [], outs: ['across', 'down', 'detail'], io: { outs: ['field', 'field', 'field'] },
     params: [GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 1,
-    doc: 'Where on the page’s plane each pixel looks, through the ground camera that Wood and Discharge share: across, down, and how much a pixel spans there.',
     run(E, n){ const { ww, wh, unit, N, num } = E, cam = groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       const X = new Float32Array(N), Y = new Float32Array(N), D = new Float32Array(N);
       for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, sx = (x + 0.5)/unit, sy = (y + 0.5)/unit;
@@ -2188,13 +2184,11 @@ export const GEN_STEPS = {
   mapnoise: { cat: 'Noise', label: 'Noise at Coordinates', ins: ['across', 'down', 'detail'], outs: ['noise', 'slope'], io: { ins: ['field', 'field', 'field'], outs: ['field', 'field'] },
     params: [GEN_R('size', 'Size', 100, 1, 1000), GEN_R('octaves', 'Octaves', 8, 1, 14), GEN_R('rough', 'Roughness', 50), GEN_R('ridges', 'Ridges', 0), GEN_R('warp', 'Warp', 0), GEN_R('variation', 'Variation', 0, 0, 99),
       GEN_R('steep', 'Steepness', 0)], cost: () => 4,
-    doc: 'Noise read wherever two maps say: laid on a ring, a polar wrap or a perspective, never repeating, never finer than a pixel where it lands.',
     run(E, n){ const { N, num, input, asField } = E, X = asField(input(n, 1)), Y = asField(input(n, 2)), D = input(n, 3) != null ? asField(input(n, 3)) : null;
       return genMapNoise(X, Y, D, N, { size: num(n, 'size', 100)/100, octaves: num(n, 'octaves', 8), rough: 0.3 + 0.4*num(n, 'rough', 50)/100, ridges: num(n, 'ridges', 0)/100,
         warp: num(n, 'warp', 0)/100*2, steep: num(n, 'steep', 0)/100, seed: ((E.ctx.seed >>> 0) % 100003) + Math.round(num(n, 'variation', 0))*7919 }); } },
   raindrops: { cat: 'Marks', label: 'Raindrops', ins: [], outs: ['ripples', 'splashes', 'distance'], io: { outs: ['field', 'field', 'field'] },
     params: [GEN_R('size', 'Ripple Size', 100, 40, 250), GEN_R('rain', 'Rain', 50), GEN_R('spread', 'Spread', 50), GEN_R('splash', 'Splashes', 40), GEN_R('view', 'View', 35, 0, 85), GEN_R('variation', 'Variation', 0, 0, 99)], cost: () => 8,
-    doc: 'Rain falling on still water: every drop a ring wave spreading from where it struck, the newest still splashing, seen from above or across the water.',
     run(E, n){ const { num } = E;
       return genRaindrops(E.ww, E.wh, E.unit, { size: num(n, 'size', 100)/100, rain: num(n, 'rain', 50)/100, spread: num(n, 'spread', 50)/100, splash: num(n, 'splash', 40)/100,
         tilt: num(n, 'view', 35)/100, salt: ((E.ctx.seed >>> 0) + Math.round(num(n, 'variation', 0))*7919) >>> 0 }); } },
@@ -2342,7 +2336,6 @@ export const GEN_STEPS = {
     params: [GEN_R('count', 'Shards', 40), GEN_R('size', 'Size', 100, 30, 300), GEN_R('spread', 'Spread', 55), GEN_R('slivers', 'Slivers', 35), GEN_R('caustics', 'Caustics', 60),
       GEN_R('glints', 'Glints', 60), GEN_R('colors', 'Colored Glass', 25), GEN_R('shadows', 'Shadows', 50), GEN_R('variant', 'Variation', 0, 0, 99),
       GEN_R('turn', 'Turn', 0, 0, 360), GEN_R('view', 'View', 0), GEN_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 10,
-    doc: 'Broken glass lying on the page, or on a picture: sharp shards, a little tilted, lit by the light dial, each throwing its light beside it.',
     run(E, n){ const { ww, wh, unit, num, input } = E, dial = genDial(E, n, 2), h = input(n, 3), pic = input(n, 1);
       const o = { count: num(n, 'count', 40)/100, size: num(n, 'size', 100)/100, spread: num(n, 'spread', 55)/100, slivers: num(n, 'slivers', 35)/100, caustics: num(n, 'caustics', 60)/100,
         glints: num(n, 'glints', 60)/100, colors: num(n, 'colors', 25)/100, shadows: num(n, 'shadows', 50)/100, deg: dial.deg,
@@ -2358,7 +2351,6 @@ export const GEN_STEPS = {
   dewwebs: { cat: 'Marks', label: 'Dewy Webs', ins: ['light from'], outs: ['silk', 'glints', 'dew'], io: { ins: ['value'], outs: ['field', 'image', 'field'] },
     params: [GEN_R('webs', 'Webs', 30), GEN_R('size', 'Size', 100, 40, 250), GEN_R('dew', 'Dew', 60), GEN_R('drops', 'Drop Size', 100, 30, 300), GEN_R('torn', 'Torn', 20),
       GEN_R('sag', 'Sag', 40), GEN_R('irid', 'Iridescence', 50), GEN_R('threads', 'Threads', 50), GEN_R('width', 'Thread Width', 100, 30, 300), GEN_R('variant', 'Variation', 0, 0, 99)], cost: () => 5,
-    doc: 'Orb webs strung across the page and beaded with dew: the silk, its glints in the colours thin silk makes, and the drops, each a tiny lens.',
     run(E, n){ const { ww, wh, unit, num } = E, dial = genDial(E, n, 1);
       const o = { webs: num(n, 'webs', 30)/100, size: num(n, 'size', 100)/100, dew: num(n, 'dew', 60)/100, dropSize: num(n, 'drops', 100)/100, torn: num(n, 'torn', 20)/100,
         sag: num(n, 'sag', 40)/100, irid: num(n, 'irid', 50)/100, threads: num(n, 'threads', 50)/100, width: num(n, 'width', 100)/100, deg: dial.deg };

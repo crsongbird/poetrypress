@@ -10,7 +10,7 @@
  */
 import { readFileSync } from 'fs';
 globalThis.document = { createElement: () => ({ getContext: () => null }) };
-const { STEPS, poemRuns, stepDistance } = await import('../steps.js');
+const { STEPS, poemRuns, stepDistance } = await import('../steps.js'), { WIKI_PARTS } = await import('../athanorWikiParts.js');
 const { evalAthanor, athanorStarter } = await import('../athanor.js');
 const { textureKeyFor } = await import('../textureGenerators.js');
 let failures = 0;
@@ -48,7 +48,7 @@ check('The Poem has a Rhymes output and a rhyme to pick', STEPS.poem.outs.includ
   check('…each as strong as Shape Strength says', Math.abs(h[7] - 0.4) < 1e-9);
   const { wordsRoom } = await import('../texCore.js'), t = '0.4,0.4,0.6,0.5,0,0,0', full = wordsRoom({ around: 1, text: t }, 20, 20), half = wordsRoom({ around: 0.5, text: t }, 20, 20);
   check('the words\' room: none on the words at full strength, half at half, the page far off untouched', full[10*20 + 10] === 0 && Math.abs(half[10*20 + 10] - 0.5) < 1e-6 && full[0] === 1 && half[0] === 1 && wordsRoom({ text: t }, 20, 20) === null); }
-check('every new part has its doc', ['poem', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma'].every(k => STEPS[k] && STEPS[k].doc.length > 40));
+check('every new part has its doc', ['poem', 'grow', 'pixelate', 'twirl', 'mirror', 'chroma'].every(k => STEPS[k] && (WIKI_PARTS[k] || {}).line.length > 40));
 check('the Ripples from the Words starter teaches with The Poem', /"name":"poem"/.test(JSON.stringify(athanorStarter('ripples'))));
 
 // PUNCTUATION (ROADMAP G2): the page's "x,y,mark" points, read by The Poem's ninth output; every reader of the runs passes them over

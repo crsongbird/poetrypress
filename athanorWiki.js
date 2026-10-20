@@ -504,7 +504,7 @@ function wkPartHtml(k, ctx){
   const word = n => String(n).replace(/colour/g, 'color').replace(/\bgrey\b/g, 'gray').replace(/^field$/, 'map').replace(/^image$/, 'picture');
   const row = (name, kind, text, extra = '') => `<tr><td><b>${wkEsc(word(name))}</b>${extra}</td><td>${wkKindChip(kind)}</td><td>${wkLinks(wkEsc(text || ''), ctx)}</td></tr>`;
   let h = `<p class="wk-kicker"><a href="#" data-wiki="cat:${wkEsc(cat)}">${wkEsc(catName)}</a> · part</p>`;
-  h += `<p class="wk-lead">${wkEsc(W.line || S.doc || '')}</p>`;
+  h += `<p class="wk-lead">${wkEsc(W.line || '')}</p>`;
   if(W.about) h += `<p>${wkLinks(wkEsc(W.about), ctx)}</p>`;
   if(ins.length) h += `<h3>Inputs</h3><table class="wk-table">` + ins.map((n, i) => row(n, inT[i] || 'field', (W.ins || {})[n], req.includes(i + 1) ? ' <span class="wk-req" title="Required: see Required inputs">required</span>' : '')).join('') + `</table>`;
   if(S.outs.length) h += `<h3>Outputs</h3><table class="wk-table">` + S.outs.map((n, i) => row(n, outT[i] || 'field', (W.outs || {})[n])).join('') + `</table>`;
@@ -525,7 +525,7 @@ function wkPartHtml(k, ctx){
 function wkCatHtml(cat, ctx){
   const parts = Object.entries(STEPS).filter(([, s]) => s.cat === cat).sort((a, b) => a[1].label.localeCompare(b[1].label));
   return `<p class="wk-lead">${wkEsc((ctx && ctx.catDoc && ctx.catDoc(cat)) || '')}</p><dl class="wk-gloss">`
-    + parts.map(([k, s]) => `<dt><a href="#" data-wiki="part:${k}">${wkEsc(s.label)}</a></dt><dd>${wkEsc((WIKI_PARTS[k] || {}).line || s.doc || '')}</dd>`).join('') + '</dl>';
+    + parts.map(([k, s]) => `<dt><a href="#" data-wiki="part:${k}">${wkEsc(s.label)}</a></dt><dd>${wkEsc((WIKI_PARTS[k] || {}).line || '')}</dd>`).join('') + '</dl>';
 }
 /** An article's first sentence, as plain text (a section's page lists each page with it). */
 const wkFirst = id => { const a = wkArticle(id); if(!a) return '';
@@ -599,8 +599,8 @@ export function wikiSearch(q){
     const lb = body.toLowerCase(), times = q.length > 1 ? lb.split(q).length - 1 : 0, start = (wikiPlace(a.id) || {}).sec && wikiPlace(a.id).sec.walk ? 0.6 : 0;
     const score = t === q ? 7 : t.startsWith(q) ? 6 : t.includes(q) ? 5 : heads.some(h => h.includes(q)) ? 3 + start : times ? 1.5 + Math.min(1, times/6) + start : 0;
     if(score) hits.push({ id: a.id, title: a.title, score, snip: score < 5 ? snipOf(body) : snipOf(body) || '' }); }
-  for(const [k, s] of Object.entries(STEPS)){ if(s.hidden) continue; const W = WIKI_PARTS[k] || {}, t = s.label.toLowerCase(), body = plain([W.line, W.about, s.doc, ...Object.values(W.set || {})].join(' '));
+  for(const [k, s] of Object.entries(STEPS)){ if(s.hidden) continue; const W = WIKI_PARTS[k] || {}, t = s.label.toLowerCase(), body = plain([W.line, W.about, ...Object.values(W.set || {})].join(' '));
     const score = t === q ? 6.5 : t.startsWith(q) ? 4.5 : t.includes(q) ? 4 : body.toLowerCase().includes(q) ? 1 : 0;
-    if(score) hits.push({ id: 'part:' + k, title: s.label, score, snip: score < 4 ? snipOf(body) : (W.line || s.doc || '') }); }
+    if(score) hits.push({ id: 'part:' + k, title: s.label, score, snip: score < 4 ? snipOf(body) : (W.line || '') }); }
   return hits.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title)).slice(0, 30);
 }

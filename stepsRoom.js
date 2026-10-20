@@ -252,7 +252,6 @@ export const ROOM_STEPS = {
     io: { ins: ['value', 'value', 'value'], outs: ['field', 'field', 'field', 'field', 'field', 'field', 'field'] },
     params: [RM_R('kind', ROOM_KIND_LABEL, 0), RM_R('reach', 'Reach', 50), RM_R('ceiling', 'Ceiling', 50), RM_R('width', 'Width', 50), RM_R('lights', 'Lights', 60),
       RM_R('failing', 'Failing Lights', 25), RM_R('strange', 'Strangeness', 30), RM_R('variant', 'Variation', 0, 0, 99)], cost: () => 8,
-    doc: 'An empty place built for passing through, cast as a ray-caster casts one: a corridor, a lobby, the poolrooms, a garage. The seed picks the kind, its layout, its lights and where the camera stands; it hands on which surface each point is, how far, the light, each surface’s pattern, the lamps, the water and the shade.',
     run(E, n){ const { ww, wh, num } = E, sel = Math.min(ROOM_KIND_KEYS.length, Math.floor(num(n, 'kind', 0)/100*(ROOM_KIND_KEYS.length + 1)));
       const seed = (((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0) ^ 0x2f6b;
       const tv = E.input(n, 1), vv = E.input(n, 2), zv = E.input(n, 3), cam = E.ctx.camera || {};

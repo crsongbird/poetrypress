@@ -164,7 +164,6 @@ export const PATTERN_STEPS = {
       // (SIZE ×: Size's range, made larger, for marks that are whole things — a fallen flower, a bouquet's heads)
       PAT_R('big', 'Size ×', 100, 100, 400), PAT_SEL('ground', 'Picture’s Ground', ['solid', 'black is clear'])],
     cost: () => 3,
-    doc: 'Scatters copies of a mark across the page (dots, stars, sigils, glyphs or any picture), each with its own size, turn, brightness and, if you like, color.',
     run(E, n){ const { ww, wh, N, unit, input, num, P, asField, asImage, carea, readCanvas } = E;
       const shape = P(n, 'shape', 'dot'), where = asField(input(n, 2)), way = asField(input(n, 3));
       const tinted = P(n, 'color', 'white') === 'from the picture', layers = P(n, 'layers', 'brightest');
@@ -252,7 +251,6 @@ export const PATTERN_STEPS = {
   grid: { cat: 'Noise', label: 'Grid & Dots', ins: [], outs: ['pattern'], maps: ['weight'],
     params: [PAT_SEL('kind', 'Pattern', ['checker', 'grid lines', 'dots', 'hex dots', 'diamonds', 'stripes']), PAT_R('cells', 'Cells', 12, 2, 120), PAT_R('weight', 'Line or Dot Size', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('soft', 'Softness', 10)],
     cost: () => 1,
-    doc: 'A regular pattern: checkerboard, grid lines, dots in rows or in a honeycomb, diamonds, or stripes.',
     run(E, n){ const { ww, wh, unit, P, num, map, at, field } = E;
       const kind = P(n, 'kind', 'checker'), c = Math.max(2, num(n, 'cells', 12)), a = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a);
       const WT = map(n, 'weight', 30), SF = num(n, 'soft', 10)/100*0.25 + 0.01;
@@ -274,7 +272,6 @@ export const PATTERN_STEPS = {
     // (Inset Box: the frame measured from the page's inset box, its offset and corners — ROADMAP F3)
     params: [PAT_SEL('shape', 'Shape', ['square', 'rounded', 'oval', 'inset box']), PAT_R('width', 'Width', 12, 0, 50), PAT_R('soft', 'Softness', 50), PAT_R('rough', 'Roughness', 0)],
     cost: () => 1,
-    doc: 'A frame-shaped mask from the page’s edges: white at the edge, fading to black inward.',
     run(E, n){ const { ww, wh, unit, P, num, input, asField, field } = E;
       const shape = P(n, 'shape', 'square'), W = Math.max(0.001, num(n, 'width', 12)/100*unit), soft = Math.max(0.02, num(n, 'soft', 50)/100), rough = num(n, 'rough', 0)/100, R = asField(input(n, 1));
       const box = shape === 'inset box' ? patBox(E) : null;
@@ -294,7 +291,6 @@ export const PATTERN_STEPS = {
   insetbox: { cat: 'Inputs', label: 'Inset Box', ins: [], outs: ['inside', 'edge', 'line'],
     params: [PAT_R('width', 'Edge Width', 10, 1, 50), PAT_R('soft', 'Softness', 0)],
     cost: () => 1,
-    doc: 'The page’s inset box as masks: white inside it, a rise in from its edge, and its line. With the box off, the page’s own edges.',
     run(E, n){ const { N, ww, wh, unit, num, field } = E;
       const B = patBox(E), W = Math.max(0.5, num(n, 'width', 10)/100*unit), sf = Math.max(0.75, num(n, 'soft', 0)/100*unit*0.2), half = Math.max(0.5, B.thick/2);
       const D = new Float32Array(N); let q = 0; for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) D[q++] = B.d(x + 0.5, y + 0.5);
@@ -308,7 +304,6 @@ export const PATTERN_STEPS = {
   lookup: { cat: 'Shape', label: 'Lookup', ins: ['picture', 'across', 'down'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 100), PAT_SEL('edges', 'At the Edges', ['repeat', 'mirror', 'clamp']), PAT_R('scale', 'Scale', 100, 10, 400)],
     cost: () => 1,
-    doc: 'Rebuilds a picture by reading it at positions given by two gray maps.',
     run(E, n){ const { ww, wh, N, input, num, map, at, P, asImage, asField } = E;
       const pic = asImage(input(n, 1)); if(!pic) return null;
       const AX = asField(input(n, 2)), AY = asField(input(n, 3)), A = map(n, 'amount', 100), sc = num(n, 'scale', 100)/100, mode = P(n, 'edges', 'repeat');
@@ -325,7 +320,6 @@ export const PATTERN_STEPS = {
   displace: { cat: 'Shape', label: 'Displace', ins: ['picture', 'by'], outs: ['picture'], maps: ['amount'], io: { ins: ['image', 'field'], outs: ['image'] }, req: true,
     params: [PAT_R('amount', 'Amount', 30), PAT_R('blur', 'Smoothing', 20)],
     cost: () => 1.5,
-    doc: 'Bends a picture as if seen through glass shaped like a gray map.',
     run(E, n){ const { ww, wh, N, unit, input, num, map, at, asImage, asField, boxBlur } = E;
       const pic = asImage(input(n, 1)); if(!pic) return null;
       let by = asField(input(n, 2)); if(!by) return [pic];
@@ -344,7 +338,6 @@ export const PATTERN_STEPS = {
     params: [PAT_R('size', 'Size', 60, 1, 200), PAT_R('height', 'Height', 60, 5, 100), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
       PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
     cost: () => 1,
-    doc: 'An ellipse, or rings of them like orbits, filled or drawn as lines; also how far out from its center each point is, and how far around.',
     run(E, n){ const { ww, wh, N, unit, num } = E;
       const A = Math.max(1e-3, num(n, 'size', 60)/200), B = Math.max(1e-3, A*num(n, 'height', 60)/100), an = num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(an), sa = Math.sin(an);
       const cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
@@ -365,7 +358,6 @@ export const PATTERN_STEPS = {
     params: [PAT_R('sides', 'Sides', 6, 3, 12), PAT_R('star', 'Star', 0), PAT_R('size', 'Size', 60, 1, 200), PAT_R('angle', 'Turn', 0, 0, 360), PAT_R('x', 'Across', 50), PAT_R('y', 'Down', 50),
       PAT_R('rings', 'Rings', 1, 1, 40), PAT_R('line', 'Line Width', 0), PAT_R('soft', 'Softness', 4)],
     cost: () => 1,
-    doc: 'A regular polygon or a star, or rings of them, filled or drawn as lines; also a bevel that rises to its center, and how far around each point is.',
     run(E, n){ const { ww, wh, N, unit, num } = E;
       const sides = Math.max(3, Math.min(12, Math.round(num(n, 'sides', 6)))), star = num(n, 'star', 0)/100, R = Math.max(1e-3, num(n, 'size', 60)/200);
       const an = num(n, 'angle', 0)*Math.PI/180, cx = num(n, 'x', 50)/100*ww/unit, cy = num(n, 'y', 50)/100*wh/unit, K = Math.max(1, Math.round(num(n, 'rings', 1)));
@@ -389,7 +381,6 @@ export const PATTERN_STEPS = {
   mesh: { cat: 'Marks', label: 'Triangle Mesh', ins: ['where'], outs: ['lines', 'points', 'facets'],
     params: [PAT_R('count', 'Points', 40, 3, 400), PAT_R('even', 'Evenness', 50), PAT_R('prune', 'Thin Out', 0), PAT_R('line', 'Line Width', 15), PAT_R('dot', 'Point Size', 20), PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 3,
-    doc: 'Scattered points joined into triangles (a Delaunay mesh): its lines, its points, and each triangle a flat gray of its own.',
     run(E, n){ const { ww, wh, N, input, num, asField, readCanvas } = E;
       const where = asField(input(n, 1)), count = Math.max(3, Math.min(400, Math.round(num(n, 'count', 40)))), tries = 1 + Math.round(num(n, 'even', 50)/100*12);
       const prune = num(n, 'prune', 0)/100, lw = num(n, 'line', 15)/100*10, dot = num(n, 'dot', 20)/100*14;
@@ -420,7 +411,6 @@ export const PATTERN_STEPS = {
   blocks: { cat: 'Noise', label: 'Blocks', ins: [], outs: ['blocks', 'outlines'],
     params: [PAT_R('scale', 'Scale', 6, 1, 60), PAT_R('octaves', 'Octaves', 3, 1, 5), PAT_R('fill', 'Density', 60), PAT_R('line', 'Line Width', 12), PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 2,
-    doc: 'Rectangles of random gray laid at several sizes over each other; their outlines alone are a circuitry of lines (Filter Forge’s Techno).',
     run(E, n){ const { ww, wh, N, unit, num, readCanvas } = E;
       const cells0 = Math.max(1, num(n, 'scale', 6)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 3)))), fill = num(n, 'fill', 60)/100, lw = num(n, 'line', 12)/100*8;
       const mk = bg => { const c = document.createElement('canvas'); c.width = ww; c.height = wh; const x = c.getContext('2d', CPU); x.fillStyle = bg; x.fillRect(0, 0, ww, wh); return [c, x]; };
@@ -442,7 +432,6 @@ export const PATTERN_STEPS = {
     params: [PAT_R('rows', 'Rows', 8, 2, 40), PAT_R('irreg', 'Irregularity', 50), PAT_R('gap', 'Joint Width', 20), PAT_R('round', 'Roundness', 30),
       PAT_R('bevel', 'Bevel Width', 30), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 3,
-    doc: 'Paving stones laid in rows, each row its own height and each stone its own width, a little out of true, with joints between: for paths, walls and flagstones.',
     run(E, n){ const { ww, wh, N, unit, num, readCanvas } = E;
       const rows = Math.max(2, num(n, 'rows', 8)), irr = num(n, 'irreg', 50)/100, rh = unit/rows, gap = num(n, 'gap', 20)/100*rh*0.25;
       const round = num(n, 'round', 30)/100*rh*0.35, bev = Math.max(1, num(n, 'bevel', 30)/100*rh*0.4), a = num(n, 'angle', 0)*Math.PI/180;
@@ -488,7 +477,6 @@ export const PATTERN_STEPS = {
   pyramids: { cat: 'Noise', label: 'Pyramids', ins: [], outs: ['heights', 'cells'],
     params: [PAT_R('scale', 'Scale', 10, 1, 80), PAT_R('octaves', 'Octaves', 1, 1, 5), PAT_R('round', 'Roundness', 0), PAT_R('vary', 'Height Variety', 50), PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 1,
-    doc: 'A grid of pyramids, cones or domes, each of its own height, at one or more sizes: heights for studs, rivets and tiles.',
     run(E, n){ const { ww, wh, N, unit, num } = E;
       const cells0 = Math.max(1, num(n, 'scale', 10)), oct = Math.max(1, Math.min(5, Math.round(num(n, 'octaves', 1)))), rd = num(n, 'round', 0)/100, vary = num(n, 'vary', 50)/100;
       const H = new Float32Array(N), id = new Float32Array(N); let norm = 0;
@@ -509,7 +497,6 @@ export const PATTERN_STEPS = {
   noisegrad: { cat: 'Light & Color', label: 'Noise Gradient', ins: ['field', 'color a', 'color b'], outs: ['picture'], io: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
     params: [PAT_R('stops', 'Stops', 8, 2, 32), PAT_R('drift', 'Color Drift', 40), PAT_R('smooth', 'Smoothness', 70), ['ca', 'Color A', 'text', '#14102A'], ['cb', 'Color B', 'text', '#E8C8E0'], PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 1,
-    doc: 'Colors a gray map with a gradient of many stops between two colors, each stop straying from the line between them, so the colors drift.',
     run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
       const f = asField(input(n, 1)), K = Math.max(2, Math.min(32, Math.round(num(n, 'stops', 8)))), drift = num(n, 'drift', 40)/100, sm = num(n, 'smooth', 70)/100;
       const ca = input(n, 2), cb = input(n, 3), A = Array.isArray(ca) ? ca : patHex(P(n, 'ca', '#14102A')), B = Array.isArray(cb) ? cb : patHex(P(n, 'cb', '#E8C8E0'));
@@ -527,14 +514,12 @@ export const PATTERN_STEPS = {
   // FILTER FORGE'S EXTRACT HSB and ASSEMBLE HSB: a picture as hue, saturation and brightness, and back
   splithsb: { cat: 'Combine', label: 'Split HSB', ins: ['picture'], outs: ['hue', 'saturation', 'brightness'], io: { ins: ['image'], outs: ['field', 'field', 'field'] }, req: true,
     params: [], cost: () => 1,
-    doc: 'Splits a picture into three gray maps: its hue (around the color wheel), its saturation and its brightness.',
     run(E, n){ const { N, input, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
       const h = new Float32Array(N), s = new Float32Array(N), v = new Float32Array(N);
       for(let i = 0; i < N; i++){ const c = patHsv([patClamp(im.r[i]), patClamp(im.g[i]), patClamp(im.b[i])]); h[i] = c[0]; s[i] = c[1]; v[i] = c[2]; }
       return [h, s, v]; } },
   mergehsb: { cat: 'Combine', label: 'Merge HSB', ins: ['hue', 'saturation', 'brightness'], outs: ['picture'], io: { ins: ['field', 'field', 'field'], outs: ['image'] },
     params: [], cost: () => 1,
-    doc: 'Makes a picture from three gray maps: a hue, a saturation and a brightness (an empty one is red, full, bright).',
     run(E, n){ const { N, input, asField } = E; const h = asField(input(n, 1)), s = asField(input(n, 2)), v = asField(input(n, 3)); if(!h && !s && !v) return null;
       const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
       for(let i = 0; i < N; i++){ const c = patRgb([((h ? h[i] : 0) % 1 + 1) % 1, patClamp(s ? s[i] : 1), patClamp(v ? v[i] : 1)]); o.r[i] = c[0]; o.g[i] = c[1]; o.b[i] = c[2]; }
@@ -542,14 +527,12 @@ export const PATTERN_STEPS = {
   // FILTER FORGE'S EXTRACT LAB and ASSEMBLE LAB: lightness as the eye sees it, and two color axes
   splitlab: { cat: 'Combine', label: 'Split Lab', ins: ['picture'], outs: ['lightness', 'green–red', 'blue–yellow'], io: { ins: ['image'], outs: ['field', 'field', 'field'] }, req: true,
     params: [], cost: () => 1.5,
-    doc: 'Splits a picture into lightness as the eye sees it (CIE Lab) and two color axes, green to red and blue to yellow.',
     run(E, n){ const { N, input, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
       const L = new Float32Array(N), A = new Float32Array(N), B = new Float32Array(N);
       for(let i = 0; i < N; i++){ const c = patToLab(patClamp(im.r[i]), patClamp(im.g[i]), patClamp(im.b[i])); L[i] = c[0]; A[i] = c[1]; B[i] = c[2]; }
       return [L, A, B]; } },
   mergelab: { cat: 'Combine', label: 'Merge Lab', ins: ['lightness', 'green–red', 'blue–yellow'], outs: ['picture'], io: { ins: ['field', 'field', 'field'], outs: ['image'] },
     params: [], cost: () => 1.5,
-    doc: 'Makes a picture from a lightness and two color axes (CIE Lab); an empty axis is neutral gray.',
     run(E, n){ const { N, input, asField } = E; const l = asField(input(n, 1)), a = asField(input(n, 2)), b = asField(input(n, 3)); if(!l && !a && !b) return null;
       const o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
       for(let i = 0; i < N; i++){ const c = patFromLab(l ? l[i] : 0.5, a ? a[i] : 0.5, b ? b[i] : 0.5); o.r[i] = c[0]; o.g[i] = c[1]; o.b[i] = c[2]; }
@@ -559,7 +542,6 @@ export const PATTERN_STEPS = {
   median: { cat: 'Shape', label: 'Median', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
     params: [PAT_R('radius', 'Radius', 10, 1, 100), PAT_R('rank', 'Percentile', 50)],
     cost: () => 3,
-    doc: 'Gives each point the middle value of those around it: specks and scratches vanish while edges stay sharp. Other percentiles darken or lighten.',
     run(E, n){ const { ww, wh, unit, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
       const r = Math.max(1, Math.round(num(n, 'radius', 10)*unit/1536*1.2)), p = num(n, 'rank', 50)/100;
       const ch = c => patRank(patRank(c, ww, wh, r, p, true), ww, wh, r, p, false);
@@ -569,7 +551,6 @@ export const PATTERN_STEPS = {
   mapswitch: { cat: 'Combine', label: 'Map Switch', ins: ['by', 'a', 'b', 'c', 'd'], outs: ['picture'], io: { ins: ['field', 'image', 'image', 'image', 'image'], outs: ['image'] }, req: true,
     params: [PAT_R('soft', 'Softness', 10)],
     cost: () => 1,
-    doc: 'A gray map chooses, point by point, which of up to four pictures shows: the darkest band shows A, the lightest the last one wired.',
     run(E, n){ const { N, input, num, asField, asImage } = E; const by = asField(input(n, 1)); if(!by) return null;
       const pics = [2, 3, 4, 5].map(j => input(n, j)).filter(v => v != null).map(asImage); if(!pics.length) return null;
       const K = pics.length, sf = num(n, 'soft', 10)/100*0.5, o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
@@ -583,7 +564,6 @@ export const PATTERN_STEPS = {
   flip: { cat: 'Shape', label: 'Flip', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
     params: [PAT_SEL('axis', 'Flip', ['left to right', 'top to bottom', 'both'])],
     cost: () => 0.5,
-    doc: 'Turns a picture over, left to right or top to bottom, as a mirror shows it.',
     run(E, n){ const { ww, wh, N, input, P, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
       const ax = P(n, 'axis', 'left to right'), fx = ax !== 'top to bottom', fy = ax !== 'left to right', o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
       for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, s = (fy ? wh - 1 - y : y)*ww + (fx ? ww - 1 - x : x); o.r[q] = im.r[s]; o.g[q] = im.g[s]; o.b[q] = im.b[s]; }
@@ -595,7 +575,6 @@ export const PATTERN_STEPS = {
   rotate: { cat: 'Shape', label: 'Rotate', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
     params: [PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('cx', 'Center Across', 50), PAT_R('cy', 'Center Down', 50), PAT_SEL('edges', 'Past the Edges', ['repeat', 'mirror', 'stretch the edge'])],
     cost: () => 1,
-    doc: 'Turns a picture about a center anywhere on the page, by any angle; past its edges it repeats, mirrors or stretches.',
     run(E, n){ const { ww, wh, input, num, P, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
       const a = -num(n, 'angle', 0)*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a), cx = num(n, 'cx', 50)/100*ww, cy = num(n, 'cy', 50)/100*wh;
       return [patResample(im, ww, wh, P(n, 'edges', 'repeat'), (x, y) => { const dx = x - cx, dy = y - cy; return [cx + dx*ca - dy*sa, cy + dx*sa + dy*ca]; })]; } },
@@ -603,7 +582,6 @@ export const PATTERN_STEPS = {
     params: [PAT_R('scale', 'Scale', 100, 10, 400), PAT_R('stretch', 'Stretch', 0, -100, 100), PAT_R('cx', 'Center Across', 50), PAT_R('cy', 'Center Down', 50),
       PAT_SEL('edges', 'Past the Edges', ['repeat', 'mirror', 'stretch the edge'])],
     cost: () => 1,
-    doc: 'Makes a picture larger or smaller about a center anywhere on the page, wider or taller by Stretch; past its edges it repeats, mirrors or stretches.',
     run(E, n){ const { ww, wh, input, num, P, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
       const k = Math.max(0.1, num(n, 'scale', 100)/100), st = num(n, 'stretch', 0)/100, kx = k*Math.pow(2, st), ky = k*Math.pow(2, -st);
       const cx = num(n, 'cx', 50)/100*ww, cy = num(n, 'cy', 50)/100*wh;
@@ -613,7 +591,6 @@ export const PATTERN_STEPS = {
   perspective: { cat: 'Shape', label: 'Perspective', ins: ['picture'], outs: ['picture'], io: { ins: ['image'], outs: ['image'] }, req: true,
     params: [PAT_R('tilt', 'Tilt', 50, 0, 95), PAT_R('scale', 'Scale', 100, 25, 400)],
     cost: () => 1,
-    doc: 'Lays a picture flat on the ground and looks at it at a slant: it shrinks toward the top of the page and repeats to the horizon.',
     run(E, n){ const { ww, wh, N, input, num, asImage } = E; const im = asImage(input(n, 1)); if(!im) return null;
       const t = num(n, 'tilt', 50)/100, sc = 100/Math.max(25, num(n, 'scale', 100)), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
       // the ground's depth at each row: 1 at the bottom (the picture as it is), farther toward the top
@@ -630,7 +607,6 @@ export const PATTERN_STEPS = {
     params: [PAT_R('stops', 'Colors Used', 3, 2, 5), PAT_SEL('blend', 'Transition', ['smooth', 'bands']),
       ['c1', 'Color 1', 'text', '#120C18'], ['c2', 'Color 2', 'text', '#7A3050'], ['c3', 'Color 3', 'text', '#F2C8A0'], ['c4', 'Color 4', 'text', '#80B0D0'], ['c5', 'Color 5', 'text', '#FFFFFF']],
     cost: () => 1,
-    doc: 'Colors a gray map with up to five colors: black takes the first, white the last.',
     run(E, n){ const { N, input, num, P, asField } = E;
       const f = asField(input(n, 1)); if(!f) return null;
       const k = Math.max(2, Math.min(5, Math.round(num(n, 'stops', 3)))), bands = P(n, 'blend', 'smooth') === 'bands';
@@ -649,7 +625,6 @@ export const PATTERN_STEPS = {
     maps: ['strength:4'],
     params: [PAT_R('radius', 'Radius', 22), PAT_R('aura', 'Aura', 60, 0, 200), PAT_R('strength', 'Strength', 85), PAT_R('auraK', 'Aura Strength', 45), PAT_R('core', 'Core', 45), ['hex', 'Color', 'text', '#FFE2B0']],
     cost: () => 2,
-    doc: 'Light given off where a gray map is bright: a colored halo, a wide aura and hot cores, laid over a picture in one step.',
     run(E, n){ const { N, unit, input, num, map, at, P, asField, asImage, boxBlur } = E;
       const pic = asImage(input(n, 1) ?? 0), src = asField(input(n, 2)); if(!src) return [pic];
       const w = input(n, 3), c = Array.isArray(w) ? w : patHex(P(n, 'hex', '#FFE2B0')), k = unit/1536*1.2;
@@ -665,7 +640,6 @@ export const PATTERN_STEPS = {
   spectrum: { cat: 'Noise', label: 'Spectrum', ins: ['along'], outs: ['picture'], io: { ins: ['field'], outs: ['image'] },
     params: [PAT_SEL('shape', 'Shape', ['linear', 'radial', 'around', 'along a map']), PAT_R('angle', 'Angle', 0, 0, 360), PAT_R('repeat', 'Repeat', 1, 1, 12), PAT_R('sat', 'Saturation', 80), PAT_R('light', 'Lightness', 55)],
     cost: () => 1,
-    doc: 'A rainbow: every hue in turn, across the page, from the center, around it, or along any gray map.',
     run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
       const shape = P(n, 'shape', 'linear'), along = asField(input(n, 1)), an = num(n, 'angle', 0)*Math.PI/180, rep = Math.max(1, num(n, 'repeat', 1)), s = num(n, 'sat', 80)/100, l = num(n, 'light', 55)/100;
       const ca = Math.cos(an), sa = Math.sin(an), o = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };

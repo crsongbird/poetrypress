@@ -284,7 +284,6 @@ export const NETWORK_STEPS = {
     params: [NW_R('weave', 'Weave: ' + NET_WEAVES.join(' · '), 0), NW_R('nodes', 'Nodes', 120, 3, 600), NW_R('even', 'Evenness', 60), NW_R('loops', 'Loops', 50), NW_R('hubs', 'Hubs', 3, 1, 8),
       NW_R('order', 'Hierarchy', 60), NW_R('style', 'Organic ↔ Circuit', 65), NW_R('wander', 'Wander', 30), NW_R('width', 'Line Width', 100, 30, 300), NW_R('pads', 'Pads', 50), NW_R('bus', 'Buses', 20),
       NW_R('pulses', 'Pulses', 30), NW_R('variant', 'Variation', 0, 0, 99)], cost: () => 10,
-    doc: 'A network with loops, not a tree: nodes where the map allows, joined one of six ways (a tree with loops added back, the relative or Gabriel graph, a slime mould’s tubes, streets, or faces split order by order), each line as wide as the flow it carries from the hubs, routed from organic curves to circuit traces at 45° and 90°, with pads, buses and pulses.',
     run(E, n){ const { ww, wh, num } = E, mn = Math.min(ww, wh), W = ww/mn, H = wh/mn;
       const fieldAt = f => f ? (x, y) => f[Math.min(wh - 1, Math.max(0, y*mn | 0))*ww + Math.min(ww - 1, Math.max(0, x*mn | 0))] : null;
       const whereF = E.asField(E.input(n, 1)), waysF = E.asField(E.input(n, 2)), hubF = E.asField(E.input(n, 3)), fv = E.input(n, 4);

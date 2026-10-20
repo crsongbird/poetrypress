@@ -1119,7 +1119,6 @@ function ugPane(E, n){
 
 Object.assign(TOUCH_STEPS, {
   scratches: { cat: 'Marks', label: 'Scratches', ins: ['light from', 'light height'], outs: ['scratches', 'glints'], io: { ins: ['value', 'value'], outs: ['field', 'field'] },
-    doc: 'Fine scratches in glass or a polished face: straight, in bunches, or swirled where a cloth wiped it, with the glints they throw toward the light.',
     params: [TOUCH_R('count', 'Scratches', 40), TOUCH_R('length', 'Length', 50), TOUCH_R('swirl', 'Swirl', 30), TOUCH_R('width', 'Width', 100, 30, 300), TOUCH_R('sharp', 'Glint Sharpness', 50), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 4,
     run(E, n){ const { ww, wh, unit, num } = E, L = ugLight(E, n, 1, 2), hot = ugUnit(ww/unit, wh/unit, L.deg, L.reach);
       const o = { count: num(n, 'count', 40)/100, length: num(n, 'length', 50)/100, swirl: num(n, 'swirl', 30)/100, width: num(n, 'width', 100)/100, sharp: num(n, 'sharp', 50)/100 };
@@ -1129,19 +1128,16 @@ Object.assign(TOUCH_STEPS, {
       for(let i = 0; i < G.length; i++) G[i] = Math.min(1, G[i] + bloom[i]*1.6);
       return [E.asField(E.readCanvas(sc)), G]; } },
   smudges: { cat: 'Marks', label: 'Smudges', ins: [], outs: ['oil', 'spots', 'dust'], io: { outs: ['field', 'field', 'field'] },
-    doc: 'What hands and weather leave on glass: fingerprints, smears, dried water spots and dust, each as its own gray map.',
     params: [TOUCH_R('prints', 'Fingerprints', 35), TOUCH_R('smears', 'Smears', 30), TOUCH_R('spots', 'Water Spots', 20), TOUCH_R('dust', 'Dust', 30), TOUCH_R('size', 'Size', 100, 40, 250), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 6,
     run(E, n){ const { ww, wh, unit, num } = E;
       const S = ugSmudges(ww, wh, unit, { prints: num(n, 'prints', 35)/100, smears: num(n, 'smears', 30)/100, spots: num(n, 'spots', 20)/100, dust: num(n, 'dust', 30)/100, size: num(n, 'size', 100)/100 }, E.px);
       return [S.oil, S.spots, E.asField(E.readCanvas(S.dust))]; } },
   reflection: { cat: 'Light & Color', label: 'Window Reflection', ins: ['light from', 'light height', 'bend'], outs: ['reflection'], io: { ins: ['value', 'value', 'field'], outs: ['field'] },
-    doc: 'The bright bands of a window mirrored in glass or a polished face, lying about where the light’s own reflection falls.',
     params: [TOUCH_R('bands', 'Bands', 2, 1, 5), TOUCH_R('width', 'Width', 100, 30, 300), TOUCH_R('soft', 'Softness', 35), TOUCH_R('slant', 'Slant', 20, -90, 90), TOUCH_R('sky', 'Sky', 30), TOUCH_R('ripple', 'Ripple', 50), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 2,
     run(E, n){ const { ww, wh, unit, num } = E, L = ugLight(E, n, 1, 2), B = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : null;
       return [ugReflection(ww, wh, unit, ugUnit(ww/unit, wh/unit, L.deg, L.reach), { bands: num(n, 'bands', 2), width: num(n, 'width', 100)/100, soft: num(n, 'soft', 35)/100, slant: num(n, 'slant', 20),
         sky: num(n, 'sky', 30)/100, ripple: num(n, 'ripple', 50)/100 }, B)]; } },
   shatter: { cat: 'Marks', label: 'Shatter', ins: [], outs: ['cracks', 'shards'], io: { outs: ['field', 'field'] },
-    doc: 'Glass broken by a blow: cracks running out from where it was struck, rings of cracks across them, and a gray for each piece.',
     params: [TOUCH_R('breaks', 'Breakage', 60), TOUCH_R('reach', 'Reach', 100, 40, 250), TOUCH_R('rays', 'Rays', 50), TOUCH_R('rings', 'Rings', 50), TOUCH_R('width', 'Crack Width', 100, 30, 300), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 3,
     run(E, n){ const { ww, wh, unit, num } = E, S = ugShatter(ww/unit, wh/unit, { breaks: num(n, 'breaks', 60)/100, reach: num(n, 'reach', 100)/100, rays: num(n, 'rays', 50)/100, rings: num(n, 'rings', 50)/100 });
       const [cc, cx] = kitCanvas(ww, wh), [sc, sx] = kitCanvas(ww, wh); cx.fillStyle = sx.fillStyle = '#000'; cx.fillRect(0, 0, ww, wh); sx.fillRect(0, 0, ww, wh);
@@ -1152,7 +1148,6 @@ Object.assign(TOUCH_STEPS, {
       return [E.asField(E.readCanvas(cc)), E.asField(E.readCanvas(sc))]; } },
   glasspane: { cat: 'Light & Color', label: 'Glass Pane', ins: ['picture', 'reflection', 'glints', 'oil', 'dust', 'spots', 'cracks', 'shards', 'waves'], outs: ['picture'],
     io: { ins: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'], outs: ['image'] },
-    doc: 'A sheet of glass over a picture (or over mid-gray, to lay on another surface): it bends what lies under it and adds the light the glass catches.',
     params: [TOUCH_R('reflect', 'Reflection', 60), TOUCH_R('glint', 'Glints', 80), TOUCH_R('smudge', 'Smudges', 60), TOUCH_R('dust', 'Dust', 70), TOUCH_R('bend', 'Bend', 30), TOUCH_R('edge', 'Edge', 0)], cost: () => 3,
     run(E, n){ return [ugPane(E, n)]; } },
 });

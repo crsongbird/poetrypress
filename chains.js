@@ -23,98 +23,99 @@
  */
 import { weaveGridDiv } from './stepsTouch.js';
 import { paramPort } from './steps.js';
+import { TEXTURE_PARAMS } from './textureParams.js';
 
 export const TEXTURE_CHAINS = {
   // ═══ 🜛 BASICS: quiet grounds, two or three parts each — the easiest graphs to open and learn from ═══
   // 🜛 Plain Noise: Value Noise → Levels
   plainnoise: { label: 'Plain Noise', div: 2, teach: 'A soft cloudy ground. Value Noise makes the clouds: Scale sets how many across the page, Detail adds finer clouds over them (octaves). Levels sets the Contrast by moving its dark and light points toward each other. Try: wire this noise into another part\'s gray input, a Warp or a Color Ramp.', nodes: [
-      ['knob', { slot: '1', name: 'Scale', def: 30 }, 40, 40],                     // 1
-      ['knob', { slot: '2', name: 'Detail', def: 50 }, 40, 140],                   // 2
-      ['knob', { slot: '3', name: 'Contrast', def: 20 }, 40, 240],                 // 3
+      ['knob', { slot: '1' }, 40, 40],                     // 1
+      ['knob', { slot: '2' }, 40, 140],                   // 2
+      ['knob', { slot: '3' }, 40, 240],                 // 3
       ['noise', { scale: 60, '~scale': '5,200', octaves: 4, '~octaves': '1,6' }, 320, 60],   // 4
       ['levels', { lo: 0, '~lo': '0,40', hi: 100, '~hi': '100,60', gamma: 50 }, 600, 120],  // 5
       ['surface', { name: 'Plain Noise', ground: 'grey' }, 880, 120]],             // 6
-    wires: [[1, 1, 4, paramPort('noise', 'scale')], [2, 1, 4, paramPort('noise', 'octaves')], [3, 1, 5, paramPort('levels', 'lo')], [3, 1, 5, paramPort('levels', 'hi')],
+    wires: [[1, 1, 4, 'scale'], [2, 1, 4, 'octaves'], [3, 1, 5, 'lo'], [3, 1, 5, 'hi'],
       [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🜛 Stripes: Waves → Threshold
   stripes: { label: 'Stripes', div: 2, teach: 'Waves makes smooth bands of light and dark; Threshold cuts them into stripes. Where Threshold cuts sets the Stripe Width, and its Softness blurs the edges back toward waves. Angle turns the Waves. Try: wire a Value Noise into the Waves\' Warp input to make the stripes wander like wood grain.', nodes: [
-      ['knob', { slot: '1', name: 'Stripe Count', def: 20 }, 40, 40],              // 1
-      ['knob', { slot: '2', name: 'Stripe Width', def: 50 }, 40, 140],             // 2
-      ['knob', { slot: '3', name: 'Softness', def: 20 }, 40, 240],                 // 3
-      ['knob', { slot: '4', name: 'Angle', def: 50 }, 40, 340],                    // 4
+      ['knob', { slot: '1' }, 40, 40],              // 1
+      ['knob', { slot: '2' }, 40, 140],             // 2
+      ['knob', { slot: '3' }, 40, 240],                 // 3
+      ['knob', { slot: '4' }, 40, 340],                    // 4
       ['waves', { freq: 20, '~freq': '3,60', angle: 90, '~angle': '0,180' }, 320, 60],     // 5
       ['threshold', { at: 50, '~at': '97,3', soft: 20, '~soft': '1,100' }, 600, 140],    // 6
       ['surface', { name: 'Stripes', ground: 'grey' }, 880, 140]],                 // 7
-    wires: [[1, 1, 5, paramPort('waves', 'freq')], [4, 1, 5, paramPort('waves', 'angle')], [2, 1, 6, paramPort('threshold', 'at')], [3, 1, 6, paramPort('threshold', 'soft')],
+    wires: [[1, 1, 5, 'freq'], [4, 1, 5, 'angle'], [2, 1, 6, 'at'], [3, 1, 6, 'soft'],
       [5, 1, 6, 1], [6, 1, 7, 1]] },
   // 🜛 Polka Dots: Cells (in rows, no jitter) → Threshold of the distance to each center
   polka: { label: 'Polka Dots', div: 2, teach: 'Polka dots, made from Cells. With no Jitter, Cells puts one point in the middle of every square of a grid; its first output is how far each spot is from the nearest point. Threshold keeps what is near: a round dot about every point. Spacing is Cells\' Scale, Dot Size is where Threshold cuts, and Scatter is the Jitter that throws the points out of their rows. Try: wire the Cells\' Edges output into the Surface instead.', nodes: [
-      ['knob', { slot: '1', name: 'Spacing', def: 50 }, 40, 40],                   // 1
-      ['knob', { slot: '2', name: 'Dot Size', def: 45 }, 40, 140],                 // 2
-      ['knob', { slot: '3', name: 'Scatter', def: 0 }, 40, 240],                   // 3
+      ['knob', { slot: '1' }, 40, 40],                   // 1
+      ['knob', { slot: '2' }, 40, 140],                 // 2
+      ['knob', { slot: '3' }, 40, 240],                   // 3
       ['cells', { scale: 110, '~scale': '200,30', jitter: 0, '~jitter': '0,100' }, 320, 60],  // 4
       ['threshold', { at: 25, '~at': '8,46', soft: 4, '~soft': '2,6' }, 600, 120], // 5
       ['surface', { name: 'Polka Dots', ground: 'grey' }, 880, 120]],              // 6
-    wires: [[1, 1, 4, paramPort('cells', 'scale')], [3, 1, 4, paramPort('cells', 'jitter')], [2, 1, 5, paramPort('threshold', 'at')],
+    wires: [[1, 1, 4, 'scale'], [3, 1, 4, 'jitter'], [2, 1, 5, 'at'],
       [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🜛 Checkerboard: two Waves, across and down, each cut by Threshold; Math (difference) crosses them
   checker: { label: 'Checkerboard', div: 2, teach: 'Two Waves, one across and one down, are each cut into stripes by Threshold. Math, set to Difference, keeps a square where exactly one of the two stripes is light: that is a checkerboard. One Knob (Squares) sets both Waves\' Frequency, Softness both Thresholds, and Turn both Angles, so the squares stay square. Try: set Math to Multiply for a grid of windows, or Max for a plaid.', nodes: [
-      ['knob', { slot: '1', name: 'Squares', def: 20 }, 40, 40],                   // 1
-      ['knob', { slot: '2', name: 'Softness', def: 10 }, 40, 160],                 // 2
-      ['knob', { slot: '3', name: 'Turn', def: 0 }, 40, 280],                      // 3
+      ['knob', { slot: '1' }, 40, 40],                   // 1
+      ['knob', { slot: '2' }, 40, 160],                 // 2
+      ['knob', { slot: '3' }, 40, 280],                      // 3
       ['waves', { freq: 12, '~freq': '2,40', angle: 0, '~angle': '0,90' }, 320, 40],       // 4
       ['waves', { freq: 12, '~freq': '2,40', angle: 90, '~angle': '90,180' }, 320, 240],   // 5
       ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 40],                // 6
       ['threshold', { at: 50, soft: 4, '~soft': '1,60' }, 600, 240],               // 7
       ['math', { op: 'difference' }, 860, 140],                                    // 8
       ['surface', { name: 'Checkerboard', ground: 'grey' }, 1100, 140]],           // 9
-    wires: [[1, 1, 4, paramPort('waves', 'freq')], [1, 1, 5, paramPort('waves', 'freq')], [3, 1, 4, paramPort('waves', 'angle')], [3, 1, 5, paramPort('waves', 'angle')],
-      [2, 1, 6, paramPort('threshold', 'soft')], [2, 1, 7, paramPort('threshold', 'soft')],
+    wires: [[1, 1, 4, 'freq'], [1, 1, 5, 'freq'], [3, 1, 4, 'angle'], [3, 1, 5, 'angle'],
+      [2, 1, 6, 'soft'], [2, 1, 7, 'soft'],
       [4, 1, 6, 1], [5, 1, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
   // 🜛 Gradient: a straight and a round Gradient, Mixed by Roundness; Levels bends the falloff
   softgradient: { label: 'Gradient', div: 4, teach: 'A smooth fall from dark to light. There are two Gradient parts, one straight and one round (Invert turns the round one into a glow, light in the middle); Mix blends between them by Roundness, so the ramp can bend into a glow. Angle turns the straight one. Levels\' Gamma is the Falloff: how quickly the light gives way. Try: wire a Value Noise into Mix\'s amount instead of the Knob.', nodes: [
-      ['knob', { slot: '1', name: 'Angle', def: 25 }, 40, 40],                     // 1
-      ['knob', { slot: '2', name: 'Roundness', def: 0 }, 40, 160],                 // 2
-      ['knob', { slot: '3', name: 'Falloff', def: 50 }, 40, 280],                  // 3
+      ['knob', { slot: '1' }, 40, 40],                     // 1
+      ['knob', { slot: '2' }, 40, 160],                 // 2
+      ['knob', { slot: '3' }, 40, 280],                  // 3
       ['gradient', { shape: 'linear', angle: 90, '~angle': '0,360' }, 320, 40],    // 4
       ['gradient', { shape: 'radial', angle: 90 }, 320, 200],                      // 5
       ['mix', { t: 0, '~t': '0,100' }, 800, 100],                                  // 6
       ['levels', { lo: 0, hi: 100, gamma: 50, '~gamma': '0,100' }, 1040, 120],     // 7
       ['surface', { name: 'Gradient', ground: 'grey' }, 1280, 120],                // 8
       ['invert', {}, 560, 200]],                                                   // 9 (light in the middle: a glow)
-    wires: [[1, 1, 4, paramPort('gradient', 'angle')], [2, 1, 6, paramPort('mix', 't')], [3, 1, 7, paramPort('levels', 'gamma')],
+    wires: [[1, 1, 4, 'angle'], [2, 1, 6, 't'], [3, 1, 7, 'gamma'],
       [4, 1, 6, 1], [5, 1, 9, 1], [9, 1, 6, 2], [6, 1, 7, 1], [7, 1, 8, 1]] },
   // 🜛 Cells: Cells' distance (inverted: domes) and edges (inverted: flat cells), Mixed by Lines; lit by the dial
   cells: { label: 'Cells', div: 2, teach: 'Like pebbles, cobbles or a sponge. Cells gives the distance to each cell\'s middle and the lines between cells; Invert turns each the right way up (light in the middle). Mix blends the round domes into flat cells with crisp lines by Lines. The same picture goes into the Surface\'s Height, scaled by Relief, so the dial lights it. Try: turn the light dial on the page, then set Order to 0 for a grid of tiles.', nodes: [
-      ['knob', { slot: '1', name: 'Cell Size', def: 40 }, 40, 40],                 // 1
-      ['knob', { slot: '2', name: 'Order', def: 20 }, 40, 140],                    // 2
-      ['knob', { slot: '3', name: 'Lines', def: 50 }, 40, 240],                    // 3
-      ['knob', { slot: '4', name: 'Relief', def: 40 }, 40, 340],                   // 4
+      ['knob', { slot: '1' }, 40, 40],                 // 1
+      ['knob', { slot: '2' }, 40, 140],                    // 2
+      ['knob', { slot: '3' }, 40, 240],                    // 3
+      ['knob', { slot: '4' }, 40, 340],                   // 4
       ['cells', { scale: 60, '~scale': '200,20', jitter: 80, '~jitter': '100,0' }, 300, 60],  // 5
       ['invert', {}, 540, 20], ['invert', {}, 540, 140],                           // 6, 7
       ['mix', { t: 50, '~t': '0,100' }, 760, 80],                                  // 8
       ['levels', { lo: 10, hi: 95, gamma: 50 }, 980, 80],                          // 9
       ['math', { op: 'multiply' }, 980, 260],                                      // 10
       ['surface', { name: 'Cells', ground: 'grey' }, 1220, 140]],                  // 11
-    wires: [[1, 1, 5, paramPort('cells', 'scale')], [2, 1, 5, paramPort('cells', 'jitter')], [5, 1, 6, 1], [5, 2, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [3, 1, 8, paramPort('mix', 't')],
+    wires: [[1, 1, 5, 'scale'], [2, 1, 5, 'jitter'], [5, 1, 6, 1], [5, 2, 7, 1], [6, 1, 8, 1], [7, 1, 8, 2], [3, 1, 8, 't'],
       [8, 1, 9, 1], [9, 1, 11, 1], [9, 1, 10, 1], [4, 1, 10, 2], [10, 1, 11, 2]] },
   // √ Harsh Rain: far sheets, then near streaks drawn over them; the dial is
   // where the rain comes from, Gusts swings it about that
   rainstreaks: { label: 'Harsh Rain', div: 2, teach: 'The Light Dial sets the direction the rain comes from. The first Streaks part draws far, soft sheets of rain; the second draws near streaks over them. The two Knobs are this texture\'s sliders on the page (Rain Zoom and Gusts), wired into the settings they move. Try: turn the dial, then raise Gusts.', nodes: [
-      ['knob', { slot: '1', name: 'Rain Zoom', def: 0 }, 40, 300],                 // 1
-      ['knob', { slot: '2', name: 'Gusts', def: 0 }, 40, 170],                     // 2
+      ['knob', { slot: '1' }, 40, 300],                 // 1
+      ['knob', { slot: '2' }, 40, 170],                     // 2
       ['dial', {}, 40, 40],                                                        // 3
       ['streaks', { kind: 'sheets', angle: 0, spread: 0, length: 100, count: 100, light: 75, strength: 50 }, 320, 40],   // 4
       ['streaks', { kind: 'streaks', angle: 0, spread: 0, length: 100, count: 100, light: 75, strength: 50 }, 600, 120],  // 5
       ['surface', { name: 'Harsh Rain', ground: 'grey' }, 880, 160]],             // 6
-    wires: [[3, 1, 4, paramPort('streaks', 'angle')], [3, 1, 5, paramPort('streaks', 'angle')], [2, 1, 4, paramPort('streaks', 'spread')], [2, 1, 5, paramPort('streaks', 'spread')],
-      [1, 1, 5, paramPort('streaks', 'length')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[3, 1, 4, 'angle'], [3, 1, 5, 'angle'], [2, 1, 4, 'spread'], [2, 1, 5, 'spread'],
+      [1, 1, 5, 'length'], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // √ Silverpoint Hatch: soft forms say where the drawing is dark; hatching
   // gathers there, along the dial; the ink tarnishes with Age
   hatch: { label: 'Silverpoint Hatch', poem: 'shape', div: 2, teach: 'Soft Forms makes a few large shapes that say where the drawing is dark. Hatching draws pencil strokes that gather in those dark places, along the dial\'s direction. Two Colors, mixed by the Age knob, make the ink, and a Color Ramp lays the ink over a gray ground. With Shape Aware ticked the strokes stop short of your words. Try: raise Cross-Hatching, then change Soft Forms\' Size.', nodes: [
-      ['knob', { slot: '1', name: 'Cross-Hatching', def: 38 }, 40, 180],          // 1
-      ['knob', { slot: '2', name: 'Line Density', def: 13 }, 40, 300],            // 2
-      ['knob', { slot: '3', name: 'Age', def: 30 }, 320, 560],                    // 3
+      ['knob', { slot: '1' }, 40, 180],          // 1
+      ['knob', { slot: '2' }, 40, 300],            // 2
+      ['knob', { slot: '3' }, 320, 560],                    // 3
       ['forms', { count: 5, size: 50, noise: 50 }, 40, 420],                      // 4
       ['hatching', { angle: 125, density: 100, size: 100, cross: 38, crossAngle: 54, weight: 50 }, 320, 120],   // 5
       ['colour', { hex: '#2C303A' }, 320, 360],                                   // 6
@@ -125,44 +126,44 @@ export const TEXTURE_CHAINS = {
       ['surface', { name: 'Silverpoint Hatch', ground: 'grey' }, 1120, 220],      // 11
       ['dial', {}, 40, 40]],                                                      // 12
     // the ink laid on the grey ground as far as it covers (a ramp: one colour, never a page of them)
-    wires: [[4, 1, 5, 1], [12, 1, 5, paramPort('hatching', 'angle')], [1, 1, 5, paramPort('hatching', 'cross')], [2, 1, 5, paramPort('hatching', 'density')],
+    wires: [[4, 1, 5, 1], [12, 1, 5, 'angle'], [1, 1, 5, 'cross'], [2, 1, 5, 'density'],
       [6, 1, 8, 1], [7, 1, 8, 2], [3, 1, 8, 3], [5, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
   // 🜚 Linen: the weave (a normal map, lit by the dial) → the cloth coloured
   // and its details laid on as heights, lit. Its grid keeps the threads at
   // least three pixels apart, and no finer (a preview no longer pays the export's price)
   linen: { label: 'Linen Tooth', teach: 'Weave makes the threads, as shading and sheen. Cloth & Details colors them with two Hues and adds seams and stitching, lit by the dial. The Knobs are this texture\'s sliders on the page. Try: move the Weave knob from silk to burlap.', grid: (w, h, S, k) => weaveGridDiv(w, h, S, (50 + (k[0] ?? 14.3)*3.5)/100), nodes: [
-      ['knob', { slot: '1', name: 'Weave Scale', def: 14 }, 40, 40],              // 1
-      ['knob', { slot: '2', name: 'Details', def: 42 }, 40, 300],                 // 2
-      ['knob', { slot: '3', name: 'Weave', def: 50 }, 40, 170],                   // 3
+      ['knob', { slot: '1' }, 40, 40],              // 1
+      ['knob', { slot: '2' }, 40, 300],                 // 2
+      ['knob', { slot: '3' }, 40, 170],                   // 3
       ['weave', { weave: 50, scale: 100 }, 320, 60],                              // 4
       ['hue', { slot: '1', name: 'Fabric Hue' }, 320, 300],                       // 5
       ['hue', { slot: '2', name: 'Light Hue' }, 320, 420],                        // 6
       ['cloth', { details: 42, scale: 100 }, 600, 140],                           // 7
       ['surface', { name: 'Linen Tooth', ground: 'grey' }, 880, 180]],            // 8
-    wires: [[3, 1, 4, paramPort('weave', 'weave')], [1, 1, 4, paramPort('weave', 'scale')], [1, 1, 7, paramPort('cloth', 'scale')], [2, 1, 7, paramPort('cloth', 'details')],
+    wires: [[3, 1, 4, 'weave'], [1, 1, 4, 'scale'], [1, 1, 7, 'scale'], [2, 1, 7, 'details'],
       [4, 1, 7, 1], [4, 2, 7, 2], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ∆ Fractured Glaze: the crazing (heights, glaze, grime, the finest cracks)
   // and the brushwork (how thick it was painted) → the glaze lit and coloured
   crackedglaze: { label: 'Fractured Glaze', div: 2, teach: 'Crazing makes four maps of cracked glaze: its heights, the glaze, grime in the cracks, and the finest cracks. Brushwork says how thickly the glaze was painted. Glaze lights and colors all of these with two Hues. Try: raise Enameling to see the glaze age and peel.', nodes: [
-      ['knob', { slot: '1', name: 'Fracture Scale', def: 12 }, 40, 40],           // 1
-      ['knob', { slot: '2', name: 'Crack Density', def: 10 }, 40, 170],           // 2
-      ['knob', { slot: '3', name: 'Enameling', def: 0 }, 40, 300],                // 3
+      ['knob', { slot: '1' }, 40, 40],           // 1
+      ['knob', { slot: '2' }, 40, 170],           // 2
+      ['knob', { slot: '3' }, 40, 300],                // 3
       ['crazing', { scale: 100, density: 100, age: 0 }, 320, 40],                 // 4
       ['brushwork', { streaks: 55, runs: 30, pools: 60 }, 320, 330],              // 5
       ['hue', { slot: '1', name: 'Glaze Hue' }, 320, 460],                        // 6
       ['hue', { slot: '2', name: 'Base Hue' }, 320, 580],                         // 7
       ['glaze', { scale: 100, gloss: 85, grime: 40 }, 620, 160],                  // 8
       ['surface', { name: 'Fractured Glaze', ground: 'colour' }, 900, 220]],      // 9
-    wires: [[1, 1, 4, paramPort('crazing', 'scale')], [2, 1, 4, paramPort('crazing', 'density')], [3, 1, 4, paramPort('crazing', 'age')], [1, 1, 8, paramPort('glaze', 'scale')],
+    wires: [[1, 1, 4, 'scale'], [2, 1, 4, 'density'], [3, 1, 4, 'age'], [1, 1, 8, 'scale'],
       [4, 1, 8, 1], [4, 2, 8, 2], [4, 3, 8, 3], [4, 4, 8, 4], [5, 1, 8, 5], [6, 1, 8, 6], [7, 1, 8, 7], [8, 1, 9, 1]] },
   // 🜍 Cartomancy: a Table under a lamp, and a game Dealt onto it. The seed
   // picks the game, the table, the cards and the coin (each 'seed' setting:
   // choose one instead to fix it). Its four suits are the page's two Accents
   // and the texture's two Hues. Drawn on the page at full size (a canvas pass).
   cards: { label: 'Cartomancy', canvas: true, teach: 'Table draws a table top under a lamp; Card Deal lays a card game on it. The menus left at “seed” let the seed choose (the game, the table, the cards, the coins); pick one to fix it. The four suits are the page\'s two Accents and the texture\'s two Hues. The Knobs are this texture\'s sliders: Cards in Play, Scatter, Stakes, Clutter (what else is on the table) and Wear (how damaged the cards are). Try: set Game to “ring”, then press ⟳ Seed. A Table Objects part lays the same candles, cups and letters on any picture.', nodes: [
-      ['knob', { slot: '1', name: 'Cards in Play', def: 29 }, 40, 40],            // 1  (100 of 20–300)
-      ['knob', { slot: '2', name: 'Scatter', def: 22 }, 40, 140],                 // 2  (20 of 0–90)
-      ['knob', { slot: '3', name: 'Stakes', def: 50 }, 40, 240],                  // 3
+      ['knob', { slot: '1' }, 40, 40],            // 1  (100 of 20–300)
+      ['knob', { slot: '2' }, 40, 140],                 // 2  (20 of 0–90)
+      ['knob', { slot: '3' }, 40, 240],                  // 3
       ['accent', { slot: '1', name: 'First Suit' }, 40, 340],                     // 4
       ['accent', { slot: '2', name: 'Second Suit' }, 40, 420],                    // 5
       ['hue', { slot: '1', name: 'Third Suit Hue' }, 40, 500],                    // 6
@@ -170,97 +171,97 @@ export const TEXTURE_CHAINS = {
       ['table', { mat: 'seed', lamp: 50 }, 320, 40],                              // 8
       ['deal', { game: 'seed', stock: 'seed', gilt: 'seed', suits: 'seed', coinage: 'seed', count: 100, size: 100, scatter: 20, stakes: 50, clutter: 40, wear: 30 }, 600, 120],   // 9
       ['surface', { name: 'Cartomancy', ground: 'colour' }, 880, 160],            // 10
-      ['knob', { slot: '4', name: 'Clutter', def: 40 }, 320, 300],                // 11
-      ['knob', { slot: '5', name: 'Wear', def: 30 }, 320, 400]],                  // 12
+      ['knob', { slot: '4' }, 320, 300],                // 11
+      ['knob', { slot: '5' }, 320, 400]],                  // 12
     wires: [[8, 1, 9, 1], [4, 1, 9, 2], [5, 1, 9, 3], [6, 1, 9, 4], [7, 1, 9, 5],
-      [1, 1, 9, paramPort('deal', 'count')], [2, 1, 9, paramPort('deal', 'scatter')], [3, 1, 9, paramPort('deal', 'stakes')],
-      [11, 1, 9, paramPort('deal', 'clutter')], [12, 1, 9, paramPort('deal', 'wear')], [9, 1, 10, 1]] },
+      [1, 1, 9, 'count'], [2, 1, 9, 'scatter'], [3, 1, 9, 'stakes'],
+      [11, 1, 9, 'clutter'], [12, 1, 9, 'wear'], [9, 1, 10, 1]] },
   // ♡ Sleep Haze: smoke rising in a dusty room, a shaft of light through it
   // from the dial's way, dust catching the light. Drawn by a canvas pass (the
   // smoke on its own soft grid, the motes at full size).
   clouds: { label: 'Sleep Haze', canvas: true, teach: 'Smoke makes a density map: haze in layers and wisps rising (Lift and Drag set how). A Light Shaft shines from the Light Dial\'s direction through that density, so the smoke glows inside the beam; its second output is the beam itself. Dust Motes draws specks that show only where the beam catches them. Try: wire a Value Noise into the Light Shaft instead of the Smoke.', nodes: [
-      ['knob', { slot: '1', name: 'Lift', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
-      ['knob', { slot: '2', name: 'Drag', def: 30 }, 40, 140],                    // 2  (60 of 0–200)
-      ['knob', { slot: '3', name: 'Dust', def: 35 }, 40, 240],                    // 3
+      ['knob', { slot: '1' }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2' }, 40, 140],                    // 2  (60 of 0–200)
+      ['knob', { slot: '3' }, 40, 240],                    // 3
       ['dial', {}, 40, 340],                                                      // 4
       ['smoke', { lift: 100, drag: 60 }, 320, 40],                                // 5
       ['shaft', { dust: 35 }, 600, 120],                                          // 6
       ['motes', { dust: 35 }, 880, 160],                                          // 7
       ['surface', { name: 'Sleep Haze', ground: 'grey' }, 1160, 180]],            // 8
-    wires: [[1, 1, 5, paramPort('smoke', 'lift')], [2, 1, 5, paramPort('smoke', 'drag')], [5, 1, 6, 1], [4, 1, 6, 2], [3, 1, 6, paramPort('shaft', 'dust')],
-      [6, 1, 7, 1], [6, 2, 7, 2], [3, 1, 7, paramPort('motes', 'dust')], [7, 1, 8, 1]] },
+    wires: [[1, 1, 5, 'lift'], [2, 1, 5, 'drag'], [5, 1, 6, 1], [4, 1, 6, 2], [3, 1, 6, 'dust'],
+      [6, 1, 7, 1], [6, 2, 7, 2], [3, 1, 7, 'dust'], [7, 1, 8, 1]] },
   // √ Scattered Polygons: flakes of leaf over a grey ground, in the leaf's hue
   metalleaf: { label: 'Scattered Polygons', canvas: true, teach: 'Flakes lays translucent flakes of leaf, in the Leaf Hue, over whatever comes into its Base (here nothing, so a gray ground). Shape makes them polygons of every kind, Sheen tilts each toward the dial\'s light, and Glitter speckles them. Its Mask output shows where the flakes lie, so Mix can lay them onto another picture. Try: wire a Value Noise into Base.', nodes: [
-      ['knob', { slot: '1', name: 'Leaf Size', def: 13 }, 40, 40],                // 1  (100 of 60–360)
-      ['knob', { slot: '2', name: 'Coverage', def: 33 }, 40, 140],                // 2  (100 of 20–260)
-      ['knob', { slot: '3', name: 'Shape', def: 0 }, 40, 240],                    // 3
-      ['knob', { slot: '4', name: 'Sheen', def: 0 }, 40, 340],                    // 4
-      ['knob', { slot: '5', name: 'Glitter', def: 0 }, 40, 440],                  // 5
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 60–360)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–260)
+      ['knob', { slot: '3' }, 40, 240],                    // 3
+      ['knob', { slot: '4' }, 40, 340],                    // 4
+      ['knob', { slot: '5' }, 40, 440],                  // 5
       ['hue', { slot: '1', name: 'Leaf Hue' }, 40, 540],                          // 6
       ['flakes', { size: 100, coverage: 100, shape: 0, sheen: 0, glitter: 0 }, 340, 160],   // 7
       ['surface', { name: 'Scattered Polygons', ground: 'grey' }, 640, 200]],     // 8
-    wires: [[1, 1, 7, paramPort('flakes', 'size')], [2, 1, 7, paramPort('flakes', 'coverage')], [3, 1, 7, paramPort('flakes', 'shape')], [4, 1, 7, paramPort('flakes', 'sheen')],
-      [5, 1, 7, paramPort('flakes', 'glitter')], [6, 1, 7, 2], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'size'], [2, 1, 7, 'coverage'], [3, 1, 7, 'shape'], [4, 1, 7, 'sheen'],
+      [5, 1, 7, 'glitter'], [6, 1, 7, 2], [7, 1, 8, 1]] },
   // 🜚 Stained Glass: the window's panes (four kinds), then the glass lit from behind and in front
   stainedglass: { label: 'Stained Glass', poem: 'shape', div: 3, teach: 'Panes lays out the window (random shards, a lattice, a rose window or a grid, chosen by Shape; Size Variety mixes big panes with small; Window draws a pointed lancet arch, a round window or an arcade of three lancets in heavier lead, with a border of glass in its own colors beyond) and hands on its maps: the lead, the distance from it, a number for each pane, each pane\'s color slot, where the window is, and the joints where cames meet. Stained Glass lights them from behind, toward the dial\'s sun, and from the front; its lead is flat, dark and soldered at the joints. Its Texture runs from smooth cathedral glass through hammered and seedy to milky opalescent glass. Scene colors each pane from a picture behind it, as Tiffany\'s landscape windows were made: here a Painted Sky with Painted Ridges. With Shape Aware ticked your words are set in clear glass, no lead across them. Try: raise Scene, or wire any texture into Stained Glass\'s Scene.', nodes: [
-      ['knob', { slot: '1', name: 'Pane Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
-      ['knob', { slot: '2', name: 'Leading', def: 32 }, 40, 140],                 // 2  (100 of 30–250)
-      ['knob', { slot: '3', name: 'Shape', def: 25 }, 40, 240],                   // 3
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2' }, 40, 140],                 // 2  (100 of 30–250)
+      ['knob', { slot: '3' }, 40, 240],                   // 3
       ['hue', { slot: '1', name: 'Glass Hue' }, 40, 340],                         // 4
       ['hue', { slot: '2', name: 'Second Glass Hue' }, 40, 440],                  // 5
       ['panes', { size: 100, leading: 100, shape: 25, variety: 0, '~variety': '0,45', frame: 0, '~frame': '0,100' }, 320, 60],   // 6
       ['glass', { relief: 100, scene: 0, '~scene': '0,100', texture: 0, '~texture': '0,100', reflect: 100 }, 600, 140],   // 7
       ['surface', { name: 'Stained Glass', ground: 'colour', aa: 'edges only' }, 880, 180],         // 8
-      ['knob', { slot: '4', name: 'Scene', def: 0 }, 40, 540],                    // 9
-      ['knob', { slot: '5', name: 'Glass Texture', def: 0 }, 40, 640],            // 10
-      ['knob', { slot: '6', name: 'Window', def: 0 }, 40, 740],                   // 11
+      ['knob', { slot: '4' }, 40, 540],                    // 9
+      ['knob', { slot: '5' }, 40, 640],            // 10
+      ['knob', { slot: '6' }, 40, 740],                   // 11
       ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 100 }, 320, 560],   // 12 (the scene behind the glass)
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 100 }, 320, 700]],   // 13
-    wires: [[1, 1, 6, paramPort('panes', 'size')], [2, 1, 6, paramPort('panes', 'leading')], [3, 1, 6, paramPort('panes', 'shape')],
+    wires: [[1, 1, 6, 'size'], [2, 1, 6, 'leading'], [3, 1, 6, 'shape'],
       [6, 1, 7, 1], [6, 2, 7, 2], [6, 3, 7, 3], [6, 4, 7, 4], [4, 1, 7, 5], [5, 1, 7, 6], [6, 5, 7, 7], [7, 1, 8, 1],
-      [9, 1, 7, paramPort('glass', 'scene')], [10, 1, 7, paramPort('glass', 'texture')], [11, 1, 6, paramPort('panes', 'frame')], [12, 1, 13, 1], [13, 1, 7, 8], [6, 6, 7, 9],
-      [9, 1, 6, paramPort('panes', 'variety')]] },   // (Scene also sets Size Variety: a scene wants small panes for its detail)
+      [9, 1, 7, 'scene'], [10, 1, 7, 'texture'], [11, 1, 6, 'frame'], [12, 1, 13, 1], [13, 1, 7, 8], [6, 6, 7, 9],
+      [9, 1, 6, 'variety']] },   // (Scene also sets Size Variety: a scene wants small panes for its detail)
   // ⛰ Painted Landscape: a painted sky, the country's ridges painted over it, a watercolour wash
   // 🝊 Aurora: Deep Field's stars, then curtains of rays over them
   aurorasky: { label: 'Aurora', canvas: true, teach: 'Starfield lays Deep Field\'s stars on black; Aurora Curtains hangs curtains of light over them, each made of thousands of fine rays rising from a bright folded hem — green low down, red high up (the two colors oxygen glows at different heights), a pink fringe at the hem. The Light Dial goes into Field From: the rays lean along it and the hem bends. It is screened over the page, as Deep Field is. Try: raise Red Sky and Curtain Height for a rare red aurora.', nodes: [
-      ['knob', { slot: '1', name: 'Curtain Height', def: 43 }, 40, 40],           // 1  (100 of 40–180)
-      ['knob', { slot: '2', name: 'Rays', def: 35 }, 40, 140],                     // 2  (100 of 20–250)
-      ['knob', { slot: '3', name: 'Curtains', def: 25 }, 40, 240],                 // 3  (2 of 1–5)
-      ['knob', { slot: '4', name: 'Red Sky', def: 30 }, 40, 340],                  // 4
-      ['knob', { slot: '5', name: 'Stars', def: 29 }, 40, 440],                    // 5  (100 of 20–300)
+      ['knob', { slot: '1' }, 40, 40],           // 1  (100 of 40–180)
+      ['knob', { slot: '2' }, 40, 140],                     // 2  (100 of 20–250)
+      ['knob', { slot: '3' }, 40, 240],                 // 3  (2 of 1–5)
+      ['knob', { slot: '4' }, 40, 340],                  // 4
+      ['knob', { slot: '5' }, 40, 440],                    // 5  (100 of 20–300)
       ['dial', {}, 40, 540],                                                       // 6
       ['starfield', { amount: 100, '~amount': '20,300', atmosphere: 30 }, 320, 360],   // 7
       ['curtains', { curtains: 2, '~curtains': '1,5', rays: 100, '~rays': '20,250', height: 100, '~height': '40,180', red: 30, '~red': '0,100', fringe: 50, glow: 100, horizon: 50, '~horizon': '0,100' }, 600, 160],   // 8
       ['surface', { name: 'Aurora', ground: 'colour' }, 880, 200],                 // 9
-      ['knob', { slot: '6', name: 'Horizon', def: 50 }, 40, 620]],                 // 10
-    wires: [[1, 1, 8, paramPort('curtains', 'height')], [2, 1, 8, paramPort('curtains', 'rays')], [3, 1, 8, paramPort('curtains', 'curtains')], [4, 1, 8, paramPort('curtains', 'red')],
-      [5, 1, 7, paramPort('starfield', 'amount')], [6, 1, 8, 2], [7, 1, 8, 1], [8, 1, 9, 1], [10, 1, 8, paramPort('curtains', 'horizon')]] },
+      ['knob', { slot: '6' }, 40, 620]],                 // 10
+    wires: [[1, 1, 8, 'height'], [2, 1, 8, 'rays'], [3, 1, 8, 'curtains'], [4, 1, 8, 'red'],
+      [5, 1, 7, 'amount'], [6, 1, 8, 2], [7, 1, 8, 1], [8, 1, 9, 1], [10, 1, 8, 'horizon']] },
   // 🜚 Fractured Glaze (the second): cracks that SPREAD — Tarbell's Substrate — lit as glaze by the dial
   crackle: { label: 'Fractured Glaze', div: 2, teach: 'Spreading Cracks lets cracks run across the glaze: each runs until it meets another, and then a new one starts from a crack already there, at right angles, so the first are long and each after shorter, as real crackle is. From One Point makes the first cracks burst from where the dial points, like an impact. It hands Glaze four maps: heights, where the glaze is, grime in the cracks and the finest cracks; Brushwork says how thick the glaze was painted. Glaze lights it all with your two Hues. Try: Chipping up, or From One Point at 100.', nodes: [
-      ['knob', { slot: '1', name: 'Crack Scale', def: 20 }, 40, 40],              // 1  (100 of 50–300)
-      ['knob', { slot: '2', name: 'Cracks', def: 21 }, 40, 130],                  // 2  (100 of 20–400)
-      ['knob', { slot: '3', name: 'From One Point', def: 30 }, 40, 220],          // 3
-      ['knob', { slot: '4', name: 'Wander', def: 40 }, 40, 310],                  // 4
-      ['knob', { slot: '5', name: 'Chipping', def: 0 }, 40, 400],                 // 5
+      ['knob', { slot: '1' }, 40, 40],              // 1  (100 of 50–300)
+      ['knob', { slot: '2' }, 40, 130],                  // 2  (100 of 20–400)
+      ['knob', { slot: '3' }, 40, 220],          // 3
+      ['knob', { slot: '4' }, 40, 310],                  // 4
+      ['knob', { slot: '5' }, 40, 400],                 // 5
       ['dial', {}, 40, 490],                                                      // 6
       ['cracks', { scale: 100, '~scale': '50,300', count: 100, '~count': '20,400', spread: 30, '~spread': '0,100', wander: 40, '~wander': '0,100', age: 0, '~age': '0,100' }, 320, 60],   // 7
       ['brushwork', { streaks: 55, runs: 30, pools: 60 }, 320, 380],              // 8
       ['hue', { slot: '1', name: 'Glaze Hue' }, 320, 500], ['hue', { slot: '2', name: 'Body Hue' }, 320, 600],   // 9, 10
       ['glaze', { scale: 100, gloss: 85, grime: 40 }, 620, 160],                  // 11
       ['surface', { name: 'Fractured Glaze', ground: 'colour', aa: 'edges only' }, 900, 220]],      // 12
-    wires: [[1, 1, 7, paramPort('cracks', 'scale')], [2, 1, 7, paramPort('cracks', 'count')], [3, 1, 7, paramPort('cracks', 'spread')], [4, 1, 7, paramPort('cracks', 'wander')], [5, 1, 7, paramPort('cracks', 'age')],
-      [6, 1, 7, 1], [1, 1, 11, paramPort('glaze', 'scale')], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
+    wires: [[1, 1, 7, 'scale'], [2, 1, 7, 'count'], [3, 1, 7, 'spread'], [4, 1, 7, 'wander'], [5, 1, 7, 'age'],
+      [6, 1, 7, 1], [1, 1, 11, 'scale'], [7, 1, 11, 1], [7, 2, 11, 2], [7, 3, 11, 3], [7, 4, 11, 4], [8, 1, 11, 5], [9, 1, 11, 6], [10, 1, 11, 7], [11, 1, 12, 1]] },
   // 🝆 Veins of Light: a network grown (space colonization) through a material's ways, glowing inside it
   veins: { label: 'Veins of Light', div: 2, teach: 'A network running through stone, sand, fibre or skin: not a tree but a web with loops, like a leaf\'s veins, a slime mould\'s tubes, a street plan or a circuit. Growth Medium makes the material (Material picks it, or the seed) and its ways. Network throws nodes along those ways, takes hubs from the poem\'s pauses (else the seed\'s), joins them by the Weave, widens each line by the flow it carries from the hubs (Hierarchy), and routes it from organic curves to circuit traces at 45° and 90° (Organic ↔ Circuit), with pads, buses and pulses. Blend lays the lines and pads into the material and inlays some of its closed loops with the second material; Math cuts the lines in as channels or raises them as wire; the Light Engine lights it from the dial; Glow lets the network shine into the lit grain, more as the dial\'s light sinks. Try: Weave at Streets, then Organic ↔ Circuit up.',
     nodes: [
-      ['knob', { slot: '1', name: 'Material', def: 0 }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2', name: 'Weave', def: 0 }, 40, 150],                                                                                        // 2
-      ['knob', { slot: '3', name: 'Density', def: 45 }, 40, 260],                                                                                     // 3
-      ['knob', { slot: '4', name: 'Loops', def: 50 }, 40, 370],                                                                                       // 4
-      ['knob', { slot: '5', name: 'Organic ↔ Circuit', def: 65 }, 40, 480],                                                                           // 5
-      ['knob', { slot: '6', name: 'Hierarchy', def: 60 }, 40, 590],                                                                                   // 6
-      ['knob', { slot: '7', name: 'Glow', def: 65 }, 40, 700],                                                                                        // 7
-      ['knob', { slot: '8', name: 'Pulses', def: 30 }, 40, 810],                                                                                      // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                        // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                     // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                       // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                           // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                   // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                      // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['poem', {}, 40, 1030],                                                                                                                         // 10
       ['hue', { slot: '1', name: 'Material Hue' }, 40, 1140],                                                                                         // 11
@@ -319,29 +320,29 @@ export const TEXTURE_CHAINS = {
       ['math', { op: 'multiply' }, 3120, 40],                                                                                                         // 64
       ['blend', { mode: 'screen', opacity: 100 }, 3560, 40],                                                                                          // 65
       ['surface', { name: 'Veins of Light', ground: 'colour' }, 3780, 40]],                                                                           // 66
-    wires: [[19, 1, 18, 1], [1, 1, 20, 1], [20, 1, 18, 2], [1, 1, 18, 3], [18, 1, 17, paramPort('matrix', 'kind')], [21, 1, 17, paramPort('matrix', 'scale')],
-      [22, 1, 17, paramPort('matrix', 'angle')], [23, 1, 17, paramPort('matrix', 'variant')], [17, 3, 24, 1], [24, 1, 26, 1], [26, 1, 25, 1], [17, 3, 25, 2],
-      [10, 9, 25, 3], [9, 1, 25, 4], [28, 1, 27, 1], [2, 1, 29, 1], [29, 1, 27, 2], [2, 1, 27, 3], [27, 1, 25, paramPort('network', 'weave')],
-      [3, 1, 25, paramPort('network', 'nodes')], [4, 1, 25, paramPort('network', 'loops')], [5, 1, 25, paramPort('network', 'style')],
-      [6, 1, 25, paramPort('network', 'order')], [8, 1, 25, paramPort('network', 'pulses')], [30, 1, 25, paramPort('network', 'even')],
-      [31, 1, 25, paramPort('network', 'hubs')], [32, 1, 25, paramPort('network', 'wander')], [33, 1, 25, paramPort('network', 'width')],
-      [34, 1, 25, paramPort('network', 'pads')], [35, 1, 25, paramPort('network', 'bus')], [36, 1, 25, paramPort('network', 'variant')], [17, 1, 37, 1],
-      [11, 1, 38, 1], [37, 1, 38, 2], [12, 1, 39, 1], [37, 1, 39, 2], [25, 6, 40, 1], [41, 1, 40, paramPort('threshold', 'at')], [38, 1, 42, 1],
+    wires: [[19, 1, 18, 1], [1, 1, 20, 1], [20, 1, 18, 2], [1, 1, 18, 3], [18, 1, 17, 'kind'], [21, 1, 17, 'scale'],
+      [22, 1, 17, 'angle'], [23, 1, 17, 'variant'], [17, 3, 24, 1], [24, 1, 26, 1], [26, 1, 25, 1], [17, 3, 25, 2],
+      [10, 9, 25, 3], [9, 1, 25, 4], [28, 1, 27, 1], [2, 1, 29, 1], [29, 1, 27, 2], [2, 1, 27, 3], [27, 1, 25, 'weave'],
+      [3, 1, 25, 'nodes'], [4, 1, 25, 'loops'], [5, 1, 25, 'style'],
+      [6, 1, 25, 'order'], [8, 1, 25, 'pulses'], [30, 1, 25, 'even'],
+      [31, 1, 25, 'hubs'], [32, 1, 25, 'wander'], [33, 1, 25, 'width'],
+      [34, 1, 25, 'pads'], [35, 1, 25, 'bus'], [36, 1, 25, 'variant'], [17, 1, 37, 1],
+      [11, 1, 38, 1], [37, 1, 38, 2], [12, 1, 39, 1], [37, 1, 39, 2], [25, 6, 40, 1], [41, 1, 40, 'at'], [38, 1, 42, 1],
       [39, 1, 42, 2], [40, 1, 42, 3], [42, 1, 43, 1], [13, 1, 43, 2], [25, 1, 43, 3], [43, 1, 44, 1], [15, 1, 44, 2], [25, 4, 44, 3], [25, 1, 45, 1],
-      [46, 1, 45, paramPort('maprange', 'outHi')], [25, 7, 47, 1], [48, 1, 47, paramPort('maprange', 'outHi')], [17, 2, 49, 1], [45, 1, 49, 2], [49, 1, 50, 1],
+      [46, 1, 45, 'outHi'], [25, 7, 47, 1], [48, 1, 47, 'outHi'], [17, 2, 49, 1], [45, 1, 49, 2], [49, 1, 50, 1],
       [47, 1, 50, 2], [44, 1, 51, 1], [50, 1, 51, 2], [25, 1, 52, 1], [25, 4, 52, 2], [52, 1, 51, 3], [9, 1, 51, 7], [13, 1, 53, 1], [14, 1, 53, 2],
       [51, 1, 54, 1], [53, 1, 54, 2], [25, 2, 54, 3], [25, 2, 55, 1], [25, 4, 55, 2], [55, 1, 56, 1], [25, 5, 56, 2], [56, 1, 57, 1], [57, 1, 58, 1],
       [56, 1, 59, 1], [58, 1, 59, 2], [51, 2, 60, 1], [9, 2, 61, 1], [60, 1, 62, 1], [61, 1, 62, 2], [54, 1, 63, 1], [59, 1, 63, 2], [14, 1, 63, 3],
-      [62, 1, 64, 1], [7, 1, 64, 2], [64, 1, 63, paramPort('glow', 'strength')], [63, 1, 65, 1], [16, 1, 65, 2], [25, 5, 65, 3], [65, 1, 66, 1]] },
+      [62, 1, 64, 1], [7, 1, 64, 2], [64, 1, 63, 'strength'], [63, 1, 65, 1], [16, 1, 65, 2], [25, 5, 65, 3], [65, 1, 66, 1]] },
   // 🝓 Circuit Board: Circuit Traces on the page's own backdrop; Threshold powers some traces (Charge), the Light Engine
   // lights the board, then what it gives off is screened over: the traces' glow, the Glow Hue's aura, data, sparks
   circuit: { label: 'Circuit Board', div: 2, poem: 'lines', teach: 'A circuit board drawn on the page itself. Circuit Traces routes it the way boards are routed by hand: chips first, then buses of parallel traces that run straight and turn together (Bends: square corners, or 45° chamfers), ending in vias and pads. Page Backdrop makes the board of your backdrop\'s colors; Blend lays the copper, the tinned pads, the chips and the silkscreen on it. Every trace has its own grey (Each Trace), so three Thresholds driven by Charge decide which are powered: colored in your Trace Hue first, then (the grey dimmed by Math, so Charge reaches it later) glowing, then sparking. The Light Engine raises and lights the board; then the light it gives off is screened over (Blend in Screen): the glow, the Glow Hue\'s aura, data running along the powered traces in your Data Hue, and sparks from Scatter. Era (slider 7) turns the board, chip by chip, toward the future\'s, then quantum ones, then the atomic (brass gears and valves), then magitech: crystals set in the board, light guides curving to their pins, summoning circles, holograms, and their own light (Arcana) glowing and sparking where Charge reaches it; Markings (slider 8) stamps it with names, revisions and the odd little picture. The Poem keeps it clear of your words: Circuit Traces cuts away what lies under the lines after the board is routed, so the rest stays where it was as you write. With Shape Aware ticked it is routed round your words instead. Try: Charge at 100, then Bends at 0 for square corners.', nodes: [
-      ['knob', { slot: '1', name: 'Traces', def: 55 }, 40, 40],                    // 1
-      ['knob', { slot: '3', name: 'Charge', def: 55 }, 40, 130],                   // 2
-      ['knob', { slot: '4', name: 'Data Flow', def: 40 }, 40, 220],                // 3
-      ['knob', { slot: '6', name: 'Scale', def: 23 }, 40, 310],                    // 4  (100 of 40–300)
-      ['knob', { slot: '5', name: 'Components', def: 45 }, 40, 400],               // 5
-      ['knob', { slot: '2', name: 'Bends', def: 70 }, 40, 490],                    // 6
+      ['knob', { slot: '1' }, 40, 40],                    // 1
+      ['knob', { slot: '3' }, 40, 130],                   // 2
+      ['knob', { slot: '4' }, 40, 220],                // 3
+      ['knob', { slot: '6' }, 40, 310],                    // 4  (100 of 40–300)
+      ['knob', { slot: '5' }, 40, 400],               // 5
+      ['knob', { slot: '2' }, 40, 490],                    // 6
       ['dial', {}, 40, 580],                                                       // 7
       ['hue', { slot: '1', name: 'Trace Hue' }, 40, 660], ['hue', { slot: '2', name: 'Data Hue' }, 40, 740], ['glowhue', {}, 40, 820],   // 8, 9, 10
       ['backdrop', {}, 300, 700],                                                  // 11
@@ -379,7 +380,7 @@ export const TEXTURE_CHAINS = {
       ['number', { value: 70 }, 300, 900], ['number', { value: 36 }, 300, 980],   // 43, 44 (how far the glow and the sparks lag behind)
       ['math', { op: 'multiply' }, 560, 160], ['math', { op: 'multiply' }, 560, 280],   // 45, 46 (each trace's grey, dimmed: Charge reaches it later)
       // (Ruby: an Era slider, today → future and quantum → magitech; and markings, stamps and glyphs by the seed)
-      ['knob', { slot: '7', name: 'Era', def: 0 }, 40, 1060], ['knob', { slot: '8', name: 'Markings', def: 0 }, 40, 1140],   // 47, 48
+      ['knob', { slot: '7' }, 40, 1060], ['knob', { slot: '8' }, 40, 1140],   // 47, 48
       // (Ruby: no traces under the poem) its lines, cut away from the board after it is routed, so the rest stays put
       ['poem', { padding: 45, softness: 0 }, 40, 1220],   // 49
       // magitech's brass (gears, bars, rivets, valve caps, coils), laid over the chips before the silkscreen
@@ -391,8 +392,8 @@ export const TEXTURE_CHAINS = {
       ['colour', { hex: '#9B6BFF' }, 2960, 1100], ['blend', { mode: 'screen', opacity: 100 }, 3680, 760],   // 57, 58 (the halo, violet)
       ['math', { op: 'multiply' }, 1520, 1420], ['scatter', { shape: 'spark', count: 40, size: 7, vary: 80, turn: 100, clump: 0, fade: 40 }, 1760, 1420],   // 59, 60 (sparks where it sparks)
       ['blur', { radius: 6 }, 2000, 1420], ['math', { op: 'screen' }, 2240, 1420], ['colour', { hex: '#FFD98A' }, 2960, 1200], ['blend', { mode: 'screen', opacity: 100 }, 3920, 760]],   // 61, 62, 63, 64
-    wires: [[49, 1, 12, 1], [47, 1, 12, paramPort('traces', 'era')], [48, 1, 12, paramPort('traces', 'marks')], [1, 1, 12, paramPort('traces', 'traces')], [4, 1, 12, paramPort('traces', 'scale')], [6, 1, 12, paramPort('traces', 'bends')], [5, 1, 12, paramPort('traces', 'parts')], [3, 1, 12, paramPort('traces', 'flow')],
-      [2, 1, 13, paramPort('threshold', 'at')], [2, 1, 14, paramPort('threshold', 'at')], [2, 1, 15, paramPort('threshold', 'at')],
+    wires: [[49, 1, 12, 1], [47, 1, 12, 'era'], [48, 1, 12, 'marks'], [1, 1, 12, 'traces'], [4, 1, 12, 'scale'], [6, 1, 12, 'bends'], [5, 1, 12, 'parts'], [3, 1, 12, 'flow'],
+      [2, 1, 13, 'at'], [2, 1, 14, 'at'], [2, 1, 15, 'at'],
       [12, 3, 13, 1], [12, 3, 45, 1], [43, 1, 45, 2], [12, 3, 46, 1], [44, 1, 46, 2], [45, 1, 14, 1], [46, 1, 15, 1], [13, 1, 16, 1], [12, 1, 16, 2], [14, 1, 17, 1], [12, 1, 17, 2],
       [11, 1, 19, 1], [18, 1, 19, 2], [12, 1, 19, 3], [19, 1, 21, 1], [20, 1, 21, 2], [12, 5, 21, 3], [21, 1, 23, 1], [22, 1, 23, 2], [12, 6, 23, 3],
       [23, 1, 51, 1], [50, 1, 51, 2], [12, 8, 51, 3], [51, 1, 25, 1], [24, 1, 25, 2], [12, 7, 25, 3], [25, 1, 26, 1], [8, 1, 26, 2], [16, 1, 26, 3],
@@ -405,226 +406,226 @@ export const TEXTURE_CHAINS = {
       [12, 9, 59, 1], [15, 1, 59, 2], [59, 1, 60, 2], [60, 1, 61, 1], [60, 1, 62, 1], [61, 1, 62, 2], [58, 1, 64, 1], [63, 1, 64, 2], [62, 1, 64, 3], [64, 1, 42, 1]] },
   // ∆ the Chaos textures, each one part (as its texture always drew) with the sliders wired in
   sigils: { label: 'Sigil Scatter', canvas: true, teach: 'One part makes it: Sigils, which inscribes sigils with a broad nib (thick across the nib\'s angle, thin along it), ink pooling where each stroke ends. The dark ones are cut into the ground, the light ones raised from it, and the Light Dial lights that relief: a lit wall and a shadowed one in every cut. Chaos is the hand: steady at 0, then trembling, the nib skipping into scratches. Try: raise Chaos to 80, then turn the dial.', nodes: [
-      ['knob', { slot: '1', name: 'Sigil Zoom', def: 0 }, 40, 40],                 // 1  (100 of 100–500)
-      ['knob', { slot: '2', name: 'Sigil Count', def: 35 }, 40, 140],              // 2  (100 of 15–260)
-      ['knob', { slot: '3', name: 'Chaos', def: 20 }, 40, 240],                    // 3
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 100–500)
+      ['knob', { slot: '2' }, 40, 140],              // 2  (100 of 15–260)
+      ['knob', { slot: '3' }, 40, 240],                    // 3
       ['dial', {}, 40, 340],                                                       // 4
       ['sigilmarks', { zoom: 100, '~zoom': '100,500', amount: 100, '~amount': '15,260', form: 20, '~form': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Sigil Scatter', ground: 'grey' }, 600, 120]],           // 6
-    wires: [[1, 1, 5, paramPort('sigilmarks', 'zoom')], [2, 1, 5, paramPort('sigilmarks', 'amount')], [3, 1, 5, paramPort('sigilmarks', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 1], [5, 1, 6, 1]] },
   inkbleed: { label: 'Rorschach Test', canvas: true, teach: 'One part makes it: Ink Blot, which drops ink on one half of a folded sheet and presses it, so the blot is mirrored. Wetness makes it bleed: pooled rims, pale mottled middles, wicking and drips. Color lets red join the black, then whole pastel figures, in your Ink Hue and Accent Hue. Try: set Color to 100, then press ⟳ Seed until you see something.', nodes: [
-      ['knob', { slot: '1', name: 'Blot Scale', def: 12 }, 40, 40],                // 1  (100 of 60–400)
-      ['knob', { slot: '2', name: 'Spread', def: 33 }, 40, 140],                   // 2  (100 of 30–240)
-      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
-      ['knob', { slot: '4', name: 'Color', def: 35 }, 40, 340],                    // 4
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 60–400)
+      ['knob', { slot: '2' }, 40, 140],                   // 2  (100 of 30–240)
+      ['knob', { slot: '3' }, 40, 240],                  // 3
+      ['knob', { slot: '4' }, 40, 340],                    // 4
       ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440], ['hue', { slot: '2', name: 'Accent Hue' }, 40, 520],   // 5, 6
       ['blot', { zoom: 100, '~zoom': '60,400', amount: 100, '~amount': '30,240', form: 50, '~form': '0,100', color: 35, '~color': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Rorschach Test', ground: 'colour' }, 600, 120]],        // 8
-    wires: [[1, 1, 7, paramPort('blot', 'zoom')], [2, 1, 7, paramPort('blot', 'amount')], [3, 1, 7, paramPort('blot', 'form')], [4, 1, 7, paramPort('blot', 'color')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'zoom'], [2, 1, 7, 'amount'], [3, 1, 7, 'form'], [4, 1, 7, 'color'], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
   tessellate: { label: 'Facet Field', poem: 'shape', canvas: true, teach: 'One part makes it: Facet Field, a field of cut facets (a Voronoi of flat planes) each tilted its own way, so the Light Dial catches some and leaves others dark. Irregularity breaks the even cells apart. The Light Hue colors the light; the Facet Hue is the stone itself; the Glow Hue fills the seams with molten light. With Shape Aware ticked the facets near your words are ground flat. Try: raise Irregularity, then lower the dial toward the horizon.', nodes: [
-      ['knob', { slot: '1', name: 'Facet Size', def: 14 }, 40, 40],                // 1  (100 of 50–400)
-      ['knob', { slot: '2', name: 'Irregularity', def: 0 }, 40, 140],              // 2  (0 of 0–240)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–400)
+      ['knob', { slot: '2' }, 40, 140],              // 2  (0 of 0–240)
       ['dial', {}, 40, 240],                                                       // 3
       ['hue', { slot: '1', name: 'Light Hue' }, 40, 320], ['hue', { slot: '2', name: 'Facet Hue' }, 40, 400],   // 4, 5
       ['facets', { zoom: 100, '~zoom': '50,400', amount: 0, '~amount': '0,240' }, 320, 100],   // 6
       ['surface', { name: 'Facet Field', ground: 'grey' }, 600, 120]],             // 7
-    wires: [[1, 1, 6, paramPort('facets', 'zoom')], [2, 1, 6, paramPort('facets', 'amount')], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+    wires: [[1, 1, 6, 'zoom'], [2, 1, 6, 'amount'], [3, 1, 6, 1], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
   blackhole: { label: 'Black Hole', canvas: true, teach: 'One part makes it: Black Hole, which ray-traces a black hole against a starry sky: every pixel follows a ray bent by the hole\'s gravity, so the sky behind is lensed into rings and a disc of hot matter wraps over and under it. The Camera Dial is where you look from: its Turn turns the disc in the sky, its View tips it from face-on at the middle to edge-on at the rim, its zoom brings it closer. The Light Dial places the hole: its way from the page’s middle, and its height how far out (in the middle, the hole stands at the page’s middle). Chaos stirs the disc, Particles fills it, Jets fires beams from the poles. The seed chooses the rest: how wide and turbulent the disc, which way it spins, hot spots orbiting in it, how much nebula and dust lies behind, and sometimes a galaxy right behind the hole, bent into arcs and a ring. Try: draw the camera dial slowly from the rim to the middle, and watch the disc open.', nodes: [
-      ['knob', { slot: '1', name: 'Chaos', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
-      ['knob', { slot: '2', name: 'Particles', def: 31 }, 40, 140],                // 2  (100 of 10–300)
-      ['knob', { slot: '3', name: 'Jets', def: 0 }, 40, 240],                      // 3
+      ['knob', { slot: '1' }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 10–300)
+      ['knob', { slot: '3' }, 40, 240],                      // 3
       ['camdial', {}, 40, 340],                                                    // 4  (the camera: where you see it from)
       ['blackhole', { zoom: 100, '~zoom': '40,250', amount: 100, '~amount': '10,300', form: 0, '~form': '0,100', turn: 0, '~turn': '0,360', view: 100, '~view': '0,100', lens: 100, '~lens': '25,400' }, 320, 100],   // 5
       ['surface', { name: 'Black Hole', ground: 'grey' }, 600, 120],               // 6
       ['dial', {}, 40, 440]],                                                      // 7  (the light dial: where it stands)
-    wires: [[7, 1, 5, 2], [7, 2, 5, 3], [1, 1, 5, paramPort('blackhole', 'zoom')], [2, 1, 5, paramPort('blackhole', 'amount')], [3, 1, 5, paramPort('blackhole', 'form')],
-      [4, 1, 5, paramPort('blackhole', 'turn')], [4, 2, 5, paramPort('blackhole', 'view')], [4, 3, 5, paramPort('blackhole', 'lens')], [5, 1, 6, 1]] },
+    wires: [[7, 1, 5, 2], [7, 2, 5, 3], [1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'],
+      [4, 1, 5, 'turn'], [4, 2, 5, 'view'], [4, 3, 5, 'lens'], [5, 1, 6, 1]] },
   moon: { label: 'Fractal Moon', canvas: true, teach: 'One part makes it: Fractal Moon, a moon whose maria and craters are fractal noise, in the phase of the seed, under a night sky of faint stars and drifting cloud. Fractal Depth adds finer and finer detail; Clouds draws cloud across it; Night Sky darkens the sky around. Try: Clouds at 0 and Night Sky at 100, for a clear night.', nodes: [
-      ['knob', { slot: '1', name: 'Moon Size', def: 44 }, 40, 40],                 // 1  (100 of 60–150)
-      ['knob', { slot: '2', name: 'Fractal Depth', def: 47 }, 40, 140],            // 2  (100 of 20–190)
-      ['knob', { slot: '3', name: 'Clouds', def: 30 }, 40, 240],                   // 3
-      ['knob', { slot: '4', name: 'Night Sky', def: 70 }, 40, 340],                // 4
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 60–150)
+      ['knob', { slot: '2' }, 40, 140],            // 2  (100 of 20–190)
+      ['knob', { slot: '3' }, 40, 240],                   // 3
+      ['knob', { slot: '4' }, 40, 340],                // 4
       ['moon', { zoom: 100, '~zoom': '60,150', amount: 100, '~amount': '20,190', form: 30, '~form': '0,100', night: 70, '~night': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Fractal Moon', ground: 'grey' }, 600, 120]],            // 6
-    wires: [[1, 1, 5, paramPort('moon', 'zoom')], [2, 1, 5, paramPort('moon', 'amount')], [3, 1, 5, paramPort('moon', 'form')], [4, 1, 5, paramPort('moon', 'night')], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 'night'], [5, 1, 6, 1]] },
   // the older textures, each one part with the sliders wired in (each drawn exactly as it was)
   coldpress: { label: 'Cold Press', canvas: true, teach: 'Watercolor paper, and what the felt it was pressed between left on it. One part makes it: Cold Press raises the tooth as heights (rounded hills and hollows over a gentle swell), so a low light fills the hollows with shadow, and lays the fibers as a normal map, too fine to cast shadows but still catching the light. Press runs from hot press (smooth) to rough. Try: pull the Light Dial out past its rim, and the tooth stands up in long shadows.', nodes: [
-      ['knob', { slot: '1', name: 'Tooth Scale', def: 8 }, 40, 40],                // 1  (100 of 75–400)
-      ['knob', { slot: '2', name: 'Tooth Depth', def: 29 }, 40, 140],                // 2  (100 of 20–300)
-      ['knob', { slot: '3', name: 'Press', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 75–400)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (50 of 0–100)
       ['dial', {}, 40, 340],                                                       // 4
       ['coldpress', { zoom: 100, '~zoom': '75,400', amount: 100, '~amount': '20,300', form: 50, '~form': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Cold Press', ground: 'grey' }, 600, 120]],   // 6
-    wires: [[1, 1, 5, paramPort('coldpress', 'zoom')], [2, 1, 5, paramPort('coldpress', 'amount')], [3, 1, 5, paramPort('coldpress', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 1], [5, 1, 6, 1]] },
   cupring: { label: 'Cup Ring', canvas: true, teach: 'Where a mug of coffee stood on paper. One part makes it: Cup Ring draws each ring the way coffee dries, carried to the edge so the band darkens to a crisp outer line, pooled on the downhill side, mottled where the paper drank it, with drips and a second, offset ring. The Stain Hue is the coffee; the dial gives only a faint sheen where the film is thick. Try: raise Spill for drips and a pale wash inside the rings.', nodes: [
-      ['knob', { slot: '1', name: 'Ring Size', def: 21 }, 40, 40],                // 1  (100 of 40–320)
-      ['knob', { slot: '2', name: 'Ring Count', def: 26 }, 40, 140],                // 2  (100 of 30–300)
-      ['knob', { slot: '3', name: 'Spill', def: 35 }, 40, 240],                // 3  (35 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–320)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 30–300)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (35 of 0–100)
       ['dial', {}, 40, 340],                                                       // 4
       ['hue', { slot: '1', name: 'Stain Hue' }, 40, 440],                // 5
       ['cupring', { zoom: 100, '~zoom': '40,320', amount: 100, '~amount': '30,300', form: 35, '~form': '0,100' }, 320, 100],   // 6
       ['surface', { name: 'Cup Ring', ground: 'grey' }, 600, 120]],   // 7
-    wires: [[1, 1, 6, paramPort('cupring', 'zoom')], [2, 1, 6, paramPort('cupring', 'amount')], [3, 1, 6, paramPort('cupring', 'form')], [4, 1, 6, 1], [5, 1, 6, 2], [6, 1, 7, 1]] },
+    wires: [[1, 1, 6, 'zoom'], [2, 1, 6, 'amount'], [3, 1, 6, 'form'], [4, 1, 6, 1], [5, 1, 6, 2], [6, 1, 7, 1]] },
   oldpaper: { label: 'Old Paper', canvas: true, teach: 'What time and handling do to a sheet. One part makes it: Old Paper folds the sheet as it was folded to be carried (the seed decides how) and crinkles it, as heights the Light Dial lights; then Age yellows it from the edges, gathers foxing in the margins and mildew in colonies, and at the end scorches it. Age Hue colors the yellowing, Mold Hue the mildew. Try: Folds at 100, and the folds tear in from the edge.', nodes: [
-      ['knob', { slot: '1', name: 'Scale', def: 17 }, 40, 40],                // 1  (100 of 40–400)
-      ['knob', { slot: '2', name: 'Folds', def: 35 }, 40, 140],                // 2  (35 of 0–100)
-      ['knob', { slot: '3', name: 'Age', def: 30 }, 40, 240],                // 3  (30 of 0–100)
-      ['knob', { slot: '4', name: 'Crinkle', def: 25 }, 40, 340],                // 4  (25 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–400)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '4' }, 40, 340],                // 4  (25 of 0–100)
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Age Hue' }, 40, 540],                // 6
       ['hue', { slot: '2', name: 'Mold Hue' }, 40, 620],                // 7
       ['oldpaper', { zoom: 100, '~zoom': '40,400', amount: 35, '~amount': '0,100', form: 30, '~form': '0,100', crinkle: 25, '~crinkle': '0,100' }, 320, 100],   // 8
       ['surface', { name: 'Old Paper', ground: 'grey' }, 600, 120]],   // 9
-    wires: [[1, 1, 8, paramPort('oldpaper', 'zoom')], [2, 1, 8, paramPort('oldpaper', 'amount')], [3, 1, 8, paramPort('oldpaper', 'form')], [4, 1, 8, paramPort('oldpaper', 'crinkle')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'crinkle'], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
   ash: { label: 'Burnt Letter', canvas: true, teach: 'The ash a burnt page leaves, as it lies. One part makes it: Burnt Letter scatters curled flakes (many small, a few large), each charred black at its heart and pale at its rim, crazed with the lines of the page it was, lifting at its ends so the Light Dial lights one side and throws a shadow; soot and soft piles of powder lie between them. Char moves the flakes from pale ash to black; Embers keeps some burning along their edge. Try: Char at 20 and Embers at 80.', nodes: [
-      ['knob', { slot: '1', name: 'Flake Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Ashfall', def: 21 }, 40, 140],                // 2  (100 of 20–400)
-      ['knob', { slot: '3', name: 'Char', def: 55 }, 40, 240],                // 3  (55 of 0–100)
-      ['knob', { slot: '4', name: 'Embers', def: 20 }, 40, 340],                // 4  (20 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4' }, 40, 340],                // 4  (20 of 0–100)
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Ash Hue' }, 40, 540],                // 6
       ['hue', { slot: '2', name: 'Ember Hue' }, 40, 620],                // 7
       ['ash', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,400', form: 55, '~form': '0,100', embers: 20, '~embers': '0,100' }, 320, 100],   // 8
       ['surface', { name: 'Burnt Letter', ground: 'grey' }, 600, 120]],   // 9
-    wires: [[1, 1, 8, paramPort('ash', 'zoom')], [2, 1, 8, paramPort('ash', 'amount')], [3, 1, 8, paramPort('ash', 'form')], [4, 1, 8, paramPort('ash', 'embers')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'embers'], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
   frost: { label: 'Hoarfrost', canvas: true, teach: 'Frost ferns across a pane. One part makes it: Hoarfrost grows them the way branching things grow toward the room they have (space colonization): from seeds along the frame inward, each crystal turning by sixty degrees, twigs feathering into needles, a matte rime toward the edges. The ice glints in the Light Dial’s light. Try: Feathering at 0 for bare branches, then raise it.', nodes: [
-      ['knob', { slot: '1', name: 'Crystal Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
-      ['knob', { slot: '2', name: 'Frost', def: 35 }, 40, 140],                // 2  (100 of 20–250)
-      ['knob', { slot: '3', name: 'Feathering', def: 55 }, 40, 240],                // 3  (55 of 0–100)
-      ['knob', { slot: '4', name: 'Rime', def: 30 }, 40, 340],                // 4  (30 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–250)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (55 of 0–100)
+      ['knob', { slot: '4' }, 40, 340],                // 4  (30 of 0–100)
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Frost Hue' }, 40, 540],                // 6
       ['hoarfrost', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '20,250', form: 55, '~form': '0,100', rime: 30, '~rime': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Hoarfrost', ground: 'grey' }, 600, 120]],   // 8
-    wires: [[1, 1, 7, paramPort('hoarfrost', 'zoom')], [2, 1, 7, paramPort('hoarfrost', 'amount')], [3, 1, 7, paramPort('hoarfrost', 'form')], [4, 1, 7, paramPort('hoarfrost', 'rime')], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'zoom'], [2, 1, 7, 'amount'], [3, 1, 7, 'form'], [4, 1, 7, 'rime'], [5, 1, 7, 1], [6, 1, 7, 2], [7, 1, 8, 1]] },
   glassrain: { label: 'Rain on Glass', canvas: true, teach: 'Rain on a window, simulated. One part makes it: Rain on Glass lets drops sit until they are heavy, then slide, sweep up droplets, merge and leave beaded trails, wiping the fog as they go; each drop is a small dome the Light Dial lights, and through them you see the page behind the glass. Condensation is the fog and the fine droplets between. Try: Condensation at 100, Rain low: a fogged pane with a few clear runs.', nodes: [
-      ['knob', { slot: '1', name: 'Drop Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Rain', def: 29 }, 40, 140],                // 2  (100 of 20–300)
-      ['knob', { slot: '3', name: 'Condensation', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (30 of 0–100)
       ['dial', {}, 40, 340],                                                       // 4
       ['glassrain', { zoom: 100, '~zoom': '40,300', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Rain on Glass', ground: 'colour' }, 600, 120]],   // 6
-    wires: [[1, 1, 5, paramPort('glassrain', 'zoom')], [2, 1, 5, paramPort('glassrain', 'amount')], [3, 1, 5, paramPort('glassrain', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 1], [5, 1, 6, 1]] },
   water: { label: 'Scrying Pool', canvas: true, teach: 'Looking down into a pool. One part makes it: Scrying Pool lays waves on the surface, refracts what lies below through them (more the deeper it is) and focuses the light into caustics on the floor; the seed picks the pool: a koi pond, a pebbled stream, or a wishing well. The Camera Dial is the camera, wired into Turn, View and Camera Zoom: View tips it toward the horizon, where the water mirrors the sky; Turn walks round the pool; Zoom is the lens. Try: the camera dial at its middle and Turbulence low, then press ⟳ Seed.', nodes: [
-      ['knob', { slot: '1', name: 'Wave Scale', def: 29 }, 40, 40],                // 1  (100 of 40–250)
-      ['knob', { slot: '2', name: 'Turbulence', def: 35 }, 40, 140],                // 2  (35 of 0–100)
-      ['knob', { slot: '3', name: 'Depth', def: 35 }, 40, 240],                // 3  (35 of 0–100)
-      ['knob', { slot: '4', name: 'Haze', def: 10 }, 40, 340],                // 4  (10 of 0–100)
-      ['knob', { slot: '5', name: 'Murk', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–250)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (35 of 0–100)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (35 of 0–100)
+      ['knob', { slot: '4' }, 40, 340],                // 4  (10 of 0–100)
+      ['knob', { slot: '5' }, 40, 440],                // 5  (0 of 0–100)
       ['camdial', {}, 40, 540],                                                    // 6  (the camera: View tips it toward the far bank)
       ['dial', {}, 40, 640],                                                       // 7
       ['water', { zoom: 100, '~zoom': '40,250', amount: 35, '~amount': '0,100', form: 35, '~form': '0,100', haze: 10, '~haze': '0,100', murk: 0, '~murk': '0,100', tilt: 35, '~tilt': '0,100', turn: 0, '~turn': '0,360', lens: 100, '~lens': '25,400' }, 320, 100],   // 8
       ['surface', { name: 'Scrying Pool', ground: 'grey' }, 600, 120]],   // 9
-    wires: [[1, 1, 8, paramPort('water', 'zoom')], [2, 1, 8, paramPort('water', 'amount')], [3, 1, 8, paramPort('water', 'form')], [4, 1, 8, paramPort('water', 'haze')], [5, 1, 8, paramPort('water', 'murk')], [6, 1, 8, paramPort('water', 'turn')], [6, 2, 8, paramPort('water', 'tilt')], [6, 3, 8, paramPort('water', 'lens')], [7, 1, 8, 1], [8, 1, 9, 1]] },
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'haze'], [5, 1, 8, 'murk'], [6, 1, 8, 'turn'], [6, 2, 8, 'tilt'], [6, 3, 8, 'lens'], [7, 1, 8, 1], [8, 1, 9, 1]] },
   dunes: { label: 'Dune Ripples', canvas: true, teach: 'A field of wind-blown sand. One part makes it: Dune Ripples builds the dunes the seed picks (ridges across the wind, crescents, or long dunes along it), each with a gentle windward slope and a steep slip face, then covers the slopes with ripples where the wind works. The Light Dial is the sun; the Camera Dial is the camera, wired into Turn, View and Camera Zoom: View tips it toward the horizon, Turn walks round the dunes (the sun stays where the light dial points), Zoom is the lens. Try: Dune Height at 0 for ripples alone, then lower the sun.', nodes: [
-      ['knob', { slot: '1', name: 'Ripple Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Wind', def: 50 }, 40, 140],                // 2  (50 of 0–100)
-      ['knob', { slot: '3', name: 'Dune Height', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (40 of 0–100)
       ['camdial', {}, 40, 340],                                                    // 4  (the camera: View tips it toward the horizon)
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Sand Hue' }, 40, 540],                // 6
       ['hue', { slot: '2', name: 'Sun Hue' }, 40, 620],                // 7
       ['dunes', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 40, '~form': '0,100', tilt: 40, '~tilt': '0,100', turn: 0, '~turn': '0,360', lens: 100, '~lens': '25,400' }, 320, 100],   // 8
       ['surface', { name: 'Dune Ripples', ground: 'colour' }, 600, 120]],   // 9
-    wires: [[1, 1, 8, paramPort('dunes', 'zoom')], [2, 1, 8, paramPort('dunes', 'amount')], [3, 1, 8, paramPort('dunes', 'form')], [4, 1, 8, paramPort('dunes', 'turn')], [4, 2, 8, paramPort('dunes', 'tilt')], [4, 3, 8, paramPort('dunes', 'lens')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'turn'], [4, 2, 8, 'tilt'], [4, 3, 8, 'lens'], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
   moss: { label: 'Moss on Stone', canvas: true, teach: 'Stone, and moss where moss grows. One part makes it: Moss on Stone raises rough stone as heights and lays moss where the stone dips below its surroundings and where it is flat, as soft raised clumps, each lit by the Light Dial with its own gloss. Dampness darkens and shines the stone. The Camera Dial is the camera, wired into Turn, View and Camera Zoom: View tips it toward the horizon, the far stone in haze. Try: Moss at 100 and Dampness at 80, for a wet forest floor.', nodes: [
-      ['knob', { slot: '1', name: 'Stone Scale', def: 23 }, 40, 40],                // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Moss', def: 45 }, 40, 140],                // 2  (45 of 0–100)
-      ['knob', { slot: '3', name: 'Dampness', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (45 of 0–100)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (30 of 0–100)
       ['camdial', {}, 40, 340],                                                    // 4  (the camera: View tips it toward the horizon)
       ['dial', {}, 40, 440],                                                       // 5
       ['hue', { slot: '1', name: 'Stone Hue' }, 40, 540],                // 6
       ['hue', { slot: '2', name: 'Moss Hue' }, 40, 620],                // 7
       ['moss', { zoom: 100, '~zoom': '40,300', amount: 45, '~amount': '0,100', form: 30, '~form': '0,100', tilt: 30, '~tilt': '0,100', turn: 0, '~turn': '0,360', lens: 100, '~lens': '25,400' }, 320, 100],   // 8
       ['surface', { name: 'Moss on Stone', ground: 'colour' }, 600, 120]],   // 9
-    wires: [[1, 1, 8, paramPort('moss', 'zoom')], [2, 1, 8, paramPort('moss', 'amount')], [3, 1, 8, paramPort('moss', 'form')], [4, 1, 8, paramPort('moss', 'turn')], [4, 2, 8, paramPort('moss', 'tilt')], [4, 3, 8, paramPort('moss', 'lens')], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'turn'], [4, 2, 8, 'tilt'], [4, 3, 8, 'lens'], [5, 1, 8, 1], [6, 1, 8, 2], [7, 1, 8, 3], [8, 1, 9, 1]] },
   kintsugi: { label: 'Kintsugi', canvas: true, teach: 'A glazed vessel broken and mended with gold. One part makes it: Kintsugi breaks the glaze along some edges of a warped cell network, fills each crack with a raised seam of gold, and curves the whole wall away toward the sides, so the Light Dial draws one long highlight down it. Glaze Hue and Gold Hue color the two materials. Try: Fractures at 400, Seam Width at 50.', nodes: [
-      ['knob', { slot: '1', name: 'Seam Width', def: 20 }, 40, 40],                // 1  (100 of 50–300)
-      ['knob', { slot: '2', name: 'Fractures', def: 21 }, 40, 140],                // 2  (100 of 20–400)
-      ['knob', { slot: '3', name: 'Gloss', def: 70 }, 40, 240],                // 3  (70 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–400)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (70 of 0–100)
       ['dial', {}, 40, 340],                                                       // 4
       ['hue', { slot: '1', name: 'Glaze Hue' }, 40, 440],                // 5
       ['hue', { slot: '2', name: 'Gold Hue' }, 40, 520],                // 6
       ['kintsugi', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,400', form: 70, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Kintsugi', ground: 'colour' }, 600, 120]],   // 8
-    wires: [[1, 1, 7, paramPort('kintsugi', 'zoom')], [2, 1, 7, paramPort('kintsugi', 'amount')], [3, 1, 7, paramPort('kintsugi', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'zoom'], [2, 1, 7, 'amount'], [3, 1, 7, 'form'], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
   spangle: { label: 'Metal Spangle', canvas: true, teach: 'Metal that crystallized as it cooled: the spangle on galvanized zinc, the stepped hollows of bismuth. One part makes it: Metal Spangle grows grains, each tilted its own way, with feathered dendrites, so turning the Light Dial flashes them one by one. Terraces steps them down into bismuth’s colored hollows; Brushing lays fine lines across them. Try: Terraces at 100, then turn the dial slowly.', nodes: [
-      ['knob', { slot: '1', name: 'Crystal Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Dendrites', def: 50 }, 40, 140],                // 2  (50 of 0–100)
-      ['knob', { slot: '3', name: 'Terraces', def: 0 }, 40, 240],                // 3  (0 of 0–100)
-      ['knob', { slot: '4', name: 'Variation', def: 40 }, 40, 340],                // 4  (40 of 0–100)
-      ['knob', { slot: '5', name: 'Brushing', def: 0 }, 40, 440],                // 5  (0 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (50 of 0–100)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4' }, 40, 340],                // 4  (40 of 0–100)
+      ['knob', { slot: '5' }, 40, 440],                // 5  (0 of 0–100)
       ['dial', {}, 40, 540],                                                       // 6
       ['hue', { slot: '1', name: 'Metal Hue' }, 40, 640],                // 7
       ['spangle', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 0, '~form': '0,100', irregular: 40, '~irregular': '0,100', brushing: 0, '~brushing': '0,100' }, 320, 100],   // 8
       ['surface', { name: 'Metal Spangle', ground: 'grey' }, 600, 120]],   // 9
-    wires: [[1, 1, 8, paramPort('spangle', 'zoom')], [2, 1, 8, paramPort('spangle', 'amount')], [3, 1, 8, paramPort('spangle', 'form')], [4, 1, 8, paramPort('spangle', 'irregular')], [5, 1, 8, paramPort('spangle', 'brushing')], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'irregular'], [5, 1, 8, 'brushing'], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
   crystal: { label: 'Crystal Leaf', canvas: true, teach: 'Looking into a crystal, close up. One part makes it: Crystal Leaf cuts a few large faces, each lit from its edge by the Light Dial and fading inward, with a second set behind them seen through by refraction; Fire flashes where light meets an inner face, split into its colors. Phantoms are ghost crystals inside, Inclusions needles and bubbles. Try: Clarity at 100 and Fire at 100.', nodes: [
-      ['knob', { slot: '1', name: 'Facet Size', def: 23 }, 40, 40],                // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Clarity', def: 70 }, 40, 140],                // 2  (70 of 0–100)
-      ['knob', { slot: '3', name: 'Fire', def: 50 }, 40, 240],                // 3  (50 of 0–100)
-      ['knob', { slot: '4', name: 'Phantoms', def: 30 }, 40, 340],                // 4  (30 of 0–100)
-      ['knob', { slot: '5', name: 'Inclusions', def: 20 }, 40, 440],                // 5  (20 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (70 of 0–100)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (50 of 0–100)
+      ['knob', { slot: '4' }, 40, 340],                // 4  (30 of 0–100)
+      ['knob', { slot: '5' }, 40, 440],                // 5  (20 of 0–100)
       ['dial', {}, 40, 540],                                                       // 6
       ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],                // 7
       ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],                // 8
       ['crystal', { zoom: 100, '~zoom': '40,300', amount: 70, '~amount': '0,100', form: 50, '~form': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],   // 9
       ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 600, 120]],   // 10
-    wires: [[1, 1, 9, paramPort('crystal', 'zoom')], [2, 1, 9, paramPort('crystal', 'amount')], [3, 1, 9, paramPort('crystal', 'form')], [4, 1, 9, paramPort('crystal', 'phantoms')], [5, 1, 9, paramPort('crystal', 'inclusions')], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
+    wires: [[1, 1, 9, 'zoom'], [2, 1, 9, 'amount'], [3, 1, 9, 'form'], [4, 1, 9, 'phantoms'], [5, 1, 9, 'inclusions'], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
   suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
-      ['knob', { slot: '1', name: 'Ring Size', def: 25 }, 40, 40],                // 1  (100 of 50–250)
-      ['knob', { slot: '2', name: 'Drops', def: 32 }, 40, 140],                // 2  (100 of 30–250)
-      ['knob', { slot: '3', name: 'Breath', def: 40 }, 40, 240],                // 3  (40 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–250)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 30–250)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (40 of 0–100)
       ['dial', {}, 40, 340],                                                       // 4
       ['hue', { slot: '1', name: 'Ink Hue' }, 40, 440],                // 5
       ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 520],                // 6
       ['marbling', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,250', form: 40, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Suminagashi', ground: 'colour' }, 600, 120]],   // 8
-    wires: [[1, 1, 7, paramPort('marbling', 'zoom')], [2, 1, 7, paramPort('marbling', 'amount')], [3, 1, 7, paramPort('marbling', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'zoom'], [2, 1, 7, 'amount'], [3, 1, 7, 'form'], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
   aurora: { label: 'Silk Ribbons', canvas: true, teach: 'Ribbons of light hung in sheets. One part makes it: Silk Ribbons draws each ribbon as a filled sheet with a soft falloff. With two different hues the color blends across the page, from the side the Blend Direction dial points to toward the other; Bloom spills the brightest light into a grainy glow, as on film. Try: a red Curtain Hue and a blue Hem Hue, then turn the dial.', nodes: [
-      ['knob', { slot: '1', name: 'Curtain Height', def: 33 }, 40, 40],                // 1  (100 of 40–220)
-      ['knob', { slot: '2', name: 'Ribbon Count', def: 4 }, 40, 140],                // 2  (100 of 20–1800)
-      ['knob', { slot: '3', name: 'Bloom', def: 0 }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–220)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–1800)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (0 of 0–100)
       ['dial', {}, 40, 340],                                                       // 4
       ['hue', { slot: '1', name: 'Curtain Hue' }, 40, 440],                // 5
       ['hue', { slot: '2', name: 'Hem Hue' }, 40, 520],                // 6
       ['ribbons', { zoom: 100, '~zoom': '40,220', amount: 100, '~amount': '20,1800', form: 0, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Silk Ribbons', ground: 'grey' }, 600, 120]],   // 8
-    wires: [[1, 1, 7, paramPort('ribbons', 'zoom')], [2, 1, 7, paramPort('ribbons', 'amount')], [3, 1, 7, paramPort('ribbons', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'zoom'], [2, 1, 7, 'amount'], [3, 1, 7, 'form'], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
   bokeh: { label: 'Dream Bloom', canvas: true, teach: 'Lights out of focus, through a real lens. One part makes it: Dream Bloom places motes at real distances from a 50 mm lens at f/1.8 and blurs each by the thin-lens circle of confusion, so those near the Focal Plane stay small and sharp and the rest swell into discs the shape of the Aperture. Object Shape picks what the motes are. Try: Object Shape on the snowflake and Focal Plane low.', nodes: [
-      ['knob', { slot: '1', name: 'Focal Plane', def: 20 }, 40, 40],                // 1  (100 of 25–400)
-      ['knob', { slot: '2', name: 'Orb Count', def: 33 }, 40, 140],                // 2  (100 of 20–260)
-      ['knob', { slot: '3', name: 'Aperture', def: 0 }, 40, 240],                // 3  (0 of 0–100)
-      ['knob', { slot: '4', name: 'Object Shape', def: 0 }, 40, 340],                // 4  (0 of 0–100)
-      ['knob', { slot: '5', name: 'Color Variation', def: 0 }, 40, 440],                // 5  (0 of 0–180)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 25–400)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–260)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (0 of 0–100)
+      ['knob', { slot: '4' }, 40, 340],                // 4  (0 of 0–100)
+      ['knob', { slot: '5' }, 40, 440],                // 5  (0 of 0–180)
       ['hue', { slot: '1', name: 'Light Hue' }, 40, 540],                // 6
       ['bokeh', { zoom: 100, '~zoom': '25,400', amount: 100, '~amount': '20,260', form: 0, '~form': '0,100', object: 0, '~object': '0,100', spread: 0, '~spread': '0,180' }, 320, 100],   // 7
       ['surface', { name: 'Dream Bloom', ground: 'grey' }, 600, 120]],   // 8
-    wires: [[1, 1, 7, paramPort('bokeh', 'zoom')], [2, 1, 7, paramPort('bokeh', 'amount')], [3, 1, 7, paramPort('bokeh', 'form')], [4, 1, 7, paramPort('bokeh', 'object')], [5, 1, 7, paramPort('bokeh', 'spread')], [6, 1, 7, 1], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'zoom'], [2, 1, 7, 'amount'], [3, 1, 7, 'form'], [4, 1, 7, 'object'], [5, 1, 7, 'spread'], [6, 1, 7, 1], [7, 1, 8, 1]] },
   cityscape: { label: 'Night City', canvas: true, teach: 'A city at night across the water. One part makes it: Night City raises a skyline of mostly dark windows (the few lit ones are what make a city look awake), reflected in rippling streaks below; the seed decides what lies at its feet. Window Hue is the lamplight, Water Hue the river. Try: Lit Windows at 0, then raise it slowly.', nodes: [
-      ['knob', { slot: '1', name: 'Skyline Height', def: 33 }, 40, 40],                // 1  (100 of 60–180)
-      ['knob', { slot: '2', name: 'Lit Windows', def: 33 }, 40, 140],                // 2  (100 of 0–300)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 60–180)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 0–300)
       ['hue', { slot: '1', name: 'Window Hue' }, 40, 240],                // 3
       ['hue', { slot: '2', name: 'Water Hue' }, 40, 320],                // 4
       ['cityscape', { zoom: 100, '~zoom': '60,180', amount: 100, '~amount': '0,300' }, 320, 100],   // 5
       ['surface', { name: 'Night City', ground: 'grey' }, 600, 120]],   // 6
-    wires: [[1, 1, 5, paramPort('cityscape', 'zoom')], [2, 1, 5, paramPort('cityscape', 'amount')], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 1], [4, 1, 5, 2], [5, 1, 6, 1]] },
   flowers: { label: 'Lotus Pond', canvas: true, teach: 'Flowers floating on water. One part makes it: Lotus Pond draws each bloom ring by ring, its petals shaded on their far halves and its shadow thrown on the water away from the Light Dial; Form runs through bell bud, cherry, day lily, lotus, daisy, rosette and hydrangea. Its ground is clear, so the page’s backdrop is the water. Try: Form at 100 for hydrangea, then 50 for lotus.', nodes: [
-      ['knob', { slot: '1', name: 'Bloom Size', def: 25 }, 40, 40],                // 1  (150 of 50–450)
-      ['knob', { slot: '2', name: 'Bloom Count', def: 17 }, 40, 140],                // 2  (60 of 10–300)
-      ['knob', { slot: '3', name: 'Form', def: 50 }, 40, 240],                // 3  (50 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (150 of 50–450)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (60 of 10–300)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (50 of 0–100)
       ['dial', {}, 40, 340],                                                       // 4
       ['hue', { slot: '1', name: 'Petal Hue' }, 40, 440],                // 5
       ['hue', { slot: '2', name: 'Heart Hue' }, 40, 520],                // 6
       ['lotus', { zoom: 150, '~zoom': '50,450', amount: 60, '~amount': '10,300', form: 50, '~form': '0,100' }, 320, 100],   // 7
       ['surface', { name: 'Lotus Pond', ground: 'colour' }, 600, 120]],   // 8
-    wires: [[1, 1, 7, paramPort('lotus', 'zoom')], [2, 1, 7, paramPort('lotus', 'amount')], [3, 1, 7, paramPort('lotus', 'form')], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
+    wires: [[1, 1, 7, 'zoom'], [2, 1, 7, 'amount'], [3, 1, 7, 'form'], [4, 1, 7, 1], [5, 1, 7, 2], [6, 1, 7, 3], [7, 1, 8, 1]] },
   // ── Light to lay over a page (ROADMAP §2 L6): graphs of general parts, on mid-grey (Light Leaks on black, for Screen) ──
   dappled: { label: 'Dappled Leaves', div: 2, teach: 'Sunlight through leaves, to lay over a page: their shadows on a mid-grey ground, so Soft Light or Overlay lays them over anything. Three Scatters of a leaf (an Ellipse) make the foliage in clumps, far, middle and near; each is thrown along the light by a Motion Blur turned by the Light Dial’s direction and stretched by its height (a lower sun throws longer shadows), then softened by a Blur, the far ones most. Max gathers the shade; a Scatter of dots, blurred, makes the round spots of the sun between the leaves, kept to the gaps by the shade inverted. Map Range lays the shade below the middle and the spots above it, and a Gradient Map colours them Shade Hue, mid-grey, Light Hue. Try: Soft Light over a plain page, the dial low at one side.',
     nodes: [
-  ['knob', { slot: '1', name: 'Leaf Size', def: 50 }, 40, 40],           // 1
-  ['knob', { slot: '2', name: 'Leaves', def: 50 }, 40, 120],             // 2
-  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['knob', { slot: '1' }, 40, 40],           // 1
+  ['knob', { slot: '2' }, 40, 120],             // 2
+  ['knob', { slot: '3' }, 40, 200],           // 3
   ['dial', {}, 40, 280],                                                 // 4 the sun
   ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
   ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
@@ -653,16 +654,16 @@ export const TEXTURE_CHAINS = {
   wires: [[7, 1, 8, 1], [7, 1, 9, 1], [7, 1, 10, 1], [8, 1, 11, 1], [9, 1, 12, 1], [10, 1, 13, 1], [11, 1, 14, 1], [12, 1, 15, 1], [13, 1, 16, 1],
     [14, 1, 17, 1], [15, 1, 17, 2], [17, 1, 18, 1], [16, 1, 18, 2], [19, 1, 20, 1], [18, 1, 21, 1], [20, 1, 22, 1], [21, 1, 22, 2],
     [18, 1, 23, 1], [22, 1, 24, 1], [23, 1, 25, 1], [24, 1, 25, 2], [25, 1, 27, 1], [6, 1, 27, 2], [26, 1, 27, 3], [5, 1, 27, 4], [27, 1, 28, 1],
-    [4, 3, 11, paramPort('motionblur', 'angle')], [4, 3, 12, paramPort('motionblur', 'angle')], [4, 3, 13, paramPort('motionblur', 'angle')],
-    [4, 2, 11, paramPort('motionblur', 'length')], [4, 2, 12, paramPort('motionblur', 'length')], [4, 2, 13, paramPort('motionblur', 'length')],
-    [1, 1, 7, paramPort('ellipse', 'size')], [1, 1, 8, paramPort('scatter', 'size')], [1, 1, 9, paramPort('scatter', 'size')], [1, 1, 10, paramPort('scatter', 'size')],
-    [2, 1, 8, paramPort('scatter', 'count')], [2, 1, 9, paramPort('scatter', 'count')], [2, 1, 10, paramPort('scatter', 'count')],
-    [3, 1, 14, paramPort('blur', 'radius')], [3, 1, 15, paramPort('blur', 'radius')], [3, 1, 16, paramPort('blur', 'radius')]] },
+    [4, 3, 11, 'angle'], [4, 3, 12, 'angle'], [4, 3, 13, 'angle'],
+    [4, 2, 11, 'length'], [4, 2, 12, 'length'], [4, 2, 13, 'length'],
+    [1, 1, 7, 'size'], [1, 1, 8, 'size'], [1, 1, 9, 'size'], [1, 1, 10, 'size'],
+    [2, 1, 8, 'count'], [2, 1, 9, 'count'], [2, 1, 10, 'count'],
+    [3, 1, 14, 'radius'], [3, 1, 15, 'radius'], [3, 1, 16, 'radius']] },
   windowlight: { label: 'Window Light', div: 2, teach: 'The light of a window laid across the page, to lay over it on a mid-grey ground. Grid & Dots draws the bars, inverted into panes, cut to a window by a Shape; a Scatter of leaves, kept to one corner by another Shape, is a plant on the sill. Scale stretches it as the Light Dial’s height lowers the sun, Rotate turns it to the dial’s direction, Blur softens its edges; Map Range and a Gradient Map make the room dim and the light bright in your hues. Random Numbers, by the seed, choose how many panes, where the window falls and how leafy the plant. Try: Overlay on a warm page.',
     nodes: [
-  ['knob', { slot: '1', name: 'Window Size', def: 50 }, 40, 40],         // 1
-  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
-  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['knob', { slot: '1' }, 40, 40],         // 1
+  ['knob', { slot: '2' }, 40, 120],         // 2
+  ['knob', { slot: '3' }, 40, 200],           // 3
   ['dial', {}, 40, 280],                                                 // 4 the sun
   ['hue', { slot: '1', name: 'Light Hue' }, 40, 360],                    // 5
   ['hue', { slot: '2', name: 'Shade Hue' }, 40, 440],                    // 6
@@ -689,13 +690,13 @@ export const TEXTURE_CHAINS = {
   ['random', { lo: 0, hi: 100 }, 40, 780]],                              // 27 …and the plant
   wires: [[7, 1, 8, 1], [8, 1, 10, 1], [9, 1, 10, 2], [11, 1, 12, 1], [12, 1, 14, 1], [13, 1, 14, 2], [14, 1, 15, 1], [10, 1, 16, 1], [15, 1, 16, 2],
     [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 20, 1], [20, 1, 22, 1], [6, 1, 22, 2], [21, 1, 22, 3], [5, 1, 22, 4], [22, 1, 23, 1],
-    [4, 3, 18, paramPort('rotate', 'angle')], [4, 2, 17, paramPort('scale', 'stretch')], [1, 1, 9, paramPort('shape', 'size')], [3, 1, 19, paramPort('blur', 'radius')], [2, 1, 20, paramPort('maprange', 'outHi')],
-    [24, 1, 7, paramPort('grid', 'cells')], [25, 1, 9, paramPort('shape', 'x')], [26, 1, 9, paramPort('shape', 'y')], [27, 1, 12, paramPort('scatter', 'count')]] },
+    [4, 3, 18, 'angle'], [4, 2, 17, 'stretch'], [1, 1, 9, 'size'], [3, 1, 19, 'radius'], [2, 1, 20, 'outHi'],
+    [24, 1, 7, 'cells'], [25, 1, 9, 'x'], [26, 1, 9, 'y'], [27, 1, 12, 'count']] },
   caustics: { label: 'Pool Caustics', div: 2, teach: 'Light focused by rippling water onto the floor of a pool, to lay over a page: a bright net on a mid-grey ground. Two Cells, warped by a slow Perlin swell, give the net (their edges); Levels thin the lines and, softer, their glow, which a Blur spreads; a second, finer net is screened over fainter, so the lines are brightest where they cross. Map Range and a Gradient Map put it on mid-grey in your hues. Try: Overlay on a teal page.',
     nodes: [
-  ['knob', { slot: '1', name: 'Net Size', def: 50 }, 40, 40],            // 1
-  ['knob', { slot: '2', name: 'Brightness', def: 50 }, 40, 120],         // 2
-  ['knob', { slot: '3', name: 'Softness', def: 40 }, 40, 200],           // 3
+  ['knob', { slot: '1' }, 40, 40],            // 1
+  ['knob', { slot: '2' }, 40, 120],         // 2
+  ['knob', { slot: '3' }, 40, 200],           // 3
   ['hue', { slot: '1', name: 'Light Hue' }, 40, 280],                    // 4
   ['hue', { slot: '2', name: 'Shade Hue' }, 40, 360],                    // 5
   ['perlin', { scale: 16, details: 2, rough: 40, contrast: 30, variation: 3 }, 220, 40],   // 6 the swell that bends it
@@ -716,12 +717,12 @@ export const TEXTURE_CHAINS = {
   ['surface', { name: 'Pool Caustics', ground: 'grey' }, 1700, 240]],   // 21
   wires: [[7, 2, 8, 1], [6, 1, 8, 2], [8, 1, 9, 1], [8, 1, 10, 1], [11, 2, 12, 1], [6, 1, 12, 2], [12, 1, 13, 1], [10, 1, 14, 1], [9, 1, 15, 1], [14, 1, 15, 2],
     [13, 1, 16, 1], [15, 1, 17, 1], [16, 1, 17, 2], [17, 1, 18, 1], [18, 1, 20, 1], [5, 1, 20, 2], [19, 1, 20, 3], [4, 1, 20, 4], [20, 1, 21, 1],
-    [1, 1, 7, paramPort('cells', 'scale')], [1, 1, 11, paramPort('cells', 'scale')], [3, 1, 9, paramPort('levels', 'lo')], [2, 1, 18, paramPort('maprange', 'outHi')]] },
+    [1, 1, 7, 'scale'], [1, 1, 11, 'scale'], [3, 1, 9, 'lo'], [2, 1, 18, 'outHi']] },
   lightleaks: { label: 'Light Leaks', div: 4, teach: 'The warm stains of light leaking into a film camera, on black for Screen. Soft Forms make the blooms, kept toward one edge by a Gradient whose way the seed picks; a second Gradient, folded at its middle, is the band of light dragged across. A Blur softens them all; a Gradient Map colours them from black through the Red, Orange and Gold Hues. Random Numbers choose the edge, the band’s way and how many blooms. Try: Screen over a dark page.',
     nodes: [
-  ['knob', { slot: '1', name: 'Bloom Size', def: 50 }, 40, 40],          // 1
-  ['knob', { slot: '2', name: 'Leaks', def: 50 }, 40, 120],              // 2
-  ['knob', { slot: '3', name: 'Softness', def: 50 }, 40, 200],           // 3
+  ['knob', { slot: '1' }, 40, 40],          // 1
+  ['knob', { slot: '2' }, 40, 120],              // 2
+  ['knob', { slot: '3' }, 40, 200],           // 3
   ['hue', { slot: '1', name: 'Gold Hue' }, 40, 280],                     // 4
   ['hue', { slot: '2', name: 'Orange Hue' }, 40, 360],                   // 5
   ['hue', { slot: '3', name: 'Red Hue' }, 40, 440],                      // 6
@@ -746,21 +747,21 @@ export const TEXTURE_CHAINS = {
   ['random', { lo: 0, hi: 100 }, 40, 700]],                              // 25 …how many blooms
   wires: [[7, 1, 10, 1], [8, 1, 9, 1], [9, 1, 10, 2], [11, 1, 12, 1], [13, 1, 12, 2], [12, 1, 14, 1], [14, 1, 15, 1], [15, 1, 16, 1], [10, 1, 17, 1], [16, 1, 17, 2],
     [17, 1, 18, 1], [18, 1, 19, 1], [19, 1, 21, 1], [20, 1, 21, 2], [6, 1, 21, 3], [5, 1, 21, 4], [4, 1, 21, 5], [21, 1, 22, 1],
-    [1, 1, 7, paramPort('forms', 'size')], [2, 1, 16, paramPort('maprange', 'outHi')], [2, 1, 19, paramPort('maprange', 'outHi')], [3, 1, 18, paramPort('blur', 'radius')],
-    [23, 1, 8, paramPort('gradient', 'angle')], [24, 1, 11, paramPort('gradient', 'angle')], [25, 1, 7, paramPort('forms', 'count')]] },
+    [1, 1, 7, 'size'], [2, 1, 16, 'outHi'], [2, 1, 19, 'outHi'], [3, 1, 18, 'radius'],
+    [23, 1, 8, 'angle'], [24, 1, 11, 'angle'], [25, 1, 7, 'count']] },
   // 🪶 Feathers (Ruby: "simple textures of feathers with sliders that control how much … procedurally generated feathers in
   // the background that you can fade or blend with a page color or with a simple texture"): one part, on a transparent ground
   // ── Pixel Space (ROADMAP §2 L1): pixel-art space, general parts and Orbs; docs/prior-art/space-scenes.md ──
   pixelspace: { label: 'Pixel Space', div: 4, crisp: true, teach: 'Space in pixel art, after the generators pixel artists use (Deep-Fold’s Pixel Space and Pixel Planets): a nebula, worlds and stars on a coarse grid of square pixels, every colour from the six hues and the seed choosing the scene. The seed picks the nebula’s form (Random Numbers into a Map Switch): a torn band across the page at the seed’s angle, drifting clouds, a veil of filaments (the ridges of a Perlin Noise), or a galaxy twisted round a point, alone or lying in the band. Every grey map is cut into square cells by Pixelate (Pixel Size), stepped by Posterize (Bands) with Dither where two steps meet, and coloured by a Gradient Map from the Deep Sky through the Mid Sky and the Nebula Hue to Starlight. The rim on the side toward the light is a Smudge of the nebula toward the dial’s handle, less the nebula itself. Stars are two Scatters: dust (Stars) and four-point sparkles (Sparkles) with a halo, each cell taking its brightest point so the smallest star still lights a pixel; some take the Rim or World Hue. Orbs makes the worlds: the seed frames them (none, one, a close one cropped by the page, a horizon, an eclipse with its corona, a belt of rocks, a little system), with bands, continents, ice, craters or lava, rings and moons, each lit by the Light Dial. Try: turn the dial and watch the rims and every world’s terminator follow it.',
     nodes: [
-      ['knob', { slot: '1', name: 'Pixel Size', def: 40 }, 40, 40],                                                                                   // 1
-      ['knob', { slot: '2', name: 'Nebula', def: 55 }, 40, 150],                                                                                      // 2
-      ['knob', { slot: '3', name: 'Stars', def: 50 }, 40, 260],                                                                                       // 3
-      ['knob', { slot: '4', name: 'Sparkles', def: 40 }, 40, 370],                                                                                    // 4
-      ['knob', { slot: '5', name: 'Worlds', def: 50 }, 40, 480],                                                                                      // 5
-      ['knob', { slot: '6', name: 'Dither', def: 40 }, 40, 590],                                                                                      // 6
-      ['knob', { slot: '7', name: 'Swirl', def: 50 }, 40, 700],                                                                                       // 7
-      ['knob', { slot: '8', name: 'Bands', def: 45 }, 40, 810],                                                                                       // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                   // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                      // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                    // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                      // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                       // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Deep Sky' }, 40, 1030],                                                                                             // 10
       ['hue', { slot: '2', name: 'Mid Sky' }, 40, 1140],                                                                                              // 11
@@ -906,52 +907,52 @@ export const TEXTURE_CHAINS = {
       ['pixelate', { size: 12, '~size': '5,24', take: 'the average' }, 700, 1690],                                                                    // 151
       ['blend', { opacity: 100 }, 5980, 40],                                                                                                          // 152
       ['surface', { name: 'Pixel Space', ground: 'colour' }, 6200, 40]],                                                                              // 153
-    wires: [[17, 1, 16, paramPort('perlin', 'scale')], [20, 1, 19, paramPort('gradient', 'angle')], [19, 1, 22, 1], [21, 1, 22, 2], [22, 1, 23, 1],
-      [24, 1, 23, paramPort('maprange', 'inHi')], [23, 1, 25, 1], [18, 1, 25, 2], [7, 1, 25, paramPort('warp', 'amount')], [25, 1, 27, 1], [26, 1, 27, 2],
-      [16, 1, 26, 1], [16, 1, 29, 1], [18, 1, 29, 2], [7, 1, 29, paramPort('warp', 'amount')], [29, 1, 31, 1], [30, 1, 31, 2], [28, 1, 30, 1],
-      [34, 1, 33, paramPort('perlin', 'scale')], [33, 1, 35, 1], [21, 1, 35, 2], [35, 1, 32, 1], [36, 1, 32, paramPort('maprange', 'inHi')], [28, 1, 37, 1],
-      [16, 1, 38, 1], [32, 1, 39, 1], [18, 1, 39, 2], [7, 1, 39, paramPort('warp', 'amount')], [39, 1, 40, 1], [38, 1, 40, 2], [16, 1, 42, 1], [41, 1, 42, 2],
-      [40, 1, 43, 1], [42, 1, 43, 2], [43, 1, 44, 1], [37, 1, 44, 2], [45, 1, 47, paramPort('ellipse', 'x')], [46, 1, 47, paramPort('ellipse', 'y')],
-      [48, 1, 47, paramPort('ellipse', 'size')], [47, 2, 49, 1], [49, 1, 51, 1], [49, 1, 51, 2], [49, 1, 52, 1], [51, 1, 52, 2], [52, 1, 53, 1],
-      [16, 1, 53, 2], [53, 1, 50, 1], [45, 1, 50, paramPort('twirl', 'x')], [46, 1, 50, paramPort('twirl', 'y')], [54, 1, 50, paramPort('twirl', 'angle')],
-      [49, 1, 55, 1], [49, 1, 55, 2], [55, 1, 57, 1], [56, 1, 57, 2], [50, 1, 58, 1], [57, 1, 58, 2], [45, 1, 59, paramPort('ellipse', 'x')],
-      [46, 1, 59, paramPort('ellipse', 'y')], [60, 1, 59, paramPort('ellipse', 'size')], [61, 1, 59, paramPort('ellipse', 'height')],
-      [62, 1, 59, paramPort('ellipse', 'angle')], [59, 2, 64, 1], [65, 1, 64, 2], [64, 1, 63, 1], [66, 1, 63, paramPort('maprange', 'inHi')], [16, 1, 67, 1],
-      [63, 1, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [18, 1, 69, 2], [7, 1, 69, paramPort('warp', 'amount')], [71, 1, 70, 1], [58, 1, 70, 2], [58, 1, 73, 1],
+    wires: [[17, 1, 16, 'scale'], [20, 1, 19, 'angle'], [19, 1, 22, 1], [21, 1, 22, 2], [22, 1, 23, 1],
+      [24, 1, 23, 'inHi'], [23, 1, 25, 1], [18, 1, 25, 2], [7, 1, 25, 'amount'], [25, 1, 27, 1], [26, 1, 27, 2],
+      [16, 1, 26, 1], [16, 1, 29, 1], [18, 1, 29, 2], [7, 1, 29, 'amount'], [29, 1, 31, 1], [30, 1, 31, 2], [28, 1, 30, 1],
+      [34, 1, 33, 'scale'], [33, 1, 35, 1], [21, 1, 35, 2], [35, 1, 32, 1], [36, 1, 32, 'inHi'], [28, 1, 37, 1],
+      [16, 1, 38, 1], [32, 1, 39, 1], [18, 1, 39, 2], [7, 1, 39, 'amount'], [39, 1, 40, 1], [38, 1, 40, 2], [16, 1, 42, 1], [41, 1, 42, 2],
+      [40, 1, 43, 1], [42, 1, 43, 2], [43, 1, 44, 1], [37, 1, 44, 2], [45, 1, 47, 'x'], [46, 1, 47, 'y'],
+      [48, 1, 47, 'size'], [47, 2, 49, 1], [49, 1, 51, 1], [49, 1, 51, 2], [49, 1, 52, 1], [51, 1, 52, 2], [52, 1, 53, 1],
+      [16, 1, 53, 2], [53, 1, 50, 1], [45, 1, 50, 'x'], [46, 1, 50, 'y'], [54, 1, 50, 'angle'],
+      [49, 1, 55, 1], [49, 1, 55, 2], [55, 1, 57, 1], [56, 1, 57, 2], [50, 1, 58, 1], [57, 1, 58, 2], [45, 1, 59, 'x'],
+      [46, 1, 59, 'y'], [60, 1, 59, 'size'], [61, 1, 59, 'height'],
+      [62, 1, 59, 'angle'], [59, 2, 64, 1], [65, 1, 64, 2], [64, 1, 63, 1], [66, 1, 63, 'inHi'], [16, 1, 67, 1],
+      [63, 1, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [18, 1, 69, 2], [7, 1, 69, 'amount'], [71, 1, 70, 1], [58, 1, 70, 2], [58, 1, 73, 1],
       [72, 1, 73, 2], [27, 1, 74, 1], [73, 1, 74, 2], [74, 1, 70, 3], [69, 1, 70, 4], [75, 1, 76, 1], [27, 1, 76, 2], [31, 1, 76, 3], [44, 1, 76, 4],
-      [70, 1, 76, 5], [76, 1, 77, 1], [2, 1, 77, paramPort('levels', 'lo')], [79, 1, 78, 1], [77, 1, 80, 1], [77, 1, 82, 1], [81, 1, 82, 2], [80, 1, 83, 1],
-      [82, 1, 83, 2], [78, 1, 84, 1], [83, 1, 84, 2], [12, 1, 85, 1], [15, 1, 85, 2], [84, 1, 87, 1], [1, 1, 87, paramPort('pixelate', 'size')],
-      [87, 1, 88, 1], [1, 1, 88, paramPort('posterize', 'cell')], [6, 1, 88, paramPort('posterize', 'dither')], [8, 1, 88, paramPort('posterize', 'steps')],
+      [70, 1, 76, 5], [76, 1, 77, 1], [2, 1, 77, 'lo'], [79, 1, 78, 1], [77, 1, 80, 1], [77, 1, 82, 1], [81, 1, 82, 2], [80, 1, 83, 1],
+      [82, 1, 83, 2], [78, 1, 84, 1], [83, 1, 84, 2], [12, 1, 85, 1], [15, 1, 85, 2], [84, 1, 87, 1], [1, 1, 87, 'size'],
+      [87, 1, 88, 1], [1, 1, 88, 'cell'], [6, 1, 88, 'dither'], [8, 1, 88, 'steps'],
       [88, 1, 86, 1], [10, 1, 86, 2], [11, 1, 86, 3], [12, 1, 86, 4], [85, 1, 86, 5], [9, 1, 90, 1], [89, 1, 90, 2], [9, 1, 91, 1], [89, 1, 91, 2],
       [9, 1, 93, 1], [92, 1, 93, 2], [91, 1, 94, 1], [93, 1, 94, 2], [90, 1, 95, 1], [94, 1, 95, 2], [77, 1, 96, 1], [96, 1, 98, 1], [97, 1, 98, 2],
-      [98, 1, 99, 1], [95, 1, 99, 2], [100, 1, 99, paramPort('smudge', 'length')], [99, 1, 101, 1], [98, 1, 101, 2], [101, 1, 103, 1], [102, 1, 103, 2],
-      [103, 1, 104, 1], [1, 1, 104, paramPort('pixelate', 'size')], [104, 1, 105, 1], [104, 1, 106, 1], [49, 1, 108, 1], [49, 1, 108, 2], [75, 1, 109, 1],
-      [92, 1, 109, 2], [108, 1, 110, 1], [109, 1, 110, 2], [110, 1, 111, 1], [1, 1, 111, paramPort('pixelate', 'size')], [111, 1, 107, 1], [86, 1, 112, 1],
+      [98, 1, 99, 1], [95, 1, 99, 2], [100, 1, 99, 'length'], [99, 1, 101, 1], [98, 1, 101, 2], [101, 1, 103, 1], [102, 1, 103, 2],
+      [103, 1, 104, 1], [1, 1, 104, 'size'], [104, 1, 105, 1], [104, 1, 106, 1], [49, 1, 108, 1], [49, 1, 108, 2], [75, 1, 109, 1],
+      [92, 1, 109, 2], [108, 1, 110, 1], [109, 1, 110, 2], [110, 1, 111, 1], [1, 1, 111, 'size'], [111, 1, 107, 1], [86, 1, 112, 1],
       [15, 1, 112, 2], [107, 1, 112, 3], [112, 1, 113, 1], [13, 1, 113, 2], [105, 1, 113, 3], [113, 1, 114, 1], [15, 1, 114, 2], [106, 1, 114, 3],
-      [3, 1, 115, paramPort('scatter', 'count')], [116, 1, 115, paramPort('scatter', 'clump')], [4, 1, 117, paramPort('scatter', 'count')], [115, 1, 119, 1],
-      [1, 1, 119, paramPort('pixelate', 'size')], [119, 1, 118, 1], [117, 1, 121, 1], [1, 1, 121, paramPort('pixelate', 'size')], [121, 1, 120, 1],
-      [117, 1, 122, 1], [122, 1, 124, 1], [1, 1, 124, paramPort('pixelate', 'size')], [124, 1, 123, 1], [114, 1, 125, 1], [12, 1, 125, 2], [123, 1, 125, 3],
+      [3, 1, 115, 'count'], [116, 1, 115, 'clump'], [4, 1, 117, 'count'], [115, 1, 119, 1],
+      [1, 1, 119, 'size'], [119, 1, 118, 1], [117, 1, 121, 1], [1, 1, 121, 'size'], [121, 1, 120, 1],
+      [117, 1, 122, 1], [122, 1, 124, 1], [1, 1, 124, 'size'], [124, 1, 123, 1], [114, 1, 125, 1], [12, 1, 125, 2], [123, 1, 125, 3],
       [115, 3, 126, 1], [117, 3, 127, 1], [118, 1, 128, 1], [120, 1, 128, 2], [125, 1, 129, 1], [15, 1, 129, 2], [128, 1, 129, 3], [129, 1, 130, 1],
-      [14, 1, 130, 2], [126, 1, 131, 1], [1, 1, 131, paramPort('pixelate', 'size')], [118, 1, 132, 1], [131, 1, 132, 2], [132, 1, 130, 3], [130, 1, 133, 1],
-      [13, 1, 133, 2], [127, 1, 134, 1], [1, 1, 134, paramPort('pixelate', 'size')], [120, 1, 135, 1], [134, 1, 135, 2], [135, 1, 133, 3], [9, 1, 136, 1],
-      [9, 2, 136, 2], [5, 1, 136, paramPort('orbs', 'size')], [136, 3, 137, 1], [136, 2, 138, 1], [138, 1, 139, 1], [137, 1, 139, 2], [14, 1, 140, 1],
-      [15, 1, 140, 2], [139, 1, 142, 1], [1, 1, 142, paramPort('pixelate', 'size')], [142, 1, 143, 1], [1, 1, 143, paramPort('posterize', 'cell')],
-      [6, 1, 143, paramPort('posterize', 'dither')], [143, 1, 141, 1], [10, 1, 141, 2], [11, 1, 141, 3], [14, 1, 141, 4], [140, 1, 141, 5], [136, 5, 144, 1],
-      [1, 1, 144, paramPort('pixelate', 'size')], [144, 1, 145, 1], [1, 1, 145, paramPort('posterize', 'cell')], [6, 1, 145, paramPort('posterize', 'dither')],
+      [14, 1, 130, 2], [126, 1, 131, 1], [1, 1, 131, 'size'], [118, 1, 132, 1], [131, 1, 132, 2], [132, 1, 130, 3], [130, 1, 133, 1],
+      [13, 1, 133, 2], [127, 1, 134, 1], [1, 1, 134, 'size'], [120, 1, 135, 1], [134, 1, 135, 2], [135, 1, 133, 3], [9, 1, 136, 1],
+      [9, 2, 136, 2], [5, 1, 136, 'size'], [136, 3, 137, 1], [136, 2, 138, 1], [138, 1, 139, 1], [137, 1, 139, 2], [14, 1, 140, 1],
+      [15, 1, 140, 2], [139, 1, 142, 1], [1, 1, 142, 'size'], [142, 1, 143, 1], [1, 1, 143, 'cell'],
+      [6, 1, 143, 'dither'], [143, 1, 141, 1], [10, 1, 141, 2], [11, 1, 141, 3], [14, 1, 141, 4], [140, 1, 141, 5], [136, 5, 144, 1],
+      [1, 1, 144, 'size'], [144, 1, 145, 1], [1, 1, 145, 'cell'], [6, 1, 145, 'dither'],
       [145, 1, 146, 1], [11, 1, 146, 2], [13, 1, 146, 3], [15, 1, 146, 4], [145, 1, 147, 1], [133, 1, 148, 1], [146, 1, 148, 2], [147, 1, 148, 3],
-      [136, 1, 150, 1], [136, 4, 150, 2], [150, 1, 151, 1], [1, 1, 151, paramPort('pixelate', 'size')], [151, 1, 149, 1], [148, 1, 152, 1], [141, 1, 152, 2],
+      [136, 1, 150, 1], [136, 4, 150, 2], [150, 1, 151, 1], [1, 1, 151, 'size'], [151, 1, 149, 1], [148, 1, 152, 1], [141, 1, 152, 2],
       [149, 1, 152, 3], [152, 1, 153, 1]] },
   // ── Webb Sky (ROADMAP §2 L1): JWST false colour, general parts and Diffraction Spikes; docs/prior-art/space-scenes.md ──
   webb: { label: 'Webb Sky', div: 2, teach: 'Deep space as the Webb telescope sees it, in infrared made visible: dust lit by the stars inside it, telescope stars with six long spikes and two short ones, galaxies everywhere behind; every colour from the six hues, the seed choosing the scene. The seed picks the dust (Random Numbers into a Map Switch): globules streaming away from the light (soft blobs Scattered where a broad noise allows, each Smudged into a tail away from the dial’s handle), cosmic cliffs (a Gradient at the seed’s angle raised by the ridges of a Perlin Noise, steam drifting off them along the light), a shell round a dying star (an Ellipse’s rim torn by the noise’s ridges), soft smoke, or a deep field with hardly any dust, a cluster of galaxies and the arcs of light it lenses round itself. A fine noise breaks all of it into clumps. Simple Lighting from the Light Dial shades the dust; a Gradient Map colours it smooth from the Deep Sky through the Dust Shadow and Dust Hues to Dust Light, its lit edges screened brighter; a blue haze of ionized gas (the last hue) glows where it thins. Diffraction Spikes makes the stars, seen through the dust as Webb sees into it; their spikes’ outer halves redden, and a Glow blooms round them. Try: Spiked Stars low and Spike Length high for a few great stars over the dust.',
     nodes: [
-      ['knob', { slot: '1', name: 'Dust', def: 55 }, 40, 40],                                                                                         // 1
-      ['knob', { slot: '2', name: 'Streaming', def: 45 }, 40, 150],                                                                                   // 2
-      ['knob', { slot: '3', name: 'Stars', def: 50 }, 40, 260],                                                                                       // 3
-      ['knob', { slot: '4', name: 'Spiked Stars', def: 30 }, 40, 370],                                                                                // 4
-      ['knob', { slot: '5', name: 'Spike Length', def: 50 }, 40, 480],                                                                                // 5
-      ['knob', { slot: '6', name: 'Galaxies', def: 40 }, 40, 590],                                                                                    // 6
-      ['knob', { slot: '7', name: 'Glow', def: 50 }, 40, 700],                                                                                        // 7
-      ['knob', { slot: '8', name: 'Detail', def: 50 }, 40, 810],                                                                                      // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                         // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                   // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                    // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                      // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Deep Sky' }, 40, 1030],                                                                                             // 10
       ['hue', { slot: '2', name: 'Dust Shadow' }, 40, 1140],                                                                                          // 11
@@ -1082,44 +1083,44 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'screen', opacity: 60 }, 5980, 40],                                                                                           // 136
       ['glow', { radius: 20, aura: 60, strength: 70, auraK: 40, core: 40 }, 6200, 40],                                                                // 137
       ['surface', { name: 'Webb Sky', ground: 'colour' }, 6420, 40]],                                                                                 // 138
-    wires: [[8, 1, 17, paramPort('perlin', 'scale')], [17, 1, 20, 1], [19, 1, 20, 2], [20, 1, 21, 1], [23, 1, 24, 1], [22, 1, 25, 1], [24, 1, 25, 2],
-      [26, 1, 25, paramPort('scatter', 'count')], [8, 1, 25, paramPort('scatter', 'size')], [25, 1, 27, 1], [9, 3, 27, 2],
-      [2, 1, 27, paramPort('smudge', 'length')], [27, 1, 28, 1], [25, 1, 29, 1], [28, 1, 29, 2], [17, 1, 31, 1], [30, 1, 31, 2], [24, 1, 32, 1],
-      [31, 1, 32, 2], [29, 1, 33, 1], [32, 1, 33, 2], [35, 1, 34, paramPort('gradient', 'angle')], [34, 1, 38, 1], [37, 1, 38, 2], [21, 1, 40, 1],
-      [39, 1, 40, 2], [38, 1, 41, 1], [40, 1, 41, 2], [41, 1, 36, 1], [42, 1, 36, paramPort('levels', 'lo')], [17, 1, 43, 1], [36, 1, 44, 1], [43, 1, 44, 2],
-      [36, 1, 45, 1], [21, 1, 45, 2], [44, 1, 46, 1], [45, 1, 46, 2], [47, 1, 49, paramPort('ellipse', 'x')], [48, 1, 49, paramPort('ellipse', 'y')],
-      [50, 1, 49, paramPort('ellipse', 'size')], [51, 1, 49, paramPort('ellipse', 'height')], [52, 1, 49, paramPort('ellipse', 'angle')], [49, 2, 54, 1],
+    wires: [[8, 1, 17, 'scale'], [17, 1, 20, 1], [19, 1, 20, 2], [20, 1, 21, 1], [23, 1, 24, 1], [22, 1, 25, 1], [24, 1, 25, 2],
+      [26, 1, 25, 'count'], [8, 1, 25, 'size'], [25, 1, 27, 1], [9, 3, 27, 2],
+      [2, 1, 27, 'length'], [27, 1, 28, 1], [25, 1, 29, 1], [28, 1, 29, 2], [17, 1, 31, 1], [30, 1, 31, 2], [24, 1, 32, 1],
+      [31, 1, 32, 2], [29, 1, 33, 1], [32, 1, 33, 2], [35, 1, 34, 'angle'], [34, 1, 38, 1], [37, 1, 38, 2], [21, 1, 40, 1],
+      [39, 1, 40, 2], [38, 1, 41, 1], [40, 1, 41, 2], [41, 1, 36, 1], [42, 1, 36, 'lo'], [17, 1, 43, 1], [36, 1, 44, 1], [43, 1, 44, 2],
+      [36, 1, 45, 1], [21, 1, 45, 2], [44, 1, 46, 1], [45, 1, 46, 2], [47, 1, 49, 'x'], [48, 1, 49, 'y'],
+      [50, 1, 49, 'size'], [51, 1, 49, 'height'], [52, 1, 49, 'angle'], [49, 2, 54, 1],
       [53, 1, 54, 2], [54, 1, 55, 1], [49, 2, 56, 1], [17, 1, 57, 1], [21, 1, 58, 1], [57, 1, 58, 2], [55, 1, 59, 1], [58, 1, 59, 2], [59, 1, 60, 1],
-      [18, 1, 60, 2], [61, 1, 60, paramPort('warp', 'amount')], [56, 1, 62, 1], [17, 1, 62, 2], [60, 1, 63, 1], [62, 1, 63, 2], [17, 1, 64, 1], [18, 1, 64, 2],
-      [65, 1, 64, paramPort('warp', 'amount')], [24, 1, 66, 1], [64, 1, 67, 1], [66, 1, 67, 2], [17, 1, 69, 1], [68, 1, 69, 2], [70, 1, 71, 1], [67, 1, 71, 2],
+      [18, 1, 60, 2], [61, 1, 60, 'amount'], [56, 1, 62, 1], [17, 1, 62, 2], [60, 1, 63, 1], [62, 1, 63, 2], [17, 1, 64, 1], [18, 1, 64, 2],
+      [65, 1, 64, 'amount'], [24, 1, 66, 1], [64, 1, 67, 1], [66, 1, 67, 2], [17, 1, 69, 1], [68, 1, 69, 2], [70, 1, 71, 1], [67, 1, 71, 2],
       [69, 1, 71, 3], [72, 1, 73, 1], [33, 1, 73, 2], [46, 1, 73, 3], [63, 1, 73, 4], [71, 1, 73, 5], [72, 1, 75, 1], [74, 1, 75, 2], [70, 1, 76, 1],
       [19, 1, 76, 2], [75, 1, 77, 1], [76, 1, 77, 2], [78, 1, 79, 1], [73, 1, 80, 1], [79, 1, 80, 2], [80, 1, 81, 1],
-      [9, 3, 81, paramPort('motionblur', 'angle')], [2, 1, 81, paramPort('motionblur', 'length')], [81, 1, 82, 1], [80, 1, 83, 1], [82, 1, 83, 2],
-      [83, 1, 84, 1], [1, 1, 84, paramPort('levels', 'lo')], [84, 1, 85, 1], [85, 1, 86, 1], [9, 1, 86, 2], [86, 1, 87, 1], [84, 1, 88, 1], [87, 1, 88, 2],
+      [9, 3, 81, 'angle'], [2, 1, 81, 'length'], [81, 1, 82, 1], [80, 1, 83, 1], [82, 1, 83, 2],
+      [83, 1, 84, 1], [1, 1, 84, 'lo'], [84, 1, 85, 1], [85, 1, 86, 1], [9, 1, 86, 2], [86, 1, 87, 1], [84, 1, 88, 1], [87, 1, 88, 2],
       [88, 1, 89, 1], [89, 1, 90, 1], [10, 1, 90, 2], [11, 1, 90, 3], [12, 1, 90, 4], [13, 1, 90, 5], [90, 1, 91, 1], [13, 1, 91, 2], [86, 2, 92, 1],
       [84, 1, 92, 2], [92, 1, 91, 3], [84, 1, 93, 1], [94, 1, 95, 1], [93, 1, 96, 1], [84, 1, 97, 1], [96, 1, 98, 1], [97, 1, 98, 2], [95, 1, 99, 1],
       [98, 1, 99, 2], [91, 1, 100, 1], [15, 1, 100, 2], [99, 1, 100, 3], [101, 2, 103, 1], [103, 1, 102, 1], [105, 1, 104, 1], [49, 2, 106, 1],
-      [106, 1, 104, 2], [77, 1, 104, 3], [102, 1, 107, 1], [104, 1, 107, 2], [6, 1, 107, paramPort('scatter', 'count')],
-      [77, 1, 107, paramPort('scatter', 'size')], [107, 3, 108, 1], [107, 1, 109, 1], [109, 1, 110, 1], [30, 1, 110, 2], [107, 1, 112, 1], [111, 1, 112, 2],
+      [106, 1, 104, 2], [77, 1, 104, 3], [102, 1, 107, 1], [104, 1, 107, 2], [6, 1, 107, 'count'],
+      [77, 1, 107, 'size'], [107, 3, 108, 1], [107, 1, 109, 1], [109, 1, 110, 1], [30, 1, 110, 2], [107, 1, 112, 1], [111, 1, 112, 2],
       [107, 1, 113, 1], [112, 1, 113, 2], [110, 1, 114, 1], [113, 1, 114, 2], [100, 1, 115, 1], [15, 1, 115, 2], [114, 1, 116, 1], [108, 1, 116, 2],
       [116, 1, 115, 3], [115, 1, 117, 1], [12, 1, 117, 2], [105, 1, 118, 1], [108, 1, 118, 2], [114, 1, 119, 1], [118, 1, 119, 2], [119, 1, 117, 3],
       [49, 3, 121, 1], [120, 1, 121, 2], [121, 1, 122, 1], [16, 1, 122, 2], [49, 3, 123, 1], [16, 1, 123, 2], [49, 3, 124, 1], [74, 1, 124, 2],
       [123, 1, 125, 1], [124, 1, 125, 2], [122, 1, 126, 1], [125, 1, 126, 2], [49, 2, 127, 1], [39, 1, 127, 2], [127, 1, 128, 1], [128, 1, 129, 2],
-      [126, 1, 129, 3], [130, 1, 129, paramPort('scatter', 'count')], [129, 1, 131, 1], [117, 1, 132, 1], [15, 1, 132, 2], [131, 1, 133, 1], [77, 1, 133, 2],
-      [133, 1, 132, 3], [3, 1, 134, paramPort('spikes', 'dots')], [4, 1, 134, paramPort('spikes', 'count')], [5, 1, 134, paramPort('spikes', 'length')],
+      [126, 1, 129, 3], [130, 1, 129, 'count'], [129, 1, 131, 1], [117, 1, 132, 1], [15, 1, 132, 2], [131, 1, 133, 1], [77, 1, 133, 2],
+      [133, 1, 132, 3], [3, 1, 134, 'dots'], [4, 1, 134, 'count'], [5, 1, 134, 'length'],
       [132, 1, 135, 1], [14, 1, 135, 2], [134, 1, 135, 3], [135, 1, 136, 1], [12, 1, 136, 2], [134, 3, 136, 3], [136, 1, 137, 1], [134, 1, 137, 2],
-      [14, 1, 137, 3], [7, 1, 137, paramPort('glow', 'strength')], [137, 1, 138, 1]] },
+      [14, 1, 137, 3], [7, 1, 137, 'strength'], [137, 1, 138, 1]] },
   // ── Liminal Spaces (ROADMAP §2 L3): the Room Caster and general parts; docs/prior-art/liminal-spaces.md ──
   liminal: { label: 'Liminal Spaces', div: 2, teach: 'An empty place made for passing through, after the liminal spaces of the internet (the Backrooms, the poolrooms, Kane Pixels’ found footage, Jared Pike’s Dream Pools, The Exit 8): nobody there, everything familiar and a little off, the end of it lost in the dark. The Room Caster builds it and casts it as a ray-caster does. The seed picks the kind of place (a lobby of stripes and drop ceiling, a concrete warehouse, maintenance tunnels, the poolrooms, a hotel corridor, a school hallway after hours, a hospital corridor, a subway passage of white tile, a parking garage, a dead mall, an office after hours), lays it out (a long corridor with doors and a turn into the dark, an open plan of stubs and pillars, a maze, a hall of pools), hangs its lights (some missing, some dead) and stands the camera in it. It hands on grey maps, as a renderer does: which surface each point is, how far, the light reaching it, each surface’s pattern, the lamps, the water, each face’s shade. A Gradient Map in bands colours each surface its own hue; Blend multiplies in the pattern and the light (a Gradient Map from the Dark Hue to the Light Hue) and lays the water in the Accent Hue; the lamps are screened in and bloom (Glow); a haze swallows the far end; Film Grain and a Chromatic Offset (the seed’s, now and then) give it a camcorder’s grade. The Camera Dial turns the camera from where the seed looks, tips it down, and zooms. Try: Failing Lights high and Haze high, for a corridor nobody has walked in years.',
     nodes: [
-      ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                                                                                        // 1
-      ['knob', { slot: '2', name: 'Ceiling', def: 50 }, 40, 150],                                                                                     // 2
-      ['knob', { slot: '3', name: 'Width', def: 50 }, 40, 260],                                                                                       // 3
-      ['knob', { slot: '4', name: 'Lights', def: 60 }, 40, 370],                                                                                      // 4
-      ['knob', { slot: '5', name: 'Failing Lights', def: 25 }, 40, 480],                                                                              // 5
-      ['knob', { slot: '6', name: 'Haze', def: 30 }, 40, 590],                                                                                        // 6
-      ['knob', { slot: '7', name: 'Grain', def: 35 }, 40, 700],                                                                                       // 7
-      ['knob', { slot: '8', name: 'Strangeness', def: 30 }, 40, 810],                                                                                 // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                        // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                     // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                       // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                      // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                              // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                        // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                 // 8
       ['camdial', {}, 40, 920],                                                                                                                       // 9
       ['hue', { slot: '1', name: 'Wall Hue' }, 40, 1030],                                                                                             // 10
       ['hue', { slot: '2', name: 'Floor Hue' }, 40, 1140],                                                                                            // 11
@@ -1146,24 +1147,24 @@ export const TEXTURE_CHAINS = {
       ['chroma', { amount: 10, '~amount': '0,30', angle: 0, edge: 30 }, 2460, 40],                                                                    // 32
       ['random', { lo: 0, hi: 100 }, 40, 1800],                                                                                                       // 33
       ['surface', { name: 'Liminal Spaces', ground: 'colour' }, 2680, 40]],                                                                           // 34
-    wires: [[1, 1, 16, paramPort('roomcaster', 'reach')], [2, 1, 16, paramPort('roomcaster', 'ceiling')], [3, 1, 16, paramPort('roomcaster', 'width')],
-      [4, 1, 16, paramPort('roomcaster', 'lights')], [5, 1, 16, paramPort('roomcaster', 'failing')], [8, 1, 16, paramPort('roomcaster', 'strange')],
+    wires: [[1, 1, 16, 'reach'], [2, 1, 16, 'ceiling'], [3, 1, 16, 'width'],
+      [4, 1, 16, 'lights'], [5, 1, 16, 'failing'], [8, 1, 16, 'strange'],
       [9, 1, 16, 1], [9, 2, 16, 2], [9, 3, 16, 3], [16, 1, 17, 1], [15, 1, 17, 2], [11, 1, 17, 3], [12, 1, 17, 4], [10, 1, 17, 5], [13, 1, 17, 6],
       [17, 1, 18, 1], [16, 4, 18, 2], [18, 1, 19, 1], [13, 1, 19, 2], [16, 6, 19, 3], [16, 3, 21, 1], [21, 1, 20, 1], [15, 1, 20, 2], [14, 1, 20, 3],
       [19, 1, 22, 1], [20, 1, 22, 2], [16, 7, 23, 1], [22, 1, 24, 1], [23, 1, 24, 2], [24, 1, 25, 1], [14, 1, 25, 2], [16, 5, 25, 3], [25, 1, 26, 1],
-      [16, 5, 26, 2], [14, 1, 26, 3], [15, 1, 27, 1], [14, 1, 27, 2], [16, 2, 28, 1], [6, 1, 28, paramPort('maprange', 'outHi')], [26, 1, 29, 1],
-      [27, 1, 29, 2], [28, 1, 29, 3], [29, 1, 31, 1], [30, 1, 31, 2], [7, 1, 31, paramPort('blend', 'opacity')], [31, 1, 32, 1],
-      [33, 1, 32, paramPort('chroma', 'amount')], [32, 1, 34, 1]] },
+      [16, 5, 26, 2], [14, 1, 26, 3], [15, 1, 27, 1], [14, 1, 27, 2], [16, 2, 28, 1], [6, 1, 28, 'outHi'], [26, 1, 29, 1],
+      [27, 1, 29, 2], [28, 1, 29, 3], [29, 1, 31, 1], [30, 1, 31, 2], [7, 1, 31, 'opacity'], [31, 1, 32, 1],
+      [33, 1, 32, 'amount'], [32, 1, 34, 1]] },
   imprints: { label: 'Floral Imprints', div: 2, teach: 'Flowers printed, not painted (docs/prior-art/florals.md §3): Anna Atkins’ cyanotypes, where the plant laid on the coated paper stays pale and the rest goes blue; small heads stamped in ink, a second colour slipping off register; a crest folded round from one flower, as a kamon is; or the flowers themselves pressed flat on the page. The seed chooses which (Random Number into a Map Switch). Bloom draws them: a sheet of sixteen whole plants, heads or one centred flower, the Species slider’s, or a habitat’s mix at its end; Scatter throws them, cut out by Bloom’s Mask. A Threshold over a fine noise wears the ink (Wear) and sets its weight (Ink); Offset slips the second colour (Misregistration); a Perlin Noise and a smeared one give the paper its tooth (Paper). Pressed flowers are lit by the Light Engine, a hairline shadow from the dial. Try: Prints low and Print Size high for a single cyanotype specimen.',
     nodes: [
-      ['knob', { slot: '1', name: 'Species', def: 98 }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2', name: 'Prints', def: 40 }, 40, 150],                                                                                      // 2
-      ['knob', { slot: '3', name: 'Print Size', def: 50 }, 40, 260],                                                                                  // 3
-      ['knob', { slot: '4', name: 'Ink', def: 55 }, 40, 370],                                                                                         // 4
-      ['knob', { slot: '5', name: 'Paper', def: 45 }, 40, 480],                                                                                       // 5
-      ['knob', { slot: '6', name: 'Misregistration', def: 25 }, 40, 590],                                                                             // 6
-      ['knob', { slot: '7', name: 'Wear', def: 30 }, 40, 700],                                                                                        // 7
-      ['knob', { slot: '8', name: 'Turn', def: 50 }, 40, 810],                                                                                        // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                      // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                  // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                         // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                       // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                             // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                        // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Paper Hue' }, 40, 1030],                                                                                            // 10
       ['hue', { slot: '2', name: 'Ink Hue' }, 40, 1140],                                                                                              // 11
@@ -1237,36 +1238,36 @@ export const TEXTURE_CHAINS = {
       ['mapswitch', { soft: 0 }, 3340, 40],                                                                                                           // 79
       ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 80
       ['surface', { name: 'Floral Imprints', ground: 'colour' }, 3560, 40]],                                                                          // 81
-    wires: [[18, 1, 17, 1], [16, 1, 20, 1], [17, 1, 20, 2], [20, 1, 19, 1], [5, 1, 19, paramPort('maprange', 'outLo')], [5, 1, 19, paramPort('maprange', 'outHi')],
+    wires: [[18, 1, 17, 1], [16, 1, 20, 1], [17, 1, 20, 2], [20, 1, 19, 1], [5, 1, 19, 'outLo'], [5, 1, 19, 'outHi'],
       [19, 1, 21, 1], [10, 1, 22, 1], [11, 1, 22, 2], [22, 1, 21, 2], [10, 1, 21, 3], [10, 1, 23, 1], [15, 1, 23, 2], [23, 1, 21, 4], [25, 1, 24, 1],
-      [7, 1, 24, paramPort('threshold', 'at')], [9, 1, 26, 1], [12, 1, 26, 2], [13, 1, 26, 4], [14, 1, 26, 5], [1, 1, 26, paramPort('bloom', 'species')],
-      [26, 1, 27, 1], [2, 1, 27, paramPort('scatter', 'count')], [3, 1, 27, paramPort('scatter', 'size')], [8, 1, 27, paramPort('scatter', 'turn')],
-      [27, 1, 28, 1], [28, 1, 30, 1], [24, 1, 30, 2], [30, 1, 29, 1], [4, 1, 29, paramPort('threshold', 'at')], [29, 1, 31, 1], [21, 1, 32, 1], [11, 1, 32, 2],
+      [7, 1, 24, 'at'], [9, 1, 26, 1], [12, 1, 26, 2], [13, 1, 26, 4], [14, 1, 26, 5], [1, 1, 26, 'species'],
+      [26, 1, 27, 1], [2, 1, 27, 'count'], [3, 1, 27, 'size'], [8, 1, 27, 'turn'],
+      [27, 1, 28, 1], [28, 1, 30, 1], [24, 1, 30, 2], [30, 1, 29, 1], [4, 1, 29, 'at'], [29, 1, 31, 1], [21, 1, 32, 1], [11, 1, 32, 2],
       [31, 1, 32, 3], [27, 1, 33, 1], [28, 1, 34, 1], [33, 1, 34, 2], [32, 1, 35, 1], [10, 1, 35, 2], [34, 1, 35, 3], [9, 1, 36, 1], [12, 1, 36, 2],
-      [13, 1, 36, 4], [14, 1, 36, 5], [1, 1, 36, paramPort('bloom', 'species')], [36, 1, 37, 1], [2, 1, 37, paramPort('scatter', 'count')],
-      [3, 1, 37, paramPort('scatter', 'size')], [8, 1, 37, paramPort('scatter', 'turn')], [37, 4, 38, 1], [37, 1, 39, 1], [38, 1, 40, 1], [39, 1, 41, 1],
-      [40, 1, 42, 1], [41, 1, 42, 2], [42, 1, 44, 1], [24, 1, 44, 2], [44, 1, 43, 1], [4, 1, 43, paramPort('threshold', 'at')], [37, 1, 45, 1],
-      [6, 1, 45, paramPort('offset', 'x')], [6, 1, 45, paramPort('offset', 'y')], [21, 1, 46, 1], [15, 1, 46, 2], [45, 1, 46, 3], [46, 1, 47, 1],
-      [11, 1, 47, 2], [43, 1, 47, 3], [9, 1, 48, 1], [12, 1, 48, 2], [13, 1, 48, 4], [14, 1, 48, 5], [1, 1, 48, paramPort('bloom', 'species')],
-      [3, 1, 48, paramPort('bloom', 'size')], [49, 1, 48, paramPort('bloom', 'view')], [48, 6, 50, 1], [50, 1, 52, 1], [48, 2, 53, 1], [52, 1, 53, 2],
-      [53, 1, 54, 1], [53, 1, 55, 1], [54, 1, 55, 2], [55, 1, 51, 1], [58, 1, 57, paramPort('shape', 'size')], [60, 1, 59, 1], [56, 1, 61, 1], [57, 1, 61, 2],
-      [61, 1, 62, 1], [59, 1, 62, 2], [51, 1, 64, 1], [24, 1, 64, 2], [64, 1, 63, 1], [4, 1, 63, paramPort('threshold', 'at')], [63, 1, 66, 1], [65, 1, 66, 2],
-      [62, 1, 68, 1], [24, 1, 68, 2], [68, 1, 67, 1], [4, 1, 67, paramPort('threshold', 'at')], [67, 1, 69, 1], [56, 1, 69, 2], [66, 1, 70, 1], [69, 1, 70, 2],
-      [70, 1, 71, 1], [6, 1, 71, paramPort('offset', 'x')], [6, 1, 71, paramPort('offset', 'y')], [21, 1, 72, 1], [15, 1, 72, 2], [71, 1, 72, 3],
-      [72, 1, 73, 1], [11, 1, 73, 2], [70, 1, 73, 3], [9, 1, 74, 1], [12, 1, 74, 2], [13, 1, 74, 4], [14, 1, 74, 5], [1, 1, 74, paramPort('bloom', 'species')],
-      [74, 1, 75, 1], [2, 1, 75, paramPort('scatter', 'count')], [3, 1, 75, paramPort('scatter', 'size')], [8, 1, 75, paramPort('scatter', 'turn')],
+      [13, 1, 36, 4], [14, 1, 36, 5], [1, 1, 36, 'species'], [36, 1, 37, 1], [2, 1, 37, 'count'],
+      [3, 1, 37, 'size'], [8, 1, 37, 'turn'], [37, 4, 38, 1], [37, 1, 39, 1], [38, 1, 40, 1], [39, 1, 41, 1],
+      [40, 1, 42, 1], [41, 1, 42, 2], [42, 1, 44, 1], [24, 1, 44, 2], [44, 1, 43, 1], [4, 1, 43, 'at'], [37, 1, 45, 1],
+      [6, 1, 45, 'x'], [6, 1, 45, 'y'], [21, 1, 46, 1], [15, 1, 46, 2], [45, 1, 46, 3], [46, 1, 47, 1],
+      [11, 1, 47, 2], [43, 1, 47, 3], [9, 1, 48, 1], [12, 1, 48, 2], [13, 1, 48, 4], [14, 1, 48, 5], [1, 1, 48, 'species'],
+      [3, 1, 48, 'size'], [49, 1, 48, 'view'], [48, 6, 50, 1], [50, 1, 52, 1], [48, 2, 53, 1], [52, 1, 53, 2],
+      [53, 1, 54, 1], [53, 1, 55, 1], [54, 1, 55, 2], [55, 1, 51, 1], [58, 1, 57, 'size'], [60, 1, 59, 1], [56, 1, 61, 1], [57, 1, 61, 2],
+      [61, 1, 62, 1], [59, 1, 62, 2], [51, 1, 64, 1], [24, 1, 64, 2], [64, 1, 63, 1], [4, 1, 63, 'at'], [63, 1, 66, 1], [65, 1, 66, 2],
+      [62, 1, 68, 1], [24, 1, 68, 2], [68, 1, 67, 1], [4, 1, 67, 'at'], [67, 1, 69, 1], [56, 1, 69, 2], [66, 1, 70, 1], [69, 1, 70, 2],
+      [70, 1, 71, 1], [6, 1, 71, 'x'], [6, 1, 71, 'y'], [21, 1, 72, 1], [15, 1, 72, 2], [71, 1, 72, 3],
+      [72, 1, 73, 1], [11, 1, 73, 2], [70, 1, 73, 3], [9, 1, 74, 1], [12, 1, 74, 2], [13, 1, 74, 4], [14, 1, 74, 5], [1, 1, 74, 'species'],
+      [74, 1, 75, 1], [2, 1, 75, 'count'], [3, 1, 75, 'size'], [8, 1, 75, 'turn'],
       [21, 1, 76, 1], [75, 4, 76, 2], [75, 1, 76, 3], [76, 1, 77, 1], [75, 2, 77, 2], [9, 1, 77, 7], [77, 1, 78, 1], [80, 1, 79, 1], [35, 1, 79, 2],
       [47, 1, 79, 3], [73, 1, 79, 4], [78, 1, 79, 5], [79, 1, 81, 1]] },
   bouquets: { label: 'Bouquets', div: 2, teach: 'Flowers gathered (docs/prior-art/florals.md §4): a posy seen from above in its creased paper, a crown circling the page, or a bundle laid across a cloth; the seed chooses which, and where it lies. Bloom draws four sheets: the main flower (its species on the first slider), a second flower, a filler of Queen Anne’s lace, and leaves; four Scatters throw them inside the arrangement’s shape (an Ellipse, its ring, or a long one, chosen by a Map Switch), the leaves in a halo round it (Grow), the largest heads on top. Their heights, the leaves lowest and the heads highest, go to the Light Engine, which lights it all from the dial and lays its shadows (Shadow). The wrap shows round a posy only, creased in rings (Polar Coordinates on Waves). Try: a low dial for long shadows across the cloth.',
     nodes: [
-      ['knob', { slot: '1', name: 'Main Flower', def: 41 }, 40, 40],                                                                                  // 1
-      ['knob', { slot: '2', name: 'Second Flower', def: 43 }, 40, 150],                                                                               // 2
-      ['knob', { slot: '3', name: 'Blooms', def: 50 }, 40, 260],                                                                                      // 3
-      ['knob', { slot: '4', name: 'Bouquet Size', def: 55 }, 40, 370],                                                                                // 4
-      ['knob', { slot: '5', name: 'Foliage', def: 50 }, 40, 480],                                                                                     // 5
-      ['knob', { slot: '6', name: 'Filler', def: 45 }, 40, 590],                                                                                      // 6
-      ['knob', { slot: '7', name: 'Shadow', def: 50 }, 40, 700],                                                                                      // 7
-      ['knob', { slot: '8', name: 'Wrap', def: 50 }, 40, 810],                                                                                        // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                  // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                               // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                      // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                     // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                      // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                        // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Ground Hue' }, 40, 1030],                                                                                           // 10
       ['hue', { slot: '2', name: 'Main Bloom Hue' }, 40, 1140],                                                                                       // 11
@@ -1329,32 +1330,32 @@ export const TEXTURE_CHAINS = {
       ['math', { op: 'max' }, 1800, 150],                                                                                                             // 68
       ['material', { relief: 45, '~relief': '0,90', gloss: 20, shine: 25, shadow: 65, occlusion: 55, ambient: 40 }, 2680, 40],                        // 69
       ['surface', { name: 'Bouquets', ground: 'colour' }, 2900, 40]],                                                                                 // 70
-    wires: [[16, 1, 18, paramPort('ellipse', 'x')], [17, 1, 18, paramPort('ellipse', 'y')], [4, 1, 18, paramPort('ellipse', 'size')],
-      [4, 1, 19, paramPort('ellipse', 'size')], [21, 1, 20, paramPort('ellipse', 'angle')], [16, 1, 20, paramPort('ellipse', 'x')],
-      [17, 1, 20, paramPort('ellipse', 'y')], [4, 1, 20, paramPort('ellipse', 'size')], [22, 1, 23, 1], [18, 1, 23, 2], [19, 1, 23, 3], [20, 1, 23, 4],
+    wires: [[16, 1, 18, 'x'], [17, 1, 18, 'y'], [4, 1, 18, 'size'],
+      [4, 1, 19, 'size'], [21, 1, 20, 'angle'], [16, 1, 20, 'x'],
+      [17, 1, 20, 'y'], [4, 1, 20, 'size'], [22, 1, 23, 1], [18, 1, 23, 2], [19, 1, 23, 3], [20, 1, 23, 4],
       [23, 1, 24, 1], [24, 1, 25, 1], [26, 1, 27, 1], [27, 1, 28, 1], [10, 1, 29, 1], [14, 1, 29, 2], [29, 1, 28, 2], [10, 1, 28, 3], [10, 1, 30, 1],
       [15, 1, 30, 2], [30, 1, 28, 4], [32, 1, 31, 1], [31, 1, 33, 1], [15, 1, 34, 1], [10, 1, 34, 2], [34, 1, 33, 2], [15, 1, 33, 3], [15, 1, 35, 1],
       [13, 1, 35, 2], [35, 1, 33, 4], [8, 1, 36, 1], [25, 1, 37, 1], [24, 1, 37, 2], [22, 1, 39, 1], [38, 1, 39, 2], [39, 1, 40, 1], [36, 1, 40, 2],
       [37, 1, 41, 1], [40, 1, 41, 2], [28, 1, 42, 1], [33, 1, 42, 2], [41, 1, 42, 3], [9, 1, 43, 1], [14, 1, 43, 2], [14, 1, 43, 5], [9, 1, 44, 1],
-      [13, 1, 44, 2], [14, 1, 44, 5], [9, 1, 45, 1], [11, 1, 45, 2], [14, 1, 45, 5], [1, 1, 45, paramPort('bloom', 'species')],
-      [46, 1, 45, paramPort('bloom', 'view')], [47, 1, 45, paramPort('bloom', 'stage')], [9, 1, 48, 1], [12, 1, 48, 2], [14, 1, 48, 5],
-      [2, 1, 48, paramPort('bloom', 'species')], [43, 1, 49, 1], [25, 1, 49, 2], [5, 1, 49, paramPort('scatter', 'count')], [44, 1, 50, 1], [24, 1, 50, 2],
-      [6, 1, 50, paramPort('scatter', 'count')], [48, 1, 51, 1], [24, 1, 51, 2], [3, 1, 51, paramPort('scatter', 'count')], [45, 1, 52, 1], [24, 1, 52, 2],
-      [3, 1, 52, paramPort('scatter', 'count')], [42, 1, 53, 1], [49, 4, 53, 2], [49, 1, 53, 3], [53, 1, 54, 1], [50, 4, 54, 2], [50, 1, 54, 3],
+      [13, 1, 44, 2], [14, 1, 44, 5], [9, 1, 45, 1], [11, 1, 45, 2], [14, 1, 45, 5], [1, 1, 45, 'species'],
+      [46, 1, 45, 'view'], [47, 1, 45, 'stage'], [9, 1, 48, 1], [12, 1, 48, 2], [14, 1, 48, 5],
+      [2, 1, 48, 'species'], [43, 1, 49, 1], [25, 1, 49, 2], [5, 1, 49, 'count'], [44, 1, 50, 1], [24, 1, 50, 2],
+      [6, 1, 50, 'count'], [48, 1, 51, 1], [24, 1, 51, 2], [3, 1, 51, 'count'], [45, 1, 52, 1], [24, 1, 52, 2],
+      [3, 1, 52, 'count'], [42, 1, 53, 1], [49, 4, 53, 2], [49, 1, 53, 3], [53, 1, 54, 1], [50, 4, 54, 2], [50, 1, 54, 3],
       [54, 1, 55, 1], [51, 4, 55, 2], [51, 1, 55, 3], [55, 1, 56, 1], [52, 4, 56, 2], [52, 1, 56, 3], [49, 1, 59, 1], [58, 1, 59, 2], [50, 1, 61, 1],
       [60, 1, 61, 2], [59, 1, 62, 1], [61, 1, 62, 2], [51, 1, 64, 1], [63, 1, 64, 2], [52, 1, 66, 1], [65, 1, 66, 2], [64, 1, 67, 1], [66, 1, 67, 2],
-      [62, 1, 68, 1], [67, 1, 68, 2], [68, 1, 57, 1], [56, 1, 69, 1], [57, 1, 69, 2], [9, 1, 69, 7], [7, 1, 69, paramPort('material', 'relief')],
+      [62, 1, 68, 1], [67, 1, 68, 2], [68, 1, 57, 1], [56, 1, 69, 1], [57, 1, 69, 2], [9, 1, 69, 7], [7, 1, 69, 'relief'],
       [69, 1, 70, 1]] },
   petals: { label: 'Fallen Petals', div: 2, teach: 'Flowers past their best (docs/prior-art/florals.md §5), as the vanitas painters showed them: heads drooping and browning, petals fallen round them, fresh ones beside aged ones. Bloom draws a sheet of wilted flowers (Wilting their stage) and a sheet of single petals, in the Petal Hue ageing to the Aged Petal Hue; Scatters throw the flowers (Fallen Flowers) and, clumped round them, the petals. They lie on wood, linen or stone, the seed’s (a Map Switch of Waves warped by noise, Canvas Weave, Perlin Noise; Surface how much it shows); their heights go to the Light Engine, which casts their shadows from the dial (Shadow). Try: Wilting high and Petals high, the dial low.',
     nodes: [
-      ['knob', { slot: '1', name: 'Petals', def: 45 }, 40, 40],                                                                                       // 1
-      ['knob', { slot: '2', name: 'Petal Size', def: 50 }, 40, 150],                                                                                  // 2
-      ['knob', { slot: '3', name: 'Wilting', def: 60 }, 40, 260],                                                                                     // 3
-      ['knob', { slot: '4', name: 'Fallen Flowers', def: 30 }, 40, 370],                                                                              // 4
-      ['knob', { slot: '5', name: 'Clumping', def: 55 }, 40, 480],                                                                                    // 5
-      ['knob', { slot: '6', name: 'Shadow', def: 55 }, 40, 590],                                                                                      // 6
-      ['knob', { slot: '7', name: 'Surface', def: 50 }, 40, 700],                                                                                     // 7
-      ['knob', { slot: '8', name: 'Species', def: 41 }, 40, 810],                                                                                     // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                       // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                  // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                     // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                              // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                    // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                     // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                     // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Surface Hue' }, 40, 1030],                                                                                          // 10
       ['hue', { slot: '2', name: 'Petal Hue' }, 40, 1140],                                                                                            // 11
@@ -1391,26 +1392,26 @@ export const TEXTURE_CHAINS = {
       ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 42
       ['material', { relief: 35, '~relief': '0,65', gloss: 12, shine: 18, shadow: 45, occlusion: 55, ambient: 50, translucency: 25 }, 1800, 40],      // 43
       ['surface', { name: 'Fallen Petals', ground: 'colour' }, 2020, 40]],                                                                            // 44
-    wires: [[17, 1, 16, paramPort('waves', 'freq')], [16, 1, 18, 1], [19, 1, 18, 2], [23, 1, 22, 1], [18, 1, 22, 2], [20, 1, 22, 3], [21, 1, 22, 4], [22, 1, 24, 1],
-      [7, 1, 24, paramPort('maprange', 'outLo')], [7, 1, 24, paramPort('maprange', 'outHi')], [24, 1, 25, 1], [10, 1, 26, 1], [13, 1, 26, 2], [26, 1, 25, 2],
+    wires: [[17, 1, 16, 'freq'], [16, 1, 18, 1], [19, 1, 18, 2], [23, 1, 22, 1], [18, 1, 22, 2], [20, 1, 22, 3], [21, 1, 22, 4], [22, 1, 24, 1],
+      [7, 1, 24, 'outLo'], [7, 1, 24, 'outHi'], [24, 1, 25, 1], [10, 1, 26, 1], [13, 1, 26, 2], [26, 1, 25, 2],
       [10, 1, 25, 3], [10, 1, 27, 1], [15, 1, 27, 2], [27, 1, 25, 4], [9, 1, 28, 1], [11, 1, 28, 2], [12, 1, 28, 3], [13, 1, 28, 4], [14, 1, 28, 5],
-      [8, 1, 28, paramPort('bloom', 'species')], [3, 1, 28, paramPort('bloom', 'stage')], [28, 1, 29, 1], [4, 1, 29, paramPort('scatter', 'count')],
-      [30, 1, 29, paramPort('scatter', 'size')], [9, 1, 31, 1], [11, 1, 31, 2], [12, 1, 31, 3], [13, 1, 31, 4], [14, 1, 31, 5],
-      [8, 1, 31, paramPort('bloom', 'species')], [3, 1, 31, paramPort('bloom', 'stage')], [31, 1, 32, 1], [1, 1, 32, paramPort('scatter', 'count')],
-      [2, 1, 32, paramPort('scatter', 'size')], [5, 1, 32, paramPort('scatter', 'clump')], [25, 1, 33, 1], [29, 4, 33, 2], [29, 1, 33, 3], [33, 1, 34, 1],
+      [8, 1, 28, 'species'], [3, 1, 28, 'stage'], [28, 1, 29, 1], [4, 1, 29, 'count'],
+      [30, 1, 29, 'size'], [9, 1, 31, 1], [11, 1, 31, 2], [12, 1, 31, 3], [13, 1, 31, 4], [14, 1, 31, 5],
+      [8, 1, 31, 'species'], [3, 1, 31, 'stage'], [31, 1, 32, 1], [1, 1, 32, 'count'],
+      [2, 1, 32, 'size'], [5, 1, 32, 'clump'], [25, 1, 33, 1], [29, 4, 33, 2], [29, 1, 33, 3], [33, 1, 34, 1],
       [32, 4, 34, 2], [32, 1, 34, 3], [29, 1, 37, 1], [36, 1, 37, 2], [32, 1, 39, 1], [38, 1, 39, 2], [37, 1, 40, 1], [39, 1, 40, 2], [40, 1, 35, 1],
       [29, 1, 41, 1], [32, 1, 41, 2], [35, 1, 42, 1], [41, 1, 42, 2], [34, 1, 43, 1], [42, 1, 43, 2], [15, 1, 43, 6], [9, 1, 43, 7],
-      [6, 1, 43, paramPort('material', 'relief')], [43, 1, 44, 1]] },
+      [6, 1, 43, 'relief'], [43, 1, 44, 1]] },
   meadow: { label: 'Idyllic Meadow', div: 2, teach: 'A meadow on a summer day (docs/prior-art/florals.md §6), after Monet’s and Van Gogh’s poppy fields and Kazuo Oga’s soft greens: a high warm sky of cumulus, rolling land fading into the distance, grass leaning with one wind, flowers near and far, petals in the air. The Light Dial is the sun: it lights the clouds (Simple Lighting on their blurred shape), the grass blades, every flower, and a warm glow where it stands. The land is a Threshold of a Gradient raised by a broad noise (Horizon); its colour runs from the far land’s hue, faded toward the sky, to the grass’s. Grass is a Scatter of dashes leaning with the seed’s wind, larger near; far flowers are clumped dabs; near ones are two of Bloom’s sheets (the Species slider’s, and a habitat’s mix in the second hue) thrown larger nearer, the largest on top; petals are diamonds smeared along the wind (Wind). Try: the dial low behind the field.',
     nodes: [
-      ['knob', { slot: '1', name: 'Flowers', def: 55 }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2', name: 'Grass', def: 60 }, 40, 150],                                                                                       // 2
-      ['knob', { slot: '3', name: 'Wind', def: 45 }, 40, 260],                                                                                        // 3
-      ['knob', { slot: '4', name: 'Petals in the Air', def: 35 }, 40, 370],                                                                           // 4
-      ['knob', { slot: '5', name: 'Horizon', def: 30 }, 40, 480],                                                                                     // 5
-      ['knob', { slot: '6', name: 'Clouds', def: 45 }, 40, 590],                                                                                      // 6
-      ['knob', { slot: '7', name: 'Second Flower', def: 40 }, 40, 700],                                                                               // 7
-      ['knob', { slot: '8', name: 'Species', def: 27 }, 40, 810],                                                                                     // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                       // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                        // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                           // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                     // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                      // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                               // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                     // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Sky Hue' }, 40, 1030],                                                                                              // 10
       ['hue', { slot: '2', name: 'Far Land Hue' }, 40, 1140],                                                                                         // 11
@@ -1529,43 +1530,43 @@ export const TEXTURE_CHAINS = {
       ['mix', { t: 35 }, 260, 3120],                                                                                                                  // 124
       ['blend', { mode: 'normal', opacity: 90 }, 3340, 40],                                                                                           // 125
       ['surface', { name: 'Idyllic Meadow', ground: 'colour' }, 3560, 40]],                                                                           // 126
-    wires: [[17, 1, 18, 1], [19, 1, 18, paramPort('maprange', 'outHi')], [16, 1, 21, 1], [18, 1, 21, 2], [21, 1, 20, 1], [5, 1, 20, paramPort('threshold', 'at')],
-      [16, 1, 22, 1], [5, 1, 22, paramPort('levels', 'lo')], [10, 1, 23, 1], [15, 1, 23, 2], [16, 1, 25, 1], [25, 1, 24, 1], [10, 1, 24, 2], [23, 1, 24, 3],
-      [27, 1, 26, paramPort('perlin', 'scale')], [26, 1, 28, 1], [29, 1, 28, paramPort('motionblur', 'length')], [28, 1, 30, 1],
-      [6, 1, 30, paramPort('threshold', 'at')], [30, 1, 31, 1], [16, 1, 33, 1], [33, 1, 32, 1], [10, 1, 34, 1], [15, 1, 34, 2], [34, 1, 32, 2], [15, 1, 35, 1],
+    wires: [[17, 1, 18, 1], [19, 1, 18, 'outHi'], [16, 1, 21, 1], [18, 1, 21, 2], [21, 1, 20, 1], [5, 1, 20, 'at'],
+      [16, 1, 22, 1], [5, 1, 22, 'lo'], [10, 1, 23, 1], [15, 1, 23, 2], [16, 1, 25, 1], [25, 1, 24, 1], [10, 1, 24, 2], [23, 1, 24, 3],
+      [27, 1, 26, 'scale'], [26, 1, 28, 1], [29, 1, 28, 'length'], [28, 1, 30, 1],
+      [6, 1, 30, 'at'], [30, 1, 31, 1], [16, 1, 33, 1], [33, 1, 32, 1], [10, 1, 34, 1], [15, 1, 34, 2], [34, 1, 32, 2], [15, 1, 35, 1],
       [10, 1, 35, 2], [35, 1, 32, 3], [24, 1, 36, 1], [32, 1, 36, 2], [31, 1, 36, 3], [22, 1, 37, 1], [11, 1, 38, 1], [10, 1, 38, 2], [38, 1, 37, 2],
-      [11, 1, 39, 1], [12, 1, 39, 2], [39, 1, 37, 3], [12, 1, 37, 4], [40, 1, 41, 1], [43, 1, 42, paramPort('waves', 'freq')], [42, 1, 44, 1], [45, 1, 44, 2],
+      [11, 1, 39, 1], [12, 1, 39, 2], [39, 1, 37, 3], [12, 1, 37, 4], [40, 1, 41, 1], [43, 1, 42, 'freq'], [42, 1, 44, 1], [45, 1, 44, 2],
       [44, 1, 46, 1], [12, 1, 47, 1], [11, 1, 47, 2], [47, 1, 46, 2], [12, 1, 46, 3], [12, 1, 48, 1], [15, 1, 48, 2], [48, 1, 46, 4], [22, 1, 49, 1],
       [37, 1, 50, 1], [41, 1, 50, 2], [50, 1, 51, 1], [46, 1, 51, 2], [49, 1, 51, 3], [36, 1, 52, 1], [51, 1, 52, 2], [20, 1, 52, 3], [53, 1, 54, 1],
-      [55, 1, 54, paramPort('maprange', 'outHi')], [16, 1, 57, 1], [18, 1, 57, 2], [57, 1, 58, 1], [54, 1, 58, 2], [58, 1, 56, 1],
-      [5, 1, 56, paramPort('threshold', 'at')], [11, 1, 59, 1], [12, 1, 59, 2], [60, 1, 61, 1], [59, 1, 62, 1], [61, 1, 62, 2], [62, 1, 63, 1], [10, 1, 63, 2],
+      [55, 1, 54, 'outHi'], [16, 1, 57, 1], [18, 1, 57, 2], [57, 1, 58, 1], [54, 1, 58, 2], [58, 1, 56, 1],
+      [5, 1, 56, 'at'], [11, 1, 59, 1], [12, 1, 59, 2], [60, 1, 61, 1], [59, 1, 62, 1], [61, 1, 62, 2], [62, 1, 63, 1], [10, 1, 63, 2],
       [56, 1, 64, 1], [20, 1, 64, 2], [52, 1, 65, 1], [63, 1, 65, 2], [64, 1, 65, 3], [67, 1, 68, 1], [66, 1, 69, 1], [68, 1, 69, 2], [20, 1, 70, 2],
-      [69, 1, 70, 3], [2, 1, 70, paramPort('scatter', 'count')], [22, 1, 71, 1], [71, 1, 70, paramPort('scatter', 'size')], [70, 2, 72, 1], [9, 1, 72, 2],
+      [69, 1, 70, 3], [2, 1, 70, 'count'], [22, 1, 71, 1], [71, 1, 70, 'size'], [70, 2, 72, 1], [9, 1, 72, 2],
       [72, 1, 73, 1], [12, 1, 74, 1], [11, 1, 74, 2], [74, 1, 73, 2], [12, 1, 73, 3], [12, 1, 75, 1], [15, 1, 75, 2], [75, 1, 73, 4], [65, 1, 76, 1],
-      [73, 1, 76, 2], [70, 1, 76, 3], [22, 1, 78, 1], [20, 1, 79, 1], [78, 1, 79, 2], [79, 1, 77, 2], [1, 1, 77, paramPort('scatter', 'count')],
-      [77, 3, 80, 1], [7, 1, 80, paramPort('threshold', 'at')], [77, 1, 81, 1], [80, 1, 81, 2], [76, 1, 82, 1], [13, 1, 82, 2], [81, 1, 82, 3], [77, 1, 83, 1],
-      [80, 1, 83, 2], [82, 1, 84, 1], [14, 1, 84, 2], [83, 1, 84, 3], [9, 1, 85, 1], [13, 1, 85, 2], [8, 1, 85, paramPort('bloom', 'species')],
-      [86, 1, 85, paramPort('bloom', 'view')], [9, 1, 87, 1], [14, 1, 87, 2], [22, 1, 88, 1], [20, 1, 89, 1], [88, 1, 89, 2], [85, 1, 90, 1], [89, 1, 90, 2],
-      [1, 1, 90, paramPort('scatter', 'count')], [22, 1, 91, 1], [91, 1, 90, paramPort('scatter', 'size')], [87, 1, 92, 1], [89, 1, 92, 2],
-      [7, 1, 92, paramPort('scatter', 'count')], [22, 1, 93, 1], [93, 1, 92, paramPort('scatter', 'size')], [84, 1, 94, 1], [92, 4, 94, 2], [92, 1, 94, 3],
-      [94, 1, 95, 1], [90, 4, 95, 2], [90, 1, 95, 3], [22, 1, 97, 1], [97, 1, 96, 2], [69, 1, 96, 3], [2, 1, 96, paramPort('scatter', 'count')],
+      [73, 1, 76, 2], [70, 1, 76, 3], [22, 1, 78, 1], [20, 1, 79, 1], [78, 1, 79, 2], [79, 1, 77, 2], [1, 1, 77, 'count'],
+      [77, 3, 80, 1], [7, 1, 80, 'at'], [77, 1, 81, 1], [80, 1, 81, 2], [76, 1, 82, 1], [13, 1, 82, 2], [81, 1, 82, 3], [77, 1, 83, 1],
+      [80, 1, 83, 2], [82, 1, 84, 1], [14, 1, 84, 2], [83, 1, 84, 3], [9, 1, 85, 1], [13, 1, 85, 2], [8, 1, 85, 'species'],
+      [86, 1, 85, 'view'], [9, 1, 87, 1], [14, 1, 87, 2], [22, 1, 88, 1], [20, 1, 89, 1], [88, 1, 89, 2], [85, 1, 90, 1], [89, 1, 90, 2],
+      [1, 1, 90, 'count'], [22, 1, 91, 1], [91, 1, 90, 'size'], [87, 1, 92, 1], [89, 1, 92, 2],
+      [7, 1, 92, 'count'], [22, 1, 93, 1], [93, 1, 92, 'size'], [84, 1, 94, 1], [92, 4, 94, 2], [92, 1, 94, 3],
+      [94, 1, 95, 1], [90, 4, 95, 2], [90, 1, 95, 3], [22, 1, 97, 1], [97, 1, 96, 2], [69, 1, 96, 3], [2, 1, 96, 'count'],
       [96, 1, 98, 1], [12, 1, 99, 1], [11, 1, 99, 2], [95, 1, 100, 1], [99, 1, 100, 2], [98, 1, 100, 3], [101, 1, 102, 1], [101, 1, 104, 1], [103, 1, 104, 2],
       [101, 2, 106, 1], [105, 1, 106, 2], [102, 1, 108, 1], [106, 1, 108, 2], [105, 1, 110, 1], [106, 1, 110, 2], [109, 1, 111, 1], [110, 1, 111, 2],
-      [108, 1, 112, 1], [111, 1, 112, 2], [112, 1, 107, paramPort('ellipse', 'x')], [104, 1, 113, 1], [106, 1, 113, 2], [105, 1, 114, 1], [106, 1, 114, 2],
-      [109, 1, 115, 1], [114, 1, 115, 2], [113, 1, 116, 1], [115, 1, 116, 2], [116, 1, 107, paramPort('ellipse', 'y')], [107, 2, 117, 1], [117, 1, 118, 1],
+      [108, 1, 112, 1], [111, 1, 112, 2], [112, 1, 107, 'x'], [104, 1, 113, 1], [106, 1, 113, 2], [105, 1, 114, 1], [106, 1, 114, 2],
+      [109, 1, 115, 1], [114, 1, 115, 2], [113, 1, 116, 1], [115, 1, 116, 2], [116, 1, 107, 'y'], [107, 2, 117, 1], [117, 1, 118, 1],
       [16, 1, 119, 1], [118, 1, 120, 1], [119, 1, 120, 2], [100, 1, 121, 1], [15, 1, 121, 2], [120, 1, 121, 3], [66, 1, 122, 3],
-      [4, 1, 122, paramPort('scatter', 'count')], [122, 1, 123, 1], [3, 1, 123, paramPort('motionblur', 'length')], [13, 1, 124, 1], [15, 1, 124, 2],
+      [4, 1, 122, 'count'], [122, 1, 123, 1], [3, 1, 123, 'length'], [13, 1, 124, 1], [15, 1, 124, 2],
       [121, 1, 125, 1], [124, 1, 125, 2], [123, 1, 125, 3], [125, 1, 126, 1]] },
   macro: { label: 'Macro Bloom', div: 2, v: 5, teach: 'One flower close, through a real lens (docs/prior-art/florals.md §8e). The camera dial frames it: Zoom from the whole flower in its setting to its heart filling the page, View tips it from face-on to the side, Turn says which way it tips and sets it toward that side’s third. Bloom draws it as maps, unlit, and the Light Engine lights them from the light dial: its heights, gloss, Facing and thinness, so light comes through thin petals (Translucency). Everything is painted sharp beside a depth map (the lights and the wash behind farthest, more flowers of its kind, the flower, a flower near the lens), and one Lens Blur focuses the whole scene as a lens does: Aperture how wide it is open, Focus where the plane of focus lies (its middle on the flower). Points of light behind (Lights Behind) become discs. Dew drops are little lenses; pollen dusts the heart. Draw order is depth order, and the same depth gives the shadows: read as heights (nearer higher) and lit twice by the Light Engine, with its shadow march and without, their ratio is the cast shadow alone, as a depth buffer gives it; a leaf crossing near the lens shadows the petals, a visitor the petal it stands on. The seed says whether the flower has its stem, and whether a blade of grass or leaves stand between the sun and it: out of the frame only their shadow falls; in it they cross near the lens, blurred. Now and then an insect visits, small, on a petal, lit with the flower: Visitors says how often (rare at its default, never more than two). Try: Aperture high and Focus low, to see the flower melt.',
     nodes: [
-      ['knob', { slot: '1', name: 'Species', def: 27 }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2', name: 'Stage', def: 45 }, 40, 150],                                                                                       // 2
-      ['knob', { slot: '3', name: 'Aperture', def: 60 }, 40, 260],                                                                                    // 3
-      ['knob', { slot: '4', name: 'Focus', def: 50 }, 40, 370],                                                                                       // 4
-      ['knob', { slot: '5', name: 'Lights Behind', def: 45 }, 40, 480],                                                                               // 5
-      ['knob', { slot: '6', name: 'Dew', def: 35 }, 40, 590],                                                                                         // 6
-      ['knob', { slot: '7', name: 'Translucency', def: 55 }, 40, 700],                                                                                // 7
-      ['knob', { slot: '8', name: 'Visitors', def: 20 }, 40, 810],                                                                                    // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                       // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                    // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                       // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                               // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                         // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                    // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['camdial', {}, 40, 1030],                                                                                                                      // 10
       ['hue', { slot: '1', name: 'Bokeh Hue' }, 40, 1140],                                                                                            // 11
@@ -1779,28 +1780,28 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'multiply', opacity: 100 }, 5760, 40],                                                                                        // 219
       ['lensblur', { focus: 40, '~focus': '18,62', aperture: 60, size: 110, blades: 0, highlights: 100 }, 5980, 40],                                  // 220
       ['surface', { name: 'Macro Bloom', ground: 'colour' }, 6200, 40]],                                                                              // 221
-    wires: [[10, 1, 17, 1], [10, 1, 19, 1], [18, 1, 19, 2], [17, 1, 20, 1], [19, 1, 21, 1], [23, 1, 22, paramPort('perlin', 'scale')], [22, 1, 24, 1],
+    wires: [[10, 1, 17, 1], [10, 1, 19, 1], [18, 1, 19, 2], [17, 1, 20, 1], [19, 1, 21, 1], [23, 1, 22, 'scale'], [22, 1, 24, 1],
       [24, 1, 25, 1], [15, 1, 26, 1], [14, 1, 26, 2], [26, 1, 25, 2], [15, 1, 25, 3], [15, 1, 27, 1], [11, 1, 27, 2], [27, 1, 25, 4], [9, 1, 28, 1],
-      [13, 1, 28, 2], [14, 1, 28, 4], [15, 1, 28, 5], [1, 1, 28, paramPort('bloom', 'species')], [29, 1, 28, paramPort('bloom', 'view')],
-      [30, 1, 28, paramPort('bloom', 'stage')], [28, 1, 31, 1], [32, 1, 31, paramPort('scatter', 'count')], [33, 1, 31, paramPort('scatter', 'size')],
-      [15, 1, 34, 1], [31, 4, 34, 2], [25, 1, 35, 1], [34, 1, 35, 2], [31, 1, 35, 3], [5, 1, 36, paramPort('scatter', 'count')], [36, 3, 37, 1],
+      [13, 1, 28, 2], [14, 1, 28, 4], [15, 1, 28, 5], [1, 1, 28, 'species'], [29, 1, 28, 'view'],
+      [30, 1, 28, 'stage'], [28, 1, 31, 1], [32, 1, 31, 'count'], [33, 1, 31, 'size'],
+      [15, 1, 34, 1], [31, 4, 34, 2], [25, 1, 35, 1], [34, 1, 35, 2], [31, 1, 35, 3], [5, 1, 36, 'count'], [36, 3, 37, 1],
       [11, 1, 38, 1], [16, 1, 38, 2], [36, 1, 39, 1], [37, 1, 39, 2], [35, 1, 40, 1], [38, 1, 40, 2], [39, 1, 40, 3], [16, 1, 41, 1], [11, 1, 41, 2],
       [42, 1, 43, 1], [37, 1, 43, 2], [36, 1, 44, 1], [43, 1, 44, 2], [40, 1, 45, 1], [41, 1, 45, 2], [44, 1, 45, 3], [9, 1, 46, 1], [13, 1, 46, 2],
-      [14, 1, 46, 4], [15, 1, 46, 5], [1, 1, 46, paramPort('bloom', 'species')], [2, 1, 46, paramPort('bloom', 'stage')],
-      [10, 3, 46, paramPort('bloom', 'size')], [10, 2, 46, paramPort('bloom', 'view')], [10, 1, 46, paramPort('bloom', 'turn')],
-      [20, 1, 46, paramPort('bloom', 'x')], [21, 1, 46, paramPort('bloom', 'y')], [47, 1, 46, paramPort('bloom', 'stem')], [10, 3, 48, 1], [46, 2, 50, 1],
+      [14, 1, 46, 4], [15, 1, 46, 5], [1, 1, 46, 'species'], [2, 1, 46, 'stage'],
+      [10, 3, 46, 'size'], [10, 2, 46, 'view'], [10, 1, 46, 'turn'],
+      [20, 1, 46, 'x'], [21, 1, 46, 'y'], [47, 1, 46, 'stem'], [10, 3, 48, 1], [46, 2, 50, 1],
       [50, 1, 49, 1], [8, 1, 51, 1], [9, 1, 52, 1], [12, 1, 52, 2], [12, 1, 53, 1], [16, 1, 53, 2], [53, 1, 52, 3], [14, 1, 52, 4], [15, 1, 52, 5],
-      [10, 3, 52, paramPort('bloom', 'size')], [54, 1, 55, 1], [55, 1, 56, 1], [20, 1, 57, 1], [48, 1, 57, 2], [57, 1, 56, paramPort('maprange', 'outLo')],
-      [20, 1, 58, 1], [48, 1, 58, 2], [58, 1, 56, paramPort('maprange', 'outHi')], [56, 1, 52, paramPort('bloom', 'x')], [54, 1, 59, 1], [18, 1, 59, 2],
-      [59, 1, 60, 1], [21, 1, 61, 1], [48, 1, 61, 2], [61, 1, 60, paramPort('maprange', 'outLo')], [21, 1, 62, 1], [48, 1, 62, 2],
-      [62, 1, 60, paramPort('maprange', 'outHi')], [60, 1, 52, paramPort('bloom', 'y')], [64, 1, 63, 1], [51, 1, 63, paramPort('threshold', 'at')],
+      [10, 3, 52, 'size'], [54, 1, 55, 1], [55, 1, 56, 1], [20, 1, 57, 1], [48, 1, 57, 2], [57, 1, 56, 'outLo'],
+      [20, 1, 58, 1], [48, 1, 58, 2], [58, 1, 56, 'outHi'], [56, 1, 52, 'x'], [54, 1, 59, 1], [18, 1, 59, 2],
+      [59, 1, 60, 1], [21, 1, 61, 1], [48, 1, 61, 2], [61, 1, 60, 'outLo'], [21, 1, 62, 1], [48, 1, 62, 2],
+      [62, 1, 60, 'outHi'], [60, 1, 52, 'y'], [64, 1, 63, 1], [51, 1, 63, 'at'],
       [52, 2, 65, 1], [63, 1, 65, 2], [65, 1, 66, 1], [49, 1, 66, 2], [8, 1, 67, 1], [9, 1, 68, 1], [12, 1, 68, 2], [12, 1, 69, 1], [16, 1, 69, 2],
-      [69, 1, 68, 3], [14, 1, 68, 4], [15, 1, 68, 5], [10, 3, 68, paramPort('bloom', 'size')], [70, 1, 71, 1], [71, 1, 72, 1], [20, 1, 73, 1], [48, 1, 73, 2],
-      [73, 1, 72, paramPort('maprange', 'outLo')], [20, 1, 74, 1], [48, 1, 74, 2], [74, 1, 72, paramPort('maprange', 'outHi')],
-      [72, 1, 68, paramPort('bloom', 'x')], [70, 1, 75, 1], [18, 1, 75, 2], [75, 1, 76, 1], [21, 1, 77, 1], [48, 1, 77, 2],
-      [77, 1, 76, paramPort('maprange', 'outLo')], [21, 1, 78, 1], [48, 1, 78, 2], [78, 1, 76, paramPort('maprange', 'outHi')],
-      [76, 1, 68, paramPort('bloom', 'y')], [80, 1, 79, 1], [67, 1, 79, paramPort('threshold', 'at')], [68, 2, 81, 1], [79, 1, 81, 2], [81, 1, 82, 1],
-      [49, 1, 82, 2], [82, 1, 83, 1], [63, 1, 83, 2], [66, 1, 84, 1], [83, 1, 84, 2], [87, 1, 86, paramPort('perlin', 'scale')], [86, 1, 88, 1],
+      [69, 1, 68, 3], [14, 1, 68, 4], [15, 1, 68, 5], [10, 3, 68, 'size'], [70, 1, 71, 1], [71, 1, 72, 1], [20, 1, 73, 1], [48, 1, 73, 2],
+      [73, 1, 72, 'outLo'], [20, 1, 74, 1], [48, 1, 74, 2], [74, 1, 72, 'outHi'],
+      [72, 1, 68, 'x'], [70, 1, 75, 1], [18, 1, 75, 2], [75, 1, 76, 1], [21, 1, 77, 1], [48, 1, 77, 2],
+      [77, 1, 76, 'outLo'], [21, 1, 78, 1], [48, 1, 78, 2], [78, 1, 76, 'outHi'],
+      [76, 1, 68, 'y'], [80, 1, 79, 1], [67, 1, 79, 'at'], [68, 2, 81, 1], [79, 1, 81, 2], [81, 1, 82, 1],
+      [49, 1, 82, 2], [82, 1, 83, 1], [63, 1, 83, 2], [66, 1, 84, 1], [83, 1, 84, 2], [87, 1, 86, 'scale'], [86, 1, 88, 1],
       [46, 4, 89, 1], [89, 1, 90, 1], [46, 2, 90, 2], [46, 1, 91, 1], [52, 1, 91, 2], [66, 1, 91, 3], [91, 1, 92, 1], [68, 1, 92, 2], [83, 1, 92, 3],
       [42, 1, 93, 1], [66, 1, 93, 2], [46, 8, 94, 1], [93, 1, 94, 2], [52, 8, 95, 1], [66, 1, 95, 2], [94, 1, 96, 1], [95, 1, 96, 2], [42, 1, 97, 1],
       [83, 1, 97, 2], [96, 1, 98, 1], [97, 1, 98, 2], [68, 8, 99, 1], [83, 1, 99, 2], [98, 1, 100, 1], [99, 1, 100, 2], [88, 1, 101, 1], [46, 2, 101, 2],
@@ -1810,20 +1811,20 @@ export const TEXTURE_CHAINS = {
       [112, 1, 114, 1], [113, 1, 114, 2], [52, 4, 115, 1], [42, 1, 116, 1], [66, 1, 116, 2], [90, 1, 117, 1], [116, 1, 117, 2], [115, 1, 118, 1],
       [66, 1, 118, 2], [117, 1, 119, 1], [118, 1, 119, 2], [68, 4, 120, 1], [42, 1, 121, 1], [83, 1, 121, 2], [119, 1, 122, 1], [121, 1, 122, 2],
       [120, 1, 123, 1], [83, 1, 123, 2], [122, 1, 124, 1], [123, 1, 124, 2], [92, 1, 125, 1], [100, 1, 125, 2], [125, 1, 85, 1], [106, 1, 85, 2],
-      [114, 1, 85, 3], [16, 1, 85, 6], [9, 1, 85, 7], [124, 1, 126, 1], [7, 1, 126, 2], [126, 1, 85, paramPort('material', 'translucency')], [46, 2, 128, 1],
+      [114, 1, 85, 3], [16, 1, 85, 6], [9, 1, 85, 7], [124, 1, 126, 1], [7, 1, 126, 2], [126, 1, 85, 'translucency'], [46, 2, 128, 1],
       [84, 1, 128, 2], [128, 1, 127, 1], [45, 1, 129, 1], [85, 1, 129, 2], [127, 1, 129, 3], [130, 3, 131, 1], [18, 1, 131, 2], [130, 3, 132, 1],
-      [134, 1, 133, paramPort('scatter', 'count')], [135, 1, 133, paramPort('scatter', 'size')], [9, 1, 136, 1], [15, 1, 136, 5], [136, 1, 137, 1],
-      [138, 1, 137, paramPort('scatter', 'count')], [140, 1, 139, 1], [141, 1, 139, 2], [133, 1, 139, 3], [137, 1, 139, 4], [133, 1, 142, 1], [137, 1, 142, 2],
-      [142, 1, 139, 5], [144, 1, 143, 1], [42, 1, 145, 1], [143, 1, 145, 2], [139, 1, 146, 1], [131, 1, 146, paramPort('offset', 'x')],
-      [132, 1, 146, paramPort('offset', 'y')], [146, 1, 147, 1], [147, 1, 148, 1], [145, 1, 148, 2], [148, 1, 149, 1], [129, 1, 150, 1], [149, 1, 150, 2],
-      [127, 1, 150, 3], [139, 1, 151, 1], [143, 1, 151, 2], [46, 2, 152, 2], [6, 1, 152, paramPort('scatter', 'count')], [152, 2, 153, 1], [9, 1, 153, 2],
-      [152, 1, 154, 1], [131, 1, 154, paramPort('offset', 'x')], [132, 1, 154, paramPort('offset', 'y')], [154, 1, 156, 1], [152, 1, 156, 2], [156, 1, 155, 1],
+      [134, 1, 133, 'count'], [135, 1, 133, 'size'], [9, 1, 136, 1], [15, 1, 136, 5], [136, 1, 137, 1],
+      [138, 1, 137, 'count'], [140, 1, 139, 1], [141, 1, 139, 2], [133, 1, 139, 3], [137, 1, 139, 4], [133, 1, 142, 1], [137, 1, 142, 2],
+      [142, 1, 139, 5], [144, 1, 143, 1], [42, 1, 145, 1], [143, 1, 145, 2], [139, 1, 146, 1], [131, 1, 146, 'x'],
+      [132, 1, 146, 'y'], [146, 1, 147, 1], [147, 1, 148, 1], [145, 1, 148, 2], [148, 1, 149, 1], [129, 1, 150, 1], [149, 1, 150, 2],
+      [127, 1, 150, 3], [139, 1, 151, 1], [143, 1, 151, 2], [46, 2, 152, 2], [6, 1, 152, 'count'], [152, 2, 153, 1], [9, 1, 153, 2],
+      [152, 1, 154, 1], [131, 1, 154, 'x'], [132, 1, 154, 'y'], [154, 1, 156, 1], [152, 1, 156, 2], [156, 1, 155, 1],
       [152, 1, 157, 1], [155, 1, 158, 1], [46, 2, 158, 2], [150, 1, 159, 1], [16, 1, 159, 2], [158, 1, 159, 3], [157, 1, 160, 1], [159, 1, 161, 1],
       [14, 1, 161, 2], [160, 1, 161, 3], [13, 1, 162, 1], [15, 1, 162, 2], [152, 1, 163, 1], [161, 1, 164, 1], [162, 1, 164, 2], [163, 1, 164, 3],
       [153, 2, 165, 1], [152, 1, 165, 2], [164, 1, 166, 1], [16, 1, 166, 2], [165, 1, 166, 3], [46, 5, 167, 1], [167, 1, 169, 1], [169, 1, 168, 2],
-      [170, 1, 168, paramPort('scatter', 'count')], [14, 1, 171, 1], [16, 1, 171, 2], [166, 1, 172, 1], [171, 1, 172, 2], [168, 1, 172, 3], [9, 1, 173, 1],
-      [13, 1, 173, 2], [14, 1, 173, 4], [15, 1, 173, 5], [1, 1, 173, paramPort('bloom', 'species')], [174, 1, 173, paramPort('bloom', 'view')],
-      [175, 1, 173, paramPort('bloom', 'size')], [176, 1, 173, paramPort('bloom', 'x')], [177, 1, 173, paramPort('bloom', 'y')], [179, 1, 178, 1],
+      [170, 1, 168, 'count'], [14, 1, 171, 1], [16, 1, 171, 2], [166, 1, 172, 1], [171, 1, 172, 2], [168, 1, 172, 3], [9, 1, 173, 1],
+      [13, 1, 173, 2], [14, 1, 173, 4], [15, 1, 173, 5], [1, 1, 173, 'species'], [174, 1, 173, 'view'],
+      [175, 1, 173, 'size'], [176, 1, 173, 'x'], [177, 1, 173, 'y'], [179, 1, 178, 1],
       [173, 2, 180, 1], [178, 1, 180, 2], [181, 1, 182, 1], [180, 1, 183, 1], [182, 1, 183, 2], [172, 1, 184, 1], [173, 1, 184, 2], [183, 1, 184, 3],
       [15, 1, 185, 1], [14, 1, 185, 2], [184, 1, 186, 1], [185, 1, 186, 2], [151, 1, 186, 3], [52, 3, 187, 1], [66, 1, 187, 2], [46, 3, 188, 1],
       [187, 1, 188, 2], [188, 1, 189, 1], [42, 1, 191, 1], [31, 1, 191, 2], [42, 1, 192, 1], [191, 1, 192, 2], [190, 1, 193, 1], [31, 1, 193, 2],
@@ -1833,17 +1834,17 @@ export const TEXTURE_CHAINS = {
       [206, 1, 208, 1], [207, 1, 208, 2], [208, 1, 210, 1], [210, 1, 209, 1], [42, 1, 211, 1], [209, 1, 211, 2], [9, 1, 211, 7], [42, 1, 212, 1],
       [209, 1, 212, 2], [9, 1, 212, 7], [211, 2, 213, 1], [212, 2, 213, 2], [42, 1, 215, 1], [208, 1, 215, 2], [215, 1, 214, 1], [42, 1, 216, 1],
       [213, 1, 216, 2], [216, 1, 217, 1], [214, 1, 217, 2], [217, 1, 218, 1], [186, 1, 219, 1], [218, 1, 219, 2], [219, 1, 220, 1], [208, 1, 220, 2],
-      [3, 1, 220, paramPort('lensblur', 'aperture')], [4, 1, 220, paramPort('lensblur', 'focus')], [220, 1, 221, 1]] },
+      [3, 1, 220, 'aperture'], [4, 1, 220, 'focus'], [220, 1, 221, 1]] },
   ditsy: { label: 'Ditsy Print', div: 2, teach: 'A small floral print all over cloth, as the cotton day dresses of the 1930s and Liberty’s Tana Lawn have it (docs/prior-art/florals.md §8): tiny flowers at random, never in rows, a sprig of leaf between. Bloom draws a sheet of sixteen heads face on and pressed flat (a print has no depth), once in each of three colours; Scatter throws each sheet over the cloth (Flowers, Flower Size, Clustering, Turn), cut out by black; Colors says how many of the three print, and a Threshold of it lets the second and third in. Bloom’s single leaves are the sprigs. Canvas Weave, through a Map Range, gives the cloth its weave (Cloth). Try: a dark ground and Colors high.',
     nodes: [
-      ['knob', { slot: '1', name: 'Flowers', def: 55 }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2', name: 'Flower Size', def: 35 }, 40, 150],                                                                                 // 2
-      ['knob', { slot: '3', name: 'Sprigs', def: 45 }, 40, 260],                                                                                      // 3
-      ['knob', { slot: '4', name: 'Colors', def: 50 }, 40, 370],                                                                                      // 4
-      ['knob', { slot: '5', name: 'Cloth', def: 40 }, 40, 480],                                                                                       // 5
-      ['knob', { slot: '6', name: 'Clustering', def: 30 }, 40, 590],                                                                                  // 6
-      ['knob', { slot: '7', name: 'Turn', def: 70 }, 40, 700],                                                                                        // 7
-      ['knob', { slot: '8', name: 'Species', def: 98 }, 40, 810],                                                                                     // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                 // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                      // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                      // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                       // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                  // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                        // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                     // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Ground Hue' }, 40, 1030],                                                                                           // 10
       ['hue', { slot: '2', name: 'Flower Hue' }, 40, 1140],                                                                                           // 11
@@ -1876,29 +1877,29 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 38
       ['blend', { mode: 'multiply', opacity: 70 }, 1800, 40],                                                                                         // 39
       ['surface', { name: 'Ditsy Print', ground: 'colour' }, 2020, 40]],                                                                              // 40
-    wires: [[17, 1, 16, paramPort('canvasweave', 'pitch')], [16, 1, 18, 1], [5, 1, 18, paramPort('maprange', 'outLo')], [10, 1, 19, 1], [18, 1, 19, 2],
-      [9, 1, 20, 1], [11, 1, 20, 2], [11, 1, 20, 3], [14, 1, 20, 4], [15, 1, 20, 5], [8, 1, 20, paramPort('bloom', 'species')],
-      [21, 1, 20, paramPort('bloom', 'stage')], [20, 1, 22, 1], [1, 1, 22, paramPort('scatter', 'count')], [2, 1, 22, paramPort('scatter', 'size')],
-      [6, 1, 22, paramPort('scatter', 'clump')], [7, 1, 22, paramPort('scatter', 'turn')], [9, 1, 23, 1], [12, 1, 23, 2], [12, 1, 23, 3], [14, 1, 23, 4],
-      [15, 1, 23, 5], [8, 1, 23, paramPort('bloom', 'species')], [24, 1, 23, paramPort('bloom', 'stage')], [23, 1, 25, 1],
-      [1, 1, 25, paramPort('scatter', 'count')], [2, 1, 25, paramPort('scatter', 'size')], [6, 1, 25, paramPort('scatter', 'clump')],
-      [7, 1, 25, paramPort('scatter', 'turn')], [9, 1, 26, 1], [13, 1, 26, 2], [13, 1, 26, 3], [14, 1, 26, 4], [15, 1, 26, 5],
-      [8, 1, 26, paramPort('bloom', 'species')], [27, 1, 26, paramPort('bloom', 'stage')], [26, 1, 28, 1], [1, 1, 28, paramPort('scatter', 'count')],
-      [2, 1, 28, paramPort('scatter', 'size')], [6, 1, 28, paramPort('scatter', 'clump')], [7, 1, 28, paramPort('scatter', 'turn')], [4, 1, 29, 1],
-      [4, 1, 30, 1], [9, 1, 31, 1], [15, 1, 31, 5], [31, 1, 32, 1], [3, 1, 32, paramPort('scatter', 'count')], [2, 1, 32, paramPort('scatter', 'size')],
-      [6, 1, 32, paramPort('scatter', 'clump')], [19, 1, 33, 1], [32, 4, 33, 2], [32, 1, 33, 3], [28, 1, 34, 1], [30, 1, 34, 2], [33, 1, 35, 1],
+    wires: [[17, 1, 16, 'pitch'], [16, 1, 18, 1], [5, 1, 18, 'outLo'], [10, 1, 19, 1], [18, 1, 19, 2],
+      [9, 1, 20, 1], [11, 1, 20, 2], [11, 1, 20, 3], [14, 1, 20, 4], [15, 1, 20, 5], [8, 1, 20, 'species'],
+      [21, 1, 20, 'stage'], [20, 1, 22, 1], [1, 1, 22, 'count'], [2, 1, 22, 'size'],
+      [6, 1, 22, 'clump'], [7, 1, 22, 'turn'], [9, 1, 23, 1], [12, 1, 23, 2], [12, 1, 23, 3], [14, 1, 23, 4],
+      [15, 1, 23, 5], [8, 1, 23, 'species'], [24, 1, 23, 'stage'], [23, 1, 25, 1],
+      [1, 1, 25, 'count'], [2, 1, 25, 'size'], [6, 1, 25, 'clump'],
+      [7, 1, 25, 'turn'], [9, 1, 26, 1], [13, 1, 26, 2], [13, 1, 26, 3], [14, 1, 26, 4], [15, 1, 26, 5],
+      [8, 1, 26, 'species'], [27, 1, 26, 'stage'], [26, 1, 28, 1], [1, 1, 28, 'count'],
+      [2, 1, 28, 'size'], [6, 1, 28, 'clump'], [7, 1, 28, 'turn'], [4, 1, 29, 1],
+      [4, 1, 30, 1], [9, 1, 31, 1], [15, 1, 31, 5], [31, 1, 32, 1], [3, 1, 32, 'count'], [2, 1, 32, 'size'],
+      [6, 1, 32, 'clump'], [19, 1, 33, 1], [32, 4, 33, 2], [32, 1, 33, 3], [28, 1, 34, 1], [30, 1, 34, 2], [33, 1, 35, 1],
       [28, 4, 35, 2], [34, 1, 35, 3], [25, 1, 36, 1], [29, 1, 36, 2], [35, 1, 37, 1], [25, 4, 37, 2], [36, 1, 37, 3], [37, 1, 38, 1], [22, 4, 38, 2],
       [22, 1, 38, 3], [38, 1, 39, 1], [18, 1, 39, 2], [39, 1, 40, 1]] },
   botline: { label: 'Botanical Line', div: 2, teach: 'Flowers drawn in a fine ink line, with a loose wash of colour or none (docs/prior-art/florals.md §8): the line art of a field guide’s margin, clean confident outlines, no shading, the paper left to breathe. Bloom draws a sheet of four whole plants from the side, stems and leaves; Scatter throws a few, large (Plants, Plant Size). Edges of the plants’ shape is the outline; edges of their colours (Detail) the lines between petals and leaves. Blur and Threshold set the pen (Line). The wash is the plants’ own colour, multiplied in under the line and slipped off it by an Offset (Wash, Wash Slip). Split HSB finds the green, so leaves and stems take the second ink. Try: Plants low, Plant Size high, Wash at nothing.',
     nodes: [
-      ['knob', { slot: '1', name: 'Plants', def: 35 }, 40, 40],                                                                                       // 1
-      ['knob', { slot: '2', name: 'Plant Size', def: 55 }, 40, 150],                                                                                  // 2
-      ['knob', { slot: '3', name: 'Line', def: 45 }, 40, 260],                                                                                        // 3
-      ['knob', { slot: '4', name: 'Detail', def: 55 }, 40, 370],                                                                                      // 4
-      ['knob', { slot: '5', name: 'Wash', def: 40 }, 40, 480],                                                                                        // 5
-      ['knob', { slot: '6', name: 'Wash Slip', def: 30 }, 40, 590],                                                                                   // 6
-      ['knob', { slot: '7', name: 'Paper', def: 40 }, 40, 700],                                                                                       // 7
-      ['knob', { slot: '8', name: 'Species', def: 98 }, 40, 810],                                                                                     // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                       // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                  // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                        // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                      // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                        // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                   // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                       // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                     // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Paper Hue' }, 40, 1030],                                                                                            // 10
       ['hue', { slot: '2', name: 'Ink Hue' }, 40, 1140],                                                                                              // 11
@@ -1934,25 +1935,25 @@ export const TEXTURE_CHAINS = {
       ['math', { op: 'multiply' }, 1800, 150],                                                                                                        // 41
       ['blend', { mode: 'normal', opacity: 100 }, 2020, 40],                                                                                          // 42
       ['surface', { name: 'Botanical Line', ground: 'colour' }, 2240, 40]],                                                                           // 43
-    wires: [[16, 1, 17, 1], [7, 1, 17, paramPort('maprange', 'outLo')], [10, 1, 18, 1], [17, 1, 18, 2], [9, 1, 19, 1], [12, 1, 19, 2], [12, 1, 19, 3],
-      [13, 1, 19, 4], [14, 1, 19, 5], [8, 1, 19, paramPort('bloom', 'species')], [20, 1, 19, paramPort('bloom', 'view')],
-      [21, 1, 19, paramPort('bloom', 'stage')], [19, 1, 22, 1], [1, 1, 22, paramPort('scatter', 'count')], [2, 1, 22, paramPort('scatter', 'size')],
-      [23, 1, 22, paramPort('scatter', 'turn')], [22, 1, 24, 1], [22, 4, 25, 1], [25, 1, 26, 1], [4, 1, 26, paramPort('maprange', 'outHi')], [24, 1, 27, 1],
-      [27, 1, 28, 1], [26, 1, 28, 2], [28, 1, 29, 1], [3, 1, 29, paramPort('blur', 'radius')], [29, 1, 30, 1], [3, 1, 30, paramPort('threshold', 'at')],
-      [22, 1, 31, 1], [6, 1, 31, paramPort('offset', 'x')], [6, 1, 31, paramPort('offset', 'y')], [31, 1, 32, 1], [32, 1, 33, 1],
-      [5, 1, 33, paramPort('maprange', 'outHi')], [18, 1, 34, 1], [22, 4, 34, 2], [33, 1, 34, 3], [22, 4, 35, 1], [35, 1, 37, 1], [35, 2, 38, 1],
+    wires: [[16, 1, 17, 1], [7, 1, 17, 'outLo'], [10, 1, 18, 1], [17, 1, 18, 2], [9, 1, 19, 1], [12, 1, 19, 2], [12, 1, 19, 3],
+      [13, 1, 19, 4], [14, 1, 19, 5], [8, 1, 19, 'species'], [20, 1, 19, 'view'],
+      [21, 1, 19, 'stage'], [19, 1, 22, 1], [1, 1, 22, 'count'], [2, 1, 22, 'size'],
+      [23, 1, 22, 'turn'], [22, 1, 24, 1], [22, 4, 25, 1], [25, 1, 26, 1], [4, 1, 26, 'outHi'], [24, 1, 27, 1],
+      [27, 1, 28, 1], [26, 1, 28, 2], [28, 1, 29, 1], [3, 1, 29, 'radius'], [29, 1, 30, 1], [3, 1, 30, 'at'],
+      [22, 1, 31, 1], [6, 1, 31, 'x'], [6, 1, 31, 'y'], [31, 1, 32, 1], [32, 1, 33, 1],
+      [5, 1, 33, 'outHi'], [18, 1, 34, 1], [22, 4, 34, 2], [33, 1, 34, 3], [22, 4, 35, 1], [35, 1, 37, 1], [35, 2, 38, 1],
       [37, 1, 39, 1], [38, 1, 39, 2], [39, 1, 36, 1], [34, 1, 40, 1], [11, 1, 40, 2], [30, 1, 40, 3], [30, 1, 41, 1], [36, 1, 41, 2], [40, 1, 42, 1],
       [15, 1, 42, 2], [41, 1, 42, 3], [42, 1, 43, 1]] },
   windsea: { label: 'Windward Sea', div: 2, v: 5, teach: 'A sea and sky in the cel-shaded look of the great sailing games (docs/prior-art/cel-shaded.md): light in a few flat bands, never a gradient. The seed picks the weather (clear, fair, overcast, now and then a storm: a slate sky, a choppy sea, wind everywhere); Weather leans it fairer or stormier. The Light Engine lights the clouds’ and islands’ heights from the dial, and a Posterize of its light (Toon Bands) with a Gradient Map gives each band a hue: shadow, key, bright edge. The clouds are Scatter’s domes heaped above the horizon, curled by two Twirls (Swirls). The wind is not painted on the sky: Streamers sweeps ribbons through the scene, gusts that end in tightening curls, near ones large and far ones small, lit in the same bands, their back faces a shade darker (Wind). The sea is three colours: a Gradient Map of the depth, and foam in flattened rounds and the waves’ long lines, thrown smaller the farther they lie (Foam, Waves). Islands rise where a Perlin reaches above the horizon (Islands). The sun stands where the dial lays it, and sets into the sea as its height sinks. Try: the dial low and behind, the Sky Hue orange.',
     nodes: [
-      ['knob', { slot: '1', name: 'Horizon', def: 45 }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2', name: 'Weather', def: 50 }, 40, 150],                                                                                     // 2
-      ['knob', { slot: '3', name: 'Swirls', def: 45 }, 40, 260],                                                                                      // 3
-      ['knob', { slot: '4', name: 'Waves', def: 50 }, 40, 370],                                                                                       // 4
-      ['knob', { slot: '5', name: 'Foam', def: 45 }, 40, 480],                                                                                        // 5
-      ['knob', { slot: '6', name: 'Wind', def: 35 }, 40, 590],                                                                                        // 6
-      ['knob', { slot: '7', name: 'Islands', def: 40 }, 40, 700],                                                                                     // 7
-      ['knob', { slot: '8', name: 'Toon Bands', def: 30 }, 40, 810],                                                                                  // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                      // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                     // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                      // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                       // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                        // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                        // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                     // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                  // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Sky Hue' }, 40, 1030],                                                                                              // 10
       ['hue', { slot: '2', name: 'Sea Hue' }, 40, 1140],                                                                                              // 11
@@ -2097,49 +2098,49 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'normal', opacity: 50 }, 2240, 480],                                                                                          // 150
       ['blend', { mode: 'normal', opacity: 96 }, 4440, 40],                                                                                           // 151
       ['surface', { name: 'Windward Sea', ground: 'colour' }, 4660, 40]],                                                                             // 152
-    wires: [[17, 1, 16, 1], [2, 1, 18, 1], [18, 1, 16, paramPort('maprange', 'outLo')], [2, 1, 19, 1], [19, 1, 16, paramPort('maprange', 'outHi')], [16, 1, 20, 1],
-      [21, 1, 22, 1], [1, 1, 22, paramPort('threshold', 'at')], [21, 1, 23, 1], [1, 1, 23, paramPort('levels', 'lo')], [21, 1, 24, 1], [10, 1, 24, 2],
+    wires: [[17, 1, 16, 1], [2, 1, 18, 1], [18, 1, 16, 'outLo'], [2, 1, 19, 1], [19, 1, 16, 'outHi'], [16, 1, 20, 1],
+      [21, 1, 22, 1], [1, 1, 22, 'at'], [21, 1, 23, 1], [1, 1, 23, 'lo'], [21, 1, 24, 1], [10, 1, 24, 2],
       [10, 1, 25, 1], [13, 1, 25, 2], [25, 1, 24, 3], [10, 1, 26, 1], [13, 1, 26, 2], [26, 1, 24, 4], [9, 1, 27, 1], [28, 2, 30, 1], [29, 1, 30, 2],
       [1, 1, 31, 1], [30, 1, 32, 1], [30, 1, 32, 2], [31, 1, 34, 1], [33, 1, 34, 2], [32, 1, 35, 1], [34, 1, 35, 2], [31, 1, 36, 1], [35, 1, 36, 2],
-      [36, 1, 38, 1], [37, 1, 38, 2], [27, 1, 39, paramPort('ellipse', 'x')], [38, 1, 39, paramPort('ellipse', 'y')], [27, 1, 40, paramPort('ellipse', 'x')],
-      [38, 1, 40, paramPort('ellipse', 'y')], [24, 1, 41, 1], [15, 1, 41, 2], [39, 1, 41, 3], [15, 1, 42, 1], [13, 1, 42, 2], [41, 1, 43, 1], [42, 1, 43, 2],
-      [40, 1, 43, 3], [21, 1, 44, 1], [1, 1, 45, 1], [45, 1, 44, paramPort('maprange', 'inLo')], [1, 1, 46, 1], [46, 1, 44, paramPort('maprange', 'inHi')],
+      [36, 1, 38, 1], [37, 1, 38, 2], [27, 1, 39, 'x'], [38, 1, 39, 'y'], [27, 1, 40, 'x'],
+      [38, 1, 40, 'y'], [24, 1, 41, 1], [15, 1, 41, 2], [39, 1, 41, 3], [15, 1, 42, 1], [13, 1, 42, 2], [41, 1, 43, 1], [42, 1, 43, 2],
+      [40, 1, 43, 3], [21, 1, 44, 1], [1, 1, 45, 1], [45, 1, 44, 'inLo'], [1, 1, 46, 1], [46, 1, 44, 'inHi'],
       [44, 1, 47, 1], [44, 1, 48, 1], [47, 1, 49, 1], [48, 1, 49, 2], [44, 1, 50, 1], [50, 1, 51, 1], [49, 1, 51, 2], [51, 1, 52, 2], [16, 1, 53, 1],
-      [53, 1, 52, paramPort('scatter', 'count')], [16, 1, 55, 1], [54, 1, 56, 1], [55, 1, 56, 2], [56, 1, 52, paramPort('scatter', 'size')], [44, 1, 57, 1],
-      [52, 2, 59, 1], [57, 1, 59, 2], [59, 1, 58, 1], [3, 1, 58, paramPort('twirl', 'angle')], [60, 1, 58, paramPort('twirl', 'radius')],
-      [61, 1, 58, paramPort('twirl', 'x')], [62, 1, 58, paramPort('twirl', 'y')], [58, 1, 63, 1], [3, 1, 63, paramPort('twirl', 'angle')],
-      [64, 1, 63, paramPort('twirl', 'radius')], [65, 1, 63, paramPort('twirl', 'x')], [66, 1, 63, paramPort('twirl', 'y')], [63, 1, 67, 1], [29, 1, 68, 1],
+      [53, 1, 52, 'count'], [16, 1, 55, 1], [54, 1, 56, 1], [55, 1, 56, 2], [56, 1, 52, 'size'], [44, 1, 57, 1],
+      [52, 2, 59, 1], [57, 1, 59, 2], [59, 1, 58, 1], [3, 1, 58, 'angle'], [60, 1, 58, 'radius'],
+      [61, 1, 58, 'x'], [62, 1, 58, 'y'], [58, 1, 63, 1], [3, 1, 63, 'angle'],
+      [64, 1, 63, 'radius'], [65, 1, 63, 'x'], [66, 1, 63, 'y'], [63, 1, 67, 1], [29, 1, 68, 1],
       [22, 1, 68, 2], [67, 1, 69, 1], [68, 1, 69, 2], [63, 1, 70, 1], [10, 1, 71, 1], [13, 1, 71, 2], [13, 1, 72, 1], [10, 1, 72, 2], [74, 1, 73, 1],
-      [70, 1, 73, 2], [9, 1, 73, 7], [73, 2, 75, 1], [8, 1, 75, paramPort('posterize', 'steps')], [75, 1, 77, 1], [77, 1, 76, 1], [71, 1, 76, 2],
-      [72, 1, 76, 3], [13, 1, 76, 4], [43, 1, 78, 1], [76, 1, 78, 2], [69, 1, 78, 3], [80, 1, 79, paramPort('perlin', 'scale')], [79, 1, 81, 1],
-      [7, 1, 81, paramPort('maprange', 'outHi')], [81, 1, 82, 1], [44, 1, 82, 2], [82, 1, 83, 1], [29, 1, 84, 1], [22, 1, 84, 2], [83, 1, 85, 1],
+      [70, 1, 73, 2], [9, 1, 73, 7], [73, 2, 75, 1], [8, 1, 75, 'steps'], [75, 1, 77, 1], [77, 1, 76, 1], [71, 1, 76, 2],
+      [72, 1, 76, 3], [13, 1, 76, 4], [43, 1, 78, 1], [76, 1, 78, 2], [69, 1, 78, 3], [80, 1, 79, 'scale'], [79, 1, 81, 1],
+      [7, 1, 81, 'outHi'], [81, 1, 82, 1], [44, 1, 82, 2], [82, 1, 83, 1], [29, 1, 84, 1], [22, 1, 84, 2], [83, 1, 85, 1],
       [84, 1, 85, 2], [85, 1, 86, 1], [14, 1, 87, 1], [12, 1, 87, 2], [14, 1, 88, 1], [15, 1, 88, 2], [90, 1, 89, 1], [86, 1, 89, 2], [9, 1, 89, 7],
-      [89, 2, 91, 1], [8, 1, 91, paramPort('posterize', 'steps')], [91, 1, 93, 1], [93, 1, 92, 1], [87, 1, 92, 2], [14, 1, 92, 3], [88, 1, 92, 4],
+      [89, 2, 91, 1], [8, 1, 91, 'steps'], [91, 1, 93, 1], [93, 1, 92, 1], [87, 1, 92, 2], [14, 1, 92, 3], [88, 1, 92, 4],
       [92, 1, 94, 1], [10, 1, 94, 2], [78, 1, 95, 1], [94, 1, 95, 2], [85, 1, 95, 3], [23, 1, 96, 1], [11, 1, 97, 1], [10, 1, 97, 2], [97, 1, 96, 2],
       [11, 1, 96, 3], [12, 1, 96, 4], [23, 1, 98, 1], [99, 1, 100, 1], [22, 1, 102, 1], [100, 1, 102, 2], [23, 1, 103, 1], [102, 1, 104, 1], [103, 1, 104, 2],
-      [104, 1, 101, 2], [5, 1, 101, paramPort('scatter', 'count')], [98, 1, 101, paramPort('scatter', 'size')], [101, 1, 105, 1], [105, 1, 106, 1],
-      [107, 1, 106, 2], [22, 1, 108, 2], [20, 1, 109, 1], [4, 1, 110, 1], [109, 1, 110, 2], [110, 1, 108, paramPort('scatter', 'count')],
-      [98, 1, 108, paramPort('scatter', 'size')], [108, 1, 111, 1], [112, 1, 111, 2], [106, 1, 113, 1], [96, 1, 114, 1], [13, 1, 114, 2], [113, 1, 114, 3],
-      [111, 1, 115, 1], [114, 1, 116, 1], [13, 1, 116, 2], [115, 1, 116, 3], [27, 1, 117, paramPort('ellipse', 'x')], [117, 1, 119, 1], [22, 1, 119, 2],
-      [119, 1, 118, 2], [4, 1, 118, paramPort('scatter', 'count')], [15, 1, 120, 1], [13, 1, 120, 2], [116, 1, 121, 1], [120, 1, 121, 2], [118, 1, 121, 3],
+      [104, 1, 101, 2], [5, 1, 101, 'count'], [98, 1, 101, 'size'], [101, 1, 105, 1], [105, 1, 106, 1],
+      [107, 1, 106, 2], [22, 1, 108, 2], [20, 1, 109, 1], [4, 1, 110, 1], [109, 1, 110, 2], [110, 1, 108, 'count'],
+      [98, 1, 108, 'size'], [108, 1, 111, 1], [112, 1, 111, 2], [106, 1, 113, 1], [96, 1, 114, 1], [13, 1, 114, 2], [113, 1, 114, 3],
+      [111, 1, 115, 1], [114, 1, 116, 1], [13, 1, 116, 2], [115, 1, 116, 3], [27, 1, 117, 'x'], [117, 1, 119, 1], [22, 1, 119, 2],
+      [119, 1, 118, 2], [4, 1, 118, 'count'], [15, 1, 120, 1], [13, 1, 120, 2], [116, 1, 121, 1], [120, 1, 121, 2], [118, 1, 121, 3],
       [95, 1, 122, 1], [121, 1, 122, 2], [22, 1, 122, 3], [23, 1, 123, 1], [10, 1, 124, 1], [13, 1, 124, 2], [123, 1, 125, 1], [22, 1, 125, 2],
       [122, 1, 126, 1], [124, 1, 126, 2], [125, 1, 126, 3], [12, 1, 127, 1], [13, 1, 127, 2], [22, 1, 128, 1], [20, 1, 129, 1], [128, 1, 129, 2],
       [126, 1, 130, 1], [127, 1, 130, 2], [129, 1, 130, 3], [132, 1, 133, 1], [134, 1, 135, 1], [135, 1, 137, 1], [136, 1, 137, 2], [133, 1, 138, 1],
-      [137, 1, 138, 2], [138, 1, 131, 2], [9, 1, 131, 3], [20, 1, 139, 1], [6, 1, 140, 1], [139, 1, 140, 2], [140, 1, 131, paramPort('streamers', 'count')],
-      [1, 1, 131, paramPort('streamers', 'horizon')], [141, 1, 131, paramPort('streamers', 'length')], [142, 1, 131, paramPort('streamers', 'curl')],
-      [131, 2, 143, 1], [8, 1, 143, paramPort('posterize', 'steps')], [143, 1, 145, 1], [145, 1, 144, 1], [13, 1, 146, 1], [10, 1, 146, 2], [146, 1, 144, 2],
+      [137, 1, 138, 2], [138, 1, 131, 2], [9, 1, 131, 3], [20, 1, 139, 1], [6, 1, 140, 1], [139, 1, 140, 2], [140, 1, 131, 'count'],
+      [1, 1, 131, 'horizon'], [141, 1, 131, 'length'], [142, 1, 131, 'curl'],
+      [131, 2, 143, 1], [8, 1, 143, 'steps'], [143, 1, 145, 1], [145, 1, 144, 1], [13, 1, 146, 1], [10, 1, 146, 2], [146, 1, 144, 2],
       [13, 1, 147, 1], [10, 1, 147, 2], [147, 1, 144, 3], [13, 1, 144, 4], [131, 3, 148, 1], [13, 1, 149, 1], [12, 1, 149, 2], [144, 1, 150, 1],
       [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 152, 1]] },
   inkscroll: { label: 'Sunrise Scroll', div: 2, v: 5, teach: 'A land painted in ink on old paper, in the cel-shaded ink-wash look of the brush-painted games and the painters they loved (docs/prior-art/cel-shaded.md §7). Mountains stand band behind band, as in a mountain-and-water painting: each ridge a noise laid along the page (a Curve’s noise through a Profile Gradient), the far ones folded into sharp crags (Peaks). Each is a flat wash of ink, diluted by distance and tinted toward the Mountain Hue by Wash, lit by the Light Engine in bands (Toon Bands), its foot fading back to paper as mist (Mist), its ridge brushed in ink, thick and thin, broken by dry-brush streaks (Ink). The sky is graded across the top as a woodblock print’s straight-line gradation; a red sun stands where the dial lays it and sinks behind the mountains; long bands of mist with rounded ends drift across the sky, outlined (Clouds); cherry petals drift over all (Blossoms); the paper darkens at its edges with age (Age). Try: Wash at nothing for bare ink.',
     nodes: [
-      ['knob', { slot: '1', name: 'Peaks', def: 55 }, 40, 40],                                                                                        // 1
-      ['knob', { slot: '2', name: 'Mist', def: 50 }, 40, 150],                                                                                        // 2
-      ['knob', { slot: '3', name: 'Ink', def: 50 }, 40, 260],                                                                                         // 3
-      ['knob', { slot: '4', name: 'Wash', def: 55 }, 40, 370],                                                                                        // 4
-      ['knob', { slot: '5', name: 'Clouds', def: 45 }, 40, 480],                                                                                      // 5
-      ['knob', { slot: '6', name: 'Blossoms', def: 35 }, 40, 590],                                                                                    // 6
-      ['knob', { slot: '7', name: 'Age', def: 40 }, 40, 700],                                                                                         // 7
-      ['knob', { slot: '8', name: 'Toon Bands', def: 30 }, 40, 810],                                                                                  // 8
+      ['knob', { slot: '1' }, 40, 40],                                                                                        // 1
+      ['knob', { slot: '2' }, 40, 150],                                                                                        // 2
+      ['knob', { slot: '3' }, 40, 260],                                                                                         // 3
+      ['knob', { slot: '4' }, 40, 370],                                                                                        // 4
+      ['knob', { slot: '5' }, 40, 480],                                                                                      // 5
+      ['knob', { slot: '6' }, 40, 590],                                                                                    // 6
+      ['knob', { slot: '7' }, 40, 700],                                                                                         // 7
+      ['knob', { slot: '8' }, 40, 810],                                                                                  // 8
       ['dial', {}, 40, 920],                                                                                                                          // 9
       ['hue', { slot: '1', name: 'Paper Hue' }, 40, 1030],                                                                                            // 10
       ['hue', { slot: '2', name: 'Ink Hue' }, 40, 1140],                                                                                              // 11
@@ -2376,63 +2377,63 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'normal', opacity: 100 }, 5980, 40],                                                                                          // 242
       ['blend', { mode: 'multiply', opacity: 14 }, 6200, 40],                                                                                         // 243
       ['surface', { name: 'Sunrise Scroll', ground: 'colour' }, 6420, 40]],                                                                           // 244
-    wires: [[9, 1, 17, 1], [18, 1, 19, 1], [7, 1, 19, paramPort('maprange', 'outHi')], [10, 1, 20, 1], [11, 1, 20, 2], [10, 1, 21, 1], [20, 1, 21, 2],
+    wires: [[9, 1, 17, 1], [18, 1, 19, 1], [7, 1, 19, 'outHi'], [10, 1, 20, 1], [11, 1, 20, 2], [10, 1, 21, 1], [20, 1, 21, 2],
       [19, 1, 21, 3], [16, 1, 22, 1], [22, 1, 23, 1], [24, 1, 23, 2], [21, 1, 25, 1], [12, 1, 25, 2], [23, 1, 25, 3], [9, 1, 26, 1], [27, 2, 29, 1],
-      [28, 1, 29, 2], [29, 1, 31, 1], [29, 1, 31, 2], [31, 1, 33, 1], [32, 1, 33, 2], [30, 1, 34, 1], [33, 1, 34, 2], [26, 1, 35, paramPort('ellipse', 'x')],
-      [34, 1, 35, paramPort('ellipse', 'y')], [25, 1, 36, 1], [15, 1, 36, 2], [35, 1, 36, 3], [16, 1, 37, 1], [16, 1, 38, 1], [37, 1, 39, 1], [38, 1, 39, 2],
-      [39, 1, 40, 2], [5, 1, 40, paramPort('scatter', 'count')], [41, 1, 40, paramPort('scatter', 'size')], [40, 1, 43, 1], [43, 1, 44, 1], [44, 1, 42, 1],
-      [45, 1, 42, paramPort('twirl', 'angle')], [46, 1, 42, paramPort('twirl', 'radius')], [47, 1, 42, paramPort('twirl', 'x')],
-      [48, 1, 42, paramPort('twirl', 'y')], [42, 1, 49, 1], [49, 1, 50, 1], [10, 1, 51, 1], [12, 1, 51, 2], [10, 1, 52, 1], [12, 1, 52, 2], [54, 1, 53, 1],
-      [50, 1, 53, 2], [9, 1, 53, 7], [53, 2, 55, 1], [8, 1, 55, paramPort('posterize', 'steps')], [55, 1, 57, 1], [57, 1, 56, 1], [51, 1, 56, 2],
+      [28, 1, 29, 2], [29, 1, 31, 1], [29, 1, 31, 2], [31, 1, 33, 1], [32, 1, 33, 2], [30, 1, 34, 1], [33, 1, 34, 2], [26, 1, 35, 'x'],
+      [34, 1, 35, 'y'], [25, 1, 36, 1], [15, 1, 36, 2], [35, 1, 36, 3], [16, 1, 37, 1], [16, 1, 38, 1], [37, 1, 39, 1], [38, 1, 39, 2],
+      [39, 1, 40, 2], [5, 1, 40, 'count'], [41, 1, 40, 'size'], [40, 1, 43, 1], [43, 1, 44, 1], [44, 1, 42, 1],
+      [45, 1, 42, 'angle'], [46, 1, 42, 'radius'], [47, 1, 42, 'x'],
+      [48, 1, 42, 'y'], [42, 1, 49, 1], [49, 1, 50, 1], [10, 1, 51, 1], [12, 1, 51, 2], [10, 1, 52, 1], [12, 1, 52, 2], [54, 1, 53, 1],
+      [50, 1, 53, 2], [9, 1, 53, 7], [53, 2, 55, 1], [8, 1, 55, 'steps'], [55, 1, 57, 1], [57, 1, 56, 1], [51, 1, 56, 2],
       [52, 1, 56, 3], [10, 1, 56, 4], [36, 1, 58, 1], [56, 1, 58, 2], [49, 1, 58, 3], [49, 1, 59, 1], [60, 1, 61, 1], [59, 1, 63, 1], [61, 1, 63, 2],
-      [63, 1, 62, 1], [3, 1, 62, paramPort('blur', 'radius')], [62, 1, 64, 1], [66, 1, 65, 1], [65, 1, 67, 1], [64, 1, 68, 1], [67, 1, 68, 2], [58, 1, 69, 1],
-      [11, 1, 69, 2], [68, 1, 69, 3], [11, 1, 70, 1], [13, 1, 70, 2], [4, 1, 70, 3], [16, 1, 71, 1], [74, 1, 72, paramPort('curve', 'variation')],
-      [75, 1, 73, paramPort('curve', 'variation')], [72, 1, 76, 1], [73, 1, 76, 2], [76, 1, 77, 1], [77, 1, 79, 1], [78, 1, 79, 2], [80, 1, 81, 1],
+      [63, 1, 62, 1], [3, 1, 62, 'radius'], [62, 1, 64, 1], [66, 1, 65, 1], [65, 1, 67, 1], [64, 1, 68, 1], [67, 1, 68, 2], [58, 1, 69, 1],
+      [11, 1, 69, 2], [68, 1, 69, 3], [11, 1, 70, 1], [13, 1, 70, 2], [4, 1, 70, 3], [16, 1, 71, 1], [74, 1, 72, 'variation'],
+      [75, 1, 73, 'variation'], [72, 1, 76, 1], [73, 1, 76, 2], [76, 1, 77, 1], [77, 1, 79, 1], [78, 1, 79, 2], [80, 1, 81, 1],
       [79, 1, 82, 1], [81, 1, 82, 2], [82, 1, 84, 1], [54, 1, 84, 2], [84, 1, 85, 1], [84, 1, 85, 2], [85, 1, 83, 1], [83, 1, 86, 1], [83, 1, 86, 2],
-      [86, 1, 87, 1], [1, 1, 87, paramPort('maprange', 'outHi')], [87, 1, 88, 1], [71, 1, 88, 2], [88, 1, 89, 1], [16, 1, 90, 1],
-      [2, 1, 90, paramPort('maprange', 'inLo')], [10, 1, 91, 1], [70, 1, 91, 2], [89, 1, 92, 1], [93, 1, 94, 1], [92, 1, 95, 1], [94, 1, 95, 2],
+      [86, 1, 87, 1], [1, 1, 87, 'outHi'], [87, 1, 88, 1], [71, 1, 88, 2], [88, 1, 89, 1], [16, 1, 90, 1],
+      [2, 1, 90, 'inLo'], [10, 1, 91, 1], [70, 1, 91, 2], [89, 1, 92, 1], [93, 1, 94, 1], [92, 1, 95, 1], [94, 1, 95, 2],
       [91, 1, 96, 1], [11, 1, 96, 2], [91, 1, 97, 1], [10, 1, 97, 2], [54, 1, 98, 1], [95, 1, 98, 2], [9, 1, 98, 7], [98, 2, 99, 1],
-      [8, 1, 99, paramPort('posterize', 'steps')], [99, 1, 101, 1], [101, 1, 100, 1], [96, 1, 100, 2], [91, 1, 100, 3], [97, 1, 100, 4], [89, 1, 102, 1],
+      [8, 1, 99, 'steps'], [99, 1, 101, 1], [101, 1, 100, 1], [96, 1, 100, 2], [91, 1, 100, 3], [97, 1, 100, 4], [89, 1, 102, 1],
       [90, 1, 102, 2], [69, 1, 103, 1], [100, 1, 103, 2], [102, 1, 103, 3], [10, 1, 104, 1], [11, 1, 104, 2], [89, 1, 105, 1], [106, 1, 107, 1],
-      [105, 1, 109, 1], [107, 1, 109, 2], [109, 1, 108, 1], [3, 1, 108, paramPort('blur', 'radius')], [108, 1, 110, 1], [112, 1, 111, 1], [111, 1, 113, 1],
+      [105, 1, 109, 1], [107, 1, 109, 2], [109, 1, 108, 1], [3, 1, 108, 'radius'], [108, 1, 110, 1], [112, 1, 111, 1], [111, 1, 113, 1],
       [110, 1, 114, 1], [113, 1, 114, 2], [103, 1, 115, 1], [104, 1, 115, 2], [114, 1, 115, 3], [16, 1, 116, 1],
-      [119, 1, 117, paramPort('curve', 'variation')], [120, 1, 118, paramPort('curve', 'variation')], [117, 1, 121, 1], [118, 1, 121, 2], [121, 1, 122, 1],
+      [119, 1, 117, 'variation'], [120, 1, 118, 'variation'], [117, 1, 121, 1], [118, 1, 121, 2], [121, 1, 122, 1],
       [122, 1, 123, 1], [78, 1, 123, 2], [124, 1, 125, 1], [123, 1, 126, 1], [125, 1, 126, 2], [126, 1, 128, 1], [54, 1, 128, 2], [128, 1, 129, 1],
-      [128, 1, 129, 2], [129, 1, 127, 1], [127, 1, 130, 1], [127, 1, 130, 2], [130, 1, 131, 1], [1, 1, 131, paramPort('maprange', 'outHi')], [131, 1, 132, 1],
-      [116, 1, 132, 2], [132, 1, 133, 1], [16, 1, 134, 1], [2, 1, 134, paramPort('maprange', 'inLo')], [10, 1, 135, 1], [70, 1, 135, 2], [133, 1, 136, 1],
+      [128, 1, 129, 2], [129, 1, 127, 1], [127, 1, 130, 1], [127, 1, 130, 2], [130, 1, 131, 1], [1, 1, 131, 'outHi'], [131, 1, 132, 1],
+      [116, 1, 132, 2], [132, 1, 133, 1], [16, 1, 134, 1], [2, 1, 134, 'inLo'], [10, 1, 135, 1], [70, 1, 135, 2], [133, 1, 136, 1],
       [137, 1, 138, 1], [136, 1, 139, 1], [138, 1, 139, 2], [135, 1, 140, 1], [11, 1, 140, 2], [135, 1, 141, 1], [10, 1, 141, 2], [54, 1, 142, 1],
-      [139, 1, 142, 2], [9, 1, 142, 7], [142, 2, 143, 1], [8, 1, 143, paramPort('posterize', 'steps')], [143, 1, 145, 1], [145, 1, 144, 1], [140, 1, 144, 2],
+      [139, 1, 142, 2], [9, 1, 142, 7], [142, 2, 143, 1], [8, 1, 143, 'steps'], [143, 1, 145, 1], [145, 1, 144, 1], [140, 1, 144, 2],
       [135, 1, 144, 3], [141, 1, 144, 4], [133, 1, 146, 1], [134, 1, 146, 2], [115, 1, 147, 1], [144, 1, 147, 2], [146, 1, 147, 3], [10, 1, 148, 1],
-      [11, 1, 148, 2], [133, 1, 149, 1], [150, 1, 151, 1], [149, 1, 153, 1], [151, 1, 153, 2], [153, 1, 152, 1], [3, 1, 152, paramPort('blur', 'radius')],
+      [11, 1, 148, 2], [133, 1, 149, 1], [150, 1, 151, 1], [149, 1, 153, 1], [151, 1, 153, 2], [153, 1, 152, 1], [3, 1, 152, 'radius'],
       [152, 1, 154, 1], [156, 1, 155, 1], [155, 1, 157, 1], [154, 1, 158, 1], [157, 1, 158, 2], [147, 1, 159, 1], [148, 1, 159, 2], [158, 1, 159, 3],
-      [16, 1, 160, 1], [163, 1, 161, paramPort('curve', 'variation')], [164, 1, 162, paramPort('curve', 'variation')], [161, 1, 165, 1], [162, 1, 165, 2],
+      [16, 1, 160, 1], [163, 1, 161, 'variation'], [164, 1, 162, 'variation'], [161, 1, 165, 1], [162, 1, 165, 2],
       [165, 1, 166, 1], [166, 1, 167, 1], [78, 1, 167, 2], [168, 1, 169, 1], [167, 1, 170, 1], [169, 1, 170, 2], [170, 1, 171, 1],
-      [1, 1, 171, paramPort('maprange', 'outHi')], [171, 1, 172, 1], [160, 1, 172, 2], [172, 1, 173, 1], [16, 1, 174, 1],
-      [2, 1, 174, paramPort('maprange', 'inLo')], [10, 1, 175, 1], [70, 1, 175, 2], [173, 1, 176, 1], [177, 1, 178, 1], [176, 1, 179, 1], [178, 1, 179, 2],
+      [1, 1, 171, 'outHi'], [171, 1, 172, 1], [160, 1, 172, 2], [172, 1, 173, 1], [16, 1, 174, 1],
+      [2, 1, 174, 'inLo'], [10, 1, 175, 1], [70, 1, 175, 2], [173, 1, 176, 1], [177, 1, 178, 1], [176, 1, 179, 1], [178, 1, 179, 2],
       [175, 1, 180, 1], [11, 1, 180, 2], [175, 1, 181, 1], [10, 1, 181, 2], [54, 1, 182, 1], [179, 1, 182, 2], [9, 1, 182, 7], [182, 2, 183, 1],
-      [8, 1, 183, paramPort('posterize', 'steps')], [183, 1, 185, 1], [185, 1, 184, 1], [180, 1, 184, 2], [175, 1, 184, 3], [181, 1, 184, 4], [173, 1, 186, 1],
+      [8, 1, 183, 'steps'], [183, 1, 185, 1], [185, 1, 184, 1], [180, 1, 184, 2], [175, 1, 184, 3], [181, 1, 184, 4], [173, 1, 186, 1],
       [174, 1, 186, 2], [159, 1, 187, 1], [184, 1, 187, 2], [186, 1, 187, 3], [10, 1, 188, 1], [11, 1, 188, 2], [173, 1, 189, 1], [190, 1, 191, 1],
-      [189, 1, 193, 1], [191, 1, 193, 2], [193, 1, 192, 1], [3, 1, 192, paramPort('blur', 'radius')], [192, 1, 194, 1], [196, 1, 195, 1], [195, 1, 197, 1],
+      [189, 1, 193, 1], [191, 1, 193, 2], [193, 1, 192, 1], [3, 1, 192, 'radius'], [192, 1, 194, 1], [196, 1, 195, 1], [195, 1, 197, 1],
       [194, 1, 198, 1], [197, 1, 198, 2], [187, 1, 199, 1], [188, 1, 199, 2], [198, 1, 199, 3], [16, 1, 200, 1],
-      [203, 1, 201, paramPort('curve', 'variation')], [204, 1, 202, paramPort('curve', 'variation')], [201, 1, 205, 1], [202, 1, 205, 2], [205, 1, 206, 1],
-      [206, 1, 207, 1], [78, 1, 207, 2], [208, 1, 209, 1], [207, 1, 210, 1], [209, 1, 210, 2], [210, 1, 211, 1], [1, 1, 211, paramPort('maprange', 'outHi')],
-      [211, 1, 212, 1], [200, 1, 212, 2], [212, 1, 213, 1], [16, 1, 214, 1], [2, 1, 214, paramPort('maprange', 'inLo')], [10, 1, 215, 1], [70, 1, 215, 2],
+      [203, 1, 201, 'variation'], [204, 1, 202, 'variation'], [201, 1, 205, 1], [202, 1, 205, 2], [205, 1, 206, 1],
+      [206, 1, 207, 1], [78, 1, 207, 2], [208, 1, 209, 1], [207, 1, 210, 1], [209, 1, 210, 2], [210, 1, 211, 1], [1, 1, 211, 'outHi'],
+      [211, 1, 212, 1], [200, 1, 212, 2], [212, 1, 213, 1], [16, 1, 214, 1], [2, 1, 214, 'inLo'], [10, 1, 215, 1], [70, 1, 215, 2],
       [213, 1, 216, 1], [217, 1, 218, 1], [216, 1, 219, 1], [218, 1, 219, 2], [215, 1, 220, 1], [11, 1, 220, 2], [215, 1, 221, 1], [10, 1, 221, 2],
-      [54, 1, 222, 1], [219, 1, 222, 2], [9, 1, 222, 7], [222, 2, 223, 1], [8, 1, 223, paramPort('posterize', 'steps')], [223, 1, 225, 1], [225, 1, 224, 1],
+      [54, 1, 222, 1], [219, 1, 222, 2], [9, 1, 222, 7], [222, 2, 223, 1], [8, 1, 223, 'steps'], [223, 1, 225, 1], [225, 1, 224, 1],
       [220, 1, 224, 2], [215, 1, 224, 3], [221, 1, 224, 4], [213, 1, 226, 1], [214, 1, 226, 2], [199, 1, 227, 1], [224, 1, 227, 2], [226, 1, 227, 3],
       [10, 1, 228, 1], [11, 1, 228, 2], [213, 1, 229, 1], [230, 1, 231, 1], [229, 1, 233, 1], [231, 1, 233, 2], [233, 1, 232, 1],
-      [3, 1, 232, paramPort('blur', 'radius')], [232, 1, 234, 1], [236, 1, 235, 1], [235, 1, 237, 1], [234, 1, 238, 1], [237, 1, 238, 2], [227, 1, 239, 1],
+      [3, 1, 232, 'radius'], [232, 1, 234, 1], [236, 1, 235, 1], [235, 1, 237, 1], [234, 1, 238, 1], [237, 1, 238, 2], [227, 1, 239, 1],
       [228, 1, 239, 2], [238, 1, 239, 3], [9, 1, 240, 1], [14, 1, 240, 2], [14, 1, 240, 3], [14, 1, 240, 4], [240, 1, 241, 1],
-      [6, 1, 241, paramPort('scatter', 'count')], [239, 1, 242, 1], [241, 4, 242, 2], [241, 1, 242, 3], [242, 1, 243, 1], [17, 1, 243, 2], [243, 1, 244, 1]] },
+      [6, 1, 241, 'count'], [239, 1, 242, 1], [241, 4, 242, 2], [241, 1, 242, 3], [242, 1, 243, 1], [17, 1, 243, 2], [243, 1, 244, 1]] },
   feathers: { label: 'Feathers', canvas: true, teach: 'Feathers drifting over the page, on a transparent ground, so they lie on the page’s colour or on another surface and blend with it. One part makes them: Feathers draws each one as a shaft with a vane each side made of fine barbs that lean toward the tip, held together where the vane is whole, parting into V-shaped gaps where it splits, and loose and wavy where it is down (always at the foot, and over the whole feather as Fluff rises). The seed picks how they lie (scattered, drifting one way, fanned, or fallen to the bottom) and each feather’s kind: a contour feather, broad and round-tipped; a flight feather, long, its leading vane narrow; a soft plume. The Light Dial lights each vane as a shallow roof over the shaft, and Lift casts their soft shadows away from it; Depth sets some farther off, smaller, fainter and out of focus. Markings runs from plain, through bars, to eyes near the tips, in the Tip Hue. Try: Multiply on a pale page, Fluff high and Depth high, for down drifting in the air. Its six hues colour everything it draws: the feathers and their tips, a faint sheen in two colours that turns with the light, the pale parts and the dark.', nodes: [
-      ['knob', { slot: '1', name: 'Feather Size', def: 29 }, 40, 40],              // 1  (100 of 40–250)
-      ['knob', { slot: '2', name: 'Feathers', def: 30 }, 40, 120],                 // 2
-      ['knob', { slot: '3', name: 'Fluff', def: 15 }, 40, 200],                    // 3
-      ['knob', { slot: '4', name: 'Curl', def: 30 }, 40, 280],                     // 4
-      ['knob', { slot: '5', name: 'Splits', def: 30 }, 40, 360],                   // 5
-      ['knob', { slot: '6', name: 'Markings', def: 0 }, 40, 440],                  // 6
-      ['knob', { slot: '7', name: 'Depth', def: 50 }, 40, 520],                    // 7
-      ['knob', { slot: '8', name: 'Lift', def: 50 }, 40, 600],                     // 8
+      ['knob', { slot: '1' }, 40, 40],              // 1  (100 of 40–250)
+      ['knob', { slot: '2' }, 40, 120],                 // 2
+      ['knob', { slot: '3' }, 40, 200],                    // 3
+      ['knob', { slot: '4' }, 40, 280],                     // 4
+      ['knob', { slot: '5' }, 40, 360],                   // 5
+      ['knob', { slot: '6' }, 40, 440],                  // 6
+      ['knob', { slot: '7' }, 40, 520],                    // 7
+      ['knob', { slot: '8' }, 40, 600],                     // 8
       ['dial', {}, 40, 680],                                                       // 9
       ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760],                        // 10
       ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840],                            // 11
@@ -2443,80 +2444,80 @@ export const TEXTURE_CHAINS = {
       ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000],                  // 15
       ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080],                          // 16
       ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160]],                         // 17
-    wires: [[1, 1, 12, paramPort('feathers', 'size')], [2, 1, 12, paramPort('feathers', 'count')], [3, 1, 12, paramPort('feathers', 'fluff')], [4, 1, 12, paramPort('feathers', 'curl')],
-      [5, 1, 12, paramPort('feathers', 'splits')], [6, 1, 12, paramPort('feathers', 'marks')], [7, 1, 12, paramPort('feathers', 'depth')], [8, 1, 12, paramPort('feathers', 'lift')],
+    wires: [[1, 1, 12, 'size'], [2, 1, 12, 'count'], [3, 1, 12, 'fluff'], [4, 1, 12, 'curl'],
+      [5, 1, 12, 'splits'], [6, 1, 12, 'marks'], [7, 1, 12, 'depth'], [8, 1, 12, 'lift'],
       [9, 1, 12, 1], [10, 1, 12, 2], [11, 1, 12, 3], [14, 1, 12, 4], [15, 1, 12, 5], [16, 1, 12, 6], [17, 1, 12, 7], [12, 1, 13, 1]] },
   // 🪶 Corvid Feathers (Ruby: "really want corvid feathers"): the Feathers part, its Bird on a slider, all six hues wired
   corvids: { label: 'Corvid Feathers', canvas: true, teach: 'The feathers of the crow family, on a transparent ground. One part makes them: Feathers, its Bird on the first slider: a crow’s, matte black with a faint sheen; a raven’s, long and glossy, its sheen strong; a magpie’s, black with a white inner web near the foot and a green-blue-purple sheen; a blue jay’s, blue, barred dark, tipped pale. Their sheen is structural colour, as a real feather’s is: it turns between the two Sheen Hues with the angle between each barb and the light, strongest where it faces the Light Dial. Every colour is a hue: Feather, Tip, the two Sheens, Pale and Dark. Try: Raven, Sheen high, and turn the light dial slowly.', nodes: [
-      ['knob', { slot: '1', name: 'Bird', def: 50 }, 40, 40], ['knob', { slot: '2', name: 'Feather Size', def: 29 }, 40, 120], ['knob', { slot: '3', name: 'Feathers', def: 25 }, 40, 200],
-      ['knob', { slot: '4', name: 'Fluff', def: 10 }, 40, 280], ['knob', { slot: '5', name: 'Splits', def: 30 }, 40, 360], ['knob', { slot: '6', name: 'Sheen', def: 70 }, 40, 440],
-      ['knob', { slot: '7', name: 'Depth', def: 40 }, 40, 520], ['knob', { slot: '8', name: 'Lift', def: 60 }, 40, 600],                 // 1–8
+      ['knob', { slot: '1' }, 40, 40], ['knob', { slot: '2' }, 40, 120], ['knob', { slot: '3' }, 40, 200],
+      ['knob', { slot: '4' }, 40, 280], ['knob', { slot: '5' }, 40, 360], ['knob', { slot: '6' }, 40, 440],
+      ['knob', { slot: '7' }, 40, 520], ['knob', { slot: '8' }, 40, 600],                 // 1–8
       ['dial', {}, 40, 680],                                                                                                         // 9
       ['hue', { slot: '1', name: 'Feather Hue' }, 40, 760], ['hue', { slot: '2', name: 'Tip Hue' }, 40, 840], ['hue', { slot: '3', name: 'Sheen Hue' }, 40, 920],
       ['hue', { slot: '4', name: 'Second Sheen Hue' }, 40, 1000], ['hue', { slot: '5', name: 'Pale Hue' }, 40, 1080], ['hue', { slot: '6', name: 'Dark Hue' }, 40, 1160],   // 10–15
       ['feathers', { bird: 50, '~bird': '0,100', size: 100, '~size': '40,250', count: 25, '~count': '0,100', fluff: 10, '~fluff': '0,100', curl: 25, splits: 30, '~splits': '0,100', sheen: 70, '~sheen': '0,100', depth: 40, '~depth': '0,100', lift: 60, '~lift': '0,100' }, 320, 300],   // 16
       ['surface', { name: 'Corvid Feathers', ground: 'colour' }, 600, 320]],                                                         // 17
-    wires: [[1, 1, 16, paramPort('feathers', 'bird')], [2, 1, 16, paramPort('feathers', 'size')], [3, 1, 16, paramPort('feathers', 'count')], [4, 1, 16, paramPort('feathers', 'fluff')],
-      [5, 1, 16, paramPort('feathers', 'splits')], [6, 1, 16, paramPort('feathers', 'sheen')], [7, 1, 16, paramPort('feathers', 'depth')], [8, 1, 16, paramPort('feathers', 'lift')],
+    wires: [[1, 1, 16, 'bird'], [2, 1, 16, 'size'], [3, 1, 16, 'count'], [4, 1, 16, 'fluff'],
+      [5, 1, 16, 'splits'], [6, 1, 16, 'sheen'], [7, 1, 16, 'depth'], [8, 1, 16, 'lift'],
       [9, 1, 16, 1], [10, 1, 16, 2], [11, 1, 16, 3], [12, 1, 16, 4], [13, 1, 16, 5], [14, 1, 16, 6], [15, 1, 16, 7], [16, 1, 17, 1]] },
   summoning: { label: 'Transmutation Circle', canvas: true, teach: 'A transmutation circle, built from the rim inward as a stack of bands. One part makes it: Transmutation Circle lays rings of glyphs, polygrams and planets, more of them as Complexity rises; Organic ↔ Tech moves its making from hand-drawn vines and moons to machined ticks, circuit traces and hex digits. The Position dial places it: at the dial’s center it sits in the middle of the page. Try: drag the dial out, then raise Complexity.', nodes: [
-      ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
-      ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
-      ['knob', { slot: '3', name: 'Organic ↔ Tech', def: 30 }, 40, 240],                // 3  (30 of 0–100)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 40–200)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 20–300)
+      ['knob', { slot: '3' }, 40, 240],                // 3  (30 of 0–100)
       ['camdial', {}, 40, 340],                                                    // 4  (the camera dial places it: Ruby)
       ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100', from: 'its own reach', reach: 100 }, 320, 100],   // 5
       ['surface', { name: 'Transmutation Circle', ground: 'grey' }, 600, 120]],   // 6
-    wires: [[4, 2, 5, paramPort('transmutation', 'reach')], [1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[4, 2, 5, 'reach'], [1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
   chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
-      ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
-      ['knob', { slot: '2', name: 'Sand', def: 29 }, 40, 140],                     // 2  (100 of 20–300)
-      ['knob', { slot: '3', name: 'Mode', def: 40 }, 40, 240],                     // 3
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–300)
+      ['knob', { slot: '2' }, 40, 140],                     // 2  (100 of 20–300)
+      ['knob', { slot: '3' }, 40, 240],                     // 3
       ['dial', {}, 40, 340],                                                       // 4
       ['sand', { zoom: 100, '~zoom': '50,300', amount: 100, '~amount': '20,300', form: 40, '~form': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Chladni Sand', ground: 'grey' }, 600, 120]],            // 6
-    wires: [[1, 1, 5, paramPort('sand', 'zoom')], [2, 1, 5, paramPort('sand', 'amount')], [3, 1, 5, paramPort('sand', 'form')], [4, 1, 5, 2], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 2], [5, 1, 6, 1]] },
   // 🝓 Guilloché: a field of interlaced waves and rosettes, engraved and lit by the dial
   guilloche: { label: 'Guilloché', canvas: true, teach: 'The engraved rosettes of banknotes and watch dials, made the way a rose engine makes them. One part does it: Guilloché lays a field of fine interlaced waves, then rosettes over it, each many copies of one wavy loop turned a little each time, so the lines weave into lace, with a spirograph at its heart. The lines are cut into the plate as grooves, lit by the Light Dial. Its second output is the lines alone. Try: wire the Lines output into a Light Engine\'s height, with a Gradient Map as the picture.', nodes: [
-      ['knob', { slot: '1', name: 'Rosette Size', def: 25 }, 40, 40],              // 1  (100 of 50–250)
-      ['knob', { slot: '2', name: 'Line Density', def: 41 }, 40, 140],             // 2  (100 of 30–200)
-      ['knob', { slot: '3', name: 'Lobes', def: 45 }, 40, 240],                    // 3
+      ['knob', { slot: '1' }, 40, 40],              // 1  (100 of 50–250)
+      ['knob', { slot: '2' }, 40, 140],             // 2  (100 of 30–200)
+      ['knob', { slot: '3' }, 40, 240],                    // 3
       ['dial', {}, 40, 340],                                                       // 4
       ['rosettes', { zoom: 100, '~zoom': '50,250', amount: 100, '~amount': '30,200', form: 45, '~form': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'Guilloché', ground: 'grey' }, 600, 120]],               // 6
-    wires: [[1, 1, 5, paramPort('rosettes', 'zoom')], [2, 1, 5, paramPort('rosettes', 'amount')], [3, 1, 5, paramPort('rosettes', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'zoom'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Binary Pattern: Bit Grid, drawn on its own soft noise
   mathnoise: { label: 'Binary Pattern', canvas: true, teach: 'One part makes it: Bit Grid, a grid of small marks (filled and empty squares, dashes and bars, mostly dark, some light) that surface wherever a soft noise rises past a gate. Glyph Zoom is the size of a cell, Emergence how low the gate sits: more of the grid shows as it rises. Try: wire a Gradient into Bit Grid\'s Where, so the marks surface from one side of the page.', nodes: [
-      ['knob', { slot: '1', name: 'Glyph Zoom', def: 10 }, 40, 40],                // 1  (140 of 100–500)
-      ['knob', { slot: '2', name: 'Emergence', def: 48 }, 40, 140],                // 2  (130 of 30–240)
+      ['knob', { slot: '1' }, 40, 40],                // 1  (140 of 100–500)
+      ['knob', { slot: '2' }, 40, 140],                // 2  (130 of 30–240)
       ['bits', { zoom: 140, '~zoom': '100,500', amount: 130, '~amount': '30,240' }, 320, 60],   // 3
       ['surface', { name: 'Binary Pattern', ground: 'grey' }, 600, 80]],          // 4
-    wires: [[1, 1, 3, paramPort('bits', 'zoom')], [2, 1, 3, paramPort('bits', 'amount')], [3, 1, 4, 1]] },
+    wires: [[1, 1, 3, 'zoom'], [2, 1, 3, 'amount'], [3, 1, 4, 1]] },
   // ⎐ Knotwork: Cromwell's plait and breaks → Blur (the ribbon rounded) → Light Engine
   knotwork: { label: 'Knotwork', poem: 'shape', div: 2, teach: 'The interlaced knots of Celtic manuscripts, made the way Peter Cromwell described them. Knotwork lays a plait: diagonal strands crossing at every point of a grid, over then under then over. Breaks turn some strands back instead of crossing them, and that is what makes a knot; the outline (a circle, a square, a cross…) is a ring of breaks. The heights go through Blur, which rounds the ribbon, and the Light Engine raises it from the page. With Shape Aware ticked the knot weaves round your words. Try: Breaks 0 for a plain plait, or raise Strands for a finer knot.', nodes: [
-      ['knob', { slot: '1', name: 'Size', def: 23 }, 40, 40],                      // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Strands', def: 14 }, 40, 130],                  // 2  (6 of 3–24)
-      ['knob', { slot: '3', name: 'Breaks', def: 45 }, 40, 220],                   // 3
-      ['knob', { slot: '4', name: 'Shape', def: 0 }, 40, 310],                     // 4
-      ['knob', { slot: '5', name: 'Ribbon Width', def: 50 }, 40, 400],             // 5  (55 of 20–90)
-      ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 490],                    // 6
+      ['knob', { slot: '1' }, 40, 40],                      // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 130],                  // 2  (6 of 3–24)
+      ['knob', { slot: '3' }, 40, 220],                   // 3
+      ['knob', { slot: '4' }, 40, 310],                     // 4
+      ['knob', { slot: '5' }, 40, 400],             // 5  (55 of 20–90)
+      ['knob', { slot: '6' }, 40, 490],                    // 6
       ['dial', {}, 40, 580],                                                       // 7
       ['knotwork', { size: 100, '~size': '40,300', cells: 6, '~cells': '3,24', breaks: 45, '~breaks': '0,100', shape: 0, '~shape': '0,100', width: 55, '~width': '20,90', offset: 0, '~offset': '-100,100' }, 320, 160],   // 8
       ['blur', { radius: 5 }, 600, 260],                                           // 9
       ['material', { relief: 30, gloss: 45, shine: 40, shadow: 60, occlusion: 45, ambient: 40 }, 840, 180],   // 10
       ['surface', { name: 'Knotwork', ground: 'grey', aa: 'edges only' }, 1080, 200]],               // 11
-    wires: [[1, 1, 8, paramPort('knotwork', 'size')], [2, 1, 8, paramPort('knotwork', 'cells')], [3, 1, 8, paramPort('knotwork', 'breaks')], [4, 1, 8, paramPort('knotwork', 'shape')],
-      [5, 1, 8, paramPort('knotwork', 'width')], [6, 1, 8, paramPort('knotwork', 'offset')], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
+    wires: [[1, 1, 8, 'size'], [2, 1, 8, 'cells'], [3, 1, 8, 'breaks'], [4, 1, 8, 'shape'],
+      [5, 1, 8, 'width'], [6, 1, 8, 'offset'], [7, 1, 8, 1], [8, 2, 9, 1], [8, 1, 10, 1], [9, 1, 10, 2], [10, 1, 11, 1]] },
   // 🜉 Lichtenberg Figures: Discharge → Burn into Wood → Light Engine (the dial: where the strike enters, and the light)
   lichtenberg: { label: 'Lichtenberg Figures', div: 2, teach: 'The branching path high voltage burns through a surface. Discharge grows the path: each step goes where the electric potential is highest, so it forks and reaches; Strike Angle is where it enters. The Camera Dial is the camera, wired into Wood, Ground Coordinates and Discharge alike, so the plank and its figure turn, tip and zoom together; the Light Dial is only the light. Material chooses the plank through Map Switch: Wood\'s grain in your two hues, a slate (Noise at Coordinates on the plank, in slate\'s own grays), brushed brass (the same noise stretched along the plank) or a clear acrylic block. Burn chars the channels into wood, etches them pale into slate and brass, or lights them inside the acrylic; Depth sinks them and raises the relief; the Light Engine lights it, and Glow makes the channels give off your Glow Hue (black: none). Try: Material on Brass with a Glow Hue, then pull the camera low across the plank.', nodes: [
-      ['knob', { slot: '1', name: 'Reach', def: 50 }, 40, 40],                     // 1
-      ['knob', { slot: '2', name: 'Branching', def: 50 }, 40, 120],                // 2
-      ['knob', { slot: '3', name: 'Poles', def: 50 }, 40, 200],                    // 3  (2 of 1–3)
+      ['knob', { slot: '1' }, 40, 40],                     // 1
+      ['knob', { slot: '2' }, 40, 120],                // 2
+      ['knob', { slot: '3' }, 40, 200],                    // 3  (2 of 1–3)
       ['knob', { slot: '4', name: 'Material', def: 0, kind: 'steps', steps: 4, names: 'Charred Wood, Slate, Brass, Acrylic' }, 40, 280],   // 4
       ['knob', { slot: '5', name: 'Strike Angle', def: 87.5, kind: 'angle' }, 40, 360],   // 5  (315°)
-      ['knob', { slot: '6', name: 'Depth', def: 50 }, 40, 440],                    // 6
-      ['knob', { slot: '7', name: 'Channel Width', def: 26 }, 40, 520],           // 7  (100 of 30–300)
-      ['knob', { slot: '8', name: 'Slide', def: 50 }, 40, 600],                    // 8  (0 of −100–100)
+      ['knob', { slot: '6' }, 40, 440],                    // 6
+      ['knob', { slot: '7' }, 40, 520],           // 7  (100 of 30–300)
+      ['knob', { slot: '8' }, 40, 600],                    // 8  (0 of −100–100)
       ['camdial', {}, 40, 700], ['dial', {}, 40, 800],                             // 9, 10
       ['hue', { slot: '1', name: 'Wood Hue' }, 40, 880], ['hue', { slot: '2', name: 'Grain Hue' }, 40, 960], ['glowhue', {}, 40, 1040],   // 11, 12, 13
       ['wood', { rings: 40, figure: 50, turn: 0, '~turn': '0,360', view: 0, '~view': '0,100', lens: 100, '~lens': '25,400' }, 300, 700],   // 14
@@ -2535,25 +2536,25 @@ export const TEXTURE_CHAINS = {
       ['glow', { radius: 10, aura: 40, strength: 85, auraK: 35, core: 45, hex: '#000000' }, 2000, 300],   // 31
       ['surface', { name: 'Lichtenberg Figures', ground: 'colour' }, 2240, 320],   // 32
       ['colour', { hex: '#6E7680' }, 560, 940], ['colour', { hex: '#2A2E35' }, 560, 1020]],   // 33, 34 (slate's grays)
-    wires: [[1, 1, 25, paramPort('discharge', 'reach')], [2, 1, 25, paramPort('discharge', 'branching')], [3, 1, 25, paramPort('discharge', 'poles')], [5, 1, 25, 1],
-      [7, 1, 25, paramPort('discharge', 'width')], [8, 1, 25, paramPort('discharge', 'offset')],
-      [9, 1, 14, paramPort('wood', 'turn')], [9, 2, 14, paramPort('wood', 'view')], [9, 3, 14, paramPort('wood', 'lens')],
-      [9, 1, 15, paramPort('groundview', 'turn')], [9, 2, 15, paramPort('groundview', 'view')], [9, 3, 15, paramPort('groundview', 'lens')],
-      [9, 1, 25, paramPort('discharge', 'turn')], [9, 2, 25, paramPort('discharge', 'view')], [9, 3, 25, paramPort('discharge', 'lens')],
+    wires: [[1, 1, 25, 'reach'], [2, 1, 25, 'branching'], [3, 1, 25, 'poles'], [5, 1, 25, 1],
+      [7, 1, 25, 'width'], [8, 1, 25, 'offset'],
+      [9, 1, 14, 'turn'], [9, 2, 14, 'view'], [9, 3, 14, 'lens'],
+      [9, 1, 15, 'turn'], [9, 2, 15, 'view'], [9, 3, 15, 'lens'],
+      [9, 1, 25, 'turn'], [9, 2, 25, 'view'], [9, 3, 25, 'lens'],
       [11, 1, 14, 1], [12, 1, 14, 2],
       [15, 1, 16, 1], [15, 2, 16, 2], [15, 3, 16, 3], [16, 1, 17, 1], [33, 1, 17, 2], [34, 1, 17, 3],
       [15, 1, 19, 1], [18, 1, 19, 2], [19, 1, 20, 1], [15, 2, 20, 2], [15, 3, 20, 3], [20, 1, 23, 1], [21, 1, 23, 2], [22, 1, 23, 3],
       [4, 1, 24, 1], [14, 1, 24, 2], [17, 1, 24, 3], [23, 1, 24, 4], [14, 1, 24, 5],
       [4, 1, 26, 1], [4, 1, 27, 1], [27, 1, 28, 1], [26, 1, 28, 2],
-      [24, 1, 29, 1], [25, 1, 29, 2], [26, 1, 29, paramPort('burn', 'material')], [28, 1, 29, paramPort('burn', 'etch')], [6, 1, 29, paramPort('burn', 'depth')],
-      [29, 1, 30, 1], [29, 2, 30, 2], [10, 1, 30, 7], [6, 1, 30, paramPort('material', 'relief')], [4, 1, 30, paramPort('material', 'gloss')], [4, 1, 30, paramPort('material', 'shine')],
+      [24, 1, 29, 1], [25, 1, 29, 2], [26, 1, 29, 'material'], [28, 1, 29, 'etch'], [6, 1, 29, 'depth'],
+      [29, 1, 30, 1], [29, 2, 30, 2], [10, 1, 30, 7], [6, 1, 30, 'relief'], [4, 1, 30, 'gloss'], [4, 1, 30, 'shine'],
       [30, 1, 31, 1], [25, 1, 31, 2], [13, 1, 31, 3], [31, 1, 32, 1]] },
   // 🜉 Ruffled Growth: Differential Growth, its body raised and lit
   growth: { label: 'Ruffled Growth', div: 2, teach: 'Differential growth: Differential Growth starts as small loops whose points push each other apart, follow their neighbours and split where they stretch, so the loops ruffle and fold the way lettuce, coral and brains do. The Light Dial goes into Sun: the line grows toward it. Its body becomes a raised surface (Mix makes the picture, the relief goes to the Light Engine). Try: raise Seeds, or wire the line itself into Burn over a Wood.', nodes: [
-      ['knob', { slot: '1', name: 'Growth', def: 55 }, 40, 40],                    // 1
-      ['knob', { slot: '2', name: 'Fold Size', def: 25 }, 40, 140],                // 2  (100 of 50–250)
-      ['knob', { slot: '3', name: 'Seeds', def: 0 }, 40, 240],                     // 3  (1 of 1–7)
-      ['knob', { slot: '4', name: 'Relief', def: 50 }, 40, 340],                   // 4
+      ['knob', { slot: '1' }, 40, 40],                    // 1
+      ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 50–250)
+      ['knob', { slot: '3' }, 40, 240],                     // 3  (1 of 1–7)
+      ['knob', { slot: '4' }, 40, 340],                   // 4
       ['dial', {}, 40, 440],                                                       // 5
       ['growline', { growth: 55, '~growth': '0,100', fold: 100, '~fold': '50,250', seeds: 1, '~seeds': '1,7', photo: 40, zoom: 100, '~zoom': '50,400', offset: 0, '~offset': '-100,100' }, 300, 120],   // 6
       ['number', { value: 40 }, 300, 380], ['number', { value: 74 }, 300, 460],   // 7, 8 (the ground, the body)
@@ -2562,17 +2563,17 @@ export const TEXTURE_CHAINS = {
       ['mix', { t: 50 }, 780, 300],                                                // 11
       ['material', { relief: 40, '~relief': '0,90', gloss: 35, shine: 30, shadow: 55, occlusion: 45, ambient: 40 }, 1000, 200],   // 12
       ['surface', { name: 'Ruffled Growth', ground: 'grey', aa: 'edges only' }, 1240, 220],          // 13
-      ['knob', { slot: '5', name: 'Zoom', def: 14 }, 40, 540], ['knob', { slot: '6', name: 'Slide', def: 50 }, 40, 620]],   // 14 (100 of 50–400), 15
-    wires: [[1, 1, 6, paramPort('growline', 'growth')], [2, 1, 6, paramPort('growline', 'fold')], [3, 1, 6, paramPort('growline', 'seeds')], [4, 1, 12, paramPort('material', 'relief')],
-      [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1], [14, 1, 6, paramPort('growline', 'zoom')], [15, 1, 6, paramPort('growline', 'offset')]] },
+      ['knob', { slot: '5' }, 40, 540], ['knob', { slot: '6' }, 40, 620]],   // 14 (100 of 50–400), 15
+    wires: [[1, 1, 6, 'growth'], [2, 1, 6, 'fold'], [3, 1, 6, 'seeds'], [4, 1, 12, 'relief'],
+      [5, 1, 6, 1], [7, 1, 9, 1], [8, 1, 9, 2], [6, 2, 9, 3], [9, 1, 11, 1], [10, 1, 11, 2], [6, 1, 11, 3], [11, 1, 12, 1], [6, 3, 12, 2], [12, 1, 13, 1], [14, 1, 6, 'zoom'], [15, 1, 6, 'offset']] },
   // 🜚 Poured Wax (Ruby: waxier, and a slider from wax to a fluid's spatter): Pours → Meniscus → colour → Light Engine
   wax: { label: 'Poured Wax', div: 2, teach: 'Pours makes the pools (pools that touch merge); Splatter flings drops away from where the dial points, so it becomes a spatter of paint or ink. Meniscus gives the pools a flat top and a rounded edge. The wax is lighter where it is thin (Hue & Saturation brightens it, Mix lays it in by Thin), and the Light Engine lights it with Translucency, the way light sinks into wax and comes back out. The Glow Hue is screened in where the wax is thick, as if a candle were inside it. Try: Splatter 80 and Viscosity 0 for spilt ink, Sheen 100 for wet paint.', nodes: [
-      ['knob', { slot: '1', name: 'Pool Size', def: 17 }, 40, 40],                 // 1  (100 of 40–400)
-      ['knob', { slot: '2', name: 'Pool Count', def: 27 }, 40, 130],               // 2  (100 of 25–300)
-      ['knob', { slot: '3', name: 'Viscosity', def: 45 }, 40, 220],                // 3
-      ['knob', { slot: '4', name: 'Splatter', def: 0 }, 40, 310],                  // 4
-      ['knob', { slot: '5', name: 'Height', def: 50 }, 40, 400],                   // 5
-      ['knob', { slot: '6', name: 'Sheen', def: 50 }, 40, 490],                    // 6
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 40–400)
+      ['knob', { slot: '2' }, 40, 130],               // 2  (100 of 25–300)
+      ['knob', { slot: '3' }, 40, 220],                // 3
+      ['knob', { slot: '4' }, 40, 310],                  // 4
+      ['knob', { slot: '5' }, 40, 400],                   // 5
+      ['knob', { slot: '6' }, 40, 490],                    // 6
       ['dial', {}, 40, 580],                                                       // 7
       ['hue', { slot: '1', name: 'Wax Hue' }, 300, 420], ['glowhue', {}, 1040, 460],   // 8, 9
       ['pours', { size: 100, '~size': '40,400', count: 100, '~count': '25,300', viscosity: 45, '~viscosity': '0,100', splatter: 0, '~splatter': '0,100' }, 300, 60],   // 10
@@ -2584,15 +2585,15 @@ export const TEXTURE_CHAINS = {
       ['material', { relief: 58, gloss: 60, '~gloss': '20,100', shine: 50, '~shine': '10,90', shadow: 45, occlusion: 20, ambient: 42, translucency: 45 }, 1280, 160],   // 16
       ['blend', { mode: 'screen', opacity: 85 }, 1520, 220],                       // 17
       ['surface', { name: 'Poured Wax', ground: 'grey' }, 1760, 240]],             // 18
-    wires: [[1, 1, 10, paramPort('pours', 'size')], [2, 1, 10, paramPort('pours', 'count')], [3, 1, 10, paramPort('pours', 'viscosity')], [3, 1, 11, paramPort('meniscus', 'viscosity')], [4, 1, 10, paramPort('pours', 'splatter')],
-      [5, 1, 11, paramPort('meniscus', 'height')], [6, 1, 16, paramPort('material', 'gloss')], [6, 1, 16, paramPort('material', 'shine')], [7, 1, 10, 1], [7, 1, 16, 7],
+    wires: [[1, 1, 10, 'size'], [2, 1, 10, 'count'], [3, 1, 10, 'viscosity'], [3, 1, 11, 'viscosity'], [4, 1, 10, 'splatter'],
+      [5, 1, 11, 'height'], [6, 1, 16, 'gloss'], [6, 1, 16, 'shine'], [7, 1, 10, 1], [7, 1, 16, 7],
       [10, 1, 11, 1], [8, 1, 12, 1], [8, 1, 13, 1], [12, 1, 13, 2], [11, 3, 13, 3], [14, 1, 15, 1], [13, 1, 15, 2], [11, 2, 15, 3],
       [15, 1, 16, 1], [11, 1, 16, 2], [16, 1, 17, 1], [9, 1, 17, 2], [11, 4, 17, 3], [17, 1, 18, 1]] },
   // 🜚 Contour Map: Terrain → Contour Lines, inked over the land lit by the Light Engine (the hillshade)
   contour: { label: 'Contour Map', poem: 'shape', div: 2, teach: 'A survey of an imagined land. Terrain makes the land\'s heights. The Light Engine lights a plain gray picture by those heights (the hillshade), and Mix fades it toward plain gray by the Hillshade knob. Contour Lines draws the lines of equal height, every fifth heavier; the last Mix inks them over the hillshade in the Ink color. With Shape Aware ticked the land under your words is levelled, so the contours ring the poem. Try: wire another texture, or a Gradient, into Contour Lines instead of the Terrain.', nodes: [
-      ['knob', { slot: '1', name: 'Terrain Scale', def: 23 }, 40, 40],             // 1  (100 of 40–300)
-      ['knob', { slot: '2', name: 'Contour Interval', def: 32 }, 40, 160],         // 2  (100 of 30–250)
-      ['knob', { slot: '3', name: 'Hillshade', def: 45 }, 40, 280],                // 3
+      ['knob', { slot: '1' }, 40, 40],             // 1  (100 of 40–300)
+      ['knob', { slot: '2' }, 40, 160],         // 2  (100 of 30–250)
+      ['knob', { slot: '3' }, 40, 280],                // 3
       ['terrain', { scale: 100, '~scale': '40,300', crests: 22, variant: 0 }, 300, 40],   // 4
       ['number', { value: 50 }, 300, 220],                                         // 5  (a plain gray picture)
       ['material', { relief: 200, gloss: 5, shine: 0, shadow: 35, occlusion: 15, ambient: 45 }, 560, 160],   // 6
@@ -2601,19 +2602,19 @@ export const TEXTURE_CHAINS = {
       ['colour', { hex: '#222222' }, 820, 20],                                     // 9  (the ink)
       ['mix', { t: 50 }, 1060, 100],                                               // 10 (the lines inked over it)
       ['surface', { name: 'Contour Map', ground: 'grey', aa: 'edges only' }, 1300, 100]],            // 11
-    wires: [[1, 1, 4, paramPort('terrain', 'scale')], [2, 1, 8, paramPort('contours', 'levels')], [3, 1, 7, paramPort('mix', 't')],
+    wires: [[1, 1, 4, 'scale'], [2, 1, 8, 'levels'], [3, 1, 7, 't'],
       [5, 1, 6, 1], [4, 1, 6, 2], [5, 1, 7, 1], [6, 1, 7, 2], [4, 1, 8, 1], [7, 1, 10, 1], [9, 1, 10, 2], [8, 1, 10, 3], [10, 1, 11, 1]] },
   // ∆ Turing Skin: Turing Pattern → raised by the Light Engine
   turing: { label: 'Turing Skin', poem: 'shape', div: 2, teach: 'Turing Pattern grows the marks of an animal\'s skin or a coral (Pattern slides from spots to holes). Map Range turns it into a picture, the marks a little lighter than the skin between, and the Light Engine raises the marks by Relief and lights them by the dial. With Shape Aware ticked the pattern grows up to your words and follows their edges. Try: wire the Turing Pattern into a Color Ramp first, or set Pattern to Maze.', nodes: [
-      ['knob', { slot: '1', name: 'Pattern Scale', def: 25 }, 40, 40],             // 1  (100 of 50–250)
-      ['knob', { slot: '2', name: 'Growth', def: 75 }, 40, 140],                   // 2  (80 of 20–100)
-      ['knob', { slot: '3', name: 'Pattern', def: 25 }, 40, 240],                  // 3
-      ['knob', { slot: '4', name: 'Relief', def: 50 }, 40, 340],                   // 4
+      ['knob', { slot: '1' }, 40, 40],             // 1  (100 of 50–250)
+      ['knob', { slot: '2' }, 40, 140],                   // 2  (80 of 20–100)
+      ['knob', { slot: '3' }, 40, 240],                  // 3
+      ['knob', { slot: '4' }, 40, 340],                   // 4
       ['grayscott', { pattern: 25, '~pattern': '0,100', growth: 80, '~growth': '20,100', scale: 100, '~scale': '50,250', variant: 0 }, 300, 80],   // 5
       ['maprange', { inLo: 0, inHi: 100, outLo: 31, outHi: 69 }, 560, 40],          // 6  (the skin 128 ∓ 48)
       ['material', { relief: 23, '~relief': '6,40', gloss: 35, shine: 47, shadow: 45, occlusion: 40, ambient: 45 }, 800, 120],   // 7
       ['surface', { name: 'Turing Skin', ground: 'grey' }, 1060, 140]],            // 8
-    wires: [[1, 1, 5, paramPort('grayscott', 'scale')], [2, 1, 5, paramPort('grayscott', 'growth')], [3, 1, 5, paramPort('grayscott', 'pattern')], [4, 1, 7, paramPort('material', 'relief')],
+    wires: [[1, 1, 5, 'scale'], [2, 1, 5, 'growth'], [3, 1, 5, 'pattern'], [4, 1, 7, 'relief'],
       [5, 1, 6, 1], [6, 1, 7, 1], [5, 1, 7, 2], [7, 1, 8, 1]] },
   // 🜁 Rain on Water: Raindrops (each drop a ring wave, the newest splashing) → the water's colour by distance → Light Engine → Glow
   // ◯ RINGWORLD (Ruby: a halo landscape, a Niven ringworld, but abstract; lit by its star, so the dial is the camera and one
@@ -2621,13 +2622,13 @@ export const TEXTURE_CHAINS = {
   // ◯ Painted Ringworld (Ruby: "an abstract ring world on a space background and then something made of shapes then
   // painted in the foreground and blend it"): flat shapes, blocked in, then painted over with Oil Paint's brushes
   skyring: { label: 'Ring in the Sky', canvas: true, teach: 'A ringworld seen from out in space, as a simple, cosmic picture to lay behind a poem (Ruby: "that simplified, but cosmic"). Starfield lays the stars. Ring in the Sky paints the ring round its star as a solid band in flat blocks: across the far side its land, facing the star, land, sea and white cloud, striped with the nights the shadow squares cast, between the rim walls that hold its air; across the near side its hull, passing in front of the star; the air it holds glowing faintly about it; the nebula\'s washes and the air of your Sky Hue rising from below. The Camera Dial moves the ring: Turn spins it, View raises your eye from edge-on to looking down into it, Zoom sizes it; Star Height raises or lowers it on the page. The Light Dial shades the hull. Paint lays Oil Paint over it with the Brush you choose; at 0 it stays flat. Try: wire Land of Shapes after Ring in the Sky for a land under it, or turn View down for the ring edge-on across the star.', nodes: [
-      ['knob', { slot: '1', name: 'Ring Width', def: 45 }, 40, 40],               // 1
-      ['knob', { slot: '2', name: 'Stars', def: 50 }, 40, 120],                   // 2
-      ['knob', { slot: '3', name: 'Nebula', def: 50 }, 40, 200],                  // 3
-      ['knob', { slot: '4', name: 'Air', def: 60 }, 40, 280],                     // 4
-      ['knob', { slot: '5', name: 'Star Height', def: 45 }, 40, 360],             // 5
-      ['knob', { slot: '6', name: 'Paint', def: 0 }, 40, 440],                    // 6
-      ['knob', { slot: '7', name: 'Brush', def: 37 }, 40, 520],                   // 7
+      ['knob', { slot: '1' }, 40, 40],               // 1
+      ['knob', { slot: '2' }, 40, 120],                   // 2
+      ['knob', { slot: '3' }, 40, 200],                  // 3
+      ['knob', { slot: '4' }, 40, 280],                     // 4
+      ['knob', { slot: '5' }, 40, 360],             // 5
+      ['knob', { slot: '6' }, 40, 440],                    // 6
+      ['knob', { slot: '7' }, 40, 520],                   // 7
       ['dial', {}, 40, 600], ['camdial', {}, 40, 680],                            // 8, 9
       ['hue', { slot: '1', name: 'Land Hue' }, 40, 760], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 840],   // 10, 11
       ['starfield', { amount: 45, '~amount': '5,100', atmosphere: 10 }, 320, 80],                                     // 12
@@ -2635,19 +2636,19 @@ export const TEXTURE_CHAINS = {
       ['oilpaint', { amount: 0, '~amount': '0,100', size: 100, length: 120, detail: 30, vary: 55, brush: 37, '~brush': '0,100' }, 880, 160],   // 14
       ['material', { relief: 16, gloss: 25, shine: 30, shadow: 40, occlusion: 25, ambient: 50 }, 1160, 180],   // 15
       ['surface', { name: 'Ring in the Sky', ground: 'colour' }, 1440, 160]],                                       // 16
-    wires: [[1, 1, 13, paramPort('ringsky', 'width')], [2, 1, 12, paramPort('starfield', 'amount')], [3, 1, 13, paramPort('ringsky', 'nebula')], [4, 1, 13, paramPort('ringsky', 'haze')],
-      [5, 1, 13, paramPort('ringsky', 'centre')], [6, 1, 14, paramPort('oilpaint', 'amount')], [7, 1, 14, paramPort('oilpaint', 'brush')],
-      [8, 1, 13, 2], [9, 1, 13, paramPort('ringsky', 'turn')], [9, 2, 13, paramPort('ringsky', 'tilt')], [9, 3, 13, paramPort('ringsky', 'size')],
+    wires: [[1, 1, 13, 'width'], [2, 1, 12, 'amount'], [3, 1, 13, 'nebula'], [4, 1, 13, 'haze'],
+      [5, 1, 13, 'centre'], [6, 1, 14, 'amount'], [7, 1, 14, 'brush'],
+      [8, 1, 13, 2], [9, 1, 13, 'turn'], [9, 2, 13, 'tilt'], [9, 3, 13, 'size'],
       [10, 1, 13, 3], [11, 1, 13, 4], [12, 1, 13, 1], [13, 1, 14, 1], [14, 1, 15, 1], [14, 2, 15, 2], [15, 1, 16, 1]] },
   ringpaint: { label: 'Painted Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits Saturn, which hangs huge in its sky beyond the far arch: The Arch\'s Saturn setting), and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
-      ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],               // 1
-      ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],               // 2
-      ['knob', { slot: '3', name: 'World', def: 0 }, 40, 200],                    // 3
-      ['knob', { slot: '4', name: 'Life', def: 50 }, 40, 280],                    // 4
-      ['knob', { slot: '5', name: 'Works', def: 50 }, 40, 360],                   // 5
-      ['knob', { slot: '6', name: 'Altitude', def: 15 }, 40, 440],                // 6
-      ['knob', { slot: '7', name: 'Paint', def: 0 }, 40, 520],                    // 7
-      ['knob', { slot: '8', name: 'Brush', def: 37 }, 40, 600],                   // 8
+      ['knob', { slot: '1' }, 40, 40],               // 1
+      ['knob', { slot: '2' }, 40, 120],               // 2
+      ['knob', { slot: '3' }, 40, 200],                    // 3
+      ['knob', { slot: '4' }, 40, 280],                    // 4
+      ['knob', { slot: '5' }, 40, 360],                   // 5
+      ['knob', { slot: '6' }, 40, 440],                // 6
+      ['knob', { slot: '7' }, 40, 520],                    // 7
+      ['knob', { slot: '8' }, 40, 600],                   // 8
       ['dial', {}, 40, 680], ['camdial', {}, 40, 760],                            // 9, 10
       ['hue', { slot: '1', name: 'Land Hue' }, 40, 840], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 920],   // 11, 12
       ['accent', { slot: '1' }, 40, 1000], ['accent', { slot: '2' }, 40, 1080],   // 13, 14 (the page's accents: the lights)
@@ -2657,22 +2658,22 @@ export const TEXTURE_CHAINS = {
       ['oilpaint', { amount: 0, '~amount': '0,100', size: 100, length: 120, detail: 30, vary: 55, brush: 37, '~brush': '0,100' }, 1160, 200],   // 18 (Amount: the paint over the shapes)
       ['material', { relief: 16, gloss: 25, shine: 30, shadow: 40, occlusion: 25, ambient: 50 }, 1440, 220],   // 19
       ['surface', { name: 'Painted Ringworld', ground: 'colour' }, 1720, 200]],                                     // 20
-    wires: [[1, 1, 16, paramPort('ringarch', 'band')], [1, 1, 17, paramPort('ringland', 'band')], [2, 1, 16, paramPort('ringarch', 'landforms')], [2, 1, 17, paramPort('ringland', 'landforms')],
-      [2, 1, 16, paramPort('ringarch', 'walls')], [2, 1, 17, paramPort('ringland', 'walls')], [3, 1, 16, paramPort('ringarch', 'world')], [3, 1, 17, paramPort('ringland', 'world')],
-      [4, 1, 16, paramPort('ringarch', 'life')], [4, 1, 17, paramPort('ringland', 'life')], [5, 1, 16, paramPort('ringarch', 'works')], [5, 1, 17, paramPort('ringland', 'works')],
-      [6, 1, 16, paramPort('ringarch', 'altitude')], [6, 1, 17, paramPort('ringland', 'altitude')], [7, 1, 18, paramPort('oilpaint', 'amount')], [8, 1, 18, paramPort('oilpaint', 'brush')],
+    wires: [[1, 1, 16, 'band'], [1, 1, 17, 'band'], [2, 1, 16, 'landforms'], [2, 1, 17, 'landforms'],
+      [2, 1, 16, 'walls'], [2, 1, 17, 'walls'], [3, 1, 16, 'world'], [3, 1, 17, 'world'],
+      [4, 1, 16, 'life'], [4, 1, 17, 'life'], [5, 1, 16, 'works'], [5, 1, 17, 'works'],
+      [6, 1, 16, 'altitude'], [6, 1, 17, 'altitude'], [7, 1, 18, 'amount'], [8, 1, 18, 'brush'],
       [9, 2, 16, 5], [9, 1, 16, 6], [9, 2, 17, 5], [9, 1, 17, 6], [10, 1, 16, 2], [10, 2, 16, 3], [10, 3, 16, 4], [10, 1, 17, 2], [10, 2, 17, 3], [10, 3, 17, 4],
       [11, 1, 16, 7], [11, 1, 17, 7], [12, 1, 16, 8], [12, 1, 17, 8], [13, 1, 16, 9], [13, 1, 17, 9], [14, 1, 16, 10], [14, 1, 17, 10],
       [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [18, 2, 19, 2], [19, 1, 20, 1]] },
   ringworld: { label: 'Ringworld', div: 2, teach: 'A world built on the inside of a ring round its star, seen from its floor. Ringworld View follows each pixel\'s line of sight to what it meets: the ground near you, the ring far off where it rises into the arch overhead, the rim walls that hold the air in, the star, the shadow squares that circle it and make the nights, the works its builders raised, or open space. It hands on maps of that world: where on the ring each pixel shows (Along, Across), how far off, how fine a pixel is there (Detail), and where it is day. Noise at Coordinates lays land on those maps, finer near you and smooth far off, so the arch shows continents and the ground at your feet shows stones. The clouds are the same noise read twice: where your line of sight crosses their layer (so they float over the far land) and straight over the floor (their shade, which dapples the land beneath them). Threshold and Map Range make seas of the low ground; Tint and Mix color land, water, walls and the city\'s blocks; the Light Engine lights the relief from overhead, as the star never moves; Blend darkens what the shadow squares hide; the haze is the air on the way, colored by your Sky Hue. The Camera Dial is the camera: turn it to look along the ring, toward a wall, or back; draw it in toward the middle to look up at the arch; its zoom narrows the lens. The Light Dial is the day: at its middle noon, at its rim dusk, past the rim night, and its direction says which way round the dusk comes. The seed decides who built the ring (or Builders does): spires with beacons, towers on the walls\' tops, arches of one or two forms (great spans from wall top to wall top with the air they hold shimmering beneath them, flying buttresses from a wall down to the land, arcades striding on piers, gates, the land\'s own stone arches), bars of hard light from wall to wall, standing stones, towers and city lights, glass domes, ships and their trails, crystals of light growing from the land, summoning circles and rings of light on plinths, pillars of light toward the star, floor left as scaffolding over the void. Nothing floats but the ships. Landforms raises the land itself: its relief, the walls and the ranges at their feet, and the seed\'s own country of peaks (snow on the tall ones), mesas, boulders near you, pinnacles and stone arches, colored as rock by the Rock map. Cities says how built-up the ring is (past its first quarter, cities spread whoever built it); Traffic fills the sky with ships, and past its middle with lanes of small craft, their engines a dotted line of lights. The seed also says where across the band you stand; Random Numbers pick the dry land\'s color, the star\'s, the land\'s twist and the clouds\' size. One ring in four orbits Saturn (Ringworld View\'s Saturn setting): it hangs huge in the sky beyond, laid over the stars by its Saturn Cover, behind the shadow squares and the air. Try: Builders on Magi and Landforms high, then draw the Light Dial past its rim for night.', nodes: [
-      ['knob', { slot: '1', name: 'Band Width', def: 45 }, 40, 40],                 // 1
-      ['knob', { slot: '2', name: 'Landforms', def: 50 }, 40, 120],                 // 2  (the relief, the walls, the land's own forms)
-      ['knob', { slot: '3', name: 'Seas', def: 40 }, 40, 200],                      // 3
-      ['knob', { slot: '4', name: 'Cities', def: 25 }, 40, 280],                    // 4  (how much the builders built; past 25, cities)
-      ['knob', { slot: '5', name: 'Atmosphere', def: 50 }, 40, 360],                // 5
+      ['knob', { slot: '1' }, 40, 40],                 // 1
+      ['knob', { slot: '2' }, 40, 120],                 // 2  (the relief, the walls, the land's own forms)
+      ['knob', { slot: '3' }, 40, 200],                      // 3
+      ['knob', { slot: '4' }, 40, 280],                    // 4  (how much the builders built; past 25, cities)
+      ['knob', { slot: '5' }, 40, 360],                // 5
       ['knob', { slot: '6', name: 'Builders', def: 0, kind: 'steps', steps: 6, names: 'By the Seed, Wilds, Engineers, Cities, Magi, Ruins' }, 40, 440],   // 6
-      ['knob', { slot: '7', name: 'Altitude', def: 15 }, 40, 520],                  // 7
-      ['knob', { slot: '8', name: 'Traffic', def: 50 }, 40, 600],                   // 8  (ships; past the middle, lanes of them)
+      ['knob', { slot: '7' }, 40, 520],                  // 7
+      ['knob', { slot: '8' }, 40, 600],                   // 8  (ships; past the middle, lanes of them)
       ['hue', { slot: '1', name: 'Land Hue' }, 40, 700], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 780],   // 9, 10
       ['ringview', { band: 45, '~band': '0,100', walls: 25, '~walls': '0,50', placeBy: 'where the seed says', landforms: 50, '~landforms': '0,100', cities: 25, '~cities': '0,100', traffic: 50, '~traffic': '0,100', altitude: 15, '~altitude': '0,100', lens: 75, '~lens': '30,120',
         daylight: 80, '~daylight': '0,100', air: 50, '~air': '0,100' }, 300, 300],   // 11
@@ -2741,19 +2742,19 @@ export const TEXTURE_CHAINS = {
       ['mix', { t: 50 }, 1040, 1860], ['mix', { t: 50 }, 1280, 1860], ['mix', { t: 50 }, 1520, 1860],   // 97 (rock), 98 (metal or rock), 99 (snow)
       // SATURN (one ring in four orbits it: Ringworld View's Saturn), laid over the stars, behind the shadow squares and the air
       ['mix', { t: 50 }, 2120, 1260]],                                               // 100
-    wires: [[66, 1, 11, 1], [66, 2, 11, 2], [66, 3, 11, 3], [4, 1, 11, paramPort('ringview', 'build')], [4, 1, 11, paramPort('ringview', 'cities')], [2, 1, 11, paramPort('ringview', 'landforms')], [8, 1, 11, paramPort('ringview', 'traffic')],
-      [11, 2, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [2, 1, 69, paramPort('maprange', 'outHi')], [69, 1, 70, 1], [12, 1, 70, 2], [12, 1, 71, 1], [70, 1, 71, 2],
-      [78, 1, 79, 1], [80, 1, 12, paramPort('mapnoise', 'warp')], [81, 1, 13, paramPort('mapnoise', 'size')], [1, 1, 11, paramPort('ringview', 'band')], [2, 1, 11, paramPort('ringview', 'walls')], [7, 1, 11, paramPort('ringview', 'altitude')],
-      [6, 1, 11, paramPort('ringview', 'builders')], [5, 1, 11, paramPort('ringview', 'air')], [82, 2, 11, 4], [82, 1, 11, 5],
-      [11, 1, 12, 1], [11, 2, 12, 2], [11, 4, 12, 3], [2, 1, 12, paramPort('mapnoise', 'ridges')],
+    wires: [[66, 1, 11, 1], [66, 2, 11, 2], [66, 3, 11, 3], [4, 1, 11, 'build'], [4, 1, 11, 'cities'], [2, 1, 11, 'landforms'], [8, 1, 11, 'traffic'],
+      [11, 2, 68, 1], [67, 1, 68, 2], [68, 1, 69, 1], [2, 1, 69, 'outHi'], [69, 1, 70, 1], [12, 1, 70, 2], [12, 1, 71, 1], [70, 1, 71, 2],
+      [78, 1, 79, 1], [80, 1, 12, 'warp'], [81, 1, 13, 'size'], [1, 1, 11, 'band'], [2, 1, 11, 'walls'], [7, 1, 11, 'altitude'],
+      [6, 1, 11, 'builders'], [5, 1, 11, 'air'], [82, 2, 11, 4], [82, 1, 11, 5],
+      [11, 1, 12, 1], [11, 2, 12, 2], [11, 4, 12, 3], [2, 1, 12, 'ridges'],
       [11, 21, 13, 1], [11, 22, 13, 2], [11, 23, 13, 3], [11, 1, 14, 1], [11, 2, 14, 2], [11, 4, 14, 3],
-      [71, 1, 15, 1], [3, 1, 15, paramPort('threshold', 'at')], [71, 1, 16, 1], [3, 1, 16, paramPort('maprange', 'inLo')], [71, 1, 17, 1], [3, 1, 17, paramPort('maprange', 'inHi')],
+      [71, 1, 15, 1], [3, 1, 15, 'at'], [71, 1, 16, 1], [3, 1, 16, 'inLo'], [71, 1, 17, 1], [3, 1, 17, 'inHi'],
       [79, 1, 21, 1], [9, 1, 21, 2], [14, 1, 57, 1], [57, 1, 21, 3], [16, 1, 22, 1], [12, 2, 58, 1], [22, 1, 59, 1], [58, 1, 59, 2],
       [21, 1, 23, 1], [18, 1, 23, 2], [59, 1, 23, 3], [17, 1, 24, 1], [10, 1, 24, 2], [19, 1, 24, 3],
       [24, 1, 25, 1], [23, 1, 25, 2], [15, 1, 25, 3],
       [71, 1, 28, 1], [27, 1, 28, 2], [26, 1, 28, 3], [25, 1, 29, 1], [92, 1, 29, 2], [11, 6, 29, 3], [29, 1, 77, 1], [92, 1, 77, 2], [11, 12, 77, 3], [79, 1, 97, 1], [18, 1, 97, 2], [12, 1, 97, 3], [28, 1, 98, 1], [97, 1, 98, 2], [11, 25, 98, 3], [98, 1, 99, 1], [35, 1, 99, 2], [11, 26, 99, 3], [99, 1, 92, 1], [11, 20, 92, 2],
-      [89, 1, 61, 1], [60, 1, 61, 2], [77, 1, 89, 1], [90, 1, 89, 2], [91, 1, 89, 3], [11, 17, 91, 1], [15, 1, 91, 2], [12, 2, 62, 1], [15, 1, 62, 2], [62, 1, 60, 1], [61, 1, 31, 1], [16, 1, 31, 2], [2, 1, 12, paramPort('mapnoise', 'steep')], [30, 1, 31, 7], [2, 1, 31, paramPort('material', 'relief')], [11, 11, 31, paramPort('material', 'height')],
-      [13, 1, 32, 1], [5, 1, 32, paramPort('maprange', 'inLo')], [11, 6, 33, 1], [32, 1, 34, 1], [11, 24, 34, 2],
+      [89, 1, 61, 1], [60, 1, 61, 2], [77, 1, 89, 1], [90, 1, 89, 2], [91, 1, 89, 3], [11, 17, 91, 1], [15, 1, 91, 2], [12, 2, 62, 1], [15, 1, 62, 2], [62, 1, 60, 1], [61, 1, 31, 1], [16, 1, 31, 2], [2, 1, 12, 'steep'], [30, 1, 31, 7], [2, 1, 31, 'relief'], [11, 11, 31, 'height'],
+      [13, 1, 32, 1], [5, 1, 32, 'inLo'], [11, 6, 33, 1], [32, 1, 34, 1], [11, 24, 34, 2],
       [88, 1, 36, 1], [35, 1, 36, 2], [34, 1, 36, 3],
       [11, 8, 37, 1], [36, 1, 38, 1], [37, 1, 38, 2], [10, 1, 39, 1], [11, 11, 63, 1], [63, 1, 39, 2],
       [38, 1, 40, 1], [39, 1, 40, 2], [11, 10, 40, 3],
@@ -2762,13 +2763,13 @@ export const TEXTURE_CHAINS = {
       [46, 1, 48, 1], [47, 1, 48, 2], [11, 7, 48, 3], [48, 1, 74, 1], [73, 1, 74, 2], [11, 14, 74, 3], [74, 1, 76, 1], [75, 1, 76, 2], [11, 15, 76, 3],
       [11, 1, 50, 1], [11, 2, 50, 2], [11, 4, 50, 3], [50, 1, 51, 1], [11, 8, 52, 1], [51, 1, 53, 1], [52, 1, 53, 2], [53, 1, 54, 1], [4, 1, 54, 2],
       [76, 1, 56, 1], [55, 1, 56, 2], [54, 1, 56, 3], [56, 1, 94, 1], [93, 1, 94, 2], [11, 18, 93, 1], [15, 1, 93, 2], [94, 1, 95, 1], [11, 19, 95, 2], [95, 1, 49, 1],
-      [96, 1, 47, 1], [11, 1, 83, 1], [11, 2, 83, 2], [11, 4, 83, 3], [81, 1, 83, paramPort('mapnoise', 'size')], [83, 1, 84, 1], [5, 1, 84, paramPort('maprange', 'inLo')], [84, 1, 85, 1], [33, 1, 85, 2],
+      [96, 1, 47, 1], [11, 1, 83, 1], [11, 2, 83, 2], [11, 4, 83, 3], [81, 1, 83, 'size'], [83, 1, 84, 1], [5, 1, 84, 'inLo'], [84, 1, 85, 1], [33, 1, 85, 2],
       [85, 1, 86, 1], [86, 1, 87, 1], [31, 1, 88, 1], [87, 1, 88, 2]] },
   rainwater: { label: 'Rain on Water', div: 2, teach: 'Rain falling on still water. Raindrops makes every drop that has fallen in the last moment: a ring wave spreading from where it struck, a short packet of ripples that weakens as it widens, the newest still splashing. It hands on three maps: the ripples as heights, the splashes, and how far off each point of the water lies. Tint colors the water by that distance (your Water Hue near, the Sky Hue it reflects toward the horizon), and Displace bends that reflection through the ripples; the Light Engine raises the ripples and catches the light on them; Glow makes the splashes sparkle. View looks from overhead (0) across the water toward the horizon, where the rings grow small and the water calms. Try: Spread at 100 for wide old rings, or wire Raindrops\' Ripples into a Displace to see the poem through the water.', nodes: [
-      ['knob', { slot: '1', name: 'Ripple Size', def: 29 }, 40, 40],               // 1  (100 of 40–250)
-      ['knob', { slot: '2', name: 'Rain', def: 50 }, 40, 140],                     // 2
-      ['knob', { slot: '3', name: 'Spread', def: 50 }, 40, 240],                   // 3
-      ['knob', { slot: '4', name: 'Splashes', def: 40 }, 40, 340],                 // 4
+      ['knob', { slot: '1' }, 40, 40],               // 1  (100 of 40–250)
+      ['knob', { slot: '2' }, 40, 140],                     // 2
+      ['knob', { slot: '3' }, 40, 240],                   // 3
+      ['knob', { slot: '4' }, 40, 340],                 // 4
       ['math', { op: 'min' }, 40, 440],                                            // 5  the camera dial's View, at most 1 (0–85, as the View slider was; Ruby: the camera's)
       ['dial', {}, 40, 540],                                                       // 6
       ['hue', { slot: '1', name: 'Water Hue' }, 40, 620], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 700],   // 7, 8
@@ -2780,117 +2781,117 @@ export const TEXTURE_CHAINS = {
       ['displace', { amount: 35, blur: 10 }, 800, 520],                            // 14 (the reflection bent by the rings)
       ['camdial', {}, 40, 640],                                                    // 15 (the camera: its View looks across the water)
       ['number', { value: 100 }, 40, 700]],                                        // 16
-    wires: [[15, 2, 5, 1], [16, 1, 5, 2], [1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
+    wires: [[15, 2, 5, 1], [16, 1, 5, 2], [1, 1, 9, 'size'], [2, 1, 9, 'rain'], [3, 1, 9, 'spread'], [4, 1, 9, 'splash'], [5, 1, 9, 'view'],
       [9, 3, 10, 1], [8, 1, 10, 2], [7, 1, 10, 3], [10, 1, 14, 1], [9, 1, 14, 2], [14, 1, 11, 1], [9, 1, 11, 2], [6, 1, 11, 7], [11, 1, 12, 1], [9, 2, 12, 2], [12, 1, 13, 1]] },
   // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
   watercolour: { label: 'Watercolor Wash', div: 2, teach: 'Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
-      ['knob', { slot: '1', name: 'Wash Size', def: 29 }, 40, 40],                 // 1  (100 of 40–250)
-      ['knob', { slot: '2', name: 'Pigment', def: 32 }, 40, 140],                  // 2  (100 of 30–250)
-      ['knob', { slot: '3', name: 'Wetness', def: 50 }, 40, 240],                  // 3
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 40–250)
+      ['knob', { slot: '2' }, 40, 140],                  // 2  (100 of 30–250)
+      ['knob', { slot: '3' }, 40, 240],                  // 3
       ['dial', {}, 40, 340],                                                       // 4
       ['hue', { slot: '1', name: 'Pigment Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Pigment Hue' }, 40, 500],   // 5, 6
       ['washes', { amount: 100, '~amount': '30,250', size: 100, '~size': '40,250', wet: 50, '~wet': '0,100' }, 300, 60],   // 7
       ['pigment', { wet: 50, '~wet': '0,100' }, 560, 60],                          // 8
       ['pigment', { wet: 50, '~wet': '0,100' }, 800, 160],                         // 9
       ['surface', { name: 'Watercolor Wash', ground: 'colour' }, 1040, 160]],      // 10
-    wires: [[1, 1, 7, paramPort('washes', 'size')], [2, 1, 7, paramPort('washes', 'amount')], [3, 1, 7, paramPort('washes', 'wet')], [3, 1, 8, paramPort('pigment', 'wet')], [3, 1, 9, paramPort('pigment', 'wet')],
+    wires: [[1, 1, 7, 'size'], [2, 1, 7, 'amount'], [3, 1, 7, 'wet'], [3, 1, 8, 'wet'], [3, 1, 9, 'wet'],
       [7, 1, 8, 2], [5, 1, 8, 3], [4, 1, 8, 4], [8, 1, 9, 1], [7, 2, 9, 2], [6, 1, 9, 3], [4, 1, 9, 4], [9, 1, 10, 1]] },
   // ♡ Flow-Field Ink: one Flow Lines part, the dial its current
   flowfield: { label: 'Flow-Field Ink', poem: 'shape', canvas: true, teach: 'One part makes it: Flow Lines, which grows evenly spaced ink lines along a current and stops each one short of the others. The Light Dial goes into Flow From, so the current runs the way the dial points; Turbulence bends it into eddies. The two Hues are the inks. With Shape Aware ticked the lines flow round your words, as water round stones. Try: wire a Terrain or a Value Noise into Angle Map, then turn Turbulence up.', nodes: [
-      ['knob', { slot: '1', name: 'Scale', def: 29 }, 40, 40],                     // 1  (100 of 40–250)
-      ['knob', { slot: '2', name: 'Lines', def: 26 }, 40, 140],                    // 2  (100 of 30–300)
-      ['knob', { slot: '3', name: 'Turbulence', def: 50 }, 40, 240],               // 3
+      ['knob', { slot: '1' }, 40, 40],                     // 1  (100 of 40–250)
+      ['knob', { slot: '2' }, 40, 140],                    // 2  (100 of 30–300)
+      ['knob', { slot: '3' }, 40, 240],               // 3
       ['dial', {}, 40, 340],                                                       // 4
       ['hue', { slot: '1', name: 'Ink Hue' }, 40, 420], ['hue', { slot: '2', name: 'Second Ink Hue' }, 40, 500],   // 5, 6
       ['flowlines', { amount: 100, '~amount': '30,300', size: 100, '~size': '40,250', turbulence: 50, '~turbulence': '0,100' }, 320, 140],   // 7
       ['surface', { name: 'Flow-Field Ink', ground: 'colour' }, 600, 160]],        // 8
-    wires: [[1, 1, 7, paramPort('flowlines', 'size')], [2, 1, 7, paramPort('flowlines', 'amount')], [3, 1, 7, paramPort('flowlines', 'turbulence')],
+    wires: [[1, 1, 7, 'size'], [2, 1, 7, 'amount'], [3, 1, 7, 'turbulence'],
       [4, 1, 7, 5], [5, 1, 7, 3], [6, 1, 7, 4], [7, 1, 8, 1]] },
   // ♡ First Snow, Burning Mana and Euphoria Dust: one Particles part each, of its own kind
   snow: { label: 'First Snow', canvas: true, teach: 'One part makes it: Particles, set to flakes. The Light Dial goes into Wind From, so the wind blows from where the dial points, and the Wind knob says how hard. The flakes are colored by the Snow Hue (or anything wired into Color A). Try: turn the dial with Wind up, then set Kind to sparks.', nodes: [
-      ['knob', { slot: '1', name: 'Flake Size', def: 14 }, 40, 40],                // 1  (100 of 60–340)
-      ['knob', { slot: '2', name: 'Snowfall', def: 33 }, 40, 140],                 // 2  (100 of 20–260)
-      ['knob', { slot: '3', name: 'Wind', def: 0 }, 40, 240],                      // 3
+      ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 60–340)
+      ['knob', { slot: '2' }, 40, 140],                 // 2  (100 of 20–260)
+      ['knob', { slot: '3' }, 40, 240],                      // 3
       ['dial', {}, 40, 340],                                                       // 4
       ['particles', { kind: 'flakes', amount: 100, '~amount': '20,260', size: 100, '~size': '60,340', form: 0, '~form': '0,100' }, 320, 100],   // 5
       ['surface', { name: 'First Snow', ground: 'grey' }, 600, 120]],              // 6
-    wires: [[1, 1, 5, paramPort('particles', 'size')], [2, 1, 5, paramPort('particles', 'amount')], [3, 1, 5, paramPort('particles', 'form')], [4, 1, 5, 4], [5, 1, 6, 1]] },
+    wires: [[1, 1, 5, 'size'], [2, 1, 5, 'amount'], [3, 1, 5, 'form'], [4, 1, 5, 4], [5, 1, 6, 1]] },
   embers: { label: 'Burning Mana', canvas: true, teach: 'One part makes it: Particles, set to sparks, each flung out and bent down by gravity, white-hot at the head. The two Hues color the sparks (they follow the page\'s accents until you set them). Hue Drift lets each spark\'s color stray. Try: wire a Texture into Over to rain sparks on it.', nodes: [
-      ['knob', { slot: '1', name: 'Ember Size', def: 7 }, 40, 40],                 // 1  (100 of 60–600)
-      ['knob', { slot: '2', name: 'Ember Count', def: 17 }, 40, 140],              // 2  (100 of 20–500)
-      ['knob', { slot: '3', name: 'Hue Drift', def: 10 }, 40, 240],                // 3
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 60–600)
+      ['knob', { slot: '2' }, 40, 140],              // 2  (100 of 20–500)
+      ['knob', { slot: '3' }, 40, 240],                // 3
       ['hue', { slot: '1', name: 'Ember Hue' }, 40, 340], ['hue', { slot: '2', name: 'Spark Hue' }, 40, 420],   // 4, 5
       ['particles', { kind: 'sparks', amount: 100, '~amount': '20,500', size: 100, '~size': '60,600', form: 10, '~form': '0,100' }, 320, 100],   // 6
       ['surface', { name: 'Burning Mana', ground: 'grey' }, 600, 120]],            // 7
-    wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+    wires: [[1, 1, 6, 'size'], [2, 1, 6, 'amount'], [3, 1, 6, 'form'], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
   magicparticles: { label: 'Euphoria Dust', canvas: true, teach: 'One part makes it: Particles, set to motes. The two Hues color them (they follow the page\'s accents until you set them). Chaos gathers the dust into trails at 0, scatters it at 50 and bursts it at 100. Try: set Chaos to 0, then 100.', nodes: [
-      ['knob', { slot: '1', name: 'Sparkle Size', def: 44 }, 40, 40],              // 1  (100 of 20–200)
-      ['knob', { slot: '2', name: 'Sparkle Count', def: 23 }, 40, 140],            // 2  (100 of 10–400)
-      ['knob', { slot: '3', name: 'Chaos', def: 50 }, 40, 240],                    // 3
+      ['knob', { slot: '1' }, 40, 40],              // 1  (100 of 20–200)
+      ['knob', { slot: '2' }, 40, 140],            // 2  (100 of 10–400)
+      ['knob', { slot: '3' }, 40, 240],                    // 3
       ['hue', { slot: '1', name: 'Sparkle Hue' }, 40, 340], ['hue', { slot: '2', name: 'Glow Hue' }, 40, 420],   // 4, 5
       ['particles', { kind: 'motes', amount: 100, '~amount': '10,400', size: 100, '~size': '20,200', form: 50, '~form': '0,100' }, 320, 100],   // 6
       ['surface', { name: 'Euphoria Dust', ground: 'grey' }, 600, 120]],           // 7
-    wires: [[1, 1, 6, paramPort('particles', 'size')], [2, 1, 6, paramPort('particles', 'amount')], [3, 1, 6, paramPort('particles', 'form')], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
+    wires: [[1, 1, 6, 'size'], [2, 1, 6, 'amount'], [3, 1, 6, 'form'], [4, 1, 6, 2], [5, 1, 6, 3], [6, 1, 7, 1]] },
   // √ Halftone: a soft Value Noise for the tone, printed as a Halftone Screen of dots.
   halftone: { label: 'Halftone', poem: 'shape', canvas: true, teach: 'A Value Noise with one octave makes a soft, slow tone; Halftone Screen prints it as dots, each as big as the tone is bright there. Dot Scale is the screen\'s cell size and Dot Weight how heavy the dots print. With Shape Aware ticked the dots give way round your words, leaving each line on clean paper. Try: wire another texture into the Halftone Screen\'s tone, or turn its Screen Angle.', nodes: [
-      ['knob', { slot: '1', name: 'Dot Scale', def: 14 }, 40, 40],                 // 1  (100 of 50–400)
-      ['knob', { slot: '2', name: 'Dot Weight', def: 33 }, 40, 140],               // 2  (100 of 30–240)
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 50–400)
+      ['knob', { slot: '2' }, 40, 140],               // 2  (100 of 30–240)
       ['noise', { scale: 10, octaves: 1 }, 320, 40],                               // 3
       ['screen', { scale: 100, weight: 100, angle: 0 }, 600, 80],                  // 4
       ['surface', { name: 'Halftone', ground: 'grey' }, 880, 100]],                // 5
-    wires: [[1, 1, 4, paramPort('screen', 'scale')], [2, 1, 4, paramPort('screen', 'weight')], [3, 1, 4, 1], [4, 1, 5, 1]] },
+    wires: [[1, 1, 4, 'scale'], [2, 1, 4, 'weight'], [3, 1, 4, 1], [4, 1, 5, 1]] },
   // √ Film Grain: one part, its Kind sliding from silver to digital
   grain: { label: 'Film Grain', canvas: true, teach: 'One part makes it: Film Grain, whose Kind slides from silver halide through film and paper to a digital sensor, blending neighbours in between. The Knobs are the texture\'s sliders: Grain Size, Contrast and Grain (the Kind). Try: set Kind to 66 for paper, then blend the grain over another texture with Blend.', nodes: [
-      ['knob', { slot: '1', name: 'Grain Size', def: 0 }, 40, 40],                 // 1  (100 of 100–600)
-      ['knob', { slot: '2', name: 'Contrast', def: 33 }, 40, 140],                 // 2  (100 of 30–240)
-      ['knob', { slot: '3', name: 'Grain', def: 33 }, 40, 240],                    // 3
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 100–600)
+      ['knob', { slot: '2' }, 40, 140],                 // 2  (100 of 30–240)
+      ['knob', { slot: '3' }, 40, 240],                    // 3
       ['grain', { size: 100, contrast: 100, kind: 33 }, 320, 80],                  // 4
       ['surface', { name: 'Film Grain', ground: 'grey' }, 600, 100]],              // 5
-    wires: [[1, 1, 4, paramPort('grain', 'size')], [2, 1, 4, paramPort('grain', 'contrast')], [3, 1, 4, paramPort('grain', 'kind')], [4, 1, 5, 1]] },
+    wires: [[1, 1, 4, 'size'], [2, 1, 4, 'contrast'], [3, 1, 4, 'kind'], [4, 1, 5, 1]] },
   // √ Painter's Frustration: Paint Swipes lays the paint and its thickness; a little Canvas Weave
   // goes into the thickness (the oil-on-canvas module: weave, Mix, Light Engine, right before the
   // Surface); the Light Engine lights the impasto by the dial. Wetness also flattens and glosses it.
   brushstrokes: { label: "Painter's Frustration", canvas: true, teach: 'Paint Swipes lays a few fast swipes of gray paint and gives a second output, the paint\'s thickness. Before the Surface sits the oil-on-canvas module: Mix lays a little Canvas Weave into that thickness, and the Light Engine lights the paint by the dial. The Wetness knob goes to four places: the strokes (mixing, bleeding, drips) and the Light Engine\'s Relief, Gloss and Shine, because wet paint is flatter and shinier. Try: turn the light dial, then raise Wetness.', nodes: [
-      ['knob', { slot: '1', name: 'Stroke Width', def: 13 }, 40, 40],              // 1  (100 of 60–380)
-      ['knob', { slot: '2', name: 'Stroke Count', def: 33 }, 40, 140],             // 2  (100 of 20–260)
-      ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                   // 3
+      ['knob', { slot: '1' }, 40, 40],              // 1  (100 of 60–380)
+      ['knob', { slot: '2' }, 40, 140],             // 2  (100 of 20–260)
+      ['knob', { slot: '3' }, 40, 240],                   // 3
       ['strokes', { width: 100, count: 100, wet: 0 }, 320, 60],                    // 4
       ['canvasweave', { pitch: 100 }, 320, 320],                                   // 5
       ['mix', { t: 4 }, 600, 220],                                                 // 6
       ['material', { relief: 87, '~relief': '87,39', gloss: 25, '~gloss': '25,85', shine: 22, '~shine': '22,65', shadow: 55, occlusion: 30, ambient: 45 }, 860, 80],   // 7
       ['surface', { name: "Painter's Frustration", ground: 'grey' }, 1120, 120]],  // 8
-    wires: [[1, 1, 4, paramPort('strokes', 'width')], [2, 1, 4, paramPort('strokes', 'count')], [3, 1, 4, paramPort('strokes', 'wet')],
-      [3, 1, 7, paramPort('material', 'relief')], [3, 1, 7, paramPort('material', 'gloss')], [3, 1, 7, paramPort('material', 'shine')],
+    wires: [[1, 1, 4, 'width'], [2, 1, 4, 'count'], [3, 1, 4, 'wet'],
+      [3, 1, 7, 'relief'], [3, 1, 7, 'gloss'], [3, 1, 7, 'shine'],
       [4, 1, 7, 1], [4, 2, 6, 1], [5, 1, 6, 2], [6, 1, 7, 2], [7, 1, 8, 1]] },
   landscape: { label: 'Painted Landscape', canvas: true, teach: 'Painted Sky paints the time of day, a sun or a moon, and clouds. Painted Ridges paints the seed\'s country over whatever sky comes in, band behind band. Watercolor Bleed bleeds the painting (Wetness). Oil Paint repaints it in brushstrokes with the paint\'s heights, and the Light Engine lights those by the dial; the Impasto knob drives both (0: no strokes, as it used to be). Notice that one Knob can drive two parts: Distance, Tilt and Color each go to both the sky and the ridges, so they agree. Try: set the Ridges\' Country, then raise Color.', nodes: [
-      ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
-      ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
-      ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3
+      ['knob', { slot: '1' }, 40, 40],                 // 1  (100 of 60–200)
+      ['knob', { slot: '2' }, 40, 140],                  // 2  (100 of 20–250)
+      ['knob', { slot: '3' }, 40, 240],                  // 3
       ['math', { op: 'min' }, 40, 340],                                           // 4  the camera dial's View: the camera's pitch (Ruby: the camera's, not a slider)
-      ['knob', { slot: '4', name: 'Color', def: 0 }, 40, 440],                    // 5
+      ['knob', { slot: '4' }, 40, 440],                    // 5
       ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 0 }, 320, 40],                                  // 6
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 0 }, 600, 120],            // 7
       ['wash', { wet: 0 }, 880, 160],                                             // 8
       ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
       ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
       ['material', { relief: 20, '~relief': '0,40', gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
-      ['knob', { slot: '5', name: 'Impasto', def: 50 }, 880, 400],
+      ['knob', { slot: '5' }, 880, 400],
       ['camdial', {}, 40, 760],                                                    // 13 (the camera: its View the pitch)
       ['number', { value: 100 }, 40, 820]],               // 12
-    wires: [[13, 2, 4, 1], [14, 1, 4, 2], [1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
-      [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
+    wires: [[13, 2, 4, 1], [14, 1, 4, 2], [1, 1, 6, 'size'], [1, 1, 7, 'distance'], [2, 1, 7, 'bands'], [3, 1, 8, 'wet'],
+      [4, 1, 6, 'tilt'], [4, 1, 7, 'tilt'], [5, 1, 6, 'colour'], [5, 1, 7, 'colour'],
       [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 10, 1], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 9, 1],
-      [12, 1, 10, paramPort('oilpaint', 'amount')], [12, 1, 11, paramPort('material', 'relief')]] },
+      [12, 1, 10, 'amount'], [12, 1, 11, 'relief']] },
   // Ᏹ Under Glass (Ruby: a glass to lay over another surface): the glass alone, on mid-gray, so its blend shows only what the glass catches
   underglass: { label: 'Under Glass', div: 2, teach: 'A sheet of glass laid over the page. It is made to go over another surface: choose it as the Upper of Two Surfaces (Screen adds only the light it catches; Overlay also darkens), or in a graph put Texture from the Menu into the Glass Pane\'s Picture. Window Reflection mirrors a window\'s bright bands about where the light\'s own reflection falls; Scratches are hairlines in bunches or wiped in swirls, and its Glints are those lying across the way to the light; Smudges are fingerprints, smears, water spots and dust; Shatter breaks it, with a gray for each piece. A soft Perlin Noise is old glass\'s waviness: it ripples the reflection (and in a graph bends whatever is under it). The Glass Pane puts it together, adding light as light adds, so clean glass that catches nothing is exactly mid-gray and leaves the page alone. Try: turn the light dial and watch the glints ring the light, then raise Cracks.', nodes: [
-      ['knob', { slot: '1', name: 'Reflection', def: 55 }, 40, 40],              // 1
-      ['knob', { slot: '2', name: 'Scratches', def: 40 }, 40, 120],              // 2
-      ['knob', { slot: '3', name: 'Swirl', def: 30 }, 40, 200],                  // 3
-      ['knob', { slot: '4', name: 'Smudges', def: 35 }, 40, 280],                // 4
-      ['knob', { slot: '5', name: 'Dust & Spots', def: 30 }, 40, 360],           // 5
-      ['knob', { slot: '6', name: 'Cracks', def: 0 }, 40, 440],                  // 6
-      ['knob', { slot: '7', name: 'Waviness', def: 30 }, 40, 520],               // 7
-      ['knob', { slot: '8', name: 'Edge', def: 0 }, 40, 600],                    // 8
+      ['knob', { slot: '1' }, 40, 40],              // 1
+      ['knob', { slot: '2' }, 40, 120],              // 2
+      ['knob', { slot: '3' }, 40, 200],                  // 3
+      ['knob', { slot: '4' }, 40, 280],                // 4
+      ['knob', { slot: '5' }, 40, 360],           // 5
+      ['knob', { slot: '6' }, 40, 440],                  // 6
+      ['knob', { slot: '7' }, 40, 520],               // 7
+      ['knob', { slot: '8' }, 40, 600],                    // 8
       ['dial', {}, 40, 700],                                                     // 9
       ['perlin', { scale: 8, details: 2, rough: 40, contrast: 30 }, 300, 780],   // 10
       ['blur', { radius: 6 }, 540, 780],                                         // 11
@@ -2900,40 +2901,40 @@ export const TEXTURE_CHAINS = {
       ['shatter', { breaks: 0, '~breaks': '0,100', reach: 100, rays: 50, rings: 50, width: 100 }, 1020, 660],   // 15
       ['glasspane', { reflect: 60, '~reflect': '0,100', glint: 80, smudge: 60, dust: 70, bend: 30, '~bend': '0,100', edge: 0, '~edge': '0,100' }, 1300, 300],   // 16
       ['surface', { name: 'Under Glass', ground: 'grey' }, 1560, 300]],          // 17
-    wires: [[1, 1, 16, paramPort('glasspane', 'reflect')], [2, 1, 13, paramPort('scratches', 'count')], [3, 1, 13, paramPort('scratches', 'swirl')],
-      [4, 1, 14, paramPort('smudges', 'prints')], [4, 1, 14, paramPort('smudges', 'smears')], [5, 1, 14, paramPort('smudges', 'dust')], [5, 1, 14, paramPort('smudges', 'spots')],
-      [6, 1, 15, paramPort('shatter', 'breaks')], [7, 1, 16, paramPort('glasspane', 'bend')], [7, 1, 12, paramPort('reflection', 'ripple')], [8, 1, 16, paramPort('glasspane', 'edge')],
+    wires: [[1, 1, 16, 'reflect'], [2, 1, 13, 'count'], [3, 1, 13, 'swirl'],
+      [4, 1, 14, 'prints'], [4, 1, 14, 'smears'], [5, 1, 14, 'dust'], [5, 1, 14, 'spots'],
+      [6, 1, 15, 'breaks'], [7, 1, 16, 'bend'], [7, 1, 12, 'ripple'], [8, 1, 16, 'edge'],
       [9, 1, 12, 1], [9, 2, 12, 2], [9, 1, 13, 1], [9, 2, 13, 2], [10, 1, 11, 1], [11, 1, 12, 3],
       [12, 1, 16, 2], [13, 2, 16, 3], [14, 1, 16, 4], [14, 3, 16, 5], [14, 2, 16, 6], [15, 1, 16, 7], [15, 2, 16, 8], [11, 1, 16, 9], [16, 1, 17, 1]] },
   // 🜄 Broken Glass (Ruby: "a bunch of glass fragments laying on 'nothing'"): Glass Shards, lit by the Light Dial, laid on a plane by the Camera Dial, over mid-gray
   brokenglass: { label: 'Broken Glass', div: 2, poem: 'lines', teach: 'Broken glass lying on nothing: choose it as the Upper of Two Surfaces to scatter it over another (Screen keeps only the light it catches; Hard Light also lays its shadows), or in a graph wire Texture from the Menu into the Glass Shards\' Picture to see it through the glass. Glass Shards cuts each shard as a sharp polygon, sized as broken glass breaks (a few big, many small), heaped about where it fell; Slivers draws them out long. Each lies a little tilted: where a face lies just right for the light it flashes whole, and its edges catch the light on the side toward it, each colour a little apart (glass bends each its own way). The light through a shard falls beside it, gathered into a bright caustic inside a pale shadow. The Light Dial is the light (its height: overhead at the middle, the shadows and caustics short; at the rim and past it, long), and the Camera Dial lays the glass on a plane you can turn and tip. It knows where the poem is (Text Aware): a shard that falls on a line of the words is a small one, so the line reads; blended into the letters (Shape Aware) it lies only on the lines, sized to them. With Shape Aware ticked the shards are swept off your words. Try: pull the Light Dial past its rim for long caustics, then raise Colored Glass.',
     nodes: [
-      ['knob', { slot: '1', name: 'Shards', def: 40 }, 40, 40],                   // 1
-      ['knob', { slot: '2', name: 'Size', def: 25.9 }, 40, 120],                  // 2  (100 of 30–300)
-      ['knob', { slot: '3', name: 'Spread', def: 55 }, 40, 200],                  // 3
-      ['knob', { slot: '4', name: 'Slivers', def: 35 }, 40, 280],                 // 4
-      ['knob', { slot: '5', name: 'Caustics', def: 60 }, 40, 360],                // 5
-      ['knob', { slot: '6', name: 'Glints', def: 60 }, 40, 440],                  // 6
-      ['knob', { slot: '7', name: 'Colored Glass', def: 25 }, 40, 520],           // 7
-      ['knob', { slot: '8', name: 'Shadows', def: 50 }, 40, 600],                 // 8
+      ['knob', { slot: '1' }, 40, 40],                   // 1
+      ['knob', { slot: '2', def: 25.9 }, 40, 120],                  // 2  (100 of 30–300)
+      ['knob', { slot: '3' }, 40, 200],                  // 3
+      ['knob', { slot: '4' }, 40, 280],                 // 4
+      ['knob', { slot: '5' }, 40, 360],                // 5
+      ['knob', { slot: '6' }, 40, 440],                  // 6
+      ['knob', { slot: '7' }, 40, 520],           // 7
+      ['knob', { slot: '8' }, 40, 600],                 // 8
       ['camdial', {}, 40, 700], ['dial', {}, 40, 780],                            // 9, 10
       ['shards', { count: 40, '~count': '0,100', size: 100, '~size': '30,300', spread: 55, '~spread': '0,100', slivers: 35, '~slivers': '0,100', caustics: 60, '~caustics': '0,100',
         glints: 60, '~glints': '0,100', colors: 25, '~colors': '0,100', shadows: 50, '~shadows': '0,100', turn: 0, '~turn': '0,360', view: 0, '~view': '0,100', lens: 100, '~lens': '25,400' }, 320, 300],   // 11
       ['surface', { name: 'Broken Glass', ground: 'grey' }, 600, 320]],           // 12
-    wires: [[1, 1, 11, paramPort('shards', 'count')], [2, 1, 11, paramPort('shards', 'size')], [3, 1, 11, paramPort('shards', 'spread')], [4, 1, 11, paramPort('shards', 'slivers')],
-      [5, 1, 11, paramPort('shards', 'caustics')], [6, 1, 11, paramPort('shards', 'glints')], [7, 1, 11, paramPort('shards', 'colors')], [8, 1, 11, paramPort('shards', 'shadows')],
-      [9, 1, 11, paramPort('shards', 'turn')], [9, 2, 11, paramPort('shards', 'view')], [9, 3, 11, paramPort('shards', 'lens')], [10, 1, 11, 2], [10, 2, 11, 3], [11, 1, 12, 1]] },
+    wires: [[1, 1, 11, 'count'], [2, 1, 11, 'size'], [3, 1, 11, 'spread'], [4, 1, 11, 'slivers'],
+      [5, 1, 11, 'caustics'], [6, 1, 11, 'glints'], [7, 1, 11, 'colors'], [8, 1, 11, 'shadows'],
+      [9, 1, 11, 'turn'], [9, 2, 11, 'view'], [9, 3, 11, 'lens'], [10, 1, 11, 2], [10, 2, 11, 3], [11, 1, 12, 1]] },
   // 🜄 Dewy Webs (Ruby: "dewy spider webs getting caught by the light"): Dewy Webs' silk, dew and glints, on mid-gray
   dewwebs: { label: 'Dewy Webs', div: 2, poem: 'lines', teach: 'Spider webs at dawn, beaded with dew. Dewy Webs strings orb webs across the page: anchor threads, a frame, spokes from the hub, and the sticky spiral wound out between them, sagging a little (Sag), torn here and there (Torn). Dew gathers on the spiral the way a wet thread breaks into beads: a drop, a smaller one between, larger low in the web. Each drop is a tiny lens, with a point of light toward the Light Dial and a bright crescent on its far side. The silk glints only where it runs across the light\'s way, and Iridescence colours those glints as thin silk does. Silk and dew are screened onto mid-gray; the drops are a little darkened round so they read on a light page; the glints get a soft bloom. It knows where the poem is (Text Aware): no web\'s hub sits on the words; blended into the letters (Shape Aware) a web is strung across each line. With Shape Aware ticked the webs keep to the room between your words. Try: Dew at 0 and Iridescence at 100 for a dry web shimmering in colors.',
     nodes: [
-      ['knob', { slot: '1', name: 'Webs', def: 30 }, 40, 40],                     // 1
-      ['knob', { slot: '2', name: 'Size', def: 28.6 }, 40, 120],                  // 2  (100 of 40–250)
-      ['knob', { slot: '3', name: 'Dew', def: 60 }, 40, 200],                     // 3
-      ['knob', { slot: '4', name: 'Drop Size', def: 25.9 }, 40, 280],             // 4  (100 of 30–300)
-      ['knob', { slot: '5', name: 'Torn', def: 20 }, 40, 360],                    // 5
-      ['knob', { slot: '6', name: 'Sag', def: 40 }, 40, 440],                     // 6
-      ['knob', { slot: '7', name: 'Iridescence', def: 50 }, 40, 520],             // 7
-      ['knob', { slot: '8', name: 'Threads', def: 50 }, 40, 600],                 // 8
+      ['knob', { slot: '1' }, 40, 40],                     // 1
+      ['knob', { slot: '2', def: 28.6 }, 40, 120],                  // 2  (100 of 40–250)
+      ['knob', { slot: '3' }, 40, 200],                     // 3
+      ['knob', { slot: '4', def: 25.9 }, 40, 280],             // 4  (100 of 30–300)
+      ['knob', { slot: '5' }, 40, 360],                    // 5
+      ['knob', { slot: '6' }, 40, 440],                     // 6
+      ['knob', { slot: '7' }, 40, 520],             // 7
+      ['knob', { slot: '8' }, 40, 600],                 // 8
       ['dial', {}, 40, 700],                                                      // 9
       ['dewwebs', { webs: 30, '~webs': '0,100', size: 100, '~size': '40,250', dew: 60, '~dew': '0,100', drops: 100, '~drops': '30,300', torn: 20, '~torn': '0,100',
         sag: 40, '~sag': '0,100', irid: 50, '~irid': '0,100', threads: 50, '~threads': '0,100', width: 100 }, 300, 300],   // 10
@@ -2949,8 +2950,19 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'screen', opacity: 70 }, 1520, 300],                      // 20
       ['blend', { mode: 'screen', opacity: 100 }, 1760, 300],                     // 21
       ['surface', { name: 'Dewy Webs', ground: 'grey', aa: 'edges only' }, 2000, 320]],             // 22
-    wires: [[1, 1, 10, paramPort('dewwebs', 'webs')], [2, 1, 10, paramPort('dewwebs', 'size')], [3, 1, 10, paramPort('dewwebs', 'dew')], [4, 1, 10, paramPort('dewwebs', 'drops')],
-      [5, 1, 10, paramPort('dewwebs', 'torn')], [6, 1, 10, paramPort('dewwebs', 'sag')], [7, 1, 10, paramPort('dewwebs', 'irid')], [8, 1, 10, paramPort('dewwebs', 'threads')], [9, 1, 10, 1],
+    wires: [[1, 1, 10, 'webs'], [2, 1, 10, 'size'], [3, 1, 10, 'dew'], [4, 1, 10, 'drops'],
+      [5, 1, 10, 'torn'], [6, 1, 10, 'sag'], [7, 1, 10, 'irid'], [8, 1, 10, 'threads'], [9, 1, 10, 1],
       [10, 1, 12, 1], [11, 1, 13, 1], [12, 1, 13, 2], [10, 3, 14, 1], [14, 1, 15, 1], [13, 1, 16, 1], [15, 1, 16, 2], [10, 3, 17, 1], [16, 1, 18, 1], [17, 1, 18, 2],
       [10, 2, 19, 1], [18, 1, 20, 1], [19, 1, 20, 2], [20, 1, 21, 1], [10, 2, 21, 2], [21, 1, 22, 1]] },
 };
+
+// THE CHAINS' KNOBS AND SETTINGS, filled in once (docs/SIMPLIFY.md S1): a knob that gives only its slot takes its name and
+// its default (as a share of the slider's range) from its surface's slider (textureParams.js), so a chain never restates
+// them; and a wire to a setting may name it ('scale'), and is given that setting's port on the part it reaches.
+for(const [key, c] of Object.entries(TEXTURE_CHAINS)){
+  const sliders = TEXTURE_PARAMS[key] || [];
+  for(const nd of c.nodes || []){ if(nd[0] !== 'knob') continue; const d = nd[1], p = sliders[(+d.slot || 1) - 1]; if(!p) continue;
+    const { slot, name = p.label, def = Math.round((p.def - p.min)/(p.max - p.min)*100), ...rest } = d;
+    nd[1] = { slot, name, def, ...rest }; }
+  for(const w of c.wires || []) if(typeof w[3] === 'string'){ const to = (c.nodes || [])[w[2] - 1]; if(to) w[3] = paramPort(to[0], w[3]); }
+}

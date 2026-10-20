@@ -13,7 +13,7 @@ let failures = 0;
 const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const keys = Object.keys(S.STEPS);
 check('every part has a wiki entry with a line and an article', keys.every(k => P.WIKI_PARTS[k] && P.WIKI_PARTS[k].line.length > 30));
-check('every part\'s one-line doc is its wiki line (one source)', keys.every(k => S.STEPS[k].doc === P.WIKI_PARTS[k].line));
+check('every part has its one line in the wiki (its one source: the editor\'s part list reads it there)', keys.every(k => typeof P.WIKI_PARTS[k].line === 'string' && P.WIKI_PARTS[k].line.length > 20));
 const bad = [];
 for(const k of keys){ const s = S.STEPS[k], w = P.WIKI_PARTS[k], ins = s.ins.slice(0, s.dataIns), pk = (s.params || []).map(p => p[0]);
   for(const n of Object.keys(w.ins || {})) if(!ins.includes(n)) bad.push(k + ' in ' + n);

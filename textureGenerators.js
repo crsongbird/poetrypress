@@ -36,556 +36,9 @@ import { TEXTURE_CHAINS } from './chains.js';
 import { withSeed, withScale, withPage, wordsRoom, withLightTilt, withLightRig, lightRigOf, scaleNow, blendFamily, pixelPass, CPU, materialOf, noMaterialHue, parseHex, resolveAlpha, canonDiv, cappedDiv } from './texCore.js';
 import { genAstralFog, genAstralStars } from './texWhimsy.js';
 
-/**
- * TEXTURE_PARAMS — the two knobs each texture exposes, in order.
- *
- * A param whose key is 'zoom' is handled generically by getTextureCanvas:
- * the texture is generated at reduced dimensions and scaled back up, which
- * magnifies the pattern without any generator needing to know about it.
- * Every other param arrives at the generator as `amt`, a plain multiplier
- * around 1.0 that each one applies to whatever its dominant quantity is.
- */
-export const TEXTURE_PARAMS = {
-  clouds:        [{key:'zoom',  label:'Lift',            min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Drag',            min:0,  max:200, def:60,  unit:'%'},
-                  // a shaft of light from the dial: the smoke in it glows, dust motes catch it
-                  {key:'form',  label:'Dust',            min:0,  max:100, def:35,  unit:''}],
-  bokeh:         [{key:'zoom',  label:'Focal Plane',     min:25, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Orb Count',       min:20, max:260, def:100, unit:'%', base:67},
-                  // a camera's aperture: round, then 7, 6 and 5 blades, then a heart
-                  {key:'form',  label:'Aperture',        min:0,  max:100, def:0,   unit:'', ticks:[0,25,50,75,100],
-                   names:['Round','7 Blades','6 Blades','5 Blades','Heart']},
-                  // what the motes ARE: dot (as before), petal, leaf, star, snowflake,
-                  // droplet, crescent, flower — and a die to pick one at random
-                  {key:'shape', label:'Object Shape',    min:0,  max:100, def:0,   unit:'', ticks:[0,14,29,43,57,71,86,100],
-                   names:['Dot','Petal','Leaf','Star','Snowflake','Droplet','Crescent','Flower'], dice:true},
-                  // each mote's hue, rotated at random within this spread around Light Hue
-                  {key:'hue',   label:'Color Variation', min:0,  max:180, def:0,   unit:'°'}],
-  astral:        [{key:'stars', label:'Star Density',    min:10, max:300, def:100, unit:'%'},
-                  {key:'fog',   label:'Nebula Density',  min:0,  max:260, def:100, unit:'%'},
-                  // 0 is deep space; up the scale, twinkle, colour fringes, airglow
-                  {key:'form',  label:'Atmosphere',      min:0,  max:100, def:20,  unit:''}],
-  magicparticles:[{key:'zoom',  label:'Sparkle Size',    min:20, max:200, def:100, unit:'%'},
-                  {key:'amt',   label:'Sparkle Count',   min:10, max:400, def:100, unit:'%', base:225},
-                  // trails (0) → scattered, as it was (50) → bursts (100)
-                  {key:'form',  label:'Chaos',           min:0,  max:100, def:50,  unit:'', ticks:[0,50,100]}],
-  embers:        [{key:'zoom',  label:'Ember Size',      min:60, max:600, def:100, unit:'%'},
-                  {key:'amt',   label:'Ember Count',     min:20, max:500, def:100, unit:'%', base:590},
-                  // how far each spark's colour may stray from its ember hue
-                  {key:'form',  label:'Hue Drift',       min:0,  max:100, def:10,  unit:''}],
-  snow:          [{key:'zoom',  label:'Flake Size',      min:60, max:340, def:100, unit:'%'},
-                  {key:'amt',   label:'Snowfall',        min:20, max:260, def:100, unit:'%', base:2950},
-                  // still air at 0; the dial says where the wind blows from
-                  {key:'form',  label:'Wind',            min:0,  max:100, def:0,   unit:''}],
-  grain:         [{key:'zoom',  label:'Grain Size',      min:100,max:600, def:100, unit:'%'},
-                  {key:'amt',   label:'Contrast',        min:30, max:240, def:100, unit:'%'},
-                  // the kind of grain, blended between neighbours; Film is the original
-                  {key:'form',  label:'Grain',           min:0,  max:100, def:33,  unit:'', ticks:[0,33,66,100],
-                   names:['Silver','Film','Paper','Digital']}],
-  metalleaf:     [{key:'zoom',  label:'Leaf Size',       min:60, max:360, def:100, unit:'%'},
-                  {key:'amt',   label:'Coverage',        min:20, max:260, def:100, unit:'%', base:165},
-                  // the original flakes (0) → convex polygons of every kind, drawn out long at the top
-                  {key:'form',  label:'Shape',           min:0,  max:100, def:0,   unit:''},
-                  // flat, as it always was (0) → each flake tilting to the dial's light, a band of reflection inside
-                  {key:'shape', label:'Sheen',           min:0,  max:100, def:0,   unit:''},
-                  // soft speckled, noisy highlights over the flakes (0: none)
-                  {key:'hue',   label:'Glitter',         min:0,  max:100, def:0,   unit:''}],
-  // ── Corvid Feathers and the light to lay over a page (ROADMAP §2 L5, L6) ──
-  corvids:        [{key:'bird', label:'Bird', min:0, max:100, def:50, unit:'', ticks:[0,25,50,75,100], names:['Plain','Crow','Raven','Magpie','Blue Jay']},
-                  {key:'zoom', label:'Feather Size', min:40, max:250, def:100, unit:''},
-                  {key:'amt', label:'Feathers', min:0, max:100, def:25, unit:''},
-                  {key:'fluff', label:'Fluff', min:0, max:100, def:10, unit:''},
-                  {key:'splits', label:'Splits', min:0, max:100, def:30, unit:''},
-                  {key:'sheen', label:'Sheen', min:0, max:100, def:70, unit:''},
-                  {key:'depth', label:'Depth', min:0, max:100, def:40, unit:''},
-                  {key:'lift', label:'Lift', min:0, max:100, def:60, unit:''}],
-  pixelspace:     [{key:'pixel', label:'Pixel Size', min:0, max:100, def:40, unit:''},
-                  {key:'amount', label:'Nebula', min:0, max:100, def:55, unit:''},
-                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
-                  {key:'sparkles', label:'Sparkles', min:0, max:100, def:40, unit:''},
-                  {key:'worlds', label:'Worlds', min:0, max:100, def:50, unit:''},
-                  {key:'dither', label:'Dither', min:0, max:100, def:40, unit:''},
-                  {key:'swirl', label:'Swirl', min:0, max:100, def:50, unit:''},
-                  {key:'bands', label:'Bands', min:0, max:100, def:45, unit:''}],
-  liminal:        [{key:'reach', label:'Reach', min:0, max:100, def:50, unit:''},
-                  {key:'ceiling', label:'Ceiling', min:0, max:100, def:50, unit:''},
-                  {key:'width', label:'Width', min:0, max:100, def:50, unit:''},
-                  {key:'lights', label:'Lights', min:0, max:100, def:60, unit:''},
-                  {key:'failing', label:'Failing Lights', min:0, max:100, def:25, unit:''},
-                  {key:'haze', label:'Haze', min:0, max:100, def:30, unit:''},
-                  {key:'grain', label:'Grain', min:0, max:100, def:35, unit:''},
-                  {key:'strange', label:'Strangeness', min:0, max:100, def:30, unit:''}],
-  webb:           [{key:'amount', label:'Dust', min:0, max:100, def:55, unit:''},
-                  {key:'streaming', label:'Streaming', min:0, max:100, def:45, unit:''},
-                  {key:'stars', label:'Stars', min:0, max:100, def:50, unit:''},
-                  {key:'spiked', label:'Spiked Stars', min:0, max:100, def:30, unit:''},
-                  {key:'length', label:'Spike Length', min:0, max:100, def:50, unit:''},
-                  {key:'galaxies', label:'Galaxies', min:0, max:100, def:40, unit:''},
-                  {key:'glow', label:'Glow', min:0, max:100, def:50, unit:''},
-                  {key:'detail', label:'Detail', min:0, max:100, def:50, unit:''}],
-  imprints:       [{key:'species', label:'Species', min:0, max:100, def:98, unit:''},
-                  {key:'prints', label:'Prints', min:0, max:100, def:40, unit:''},
-                  {key:'size', label:'Print Size', min:0, max:100, def:50, unit:''},
-                  {key:'ink', label:'Ink', min:0, max:100, def:55, unit:''},
-                  {key:'paper', label:'Paper', min:0, max:100, def:45, unit:''},
-                  {key:'misreg', label:'Misregistration', min:0, max:100, def:25, unit:''},
-                  {key:'wear', label:'Wear', min:0, max:100, def:30, unit:''},
-                  {key:'turn', label:'Turn', min:0, max:100, def:50, unit:''}],
-  bouquets:       [{key:'main', label:'Main Flower', min:0, max:100, def:41, unit:''},
-                  {key:'second', label:'Second Flower', min:0, max:100, def:43, unit:''},
-                  {key:'blooms', label:'Blooms', min:0, max:100, def:50, unit:''},
-                  {key:'size', label:'Bouquet Size', min:0, max:100, def:55, unit:''},
-                  {key:'foliage', label:'Foliage', min:0, max:100, def:50, unit:''},
-                  {key:'filler', label:'Filler', min:0, max:100, def:45, unit:''},
-                  {key:'shadow', label:'Shadow', min:0, max:100, def:50, unit:''},
-                  {key:'wrap', label:'Wrap', min:0, max:100, def:50, unit:''}],
-  petals:         [{key:'petals', label:'Petals', min:0, max:100, def:45, unit:''},
-                  {key:'petalsize', label:'Petal Size', min:0, max:100, def:50, unit:''},
-                  {key:'wilting', label:'Wilting', min:0, max:100, def:60, unit:''},
-                  {key:'fallen', label:'Fallen Flowers', min:0, max:100, def:30, unit:''},
-                  {key:'clump', label:'Clumping', min:0, max:100, def:55, unit:''},
-                  {key:'shadow', label:'Shadow', min:0, max:100, def:55, unit:''},
-                  {key:'surface', label:'Surface', min:0, max:100, def:50, unit:''},
-                  {key:'species', label:'Species', min:0, max:100, def:41, unit:''}],
-  meadow:         [{key:'flowers', label:'Flowers', min:0, max:100, def:55, unit:''},
-                  {key:'grass', label:'Grass', min:0, max:100, def:60, unit:''},
-                  {key:'wind', label:'Wind', min:0, max:100, def:45, unit:''},
-                  {key:'petals', label:'Petals in the Air', min:0, max:100, def:35, unit:''},
-                  {key:'horizon', label:'Horizon', min:0, max:100, def:30, unit:''},
-                  {key:'clouds', label:'Clouds', min:0, max:100, def:45, unit:''},
-                  {key:'second', label:'Second Flower', min:0, max:100, def:40, unit:''},
-                  {key:'species', label:'Species', min:0, max:100, def:27, unit:''}],
-  macro:          [{key:'species', label:'Species', min:0, max:100, def:27, unit:''},
-                  {key:'stage', label:'Stage', min:0, max:100, def:45, unit:''},
-                  {key:'aperture', label:'Aperture', min:0, max:100, def:60, unit:''},
-                  {key:'focus', label:'Focus', min:0, max:100, def:50, unit:''},
-                  {key:'lights', label:'Lights Behind', min:0, max:100, def:45, unit:''},
-                  {key:'dew', label:'Dew', min:0, max:100, def:35, unit:''},
-                  {key:'translucency', label:'Translucency', min:0, max:100, def:55, unit:''},
-                  {key:'visitors', label:'Visitors', min:0, max:100, def:20, unit:''}],
-  ditsy:          [{key:'flowers', label:'Flowers', min:0, max:100, def:55, unit:''},
-                  {key:'size', label:'Flower Size', min:0, max:100, def:35, unit:''},
-                  {key:'sprigs', label:'Sprigs', min:0, max:100, def:45, unit:''},
-                  {key:'colors', label:'Colors', min:0, max:100, def:50, unit:''},
-                  {key:'cloth', label:'Cloth', min:0, max:100, def:40, unit:''},
-                  {key:'cluster', label:'Clustering', min:0, max:100, def:30, unit:''},
-                  {key:'turn', label:'Turn', min:0, max:100, def:70, unit:''},
-                  {key:'species', label:'Species', min:0, max:100, def:98, unit:''}],
-  botline:        [{key:'plants', label:'Plants', min:0, max:100, def:35, unit:''},
-                  {key:'size', label:'Plant Size', min:0, max:100, def:55, unit:''},
-                  {key:'line', label:'Line', min:0, max:100, def:45, unit:''},
-                  {key:'detail', label:'Detail', min:0, max:100, def:55, unit:''},
-                  {key:'wash', label:'Wash', min:0, max:100, def:40, unit:''},
-                  {key:'slip', label:'Wash Slip', min:0, max:100, def:30, unit:''},
-                  {key:'paper', label:'Paper', min:0, max:100, def:40, unit:''},
-                  {key:'species', label:'Species', min:0, max:100, def:98, unit:''}],
-  windsea:        [{key:'horizon', label:'Horizon', min:0, max:100, def:45, unit:''},
-                  {key:'weather', label:'Weather', min:0, max:100, def:50, unit:''},
-                  {key:'swirls', label:'Swirls', min:0, max:100, def:45, unit:''},
-                  {key:'waves', label:'Waves', min:0, max:100, def:50, unit:''},
-                  {key:'foam', label:'Foam', min:0, max:100, def:45, unit:''},
-                  {key:'wind', label:'Wind', min:0, max:100, def:35, unit:''},
-                  {key:'islands', label:'Islands', min:0, max:100, def:40, unit:''},
-                  {key:'bands', label:'Toon Bands', min:0, max:100, def:30, unit:''}],
-  inkscroll:      [{key:'peaks', label:'Peaks', min:0, max:100, def:55, unit:''},
-                  {key:'mist', label:'Mist', min:0, max:100, def:50, unit:''},
-                  {key:'ink', label:'Ink', min:0, max:100, def:50, unit:''},
-                  {key:'wash', label:'Wash', min:0, max:100, def:55, unit:''},
-                  {key:'clouds', label:'Clouds', min:0, max:100, def:45, unit:''},
-                  {key:'blossoms', label:'Blossoms', min:0, max:100, def:35, unit:''},
-                  {key:'age', label:'Age', min:0, max:100, def:40, unit:''},
-                  {key:'bands', label:'Toon Bands', min:0, max:100, def:30, unit:''}],
-  dappled:        [{key:'size', label:'Leaf Size', min:0, max:100, def:50, unit:''},
-                  {key:'amount', label:'Leaves', min:0, max:100, def:50, unit:''},
-                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
-  windowlight:    [{key:'size', label:'Window Size', min:0, max:100, def:50, unit:''},
-                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
-                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
-  caustics:       [{key:'size', label:'Net Size', min:0, max:100, def:50, unit:''},
-                  {key:'amount', label:'Brightness', min:0, max:100, def:50, unit:''},
-                  {key:'softness', label:'Softness', min:0, max:100, def:40, unit:''}],
-  lightleaks:     [{key:'size', label:'Bloom Size', min:0, max:100, def:50, unit:''},
-                  {key:'amount', label:'Leaks', min:0, max:100, def:50, unit:''},
-                  {key:'softness', label:'Softness', min:0, max:100, def:50, unit:''}],
-  feathers:      [{key:'zoom',  label:'Feather Size',    min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Feathers',        min:0,  max:100, def:30,  unit:''},
-                  {key:'fluff', label:'Fluff',           min:0,  max:100, def:15,  unit:''},
-                  {key:'curl',  label:'Curl',            min:0,  max:100, def:30,  unit:''},
-                  {key:'splits', label:'Splits',          min:0,  max:100, def:30,  unit:''},
-                  {key:'marks', label:'Markings',        min:0,  max:100, def:0,   unit:'', ticks:[0,33,66,100], names:['Plain','Bars','Bars','Eyes']},
-                  {key:'depth', label:'Depth',           min:0,  max:100, def:50,  unit:''},
-                  {key:'lift',  label:'Lift',            min:0,  max:100, def:50,  unit:''}],
-  flowers:       [{key:'zoom',  label:'Bloom Size',      min:50, max:450, def:150, unit:'%'},
-                  {key:'amt',   label:'Bloom Count',     min:10, max:300, def:60,  unit:'%', base:18},
-                  // the third, unusual knob: which flower. 50 is the lotus
-                  // ticks at the seven species: bud, cherry, lily, lotus, daisy, rosette, hydrangea
-                  {key:'form',  label:'Form',            min:0,  max:100, def:50,  unit:'', ticks:[0,25,38,50,65,82,100]}],
-  brushstrokes:  [{key:'zoom',  label:'Stroke Width',    min:60, max:380, def:100, unit:'%'},
-                  {key:'amt',   label:'Stroke Count',    min:20, max:260, def:100, unit:'%', base:111},
-                  // dry (as before) → wet: mixing, levelled bristles, bleeding edges, drips
-                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''}],
-  halftone:      [{key:'zoom',  label:'Dot Scale',       min:50, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Dot Weight',      min:30, max:240, def:100, unit:'%'}],
-  // RINGWORLD (chains.js 'ringworld'; Ruby: the camera on the camera dial, the day on the light dial; who built it, by the seed or chosen)
-  // ◯ RING IN THE SKY (chains.js 'skyring'; Ruby: "a beautiful background layer … simplified, but cosmic"): the camera dial moves the ring
-  skyring:       [{key:'zoom',  label:'Ring Width',      min:0,  max:100, def:45,  unit:''},
-                  {key:'amt',   label:'Stars',           min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Nebula',          min:0,  max:100, def:50,  unit:''},
-                  {key:'shape', label:'Air',             min:0,  max:100, def:60,  unit:''},
-                  {key:'height', label:'Star Height',    min:0,  max:100, def:45,  unit:''},
-                  {key:'paint', label:'Paint',           min:0,  max:100, def:0,   unit:''},
-                  {key:'brush', label:'Brush',           min:0,  max:100, def:37,  unit:'', ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry']}],
-  // ◯ PAINTED RINGWORLD (chains.js 'ringpaint'; Ruby: "a generative art piece that still looks like being on a ringworld"): Ringworld's camera, painted
-  ringpaint:     [{key:'zoom',  label:'Band Width',      min:0,  max:100, def:45,  unit:''},
-                  {key:'amt',   label:'Landforms',       min:0,  max:100, def:50,  unit:''},
-                  // who and what: the seed's own world, or one chosen; Mixed lays three side by side
-                  {key:'world', label:'World',           min:0,  max:100, def:0,   unit:'', ticks:[0,14,29,43,57,71,86,100], names:['By the Seed','Wilds','Cities','Neon','Builders','Magic','Ruins','Mixed']},
-                  {key:'shape', label:'Life',            min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Works',           min:0,  max:100, def:50,  unit:''},
-                  {key:'alt',   label:'Altitude',        min:0,  max:100, def:15,  unit:''},
-                  {key:'paint', label:'Paint',           min:0,  max:100, def:0,   unit:''},
-                  {key:'brush', label:'Brush',           min:0,  max:100, def:37,  unit:'', ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry']}],
-  ringworld:     [{key:'zoom',  label:'Band Width',      min:0,  max:100, def:45,  unit:''},
-                  // the land's relief, its rim walls and the mountains against them, and the seed's own landforms (ranges at the walls, peaks, mesas, boulders, pinnacles, stone arches)
-                  {key:'amt',   label:'Landforms',       min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Seas',            min:0,  max:100, def:40,  unit:''},
-                  // how built-up the ring is: the builders' works, and past a quarter, cities whoever built it
-                  {key:'shape', label:'Cities',          min:0,  max:100, def:25,  unit:''},
-                  {key:'hue',   label:'Atmosphere',      min:0,  max:100, def:50,  unit:''},
-                  // who built the ring (its works, its lights): the seed's own pair, or one chosen
-                  {key:'builders', label:'Builders',     min:0,  max:100, def:0,   unit:'', ticks:[0,20,40,60,80,100], names:['By the Seed','Wilds','Engineers','Cities','Magi','Ruins']},
-                  {key:'alt',   label:'Altitude',        min:0,  max:100, def:15,  unit:''},
-                  // ships in the sky (the middle: what the builders fly), and past it lanes of small craft; busier streets at night
-                  // (where across the band you stand is the seed's now; the lens is the camera dial's zoom)
-                  {key:'traffic', label:'Traffic',       min:0,  max:100, def:50,  unit:''}],
-  // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon
-  rainwater:     [{key:'zoom',  label:'Ripple Size',     min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Rain',            min:0,  max:100, def:50,  unit:''},
-                  // fresh drops' small tight rings (0) → wide, old, overlapping rings (100)
-                  {key:'form',  label:'Spread',          min:0,  max:100, def:50,  unit:''},
-                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''}],   // (its View is the camera dial's)
-  glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Rain',            min:20, max:300, def:100, unit:'%'},
-                  // a fine mist of tiny droplets between the drops
-                  {key:'form',  label:'Condensation',    min:0,  max:100, def:30,  unit:''}],
-  // the dial says where the rain comes from (it was the Slant slider)
-  rainstreaks:   [{key:'zoom',  label:'Rain Zoom',       min:100,max:500, def:100, unit:'%'},
-                  // still air (0, as it was) → gusts swinging the rain about the dial's way, page-wide
-                  {key:'gusts', label:'Gusts',           min:0,  max:100, def:0,   unit:''}],
-  sigils:        [{key:'zoom',  label:'Sigil Zoom',      min:100,max:500, def:100, unit:'%'},
-                  {key:'amt',   label:'Sigil Count',     min:15, max:260, def:100, unit:'%', base:51},
-                  // the hand: steady → trembling, the nib skipping into scratches
-                  {key:'form',  label:'Chaos',           min:0,  max:100, def:20,  unit:''}],
-  mathnoise:     [{key:'zoom',  label:'Glyph Zoom',      min:100,max:500, def:140, unit:'%'},
-                  {key:'amt',   label:'Emergence',       min:30, max:240, def:130, unit:'%'}],
-  summoning:     [{key:'zoom',  label:'Circle Size',     min:40, max:200, def:100, unit:'%'},
-                  // how many bands, polygrams and planets the one circle is built from
-                  {key:'amt',   label:'Complexity',      min:20, max:300, def:100, unit:'%'},
-                  // drawn by hand, vines and moons (0) → machined, gauges and circuits, glowing (100)
-                  {key:'form',  label:'Organic ↔ Tech',  min:0,  max:100, def:30,  unit:''}],
-  inkbleed:      [{key:'zoom',  label:'Blot Scale',      min:60, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Spread',          min:30, max:240, def:100, unit:'%'},
-                  // crisp and solid (0) → wet: pooled rims, pale mottled middles, wicking, drips, splatter
-                  {key:'form',  label:'Wetness',         min:0,  max:100, def:50,  unit:''},
-                  // black ink alone (0) → red joins it → whole pastel figures (100); the seed decides within it
-                  {key:'shape', label:'Color',           min:0,  max:100, def:35,  unit:''}],
-  crackedglaze:  [{key:'zoom',  label:'Fracture Scale',  min:60, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Crack Density',   min:10, max:900, def:100, unit:'%', base:26},
-                  // how far the glaze has gone: crazed only → blistered → chipped → peeling to the body
-                  {key:'form',  label:'Enameling',       min:0,  max:100, def:0,   unit:'', ticks:[0,33,66,100], names:['Unbroken','Bubbled','Chipped','Peeling']}],
-  linen:         [{key:'zoom',  label:'Weave Scale',     min:50, max:400, def:100, unit:'%'},
-                  // stitching → slubs → buttons → rivets
-                  {key:'amt',   label:'Details',         min:0,  max:100, def:42,  unit:'', ticks:[15,42,68,95]},
-                  // silk → twill → linen → canvas → burlap
-                  {key:'form',  label:'Weave',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
-  oldpaper:      [{key:'zoom',  label:'Scale',           min:40, max:400, def:100, unit:'%'},
-                  // folds across the sheet; past three-quarters they tear
-                  {key:'amt',   label:'Folds',           min:0,  max:100, def:35,  unit:''},
-                  // clean → yellowed → foxed → mildewed → scorched
-                  {key:'form',  label:'Age',             min:0,  max:100, def:30,  unit:'', ticks:[0,30,60,90], names:['Clean','Foxed','Mildewed','Scorched']},
-                  // the gentle unevenness of once-damp paper, and pocket creases
-                  {key:'shape', label:'Crinkle',         min:0,  max:100, def:25,  unit:''}],
-  crystal:   [{key:'zoom',  label:'Facet Size',      min:40, max:300, def:100, unit:'%'},
-                  // milky and veiled (0) → clear and deep (100)
-                  {key:'amt',   label:'Clarity',         min:0,  max:100, def:70,  unit:''},
-                  // light caught inside: flashing internal planes, split into colours
-                  {key:'form',  label:'Fire',            min:0,  max:100, def:50,  unit:''},
-                  // ghost crystals inside, the faces it had as it grew
-                  {key:'shape', label:'Phantoms',        min:0,  max:100, def:30,  unit:''},
-                  // rutile needles and tiny bubbles
-                  {key:'hue',   label:'Inclusions',      min:0,  max:100, def:20,  unit:''}],
-  spangle:       [{key:'zoom',  label:'Crystal Size',    min:40, max:300, def:100, unit:'%'},
-                  // feathered six-armed growth inside each grain (zinc spangle)
-                  {key:'amt',   label:'Dendrites',       min:0,  max:100, def:50,  unit:''},
-                  // flat facets → stepped hopper crystals (bismuth)
-                  {key:'form',  label:'Terraces',        min:0,  max:100, def:0,   unit:''},
-                  // orderly as a snowflake (0) → every crystal its own
-                  {key:'shape', label:'Variation',       min:0,  max:100, def:40,  unit:''},
-                  // fine lines brushed across the light, like brushed steel
-                  {key:'hue',   label:'Brushing',        min:0,  max:100, def:0,   unit:''}],
-  coldpress:     [{key:'zoom',  label:'Tooth Scale',     min:75, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Tooth Depth',     min:20, max:300, def:100, unit:'%'},
-                  // how the paper was made: pressed hot and smooth, cold, or left rough
-                  {key:'form',  label:'Press',           min:0,  max:100, def:50,  unit:'', ticks:[0,50,100], names:['Hot Press','Cold Press','Rough']}],
-  cupring:       [{key:'zoom',  label:'Ring Size',       min:40, max:320, def:100, unit:'%'},
-                  {key:'amt',   label:'Ring Count',      min:30, max:300, def:100, unit:'%', base:2},
-                  // drips, and the faint wash inside the ring
-                  {key:'form',  label:'Spill',           min:0,  max:100, def:35,  unit:''}],
-  // THE ATHANOR: a surface made in the node editor. Its knobs are the
-  // graph's Knob nodes (the page relabels them from the graph; here, eight
-  // plain ones, so a request always has its values)
-  athanor:      [1,2,3,4,5,6,7,8].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
-  guilloche:     [{key:'zoom',  label:'Rosette Size',    min:50, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Line Density',    min:30, max:200, def:100, unit:'%'},
-                  // how many lobes each rosette turns: a few broad petals → a fine crown
-                  {key:'form',  label:'Lobes',           min:0,  max:100, def:45,  unit:''}],
-  chladni:       [{key:'zoom',  label:'Grain Size',      min:50, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Sand',            min:20, max:300, def:100, unit:'%'},
-                  // the plate's mode: a few lines → many
-                  {key:'form',  label:'Mode',            min:0,  max:100, def:40,  unit:''}],
-  contour:       [{key:'zoom',  label:'Terrain Scale',   min:40, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Contour Interval',min:30, max:250, def:100, unit:'%'},
-                  // the land lit beneath its lines: none (lines only) → strong relief
-                  {key:'form',  label:'Hillshade',       min:0,  max:100, def:45,  unit:''}],
-  stainedglass:  [{key:'zoom',  label:'Pane Size',       min:50, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Leading',         min:30, max:250, def:100, unit:'%'},
-                  // the window's kind: random shards (0–30) → a patterned lattice → a rose window (55–80) → an ordered grid (80+)
-                  {key:'form',  label:'Shape',           min:0,  max:100, def:25,  unit:''},
-                  // the palette's colors (0, as before) → a painted landscape behind the glass, each pane its color there (Tiffany's windows)
-                  {key:'shape', label:'Scene',           min:0,  max:100, def:0,   unit:''},
-                  {key:'hue',   label:'Glass Texture',   min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Cathedral','Hammered','Seedy','Opalescent']},
-                  {key:'tilt',  label:'Window',          min:0,  max:100, def:0,   unit:'', ticks:[0,42,68,100], names:['Whole Page','Lancet Arch','Arcade','Round Window']}],
-  // UNDER GLASS (chains.js 'underglass'; Ruby: a glass to lay over another surface): what the glass catches, on mid-gray
-  // BROKEN GLASS (chains.js 'brokenglass'; Ruby: "glass fragments laying on nothing"): shards and the light they catch, on mid-gray
-  brokenglass:   [{key:'count', label:'Shards',          min:0,  max:100, def:40,  unit:''},
-                  {key:'size',  label:'Size',            min:30, max:300, def:100, unit:'%'},
-                  // heaped where it fell (0) → flung across the page
-                  {key:'spread', label:'Spread',         min:0,  max:100, def:55,  unit:''},
-                  // broad pieces (0) → long slivers
-                  {key:'sliver', label:'Slivers',        min:0,  max:100, def:35,  unit:''},
-                  // the light each shard gathers onto the ground beside it
-                  {key:'caustic', label:'Caustics',      min:0,  max:100, def:60,  unit:''},
-                  {key:'glint', label:'Glints',          min:0,  max:100, def:60,  unit:''},
-                  // how many shards are bottle green, amber, cobalt, sea glass or violet
-                  {key:'colors', label:'Colored Glass',  min:0,  max:100, def:25,  unit:''},
-                  {key:'shadow', label:'Shadows',        min:0,  max:100, def:50,  unit:''}],
-  // DEWY WEBS (chains.js 'dewwebs'; Ruby: "dewy spider webs getting caught by the light"): silk, dew and glints on mid-gray
-  dewwebs:       [{key:'webs',  label:'Webs',            min:0,  max:100, def:30,  unit:''},
-                  {key:'size',  label:'Size',            min:40, max:250, def:100, unit:'%'},
-                  {key:'dew',   label:'Dew',             min:0,  max:100, def:60,  unit:''},
-                  {key:'drop',  label:'Drop Size',       min:30, max:300, def:100, unit:'%'},
-                  {key:'torn',  label:'Torn',            min:0,  max:100, def:20,  unit:''},
-                  {key:'sag',   label:'Sag',             min:0,  max:100, def:40,  unit:''},
-                  // white glints (0) → the colours thin silk splits the light into
-                  {key:'irid',  label:'Iridescence',     min:0,  max:100, def:50,  unit:''},
-                  // the spiral's turns: open (0) → close-wound
-                  {key:'threads', label:'Threads',       min:0,  max:100, def:50,  unit:''}],
-  underglass:    [{key:'reflect', label:'Reflection',    min:0,  max:100, def:55,  unit:''},
-                  {key:'scratch', label:'Scratches',     min:0,  max:100, def:40,  unit:''},
-                  // straight, in bunches (0) → wiped round and round by a cloth (100)
-                  {key:'swirl', label:'Swirl',           min:0,  max:100, def:30,  unit:''},
-                  // fingerprints and smears
-                  {key:'smudge', label:'Smudges',        min:0,  max:100, def:35,  unit:''},
-                  {key:'dust',  label:'Dust & Spots',    min:0,  max:100, def:30,  unit:''},
-                  // 0: whole; a blow's cracks and rings, then a second and third blow
-                  {key:'cracks', label:'Cracks',         min:0,  max:100, def:0,   unit:''},
-                  // old glass's waves: they ripple the reflection (and in a graph, bend what is under it)
-                  {key:'wave',  label:'Waviness',        min:0,  max:100, def:30,  unit:''},
-                  // a thick sheet's bevelled edge round the page (0: none)
-                  {key:'edge',  label:'Edge',            min:0,  max:100, def:0,   unit:''}],
-  suminagashi:   [{key:'zoom',  label:'Ring Size',       min:50, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Drops',           min:30, max:250, def:100, unit:'%'},
-                  // still concentric rings → swept by breath and fan
-                  {key:'form',  label:'Breath',          min:0,  max:100, def:40,  unit:''}],
-  watercolour:   [{key:'zoom',  label:'Wash Size',       min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Pigment',         min:30, max:250, def:100, unit:'%'},
-                  // dry, hard rims → wet, soft and spreading
-                  {key:'form',  label:'Wetness',         min:0,  max:100, def:50,  unit:''}],
-  flowfield:     [{key:'zoom',  label:'Scale',           min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Lines',           min:30, max:300, def:100, unit:'%'},
-                  // the field: a steady current (0) → eddies and swirls
-                  {key:'form',  label:'Turbulence',      min:0,  max:100, def:50,  unit:''}],
-  turing:        [{key:'zoom',  label:'Pattern Scale',   min:50, max:250, def:100, unit:'%'},
-                  // how long the pattern has had to grow: colonies still spreading → the whole page
-                  {key:'amt',   label:'Growth',          min:20, max:100, def:80,  unit:'%'},
-                  // along the feed/kill map
-                  {key:'form',  label:'Pattern',         min:0,  max:100, def:25,  unit:'', ticks:[0,25,50,75,100], names:['Spots','Coral','Maze','Worms','Holes']},
-                  {key:'shape', label:'Relief',          min:0,  max:100, def:50,  unit:''}],
-  frost:         [{key:'zoom',  label:'Crystal Size',    min:50, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Frost',           min:20, max:250, def:100, unit:'%'},
-                  // needles off the twigs, at sixty degrees
-                  {key:'form',  label:'Feathering',      min:0,  max:100, def:55,  unit:''},
-                  // the matte of fine crystals toward the frame
-                  {key:'shape', label:'Rime',            min:0,  max:100, def:30,  unit:''}],
-  ash:           [{key:'zoom',  label:'Flake Size',      min:40, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Ashfall',         min:20, max:400, def:100, unit:'%'},
-                  // pale ash, burnt through (0) → black char, barely burnt (100)
-                  {key:'form',  label:'Char',            min:0,  max:100, def:55,  unit:''},
-                  // how many flakes are still alight along their edge
-                  {key:'shape', label:'Embers',          min:0,  max:100, def:20,  unit:''}],
-  wax:           [{key:'zoom',  label:'Pool Size',       min:40, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Pool Count',      min:25, max:300, def:100, unit:'%', base:3},
-                  // thin and spreading → thick and lumpy
-                  {key:'form',  label:'Viscosity',       min:0,  max:100, def:45,  unit:''},
-                  // wax (0) → a fluid's spatter: drops flung away from the dial, crowned pools (Ruby)
-                  {key:'shape', label:'Splatter',        min:0,  max:100, def:0,   unit:''},
-                  {key:'hue',   label:'Height',          min:0,  max:100, def:50,  unit:''},
-                  // matte (0) → wet and glossy (100)
-                  {key:'tilt',  label:'Sheen',           min:0,  max:100, def:50,  unit:''}],
-  dunes:         [{key:'zoom',  label:'Ripple Size',     min:40, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Wind',            min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Dune Height',     min:0,  max:100, def:40,  unit:''}],
-                  // (its camera — straight down, or tipped toward the horizon, the far dunes hazy — is the camera dial)
-  kintsugi:      [{key:'zoom',  label:'Seam Width',      min:50, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Fractures',       min:20, max:400, def:100, unit:'%'},
-                  {key:'form',  label:'Gloss',           min:0,  max:100, def:70,  unit:''}],
-  moss:          [{key:'zoom',  label:'Stone Scale',     min:40, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Moss',            min:0,  max:100, def:45,  unit:''},
-                  {key:'form',  label:'Dampness',        min:0,  max:100, def:30,  unit:''}],
-                  // (its camera — straight down, or tipped, the far stone in haze — is the camera dial)
-  landscape:     [{key:'zoom',  label:'Distance',        min:60, max:200, def:100, unit:'%'},
-                  {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
-                  // dry, worked paint (as before) → watercolour: bleeding edges, blooms
-                  {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
-                  // (the camera's pitch, as painted → looking down from higher, is the camera dial's View)
-                  // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
-                  {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''},
-                  // brushwork the dial lights: none (0, the old flat painting) → thick oil, every stroke standing up
-                  {key:'shape', label:'Impasto',         min:0,  max:100, def:50,  unit:''}],
-  cityscape:     [{key:'zoom',  label:'Skyline Height',  min:60, max:180, def:100, unit:'%'},
-                  {key:'amt',   label:'Lit Windows',     min:0,  max:300, def:100, unit:'%'}],
-  blackhole:     [{key:'zoom',  label:'Chaos',           min:40, max:250, def:100, unit:'%'},
-                  {key:'amt',   label:'Particles',       min:10, max:300, def:100, unit:'%'},
-                  // twin plasma jets along the spin axis (0: none, as before)
-                  {key:'form',  label:'Jets',            min:0,  max:100, def:0,   unit:''}],
-  water:         [{key:'zoom',  label:'Wave Scale',      min:40, max:250, def:100, unit:'%'},
-                  // long calm swells (0) → short choppy wind waves (100)
-                  {key:'amt',   label:'Turbulence',      min:0,  max:100, def:35,  unit:''},
-                  // shallow: a fine sharp net; deep: it swells, blurs and fades
-                  {key:'form',  label:'Depth',           min:0,  max:100, def:35,  unit:''},
-                  // milky water, scattering the light
-                  {key:'shape', label:'Haze',            min:0,  max:100, def:10,  unit:''},
-                  // dirty water: light absorbed, silt hanging in it
-                  {key:'hue',   label:'Murk',            min:0,  max:100, def:0,   unit:''}],
-                  // (its camera — straight down, or tipped toward the far bank, the far water mirroring the sky — is the camera dial)
-  moon:          [{key:'zoom',  label:'Moon Size',       min:60, max:150, def:100, unit:'%'},
-                  {key:'amt',   label:'Fractal Depth',   min:20, max:190, def:100, unit:'%'},
-                  // banks drifting in front of the moon and stars, silver-lined, a halo in their veils (0: none)
-                  {key:'form',  label:'Clouds',          min:0,  max:100, def:30,  unit:''},
-                  // the night around it: stars, the Milky Way, earthshine on the dark side (0: the page, as before)
-                  {key:'shape', label:'Night Sky',       min:0,  max:100, def:70,  unit:''}],
-  aurora:        [{key:'zoom',  label:'Curtain Height',  min:40, max:220, def:100, unit:'%', base:100, absUnit:'%'},
-                  {key:'amt',   label:'Ribbon Count',    min:20, max:1800, def:100, unit:'%', base:9, absUnit:''},
-                  // a noisy glow spilling from the brightest light (0: none, as before)
-                  {key:'form',  label:'Bloom',           min:0,  max:100, def:0,   unit:''}],
-  // the dial says which way the strokes run (it was the Hatch Angle slider)
-  hatch:         [{key:'cross', label:'Cross-Hatching',  min:0,  max:100, def:38,  unit:''},  // none → the darkest third (as it was) → everywhere
-                  {key:'amt',   label:'Line Density',    min:10, max:700, def:100, unit:'%'},
-                  // fresh cool grey to warm tarnished brown
-                  {key:'form',  label:'Age',             min:0,  max:100, def:30,  unit:''}],
-  cards:         [{key:'amt',   label:'Cards in Play',   min:20, max:300, def:100, unit:'%', base:16},
-                  // dealt square (0) → the table swept about (90)
-                  {key:'angle', label:'Scatter',         min:0,  max:90,  def:20,  unit:'°'},
-                  // whether there is money on the table, and how much: none (0) → high stakes
-                  {key:'form',  label:'Stakes',          min:0,  max:100, def:50,  unit:''},
-                  // what else is on the table: nothing (0) → a candle, a cup, a letter, a feather… crowding the edges
-                  {key:'shape', label:'Clutter',         min:0,  max:100, def:40,  unit:''},
-                  // the cards new (0) → dog-eared, torn, ringed, burnt, waxed, marked
-                  {key:'hue',   label:'Wear',            min:0,  max:100, def:30,  unit:''}],
-  tessellate:    [{key:'zoom',  label:'Facet Size',      min:50, max:400, def:100, unit:'%'},
-                  {key:'amt',   label:'Irregularity',    min:0,  max:240, def:0,   unit:'%'}],
-  // 🝊 Aurora: curtains of rays over Deep Field's stars (chains.js 'aurorasky')
-  aurorasky:     [{key:'zoom',  label:'Curtain Height',  min:40, max:180, def:100, unit:'%'},
-                  {key:'amt',   label:'Rays',            min:20, max:250, def:100, unit:'%'},
-                  {key:'form',  label:'Curtains',        min:1,  max:5,   def:2,   unit:''},
-                  // oxygen's red, high up: rare and strong (100) → none (0)
-                  {key:'shape', label:'Red Sky',         min:0,  max:100, def:30,  unit:''},
-                  {key:'hue',   label:'Stars',           min:20, max:300, def:100, unit:'%'},
-                  // where the curtains hang: low on the page (0) → high (100)
-                  {key:'tilt',  label:'Horizon',         min:0,  max:100, def:50,  unit:''}],
-  // 🜚 Fractured Glaze, the second (chains.js 'crackle'): Spreading Cracks → Glaze
-  crackle:       [{key:'zoom',  label:'Crack Scale',     min:50, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Cracks',          min:20, max:400, def:100, unit:'%'},
-                  // everywhere at once (0) → bursting from one point of impact, where the dial points (100)
-                  {key:'form',  label:'From One Point',  min:0,  max:100, def:30,  unit:''},
-                  {key:'shape', label:'Wander',          min:0,  max:100, def:40,  unit:''},
-                  {key:'hue',   label:'Chipping',        min:0,  max:100, def:0,   unit:''}],
-  // 🝓 Circuit Board (chains.js 'circuit'): Charge powers more traces, from bare copper to colored, glowing and sparking
-  circuit:       [{key:'amt',   label:'Traces',          min:0,  max:100, def:55,  unit:''},
-                  // square corners (Factorio's belts) → 45° chamfers (a board's)
-                  {key:'zoom',  label:'Bends',           min:0,  max:100, def:70,  unit:''},
-                  {key:'form',  label:'Charge',          min:0,  max:100, def:55,  unit:'', ticks:[0,18,50,84], names:['Substrate','Color','Glow','Sparks']},
-                  {key:'shape', label:'Data Flow',       min:0,  max:100, def:40,  unit:''},
-                  {key:'hue',   label:'Components',      min:0,  max:100, def:45,  unit:''},
-                  {key:'tilt',  label:'Scale',           min:40, max:300, def:100, unit:'%'},
-                  // (Ruby: slider 7) more of the board turns to the next era's parts, names and silkscreen
-                  {key:'era',   label:'Era',             min:0,  max:100, def:0,   unit:'', ticks:[0,25,50,75,100], names:['Today','Future','Quantum','Atomic','Magitech']},
-                  // stamps, codes and a little picture (the board's Easter eggs), in room the board left
-                  {key:'marks', label:'Markings',        min:0,  max:100, def:0,   unit:''}],
-  // 🝆 Veins of Light (chains.js 'veins')
-  veins:         [{key:'material', label:'Material',     min:0,  max:100, def:0,   unit:'', ticks:[8,25,42,58,75,92], names:['Seeded','Strata','Pebbles','Sand','Fibres','Skin']},
-                  {key:'weave', label:'Weave',             min:0,  max:100, def:0,   unit:'', ticks:[7,21,36,50,64,79,93], names:['Seeded','Tree + Loops','Relative','Gabriel','Slime','Streets','Subdivided']},
-                  {key:'density', label:'Density',         min:0,  max:100, def:45,  unit:''},
-                  {key:'loops', label:'Loops',             min:0,  max:100, def:50,  unit:''},
-                  {key:'style', label:'Organic ↔ Circuit', min:0,  max:100, def:65,  unit:''},
-                  {key:'order', label:'Hierarchy',         min:0,  max:100, def:60,  unit:''},
-                  {key:'glow',  label:'Glow',              min:0,  max:100, def:65,  unit:''},
-                  {key:'pulses', label:'Pulses',           min:0,  max:100, def:30,  unit:''}],
-  // ⎐ Knotwork (chains.js 'knotwork')
-  knotwork:      [{key:'zoom',  label:'Size',            min:40, max:300, def:100, unit:'%'},
-                  {key:'amt',   label:'Strands',         min:3,  max:24,  def:6,   unit:''},
-                  // a plain plait (0) → a knot full of turns (100)
-                  {key:'form',  label:'Breaks',          min:0,  max:100, def:45,  unit:''},
-                  {key:'shape', label:'Shape',           min:0,  max:100, def:0,   unit:'', ticks:[0,17,34,50,67,84], names:['Circle','Square','Diamond','Cross','Quatrefoil','Whole Page']},
-                  {key:'hue',   label:'Ribbon Width',    min:20, max:90,  def:55,  unit:''},
-                  // slid along the dial's line (the dial also lights it)
-                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
-  // 🜉 GENERATIVE: processes simulated, laid on a material, lit (stepsGenerative.js; chains.js)
-  // (Ruby: the camera on a dial of its own, the light dial the light's alone, a slider for where the strike enters,
-  //  depth, glow with a hue, and more materials than embers)
-  lichtenberg:   [{key:'zoom',  label:'Reach',           min:0,  max:100, def:50,  unit:''},
-                  // bushy (high) → one thin strike (low)
-                  {key:'amt',   label:'Branching',       min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Poles',           min:1,  max:3,   def:2,   unit:'', ticks:[1,2,3], names:['One Strike','Two Poles','Three Poles']},
-                  {key:'shape', label:'Material',        min:0,  max:100, def:0,   unit:'', ticks:[0,33,67,100], names:['Charred Wood','Slate','Brass','Acrylic']},
-                  // where the strike enters (it was the light dial's angle)
-                  {key:'angle', label:'Strike Angle',    min:0,  max:360, def:315, unit:'°'},
-                  {key:'depth', label:'Depth',           min:0,  max:100, def:50,  unit:''},
-                  {key:'width', label:'Channel Width',   min:30, max:300, def:100, unit:'%'},
-                  // the figure slid along the strike's line
-                  {key:'slide', label:'Slide',           min:-100, max:100, def:0, unit:''}],
-  growth:        [{key:'zoom',  label:'Growth',          min:0,  max:100, def:55,  unit:''},
-                  {key:'amt',   label:'Fold Size',       min:50, max:250, def:100, unit:'%'},
-                  {key:'form',  label:'Seeds',           min:1,  max:7,   def:1,   unit:''},
-                  {key:'shape', label:'Relief',          min:0,  max:100, def:50,  unit:''},
-                  {key:'hue',   label:'Zoom',            min:50, max:400, def:100, unit:'%'},
-                  // slid along the sun's line (the dial turns it)
-                  {key:'tilt',  label:'Slide',           min:-100, max:100, def:0, unit:''}],
-  // 🜛 BASICS: quiet grounds, each a chain of two or three parts (chains.js); every slider a plain 0–100
-  plainnoise:    [{key:'zoom',  label:'Scale',           min:0,  max:100, def:30,  unit:''},
-                  {key:'amt',   label:'Detail',          min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Contrast',        min:0,  max:100, def:20,  unit:''}],
-  stripes:       [{key:'zoom',  label:'Stripe Count',    min:0,  max:100, def:20,  unit:''},
-                  {key:'amt',   label:'Stripe Width',    min:0,  max:100, def:50,  unit:''},
-                  {key:'form',  label:'Softness',        min:0,  max:100, def:20,  unit:''},
-                  // 0 upright, 50 level (ruled lines), 100 upright again
-                  {key:'shape', label:'Angle',           min:0,  max:100, def:50,  unit:'', ticks:[0,25,50,75,100]}],
-  polka:         [{key:'zoom',  label:'Spacing',         min:0,  max:100, def:50,  unit:''},
-                  {key:'amt',   label:'Dot Size',        min:0,  max:100, def:45,  unit:''},
-                  // in rows (0) → thrown about (100)
-                  {key:'form',  label:'Scatter',         min:0,  max:100, def:0,   unit:''}],
-  checker:       [{key:'zoom',  label:'Squares',         min:0,  max:100, def:20,  unit:''},
-                  {key:'amt',   label:'Softness',        min:0,  max:100, def:10,  unit:''},
-                  {key:'form',  label:'Turn',            min:0,  max:100, def:0,   unit:'', ticks:[0,50,100]}],
-  softgradient:  [{key:'angle', label:'Angle',           min:0,  max:360, def:90,  unit:'°'},
-                  {key:'amt',   label:'Roundness',       min:0,  max:100, def:0,   unit:''},
-                  {key:'form',  label:'Falloff',         min:0,  max:100, def:50,  unit:'', ticks:[50]}],
-  cells:         [{key:'zoom',  label:'Cell Size',       min:0,  max:100, def:40,  unit:''},
-                  {key:'amt',   label:'Order',           min:0,  max:100, def:20,  unit:''},
-                  // round domes (0) → flat cells with crisp lines (100)
-                  {key:'form',  label:'Lines',           min:0,  max:100, def:50,  unit:''},
-                  {key:'shape', label:'Relief',          min:0,  max:100, def:40,  unit:''}],
-};
+// TEXTURE_PARAMS, every surface's sliders: textureParams.js (re-exported here, where the app has always found it)
+export { TEXTURE_PARAMS } from './textureParams.js';
+import { TEXTURE_PARAMS } from './textureParams.js';
 
 /**
  * TEXTURE_CAPS — what tools each texture can actually use.
@@ -619,6 +72,10 @@ export const LIGHT_TURNED = new Set(['circuit', 'veins', 'crackle', 'knotwork', 
   'chladni', 'contour', 'stainedglass', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']);
 export const LIGHT_KEPT_PARTS = ['ringsky', 'ringarch', 'ringland', 'ringview', 'shards', 'dewwebs', 'shaft', 'glasspane', 'shapeland', 'lotus', 'water',
   'curtains', 'ribbons', 'streaks', 'hatching', 'marbling', 'flowlines', 'particles', 'transmutation', 'blackhole', 'washes', 'pigment'];
+// the two common blend lists; ledBlends(x, set) puts a surface's default first and keeps the rest in order
+const GREY_BLENDS = ['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'];
+const LIT_BLENDS = ['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'];
+const ledBlends = (first, set) => [first, ...set.filter(b => b !== first)];
 export const TEXTURE_CAPS = {
   // the board is made of the page's own backdrop (pageEnv), so Normal is its default; its traces wear the accents
   circuit:       { blends:['source-over','screen','lighten','hard-light','overlay','soft-light','luminosity','multiply'], light:true, material:true, tints:2, pageEnv:true,
@@ -627,7 +84,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Material Hue','Second Material Hue','Line Hue','Glow Hue','Node Hue','Pulse Hue'], tintDefaults:['#B8A48C','#8E7C68','#C8913A','#4FE3FF','#F2D27A','#DFFBFF'] },
   crackle:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], light:true, material:true, dial:'Impact & Light', tints:2,
                    tintLabels:['Glaze Hue','Body Hue'], tintDefaults:['#A9B4B0','#7A6A5E'] },
-  knotwork:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2, genericTint:true,
+  knotwork:      { blends:GREY_BLENDS, ground:'grey', light:true, material:true, tints:2, genericTint:true,
                    tintLabels:['Ribbon Hue','Outline Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // light on black, screened over the page (as Deep Field is); the dial is the field lines: the rays lean and the hem arcs
   aurorasky:     { blends:['screen','lighten','color-dodge','overlay','soft-light','hard-light','source-over'], light:true, dial:'Field Lines', tints:0 },
@@ -637,25 +94,25 @@ export const TEXTURE_CAPS = {
                    hue5:{ role:'glow', def:'#000000', label:'Glow Hue', why:'the light the strike leaves in its channels, as if they still burned' },
                    camera:{ turn:0, view:0, zoom:100, guide:'plane' } },
   // the dial: the sun it grows toward, and the light on it
-  growth:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Sun', material:true, tints:2, genericTint:true,
+  growth:        { blends:GREY_BLENDS, ground:'grey', light:true, dial:'Sun', material:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  plainnoise:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  plainnoise:    { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  stripes:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  stripes:       { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  polka:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  polka:         { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  checker:       { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  checker:       { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  softgradient:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  softgradient:  { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // the cells' heights lit by the dial (the Surface's Height)
-  cells:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  cells:         { blends:GREY_BLENDS, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — whimsy —
-  clouds:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
+  clouds:        { blends:ledBlends('screen', GREY_BLENDS), material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  bokeh:         { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  bokeh:         { blends:ledBlends('screen', GREY_BLENDS), ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   astral:        { blends:['lighten','screen','overlay','color-dodge'], light:false, tints:2,
                    tintLabels:['Star Hue','Nebula Hue'], tintDefaults:['accent1','accent2'] },
@@ -665,29 +122,29 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Ember Hue','Spark Hue'], tintDefaults:['accent1','accent2'] },
   // the dial is the WIND here, not a light (dial: its name for this texture)
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
-  landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  landscape:     { blends:ledBlends('hard-light', GREY_BLENDS), ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:0, zoom:100, guide:'plane' } },   // (View: the camera's pitch, as painted to looking down)
-  cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
+  cityscape:     { blends:ledBlends('hard-light', GREY_BLENDS), ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
   // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
   blackhole:     { blends:['hard-light','screen','overlay','soft-light','multiply','color-burn','darken','color-dodge','lighten'], ground:'grey', tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:100, zoom:100, guide:'disc' }, light:true, dial:'Position', lightTilt:35 },
   // water is tinted by the page itself: neutral by default, like all of Touch
-  water:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
+  water:         { blends:ledBlends('soft-light', GREY_BLENDS), material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:35, zoom:100, guide:'plane' } },
   moon:          { blends:['hard-light','multiply','overlay','soft-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // Remapped for every blend EXCEPT screen: its grey ground under screen
   // lightens the page a little, and that is part of how the favourite looks.
-  aurora:        { blends:['screen','overlay','soft-light','hard-light','multiply','color-burn','darken','color-dodge','lighten'],
+  aurora:        { blends:ledBlends('screen', GREY_BLENDS),
                    // the dial is the direction the two hues blend in, not a light
                    ground:'grey', keepGround:['screen'], light:true, dial:'Blend Direction', tints:2,
                    tintLabels:['Curtain Hue','Hem Hue'], tintDefaults:['accent1','accent1'] },
   // — sharpness —
-  grain:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  grain:         { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // Scattered Polygons (genMetalLeaf): flat flakes as ever; the dial lights them only when Sheen is up
-  metalleaf:     { blends:['color-dodge','overlay','soft-light','hard-light','multiply','color-burn','darken','screen','lighten'], ground:'grey', light:true, tints:1,
+  metalleaf:     { blends:ledBlends('color-dodge', GREY_BLENDS), ground:'grey', light:true, tints:1,
                    tintLabels:['Leaf Hue'], tintDefaults:['#E0B38D'] },
   // (the crow family: every colour a hue, defaults a raven's; Sheen turns with the light dial)
   corvids:       { blends:['source-over','multiply','screen','soft-light','overlay','luminosity','lighten','darken','hard-light'], light:true, tints:6,
@@ -696,30 +153,30 @@ export const TEXTURE_CAPS = {
   pixelspace:    { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
                    tintLabels:['Deep Sky Hue','Mid Sky Hue','Nebula Hue','Rim Hue','World Hue','Starlight Hue'], tintDefaults:['#0E0726','#3A1C78','#E2367F','#46A8E6','#9A6BE0','#FFF4FA'] },
   // (liminal spaces: every colour a hue, defaults the teal-grey of Ruby's reference; the camera dial looks round the place)
-  liminal:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], tints:6,
+  liminal:       { blends:LIT_BLENDS, tints:6,
                    tintLabels:['Wall Hue','Floor Hue','Ceiling Hue','Accent Hue','Light Hue','Dark Hue'], tintDefaults:['#7FA0A2','#6E8486','#5E7476','#8FA9AA','#E8F4F6','#050A0C'],
                    camera:{ turn:0, view:100, zoom:100, guide:'room' } },
   // (Webb's false colour: every colour a hue, defaults its orange dust and blue stars; the light dial lights the dust and streams it)
   webb:          { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
                    tintLabels:['Deep Sky Hue','Dust Shadow Hue','Dust Hue','Dust Light Hue','Starlight Hue','Ionized Gas Hue'], tintDefaults:['#04050E','#3A1406','#C2581A','#FFC774','#A9C4FF','#3E5CC8'] },
-  imprints:      { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  imprints:      { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Paper Hue', 'Ink Hue', 'Petal Hue', 'Center Hue', 'Leaf Hue', 'Second Ink Hue'], tintDefaults:['#F2EFE4', '#1F4E8C', '#C8506A', '#E8B21C', '#5E7A4A', '#C8402E'] },
-  bouquets:      { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  bouquets:      { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Ground Hue', 'Main Bloom Hue', 'Second Bloom Hue', 'Filler Hue', 'Foliage Hue', 'Wrap Hue'], tintDefaults:['#E8DFD2', '#C2264B', '#F3C6CF', '#F5F3EC', '#4E6E3A', '#C8A880'] },
-  petals:        { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  petals:        { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Surface Hue', 'Petal Hue', 'Aged Petal Hue', 'Center Hue', 'Leaf Hue', 'Light Hue'], tintDefaults:['#7A5A40', '#C2264B', '#7A3A2A', '#3A2418', '#5A6A3A', '#FFE8C8'] },
-  meadow:        { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  meadow:        { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Sky Hue', 'Far Land Hue', 'Grass Hue', 'Flower Hue', 'Second Flower Hue', 'Sunlight Hue'], tintDefaults:['#C9D3D6', '#6E7F6A', '#7A8A45', '#D9332B', '#F2EFE6', '#FFD9A0'] },
-  macro:         { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  macro:         { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Bokeh Hue', 'Visitor Hue', 'Petal Hue', 'Center Hue', 'Foliage Hue', 'Key Light Hue'], tintDefaults:['#F2D27A', '#C8281E', '#D7261E', '#1A1414', '#5E7F3A', '#FFF2D8'],
                    camera:{ turn:0, view:20, zoom:100, guide:'bloom', seeded:{ turn:[0, 360], view:[0, 55], zoom:[70, 190] } } },
-  ditsy:         { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  ditsy:         { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Ground Hue', 'Flower Hue', 'Second Flower Hue', 'Third Flower Hue', 'Center Hue', 'Sprig Hue'], tintDefaults:['#F4EEE2', '#C8506A', '#5A7AC8', '#E8B21C', '#F2D27A', '#6E8A4A'] },
-  botline:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  botline:       { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Paper Hue', 'Ink Hue', 'Petal Wash Hue', 'Center Wash Hue', 'Leaf Wash Hue', 'Second Ink Hue'], tintDefaults:['#F4EFE4', '#2A2420', '#D88098', '#E8C040', '#8AA87A', '#4E6A3A'] },
-  windsea:       { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  windsea:       { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Sky Hue', 'Sea Hue', 'Deep Sea Hue', 'Foam Hue', 'Island Hue', 'Sun Hue'], tintDefaults:['#3A7BD5', '#1F6FB8', '#0E4A8A', '#F4F8FF', '#5FA040', '#FFF2A8'] },
-  inkscroll:     { blends:['source-over','multiply','screen','luminosity','overlay','soft-light','hard-light','lighten','darken'], light:true, tints:6,
+  inkscroll:     { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Paper Hue', 'Ink Hue', 'Sky Hue', 'Mountain Hue', 'Blossom Hue', 'Sun Hue'], tintDefaults:['#EADCBA', '#1E1A18', '#2E5A88', '#5E7A62', '#E07A8E', '#D23A2A'] },
   // (light to lay over a page, on mid-grey: Soft Light and Overlay leave the page as it was where nothing is)
   dappled:       { blends:['overlay','soft-light','hard-light','multiply','screen','luminosity','color-dodge','color-burn','lighten','darken'], ground:'grey', light:true, tints:2, tintLabels:['Light Hue','Shade Hue'], tintDefaults:['#FFF1D6','#2A3550'] },
@@ -735,9 +192,9 @@ export const TEXTURE_CAPS = {
   flowers:       { blends:['source-over','hard-light','overlay','soft-light','multiply','screen','lighten','darken','color-dodge','color-burn'],
                    light:true, tints:2, tintLabels:['Petal Hue','Heart Hue'], tintDefaults:['#E8739E','#F2B33D'] },
   // impasto: the paint's thickness lit by the dial (genBrushstrokes)
-  brushstrokes:  { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
+  brushstrokes:  { blends:GREY_BLENDS, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  halftone:      { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  halftone:      { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // glass in front of the page: transparent, the drops showing the outdoors
   // made from the page's own colours (pageEnv), so Normal is its default
@@ -754,17 +211,17 @@ export const TEXTURE_CAPS = {
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },   // (View: overhead to across the water)
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
-  rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:true, dial:'Rain Direction', lightDeg:0, tints:2, genericTint:true,
+  rainstreaks:   { blends:GREY_BLENDS, ground:'grey',  light:true, dial:'Rain Direction', lightDeg:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // the dial is the way the strokes run (125°: the old 35° hatching)
-  hatch:         { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Hatch Direction', lightDeg:125, tints:2, genericTint:true,
+  hatch:         { blends:GREY_BLENDS, ground:'grey', light:true, dial:'Hatch Direction', lightDeg:125, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // — chaos —
-  sigils:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
+  sigils:        { blends:GREY_BLENDS, material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  mathnoise:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  mathnoise:     { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+  summoning:     { blends:GREY_BLENDS, ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:315, view:0, zoom:100, guide:'circle' } },   // (the camera dial places it: Turn the way from the middle, View how far)
   // ink on clear paper (genInkBleed): its own colours, Ink and Accent
   inkbleed:      { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','hard-light'], light:false, tints:2,
@@ -774,14 +231,14 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Glaze Hue','Base Hue'], tintDefaults:['#A9B4B0','#7A6A5E'] },
   // a carved surface: Light Hue is the light's color, Dark Hue the material's; it starts lit from overhead
   // Old Paper: Foxing and Fold Ghost, merged (see genOldPaper)
-  oldpaper:      { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2,
+  oldpaper:      { blends:ledBlends('multiply', GREY_BLENDS), material:true, ground:'grey', light:true, tints:2,
                    tintLabels:['Age Hue','Mold Hue'], tintDefaults:['#8A6A3C','#5F6A4E'] },
   // looking into a crystal (genCrystalLeaf): its own colours, lit
   crystal:   { blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
                    tintLabels:['Crystal Hue','Inclusion Hue'], tintDefaults:['#B9A6D8','#D9A441'] },
   spangle:       { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], material:true, ground:'grey', light:true, tints:1,
                    tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
-  tessellate:    { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, lightTilt:0, tints:2,
+  tessellate:    { blends:GREY_BLENDS, ground:'grey', light:true, material:true, lightTilt:0, tints:2,
                    tintLabels:['Light Hue','Facet Hue'], tintDefaults:['#FFFFFF','#808080'] },
   // a divination deck on a table, lit by the dial (shadows, curl, gilt edges)
   // a game in its own colours: the four suits are the page's two accents and these two hues (cartomancy.js)
@@ -790,17 +247,17 @@ export const TEXTURE_CAPS = {
   // — 🜚 touch — relief, so soft-light leads and light direction applies
   linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], ground:'grey', light:true, tints:2,
                    tintLabels:['Fabric Hue','Light Hue'], tintDefaults:['#808080','#FFFFFF'] },
-  coldpress:     { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
+  coldpress:     { blends:ledBlends('soft-light', GREY_BLENDS), material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  cupring:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
+  cupring:       { blends:ledBlends('multiply', GREY_BLENDS), ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Stain Hue'], tintDefaults:['#6B4A2F'] },
   athanor:      { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','darken','lighten','color-dodge','color-burn','difference','exclusion'],
                    light:true, tints:2, tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#F2E6D8','#2A2230'] },
-  guilloche:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
+  guilloche:     { blends:GREY_BLENDS, material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   chladni:       { blends:['overlay','soft-light','hard-light','screen','lighten','multiply','darken','color-dodge','color-burn'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  contour:       { blends:['multiply','overlay','soft-light','hard-light','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
+  contour:       { blends:ledBlends('multiply', GREY_BLENDS), material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
                    tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
@@ -819,13 +276,13 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Pigment Hue','Second Pigment Hue'], tintDefaults:['accent1','accent2'] },
   flowfield:     { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','screen','lighten'], light:true, dial:'Flow Direction', tints:2,
                    tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['accent1','accent2'] },
-  turing:        { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], material:true, ground:'grey', light:true, tints:2, genericTint:true,
+  turing:        { blends:GREY_BLENDS, material:true, ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   frost:         { blends:['screen','soft-light','overlay','hard-light','lighten','multiply','color-dodge','darken','color-burn'], ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Frost Hue'], tintDefaults:['#EAF4FF'] },
-  ash:           { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:2,
+  ash:           { blends:ledBlends('soft-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:2,
                    tintLabels:['Ash Hue','Ember Hue'], tintDefaults:['#D6D0C6','#FF5A1E'] },
-  wax:           { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, material:true, tints:1,
+  wax:           { blends:ledBlends('hard-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
                    light:true, material:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'], camera:{ turn:0, view:40, zoom:100, guide:'plane' } },
@@ -944,172 +401,39 @@ export function clearTextureCache(){ textureCache.clear(); }
 /** What the texture cache holds, in megabytes (4 bytes a pixel). */
 export function textureCacheMB(){ let px = 0; for(const c of textureCache.values()) px += (c && c.width * c.height) || 0; return px * 4 / 1e6; }
 
+// THE SURFACES MADE BY THEIR CHAINS (chains.js), and which hues each is handed: none, the first, both, the page's two
+// accents, or a hue with a fallback of its own where that differs from the surface's default (genChain falls back to
+// TEXTURE_CAPS tintDefaults). One line per kind of hand, not one branch per surface.
+const chainTintSet = (spec, types) => Object.fromEntries(types.map(t => [t, spec ? spec.split(' ').map(a => a.split('|')) : []]));
+const CHAIN_TINTS = {
+  ...chainTintSet('tint1 tint2', ['clouds', 'corvids', 'liminal', 'webb', 'pixelspace', 'imprints', 'bouquets', 'petals']),
+  ...chainTintSet('tint1 tint2', ['meadow', 'ditsy', 'botline', 'windsea', 'inkscroll', 'dappled', 'windowlight', 'caustics']),
+  ...chainTintSet('tint1 tint2', ['lightleaks', 'feathers', 'flowers', 'inkbleed', 'crackedglaze', 'bokeh', 'tessellate', 'rainstreaks']),
+  ...chainTintSet('tint1 tint2', ['veins', 'crackle', 'lichtenberg', 'growth', 'linen', 'oldpaper', 'stainedglass', 'suminagashi']),
+  ...chainTintSet('tint1 tint2', ['skyring', 'ringpaint', 'ringworld', 'rainwater', 'ash', 'dunes', 'kintsugi', 'moss']),
+  ...chainTintSet('tint1 tint2', ['landscape', 'cityscape', 'aurora', 'cards', 'metalleaf', 'crystal']),
+  ...chainTintSet('tint1 tint2|#E8A0B8', ['macro']),
+  ...chainTintSet('accent1 accent2', ['embers', 'magicparticles', 'circuit']),
+  ...chainTintSet('', ['snow', 'glassrain', 'halftone', 'knotwork', 'aurorasky', 'plainnoise', 'stripes', 'polka']),
+  ...chainTintSet('', ['checker', 'softgradient', 'cells', 'brushstrokes', 'sigils', 'mathnoise', 'coldpress', 'guilloche']),
+  ...chainTintSet('', ['chladni', 'contour', 'brokenglass', 'dewwebs', 'underglass', 'turing', 'blackhole', 'water']),
+  ...chainTintSet('', ['moon', 'hatch', 'summoning', 'grain']),
+  ...chainTintSet('tint1', ['cupring', 'frost', 'wax', 'spangle']),
+  ...chainTintSet('tint1|#2E5C8A tint2|#B0465A', ['watercolour']),
+  ...chainTintSet('tint1|#2B2A3A tint2|#7A4A6A', ['flowfield']),
+};
 function buildTexture(type, w, h, accent1, accent2, amt, angle, zoom, light, tint1, tint2, form, extra = {}){
-  let result;  if(type === 'clouds'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // smoke → light shaft → dust motes (chains.js)
-  } else if(type === 'corvids'){
-    result = genChain(type, w, h, light, extra, tint1 || '#0E0E14', tint2 || '#0A0A10');   // (chains.js)
-  } else if(type === 'liminal'){
-    result = genChain(type, w, h, light, extra, tint1 || '#7FA0A2', tint2 || '#6E8486');   // (chains.js)
-  } else if(type === 'webb'){
-    result = genChain(type, w, h, light, extra, tint1 || '#04050E', tint2 || '#3A1406');   // (chains.js)
-  } else if(type === 'pixelspace'){
-    result = genChain(type, w, h, light, extra, tint1 || '#0E0726', tint2 || '#3A1C78');   // (chains.js)
-  } else if(type === 'imprints'){
-    result = genChain(type, w, h, light, extra, tint1 || '#F2EFE4', tint2 || '#1F4E8C');   // (chains.js)
-  } else if(type === 'bouquets'){
-    result = genChain(type, w, h, light, extra, tint1 || '#E8DFD2', tint2 || '#C2264B');   // (chains.js)
-  } else if(type === 'petals'){
-    result = genChain(type, w, h, light, extra, tint1 || '#7A5A40', tint2 || '#C2264B');   // (chains.js)
-  } else if(type === 'meadow'){
-    result = genChain(type, w, h, light, extra, tint1 || '#C9D3D6', tint2 || '#6E7F6A');   // (chains.js)
-  } else if(type === 'macro'){
-    result = genChain(type, w, h, light, extra, tint1 || '#F2D27A', tint2 || '#E8A0B8');   // (chains.js)
-  } else if(type === 'ditsy'){
-    result = genChain(type, w, h, light, extra, tint1 || '#F4EEE2', tint2 || '#C8506A');   // (chains.js)
-  } else if(type === 'botline'){
-    result = genChain(type, w, h, light, extra, tint1 || '#F4EFE4', tint2 || '#2A2420');   // (chains.js)
-  } else if(type === 'windsea'){
-    result = genChain(type, w, h, light, extra, tint1 || '#3A7BD5', tint2 || '#1F6FB8');   // (chains.js)
-  } else if(type === 'inkscroll'){
-    result = genChain(type, w, h, light, extra, tint1 || '#EADCBA', tint2 || '#1E1A18');   // (chains.js)
-  } else if(type === 'dappled'){
-    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
-  } else if(type === 'windowlight'){
-    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
-  } else if(type === 'caustics'){
-    result = genChain(type, w, h, light, extra, tint1 || '#FFF1D6', tint2 || '#2A3550');   // (chains.js)
-  } else if(type === 'lightleaks'){
-    result = genChain(type, w, h, light, extra, tint1 || '#FFD27A', tint2 || '#FF8A3A');   // (chains.js)
-  } else if(type === 'feathers'){
-    result = genChain(type, w, h, light, extra, tint1 || '#ECE6DC', tint2 || '#7C6A5C');   // Feathers (chains.js)
-  } else if(type === 'flowers'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Lotus Pond (chains.js)
-  } else if(type === 'inkbleed'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);   // Ink Blot (chains.js)
-  } else if(type === 'crackedglaze'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);
-  } else if(type === 'bokeh'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dream Bloom (chains.js)
-  } else if(type === 'embers'){
-    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (sparks), its hues the ember colours (chains.js)
-  } else if(type === 'tessellate'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);   // Facet Field (chains.js)
-  } else if(type === 'astral_fog'){
+  let result;
+  if(CHAIN_TINTS[type]){ const pick = { tint1, tint2, accent1, accent2 };
+    result = genChain(type, w, h, light, extra, ...CHAIN_TINTS[type].map(([k, fb]) => pick[k] || fb)); }
+  else if(type === 'astral_fog'){
     result = genAstralFog(w,h,amt,zoom,light,tint1,form);
   } else if(type === 'astral_stars'){
     result = genAstralStars(w,h,accent1,accent2,amt,zoom,form,extra.glow,wordsRoom({ around: extra.around, text: extra.text ? poemLines(extra.text) : '' }, w, h, 0.4, 1.8));
-  } else if(type === 'snow'){
-    result = genChain(type, w, h, light, extra);           // Particles (flakes), blown by the dial (chains.js)
-  } else if(type === 'magicparticles'){
-    result = genChain(type, w, h, light, extra, accent1, accent2);   // Particles (motes) (chains.js)
-  } else if(type === 'glassrain'){
-    result = genChain(type, w, h, light, extra);           // Rain on Glass, over the page's own colors (chains.js)
-  } else if(type === 'rainstreaks'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);
-  } else if(type === 'halftone'){
-    result = genChain(type, w, h, light, extra);           // Value Noise → Halftone Screen (chains.js)
-  } else if(type === 'circuit'){
-    result = genChain(type, w, h, light, extra, accent1, accent2);   // (its hues, else the accents) Circuit Traces on the page's backdrop → Threshold (Charge) → Light Engine → glow, data, sparks (chains.js)
-  } else if(type === 'veins'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);   // Growth Medium → Network (a web with loops) → Light Engine → Glow (chains.js)
-  } else if(type === 'crackle'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);   // Spreading Cracks → Glaze (chains.js)
-  } else if(type === 'knotwork'){
-    result = genChain(type, w, h, light, extra);           // Knotwork → Blur → Light Engine (chains.js)
-  } else if(type === 'aurorasky'){
-    result = genChain(type, w, h, light, extra);           // Starfield → Aurora Curtains (chains.js)
-  } else if(type === 'lichtenberg' || type === 'growth'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);   // 🜉 Discharge → Burn → Light Engine · Growing Line → Light Engine (chains.js)
-  } else if(type === 'plainnoise' || type === 'stripes' || type === 'polka' || type === 'checker' || type === 'softgradient' || type === 'cells'){
-    result = genChain(type, w, h, light, extra);           // 🜛 Basics: two or three parts each (chains.js)
-  } else if(type === 'brushstrokes'){
-    result = genChain(type, w, h, light, extra);           // strokes → canvas weave → Light Engine (chains.js)
-  } else if(type === 'sigils'){
-    result = genChain(type, w, h, light, extra);           // Sigils (chains.js)
-  } else if(type === 'mathnoise'){
-    result = genChain(type, w, h, light, extra);           // Bit Grid (chains.js)
-  } else if(type === 'linen'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);
-  } else if(type === 'coldpress'){
-    result = genChain(type, w, h, light, extra);           // Cold Press (chains.js)
-  } else if(type === 'oldpaper'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Old Paper (chains.js)
-  } else if(type === 'cupring'){
-    result = genChain(type, w, h, light, extra, tint1);           // Cup Ring (chains.js)
   } else if(type === 'athanor'){
     result = genAthanor(w,h,light,tint1,tint2,extra);
   } else if(type === 'athanorsteps'){
     result = genAthanorSteps(w,h,light,tint1,tint2,extra);
-  } else if(type === 'guilloche'){
-    result = genChain(type, w, h, light, extra);           // Guilloché (chains.js)
-  } else if(type === 'chladni'){
-    result = genChain(type, w, h, light, extra);           // Chladni Sand (chains.js)
-  } else if(type === 'contour'){
-    result = genChain(type, w, h, light, extra);           // Terrain → Contour Lines over the Light Engine's hillshade (chains.js)
-  } else if(type === 'stainedglass'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // panes → glass (chains.js)
-  } else if(type === 'brokenglass'){
-    result = genChain(type, w, h, light, extra);           // Glass Shards over mid-gray, the camera dial its plane (chains.js)
-  } else if(type === 'dewwebs'){
-    result = genChain(type, w, h, light, extra);           // Dewy Webs: silk, dew, glints screened onto mid-gray (chains.js)
-  } else if(type === 'underglass'){
-    result = genChain(type, w, h, light, extra);           // Window Reflection, Scratches, Smudges, Shatter → Glass Pane over mid-gray (chains.js)
-  } else if(type === 'suminagashi'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Suminagashi (chains.js)
-  } else if(type === 'watercolour'){
-    result = genChain(type, w, h, light, extra, tint1 || '#2E5C8A', tint2 || '#B0465A');   // Washes → Pigment → Pigment (chains.js)
-  } else if(type === 'flowfield'){
-    result = genChain(type, w, h, light, extra, tint1 || '#2B2A3A', tint2 || '#7A4A6A');   // Flow Lines, the dial its current (chains.js)
-  } else if(type === 'skyring'){
-    result = genChain(type, w, h, light, extra, tint1 || '#6F8F55', tint2 || '#86AEDC');   // Starfield → Ring in the Sky → Oil Paint (chains.js)
-  } else if(type === 'ringpaint'){
-    result = genChain(type, w, h, light, extra, tint1 || '#6F8F55', tint2 || '#86AEDC');   // Starfield → The Arch → Land on the Ring → Oil Paint (chains.js)
-  } else if(type === 'ringworld'){
-    result = genChain(type, w, h, light, extra, tint1 || '#6F8F55', tint2 || '#86AEDC');   // Ringworld View → Noise at Coordinates → color → Light Engine → air (chains.js)
-  } else if(type === 'rainwater'){
-    result = genChain(type, w, h, light, extra, tint1 || '#0E1A26', tint2 || '#8FA8BC');   // Raindrops → Tint by distance → Light Engine → Glow (chains.js)
-  } else if(type === 'turing'){
-    result = genChain(type, w, h, light, extra);           // Turing Pattern → Light Engine (chains.js)
-  } else if(type === 'frost'){
-    result = genChain(type, w, h, light, extra, tint1);           // Hoarfrost (chains.js)
-  } else if(type === 'ash'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Burnt Letter (chains.js)
-  } else if(type === 'wax'){
-    result = genChain(type, w, h, light, extra, tint1 || '#7A2B2B');   // Pours → Meniscus → the wax's colour → Light Engine (translucent) → Glow (chains.js)
-  } else if(type === 'dunes'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Dune Ripples (chains.js)
-  } else if(type === 'kintsugi'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Kintsugi (chains.js)
-  } else if(type === 'moss'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Moss on Stone (chains.js)
-  } else if(type === 'landscape'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // painted sky → painted ridges → wash (chains.js)
-  } else if(type === 'cityscape'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Night City (chains.js)
-  } else if(type === 'blackhole'){
-    result = genChain(type, w, h, light, extra);           // Black Hole (chains.js)
-  } else if(type === 'water'){
-    result = genChain(type, w, h, light, extra);           // Scrying Pool (chains.js)
-  } else if(type === 'moon'){
-    result = genChain(type, w, h, light, extra);           // Fractal Moon (chains.js)
-  } else if(type === 'aurora'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Silk Ribbons (chains.js)
-  } else if(type === 'hatch'){
-    result = genChain(type, w, h, light, extra);
-  } else if(type === 'cards'){
-    // a chain (chains.js 'cards'), drawn by a canvas pass: the four suits the page's two accents, the texture's two hues
-    result = genChain(type, w, h, light, extra, tint1, tint2);
-  } else if(type === 'summoning'){
-    result = genChain(type, w, h, light, extra);           // Transmutation Circle, on the page (its glyphs are web fonts) (chains.js)
-  } else if(type === 'metalleaf'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // flakes (chains.js)
-  } else if(type === 'crystal'){
-    result = genChain(type, w, h, light, extra, tint1, tint2);           // Crystal Leaf (chains.js)
-  } else if(type === 'spangle'){
-    result = genChain(type, w, h, light, extra, tint1);           // Metal Spangle (chains.js)
-  } else if(type === 'grain'){
-    result = genChain(type, w, h, light, extra);           // Film Grain (chains.js)
   } else {
     let genW = w, genH = h;
 

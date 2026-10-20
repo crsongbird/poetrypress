@@ -78,7 +78,6 @@ export const LENS_STEPS = {
     params: [LB_R('focus', 'Focus', 35), LB_R('aperture', 'Aperture', 60), LB_R('size', 'Blur Size', 40, 5, 120), LB_R('blades', 'Blades: ' + LENS_BLADES.join(' · '), 0),
       LB_R('turn', 'Blade Turn', 0), LB_R('highlights', 'Highlights', 50)],
     cost: () => 6,
-    doc: 'A picture seen through a real lens focused at one distance: each point spreads into a disc as wide as the thin lens makes it, from its depth (black near, white far), so things in front of the focus blur fast and things behind it level off; lights keep their discs (bokeh), round or bladed.',
     run(E, n){ const { ww, wh, N, unit, num, input, asImage, asField, map } = E;
       const im = asImage(input(n, 1)); if(!im) return null;
       const depth = asField(input(n, 2)) || new Float32Array(N).fill(1);

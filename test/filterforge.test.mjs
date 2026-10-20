@@ -10,6 +10,7 @@
 import { readFileSync } from 'fs';
 globalThis.document = { createElement: () => ({ getContext: () => null }) };
 const S = await import('../steps.js');
+const { WIKI_PARTS } = await import('../athanorWikiParts.js');
 const C = await import('../athanor.js');
 const F = await import('../forge.js');
 let failures = 0;
@@ -51,7 +52,7 @@ check('a fifth kind of wire: the curve, with its own color, name and help', S.VA
   check('only the Curve Controls that reach the Surface get a pad on the page', JSON.stringify(C.athanorCurves(g).map(k => [k.slot, k.label])) === '[[2,"Shape"]]'); }
 
 // ---- primitives ----
-check('Filter Forge\'s missing primitives are parts, each with its doc', ['bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'perlin', 'bricks', 'curve', 'curveops', 'tonecurve', 'profile', 'note'].every(k => S.STEPS[k] && S.STEPS[k].doc.length > 40));
+check('Filter Forge\'s missing primitives are parts, each with its doc', ['bricon', 'highpass', 'sharpen', 'motionblur', 'offset', 'perlin', 'bricks', 'curve', 'curveops', 'tonecurve', 'profile', 'note'].every(k => S.STEPS[k] && (WIKI_PARTS[k] || {}).line.length > 40));
 { const a = run([node(1, 'perlin', {})], [1, 1]), b = run([node(1, 'perlin', {})], [1, 1]), c = run([node(1, 'perlin', {})], [1, 1], { seed: 9 });
   check('Perlin Noise is the same for the same seed, different for another', a.r.every((v, i) => v === b.r[i]) && a.r.some((v, i) => v !== c.r[i]) && Math.max(...a.r) - Math.min(...a.r) > 0.2); }
 { const br = C.evalAthanor(graph([node(1, 'bricks', { rows: 4, mortar: 20 }), node(99, 'surface', { ground: 'grey' }, { 1: [1, 2] })]), W, H, { seed: 1, knobs: [], tints: [] }, {});

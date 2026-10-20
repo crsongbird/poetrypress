@@ -8,6 +8,7 @@ import { installCanvasMock } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
 installDomMock(); installCanvasMock();
 const S = await import('../steps.js');
+const { WIKI_PARTS } = await import('../athanorWikiParts.js');
 const A = await import('../athanor.js');
 const { ATHANOR_STUDIES } = await import('../athanorStudies.js');
 let failures = 0;
@@ -20,7 +21,7 @@ const spread = im => { if(!im) return 0; let lo = 9, hi = -9; for(let i = 0; i <
 const at = (im, x, y) => im.r[y*W + x];
 
 // ---- the new parts ----
-check('the pattern parts exist, each with a doc', ['scatter', 'grid', 'border', 'lookup', 'displace', 'gradmap', 'spectrum'].every(k => S.STEPS[k] && S.STEPS[k].doc.length > 40));
+check('the pattern parts exist, each with a doc', ['scatter', 'grid', 'border', 'lookup', 'displace', 'gradmap', 'spectrum'].every(k => S.STEPS[k] && (WIKI_PARTS[k] || {}).line.length > 40));
 check('Lookup, Displace and Gradient Map need their first input', ['lookup', 'displace', 'gradmap'].every(k => S.STEPS[k].required.includes(1)));
 { const b = run([node(1, 'border', { shape: 'square', width: 20, soft: 0 })], [1, 1]);
   check('Border Mask: white at the edge, black in the middle', at(b, 0, 20) > 0.9 && at(b, 20, 20) < 0.1); }

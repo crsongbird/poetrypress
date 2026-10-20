@@ -112,6 +112,7 @@ const ORDER = [
   'stepsSharpness.js',    // steps for √ surfaces: Halftone Screen, Film Grain, Guilloché; Night City, Lotus Pond
   'steps.js',             // the steps surfaces are made of (the Athanor's parts; textures as chains)
   'athanorStudies.js',    // the future-directions surfaces, as graphs of parts (Open → Surface Studies)
+  'textureParams.js',     // every surface's sliders (chains.js reads them)
   'chains.js',            // textures rebuilt as chains of steps (and the Athanor's templates)
   'athanor.js',           // the Athanor's evaluator: a node graph made into a texture
   'textureGenerators.js',
@@ -143,7 +144,9 @@ const ORDER = [
 // a scope; exports become plain declarations.
 function flatten(src, filename) {
   const withoutImports = src.replace(/^import\s*\{[^}]*\}\s*from\s*'\.\/[\w.-]+';\s*$/gm, '');
-  const withoutExports = withoutImports.replace(/^export\s+(async\s+function|function|const|let|var|class)\b/gm, '$1');
+  // (a re-export, `export { X } from './m.js'`, is already X in the one flat scope: it goes, as an import does)
+  const withoutReexports = withoutImports.replace(/^export\s*\{[^}]*\}\s*from\s*'\.\/[\w.-]+';\s*$/gm, '');
+  const withoutExports = withoutReexports.replace(/^export\s+(async\s+function|function|const|let|var|class)\b/gm, '$1');
   const leftover = withoutExports.match(/^\s*(import|export)\b.*$/gm);
   if (leftover) {
     throw new Error(
@@ -176,7 +179,7 @@ if (!html.includes(js)) throw new Error('the bundle was not inlined verbatim');
 // own few lines last, embedded as an inert script block that the texture
 // service turns into a Blob worker (works from file:// too, unlike a URL).
 const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsLens.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'textureParams.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsLens.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
 // in the <head>, so it exists before the page's script first asks for a texture
 if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');
