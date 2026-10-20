@@ -1126,7 +1126,7 @@ export function genOldPaper(w,h,amt,zoom,light,tint1,tint2,form,crinkle,M3,GL){
  * Metal Spangle.)
  */
 // the last lit structure (one: a preview's size, kept while its hues are changed)
-const CRYSTAL_KEPT={ key:null, V:null, L:null };
+const CRYSTAL_KEPT={ key:null, V:null, L:null, O:null };
 export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,inclusions,M3,GL){
   amt=(amt==null?0.7:amt); zoom=(zoom==null?1:zoom);
   const clarity=Math.max(0,Math.min(1,amt)), fire=Math.max(0,Math.min(1, form==null ? 0.5 : form));
@@ -1161,10 +1161,10 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
   // the kept structure: everything that shapes it, and a trace of the seed's draws (the faces, the planes)
   const lv0=lightVec(light==null?315:light), rg=lightRig(), keyC=[ww,wh,clarity,zoom,fire,ph,light,lv0.lx,lv0.ly,lightLow(),GL?[GL.r,GL.g,GL.b].join():'',rg?JSON.stringify(rg):'',   // (the page's lights too: they light the facets)
     FRONT.F.length, FRONT.F[0].x, FRONT.F[FRONT.F.length-1].tone, BACK.F[0].y, P[0].c, P[P.length-1].len, veil[3], feathers[7]].join('|');
-  let V, L;
-  if(CRYSTAL_KEPT.key===keyC){ V=CRYSTAL_KEPT.V; L=CRYSTAL_KEPT.L; }
+  let V, L, O;
+  if(CRYSTAL_KEPT.key===keyC){ V=CRYSTAL_KEPT.V; L=CRYSTAL_KEPT.L; O=CRYSTAL_KEPT.O; }
   else {
-  const NM=new Float32Array(N*3), H=new Float32Array(N); V=new Float32Array(N*3);
+  const NM=new Float32Array(N*3), H=new Float32Array(N); V=new Float32Array(N*3); O=new Float32Array(N*2);   // (O: how far each face bends what lies inside)
   const REFR=unit*0.12, R3=Math.sqrt(3)/2, SEC=[0,1,2,3,4,5].map(s=>(s+0.5)*Math.PI/3);
   const nA={f:null,edge:0}, nB={f:null,edge:0}, oneMinusClar=1-clarity;
   // each point's six face directions, once (not six cosines and sines per pixel)
@@ -1191,7 +1191,7 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     // inner glow pooling toward the heart of each point (masked away from its rim, as a Fresnel term would)
     const g0=rr/(R*0.55); v+=0.22*clarity*Math.exp(-(g0*g0));
     // DEPTH: crystals behind, seen through the face it is on — bent by that face's tilt, and fading
-    const B=near(BACK, x+mx*f.slope*REFR, y+my*f.slope*REFR, nB);
+    const B=near(BACK, x+mx*f.slope*REFR, y+my*f.slope*REFR, nB); O[i*2]=mx*f.slope*REFR*0.6; O[i*2+1]=my*f.slope*REFR*0.6;
     v+=0.07*B.f.tone + 0.3*Math.exp(-B.edge/backS)*clarity*(0.4+0.6*admit);
     // the ridges between faces, and the apex: crisp, worn bright (edge highlights)
     const ridge=Math.max(0, 0.5*along - R3*across);
@@ -1216,18 +1216,48 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
     V[i*3]=r; V[i*3+1]=g; V[i*3+2]=bl;
   }
   L=lightHeights(H, ww, wh, { light, relief:1, gloss:0.95, shadow:0.45, ao:0.25, ambient:0.5, normals:NM });
-  CRYSTAL_KEPT.key=keyC; CRYSTAL_KEPT.V=V; CRYSTAL_KEPT.L=L;
+  CRYSTAL_KEPT.key=keyC; CRYSTAL_KEPT.V=V; CRYSTAL_KEPT.L=L; CRYSTAL_KEPT.O=O;
+  }
+  // INCLUSIONS (Ruby: "shouldn't the inclusions be on the other side?" — they are inside the stone, so they are
+  // drawn first, on a layer of their own, and seen THROUGH the faces: bent by each face's tilt, tinted by the
+  // stone, dimmed by its milk, and under the ridges, the fire and the gloss, which stay on top). Rutile needles,
+  // fine and golden in sprays, each spray at its own depth; and fluid bubbles, as quartz holds them: a dark rim
+  // where the light turns back, a bright point where it comes through.
+  let IL=null;
+  if(inc>0.02){
+    const lay=document.createElement('canvas'); lay.width=ww; lay.height=wh;
+    const lc=lay.getContext('2d', CPU), U=unit, sprays=Math.round(1+inc*5), px=1/div;
+    lc.lineCap='round';
+    for(let s2=0;s2<sprays;s2++){ const cx=Math.random()*ww, cy=Math.random()*wh, a0=Math.random()*Math.PI, n=Math.round(4+inc*22), deep=0.35+Math.random()*0.65;
+      for(let k=0;k<n;k++){ const a=a0+(Math.random()-0.5)*0.5, L2=U*(0.05+Math.random()*0.2), ox=cx+(Math.random()-0.5)*U*0.15, oy=cy+(Math.random()-0.5)*U*0.15;
+        lc.strokeStyle=`rgba(${IN.r},${IN.g},${IN.b},${Math.min(1, (0.7+Math.random()*0.3)*(1.25-deep*0.45))})`; lc.lineWidth=Math.max(0.9, cpx(1.8+Math.random()*2.2)*px);
+        lc.beginPath(); lc.moveTo(ox, oy); lc.lineTo(ox+Math.cos(a)*L2, oy+Math.sin(a)*L2); lc.stroke();
+        const gl=Math.pow(Math.abs(Math.sin(a-la)), 4);              // a needle across the light glints
+        if(gl>0.2){ lc.strokeStyle=`rgba(255,248,225,${0.5*gl})`; lc.lineWidth=Math.max(0.5, cpx(0.9)*px);
+          lc.beginPath(); lc.moveTo(ox+Math.cos(a)*L2*0.35, oy+Math.sin(a)*L2*0.35); lc.lineTo(ox+Math.cos(a)*L2*0.55, oy+Math.sin(a)*L2*0.55); lc.stroke(); } } }
+    const nb=Math.round(inc*120);
+    for(let k=0;k<nb;k++){ const x=Math.random()*ww, y=Math.random()*wh, r=cpx(2+Math.random()*Math.random()*11)*px*2;
+      lc.strokeStyle='rgba(20,14,28,0.55)'; lc.lineWidth=Math.max(0.6, r*0.28); lc.beginPath(); lc.arc(x,y,r,0,Math.PI*2); lc.stroke();
+      lc.fillStyle='rgba(255,255,255,0.7)'; lc.beginPath(); lc.arc(x-SX*r*0.35, y-SY*r*0.35, r*0.22, 0, Math.PI*2); lc.fill(); }
+    IL=lc.getImageData(0,0,ww,wh).data; lay.width=0; lay.height=0;
   }
   const fl=L.flat||1, lum=Math.max(1, 0.2126*CR.r+0.7152*CR.g+0.0722*CR.b), hue=[CR.r/lum, CR.g/lum, CR.b/lum];
   const HT=hue.map(hc=>{ const t=new Float64Array(1026); for(let k=0;k<=1025;k++) t[k]=hc**(1.2-Math.min(1, k/1024)); return t; });
+  const seen=(0.5+0.5*clarity), hueIn=hue.map(hc=>Math.pow(Math.max(0.05, hc), 0.45));   // (what lies inside is seen through the stone's colour)
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
   for(let i=0;i<N;i++){
     const q=i*4, sp=L.spec[i];
+    let ia=0, iq=0;
+    if(IL){ const x=i%ww, y=(i/ww)|0, sx=Math.round(x+O[i*2]), sy=Math.round(y+O[i*2+1]);
+      if(sx>=0 && sy>=0 && sx<ww && sy<wh){ iq=(sy*ww+sx)*4; ia=IL[iq+3]/255*seen; } }
     for(let c=0;c<3;c++){
       // deep (dark) stone carries the hue fully; the bright fire, less (hue^(1.2 − inside), from a table: a power per channel per pixel was half the time)
       const k=litK(L,i,0.5,M3,c)/fl, inside=V[i*3+c], u=(inside<0?0:inside>1?1:inside)*1024, u0=u|0, T=HT[c], tint=u0>=1024 ? T[1024] : T[u0]+(T[u0+1]-T[u0])*(u-u0);
-      const val=255*inside*tint*(0.45+0.6*k) + 230*sp*litS(M3,c, L, i);
+      let val=255*inside*tint*(0.45+0.6*k);
+      if(ia>0){ const top=inside>0.55 ? Math.max(0, 1-(inside-0.55)*2.5) : 1;   // (the ridges and the fire, bright in V, stay over it)
+        const a=ia*top; val=val*(1-a) + IL[iq+c]*hueIn[c]*(0.4+0.65*k)*a; }
+      val+=230*sp*litS(M3,c, L, i);
       d[q+c]=val<0?0:val>255?255:val;
     }
     d[q+3]=255;
@@ -1235,22 +1265,7 @@ export function genCrystalLeaf(w,h,amt,zoom,light,tint1,tint2,form,phantoms,incl
   sctx.putImageData(img,0,0);
   const out=document.createElement('canvas'); out.width=w; out.height=h;
   const ctx=out.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
-  // INCLUSIONS: rutile needles — fine, straight, golden, in sprays — and bubbles
-  if(inc>0.02){
-    const U=Math.min(w,h), sprays=Math.round(1+inc*5);
-    ctx.lineCap='round';
-    for(let s2=0;s2<sprays;s2++){ const cx=Math.random()*w, cy=Math.random()*h, a0=Math.random()*Math.PI, n=Math.round(4+inc*22);
-      for(let k=0;k<n;k++){ const a=a0+(Math.random()-0.5)*0.5, L2=U*(0.05+Math.random()*0.2), ox=cx+(Math.random()-0.5)*U*0.15, oy=cy+(Math.random()-0.5)*U*0.15;
-        ctx.strokeStyle=`rgba(${IN.r},${IN.g},${IN.b},${0.55+Math.random()*0.4})`; ctx.lineWidth=cpx(2.5+Math.random()*3);
-        ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+Math.cos(a)*L2, oy+Math.sin(a)*L2); ctx.stroke();
-        const gl=Math.pow(Math.abs(Math.sin(a-la)), 4);              // a needle across the light glints
-        if(gl>0.2){ ctx.strokeStyle=`rgba(255,250,230,${0.6*gl})`; ctx.lineWidth=cpx(1.5);
-          ctx.beginPath(); ctx.moveTo(ox+Math.cos(a)*L2*0.35, oy+Math.sin(a)*L2*0.35); ctx.lineTo(ox+Math.cos(a)*L2*0.55, oy+Math.sin(a)*L2*0.55); ctx.stroke(); } } }
-    const nb=Math.round(inc*160);
-    for(let k=0;k<nb;k++){ const x=Math.random()*w, y=Math.random()*h, r=cpx(4+Math.random()*Math.random()*22);
-      ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=cpx(2.2); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(x-SX*r*0.4, y-SY*r*0.4, r*0.28, 0, Math.PI*2); ctx.fill(); }
-  }
+  small.width=0; small.height=0;
   return out;
 }
 
