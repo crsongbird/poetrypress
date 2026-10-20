@@ -22,7 +22,7 @@
  *   teach   what it shows, in a few lines (the Athanor says it on opening)
  */
 import { weaveGridDiv } from './stepsTouch.js';
-import { paramPort } from './steps.js';
+import { paramPort, STEPS } from './steps.js';
 import { TEXTURE_PARAMS } from './textureParams.js';
 
 export const TEXTURE_CHAINS = {
@@ -2965,4 +2965,19 @@ for(const [key, c] of Object.entries(TEXTURE_CHAINS)){
     const { slot, name = p.label, def = Math.round((p.def - p.min)/(p.max - p.min)*100), ...rest } = d;
     nd[1] = { slot, name, def, ...rest }; }
   for(const w of c.wires || []) if(typeof w[3] === 'string'){ const to = (c.nodes || [])[w[2] - 1]; if(to) w[3] = paramPort(to[0], w[3]); }
+  // A SLIDER'S MARKS FROM WHAT IT DRIVES (Ruby: ticks on the sliders that could use them): a knob wired to a setting that
+  // picks among kinds (a part's `bands`, equal shares each with its name, or its `marks`) gives its slider those marks,
+  // where they fall across the wire's range, unless the slider has marks of its own
+  c.nodes.forEach((nd, i) => { if(nd[0] !== 'knob') return; const p = sliders[(+nd[1].slot || 1) - 1]; if(!p || p.ticks) return;
+    for(const w of c.wires || []){ if(w[0] !== i + 1) continue; const to = c.nodes[w[2] - 1], st = to && STEPS[to[0]]; if(!st) continue;
+      const key = st.paramPorts[w[3] - st.dataIns - 1], par = key && st.params.find(q => q[0] === key), o = par && par[4];
+      if(!o || !(o.bands || o.marks)) continue;
+      const [lo, hi] = String(to[1]['~' + key] || `${o.min},${o.max}`).split(',').map(Number);
+      const at = o.bands ? o.bands.map((_, b) => o.min + (b + 0.5)/o.bands.length*(o.max - o.min)) : o.marks;
+      const inside = at.map((m, b) => [(m - lo)/(hi - lo), b]).filter(([f]) => f > -0.001 && f < 1.001);
+      if(inside.length < 2) continue;
+      p.ticks = inside.map(([f]) => Math.round(p.min + Math.max(0, Math.min(1, f))*(p.max - p.min)));
+      if(o.bands) p.names = inside.map(([, b]) => o.bands[b]);
+      break; }
+  });
 }

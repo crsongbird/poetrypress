@@ -15951,7 +15951,7 @@ const CHAOS_STEPS = {
       return [own ? withLightTilt(E.num(n, 'view', 100)/100, draw) : draw()]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
+    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), [...CHAOS_R('form', 'Mode', 40).slice(0, 4), { min: 0, max: 100, marks: [0, 100/6, 200/6, 50, 400/6, 500/6, 100] }], CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
 
     paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null, dv = E.input(n, 2);
       const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null, light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
@@ -17403,7 +17403,9 @@ const FLORA_KEYS = FLORA_SPECIES.map(s => s[0]);
 const FLORA = Object.fromEntries(FLORA_SPECIES);
  
 const FLORA_HABITATS = [['daisy', 'poppy', 'cornflower', 'buttercup', 'clover', 'queenannes', 'chamomile'], ['bluebell', 'foxglove', 'violet', 'anemone'], ['rose', 'peony', 'lavender', 'foxglove'], ['tulip', 'cherry', 'forgetmenot']];
-const FLORA_SPECIES_LABEL = 'Species: ' + ['Daisy', 'Chamomile', 'Cosmos', 'Sunflower', 'Zinnia', 'Cornflower', 'Poppy', 'Anemone', 'Buttercup', 'Rose', 'Peony', 'Tulip', 'Lily', 'Iris', 'Cherry', 'Forget-me-not', 'Violet', 'Bluebell', 'Foxglove', 'Lavender', 'Clover', 'Queen Anne’s Lace', 'Hydrangea', 'Mixed (seeded)'].join(' · ');
+
+const FLORA_NAMES = ['Daisy', 'Chamomile', 'Cosmos', 'Sunflower', 'Zinnia', 'Cornflower', 'Poppy', 'Anemone', 'Buttercup', 'Rose', 'Peony', 'Tulip', 'Lily', 'Iris', 'Cherry', 'Forget-me-not', 'Violet', 'Bluebell', 'Foxglove', 'Lavender', 'Clover', 'Queen Anne’s Lace', 'Hydrangea', 'Mixed (seeded)'];
+const FLORA_SPECIES_LABEL = 'Species: ' + FLORA_NAMES.join(' · ');
 
  
 function flWidth(shape, s){
@@ -17806,7 +17808,7 @@ const FLORA_STEPS = {
 
   bloom: { cat: 'Marks', label: 'Bloom', ins: ['light from', 'petal hue', 'tip hue', 'center hue', 'foliage hue'], outs: ['picture', 'mask', 'height', 'thickness', 'center', 'petals', 'gloss', 'facing'],
     io: { ins: ['value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
-    params: [FL_R('species', FLORA_SPECIES_LABEL, 0), FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
+    params: [[...FL_R('species', FLORA_SPECIES_LABEL, 0).slice(0, 4), { min: 0, max: 100, bands: FLORA_NAMES.map(nm => nm.replace(' (seeded)', '')) }], FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
       FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf · Visitor', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0), FL_R('visitor', 'Visitor: Seeded · ' + ['Ladybird', 'Jumping Spider', 'Hoverfly', 'Ant', 'Aphids', 'Fallen Petal', 'Seed Fluff'].join(' · '), 0), FL_R('turn', 'Head Turn', 0)], cost: () => 3,
     run(E, n){ const { ww, wh, num } = E, k = Math.min(FLORA_KEYS.length, Math.floor(num(n, 'species', 0)/100*(FLORA_KEYS.length + 1))), d = E.input(n, 1);
       const deg = typeof d === 'number' ? d*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, t = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
@@ -23960,6 +23962,21 @@ for(const [key, c] of Object.entries(TEXTURE_CHAINS)){
     const { slot, name = p.label, def = Math.round((p.def - p.min)/(p.max - p.min)*100), ...rest } = d;
     nd[1] = { slot, name, def, ...rest }; }
   for(const w of c.wires || []) if(typeof w[3] === 'string'){ const to = (c.nodes || [])[w[2] - 1]; if(to) w[3] = paramPort(to[0], w[3]); }
+
+
+
+  c.nodes.forEach((nd, i) => { if(nd[0] !== 'knob') return; const p = sliders[(+nd[1].slot || 1) - 1]; if(!p || p.ticks) return;
+    for(const w of c.wires || []){ if(w[0] !== i + 1) continue; const to = c.nodes[w[2] - 1], st = to && STEPS[to[0]]; if(!st) continue;
+      const key = st.paramPorts[w[3] - st.dataIns - 1], par = key && st.params.find(q => q[0] === key), o = par && par[4];
+      if(!o || !(o.bands || o.marks)) continue;
+      const [lo, hi] = String(to[1]['~' + key] || `${o.min},${o.max}`).split(',').map(Number);
+      const at = o.bands ? o.bands.map((_, b) => o.min + (b + 0.5)/o.bands.length*(o.max - o.min)) : o.marks;
+      const inside = at.map((m, b) => [(m - lo)/(hi - lo), b]).filter(([f]) => f > -0.001 && f < 1.001);
+      if(inside.length < 2) continue;
+      p.ticks = inside.map(([f]) => Math.round(p.min + Math.max(0, Math.min(1, f))*(p.max - p.min)));
+      if(o.bands) p.names = inside.map(([, b]) => o.bands[b]);
+      break; }
+  });
 }
 
 
@@ -29436,7 +29453,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 59c580b";
+const STAMP = "2026-10-20 · 7703858";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

@@ -59,7 +59,9 @@ const FLORA_KEYS = FLORA_SPECIES.map(s => s[0]);
 const FLORA = Object.fromEntries(FLORA_SPECIES);
 /** The "mixed" stop: a habitat's species (florals.md §8). */
 const FLORA_HABITATS = [['daisy', 'poppy', 'cornflower', 'buttercup', 'clover', 'queenannes', 'chamomile'], ['bluebell', 'foxglove', 'violet', 'anemone'], ['rose', 'peony', 'lavender', 'foxglove'], ['tulip', 'cherry', 'forgetmenot']];
-export const FLORA_SPECIES_LABEL = 'Species: ' + ['Daisy', 'Chamomile', 'Cosmos', 'Sunflower', 'Zinnia', 'Cornflower', 'Poppy', 'Anemone', 'Buttercup', 'Rose', 'Peony', 'Tulip', 'Lily', 'Iris', 'Cherry', 'Forget-me-not', 'Violet', 'Bluebell', 'Foxglove', 'Lavender', 'Clover', 'Queen Anne’s Lace', 'Hydrangea', 'Mixed (seeded)'].join(' · ');
+// the species' names in the Species setting's order, and the seeded mix last: its bands (one each, equal shares)
+const FLORA_NAMES = ['Daisy', 'Chamomile', 'Cosmos', 'Sunflower', 'Zinnia', 'Cornflower', 'Poppy', 'Anemone', 'Buttercup', 'Rose', 'Peony', 'Tulip', 'Lily', 'Iris', 'Cherry', 'Forget-me-not', 'Violet', 'Bluebell', 'Foxglove', 'Lavender', 'Clover', 'Queen Anne’s Lace', 'Hydrangea', 'Mixed (seeded)'];
+export const FLORA_SPECIES_LABEL = 'Species: ' + FLORA_NAMES.join(' · ');
 
 /** A petal's half-width at s (0 at its base, 1 at its tip), by its outline. */
 function flWidth(shape, s){
@@ -462,7 +464,7 @@ export const FLORA_STEPS = {
   // BLOOM (the floral surfaces' process part): a flower of a real species, or a sheet of them, lit from the dial
   bloom: { cat: 'Marks', label: 'Bloom', ins: ['light from', 'petal hue', 'tip hue', 'center hue', 'foliage hue'], outs: ['picture', 'mask', 'height', 'thickness', 'center', 'petals', 'gloss', 'facing'],
     io: { ins: ['value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
-    params: [FL_R('species', FLORA_SPECIES_LABEL, 0), FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
+    params: [[...FL_R('species', FLORA_SPECIES_LABEL, 0).slice(0, 4), { min: 0, max: 100, bands: FLORA_NAMES.map(nm => nm.replace(' (seeded)', '')) }], FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
       FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf · Visitor', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0), FL_R('visitor', 'Visitor: Seeded · ' + ['Ladybird', 'Jumping Spider', 'Hoverfly', 'Ant', 'Aphids', 'Fallen Petal', 'Seed Fluff'].join(' · '), 0), FL_R('turn', 'Head Turn', 0)], cost: () => 3,
     run(E, n){ const { ww, wh, num } = E, k = Math.min(FLORA_KEYS.length, Math.floor(num(n, 'species', 0)/100*(FLORA_KEYS.length + 1))), d = E.input(n, 1);
       const deg = typeof d === 'number' ? d*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, t = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
