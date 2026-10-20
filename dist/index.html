@@ -106,7 +106,7 @@ body{
 label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:3px; letter-spacing:0.015em}
 .field{margin:0;}
 
-select, textarea, input[type="text"], input[type="number"]{
+select, textarea, input[type="text"], input[type="number"], input[type="search"]{
   width:100%;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
   border:1px solid var(--line);
@@ -117,6 +117,10 @@ select, textarea, input[type="text"], input[type="number"]{
   font-size:14px;
   outline:none; box-shadow:inset 0 1px 2px var(--well); }
 select:focus, textarea:focus, input:focus{ border-color:var(--accent-dim); }
+/* (a search field wears the same skin as every field: the browser's own grey read as switched off — Ruby, 2026-10-19;
+   and a text field and a menu side by side stand the same height) */
+input[type="search"]{ -webkit-appearance:none; appearance:none; }
+select, input[type="text"], input[type="number"], input[type="search"]{ min-height:34px; box-sizing:border-box; }
 
 textarea{
   min-height:280px;
@@ -384,6 +388,7 @@ body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 /* no zoom-on-focus, bigger targets */
 body.is-mobile input[type="text"],
 body.is-mobile input[type="number"],
+body.is-mobile input[type="search"],
 body.is-mobile select,
 body.is-mobile textarea { font-size: 16px; }   /* 16px: a phone never zooms in on a tapped field */
 
@@ -548,7 +553,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .modal-range .mr-note{ min-height:1.3em; margin:0 0 8px; font-size:12px; color:var(--accent); }
 body.is-mobile .modal-range .mr-row{ grid-template-columns:1fr 3.5em; } body.is-mobile .modal-range label{ grid-column:1 / -1; }
 body.is-mobile .modal{ width:100%; }
-body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }
+body.is-mobile .btn-major, body.is-mobile .btn-danger, body.is-mobile .btn-row > button.ghost{ font-size:clamp(12px,3vw,13px); }
 
 /* ---------- texture sliders: own line, full width ---------- */
 .field.full > input[type="range"]{ width:calc(100% - 6px); display:block; }   /* (Ruby: backed off the right edge a little) */
@@ -1740,14 +1745,14 @@ body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padd
 
 /* square, everywhere (circles stay circles: they have no corners) */
 .card, details.card, summary, button, .radio-btn, .preset-btn, .tab-btn, .ld-btn, .seed-moon, .snap-btn,
-select, textarea, input[type="text"], input[type="number"], .subblock, .eso-drawer, .hint code,
+select, textarea, input[type="text"], input[type="number"], input[type="search"], .subblock, .eso-drawer, .hint code,
 .clr-field button, .clr-picker, .clr-swatches button, .download-btn, .modal, .toast,
 body:not(.is-mobile) .tab-btn, .preset-group-head{ border-radius:0 !important; }
 
 /* surfaces: a little depth */
 
 /* fields sit a hair below the surface; focus is the second accent */
-:root[data-theme="vellum"] select, :root[data-theme="vellum"] textarea, :root[data-theme="vellum"] input[type="text"], :root[data-theme="vellum"] input[type="number"]{
+:root[data-theme="vellum"] select, :root[data-theme="vellum"] textarea, :root[data-theme="vellum"] input[type="text"], :root[data-theme="vellum"] input[type="number"], :root[data-theme="vellum"] input[type="search"]{
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 92%, #5a4128 8%), var(--bg-panel-2) 55%);
 }
 select:focus, textarea:focus, input[type="text"]:focus, input[type="number"]:focus{
@@ -2005,7 +2010,8 @@ body.is-mobile .ld-values input{  width:4.4em; }
 
 /* sound: a switch and its volume, on one line */
 .sound-row{ display:flex; align-items:center; gap:10px; margin-top:8px; }
-.sound-row label{ margin:0; }
+.sound-row label{ margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }   /* (as every switch's and eye's name: Ruby saw Sound and Hints dimmer and smaller than Show Spell Code) */
+body.is-mobile .sound-row label{ font-size:15px; }
 .sound-row input[type=range]{ flex:1; min-width:0; }
 input.switch{ appearance:none; -webkit-appearance:none; width:34px; height:18px; margin:0; border:1px solid var(--line); background:var(--bg-card); position:relative; cursor:pointer; flex:0 0 auto; }
 input.switch::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--text-dim); transition:left .15s; }
@@ -2122,6 +2128,8 @@ input, select, textarea, button{ font-family:inherit; }
 .btn-major, .btn-danger, .download-btn, #clr-picker .clr-close, .forge-title{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; font-variation-settings:normal; }
 label, .field > label, .check-row label, .hint small, .ld-values, .fp-in, .fp-out, .forge-param span, .forge-status, .forge-sub{ font-family:var(--ui-sans); font-weight:400; }
 button.ghost, .chip, .seg button, .shortcut-btn, .forge-part, .forge-menu-item, .toast, .toast-act{ font-family:var(--ui-sans); font-weight:400; letter-spacing:0.02em; }
+/* (a plain button in a row of the big ones speaks as they do: Share beside Create, Invoke and Dissolve — Ruby) */
+.btn-row > button.ghost{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; }
 .hint{ font-family:var(--ui-text); font-style:italic; }
 .hint code, code, kbd{ font-style:normal; }
 output, .val, .readout, .range-val, .angle-val{ font-family:var(--ui-sans); font-variant-numeric:tabular-nums; }
@@ -17448,12 +17456,259 @@ const ROOM_STEPS = {
 };
 
 
-/* ==== stepsFlora.js ==== */
-const FL_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+/* ==== floraKit.js ==== */
 const flClamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
 const flHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const flMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
 const flCss = (c, k = 1, a = 1) => `rgba(${Math.round(flClamp(c[0]*k, 0, 255))},${Math.round(flClamp(c[1]*k, 0, 255))},${Math.round(flClamp(c[2]*k, 0, 255))},${a})`;
+const SPC_TAU = Math.PI*2, SPC_UP = -Math.PI/2;
+const spcGrey = v => { const g = Math.round(flClamp(v)*255); return `rgb(${g},${g},${g})`; };
+const spcAngTo = (a, b) => { let d = b - a; while(d > Math.PI) d -= SPC_TAU; while(d < -Math.PI) d += SPC_TAU; return d; };
+
+
+
+
+const SPC_SHAPES = {
+  linear:      [[0, 0.55], [0.06, 0.95], [0.5, 1], [0.82, 0.85], [0.95, 0.42], [1, 0]],
+  strap:       [[0, 0.72], [0.12, 0.96], [0.35, 1], [0.72, 0.82], [0.93, 0.38], [1, 0]],
+  sword:       [[0, 0.8], [0.15, 0.97], [0.42, 1], [0.78, 0.72], [0.95, 0.22], [1, 0]],
+  lanceolate:  [[0, 0.08], [0.1, 0.62], [0.3, 1], [0.56, 0.84], [0.8, 0.44], [1, 0]],
+  oblanceolate:[[0, 0.05], [0.28, 0.34], [0.6, 0.84], [0.78, 1], [0.92, 0.68], [1, 0]],
+  elliptic:    [[0, 0.05], [0.12, 0.62], [0.48, 1], [0.84, 0.62], [1, 0]],
+  ovate:       [[0, 0.28], [0.07, 0.76], [0.3, 1], [0.58, 0.84], [0.84, 0.42], [1, 0]],
+  obovate:     [[0, 0.05], [0.25, 0.45], [0.62, 1], [0.86, 0.86], [0.97, 0.42], [1, 0]],
+  spatulate:   [[0, 0.07], [0.4, 0.17], [0.62, 0.68], [0.8, 1], [0.94, 0.76], [1, 0]],
+  oblong:      [[0, 0.32], [0.06, 0.86], [0.2, 1], [0.74, 0.95], [0.92, 0.58], [1, 0]],
+  cordate:     [[0, 0], [-0.1, 0.36], [-0.07, 0.8], [0.12, 1], [0.42, 0.86], [0.72, 0.46], [1, 0]],
+  reniform:    [[0, 0], [-0.15, 0.42], [-0.1, 0.88], [0.15, 1], [0.5, 0.94], [0.8, 0.56], [1, 0]],
+  obcordate:   [[0, 0.05], [0.3, 0.52], [0.68, 1], [0.94, 0.8], [1, 0.32], [0.96, 0]],
+  wedge:       [[0, 0.06], [0.45, 0.5], [0.85, 1], [0.98, 0.7], [1, 0]],
+  scale:       [[0, 0.6], [0.3, 1], [0.7, 0.8], [1, 0]],
+};
+function spcSpline(cp, per = 10){
+  const out = [], P = [cp[0], ...cp, cp[cp.length - 1]];
+  for(let i = 1; i < P.length - 2; i++) for(let k = 0; k < per; k++){ const u = k/per, u2 = u*u, u3 = u2*u;
+    const f = j => 0.5*(2*P[i][j] + (-P[i - 1][j] + P[i + 1][j])*u + (2*P[i - 1][j] - 5*P[i][j] + 4*P[i + 1][j] - P[i + 2][j])*u2 + (-P[i - 1][j] + 3*P[i][j] - 3*P[i + 1][j] + P[i + 2][j])*u3);
+    out.push([f(0), Math.max(0, f(1))]); }
+  out.push(cp[cp.length - 1]);
+  return out;
+}
+const SPC_SPLINES = Object.fromEntries(Object.entries(SPC_SHAPES).map(([k, v]) => [k, spcSpline(v)]));
+ 
+function spcTooth(kind, u){
+  const f = u - Math.floor(u);
+  switch(kind){
+    case 'serrate': return f < 0.78 ? f/0.78 : (1 - f)/0.22;
+    case 'double': { const g = (u*3) - Math.floor(u*3); return 0.75*(f < 0.78 ? f/0.78 : (1 - f)/0.22) + 0.35*(g < 0.7 ? g/0.7 : (1 - g)/0.3); }
+    case 'dentate': return 1 - Math.abs(f*2 - 1);
+    case 'crenate': return Math.sqrt(Math.max(0, Math.sin(Math.PI*f)));
+    case 'incised': return Math.pow(1 - Math.abs(f*2 - 1), 2.2);
+    default: return 0;
+  }
+}
+
+
+
+
+function spcPath(ctx, pts){ ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); }
+function spcFillAll(L, pts, m){
+  for(const [k, v] of [['mask', '#fff'], ['height', m.h != null ? spcGrey(m.h) : null], ['thick', m.thick != null ? spcGrey(m.thick) : null], ['gloss', m.gloss != null ? spcGrey(m.gloss) : null], ['face', spcGrey(m.face ?? 0.78)], ['cen', m.cen ? '#fff' : null]]){
+    if(!v) continue; spcPath(L[k], pts); L[k].fillStyle = v; L[k].fill(); }
+}
+ 
+function spcRibbon(pts, k = 1){
+  const l = [], r = [];
+  for(const p of pts){ const nx = -Math.sin(p.a), ny = Math.cos(p.a), w = p.w*k/2; l.push([p.x + nx*w, p.y + ny*w]); r.push([p.x - nx*w, p.y - ny*w]); }
+  const e = pts[pts.length - 1], tip = [e.x + Math.cos(e.a)*e.w*k*0.3, e.y + Math.sin(e.a)*e.w*k*0.3];
+  return [...l, tip, ...r.reverse()];
+}
+ 
+function spcBand(L, pts, col, m = {}){
+  const poly = spcRibbon(pts);
+  spcPath(L.pic, poly); L.pic.fillStyle = flCss(col, 0.86); L.pic.fill();
+  const inner = spcRibbon(pts, 0.5);
+  spcPath(L.pic, inner); L.pic.fillStyle = flCss(col, m.wood ? 1.02 : 1.06, 0.55); L.pic.fill();
+  spcFillAll(L, poly, { h: m.h ?? 0.4, thick: m.thick ?? 0.8, gloss: m.gloss ?? 0.22, face: 0.76 });
+  spcPath(L.height, inner); L.height.fillStyle = spcGrey((m.h ?? 0.4) + 0.08); L.height.fill();
+}
+ 
+function spcHairs(L, R, pts, col, len, every = 1){
+  L.pic.strokeStyle = flCss(col, 1.08, 0.75); L.mask.strokeStyle = '#fff'; L.height.strokeStyle = spcGrey(0.38);
+  for(let i = 1; i < pts.length - 1; i += every) for(const sd of [-1, 1]){ if(R() < 0.35) continue;
+    const p = pts[i], nx = -Math.sin(p.a)*sd, ny = Math.cos(p.a)*sd, x = p.x + nx*p.w/2, y = p.y + ny*p.w/2, l = len*(0.6 + R()*0.7), fw = 0.35 + R()*0.6;
+    const ex = x + (nx + Math.cos(p.a)*fw)*l, ey = y + (ny + Math.sin(p.a)*fw)*l;
+    for(const c of [L.pic, L.mask, L.height]){ c.lineWidth = (p.w*0.07); c.beginPath(); c.moveTo(x, y); c.lineTo(ex, ey); c.stroke(); } }
+}
+ 
+function spcPrickles(L, R, pts, col, size){
+  for(let i = 2; i < pts.length - 2; i++){ if(R() > 0.32) continue;
+    const p = pts[i], sd = R() < 0.5 ? -1 : 1, nx = -Math.sin(p.a)*sd, ny = Math.cos(p.a)*sd, bx = p.x + nx*p.w*0.45, by = p.y + ny*p.w*0.45, s = size*(0.7 + R()*0.6);
+    const back = [-Math.cos(p.a), -Math.sin(p.a)];
+    const tri = [[bx + back[0]*s*0.5, by + back[1]*s*0.5], [bx - back[0]*s*0.5, by - back[1]*s*0.5], [bx + nx*s*0.95 + back[0]*s*0.75, by + ny*s*0.95 + back[1]*s*0.75]];
+    spcPath(L.pic, tri); L.pic.fillStyle = flCss(flMix(col, [150, 60, 50], 0.35), 0.9); L.pic.fill();
+    spcFillAll(L, tri, { h: 0.5, thick: 0.9, gloss: 0.35 }); }
+}
+
+
+
+
+function spcBlade(L, R, x, y, a, len, sp, c){
+
+  if(len < 7){ const W = (sp.w || 0.25)*len, d = [Math.cos(a), Math.sin(a)], n = [-d[1], d[0]], b = (c.bend || 0)*len*0.2, pts = [];
+    for(let i = 0; i <= 6; i++){ const t = i/6, w = W*Math.sin(Math.PI*Math.min(1, t*1.05)); pts.push([x + d[0]*t*len + n[0]*(w + b*t*t), y + d[1]*t*len + n[1]*(w + b*t*t)]); }
+    for(let i = 6; i >= 0; i--){ const t = i/6, w = W*Math.sin(Math.PI*Math.min(1, t*1.05)); pts.push([x + d[0]*t*len - n[0]*(w - b*t*t), y + d[1]*t*len - n[1]*(w - b*t*t)]); }
+    spcPath(L.pic, pts); L.pic.fillStyle = flCss(c.under ? flMix(c.col, [200, 210, 190], 0.28) : c.col, 0.9 + R()*0.14); L.pic.fill(); spcFillAll(L, pts, { h: c.h ?? 0.46, thick: 0.42, gloss: sp.gloss ?? 0.22 }); return; }
+  const N = 44, sh = SPC_SPLINES[sp.shape] || SPC_SPLINES.lanceolate, W = (sp.w || 0.25)*len;
+  const bend = c.bend ?? (R() - 0.5)*0.6, droop = c.droop ?? 0, roll = c.roll ?? 1, asym = 1 + (R() - 0.5)*0.2;
+
+  const mid = []; { let X = x, Y = y, A = a; for(let i = 0; i <= N; i++){ const t = i/N; mid.push([X, Y, A]);
+    A += bend/N + spcAngTo(A, Math.PI/2)*droop*t*2.2/N; X += Math.cos(A)*len/N; Y += Math.sin(A)*len/N; } }
+  const at = t => { if(t <= 0){ const [X, Y, A] = mid[0]; return [X + Math.cos(A)*t*len, Y + Math.sin(A)*t*len, A]; }
+    const f = Math.min(N - 1e-6, t*N), i = Math.floor(f), u = f - i, p = mid[i], q = mid[i + 1]; return [p[0] + (q[0] - p[0])*u, p[1] + (q[1] - p[1])*u, p[2] + (q[2] - p[2])*u]; };
+  const teeth = sp.teeth || 0, amp = sp.tooth ?? (sp.margin === 'incised' ? 0.22 : sp.margin === 'crenate' ? 0.06 : 0.07), wave = sp.wave || 0, wph = R()*6;
+  const half = side => sh.map(([t, w0]) => {
+    let w = w0;
+    if(teeth && t > 0.04 && t < 0.97 && w0 > 0.08) w += amp*spcTooth(sp.margin, t*teeth + (side > 0 ? 0 : 0.5))*Math.min(1, w0*3);
+    if(sp.tip === 'acuminate' && t > 0.78) w *= Math.pow(Math.max(0, 1 - (t - 0.78)/0.22), 0.8)*0.85 + 0.15*(1 - (t - 0.78)/0.22);
+    if(wave) w *= 1 + wave*Math.sin(t*14 + wph + side);
+    const [X, Y, A] = at(t), nx = -Math.sin(A), ny = Math.cos(A), k = W*w*(side > 0 ? asym : 1/asym)*(side > 0 ? 1 : roll);
+    return [X + nx*k*side, Y + ny*k*side, t]; });
+  const right = half(1), left = half(-1), outline = [...right.map(p => [p[0], p[1]]), ...left.reverse().map(p => [p[0], p[1]])];
+
+  const v = 0.92 + R()*0.14, under = !!c.under, base = under ? flMix(flMix(c.col, [200, 210, 190], 0.28), [128, 128, 128], 0.12) : c.col;
+  const [bx, by] = at(0), [tx, ty] = at(1), g = L.pic.createLinearGradient(bx, by, tx, ty);
+  g.addColorStop(0, flCss(base, v*0.84)); g.addColorStop(0.5, flCss(base, v)); g.addColorStop(1, flCss(base, v*1.04));
+  spcPath(L.pic, outline); L.pic.fillStyle = g; L.pic.fill();
+  spcFillAll(L, outline, { h: c.h ?? 0.46, thick: 0.42, gloss: (sp.gloss ?? 0.22)*(under ? 0.5 : 1), face: 0.8 });
+  if(len < 4) return;
+  L.pic.save(); spcPath(L.pic, outline); L.pic.clip(); L.height.save(); spcPath(L.height, outline); L.height.clip(); L.thick.save(); spcPath(L.thick, outline); L.thick.clip();
+
+  L.pic.strokeStyle = flCss(base, 0.78, 0.22); L.pic.lineWidth = W*0.28; spcPath(L.pic, outline); L.pic.stroke();
+  if(c.age > 0.05){ const r = len*(0.25 + c.age*0.45), gg = L.pic.createRadialGradient(tx, ty, 0, tx, ty, r); gg.addColorStop(0, flCss(flMix(base, [128, 92, 48], 0.75), 0.9, 0.85*c.age)); gg.addColorStop(1, 'rgba(0,0,0,0)'); L.pic.fillStyle = gg; L.pic.fillRect(tx - r, ty - r, r*2, r*2); }
+
+  const vc = flCss(base, under ? 1.18 : 1.12, under ? 0.6 : 0.42), vw = Math.max(0.35, W*0.05);
+  const line = (pts, w, ctxs) => { for(const [cx, st] of ctxs){ cx.strokeStyle = st; cx.lineWidth = w; cx.beginPath(); pts.forEach((p, i) => i ? cx.lineTo(p[0], p[1]) : cx.moveTo(p[0], p[1])); cx.stroke(); } };
+  const veinCtx = w => [[L.pic, vc], [L.height, under ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.14)'], [L.thick, 'rgba(255,255,255,0.18)']];
+  const ven = sp.vein || 'pinnate';
+  if(ven === 'parallel'){
+    for(let k = -3; k <= 3; k++){ const pts = []; for(let i = 0; i <= 24; i++){ const t = i/24, j = Math.min(sh.length - 1, Math.round(t*(sh.length - 1))), w = sh[j][1]*W*(k/4), [X, Y, A] = at(t); pts.push([X - Math.sin(A)*w, Y + Math.cos(A)*w]); }
+      line(pts, vw*(k ? 0.45 : 0.8), veinCtx()); }
+  } else {
+    line(Array.from({ length: 21 }, (_, i) => at(i/20*0.96)), vw, veinCtx());
+    if(ven === 'palmate' || ven === 'tripli'){ for(const sd of [-1, 1]) for(const spread of ven === 'palmate' ? [0.55, 1.05] : [0.45]){ const pts = []; for(let i = 0; i <= 12; i++){ const t = i/12, [X, Y, A] = at(t*0.6 + 0.04); pts.push([X - Math.sin(A)*sd*W*spread*Math.sin(t*1.4), Y + Math.cos(A)*sd*W*spread*Math.sin(t*1.4)]); } line(pts, vw*0.6, veinCtx()); } }
+    if(ven !== 'none'){ const nv = sp.veins || Math.max(4, Math.round(len/W*2.4));
+      for(let k = 1; k < nv; k++){ const t0 = k/nv*0.9 + 0.03; for(const sd of [-1, 1]){ const pts = [], j = Math.min(sh.length - 1, Math.round(Math.max(0, t0)*(sh.length - 1))), ww = Math.max(0.1, sh[j][1])*W;
+        for(let i = 0; i <= 8; i++){ const u = i/8, [X, Y, A] = at(Math.min(1, t0 + u*0.22)), off = ww*u*0.86; pts.push([X - Math.sin(A)*off*sd, Y + Math.cos(A)*off*sd]); }
+        line(pts, vw*0.45, veinCtx()); } } }
+  }
+
+  L.height.strokeStyle = 'rgba(0,0,0,0.16)'; L.height.lineWidth = W*0.45; spcPath(L.height, outline); L.height.stroke();
+  L.pic.restore(); L.height.restore(); L.thick.restore();
+}
+
+
+
+function spcLeaf(L, R, x, y, a, len, sp, c){
+  const stalk = (l, w) => { const pts = []; let X = x, Y = y, A = a; const b = (R() - 0.5)*0.3;
+    for(let i = 0; i <= 10; i++){ pts.push({ x: X, y: Y, a: A, w: w*(1 - i/10*0.45) }); A += b/10 + spcAngTo(A, Math.PI/2)*(c.droop || 0)*0.06; X += Math.cos(A)*l/10; Y += Math.sin(A)*l/10; }
+    spcBand(L, pts, flMix(c.col, c.stalk || c.col, 0.5), { h: (c.h ?? 0.46) - 0.04, thick: 0.6 }); const e = pts[pts.length - 1]; return [e.x, e.y, e.a]; };
+  const pet = sp.pet || 0, kind = sp.kind || 'simple';
+  let [X, Y, A] = pet > 0 ? stalk(len*pet, Math.max(0.6, len*0.035)) : [x, y, a];
+  const rest = len*(1 - pet);
+
+  if(sp.stip){ for(const sd of [-1, 1]) spcBlade(L, R, x, y, a + sd*0.45, len*sp.stip, { shape: 'lanceolate', w: 0.32, vein: 'none' }, { ...c, bend: sd*0.3, under: false, age: 0 }); }
+  if(kind === 'simple'){ spcBlade(L, R, X, Y, A, rest, sp, c); return; }
+  const sub = { ...sp, kind: sp.sub || 'simple', sub: 'simple', pet: sp.subPet || 0, stip: 0, chevron: false, depth: 1, pairs: sp.subPairs || 2 };
+  if(kind === 'pinnatifid' || kind === 'pinnate'){
+
+
+    const n = sp.pairs || 4, wing = kind === 'pinnatifid' ? (sp.wing || 0.1) : 0;
+    const rach = []; { let x2 = X, y2 = Y, A2 = A; const b = c.bend ?? (R() - 0.5)*0.4; for(let i = 0; i <= 24; i++){ rach.push([x2, y2, A2]); A2 += b/24 + spcAngTo(A2, Math.PI/2)*(c.droop || 0)*0.04; x2 += Math.cos(A2)*rest/24; y2 += Math.sin(A2)*rest/24; } }
+    if(wing) spcBlade(L, R, X, Y, A, rest, { shape: 'linear', w: wing, vein: 'none', margin: sp.margin, teeth: sp.teeth ? 8 : 0 }, { ...c, bend: c.bend ?? 0 });
+    else { const pts = rach.map(([px, py, pa], i) => ({ x: px, y: py, a: pa, w: Math.max(0.5, rest*0.02*(1 - i/30)) })); spcBand(L, pts, c.col, { h: c.h ?? 0.46 }); }
+    for(let k = 0; k < n; k++) for(const sd of [-1, 1]){
+      const t = (sp.from ?? 0.12) + (k + (sd > 0 ? 0 : 0.35*(kind === 'pinnatifid' ? 1 : 0)))/n*(0.86 - (sp.from ?? 0.12)), [px, py, pa] = rach[Math.min(24, Math.round(t*24))];
+      const sz = (sp.lf || 0.38)*rest*(kind === 'pinnatifid' ? (0.75 + 0.35*Math.sin(Math.PI*Math.min(1, t*1.2))) : (0.85 + 0.25*t))*(0.88 + R()*0.24);
+      spcLeaf(L, R, px, py, pa + sd*(sp.ang ?? 0.95)*(0.85 + R()*0.3), sz, sub, { ...c, bend: sd*(0.15 + R()*0.25), droop: 0, roll: c.roll });
+    }
+    const [ex, ey, ea] = rach[24]; spcLeaf(L, R, ex, ey, ea, (sp.lf || 0.38)*rest*(kind === 'pinnate' ? 1.15 : 0.9), sub, { ...c, bend: (R() - 0.5)*0.3, droop: 0 });
+    return;
+  }
+  if(kind === 'dissect'){
+
+    const order = sp.order || 2, thread = sp.seg !== 'lobe';
+    const branch = (bx, by, ba, l, depth) => {
+      const pts = []; let x2 = bx, y2 = by, A2 = ba; const b = (R() - 0.5)*0.5;
+      for(let i = 0; i <= 12; i++){ pts.push({ x: x2, y: y2, a: A2, w: Math.max(0.35, l*(depth === order ? 0.022 : thread ? 0.05 : 0.03))*(1 - i/16) }); A2 += b/12 + spcAngTo(A2, Math.PI/2)*(c.droop || 0)*0.03; x2 += Math.cos(A2)*l/12; y2 += Math.sin(A2)*l/12; }
+      if(depth === 0){ if(thread) spcBand(L, pts, c.col, { h: c.h ?? 0.46, thick: 0.4, gloss: 0.2 }); else spcBlade(L, R, bx, by, ba, l, { shape: 'lanceolate', w: 0.28, vein: 'none' }, { ...c, bend: b }); return; }
+      spcBand(L, pts, c.col, { h: c.h ?? 0.46, thick: 0.5 });
+      const n = sp.pairs || (depth === order ? 6 : 4);
+      for(let k = 0; k < n; k++) for(const sd of [-1, 1]){ const t = 0.12 + (k + (sd > 0 ? 0 : 0.5))/n*0.8, p = pts[Math.min(12, Math.round(t*12))];
+        branch(p.x, p.y, p.a + sd*(0.7 + R()*0.35), l*(depth === order ? 0.42 : 0.5)*(1.05 - t*0.6)*(0.85 + R()*0.3), depth - 1); }
+      const e = pts[12]; branch(e.x, e.y, e.a + (R() - 0.5)*0.3, l*0.3, depth - 1);
+    };
+    branch(X, Y, A, rest, order); return;
+  }
+  if(kind === 'ternate' || kind === 'palmate' || kind === 'trifoliate'){
+
+    const n = kind === 'palmate' ? (sp.lobes || 5) : 3, spread = kind === 'palmate' ? 1.25 : kind === 'trifoliate' ? 1.05 : 0.8;
+    for(let k = 0; k < n; k++){ const u = n === 1 ? 0 : k/(n - 1) - 0.5, ang = A + u*2*spread*(0.9 + R()*0.2), l = rest*(sp.lf || 0.6)*(1 - Math.abs(u)*(kind === 'palmate' ? 0.45 : 0.15))*(0.9 + R()*0.2);
+      if(kind === 'ternate' && (sp.depth || 1) > 1){ const sl = l*0.38, ex = X + Math.cos(ang)*sl, ey = Y + Math.sin(ang)*sl;
+        spcBand(L, [{ x: X, y: Y, a: ang, w: Math.max(0.5, l*0.03) }, { x: ex, y: ey, a: ang, w: Math.max(0.4, l*0.02) }], flMix(c.col, c.stalk || c.col, 0.5), { h: c.h ?? 0.46 });
+        spcLeaf(L, R, ex, ey, ang, l*0.7, { ...sp, depth: sp.depth - 1, pet: 0 }, { ...c, bend: u*0.6 }); }
+      else spcLeaf(L, R, X, Y, ang, l, sub, { ...c, bend: u*0.5 + (R() - 0.5)*0.2 });
+
+      if(kind === 'trifoliate' && sp.chevron){ const cx = X + Math.cos(ang)*l*0.55, cy = Y + Math.sin(ang)*l*0.55, w = l*0.2, pa = ang + Math.PI;
+        L.pic.strokeStyle = flCss(flMix(c.col, [235, 240, 220], 0.55), 1, 0.7); L.pic.lineWidth = (l*0.05); L.pic.beginPath();
+        L.pic.moveTo(cx + Math.cos(pa + 0.9)*w, cy + Math.sin(pa + 0.9)*w); L.pic.lineTo(cx, cy); L.pic.lineTo(cx + Math.cos(pa - 0.9)*w, cy + Math.sin(pa - 0.9)*w); L.pic.stroke(); } }
+    return;
+  }
+}
+
+
+
+
+
+const SPC_LEAVES = {
+  oxeyeBasal: { kind: 'simple', shape: 'spatulate', w: 0.24, pet: 0.35, margin: 'crenate', teeth: 7, vein: 'pinnate' },
+  oxeyeStem:  { kind: 'simple', shape: 'oblong', w: 0.17, margin: 'dentate', teeth: 9, tooth: 0.12, vein: 'pinnate' },
+  bellis:     { kind: 'simple', shape: 'spatulate', w: 0.3, pet: 0.2, margin: 'crenate', teeth: 5, vein: 'pinnate' },
+  thread:     { kind: 'dissect', order: 2, seg: 'thread', pairs: 4 },
+  cosmos:     { kind: 'dissect', order: 2, seg: 'thread', pairs: 5 },
+  carrot:     { kind: 'dissect', order: 3, seg: 'lobe', pairs: 3, pet: 0.18 },
+  sunflower:  { kind: 'simple', shape: 'cordate', w: 0.52, pet: 0.38, margin: 'serrate', teeth: 14, vein: 'tripli', gloss: 0.15 },
+  zinnia:     { kind: 'simple', shape: 'ovate', w: 0.34, vein: 'tripli', gloss: 0.12, tip: 'acuminate' },
+  cornLower:  { kind: 'pinnatifid', pairs: 2, wing: 0.07, lf: 0.3, ang: 0.8, sub: 'simple', shape: 'linear', w: 0.14 },
+  cornStem:   { kind: 'simple', shape: 'linear', w: 0.07, vein: 'pinnate', veins: 2 },
+  poppy:      { kind: 'pinnatifid', pairs: 4, wing: 0.07, lf: 0.32, ang: 0.9, pet: 0.12, sub: 'simple', shape: 'lanceolate', w: 0.3, margin: 'dentate', teeth: 3, tooth: 0.25 },
+  anemone:    { kind: 'ternate', depth: 2, pet: 0.45, lf: 0.7, sub: 'pinnatifid', pairs: 2, wing: 0.1, shape: 'lanceolate', w: 0.32, margin: 'incised', teeth: 2 },
+  ruff:       { kind: 'pinnatifid', pairs: 2, wing: 0.06, lf: 0.45, ang: 0.7, sub: 'simple', shape: 'linear', w: 0.12 },
+  buttercup:  { kind: 'palmate', lobes: 5, pet: 0.6, lf: 0.7, sub: 'pinnatifid', subPairs: 1, wing: 0.1, ang: 0.5, shape: 'wedge', w: 0.4, margin: 'incised', teeth: 2, tooth: 0.35, vein: 'pinnate', veins: 2 },
+  buttercupUp:{ kind: 'palmate', lobes: 3, lf: 0.9, sub: 'simple', shape: 'linear', w: 0.1, vein: 'none' },
+  rose:       { kind: 'pinnate', pairs: 2, lf: 0.36, ang: 1.05, pet: 0.2, stip: 0.14, sub: 'simple', shape: 'ovate', w: 0.4, margin: 'serrate', teeth: 10, tooth: 0.07, gloss: 0.35, vein: 'pinnate' },
+  peony:      { kind: 'ternate', depth: 2, pet: 0.3, lf: 0.85, sub: 'simple', shape: 'lanceolate', w: 0.24, vein: 'pinnate', gloss: 0.4 },
+  tulip:      { kind: 'simple', shape: 'strap', w: 0.13, vein: 'parallel', wave: 0.04, gloss: 0.2 },
+  lily:       { kind: 'simple', shape: 'lanceolate', w: 0.15, vein: 'parallel', gloss: 0.25 },
+  iris:       { kind: 'simple', shape: 'sword', w: 0.075, vein: 'parallel', gloss: 0.18 },
+  cherry:     { kind: 'simple', shape: 'ovate', w: 0.36, pet: 0.18, margin: 'double', teeth: 16, tooth: 0.05, tip: 'acuminate', vein: 'pinnate', veins: 9, gloss: 0.3 },
+  myosotis:   { kind: 'simple', shape: 'oblong', w: 0.28, vein: 'pinnate', veins: 3 },
+  violet:     { kind: 'simple', shape: 'cordate', w: 0.72, pet: 0.58, margin: 'crenate', teeth: 11, tooth: 0.05, vein: 'palmate', gloss: 0.18 },
+  bluebell:   { kind: 'simple', shape: 'linear', w: 0.045, vein: 'parallel', gloss: 0.35 },
+  foxglove:   { kind: 'simple', shape: 'ovate', w: 0.34, pet: 0.18, margin: 'crenate', teeth: 12, tooth: 0.04, vein: 'pinnate', veins: 8 },
+  lavender:   { kind: 'simple', shape: 'linear', w: 0.1, vein: 'none' },
+  clover:     { kind: 'trifoliate', pet: 0.5, lf: 0.55, stip: 0.12, chevron: true, sub: 'simple', shape: 'elliptic', w: 0.48, vein: 'pinnate', veins: 6 },
+  cloverWhite:{ kind: 'trifoliate', pet: 0.6, lf: 0.5, chevron: true, sub: 'simple', shape: 'obcordate', w: 0.62, margin: 'serrate', teeth: 10, tooth: 0.03, vein: 'pinnate', veins: 6 },
+  hydrangea:  { kind: 'simple', shape: 'ovate', w: 0.5, pet: 0.12, margin: 'serrate', teeth: 15, tooth: 0.06, tip: 'acuminate', vein: 'pinnate', veins: 8, gloss: 0.4 },
+};
+
+ 
+const SPC_STEM_LEAF = { daisy: 'oxeyeStem', chamomile: 'thread', cosmos: 'cosmos', sunflower: 'sunflower', zinnia: 'zinnia', cornflower: 'cornStem', poppy: 'poppy',
+  anemone: 'ruff', buttercup: 'buttercupUp', rose: 'rose', peony: 'peony', tulip: 'tulip', lily: 'lily', iris: 'iris', cherry: 'cherry', forgetmenot: 'myosotis', violet: 'violet',
+  bluebell: 'bluebell', foxglove: 'foxglove', lavender: 'lavender', clover: 'clover', queenannes: 'carrot', hydrangea: 'hydrangea' };
+
+
+/* ==== stepsFlora.js ==== */
+const FL_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 
 
 
@@ -17524,12 +17779,24 @@ function flDrawBloom(L, R, cx, cy, Rad, f){
   const open = st < 0.25 ? st/0.25 : 1, past = flClamp((st - 0.6)/0.35), bare = st > 0.96;
   const brown = flMix(cC, [70, 48, 30], 0.55);
 
-  if(f.stem && alpha > 0.35){ const sx0 = cx, sy0 = cy + Rad*0.25*sa, len = Rad*(2.2 + R()*1.8)*sa, bend = rnd(-0.4, 0.4)*Rad;
-    const sx1 = cx + bend*1.4 + Math.sin(f.turn)*len*0.3, sy1 = sy0 + len, droop = past*Rad*0.8;
-    for(const [ctx, col] of [[L.pic, flCss(cF, 0.8)], [L.mask, '#fff'], [L.thick, 'rgb(200,200,200)'], [L.height, 'rgb(90,90,90)'], [L.gloss, 'rgb(80,80,80)'], [L.face, 'rgb(190,190,190)']]){
-      ctx.strokeStyle = col; ctx.lineWidth = Rad*0.07; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(sx0, sy0 - droop*0.2); ctx.quadraticCurveTo(cx + bend, sy0 + len*0.5, sx1, sy1); ctx.stroke(); }
-    for(let k = 0, n = 1 + Math.floor(R()*3); k < n; k++){ const t = 0.35 + R()*0.5, x = sx0 + (sx1 - sx0)*t + bend*0.5*(1 - Math.abs(t - 0.5)*2), y = sy0 + len*t, side = R() < 0.5 ? -1 : 1;
-      flLeaf(L, x, y, Rad*rnd(0.7, 1.3), (side < 0 ? Math.PI : 0) + rnd(-0.6, -0.2)*side, cF, R, past); } }
+
+
+
+  if(f.stem && alpha > 0.35){ const sx0 = cx, sy0 = cy - Rad*0.04*sa, len = Rad*(2.2 + R()*1.8)*sa, bend = rnd(-0.4, 0.4)*Rad;
+    const sx1 = cx + bend*1.4 + Math.sin(f.turn)*len*0.3, sy1 = sy0 + len, qx = cx + bend, qy = sy0 + len*0.5, pts = [];
+    for(let i = 0; i <= 20; i++){ const t = i/20, u = 1 - t, x = u*u*sx0 + 2*u*t*qx + t*t*sx1, y = u*u*sy0 + 2*u*t*qy + t*t*sy1;
+      const dx = 2*u*(qx - sx0) + 2*t*(sx1 - qx), dy = 2*u*(qy - sy0) + 2*t*(sy1 - qy); pts.push({ x, y, a: Math.atan2(dy, dx), w: Rad*(0.055 + 0.03*t) }); }
+    const stemCol = flMix(cF, [150, 170, 90], 0.12);
+    spcBand(L, pts, stemCol, { h: 0.4, thick: 0.8, gloss: 0.22 });
+    if(f.key === 'rose') spcPrickles(L, R, pts, flMix(cF, [96, 70, 54], 0.6), Rad*0.07);
+    if(['poppy', 'sunflower', 'foxglove', 'zinnia', 'cornflower', 'forgetmenot'].includes(f.key)) spcHairs(L, R, pts, stemCol, Rad*0.05);
+
+    for(const [ctx, col] of [[L.pic, flCss(flMix(cF, [120, 150, 70], 0.15), 0.9)], [L.mask, '#fff'], [L.height, 'rgb(130,130,130)'], [L.thick, 'rgb(210,210,210)'], [L.face, 'rgb(200,200,200)']]){
+      ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(sx0, sy0 + Rad*0.05*sa, Rad*0.11, Rad*0.08, Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x), 0, Math.PI*2); ctx.fill(); }
+    const spec = SPC_LEAVES[SPC_STEM_LEAF[f.key]];
+    for(let k = 0, n = 1 + Math.floor(R()*3); k < n; k++){ const t = 0.35 + R()*0.5, p = pts[Math.round(t*20)], side = R() < 0.5 ? -1 : 1, a = (side < 0 ? Math.PI : 0) + rnd(-0.6, -0.2)*side;
+      if(spec) spcLeaf(L, R, p.x, p.y, a, Rad*rnd(0.8, 1.3), spec, { col: cF, stalk: stemCol, h: 0.46, roll: 0.6 + R()*0.4, under: false, droop: 0.25, bend: side*rnd(0.1, 0.4), age: past*0.6 });
+      else flLeaf(L, p.x, p.y, Rad*rnd(0.7, 1.3), a, cF, R, past); } }
 
   const petals = [];
   const addPetal = (theta, len, wid, cup, curl, colK, zBase = 0, rBase = 0, id = 0) => {
@@ -17870,7 +18137,7 @@ function genBloom(w, h, o){
       flVisitor(L, R, cx, cy, Math.min(cw, ch)*0.42*o.size*sz*2, R()*6.283, kind, [cc[0], cc[2], cc[1], cc[3]], o.light); continue; }
     if(o.part === 'leaf'){ flLeaf(L, cx - Math.min(cw, ch)*0.35, cy + Math.min(cw, ch)*0.1, Math.min(cw, ch)*0.7*o.size, -0.4 + (R() - 0.5)*0.8, cc[3], R, o.stage > 0.6 ? (o.stage - 0.6)/0.4 : 0); continue; }
     const f = { sp: S, view: flClamp(o.view + (many ? (R() - 0.5)*0.4 : 0)), stage: flClamp(o.stage + (many ? (R() - 0.5)*0.25 : 0)), spin: R()*6.283, turn: many ? (R() - 0.5)*0.6 : (o.turn || 0),
-      jitter: o.jitter, flat: o.flat > 0.5, light: o.light, albedo: !!o.albedo, cols: cc, stem: o.stem && o.part === 'whole' };
+      jitter: o.jitter, flat: o.flat > 0.5, light: o.light, albedo: !!o.albedo, cols: cc, stem: o.stem && o.part === 'whole', key };
     if(o.part === 'petal'){
 
       const S1 = { ...S, type: 'cup', n: [1, 1], disc: ['none', 0], cup: 8 + R()*30, spots: 0 };
@@ -17922,210 +18189,6 @@ const FLORA_STEPS = {
 
 /* ==== stepsSpecimen.js ==== */
 const SPC_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
-const SPC_TAU = Math.PI*2, SPC_UP = -Math.PI/2;
-const spcGrey = v => { const g = Math.round(flClamp(v)*255); return `rgb(${g},${g},${g})`; };
-const spcAngTo = (a, b) => { let d = b - a; while(d > Math.PI) d -= SPC_TAU; while(d < -Math.PI) d += SPC_TAU; return d; };
-
-
-
-
-const SPC_SHAPES = {
-  linear:      [[0, 0.55], [0.06, 0.95], [0.5, 1], [0.82, 0.85], [0.95, 0.42], [1, 0]],
-  strap:       [[0, 0.72], [0.12, 0.96], [0.35, 1], [0.72, 0.82], [0.93, 0.38], [1, 0]],
-  sword:       [[0, 0.8], [0.15, 0.97], [0.42, 1], [0.78, 0.72], [0.95, 0.22], [1, 0]],
-  lanceolate:  [[0, 0.08], [0.1, 0.62], [0.3, 1], [0.56, 0.84], [0.8, 0.44], [1, 0]],
-  oblanceolate:[[0, 0.05], [0.28, 0.34], [0.6, 0.84], [0.78, 1], [0.92, 0.68], [1, 0]],
-  elliptic:    [[0, 0.05], [0.12, 0.62], [0.48, 1], [0.84, 0.62], [1, 0]],
-  ovate:       [[0, 0.28], [0.07, 0.76], [0.3, 1], [0.58, 0.84], [0.84, 0.42], [1, 0]],
-  obovate:     [[0, 0.05], [0.25, 0.45], [0.62, 1], [0.86, 0.86], [0.97, 0.42], [1, 0]],
-  spatulate:   [[0, 0.07], [0.4, 0.17], [0.62, 0.68], [0.8, 1], [0.94, 0.76], [1, 0]],
-  oblong:      [[0, 0.32], [0.06, 0.86], [0.2, 1], [0.74, 0.95], [0.92, 0.58], [1, 0]],
-  cordate:     [[0, 0], [-0.1, 0.36], [-0.07, 0.8], [0.12, 1], [0.42, 0.86], [0.72, 0.46], [1, 0]],
-  reniform:    [[0, 0], [-0.15, 0.42], [-0.1, 0.88], [0.15, 1], [0.5, 0.94], [0.8, 0.56], [1, 0]],
-  obcordate:   [[0, 0.05], [0.3, 0.52], [0.68, 1], [0.94, 0.8], [1, 0.32], [0.96, 0]],
-  wedge:       [[0, 0.06], [0.45, 0.5], [0.85, 1], [0.98, 0.7], [1, 0]],
-  scale:       [[0, 0.6], [0.3, 1], [0.7, 0.8], [1, 0]],
-};
-function spcSpline(cp, per = 10){
-  const out = [], P = [cp[0], ...cp, cp[cp.length - 1]];
-  for(let i = 1; i < P.length - 2; i++) for(let k = 0; k < per; k++){ const u = k/per, u2 = u*u, u3 = u2*u;
-    const f = j => 0.5*(2*P[i][j] + (-P[i - 1][j] + P[i + 1][j])*u + (2*P[i - 1][j] - 5*P[i][j] + 4*P[i + 1][j] - P[i + 2][j])*u2 + (-P[i - 1][j] + 3*P[i][j] - 3*P[i + 1][j] + P[i + 2][j])*u3);
-    out.push([f(0), Math.max(0, f(1))]); }
-  out.push(cp[cp.length - 1]);
-  return out;
-}
-const SPC_SPLINES = Object.fromEntries(Object.entries(SPC_SHAPES).map(([k, v]) => [k, spcSpline(v)]));
- 
-function spcTooth(kind, u){
-  const f = u - Math.floor(u);
-  switch(kind){
-    case 'serrate': return f < 0.78 ? f/0.78 : (1 - f)/0.22;
-    case 'double': { const g = (u*3) - Math.floor(u*3); return 0.75*(f < 0.78 ? f/0.78 : (1 - f)/0.22) + 0.35*(g < 0.7 ? g/0.7 : (1 - g)/0.3); }
-    case 'dentate': return 1 - Math.abs(f*2 - 1);
-    case 'crenate': return Math.sqrt(Math.max(0, Math.sin(Math.PI*f)));
-    case 'incised': return Math.pow(1 - Math.abs(f*2 - 1), 2.2);
-    default: return 0;
-  }
-}
-
-
-
-
-function spcPath(ctx, pts){ ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); }
-function spcFillAll(L, pts, m){
-  for(const [k, v] of [['mask', '#fff'], ['height', m.h != null ? spcGrey(m.h) : null], ['thick', m.thick != null ? spcGrey(m.thick) : null], ['gloss', m.gloss != null ? spcGrey(m.gloss) : null], ['face', spcGrey(m.face ?? 0.78)], ['cen', m.cen ? '#fff' : null]]){
-    if(!v) continue; spcPath(L[k], pts); L[k].fillStyle = v; L[k].fill(); }
-}
- 
-function spcRibbon(pts, k = 1){
-  const l = [], r = [];
-  for(const p of pts){ const nx = -Math.sin(p.a), ny = Math.cos(p.a), w = p.w*k/2; l.push([p.x + nx*w, p.y + ny*w]); r.push([p.x - nx*w, p.y - ny*w]); }
-  const e = pts[pts.length - 1], tip = [e.x + Math.cos(e.a)*e.w*k*0.3, e.y + Math.sin(e.a)*e.w*k*0.3];
-  return [...l, tip, ...r.reverse()];
-}
- 
-function spcBand(L, pts, col, m = {}){
-  const poly = spcRibbon(pts);
-  spcPath(L.pic, poly); L.pic.fillStyle = flCss(col, 0.86); L.pic.fill();
-  const inner = spcRibbon(pts, 0.5);
-  spcPath(L.pic, inner); L.pic.fillStyle = flCss(col, m.wood ? 1.02 : 1.06, 0.55); L.pic.fill();
-  spcFillAll(L, poly, { h: m.h ?? 0.4, thick: m.thick ?? 0.8, gloss: m.gloss ?? 0.22, face: 0.76 });
-  spcPath(L.height, inner); L.height.fillStyle = spcGrey((m.h ?? 0.4) + 0.08); L.height.fill();
-}
- 
-function spcHairs(L, R, pts, col, len, every = 1){
-  L.pic.strokeStyle = flCss(col, 1.08, 0.75); L.mask.strokeStyle = '#fff'; L.height.strokeStyle = spcGrey(0.38);
-  for(let i = 1; i < pts.length - 1; i += every) for(const sd of [-1, 1]){ if(R() < 0.35) continue;
-    const p = pts[i], nx = -Math.sin(p.a)*sd, ny = Math.cos(p.a)*sd, x = p.x + nx*p.w/2, y = p.y + ny*p.w/2, l = len*(0.6 + R()*0.7), fw = 0.35 + R()*0.6;
-    const ex = x + (nx + Math.cos(p.a)*fw)*l, ey = y + (ny + Math.sin(p.a)*fw)*l;
-    for(const c of [L.pic, L.mask, L.height]){ c.lineWidth = (p.w*0.07); c.beginPath(); c.moveTo(x, y); c.lineTo(ex, ey); c.stroke(); } }
-}
- 
-function spcPrickles(L, R, pts, col, size){
-  for(let i = 2; i < pts.length - 2; i++){ if(R() > 0.32) continue;
-    const p = pts[i], sd = R() < 0.5 ? -1 : 1, nx = -Math.sin(p.a)*sd, ny = Math.cos(p.a)*sd, bx = p.x + nx*p.w*0.45, by = p.y + ny*p.w*0.45, s = size*(0.7 + R()*0.6);
-    const back = [-Math.cos(p.a), -Math.sin(p.a)];
-    const tri = [[bx + back[0]*s*0.5, by + back[1]*s*0.5], [bx - back[0]*s*0.5, by - back[1]*s*0.5], [bx + nx*s*0.95 + back[0]*s*0.75, by + ny*s*0.95 + back[1]*s*0.75]];
-    spcPath(L.pic, tri); L.pic.fillStyle = flCss(flMix(col, [150, 60, 50], 0.35), 0.9); L.pic.fill();
-    spcFillAll(L, tri, { h: 0.5, thick: 0.9, gloss: 0.35 }); }
-}
-
-
-
-
-function spcBlade(L, R, x, y, a, len, sp, c){
-
-  if(len < 7){ const W = (sp.w || 0.25)*len, d = [Math.cos(a), Math.sin(a)], n = [-d[1], d[0]], b = (c.bend || 0)*len*0.2, pts = [];
-    for(let i = 0; i <= 6; i++){ const t = i/6, w = W*Math.sin(Math.PI*Math.min(1, t*1.05)); pts.push([x + d[0]*t*len + n[0]*(w + b*t*t), y + d[1]*t*len + n[1]*(w + b*t*t)]); }
-    for(let i = 6; i >= 0; i--){ const t = i/6, w = W*Math.sin(Math.PI*Math.min(1, t*1.05)); pts.push([x + d[0]*t*len - n[0]*(w - b*t*t), y + d[1]*t*len - n[1]*(w - b*t*t)]); }
-    spcPath(L.pic, pts); L.pic.fillStyle = flCss(c.under ? flMix(c.col, [200, 210, 190], 0.28) : c.col, 0.9 + R()*0.14); L.pic.fill(); spcFillAll(L, pts, { h: c.h ?? 0.46, thick: 0.42, gloss: sp.gloss ?? 0.22 }); return; }
-  const N = 44, sh = SPC_SPLINES[sp.shape] || SPC_SPLINES.lanceolate, W = (sp.w || 0.25)*len;
-  const bend = c.bend ?? (R() - 0.5)*0.6, droop = c.droop ?? 0, roll = c.roll ?? 1, asym = 1 + (R() - 0.5)*0.2;
-
-  const mid = []; { let X = x, Y = y, A = a; for(let i = 0; i <= N; i++){ const t = i/N; mid.push([X, Y, A]);
-    A += bend/N + spcAngTo(A, Math.PI/2)*droop*t*2.2/N; X += Math.cos(A)*len/N; Y += Math.sin(A)*len/N; } }
-  const at = t => { if(t <= 0){ const [X, Y, A] = mid[0]; return [X + Math.cos(A)*t*len, Y + Math.sin(A)*t*len, A]; }
-    const f = Math.min(N - 1e-6, t*N), i = Math.floor(f), u = f - i, p = mid[i], q = mid[i + 1]; return [p[0] + (q[0] - p[0])*u, p[1] + (q[1] - p[1])*u, p[2] + (q[2] - p[2])*u]; };
-  const teeth = sp.teeth || 0, amp = sp.tooth ?? (sp.margin === 'incised' ? 0.22 : sp.margin === 'crenate' ? 0.06 : 0.07), wave = sp.wave || 0, wph = R()*6;
-  const half = side => sh.map(([t, w0]) => {
-    let w = w0;
-    if(teeth && t > 0.04 && t < 0.97 && w0 > 0.08) w += amp*spcTooth(sp.margin, t*teeth + (side > 0 ? 0 : 0.5))*Math.min(1, w0*3);
-    if(sp.tip === 'acuminate' && t > 0.78) w *= Math.pow(Math.max(0, 1 - (t - 0.78)/0.22), 0.8)*0.85 + 0.15*(1 - (t - 0.78)/0.22);
-    if(wave) w *= 1 + wave*Math.sin(t*14 + wph + side);
-    const [X, Y, A] = at(t), nx = -Math.sin(A), ny = Math.cos(A), k = W*w*(side > 0 ? asym : 1/asym)*(side > 0 ? 1 : roll);
-    return [X + nx*k*side, Y + ny*k*side, t]; });
-  const right = half(1), left = half(-1), outline = [...right.map(p => [p[0], p[1]]), ...left.reverse().map(p => [p[0], p[1]])];
-
-  const v = 0.92 + R()*0.14, under = !!c.under, base = under ? flMix(flMix(c.col, [200, 210, 190], 0.28), [128, 128, 128], 0.12) : c.col;
-  const [bx, by] = at(0), [tx, ty] = at(1), g = L.pic.createLinearGradient(bx, by, tx, ty);
-  g.addColorStop(0, flCss(base, v*0.84)); g.addColorStop(0.5, flCss(base, v)); g.addColorStop(1, flCss(base, v*1.04));
-  spcPath(L.pic, outline); L.pic.fillStyle = g; L.pic.fill();
-  spcFillAll(L, outline, { h: c.h ?? 0.46, thick: 0.42, gloss: (sp.gloss ?? 0.22)*(under ? 0.5 : 1), face: 0.8 });
-  if(len < 4) return;
-  L.pic.save(); spcPath(L.pic, outline); L.pic.clip(); L.height.save(); spcPath(L.height, outline); L.height.clip(); L.thick.save(); spcPath(L.thick, outline); L.thick.clip();
-
-  L.pic.strokeStyle = flCss(base, 0.78, 0.22); L.pic.lineWidth = W*0.28; spcPath(L.pic, outline); L.pic.stroke();
-  if(c.age > 0.05){ const r = len*(0.25 + c.age*0.45), gg = L.pic.createRadialGradient(tx, ty, 0, tx, ty, r); gg.addColorStop(0, flCss(flMix(base, [128, 92, 48], 0.75), 0.9, 0.85*c.age)); gg.addColorStop(1, 'rgba(0,0,0,0)'); L.pic.fillStyle = gg; L.pic.fillRect(tx - r, ty - r, r*2, r*2); }
-
-  const vc = flCss(base, under ? 1.18 : 1.12, under ? 0.6 : 0.42), vw = Math.max(0.35, W*0.05);
-  const line = (pts, w, ctxs) => { for(const [cx, st] of ctxs){ cx.strokeStyle = st; cx.lineWidth = w; cx.beginPath(); pts.forEach((p, i) => i ? cx.lineTo(p[0], p[1]) : cx.moveTo(p[0], p[1])); cx.stroke(); } };
-  const veinCtx = w => [[L.pic, vc], [L.height, under ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.14)'], [L.thick, 'rgba(255,255,255,0.18)']];
-  const ven = sp.vein || 'pinnate';
-  if(ven === 'parallel'){
-    for(let k = -3; k <= 3; k++){ const pts = []; for(let i = 0; i <= 24; i++){ const t = i/24, j = Math.min(sh.length - 1, Math.round(t*(sh.length - 1))), w = sh[j][1]*W*(k/4), [X, Y, A] = at(t); pts.push([X - Math.sin(A)*w, Y + Math.cos(A)*w]); }
-      line(pts, vw*(k ? 0.45 : 0.8), veinCtx()); }
-  } else {
-    line(Array.from({ length: 21 }, (_, i) => at(i/20*0.96)), vw, veinCtx());
-    if(ven === 'palmate' || ven === 'tripli'){ for(const sd of [-1, 1]) for(const spread of ven === 'palmate' ? [0.55, 1.05] : [0.45]){ const pts = []; for(let i = 0; i <= 12; i++){ const t = i/12, [X, Y, A] = at(t*0.6 + 0.04); pts.push([X - Math.sin(A)*sd*W*spread*Math.sin(t*1.4), Y + Math.cos(A)*sd*W*spread*Math.sin(t*1.4)]); } line(pts, vw*0.6, veinCtx()); } }
-    if(ven !== 'none'){ const nv = sp.veins || Math.max(4, Math.round(len/W*2.4));
-      for(let k = 1; k < nv; k++){ const t0 = k/nv*0.9 + 0.03; for(const sd of [-1, 1]){ const pts = [], j = Math.min(sh.length - 1, Math.round(Math.max(0, t0)*(sh.length - 1))), ww = Math.max(0.1, sh[j][1])*W;
-        for(let i = 0; i <= 8; i++){ const u = i/8, [X, Y, A] = at(Math.min(1, t0 + u*0.22)), off = ww*u*0.86; pts.push([X - Math.sin(A)*off*sd, Y + Math.cos(A)*off*sd]); }
-        line(pts, vw*0.45, veinCtx()); } } }
-  }
-
-  L.height.strokeStyle = 'rgba(0,0,0,0.16)'; L.height.lineWidth = W*0.45; spcPath(L.height, outline); L.height.stroke();
-  L.pic.restore(); L.height.restore(); L.thick.restore();
-}
-
-
-
-function spcLeaf(L, R, x, y, a, len, sp, c){
-  const stalk = (l, w) => { const pts = []; let X = x, Y = y, A = a; const b = (R() - 0.5)*0.3;
-    for(let i = 0; i <= 10; i++){ pts.push({ x: X, y: Y, a: A, w: w*(1 - i/10*0.45) }); A += b/10 + spcAngTo(A, Math.PI/2)*(c.droop || 0)*0.06; X += Math.cos(A)*l/10; Y += Math.sin(A)*l/10; }
-    spcBand(L, pts, flMix(c.col, c.stalk || c.col, 0.5), { h: (c.h ?? 0.46) - 0.04, thick: 0.6 }); const e = pts[pts.length - 1]; return [e.x, e.y, e.a]; };
-  const pet = sp.pet || 0, kind = sp.kind || 'simple';
-  let [X, Y, A] = pet > 0 ? stalk(len*pet, Math.max(0.6, len*0.035)) : [x, y, a];
-  const rest = len*(1 - pet);
-
-  if(sp.stip){ for(const sd of [-1, 1]) spcBlade(L, R, x, y, a + sd*0.45, len*sp.stip, { shape: 'lanceolate', w: 0.32, vein: 'none' }, { ...c, bend: sd*0.3, under: false, age: 0 }); }
-  if(kind === 'simple'){ spcBlade(L, R, X, Y, A, rest, sp, c); return; }
-  const sub = { ...sp, kind: sp.sub || 'simple', sub: 'simple', pet: sp.subPet || 0, stip: 0, chevron: false, depth: 1, pairs: sp.subPairs || 2 };
-  if(kind === 'pinnatifid' || kind === 'pinnate'){
-
-
-    const n = sp.pairs || 4, wing = kind === 'pinnatifid' ? (sp.wing || 0.1) : 0;
-    const rach = []; { let x2 = X, y2 = Y, A2 = A; const b = c.bend ?? (R() - 0.5)*0.4; for(let i = 0; i <= 24; i++){ rach.push([x2, y2, A2]); A2 += b/24 + spcAngTo(A2, Math.PI/2)*(c.droop || 0)*0.04; x2 += Math.cos(A2)*rest/24; y2 += Math.sin(A2)*rest/24; } }
-    if(wing) spcBlade(L, R, X, Y, A, rest, { shape: 'linear', w: wing, vein: 'none', margin: sp.margin, teeth: sp.teeth ? 8 : 0 }, { ...c, bend: c.bend ?? 0 });
-    else { const pts = rach.map(([px, py, pa], i) => ({ x: px, y: py, a: pa, w: Math.max(0.5, rest*0.02*(1 - i/30)) })); spcBand(L, pts, c.col, { h: c.h ?? 0.46 }); }
-    for(let k = 0; k < n; k++) for(const sd of [-1, 1]){
-      const t = (sp.from ?? 0.12) + (k + (sd > 0 ? 0 : 0.35*(kind === 'pinnatifid' ? 1 : 0)))/n*(0.86 - (sp.from ?? 0.12)), [px, py, pa] = rach[Math.min(24, Math.round(t*24))];
-      const sz = (sp.lf || 0.38)*rest*(kind === 'pinnatifid' ? (0.75 + 0.35*Math.sin(Math.PI*Math.min(1, t*1.2))) : (0.85 + 0.25*t))*(0.88 + R()*0.24);
-      spcLeaf(L, R, px, py, pa + sd*(sp.ang ?? 0.95)*(0.85 + R()*0.3), sz, sub, { ...c, bend: sd*(0.15 + R()*0.25), droop: 0, roll: c.roll });
-    }
-    const [ex, ey, ea] = rach[24]; spcLeaf(L, R, ex, ey, ea, (sp.lf || 0.38)*rest*(kind === 'pinnate' ? 1.15 : 0.9), sub, { ...c, bend: (R() - 0.5)*0.3, droop: 0 });
-    return;
-  }
-  if(kind === 'dissect'){
-
-    const order = sp.order || 2, thread = sp.seg !== 'lobe';
-    const branch = (bx, by, ba, l, depth) => {
-      const pts = []; let x2 = bx, y2 = by, A2 = ba; const b = (R() - 0.5)*0.5;
-      for(let i = 0; i <= 12; i++){ pts.push({ x: x2, y: y2, a: A2, w: Math.max(0.35, l*(depth === order ? 0.022 : thread ? 0.05 : 0.03))*(1 - i/16) }); A2 += b/12 + spcAngTo(A2, Math.PI/2)*(c.droop || 0)*0.03; x2 += Math.cos(A2)*l/12; y2 += Math.sin(A2)*l/12; }
-      if(depth === 0){ if(thread) spcBand(L, pts, c.col, { h: c.h ?? 0.46, thick: 0.4, gloss: 0.2 }); else spcBlade(L, R, bx, by, ba, l, { shape: 'lanceolate', w: 0.28, vein: 'none' }, { ...c, bend: b }); return; }
-      spcBand(L, pts, c.col, { h: c.h ?? 0.46, thick: 0.5 });
-      const n = sp.pairs || (depth === order ? 6 : 4);
-      for(let k = 0; k < n; k++) for(const sd of [-1, 1]){ const t = 0.12 + (k + (sd > 0 ? 0 : 0.5))/n*0.8, p = pts[Math.min(12, Math.round(t*12))];
-        branch(p.x, p.y, p.a + sd*(0.7 + R()*0.35), l*(depth === order ? 0.42 : 0.5)*(1.05 - t*0.6)*(0.85 + R()*0.3), depth - 1); }
-      const e = pts[12]; branch(e.x, e.y, e.a + (R() - 0.5)*0.3, l*0.3, depth - 1);
-    };
-    branch(X, Y, A, rest, order); return;
-  }
-  if(kind === 'ternate' || kind === 'palmate' || kind === 'trifoliate'){
-
-    const n = kind === 'palmate' ? (sp.lobes || 5) : 3, spread = kind === 'palmate' ? 1.25 : kind === 'trifoliate' ? 1.05 : 0.8;
-    for(let k = 0; k < n; k++){ const u = n === 1 ? 0 : k/(n - 1) - 0.5, ang = A + u*2*spread*(0.9 + R()*0.2), l = rest*(sp.lf || 0.6)*(1 - Math.abs(u)*(kind === 'palmate' ? 0.45 : 0.15))*(0.9 + R()*0.2);
-      if(kind === 'ternate' && (sp.depth || 1) > 1){ const sl = l*0.38, ex = X + Math.cos(ang)*sl, ey = Y + Math.sin(ang)*sl;
-        spcBand(L, [{ x: X, y: Y, a: ang, w: Math.max(0.5, l*0.03) }, { x: ex, y: ey, a: ang, w: Math.max(0.4, l*0.02) }], flMix(c.col, c.stalk || c.col, 0.5), { h: c.h ?? 0.46 });
-        spcLeaf(L, R, ex, ey, ang, l*0.7, { ...sp, depth: sp.depth - 1, pet: 0 }, { ...c, bend: u*0.6 }); }
-      else spcLeaf(L, R, X, Y, ang, l, sub, { ...c, bend: u*0.5 + (R() - 0.5)*0.2 });
-
-      if(kind === 'trifoliate' && sp.chevron){ const cx = X + Math.cos(ang)*l*0.55, cy = Y + Math.sin(ang)*l*0.55, w = l*0.2, pa = ang + Math.PI;
-        L.pic.strokeStyle = flCss(flMix(c.col, [235, 240, 220], 0.55), 1, 0.7); L.pic.lineWidth = (l*0.05); L.pic.beginPath();
-        L.pic.moveTo(cx + Math.cos(pa + 0.9)*w, cy + Math.sin(pa + 0.9)*w); L.pic.lineTo(cx, cy); L.pic.lineTo(cx + Math.cos(pa - 0.9)*w, cy + Math.sin(pa - 0.9)*w); L.pic.stroke(); } }
-    return;
-  }
-}
-
 
 
 
@@ -18245,41 +18308,6 @@ function spcRoots(L, R, x, y, a, U, kind, c){
   if(kind === 'tap'){ strand(x, y, Math.PI/2 + (R() - 0.5)*0.3, U*0.18, U*0.016, 1); return; }
   for(let k = 0; k < 11; k++) strand(x + (R() - 0.5)*U*0.01, y, Math.PI/2 + (k/10 - 0.5)*1.6, U*(0.05 + R()*0.07), Math.max(0.5, U*0.003), 1);
 }
-
-
-
-
-const SPC_LEAVES = {
-  oxeyeBasal: { kind: 'simple', shape: 'spatulate', w: 0.24, pet: 0.35, margin: 'crenate', teeth: 7, vein: 'pinnate' },
-  oxeyeStem:  { kind: 'simple', shape: 'oblong', w: 0.17, margin: 'dentate', teeth: 9, tooth: 0.12, vein: 'pinnate' },
-  bellis:     { kind: 'simple', shape: 'spatulate', w: 0.3, pet: 0.2, margin: 'crenate', teeth: 5, vein: 'pinnate' },
-  thread:     { kind: 'dissect', order: 2, seg: 'thread', pairs: 4 },
-  cosmos:     { kind: 'dissect', order: 2, seg: 'thread', pairs: 5 },
-  carrot:     { kind: 'dissect', order: 3, seg: 'lobe', pairs: 3, pet: 0.18 },
-  sunflower:  { kind: 'simple', shape: 'cordate', w: 0.52, pet: 0.38, margin: 'serrate', teeth: 14, vein: 'tripli', gloss: 0.15 },
-  zinnia:     { kind: 'simple', shape: 'ovate', w: 0.34, vein: 'tripli', gloss: 0.12, tip: 'acuminate' },
-  cornLower:  { kind: 'pinnatifid', pairs: 2, wing: 0.07, lf: 0.3, ang: 0.8, sub: 'simple', shape: 'linear', w: 0.14 },
-  cornStem:   { kind: 'simple', shape: 'linear', w: 0.07, vein: 'pinnate', veins: 2 },
-  poppy:      { kind: 'pinnatifid', pairs: 4, wing: 0.07, lf: 0.32, ang: 0.9, pet: 0.12, sub: 'simple', shape: 'lanceolate', w: 0.3, margin: 'dentate', teeth: 3, tooth: 0.25 },
-  anemone:    { kind: 'ternate', depth: 2, pet: 0.45, lf: 0.7, sub: 'pinnatifid', pairs: 2, wing: 0.1, shape: 'lanceolate', w: 0.32, margin: 'incised', teeth: 2 },
-  ruff:       { kind: 'pinnatifid', pairs: 2, wing: 0.06, lf: 0.45, ang: 0.7, sub: 'simple', shape: 'linear', w: 0.12 },
-  buttercup:  { kind: 'palmate', lobes: 5, pet: 0.6, lf: 0.7, sub: 'pinnatifid', subPairs: 1, wing: 0.1, ang: 0.5, shape: 'wedge', w: 0.4, margin: 'incised', teeth: 2, tooth: 0.35, vein: 'pinnate', veins: 2 },
-  buttercupUp:{ kind: 'palmate', lobes: 3, lf: 0.9, sub: 'simple', shape: 'linear', w: 0.1, vein: 'none' },
-  rose:       { kind: 'pinnate', pairs: 2, lf: 0.36, ang: 1.05, pet: 0.2, stip: 0.14, sub: 'simple', shape: 'ovate', w: 0.4, margin: 'serrate', teeth: 10, tooth: 0.07, gloss: 0.35, vein: 'pinnate' },
-  peony:      { kind: 'ternate', depth: 2, pet: 0.3, lf: 0.85, sub: 'simple', shape: 'lanceolate', w: 0.24, vein: 'pinnate', gloss: 0.4 },
-  tulip:      { kind: 'simple', shape: 'strap', w: 0.13, vein: 'parallel', wave: 0.04, gloss: 0.2 },
-  lily:       { kind: 'simple', shape: 'lanceolate', w: 0.15, vein: 'parallel', gloss: 0.25 },
-  iris:       { kind: 'simple', shape: 'sword', w: 0.075, vein: 'parallel', gloss: 0.18 },
-  cherry:     { kind: 'simple', shape: 'ovate', w: 0.36, pet: 0.18, margin: 'double', teeth: 16, tooth: 0.05, tip: 'acuminate', vein: 'pinnate', veins: 9, gloss: 0.3 },
-  myosotis:   { kind: 'simple', shape: 'oblong', w: 0.28, vein: 'pinnate', veins: 3 },
-  violet:     { kind: 'simple', shape: 'cordate', w: 0.72, pet: 0.58, margin: 'crenate', teeth: 11, tooth: 0.05, vein: 'palmate', gloss: 0.18 },
-  bluebell:   { kind: 'simple', shape: 'linear', w: 0.045, vein: 'parallel', gloss: 0.35 },
-  foxglove:   { kind: 'simple', shape: 'ovate', w: 0.34, pet: 0.18, margin: 'crenate', teeth: 12, tooth: 0.04, vein: 'pinnate', veins: 8 },
-  lavender:   { kind: 'simple', shape: 'linear', w: 0.1, vein: 'none' },
-  clover:     { kind: 'trifoliate', pet: 0.5, lf: 0.55, stip: 0.12, chevron: true, sub: 'simple', shape: 'elliptic', w: 0.48, vein: 'pinnate', veins: 6 },
-  cloverWhite:{ kind: 'trifoliate', pet: 0.6, lf: 0.5, chevron: true, sub: 'simple', shape: 'obcordate', w: 0.62, margin: 'serrate', teeth: 10, tooth: 0.03, vein: 'pinnate', veins: 6 },
-  hydrangea:  { kind: 'simple', shape: 'ovate', w: 0.5, pet: 0.12, margin: 'serrate', teeth: 15, tooth: 0.06, tip: 'acuminate', vein: 'pinnate', veins: 8, gloss: 0.4 },
-};
 
 
 
@@ -24140,7 +24168,7 @@ const TEXTURE_CHAINS = {
       [13, 1, 147, 1], [10, 1, 147, 2], [147, 1, 144, 3], [13, 1, 144, 4], [131, 3, 148, 1], [13, 1, 149, 1], [12, 1, 149, 2], [144, 1, 150, 1],
       [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 152, 1]] },
 
-  windhills: { label: 'Windswept Hills', div: 2, teach: 'Rolling green hills under a big sky, the grass blowing, in the cel-shaded look of the great open-air adventures (docs/prior-art/cel-shaded.md §8). The hills are a Gradient raised by three broad Perlins and cut by Thresholds, band behind band (Hills, Horizon); the farthest wears the Far Hills Hue, hazed toward the sky (Haze). Grass Blades draws the nearer land blade by blade, in two flat tones, the Grass Hue at the root and the Tip Hue above, by clumps that share their height, lean and hue (Grass); one wind leans them all (Wind), and a slow Perlin is its gusts (Gusts): where one passes, the blades bow over and their tops catch the light, the pale bands that run across a field in wind (the Sheen Hue). The clouds are a Perlin cut by a Threshold in the upper sky (Clouds). The Light Engine lights the hills’ rounded forms and the clouds’ domes from the dial, and a Posterize of its light (Toon Bands) lays the light in a few flat bands. Try: Wind high and Gusts large, the dial low behind the hills.',
+  windhills: { label: 'Windswept Hills', div: 2, teach: 'Rolling green hills under a big sky, the grass blowing, in the cel-shaded look of the great open-air adventures (docs/prior-art/cel-shaded.md §8). Far off, a range of mountains: a Gradient raised by two Curves (a noise and its finer peaks), so its line runs across the page with no island in the sky, in the Far Hills Hue paled toward the sky, as a gouache painter lightens and cools what is distant. Nearer, the hills are a Gradient raised by three broad Perlins and cut by Thresholds, band behind band (Hills, Horizon); the farthest wears the Far Hills Hue, hazed toward the sky (Haze). Round trees stand on the middle hills (a Scatter of clumped dots, a deeper green, lit as domes). Grass Blades draws the nearer land blade by blade, in two flat tones, the Grass Hue at the root and the Tip Hue above, by clumps that share their height, lean and hue (Grass); one wind leans them all (Wind), and a slow Perlin is its gusts (Gusts): where one passes, the blades bow over and their tops catch the light, the pale bands that run across a field in wind (the Sheen Hue). Streamers draws the wind itself: white trails curling at their ends, the cel-shaded games’ way of showing wind (Wind sets how many). The clouds are a Perlin cut by a Threshold in the upper sky (Clouds). The Light Engine lights the hills’ rounded forms and the clouds’ domes from the dial, and a Posterize of its light (Toon Bands) lays the light in a few flat bands. Try: Wind high and Gusts large, the dial low behind the hills.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 150],
@@ -24200,18 +24228,32 @@ const TEXTURE_CHAINS = {
       ['math', { op: 'multiply' }, 1360, 370],
       ['blend', { mode: 'multiply', opacity: 40 }, 1360, 150],
       ['perlin', { scale: 22, details: 2, contrast: 55, variation: 13 }, 260, 700],
-      ['levels', { lo: 30, hi: 80, gamma: 50 }, 2240, 260]],
+      ['levels', { lo: 30, hi: 80, gamma: 50 }, 2240, 260],
+      ['curve', { shape: 'noise', count: 7, low: 0, high: 100, variation: 21 }, 260, 810],
+      ['mix', { t: 22, '~t': '12,34' }, 480, 810],
+      ['threshold', { at: 40, '~at': '32,52', soft: 0 }, 700, 810],
+      ['blend', { mode: 'normal', opacity: 100 }, 1360, 480],
+      ['blend', { mode: 'normal', opacity: 60 }, 1580, 480],
+      ['math', { op: 'subtract' }, 920, 810],
+      ['scatter', { shape: 'dot', count: 14, size: 34, vary: 50, turn: 0, clump: 65, fade: 0, per: 'per area' }, 1140, 810],
+      ['blend', { mode: 'multiply', opacity: 100 }, 1800, 480],
+      ['math', { op: 'max' }, 1800, 260],
+      ['streamers', { shape: 0, count: 4, '~count': '0,9', strands: 2, length: 55, curl: 55, width: 35, twist: 30, depth: 50, horizon: 45, '~horizon': '34,58' }, 2680, 260],
+      ['blend', { mode: 'normal', opacity: 85 }, 3120, 260],
+      ['curve', { shape: 'noise', count: 22, low: 0, high: 30, variation: 22 }, 260, 920],
+      ['number', { value: 74 }, 2460, 370],
+      ['math', { op: 'add' }, 480, 920]],
     wires: [[16, 1, 20, 1], [17, 1, 20, 2], [16, 1, 21, 1], [18, 1, 21, 2], [16, 1, 22, 1], [19, 1, 22, 2], [1, 1, 20, 't'], [1, 1, 21, 't'], [1, 1, 22, 't'],
       [20, 1, 23, 1], [21, 1, 24, 1], [22, 1, 25, 1], [2, 1, 23, 'at'], [2, 1, 24, 'at'], [2, 1, 25, 'at'],
       [5, 1, 26, 'scale'], [26, 1, 27, 1], [27, 1, 28, 1], [4, 1, 28, 'outHi'],
       [24, 1, 29, 1], [28, 1, 29, 2], [12, 1, 29, 3], [13, 1, 29, 4], [14, 1, 29, 5], [3, 1, 29, 'height'], [2, 1, 29, 'horizon'], [4, 1, 29, 'lean'], [4, 1, 29, 'bend'],
       [16, 1, 30, 1], [10, 1, 31, 1], [15, 1, 31, 2], [30, 1, 31, 3],
       [32, 1, 33, 1], [6, 1, 33, 'at'], [16, 1, 34, 1], [33, 1, 35, 1], [34, 1, 35, 2], [35, 1, 36, 1], [36, 1, 37, 1],
-      [31, 1, 38, 1], [15, 1, 38, 2], [37, 1, 38, 3], [57, 1, 39, 1], [11, 1, 39, 2], [23, 1, 39, 3], [39, 1, 40, 1], [10, 1, 40, 2], [23, 1, 40, 3], [8, 1, 40, 'opacity'],
+      [31, 1, 38, 1], [15, 1, 38, 2], [37, 1, 38, 3], [57, 1, 63, 1], [11, 1, 63, 2], [62, 1, 63, 3], [63, 1, 64, 1], [10, 1, 64, 2], [62, 1, 64, 3], [64, 1, 39, 1], [16, 1, 61, 1], [73, 1, 61, 2], [60, 1, 73, 1], [71, 1, 73, 2], [1, 1, 61, 't'], [61, 1, 62, 1], [2, 1, 62, 'at'], [11, 1, 39, 2], [23, 1, 39, 3], [39, 1, 40, 1], [10, 1, 40, 2], [23, 1, 40, 3], [8, 1, 40, 'opacity'],
       [40, 1, 41, 1], [29, 1, 41, 2], [29, 2, 41, 3],
       [24, 1, 42, 1], [37, 1, 43, 1], [54, 1, 43, 2], [43, 1, 55, 1], [37, 1, 56, 1], [55, 1, 56, 2], [38, 1, 57, 1], [10, 1, 57, 2], [56, 1, 57, 3], [42, 1, 44, 1], [58, 1, 44, 2], [37, 1, 45, 1], [44, 1, 46, 1], [45, 1, 46, 2], [46, 1, 47, 1], [29, 3, 47, 2],
-      [41, 1, 48, 1], [47, 1, 48, 2], [9, 1, 48, 7], [48, 2, 59, 1], [59, 1, 49, 1], [7, 1, 49, 'steps'], [49, 1, 50, 1],
-      [41, 1, 51, 1], [50, 1, 51, 2], [24, 1, 51, 3], [51, 1, 52, 1], [14, 1, 52, 2], [29, 4, 52, 3], [52, 1, 53, 1]] },
+      [24, 1, 65, 1], [25, 1, 65, 2], [65, 1, 66, 2], [41, 1, 67, 1], [12, 1, 67, 2], [66, 1, 67, 3], [47, 1, 68, 1], [66, 2, 68, 2], [67, 1, 48, 1], [68, 1, 48, 2], [9, 1, 48, 7], [48, 2, 59, 1], [59, 1, 49, 1], [7, 1, 49, 'steps'], [49, 1, 50, 1],
+      [67, 1, 51, 1], [50, 1, 51, 2], [24, 1, 51, 3], [51, 1, 52, 1], [14, 1, 52, 2], [29, 4, 52, 3], [4, 1, 69, 'count'], [2, 1, 69, 'horizon'], [9, 1, 69, 3], [52, 1, 70, 1], [15, 1, 70, 2], [69, 1, 70, 3], [72, 1, 69, 2], [70, 1, 53, 1]] },
   inkscroll: { label: 'Sunrise Scroll', div: 2, v: 5, teach: 'A land painted in ink on old paper, in the cel-shaded ink-wash look of the brush-painted games and the painters they loved (docs/prior-art/cel-shaded.md §7). Mountains stand band behind band, as in a mountain-and-water painting: each ridge a noise laid along the page (a Curve’s noise through a Profile Gradient), the far ones folded into sharp crags (Peaks). Each is a flat wash of ink, diluted by distance and tinted toward the Mountain Hue by Wash, lit by the Light Engine in bands (Toon Bands), its foot fading back to paper as mist (Mist), its ridge brushed in ink, thick and thin, broken by dry-brush streaks (Ink). The sky is graded across the top as a woodblock print’s straight-line gradation; a red sun stands where the dial lays it and sinks behind the mountains; long bands of mist with rounded ends drift across the sky, outlined (Clouds); cherry petals drift over all (Blossoms); the paper darkens at its edges with age (Age). Try: Wash at nothing for bare ink.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],
@@ -25369,6 +25411,13 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
 
   const readers = new Map();
   if(!ctx.all) for(const n of Object.values(nodes)) for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node); readers.set(s, (readers.get(s) || 0) + 1); }
+
+
+  const usedOuts = new Map();
+  if(!ctx.all) for(const n of Object.values(nodes)) for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node), k = parseInt(String(c.input || '').replace('output_', ''), 10) - 1;
+    if(k >= 0) (usedOuts.get(s) || usedOuts.set(s, new Set()).get(s)).add(k); }
+  const trimOuts = (id, out) => { const u = usedOuts.get(id); if(ctx.all || !Array.isArray(out) || !u || ctx.channel) return out; return out.map((v, i) => u.has(i) ? v : null); };
+  const usedSig = id => { const u = usedOuts.get(id); return ctx.all || !u || ctx.channel ? '' : ':u' + [...u].sort((a, b) => a - b).join('.'); };
   const doneReading = n => { if(ctx.all) return;
     for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node), left = (readers.get(s) || 0) - 1; readers.set(s, left); if(left <= 0) memo.delete(s); } };
   const flat = v => new Float32Array(N).fill(v);
@@ -25454,7 +25503,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v' + gv : '') + (ctx.all ? ':all' : '') : null;
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v' + gv : '') + (ctx.all ? ':all' : '') + usedSig(id) : null;
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -25462,6 +25511,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
 
       const vr = Math.round(+((n.data || {}).variation) || 0);
       try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
+      out = trimOuts(id, out);
       if(key && out) athanorKeep(key, out);
     }
     busy.delete(id); memo.set(id, out); if(memo.size > athanorPeak) athanorPeak = memo.size; doneReading(n);
@@ -25483,10 +25533,13 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   };
   const readCanvas = (cv) => {
 
+
+
     const c = document.createElement('canvas'); c.width = ww; c.height = wh;
     const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingEnabled = true; x.drawImage(cv, 0, 0, ww, wh);
     const d = x.getImageData(0, 0, ww, wh).data, r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N);
     for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
+    c.width = 0; c.height = 0;
     return { r, g, b };
   };
   const lightOf = (H, dialDeg, relief, gloss, shadow, more) => lightHeights(H, ww, wh, { light: dialDeg, relief, gloss, shadow, ao: 0.3, ambient: 0.4, ...(more || {}) });
@@ -29654,7 +29707,8 @@ const LARGE = 360000;
 
 
 const GECKO = typeof navigator !== 'undefined' && /Gecko\/\d/.test(navigator.userAgent || '') && /Firefox\//.test(navigator.userAgent || '');
-const PHONE_GRID_CAP = FRUGAL && GECKO ? 1000000 : 0;
+
+const PHONE_GRID_CAP = FRUGAL ? (GECKO ? 1000000 : 1600000) : 0;
 
 
 const STAGE_OVER_MS = 900;
@@ -29869,7 +29923,7 @@ const RELEASE = 'Uranus–Bianca';
 
 const RELEASE_DATE = '2026-10-20';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windhills":"GfSGcOVV","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windhills":"BsN_fN1N","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -30556,7 +30610,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 3c0f95f";
+const STAMP = "2026-10-20 · ff3da96";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

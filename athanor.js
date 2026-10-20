@@ -355,6 +355,13 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   // which show every part, keep them all). What is worth keeping between edits stays in ATHANOR_KEPT.
   const readers = new Map();
   if(!ctx.all) for(const n of Object.values(nodes)) for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node); readers.set(s, (readers.get(s) || 0) + 1); }
+  // (and the outputs no part reads are let go the moment a part has run: Bloom hands on eight maps, a graph may read two —
+  //  Ruby: Macro Bloom took a phone's worker, and Firefox, down at the saved image's size)
+  const usedOuts = new Map();
+  if(!ctx.all) for(const n of Object.values(nodes)) for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node), k = parseInt(String(c.input || '').replace('output_', ''), 10) - 1;
+    if(k >= 0) (usedOuts.get(s) || usedOuts.set(s, new Set()).get(s)).add(k); }
+  const trimOuts = (id, out) => { const u = usedOuts.get(id); if(ctx.all || !Array.isArray(out) || !u || ctx.channel) return out; return out.map((v, i) => u.has(i) ? v : null); };
+  const usedSig = id => { const u = usedOuts.get(id); return ctx.all || !u || ctx.channel ? '' : ':u' + [...u].sort((a, b) => a - b).join('.'); };
   const doneReading = n => { if(ctx.all) return;
     for(const p of Object.values(n.inputs || {})) for(const c of p.connections || []){ const s = String(c.node), left = (readers.get(s) || 0) - 1; readers.set(s, left); if(left <= 0) memo.delete(s); } };
   const flat = v => new Float32Array(N).fill(v);
@@ -440,7 +447,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     const n = nodes[id]; if(!n) return null;
     busy.add(id);
     let out = null;
-    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v' + gv : '') + (ctx.all ? ':all' : '') : null;   // (a preview may hold a stand-in: never handed to the real thing)
+    const key = v2 && !ctx.canvas ? fnv(sigOf(id)) + ':' + sigOf(id).length + ':' + ctxSig + (v3 ? ':v' + gv : '') + (ctx.all ? ':all' : '') + usedSig(id) : null;   // (a preview may hold a stand-in: never handed to the real thing)
     const kept = key && ATHANOR_KEPT.get(key);
     if(kept){ ATHANOR_KEPT.delete(key); ATHANOR_KEPT.set(key, kept); athanorHits++; out = kept.outs; }
     else {
@@ -448,6 +455,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
       // (a part's own VARIATION, Filter Forge's local Variation, turns its draw without moving the page's seed; 0 is as before)
       const vr = Math.round(+((n.data || {}).variation) || 0);
       try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
+      out = trimOuts(id, out);
       if(key && out) athanorKeep(key, out);
     }
     busy.delete(id); memo.set(id, out); if(memo.size > athanorPeak) athanorPeak = memo.size; doneReading(n);
@@ -468,11 +476,14 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     return o;
   };
   const readCanvas = (cv) => {
-    // a canvas (another texture, a stitch) read back at the working size
+    // a canvas (another texture, a stitch) read back at the working size, through a copy that is let go at once (Ruby:
+    // Macro Bloom took the worker down; every read left a canvas of the grid's size waiting for the collector, a hundred
+    // and more of them in one graph)
     const c = document.createElement('canvas'); c.width = ww; c.height = wh;
     const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingEnabled = true; x.drawImage(cv, 0, 0, ww, wh);
     const d = x.getImageData(0, 0, ww, wh).data, r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N);
     for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
+    c.width = 0; c.height = 0;
     return { r, g, b };
   };
   const lightOf = (H, dialDeg, relief, gloss, shadow, more) => lightHeights(H, ww, wh, { light: dialDeg, relief, gloss, shadow, ao: 0.3, ambient: 0.4, ...(more || {}) });

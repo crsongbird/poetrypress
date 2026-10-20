@@ -184,6 +184,19 @@ height, sheen). The hills are a Gradient raised by broad Perlins and thresholded
 bands) and the clouds' domes go to the Light Engine, whose light, posterized (Toon Bands), multiplies the colours; the
 gusts are a slow Perlin; the sheen screens the Sheen Hue over the bowed blades.
 
+**Ruby's first look (2026-10-19): "If you're trying to go for a video game Love Letter it needs to be recognizable."**
+The second round adds the game's signatures, researched again:
+- its look is "painterly, gouache-inspired, *en plein air*" [src: Artpublika], "a painterly art style that combined
+  the realism of the game world with its playability" (Takizawa) [src: TweakTown; Nintendo Everything];
+- gouache's atmospheric perspective: "lightening colours of distant elements"; "the distant mountain appears as a
+  neutral blue colour, much lighter than the mountains in the foreground" [src: Fine Art Tutorials]: the mountain
+  ranges, paled and cooled;
+- its trees are foliage whose normals are transferred from a hemisphere so they shade as one round mass, grass tips
+  brighter [src: Polycount]: the round trees, lit as domes;
+- its wind is drawn: white breeze lines that glide over the land, "a 2D plane is enough" [src: three.js forum, after
+  the game]; the stylized Zelda effects use "a simple geometry with the shape of a curve", eroded at its ends
+  [src: Game Developer]: the curling trails (Streamers).
+
 **What it can do that the games can't** [est]: any hue (a lavender field, autumn gold, a blue-grass night), the light
 dial turning the bands round the hills, and words on it.
 
@@ -217,6 +230,14 @@ dial turning the bands round the hills, and words on it.
 - POV-Ray newsgroup on grass: https://news.povray.org/3ca60dc4%40news.povray.org
 - Animation Obsessive, "Defining the World of My Neighbor Totoro": https://animationobsessive.substack.com/p/defining-the-world-of-my-neighbor
 - Animation Obsessive, "What Kazuo Oga Thinks About When He Thinks About Backgrounds": https://animationobsessive.substack.com/p/what-kazuo-oga-thinks-about-when
+
+- Artpublika, "The artistic adventure that is Legend of Zelda: Breath of the Wild": https://www.artpublikamag.com/post/the-artistic-adventure-that-is-legend-of-zelda-breath-of-the-wild
+- TweakTown, "Breath of the Wild art-style explained": https://www.tweaktown.com/news/63954/legend-zelda-breath-wild-art-style-explained/index.html
+- Nintendo Everything, art director on Breath of the Wild's look: https://nintendoeverything.com/art-director-on-why-zeldas-art-style-constantly-changes-and-how-breath-of-the-wilds-look-was-made/
+- Fine Art Tutorials, gouache landscape: https://finearttutorials.com/?p=10133
+- Polycount, stylized trees: https://polycount.com/discussion/comment/2677432
+- three.js forum, "Creating white breezy effect": https://discourse.threejs.org/t/creating-white-breezy-effect-seeking-guidance-and-insights/55552
+- Game Developer, "Recreating the Zelda VFX in Unity": https://www.gamedeveloper.com/art/recreating-the-zelda-vfx-in-unity
 
 **Read but thin:** Zelda Dungeon's summary of a Polycount analysis (the analysis itself is linked, not reproduced); Zelda
 Dungeon's "Analyzing The Wind Waker's Art Style" (nothing on wind, sky or weather).

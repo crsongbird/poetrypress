@@ -67,6 +67,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   upper sky, blurred and cut crisp, shaded beneath by the sky (a Warp straight down, inverted, times the clouds). The
   Light Engine lights the land's crests and rolling rise (blurred band, Perlin) and the blades' height; its light,
   spread by Levels and posterized (Toon Bands), multiplies the land only (the sky and clouds keep their own tones).
+  Mountains: a Gradient mixed with two Curves (noise, and finer noise, added) and cut: a Curve laid across the page
+  varies only across it, so the range has one skyline and never islands; the Far Hills Hue under 60% Sky Hue. Trees:
+  a Scatter of clumped dots on the middle band (the middle threshold minus the near), the Grass Hue multiplied in, and
+  their domes (Scatter's heights) in the height the Light Engine reads. Wind trails: Streamers (Wind is its count, the
+  horizon its own), blowing from a Number (74, the west), white in the Cloud Hue.
 - **Windward Sea** (chain `windsea`, `v: 5`; one process part, `streamers`, stepsStreamers.js; prior art
   docs/prior-art/cel-shaded.md): the first love letter to a video game, cel-shaded. Light in bands: the Light
   Engine's light (or Streamers' Facing) through a Posterize (Toon Bands) into a three-stop Gradient Map. The

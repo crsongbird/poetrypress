@@ -17,12 +17,9 @@
  * field that is never clones. Part draws one petal or one leaf instead, for scattered petals and fallen leaves.
  */
 import { mulberry32, CPU, freeCanvas } from './texCore.js';
+import { flClamp, flHex, flMix, flCss, spcLeaf, spcBand, spcPrickles, spcHairs, SPC_LEAVES, SPC_STEM_LEAF } from './floraKit.js';
 
 const FL_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
-export const flClamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
-export const flHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-export const flMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
-export const flCss = (c, k = 1, a = 1) => `rgba(${Math.round(flClamp(c[0]*k, 0, 255))},${Math.round(flClamp(c[1]*k, 0, 255))},${Math.round(flClamp(c[2]*k, 0, 255))},${a})`;
 
 /**
  * THE SPECIES (florals.md §2), in the Species slider's order, neighbours alike. type: how its petals are laid out;
@@ -93,12 +90,24 @@ export function flDrawBloom(L, R, cx, cy, Rad, f){
   const open = st < 0.25 ? st/0.25 : 1, past = flClamp((st - 0.6)/0.35), bare = st > 0.96;
   const brown = flMix(cC, [70, 48, 30], 0.55);
   // ---- the stem and its leaves, below the head (not from the face: hidden)
-  if(f.stem && alpha > 0.35){ const sx0 = cx, sy0 = cy + Rad*0.25*sa, len = Rad*(2.2 + R()*1.8)*sa, bend = rnd(-0.4, 0.4)*Rad;
-    const sx1 = cx + bend*1.4 + Math.sin(f.turn)*len*0.3, sy1 = sy0 + len, droop = past*Rad*0.8;
-    for(const [ctx, col] of [[L.pic, flCss(cF, 0.8)], [L.mask, '#fff'], [L.thick, 'rgb(200,200,200)'], [L.height, 'rgb(90,90,90)'], [L.gloss, 'rgb(80,80,80)'], [L.face, 'rgb(190,190,190)']]){
-      ctx.strokeStyle = col; ctx.lineWidth = Rad*0.07; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(sx0, sy0 - droop*0.2); ctx.quadraticCurveTo(cx + bend, sy0 + len*0.5, sx1, sy1); ctx.stroke(); }
-    for(let k = 0, n = 1 + Math.floor(R()*3); k < n; k++){ const t = 0.35 + R()*0.5, x = sx0 + (sx1 - sx0)*t + bend*0.5*(1 - Math.abs(t - 0.5)*2), y = sy0 + len*t, side = R() < 0.5 ? -1 : 1;
-      flLeaf(L, x, y, Rad*rnd(0.7, 1.3), (side < 0 ? Math.PI : 0) + rnd(-0.6, -0.2)*side, cF, R, past); } }
+  // (it starts inside the flower's base, where the receptacle is, so a flower seen from the side sits on its stem —
+  //  Ruby: the rose's head floated off it; and it carries the species' own leaves, prickles or hairs, as on its
+  //  specimen sheet: floraKit.js)
+  if(f.stem && alpha > 0.35){ const sx0 = cx, sy0 = cy - Rad*0.04*sa, len = Rad*(2.2 + R()*1.8)*sa, bend = rnd(-0.4, 0.4)*Rad;
+    const sx1 = cx + bend*1.4 + Math.sin(f.turn)*len*0.3, sy1 = sy0 + len, qx = cx + bend, qy = sy0 + len*0.5, pts = [];
+    for(let i = 0; i <= 20; i++){ const t = i/20, u = 1 - t, x = u*u*sx0 + 2*u*t*qx + t*t*sx1, y = u*u*sy0 + 2*u*t*qy + t*t*sy1;
+      const dx = 2*u*(qx - sx0) + 2*t*(sx1 - qx), dy = 2*u*(qy - sy0) + 2*t*(sy1 - qy); pts.push({ x, y, a: Math.atan2(dy, dx), w: Rad*(0.055 + 0.03*t) }); }
+    const stemCol = flMix(cF, [150, 170, 90], 0.12);
+    spcBand(L, pts, stemCol, { h: 0.4, thick: 0.8, gloss: 0.22 });
+    if(f.key === 'rose') spcPrickles(L, R, pts, flMix(cF, [96, 70, 54], 0.6), Rad*0.07);
+    if(['poppy', 'sunflower', 'foxglove', 'zinnia', 'cornflower', 'forgetmenot'].includes(f.key)) spcHairs(L, R, pts, stemCol, Rad*0.05);
+    // the calyx: a little green cup where the stem meets the flower
+    for(const [ctx, col] of [[L.pic, flCss(flMix(cF, [120, 150, 70], 0.15), 0.9)], [L.mask, '#fff'], [L.height, 'rgb(130,130,130)'], [L.thick, 'rgb(210,210,210)'], [L.face, 'rgb(200,200,200)']]){
+      ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(sx0, sy0 + Rad*0.05*sa, Rad*0.11, Rad*0.08, Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x), 0, Math.PI*2); ctx.fill(); }
+    const spec = SPC_LEAVES[SPC_STEM_LEAF[f.key]];
+    for(let k = 0, n = 1 + Math.floor(R()*3); k < n; k++){ const t = 0.35 + R()*0.5, p = pts[Math.round(t*20)], side = R() < 0.5 ? -1 : 1, a = (side < 0 ? Math.PI : 0) + rnd(-0.6, -0.2)*side;
+      if(spec) spcLeaf(L, R, p.x, p.y, a, Rad*rnd(0.8, 1.3), spec, { col: cF, stalk: stemCol, h: 0.46, roll: 0.6 + R()*0.4, under: false, droop: 0.25, bend: side*rnd(0.1, 0.4), age: past*0.6 });
+      else flLeaf(L, p.x, p.y, Rad*rnd(0.7, 1.3), a, cF, R, past); } }
   // ---- the petals, as surfaces: a centre line out from the base, its width each side; cupped (rising), curled at the tip
   const petals = [];
   const addPetal = (theta, len, wid, cup, curl, colK, zBase = 0, rBase = 0, id = 0) => {
@@ -439,7 +448,7 @@ export function genBloom(w, h, o){
       flVisitor(L, R, cx, cy, Math.min(cw, ch)*0.42*o.size*sz*2, R()*6.283, kind, [cc[0], cc[2], cc[1], cc[3]], o.light); continue; }
     if(o.part === 'leaf'){ flLeaf(L, cx - Math.min(cw, ch)*0.35, cy + Math.min(cw, ch)*0.1, Math.min(cw, ch)*0.7*o.size, -0.4 + (R() - 0.5)*0.8, cc[3], R, o.stage > 0.6 ? (o.stage - 0.6)/0.4 : 0); continue; }
     const f = { sp: S, view: flClamp(o.view + (many ? (R() - 0.5)*0.4 : 0)), stage: flClamp(o.stage + (many ? (R() - 0.5)*0.25 : 0)), spin: R()*6.283, turn: many ? (R() - 0.5)*0.6 : (o.turn || 0),
-      jitter: o.jitter, flat: o.flat > 0.5, light: o.light, albedo: !!o.albedo, cols: cc, stem: o.stem && o.part === 'whole' };
+      jitter: o.jitter, flat: o.flat > 0.5, light: o.light, albedo: !!o.albedo, cols: cc, stem: o.stem && o.part === 'whole', key };
     if(o.part === 'petal'){
       // one petal, lying flat (a little curled), its base toward the cell's middle
       const S1 = { ...S, type: 'cup', n: [1, 1], disc: ['none', 0], cup: 8 + R()*30, spots: 0 };
