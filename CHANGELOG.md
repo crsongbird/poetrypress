@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Belinda (2026-10-20)
+
+- **Ways, not a grid.** The Ringworld's streets were a grid laid over every town; now they are ways, and fewer: the
+  main roads, and from the heart of each town (as many as Works builds) a few ways out and one on to the next town,
+  each walked across the land curving toward the level and away from the steep, so it follows the contours. Each is
+  made of something of its world's: asphalt, cobbles, brick, gravel, packed earth with its ruts, flagstones, stepping
+  stones in moss, the builders' pale paths and paths of light. They wear: cracked, potholed, weeds at the edges, and in
+  the ruins broken right through. The lamps, cars, benches and signs stand along them and face them; poles carry the
+  wires along the main roads out of town; buildings and trees keep off them.
+- **Cumulus** clouds sit on flatter, softer bases.
+
+### Under the hood
+- The store walks its ways (`RG_WAYMAT`, `RG_WAYHALF`, `RG_WAYCOL`, `RG_LIT_WAYS`) and the land paints them piece by
+  piece with the ridges.
+
 ## Uranus–Cupid (2026-10-20)
 
 - **The Ringworld fills a wide view.** The land reaches the page's edges at any lens and any shape of page (it showed
@@ -478,52 +493,3 @@ and every control behaving as it did.
   it), and draws at 360 px instead of 600 (as telling, and the slowest
   suite a fifth quicker); the tests that named the Emotional Seed now use
   other starters; the starter and texture counts follow what is there.
-
-## Saturn–Fornjot (2026-10-19)
-
-- **Typing and sliders are quick again on a phone.** Nothing redraws while
-  a hand is on the controls: the page is drawn once they have rested for a
-  moment (150 ms; typing waits 400 ms, since keys come slower). The poem
-  editor redraws once a key instead of three times, and only the line that
-  changed. On a phone-speed processor, dragging a slider went from 30–86%
-  busy to 4–7%, and typing from 45% to 24%. With nothing touched, the page
-  does nothing at all.
-- **New surface: Liminal Spaces.** An empty place built for passing
-  through, seen as a camera sees it: a lobby, a warehouse, tunnels, the
-  poolrooms, a hotel corridor, a school, a hospital, a subway, a garage, a
-  mall or an office, each laid out by the seed, its lamps and where the
-  camera stands. The camera dial looks round.
-- **New group of surfaces: Flowers**, with Lotus Pond and seven new ones,
-  all drawn from 23 real species:
-  - **Floral Imprints**: cyanotypes, inked stamps, a crest folded from one
-    flower, or flowers pressed on the page.
-  - **Bouquets**: a posy, a bundle, a crown or a wreath.
-  - **Fallen Petals**: wilting flowers and petals on wood, linen or stone,
-    browning as they age.
-  - **Meadow**: a wildflower meadow seen from inside it, a hedgerow along
-    the horizon, fields beyond, the nearest grass out of focus.
-  - **Macro Bloom**: one flower close, framed by the seed from the whole
-    flower to its heart filling the page, lit like a real material: light
-    wraps round its petals and comes through them in their own colour when
-    the light is low or behind, showing the veins.
-  - **Ditsy Print**: tiny flowers and sprigs all over cloth.
-  - **Botanical Line**: plants drawn in a fine ink line, with a loose wash
-    of colour or none.
-- **Veins of Light is back, remade as a network**: lines that join up into
-  loops, as a leaf's veins, a slime mould's tubes, a street plan or a
-  circuit do, each as wide as the flow it carries, from organic curves to
-  circuit traces with pads, buses and pulses. It glows more as the light
-  sinks. Eight knobs and six hues; readings Circuit Marble, Leaf Lumen and
-  Undercity.
-- **New parts:** Room Caster (an empty interior, ray-cast), Bloom (a flower
-  of a real species, or a sheet of them; it can hand on its colour unlit,
-  with maps of its shape, gloss and thinness, for the Light Engine to
-  light), Network (a graph with loops). **Better parts:** Scatter throws a
-  picture or a sheet of pictures, black as clear, with clean edges; the
-  Light Engine's Translucency can be a map, light coming through thin
-  parts in their own colour.
-- **The Surface menu is regrouped**: Burnt Letter and Cup Ring are with
-  Paper & Grounds, Veins of Light and Moss on Stone with Grown & Generated,
-  Knotwork with Pattern & Order; Light, Sparks & Dust is now Light, Dust &
-  Feathers; some starters and studies moved to where they belong.
-- **Removed**: the Emotional Seed part and its starter, Weather of Feeling.

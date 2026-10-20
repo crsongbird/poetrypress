@@ -338,11 +338,15 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     round as the page sees, its corners included (`PHI`), straight ahead and bending round the eye as a circle past 55°
     (`smax`), so a wide lens never shows a cut's end; a thing is kept while any of it can be in view; the lens is held
     under 118° (`ringParams`).
-  - **Streets and Clutter**: a grid of streets where towns are (lanes in villages, broken streets in ruins; the store's
-    `streets`), drawn as the roads are; the town's furniture stands along them (lamps lighting them, cars at the kerb, a
-    bench and a bike, a signal at the crossing) instead of scattered, and buildings and trees keep off them. The Clutter
-    knob (`V.clutter`) sets all the small things and boards, apart from Works. Things are set into the ground a little;
-    the ruins' wrecks half buried (`sink`, clipped at the ground).
+  - **Ways and Clutter** (Ruby: streets "related to works … destroyed … fairly uncommon … different materials … curved
+    … follow the contour of the land"): the main roads and, from the heart of each town Works raises, a few ways out and
+    one to the next town, each walked a step at a time toward the level and away from the steep (the store's `ways`);
+    each of one of its world's materials (`RG_WAYMAT`: asphalt, cobbles, brick, gravel, earth, flagstones, stepping
+    stones in moss, the builders' pale and light paths) and worn by the seed (cracks, potholes, weeds; broken through in
+    the ruins). The town's furniture stands along them, facing them (lamps lighting them, cars at the kerb, a bench and
+    a bike, a signal), poles carry wires along the main roads out of town, and buildings and trees keep off them. The
+    Clutter knob (`V.clutter`) sets all the small things and boards, apart from Works. Things are set into the ground a
+    little; the ruins' wrecks half buried (`sink`, clipped at the ground).
   - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow; heaps of
     cloud lit from the sun's side, rain in veils, lightning, a rainbow opposite a low sun, rays from a low or clouded
     sun, the sun's glare low over the land, mist thickening between the ridges, rain and snow falling over it all.
