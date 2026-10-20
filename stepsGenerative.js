@@ -1691,6 +1691,13 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
       lines.push({ pts, bold }); }
     return lines;
   }
+  if(kind === 'circle' && ring && ring.place){
+    // (the Transmutation Circle where the camera dial places it: its rim, dashed, and its centre)
+    const { x: cx, y: cy, r } = ring.place, pts = [];
+    for(let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2; pts.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r]); }
+    lines.push({ pts, bold: true }, { pts: [[cx - 0.03, cy], [cx + 0.03, cy]], bold: true }, { pts: [[cx, cy - 0.03], [cx, cy + 0.03]], bold: true });
+    return lines;
+  }
   if(kind === 'bloom'){
     // (Macro Bloom's flower as the camera dial frames it: Zoom sizes it, from the whole flower to its heart filling the
     //  page; View tips it from face-on; Turn says which way it tips and sets it toward that side's third. Its rim, its

@@ -535,6 +535,7 @@ body.is-mobile, html:has(body.is-mobile){ overflow:hidden; height:100%; overscro
 
 /* a disabled tool must look inert, not merely quiet */
 .field.tool-off{ opacity:.34; pointer-events:none; }
+.field.tool-idle{ opacity:.34; pointer-events:none; }   /* (shown but resting: the camera dial on a surface without a camera) */
 /* the seed, in words (the number small beneath it) */
 /* one line, the whole width; when the words run past it, a hair-thin
    scroller of the theme's own colour along the field's foot (no native bar) */
@@ -1512,7 +1513,9 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .light-dial.has-rim.rim-on .ld-spike-overlap{ display:inline; }
 /* which light the finger moves, and the Ambient slider: only where the page's lights reach the surface */
 .light-seg, #lightRow .light-amb, #lightAmbField, #lightRow .light-rimk, #lightRimKField{ display:none; }
-#lightRow.has-rig .light-seg{ display:flex; margin:2px 0 4px; }
+/* (Main Light / Rim Light always shows, faded where the page's lights don't reach the surface: Ruby) */
+#lightRow .light-seg{ display:flex; margin:2px 0 4px; }
+#lightRow:not(.has-rig) .light-seg{ opacity:.34; pointer-events:none; }
 /* (and the camera dial beside it steps down as far as Main / Rim takes, so the two dials sit level: appEvents syncLightPad) */
 .tool-row.has-camera.has-seg > #cameraRow > .light-dial-row{ margin-top:var(--light-seg-h, 38px); }
 #lightRow.has-rig:not(.pick-rim) .light-amb{ display:block; }

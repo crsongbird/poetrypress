@@ -319,6 +319,19 @@ Easter eggs).
 
 ---
 
+### S · Smaller and simpler (Ruby, 2026-10-19; the proposals and their numbers: docs/SIMPLIFY.md)
+Nothing here changes a picture or removes a feature; each step is proved by a snapshot and unchanged fingerprints.
+- **S1 · Refactors:** the dispatch ladder as a hue table; one copy of each part's description; chains that stop
+  restating their sliders (knobs from the registry, wires that name a setting); a compact registry; one part convention;
+  one WebGL helper. Then **one record per surface** (and the menu built from the groups).
+- **S2 · The page:** the generators shipped once, not twice (−2.1 MB, −37%); comments stripped at build (−0.7 MB).
+- **S3 · Tests:** timed and two at a time, a quick tier; one texture sweep for fingerprints and knob checks (~760 → ~425
+  renders), export-size renders for 2–3 surfaces; a shared harness; tests that read behaviour, not appEvents' source;
+  then appEvents.js split along its banners (4,805 → ~1,200 lines in the entry).
+- **S4 · The protocol:** AGENTS.md to ~600 lines (per-surface notes beside each surface, light, page machinery and
+  pitfalls in their own docs, each rule once, enforced rules as one line and a test's name); one review tool that makes
+  every round's sheets; the changelog archived past ~20 releases.
+
 ## 3 · Order of work: four stages, presets last (Ruby)
 
 Ruby's order: **build the components, then the new features, then the new

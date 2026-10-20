@@ -44,13 +44,14 @@ check('a broken surface among good ones is counted and left out', (() => { const
     t.value === 'athanor' && A.athanorName(reg['forgeGraph'].value) === 'Halftone2');
   check('…and the work in progress on the Athanor\'s bench is untouched', store['uv.forge.bench.v1'] === wip);
   // THE CAMERA DIAL for a graph from the Athanor (Ruby: it never appeared): shown when its Camera Dial reaches the Surface
-  const camShown = () => !String(reg['cameraRow'].className || '').split(' ').includes('tool-hidden') && !(reg['cameraRow'].classList && reg['cameraRow'].classList.contains('tool-hidden'));
+  // (the camera dial always shows (Ruby): resting, faded, for a surface without a camera; awake for one with)
+  const camShown = () => !String(reg['cameraRow'].className || '').split(' ').some(c => c === 'tool-hidden' || c === 'tool-idle') && !(reg['cameraRow'].classList && (reg['cameraRow'].classList.contains('tool-hidden') || reg['cameraRow'].classList.contains('tool-idle')));
   const noCam = camShown();
   const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
   const load = o => { reg['advancedJson'].value = JSON.stringify(o); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
   const lich = A.athanorStarterAt('lichtenberg', [], []);
   load({ ...save(), textureType: 'athanor', forgeGraph: JSON.stringify(lich) }); await new Promise(r => setTimeout(r, 30));
-  check('a graph without a Camera Dial shows no camera dial; one whose Camera Dial reaches its Surface does (Lichtenberg Figures, opened in the Athanor)',
+  check('a graph without a Camera Dial shows the camera dial resting; one whose Camera Dial reaches its Surface wakes it (Lichtenberg Figures, opened in the Athanor)',
     noCam === false && A.athanorCamera(lich) && camShown());
   // THE ATHANOR'S STARTERS AND SURFACE STUDIES in the Surface menu (Ruby: to try them on the page)
   const { TEXTURE_PARAMS } = await import('../textureGenerators.js'), { ATHANOR_STUDIES } = await import('../athanorStudies.js');

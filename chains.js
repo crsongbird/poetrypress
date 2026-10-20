@@ -2463,10 +2463,10 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
       ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
       ['knob', { slot: '3', name: 'Organic ↔ Tech', def: 30 }, 40, 240],                // 3  (30 of 0–100)
-      ['dial', {}, 40, 340],                                                       // 4
-      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['camdial', {}, 40, 340],                                                    // 4  (the camera dial places it: Ruby)
+      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100', from: 'its own reach', reach: 100 }, 320, 100],   // 5
       ['surface', { name: 'Transmutation Circle', ground: 'grey' }, 600, 120]],   // 6
-    wires: [[1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[4, 2, 5, paramPort('transmutation', 'reach')], [1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
   chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
       ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
@@ -2769,7 +2769,7 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '2', name: 'Rain', def: 50 }, 40, 140],                     // 2
       ['knob', { slot: '3', name: 'Spread', def: 50 }, 40, 240],                   // 3
       ['knob', { slot: '4', name: 'Splashes', def: 40 }, 40, 340],                 // 4
-      ['knob', { slot: '5', name: 'View', def: 41 }, 40, 440],                     // 5  (35 of 0–85)
+      ['math', { op: 'min' }, 40, 440],                                            // 5  the camera dial's View, at most 1 (0–85, as the View slider was; Ruby: the camera's)
       ['dial', {}, 40, 540],                                                       // 6
       ['hue', { slot: '1', name: 'Water Hue' }, 40, 620], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 700],   // 7, 8
       ['raindrops', { size: 100, '~size': '40,250', rain: 50, '~rain': '0,100', spread: 50, '~spread': '0,100', splash: 40, '~splash': '0,100', view: 35, '~view': '0,85' }, 300, 120],   // 9
@@ -2777,8 +2777,10 @@ export const TEXTURE_CHAINS = {
       ['material', { relief: 110, gloss: 85, shine: 90, shadow: 20, occlusion: 10, ambient: 40 }, 1060, 300],   // 11
       ['glow', { radius: 4, aura: 14, strength: 45, auraK: 10, core: 40, hex: '#EAF4FF' }, 1300, 300],   // 12
       ['surface', { name: 'Rain on Water', ground: 'colour', aa: 'edges only' }, 1540, 320],          // 13
-      ['displace', { amount: 35, blur: 10 }, 800, 520]],                           // 14 (the reflection bent by the rings)
-    wires: [[1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
+      ['displace', { amount: 35, blur: 10 }, 800, 520],                            // 14 (the reflection bent by the rings)
+      ['camdial', {}, 40, 640],                                                    // 15 (the camera: its View looks across the water)
+      ['number', { value: 100 }, 40, 700]],                                        // 16
+    wires: [[15, 2, 5, 1], [16, 1, 5, 2], [1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
       [9, 3, 10, 1], [8, 1, 10, 2], [7, 1, 10, 3], [10, 1, 14, 1], [9, 1, 14, 2], [14, 1, 11, 1], [9, 1, 11, 2], [6, 1, 11, 7], [11, 1, 12, 1], [9, 2, 12, 2], [12, 1, 13, 1]] },
   // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
   watercolour: { label: 'Watercolor Wash', div: 2, teach: 'Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
@@ -2864,16 +2866,18 @@ export const TEXTURE_CHAINS = {
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
       ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3
-      ['knob', { slot: '4', name: 'Tilt', def: 0 }, 40, 340],                     // 4
-      ['knob', { slot: '5', name: 'Color', def: 0 }, 40, 440],                    // 5
+      ['math', { op: 'min' }, 40, 340],                                           // 4  the camera dial's View: the camera's pitch (Ruby: the camera's, not a slider)
+      ['knob', { slot: '4', name: 'Color', def: 0 }, 40, 440],                    // 5
       ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 0 }, 320, 40],                                  // 6
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 0 }, 600, 120],            // 7
       ['wash', { wet: 0 }, 880, 160],                                             // 8
       ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
       ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
       ['material', { relief: 20, '~relief': '0,40', gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
-      ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
-    wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
+      ['knob', { slot: '5', name: 'Impasto', def: 50 }, 880, 400],
+      ['camdial', {}, 40, 760],                                                    // 13 (the camera: its View the pitch)
+      ['number', { value: 100 }, 40, 820]],               // 12
+    wires: [[13, 2, 4, 1], [14, 1, 4, 2], [1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
       [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 10, 1], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 9, 1],
       [12, 1, 10, paramPort('oilpaint', 'amount')], [12, 1, 11, paramPort('material', 'relief')]] },

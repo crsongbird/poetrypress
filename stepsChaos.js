@@ -233,9 +233,13 @@ export const CHAOS_STEPS = {
   // Transmutation Circle, one part (kitWhole: drawn as it always was, under the texture's own seed + Variant);
   // lettered in web fonts, so the texture is made on the page (textureService ON_PAGE)
   transmutation: kitWhole({ cat: 'Marks', label: 'Transmutation Circle', ins: ['position'], outs: ['circle'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
+    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variation', 0, 0, 99),
+      ['from', 'Placed By', 'select', 'the dial', { options: ['the dial', 'its own reach'] }], CHAOS_R('reach', 'Reach', 100)], cost: () => 6 },
+    // (placed by the dial: its turn the way from the middle, its height how far; or by its own Reach, the way still the
+    //  position input's: the Transmutation Circle's camera dial wires its Turn and View here, Ruby: positioning is the camera's)
     (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
-      return () => genSummoningCircles(w, h, a, z, light, f); }),
+      const own = E.P(n, 'from', 'the dial') === 'its own reach', reach = E.num(n, 'reach', 100)/100;
+      return () => own ? withLightTilt(reach, () => genSummoningCircles(w, h, a, z, light, f)) : genSummoningCircles(w, h, a, z, light, f); }),
   // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
   sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,

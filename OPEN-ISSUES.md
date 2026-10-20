@@ -8,6 +8,9 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- THE DIALS ALWAYS SHOW: the camera dial and Main Light / Rim Light faded where a surface doesn't use them; the colours
+  two columns beneath. The Transmutation Circle placed by the camera dial (with its guide); Rain on Water's View and the
+  Painted Landscape's Tilt on the camera dial's View. Right?
 - MACRO BLOOM IN DEPTH ORDER: drawn back to front, and its shadows from the depth (a leaf near the lens shadows the
   petals, an insect the petal it stands on); the stem, leaves overhead and the caster crossing near the lens are back.
 - LARGE GRAPHS ON FIREFOX (Ruby's crash): measured, one Macro Bloom render on a phone made 99 canvases, about 170
@@ -63,7 +66,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   new; worth a look when the Terrain is next touched.
 
 ## 4 · Waiting on Ruby
-(nothing)
+- SMALLER AND SIMPLER (docs/SIMPLIFY.md, ROADMAP S): which first? Suggested: the refactors (S1, each proved by unchanged
+  pictures), then the page phones download (S2: −2.8 MB), then the tests (S3), then the protocol (S4).
 
 ## 5 · Long horizon
 - THE SATURN RELEASE (Ruby): once every texture is taken apart into parts, a

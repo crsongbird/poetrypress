@@ -169,8 +169,10 @@ check('a preset turns the lower surface off (it never leaks from one look to the
   const rain = at('rainstreaks', 0, 100), still = at('snow', 90, 100, { wind: 0 }), blown = at('snow', 90, 100, { wind: 100 }), flow = at('flowfield', 90, 100);
   check('…rain from a handle at the top falls down the page; still air lets snow fall straight down, and wind from the right blows it left; a flow runs toward the handle',
     rain.dy > 0.99 && Math.abs(still.dx) < 1e-9 && still.dy > 0.99 && blown.dx < -0.5 && flow.dx > 0.99);
-  const imp = at('crackle', 315, 80), circ = at('summoning', 0, 0, { size: 100 }), corner = at('summoning', 135, 100, { size: 100 });
-  check('…Crackle\'s impact stands on the far side from the light; the Transmutation Circle in the middle at the dial\'s middle, at the page\'s corner at its rim',
+  // (the Transmutation Circle is placed by the camera dial now: its guide's place is the same reckoning, the camera's Turn and View)
+  const place = (deg, tilt) => dialGuidePlace({ k: 'place' }, deg, tilt, 1, 1.5, { size: 100 });
+  const imp = at('crackle', 315, 80), circ = place(0, 0), corner = place(135, 100);
+  check('…Crackle\'s impact stands on the far side from the light; the Transmutation Circle in the middle at the camera dial\'s middle, at the page\'s corner at its rim',
     imp.x > 0.5 && imp.y > 0.75 && Math.abs(circ.x - 0.5) < 1e-9 && Math.abs(circ.y - 0.75) < 1e-9 && Math.abs(corner.x - 1) < 1e-9 && Math.abs(corner.y - 1.5) < 1e-9); }
 
 // A SECTION SWITCHED OFF (Ruby: Border Options and Inset Box opened empty): its controls stay in view, faded, and the first

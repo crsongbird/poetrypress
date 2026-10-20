@@ -3,45 +3,35 @@
  * plain `node test/textureGenerators.test.mjs` from the project root.
  *
  * Not a visual test (see canvasMock.mjs for why) — this checks that every
- * texture type generates without throwing, across several seeds and canvas
- * sizes including the app's real production dimensions, and that the cache
- * stays bounded however many textures are made. (That a fixed seed draws the
- * same texture every time is the fingerprints' job: they would change.)
- * Slow (longer than half a minute): it renders every texture, at several sizes and seeds.
+ * texture in the menu generates without throwing at a tiny size, that a few
+ * draw at the app's real production sizes, and that the cache stays bounded
+ * however many textures are made. (That each draws what it drew is the
+ * fingerprints' job, at their own size.) The types come from the registry, so
+ * a new surface is covered the day it lands and a retired one never lingers;
+ * the seeds are fixed, so a failure is the same failure on the next run.
  */
 import { installCanvasMock } from './canvasMock.mjs';
 installCanvasMock();
 
-const { getTextureCanvas, clearTextureCache, textureCacheMB } = await import('../textureGenerators.js');
+const { getTextureCanvas, clearTextureCache, textureCacheMB, TEXTURE_PARAMS } = await import('../textureGenerators.js');
 const { TEXTURES } = await import('../tunables.js');
 
-const TEXTURE_TYPES = [
-  'clouds','bokeh','astral','magicparticles','embers','snow',
-  'grain','metalleaf','flowers','brushstrokes','halftone','rainstreaks',
-  'sigils','mathnoise','summoning','inkbleed','crackedglaze','tessellate',
-  'aurora','hatch','cards',
-  'linen','coldpress','crystal','spangle','oldpaper','cupring','wax','whorl','ash','turing','frost','guilloche','chladni','contour','flowfield','stainedglass','suminagashi','watercolour','athanor',
-];
-const SIZES = [[512,512],[3072,3072],[2304,4096],[64,64]];
+// every surface in the registry (the Athanor's own included), once, tiny; and the production sizes for three cheap ones
+const TINY = Object.keys(TEXTURE_PARAMS).map(t => [t, 64, 64]);
+const LARGE = ['grain', 'linen', 'snow'].flatMap(t => [[t, 3072, 3072], [t, 2304, 4096]]);
 
 let failures = 0, total = 0;
-for(const type of TEXTURE_TYPES){
-  for(let i=0;i<3;i++){
-    const seed = Math.floor(Math.random()*1e9);
-    const [w,h] = SIZES[total % SIZES.length];
-    total++;
-    try{
-      const canvas = getTextureCanvas(type, w, h, { accent1: '#c9a876', accent2: '#7a8ca3', seed });
-      if(!canvas || canvas.width !== w || canvas.height !== h){
-        throw new Error('unexpected canvas dimensions');
-      }
-    } catch(e){
-      failures++;
-      console.log(`FAIL [${type}] seed=${seed} size=${w}x${h}: ${e.message}`);
-    }
+for(const [type, w, h] of [...TINY, ...LARGE]){
+  const seed = 1000 + total++;
+  try{
+    const canvas = getTextureCanvas(type, w, h, { accent1: '#c9a876', accent2: '#7a8ca3', seed });
+    if(!canvas || canvas.width !== w || canvas.height !== h) throw new Error('unexpected canvas dimensions');
+  } catch(e){
+    failures++;
+    console.log(`FAIL [${type}] seed=${seed} size=${w}x${h}: ${e.message}`);
   }
 }
-console.log(`${failures ? 'FAIL' : 'ok'}: ${total} generation calls across ${TEXTURE_TYPES.length} texture types, at every size`);
+console.log(`${failures ? 'FAIL' : 'ok'}: every one of ${TINY.length} textures generates at 64 px, and ${LARGE.length/2} at both production sizes`);
 
 // --- the cache stays bounded ---
 // Generate twice the cache's cap with distinct sizes (each one a genuinely new

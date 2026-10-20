@@ -263,8 +263,7 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Rain',            min:0,  max:100, def:50,  unit:''},
                   // fresh drops' small tight rings (0) → wide, old, overlapping rings (100)
                   {key:'form',  label:'Spread',          min:0,  max:100, def:50,  unit:''},
-                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''},
-                  {key:'hue',   label:'View',            min:0,  max:85,  def:35,  unit:'', ticks:[0, 85], names:['Overhead', 'Across the Water']}],
+                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''}],   // (its View is the camera dial's)
   glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Rain',            min:20, max:300, def:100, unit:'%'},
                   // a fine mist of tiny droplets between the drops
@@ -448,8 +447,7 @@ export const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
                   {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
-                  // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
-                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''},
+                  // (the camera's pitch, as painted → looking down from higher, is the camera dial's View)
                   // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
                   {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''},
                   // brushwork the dial lights: none (0, the old flat painting) → thick oil, every stroke standing up
@@ -668,7 +666,7 @@ export const TEXTURE_CAPS = {
   // the dial is the WIND here, not a light (dial: its name for this texture)
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
   landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:0, zoom:100, guide:'plane' } },   // (View: the camera's pitch, as painted to looking down)
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
   // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
@@ -754,7 +752,7 @@ export const TEXTURE_CAPS = {
   ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
-                   tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'] },
+                   tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },   // (View: overhead to across the water)
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
   rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:true, dial:'Rain Direction', lightDeg:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -766,8 +764,8 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   mathnoise:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Position', lightTilt:0, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:315, view:0, zoom:100, guide:'circle' } },   // (the camera dial places it: Turn the way from the middle, View how far)
   // ink on clear paper (genInkBleed): its own colours, Ink and Accent
   inkbleed:      { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','hard-light'], light:false, tints:2,
                    tintLabels:['Ink Hue','Accent Hue'], tintDefaults:['#141414','#B0283A'] },

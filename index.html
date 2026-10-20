@@ -880,8 +880,8 @@ but bear with me, dear}]/jitter:200
                  the main light, or the RIM LIGHT, a second light from its own place on the dial in its own color. Shown only
                  for a surface the page's lights reach (TEXTURE_CAPS rig) -->
             <div class="radio-group light-seg" id="lightSeg" role="group" aria-label="Which light the dial moves">
-              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main</span></button>
-              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim</span></button>
+              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main Light</span></button>
+              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim Light</span></button>
             </div>
             <div class="light-dial-row">
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
@@ -950,7 +950,7 @@ but bear with me, dear}]/jitter:200
                middle toward where the camera stands: the middle looks straight down (or, on Ringworld, straight up),
                the rim looks low across; the slider under it (or a wheel, or a pinch) zooms. While it moves, a wireframe guide shows
                the shot before the surface is made. Shown only for a surface with a camera. -->
-          <div class="field full tool-hidden" id="cameraRow">
+          <div class="field full tool-idle" id="cameraRow">
             <label data-str="label.camera">Camera</label>
             <div class="light-dial-row">
               <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: the center looks straight down; drag toward the rim to look lower across the ground">

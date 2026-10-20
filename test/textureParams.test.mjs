@@ -39,7 +39,7 @@ const missing = textureTypes.filter(t => paramsFor(t).length !== 2);
 // a third knob is always Form; Dream Bloom alone goes on to five (Object Shape, Colour Variation)
 check('every texture declares two params, plus an optional third that must be Form (and a fourth and fifth on a few: Dream Bloom, Crystal Leaf, Cartomancy…)',
   Object.entries(TEXTURE_PARAMS).every(([t, d]) => d.length === 2 || (d.length === 3 && d[2].key === 'form')
-    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf' || t === 'cards' || t === 'crackle' || t === 'rainwater' || t === 'water') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue')
+    || ((t === 'bokeh' || t === 'crystal' || t === 'spangle' || t === 'metalleaf' || t === 'cards' || t === 'crackle' || t === 'water') && d.length === 5 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue') || (t === 'rainwater' && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')
     // (a camera's Tilt is the camera dial's View now: Scrying Pool five, Dune Ripples and Moss on Stone three)
     // (Lichtenberg: its camera on the camera dial; eight of its own — the strike's angle, depth, channel width, slide)
     || (t === 'lichtenberg' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'angle' && d[7].key === 'slide')
@@ -61,7 +61,7 @@ check('every texture declares two params, plus an optional third that must be Fo
     || (t === 'circuit' && d.length === 8 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt' && d[6].key === 'era' && d[7].key === 'marks')
     || ((t === 'wax' || t === 'stainedglass' || t === 'growth' || t === 'aurorasky' || t === 'knotwork') && d.length === 6 && d[2].key === 'form' && d[3].key === 'shape' && d[4].key === 'hue' && d[5].key === 'tilt')
     // (Painted Landscape: Tilt, then Color — grey as it was, or painted in colour)
-    || (t === 'landscape' && d.length === 6 && d[2].key === 'form' && d[3].key === 'tilt' && d[4].key === 'hue' && d[5].key === 'shape')
+    || (t === 'landscape' && d.length === 5 && d[2].key === 'form' && d[3].key === 'hue' && d[4].key === 'shape')   // (its View, and the rain's, the camera dial's)
     || ((t === 'oldpaper' || t === 'moon' || t === 'inkbleed' || t === 'ash' || t === 'turing' || t === 'frost' || t === 'stripes' || t === 'cells') && d.length === 4 && d[2].key === 'form' && d[3].key === 'shape')
     // the Athanor: eight plain knobs, named on the page from its graph's Knob nodes
     || (t === 'athanor' && d.length === 8 && d.every((p, i) => p.key === 'k' + (i + 1)))));

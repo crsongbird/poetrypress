@@ -213,7 +213,7 @@ check('importing the same spell twice does not duplicate it',
 {
   // (the camera taken out: an old look of a surface with a camera, saved before it, has none)
   const base = save(), { lookVersion, cameraTurn, cameraView, cameraZoom, ...old } = base;
-  check('a look says which format it was saved in', base.lookVersion === 7);
+  check('a look says which format it was saved in', base.lookVersion === 8);
   load({ ...base, lookVersion: 6, texture: true, textureType: 'blackhole', textureLight: '45', textureLightTilt: '60', cameraTurn: '0', cameraView: '0', cameraZoom: '100' });
   { const b = save(); check('an old Black Hole look: its view from the light dial (45°, 60) becomes the camera\'s (Turn 90, View 60), the same picture', b.cameraTurn === '90' && +b.cameraView === 60 && +b.cameraZoom === 100); }
   load({ ...old, texture: true, textureType: 'rainstreaks', texP1: '200', texP2: '-30', textureLight: '315' });
@@ -249,6 +249,17 @@ check('importing the same spell twice does not duplicate it',
   load({ ...old, lookVersion: 3, texture: true, textureType: 'moss', texP4: undefined });
   s = save();
   check('…and a Moss on Stone look saved with no Tilt at all takes its old default, 30', s.cameraView === '30');
+  // format 8: positioning onto the camera dial (the Transmutation Circle's light-dial place, Rain on Water's View, the
+  // Painted Landscape's Tilt, whose Color and Impasto step up a place)
+  load({ ...old, lookVersion: 7, texture: true, textureType: 'rainwater', texP1: '120', texP5: '85' });
+  s = save();
+  check('an old Rain on Water look: View 85 (across the water) becomes the camera dial\'s View 100', s.cameraView === '100' && +s.texP1 === 120);
+  load({ ...old, lookVersion: 7, texture: true, textureType: 'landscape', texP4: '40', texP5: '70', texP6: '20' });
+  s = save();
+  check('…a Painted Landscape look: Tilt 40 the camera\'s View, Color and Impasto a place up', s.cameraView === '40' && +s.texP4 === 70 && +s.texP5 === 20);
+  load({ ...old, lookVersion: 7, texture: true, textureType: 'summoning', textureLight: '90', textureLightTilt: '60' });
+  s = save();
+  check('…a Transmutation Circle placed by the light dial is placed by the camera dial there', s.cameraTurn === '90' && s.cameraView === '60');
   load(base);
 }
 

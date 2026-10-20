@@ -1215,7 +1215,7 @@ export const WIKI_PARTS = {
     about: "One circle, built from the rim inward as a stack of bands. Complexity is how many: a bare ring and star at the low end, a crowded seal of glyph bands, polygrams within polygrams and planets at the high. Organic ↔ Tech is its making: drawn by hand with vines, leaves and moons at one end; machined at the other, with gauge ticks, segmented arcs, circuit traces and hex digits, and a noisy bloom rising toward the digital end. The dial places it: at its center the circle sits in the middle of the page, and pulled out it moves that way. Its glyphs are lettered in the app’s web fonts, so the texture is drawn on the page itself.",
     ins: {"position": "Where the circle sits (wire the Light Dial: its center is the page’s)."},
     outs: {"circle": "The circle on gray."},
-    set: {"zoom": "Circle Size.", "amount": "Complexity: how many bands.", "form": "Organic ↔ Tech: hand-drawn at 0, machined at 100.", "variant": "Another circle."},
+    set: {"zoom": "Circle Size.", "amount": "Complexity: how many bands.", "form": "Organic ↔ Tech: hand-drawn at 0, machined at 100.", "variant": "Another circle.", from: 'What places it: the dial (its turn the way from the middle, its height how far), or its own Reach (the way still the position input’s): the Transmutation Circle’s camera dial wires its Turn to the position and its View to Reach.', reach: 'How far from the middle it stands, with Placed By on its own reach (0 the middle, 100 the edge).'},
     tips: ["Organic ↔ Tech near 100 and Complexity high: a seal on a dying screen."],
     see: ["part:sigilmarks", "part:polar"],
   },

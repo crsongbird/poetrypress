@@ -4,6 +4,39 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Gunnlod (2026-10-19)
+
+- **New surface: Sunrise Scroll**, the second love letter to a video game:
+  a land painted in ink on old paper, in Places & Scenes. Mountains stand
+  band behind band, washes of ink lit in flat bands, the far ones craggy,
+  their ridges brushed thick and thin with dry-brush breaks, their feet
+  fading into mist; a woodblock print's graded sky, a red sun the light
+  dial sets behind the peaks, long rounded bands of mist, cherry petals,
+  and paper darkened at its edges with age. Readings: Spring Scroll,
+  Vermilion Dusk, Indigo Print and Bare Ink.
+- **The camera dial and the light selector always show**, faded when a
+  surface doesn't use them, so the Materia panel keeps its shape from
+  surface to surface; the surface's colours sit in two columns beneath
+  them. The light selector's buttons say what they move: Main Light and
+  Rim Light.
+- **Positioning is the camera dial's**: the Transmutation Circle is placed
+  with the camera dial (its turn the way from the middle, its view how far),
+  with a guide on the page; Rain on Water's View and the Painted
+  Landscape's Tilt are the camera dial's View. Saved looks keep their
+  pictures.
+- **Opening the page with a saved surface**: Materia's controls match it
+  at once (on a phone, Firefox could put old values back after the page
+  had loaded; the controls are read again then, when the page comes back
+  into view, and each time Materia opens).
+- **The instrument panel** no longer spells out every rune's name beside
+  the spell.
+- **Under the hood:** reviewed the tests. The generator smoke test takes
+  its surfaces from the registry (every one, at a tiny size, with fixed
+  seeds; it had a hand list that still named a retired surface) and draws
+  the two production sizes for three surfaces instead of sixty renders:
+  about 9 seconds. A proposal for a smaller, simpler app, its tests and
+  its protocol is written up (docs/SIMPLIFY.md, ROADMAP S).
+
 ## Saturn–Gerd (2026-10-19)
 
 - **Macro Bloom is drawn in depth order, and casts its shadows from the

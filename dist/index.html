@@ -568,6 +568,7 @@ body.is-mobile, html:has(body.is-mobile){ overflow:hidden; height:100%; overscro
 
 /* a disabled tool must look inert, not merely quiet */
 .field.tool-off{ opacity:.34; pointer-events:none; }
+.field.tool-idle{ opacity:.34; pointer-events:none; }   /* (shown but resting: the camera dial on a surface without a camera) */
 /* the seed, in words (the number small beneath it) */
 /* one line, the whole width; when the words run past it, a hair-thin
    scroller of the theme's own colour along the field's foot (no native bar) */
@@ -1545,7 +1546,9 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .light-dial.has-rim.rim-on .ld-spike-overlap{ display:inline; }
 /* which light the finger moves, and the Ambient slider: only where the page's lights reach the surface */
 .light-seg, #lightRow .light-amb, #lightAmbField, #lightRow .light-rimk, #lightRimKField{ display:none; }
-#lightRow.has-rig .light-seg{ display:flex; margin:2px 0 4px; }
+/* (Main Light / Rim Light always shows, faded where the page's lights don't reach the surface: Ruby) */
+#lightRow .light-seg{ display:flex; margin:2px 0 4px; }
+#lightRow:not(.has-rig) .light-seg{ opacity:.34; pointer-events:none; }
 /* (and the camera dial beside it steps down as far as Main / Rim takes, so the two dials sit level: appEvents syncLightPad) */
 .tool-row.has-camera.has-seg > #cameraRow > .light-dial-row{ margin-top:var(--light-seg-h, 38px); }
 #lightRow.has-rig:not(.pick-rim) .light-amb{ display:block; }
@@ -12658,6 +12661,13 @@ function cameraGuide(kind, aspX, aspY, cam, ring){
       lines.push({ pts, bold }); }
     return lines;
   }
+  if(kind === 'circle' && ring && ring.place){
+    // (the Transmutation Circle where the camera dial places it: its rim, dashed, and its centre)
+    const { x: cx, y: cy, r } = ring.place, pts = [];
+    for(let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2; pts.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r]); }
+    lines.push({ pts, bold: true }, { pts: [[cx - 0.03, cy], [cx + 0.03, cy]], bold: true }, { pts: [[cx, cy - 0.03], [cx, cy + 0.03]], bold: true });
+    return lines;
+  }
   if(kind === 'bloom'){
     // (Macro Bloom's flower as the camera dial frames it: Zoom sizes it, from the whole flower to its heart filling the
     //  page; View tips it from face-on; Turn says which way it tips and sets it toward that side's third. Its rim, its
@@ -14735,9 +14745,13 @@ const CHAOS_STEPS = {
   // Transmutation Circle, one part (kitWhole: drawn as it always was, under the texture's own seed + Variant);
   // lettered in web fonts, so the texture is made on the page (textureService ON_PAGE)
   transmutation: kitWhole({ cat: 'Marks', label: 'Transmutation Circle', ins: ['position'], outs: ['circle'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
+    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variation', 0, 0, 99),
+      ['from', 'Placed By', 'select', 'the dial', { options: ['the dial', 'its own reach'] }], CHAOS_R('reach', 'Reach', 100)], cost: () => 6 },
+    // (placed by the dial: its turn the way from the middle, its height how far; or by its own Reach, the way still the
+    //  position input's: the Transmutation Circle's camera dial wires its Turn and View here, Ruby: positioning is the camera's)
     (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
-      return () => genSummoningCircles(w, h, a, z, light, f); }),
+      const own = E.P(n, 'from', 'the dial') === 'its own reach', reach = E.num(n, 'reach', 100)/100;
+      return () => own ? withLightTilt(reach, () => genSummoningCircles(w, h, a, z, light, f)) : genSummoningCircles(w, h, a, z, light, f); }),
   // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
   sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
@@ -22250,10 +22264,10 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
       ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
       ['knob', { slot: '3', name: 'Organic ↔ Tech', def: 30 }, 40, 240],                // 3  (30 of 0–100)
-      ['dial', {}, 40, 340],                                                       // 4
-      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['camdial', {}, 40, 340],                                                    // 4  (the camera dial places it: Ruby)
+      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100', from: 'its own reach', reach: 100 }, 320, 100],   // 5
       ['surface', { name: 'Transmutation Circle', ground: 'grey' }, 600, 120]],   // 6
-    wires: [[1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[4, 2, 5, paramPort('transmutation', 'reach')], [1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
   chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
       ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
@@ -22556,7 +22570,7 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '2', name: 'Rain', def: 50 }, 40, 140],                     // 2
       ['knob', { slot: '3', name: 'Spread', def: 50 }, 40, 240],                   // 3
       ['knob', { slot: '4', name: 'Splashes', def: 40 }, 40, 340],                 // 4
-      ['knob', { slot: '5', name: 'View', def: 41 }, 40, 440],                     // 5  (35 of 0–85)
+      ['math', { op: 'min' }, 40, 440],                                            // 5  the camera dial's View, at most 1 (0–85, as the View slider was; Ruby: the camera's)
       ['dial', {}, 40, 540],                                                       // 6
       ['hue', { slot: '1', name: 'Water Hue' }, 40, 620], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 700],   // 7, 8
       ['raindrops', { size: 100, '~size': '40,250', rain: 50, '~rain': '0,100', spread: 50, '~spread': '0,100', splash: 40, '~splash': '0,100', view: 35, '~view': '0,85' }, 300, 120],   // 9
@@ -22564,8 +22578,10 @@ const TEXTURE_CHAINS = {
       ['material', { relief: 110, gloss: 85, shine: 90, shadow: 20, occlusion: 10, ambient: 40 }, 1060, 300],   // 11
       ['glow', { radius: 4, aura: 14, strength: 45, auraK: 10, core: 40, hex: '#EAF4FF' }, 1300, 300],   // 12
       ['surface', { name: 'Rain on Water', ground: 'colour', aa: 'edges only' }, 1540, 320],          // 13
-      ['displace', { amount: 35, blur: 10 }, 800, 520]],                           // 14 (the reflection bent by the rings)
-    wires: [[1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
+      ['displace', { amount: 35, blur: 10 }, 800, 520],                            // 14 (the reflection bent by the rings)
+      ['camdial', {}, 40, 640],                                                    // 15 (the camera: its View looks across the water)
+      ['number', { value: 100 }, 40, 700]],                                        // 16
+    wires: [[15, 2, 5, 1], [16, 1, 5, 2], [1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
       [9, 3, 10, 1], [8, 1, 10, 2], [7, 1, 10, 3], [10, 1, 14, 1], [9, 1, 14, 2], [14, 1, 11, 1], [9, 1, 11, 2], [6, 1, 11, 7], [11, 1, 12, 1], [9, 2, 12, 2], [12, 1, 13, 1]] },
   // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
   watercolour: { label: 'Watercolor Wash', div: 2, teach: 'Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
@@ -22651,16 +22667,18 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
       ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3
-      ['knob', { slot: '4', name: 'Tilt', def: 0 }, 40, 340],                     // 4
-      ['knob', { slot: '5', name: 'Color', def: 0 }, 40, 440],                    // 5
+      ['math', { op: 'min' }, 40, 340],                                           // 4  the camera dial's View: the camera's pitch (Ruby: the camera's, not a slider)
+      ['knob', { slot: '4', name: 'Color', def: 0 }, 40, 440],                    // 5
       ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 0 }, 320, 40],                                  // 6
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 0 }, 600, 120],            // 7
       ['wash', { wet: 0 }, 880, 160],                                             // 8
       ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
       ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
       ['material', { relief: 20, '~relief': '0,40', gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
-      ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
-    wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
+      ['knob', { slot: '5', name: 'Impasto', def: 50 }, 880, 400],
+      ['camdial', {}, 40, 760],                                                    // 13 (the camera: its View the pitch)
+      ['number', { value: 100 }, 40, 820]],               // 12
+    wires: [[13, 2, 4, 1], [14, 1, 4, 2], [1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
       [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 10, 1], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 9, 1],
       [12, 1, 10, paramPort('oilpaint', 'amount')], [12, 1, 11, paramPort('material', 'relief')]] },
@@ -23765,8 +23783,7 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Rain',            min:0,  max:100, def:50,  unit:''},
                   // fresh drops' small tight rings (0) → wide, old, overlapping rings (100)
                   {key:'form',  label:'Spread',          min:0,  max:100, def:50,  unit:''},
-                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''},
-                  {key:'hue',   label:'View',            min:0,  max:85,  def:35,  unit:'', ticks:[0, 85], names:['Overhead', 'Across the Water']}],
+                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''}],   // (its View is the camera dial's)
   glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Rain',            min:20, max:300, def:100, unit:'%'},
                   // a fine mist of tiny droplets between the drops
@@ -23950,8 +23967,7 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
                   {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
-                  // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
-                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''},
+                  // (the camera's pitch, as painted → looking down from higher, is the camera dial's View)
                   // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
                   {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''},
                   // brushwork the dial lights: none (0, the old flat painting) → thick oil, every stroke standing up
@@ -24170,7 +24186,7 @@ const TEXTURE_CAPS = {
   // the dial is the WIND here, not a light (dial: its name for this texture)
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
   landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:0, zoom:100, guide:'plane' } },   // (View: the camera's pitch, as painted to looking down)
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
   // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
@@ -24256,7 +24272,7 @@ const TEXTURE_CAPS = {
   ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
-                   tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'] },
+                   tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },   // (View: overhead to across the water)
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
   rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:true, dial:'Rain Direction', lightDeg:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -24268,8 +24284,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   mathnoise:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Position', lightTilt:0, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:315, view:0, zoom:100, guide:'circle' } },   // (the camera dial places it: Turn the way from the middle, View how far)
   // ink on clear paper (genInkBleed): its own colours, Ink and Accent
   inkbleed:      { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','hard-light'], light:false, tints:2,
                    tintLabels:['Ink Hue','Accent Hue'], tintDefaults:['#141414','#B0283A'] },
@@ -25860,8 +25876,8 @@ but bear with me, dear}]/jitter:200
                  the main light, or the RIM LIGHT, a second light from its own place on the dial in its own color. Shown only
                  for a surface the page's lights reach (TEXTURE_CAPS rig) -->
             <div class="radio-group light-seg" id="lightSeg" role="group" aria-label="Which light the dial moves">
-              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main</span></button>
-              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim</span></button>
+              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main Light</span></button>
+              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim Light</span></button>
             </div>
             <div class="light-dial-row">
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
@@ -25930,7 +25946,7 @@ but bear with me, dear}]/jitter:200
                middle toward where the camera stands: the middle looks straight down (or, on Ringworld, straight up),
                the rim looks low across; the slider under it (or a wheel, or a pinch) zooms. While it moves, a wireframe guide shows
                the shot before the surface is made. Shown only for a surface with a camera. -->
-          <div class="field full tool-hidden" id="cameraRow">
+          <div class="field full tool-idle" id="cameraRow">
             <label data-str="label.camera">Camera</label>
             <div class="light-dial-row">
               <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: the center looks straight down; drag toward the rim to look lower across the ground">
@@ -26804,8 +26820,8 @@ const UI_STRINGS = {
   'label.text_cut':                          "Cut Out by Text",
   'label.shape_strength':                    "Shape Strength",
   'button.layer_upper':                      "Upper",
-  'button.light_main':                       "Main",
-  'button.light_rim':                        "Rim",
+  'button.light_main':                       "Main Light",
+  'button.light_rim':                        "Rim Light",
   'button.layer_lower':                      "Lower",
   'button.layer_swap':                       "⇅ Swap",
   'label.glass_strength':                    "Strength",
@@ -27959,7 +27975,7 @@ function getActiveRadioValue(containerId){
  * how long it took). No longer the opening page: it waits in the Grimoire,
  * dated the release (it shows how the Grimoire keeps a poem).
  */
-const DEV_TEMPLATE = "## <\u00a7UVIcon PoetryPress/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] \u00a7SpellRunes // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90> \u00a7Reading\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7SeedPhrase] \u00b7 \u00a7TextureSeed  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
+const DEV_TEMPLATE = "## <\u00a7UVIcon PoetryPress/rainbow/c> <Application Version/scale:40/right/basis:40>\n-# <[\\<\u00a7Build\\>]/right/basis:140>\n## Current Template: {\u00a7SpellName}\n-# \\[\u00a7Spell\\] // {\u00a7Today}'s Moon Phase: [\u00a7MoonPhase!tonight]\n\nUses Font: [\u00a7Font]\n-# Text Effects: [\u00a7TypeEffect]\n\n## <Uses Surface: \"[\u00a7SurfName]\"/scale:90> \u00a7Reading\n<\u00a7SurfParamsA/scale:90>\nBlend Mode: [\u00a7SurfBlendMode]  Light: [\u00a7LightDir]\n\u00a7SurfParamsB\n-# Seed: [\u00a7SeedPhrase] \u00b7 \u00a7TextureSeed  {\u00a7MoonPhase!seed}\n\n---\n\nI:[\u00a7Glyph!input]  |  R:[\u00a7Glyph!ritual] | T:[\u00a7Glyph!thoughtform] | M:[\u00a7Glyph!materia] | E:[\u00a7Glyph!esoterica] | Wind:[\u00a7Glyph!air] | Earth:[\u00a7Glyph!earth] | Water:[\u00a7Glyph!water] | Fire:[\u00a7Glyph!fire] \nTouch / Return:{\u00a7Glyph!return}\n\n---\n\n## {Renderer Stats}\nTexture Cache: [\u00a7CacheMB]MB \u2022 Canvas: [\u00a7Canvas] \u2022 Frametime: [\u00a7RenderMs]Msec\n[Timing (Msec)] \u00a7Profile";
 /** The Grimoire's title for it. */
 const DEV_TEMPLATE_TITLE = 'PoetryPress Instrument Panel';
 /**
@@ -39535,6 +39551,13 @@ function cameraGuide(kind, aspX, aspY, cam, ring){
       lines.push({ pts, bold }); }
     return lines;
   }
+  if(kind === 'circle' && ring && ring.place){
+    // (the Transmutation Circle where the camera dial places it: its rim, dashed, and its centre)
+    const { x: cx, y: cy, r } = ring.place, pts = [];
+    for(let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2; pts.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r]); }
+    lines.push({ pts, bold: true }, { pts: [[cx - 0.03, cy], [cx + 0.03, cy]], bold: true }, { pts: [[cx, cy - 0.03], [cx, cy + 0.03]], bold: true });
+    return lines;
+  }
   if(kind === 'bloom'){
     // (Macro Bloom's flower as the camera dial frames it: Zoom sizes it, from the whole flower to its heart filling the
     //  page; View tips it from face-on; Turn says which way it tips and sets it toward that side's third. Its rim, its
@@ -41612,9 +41635,13 @@ const CHAOS_STEPS = {
   // Transmutation Circle, one part (kitWhole: drawn as it always was, under the texture's own seed + Variant);
   // lettered in web fonts, so the texture is made on the page (textureService ON_PAGE)
   transmutation: kitWhole({ cat: 'Marks', label: 'Transmutation Circle', ins: ['position'], outs: ['circle'], io: { ins: ['value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6 },
+    params: [CHAOS_R('zoom', 'Circle Size', 100, 40, 200), CHAOS_R('amount', 'Complexity', 100, 20, 300), CHAOS_R('form', 'Organic ↔ Tech', 30), CHAOS_R('variant', 'Variation', 0, 0, 99),
+      ['from', 'Placed By', 'select', 'the dial', { options: ['the dial', 'its own reach'] }], CHAOS_R('reach', 'Reach', 100)], cost: () => 6 },
+    // (placed by the dial: its turn the way from the middle, its height how far; or by its own Reach, the way still the
+    //  position input's: the Transmutation Circle's camera dial wires its Turn and View here, Ruby: positioning is the camera's)
     (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
-      return () => genSummoningCircles(w, h, a, z, light, f); }),
+      const own = E.P(n, 'from', 'the dial') === 'its own reach', reach = E.num(n, 'reach', 100)/100;
+      return () => own ? withLightTilt(reach, () => genSummoningCircles(w, h, a, z, light, f)) : genSummoningCircles(w, h, a, z, light, f); }),
   // ---- the ∆ Chaos textures as parts (each draws as its texture always has, under the texture's own seed + Variant) ----
   sigilmarks: { cat: 'Marks', label: 'Sigils', ins: ['light from'], outs: ['sigils'], io: { ins: ['value'], outs: ['image'] },
     params: [CHAOS_R('zoom', 'Sigil Zoom', 100, 100, 500), CHAOS_R('amount', 'Sigil Count', 100, 15, 260), CHAOS_R('form', 'Chaos', 20), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
@@ -49127,10 +49154,10 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '1', name: 'Circle Size', def: 38 }, 40, 40],                // 1  (100 of 40–200)
       ['knob', { slot: '2', name: 'Complexity', def: 29 }, 40, 140],                // 2  (100 of 20–300)
       ['knob', { slot: '3', name: 'Organic ↔ Tech', def: 30 }, 40, 240],                // 3  (30 of 0–100)
-      ['dial', {}, 40, 340],                                                       // 4
-      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100' }, 320, 100],   // 5
+      ['camdial', {}, 40, 340],                                                    // 4  (the camera dial places it: Ruby)
+      ['transmutation', { zoom: 100, '~zoom': '40,200', amount: 100, '~amount': '20,300', form: 30, '~form': '0,100', from: 'its own reach', reach: 100 }, 320, 100],   // 5
       ['surface', { name: 'Transmutation Circle', ground: 'grey' }, 600, 120]],   // 6
-    wires: [[1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
+    wires: [[4, 2, 5, paramPort('transmutation', 'reach')], [1, 1, 5, paramPort('transmutation', 'zoom')], [2, 1, 5, paramPort('transmutation', 'amount')], [3, 1, 5, paramPort('transmutation', 'form')], [4, 1, 5, 1], [5, 1, 6, 1]] },
   // 🝓 Chladni Sand: sand on a ringing plate, gathered on its still lines, lit by the dial
   chladni: { label: 'Chladni Sand', canvas: true, teach: 'Sand on a metal plate set ringing by a bow (Ernst Chladni, 1787). One part makes it: Chladni Sand. The plate vibrates in a standing wave; the sand is thrown off everything that moves and gathers on the nodal lines, where nothing does. Mode picks how complex the wave is (a few lines, or many), and the seed picks which. Each grain is a lit speck with a small shadow away from the Light Dial. Try: wire a Perlin Noise into the part\'s Where, and the sand gathers where the noise is white instead.', nodes: [
       ['knob', { slot: '1', name: 'Grain Size', def: 20 }, 40, 40],                // 1  (100 of 50–300)
@@ -49433,7 +49460,7 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '2', name: 'Rain', def: 50 }, 40, 140],                     // 2
       ['knob', { slot: '3', name: 'Spread', def: 50 }, 40, 240],                   // 3
       ['knob', { slot: '4', name: 'Splashes', def: 40 }, 40, 340],                 // 4
-      ['knob', { slot: '5', name: 'View', def: 41 }, 40, 440],                     // 5  (35 of 0–85)
+      ['math', { op: 'min' }, 40, 440],                                            // 5  the camera dial's View, at most 1 (0–85, as the View slider was; Ruby: the camera's)
       ['dial', {}, 40, 540],                                                       // 6
       ['hue', { slot: '1', name: 'Water Hue' }, 40, 620], ['hue', { slot: '2', name: 'Sky Hue' }, 40, 700],   // 7, 8
       ['raindrops', { size: 100, '~size': '40,250', rain: 50, '~rain': '0,100', spread: 50, '~spread': '0,100', splash: 40, '~splash': '0,100', view: 35, '~view': '0,85' }, 300, 120],   // 9
@@ -49441,8 +49468,10 @@ const TEXTURE_CHAINS = {
       ['material', { relief: 110, gloss: 85, shine: 90, shadow: 20, occlusion: 10, ambient: 40 }, 1060, 300],   // 11
       ['glow', { radius: 4, aura: 14, strength: 45, auraK: 10, core: 40, hex: '#EAF4FF' }, 1300, 300],   // 12
       ['surface', { name: 'Rain on Water', ground: 'colour', aa: 'edges only' }, 1540, 320],          // 13
-      ['displace', { amount: 35, blur: 10 }, 800, 520]],                           // 14 (the reflection bent by the rings)
-    wires: [[1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
+      ['displace', { amount: 35, blur: 10 }, 800, 520],                            // 14 (the reflection bent by the rings)
+      ['camdial', {}, 40, 640],                                                    // 15 (the camera: its View looks across the water)
+      ['number', { value: 100 }, 40, 700]],                                        // 16
+    wires: [[15, 2, 5, 1], [16, 1, 5, 2], [1, 1, 9, paramPort('raindrops', 'size')], [2, 1, 9, paramPort('raindrops', 'rain')], [3, 1, 9, paramPort('raindrops', 'spread')], [4, 1, 9, paramPort('raindrops', 'splash')], [5, 1, 9, paramPort('raindrops', 'view')],
       [9, 3, 10, 1], [8, 1, 10, 2], [7, 1, 10, 3], [10, 1, 14, 1], [9, 1, 14, 2], [14, 1, 11, 1], [9, 1, 11, 2], [6, 1, 11, 7], [11, 1, 12, 1], [9, 2, 12, 2], [12, 1, 13, 1]] },
   // 🜚 Watercolor Wash: Washes lays two pigments' shapes; a Pigment part lays each on the paper
   watercolour: { label: 'Watercolor Wash', div: 2, teach: 'Washes lays the shapes of two pigments, each a blob drawn forty times over, a little differently each time, so its edges go soft. Each Pigment part lays one of them on the paper as watercolor does: darker at the drying edge, settling in the paper\'s tooth, running toward where the dial points. The second Pigment paints over the first, so where they overlap the colors mix. Try: wire a Cells or a Plain Noise into a Pigment\'s Density instead.', nodes: [
@@ -49528,16 +49557,18 @@ const TEXTURE_CHAINS = {
       ['knob', { slot: '1', name: 'Distance', def: 29 }, 40, 40],                 // 1  (100 of 60–200)
       ['knob', { slot: '2', name: 'Ridges', def: 35 }, 40, 140],                  // 2  (100 of 20–250)
       ['knob', { slot: '3', name: 'Wetness', def: 0 }, 40, 240],                  // 3
-      ['knob', { slot: '4', name: 'Tilt', def: 0 }, 40, 340],                     // 4
-      ['knob', { slot: '5', name: 'Color', def: 0 }, 40, 440],                    // 5
+      ['math', { op: 'min' }, 40, 340],                                           // 4  the camera dial's View: the camera's pitch (Ruby: the camera's, not a slider)
+      ['knob', { slot: '4', name: 'Color', def: 0 }, 40, 440],                    // 5
       ['sky', { time: 'seed', clouds: 'seed', size: 100, tilt: 0, colour: 0 }, 320, 40],                                  // 6
       ['ridges', { country: 'seed', time: 'seed', bands: 100, distance: 100, tilt: 0, colour: 0 }, 600, 120],            // 7
       ['wash', { wet: 0 }, 880, 160],                                             // 8
       ['surface', { name: 'Painted Landscape', ground: 'grey' }, 1720, 180],     // 9
       ['oilpaint', { amount: 50, size: 100, length: 100, detail: 50, vary: 40 }, 1160, 160],   // 10
       ['material', { relief: 20, '~relief': '0,40', gloss: 25, shine: 30, shadow: 50, occlusion: 30, ambient: 45 }, 1440, 180],   // 11
-      ['knob', { slot: '6', name: 'Impasto', def: 50 }, 880, 400]],               // 12
-    wires: [[1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
+      ['knob', { slot: '5', name: 'Impasto', def: 50 }, 880, 400],
+      ['camdial', {}, 40, 760],                                                    // 13 (the camera: its View the pitch)
+      ['number', { value: 100 }, 40, 820]],               // 12
+    wires: [[13, 2, 4, 1], [14, 1, 4, 2], [1, 1, 6, paramPort('sky', 'size')], [1, 1, 7, paramPort('ridges', 'distance')], [2, 1, 7, paramPort('ridges', 'bands')], [3, 1, 8, paramPort('wash', 'wet')],
       [4, 1, 6, paramPort('sky', 'tilt')], [4, 1, 7, paramPort('ridges', 'tilt')], [5, 1, 6, paramPort('sky', 'colour')], [5, 1, 7, paramPort('ridges', 'colour')],
       [6, 1, 7, 1], [7, 1, 8, 1], [8, 1, 10, 1], [10, 1, 11, 1], [10, 2, 11, 2], [11, 1, 9, 1],
       [12, 1, 10, paramPort('oilpaint', 'amount')], [12, 1, 11, paramPort('material', 'relief')]] },
@@ -50642,8 +50673,7 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Rain',            min:0,  max:100, def:50,  unit:''},
                   // fresh drops' small tight rings (0) → wide, old, overlapping rings (100)
                   {key:'form',  label:'Spread',          min:0,  max:100, def:50,  unit:''},
-                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''},
-                  {key:'hue',   label:'View',            min:0,  max:85,  def:35,  unit:'', ticks:[0, 85], names:['Overhead', 'Across the Water']}],
+                  {key:'shape', label:'Splashes',        min:0,  max:100, def:40,  unit:''}],   // (its View is the camera dial's)
   glassrain:     [{key:'zoom',  label:'Drop Size',       min:40, max:300, def:100, unit:'%'},
                   {key:'amt',   label:'Rain',            min:20, max:300, def:100, unit:'%'},
                   // a fine mist of tiny droplets between the drops
@@ -50827,8 +50857,7 @@ const TEXTURE_PARAMS = {
                   {key:'amt',   label:'Ridges',          min:20, max:250, def:100, unit:'%'},
                   // dry, worked paint (as before) → watercolour: bleeding edges, blooms
                   {key:'form',  label:'Wetness',         min:0,  max:100, def:0,   unit:''},
-                  // the camera's pitch: as painted (0) → looking down from higher: the horizon rises, the near ground grows
-                  {key:'tilt',  label:'Tilt',            min:0,  max:100, def:0,   unit:''},
+                  // (the camera's pitch, as painted → looking down from higher, is the camera dial's View)
                   // grey, tinted by the hues (0, as it was) → painted in colour: a time of day, aerial perspective, broken colour
                   {key:'hue',   label:'Color',           min:0,  max:100, def:0,   unit:''},
                   // brushwork the dial lights: none (0, the old flat painting) → thick oil, every stroke standing up
@@ -51047,7 +51076,7 @@ const TEXTURE_CAPS = {
   // the dial is the WIND here, not a light (dial: its name for this texture)
   snow:          { blends:['lighten','screen','overlay','soft-light'],  light:true, dial:'Wind Direction', tints:0 },
   landscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:0, zoom:100, guide:'plane' } },   // (View: the camera's pitch, as painted to looking down)
   cityscape:     { blends:['hard-light','overlay','soft-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2,
                    tintLabels:['Window Hue','Water Hue'], tintDefaults:['#FFE3A8','#2E4F6E'] },
   // (seen from the camera dial: Turn turns its disc, View how edge-on, Zoom the lens; the light dial is not its)
@@ -51133,7 +51162,7 @@ const TEXTURE_CAPS = {
   ringworld:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:40, view:55, zoom:100, guide:'ring' } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
-                   tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'] },
+                   tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },   // (View: overhead to across the water)
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
   rainstreaks:   { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey',  light:true, dial:'Rain Direction', lightDeg:0, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
@@ -51145,8 +51174,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   mathnoise:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
-  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:true, dial:'Position', lightTilt:0, tints:2, genericTint:true,
-                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
+  summoning:     { blends:['overlay','soft-light','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'], ground:'grey', light:false, tints:2, genericTint:true,
+                   tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:315, view:0, zoom:100, guide:'circle' } },   // (the camera dial places it: Turn the way from the middle, View how far)
   // ink on clear paper (genInkBleed): its own colours, Ink and Accent
   inkbleed:      { blends:['multiply','source-over','darken','color-burn','overlay','soft-light','hard-light'], light:false, tints:2,
                    tintLabels:['Ink Hue','Accent Hue'], tintDefaults:['#141414','#B0283A'] },
@@ -51981,9 +52010,9 @@ const TEXTURE_ELEMENTS = {
     wind:  { name: 'Moon in Cloud', k: [80, 80, 90, 50],   t: ['#E6F2EC', '#1A2420'] },
     earth: { name: 'Harvest Moon',  k: [150, 160, 10, 60], t: ['#FFD27F', '#2E1C08'] } },
   landscape: { def: 'earth', earth: { name: 'Painted Landscape' },
-    fire:  { name: 'Volcanic Dusk', k: [120, 200, 20, 30, 0, 65], t: ['#FFA060', '#180303'] },
-    water: { name: 'Misty Fjord',   k: [180, 90, 85, 10, 0, 25],  t: ['#CDE7F0', '#0E2A3A'] },
-    wind:  { name: 'High Plains',   k: [80, 140, 20, 60, 85, 55],  t: ['#F4FFE0', '#12200E'] } },
+    fire:  { name: 'Volcanic Dusk', k: [120, 200, 20, 0, 65], t: ['#FFA060', '#180303'], cam: [0, 30, 100] },
+    water: { name: 'Misty Fjord',   k: [180, 90, 85, 0, 25],  t: ['#CDE7F0', '#0E2A3A'], cam: [0, 10, 100] },
+    wind:  { name: 'High Plains',   k: [80, 140, 20, 85, 55],  t: ['#F4FFE0', '#12200E'], cam: [0, 60, 100] } },
   flowfield: { def: 'wind', wind: { name: 'Flow-Field Ink' },
     fire:  { name: 'Flame Tongues', k: [80, 160, 85],  t: ['#C2261B', '#F29A2E'], light: [0, 100] },
     water: { name: 'Current',       k: [160, 120, 25], t: ['#1D4E89', '#3FA7B5'], light: [90, 100] },
@@ -52239,9 +52268,9 @@ const TEXTURE_ELEMENTS = {
     wind:  { name: 'Gale-Torn Silk',  k: [45, 100, 40, 90, 85, 80, 45, 40],  t: ['#E8F4FF', '#0A1622'], light: [320, 80] },
     earth: { name: 'Cellar Webs',     k: [85, 70, 8, 70, 60, 65, 25, 80],   t: ['#F0E8D8', '#1A140C'], blend: 'hard-light', light: [135, 70] } },
   rainwater: { def: 'water', water: { name: 'Rain on Water' },
-    fire:  { name: 'Lantern Pond',   k: [120, 35, 70, 60, 70], t: ['#1A0E08', '#F2A24A'], light: [200, 60] },
-    wind:  { name: 'Downpour',       k: [70, 95, 25, 90, 40], t: ['#141C22', '#C9D4DC'], light: [320, 100] },
-    earth: { name: 'Last Drops',     k: [160, 12, 95, 15, 10], t: ['#0A1410', '#6E8A70'], light: [300, 80] } },
+    fire:  { name: 'Lantern Pond',   k: [120, 35, 70, 60], t: ['#1A0E08', '#F2A24A'], light: [200, 60], cam: [0, 82, 100] },
+    wind:  { name: 'Downpour',       k: [70, 95, 25, 90], t: ['#141C22', '#C9D4DC'], light: [320, 100], cam: [0, 47, 100] },
+    earth: { name: 'Last Drops',     k: [160, 12, 95, 15], t: ['#0A1410', '#6E8A70'], light: [300, 80], cam: [0, 12, 100] } },
   glassrain: { def: 'water', water: { name: 'Rain on Glass' },
     fire:  { name: 'Steam',       k: [60, 60, 100], blend: 'screen' },
     wind:  { name: 'Driven Rain', k: [70, 280, 10], light: [60, 100] },
@@ -52631,11 +52660,11 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Gerd';
+const RELEASE = 'Saturn–Gunnlod';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
-const RELEASE_DATE = '2026-10-19';
+const RELEASE_DATE = '2026-10-20';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"BBNP1xWY","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"UYGfse5f","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"xgw5D-MU"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"xgw5D-MU"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -53468,7 +53497,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-20 · 784a780";
+const STAMP = "2026-10-20 · 234db25";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -58531,7 +58560,7 @@ const WIKI_PARTS = {
     about: "One circle, built from the rim inward as a stack of bands. Complexity is how many: a bare ring and star at the low end, a crowded seal of glyph bands, polygrams within polygrams and planets at the high. Organic ↔ Tech is its making: drawn by hand with vines, leaves and moons at one end; machined at the other, with gauge ticks, segmented arcs, circuit traces and hex digits, and a noisy bloom rising toward the digital end. The dial places it: at its center the circle sits in the middle of the page, and pulled out it moves that way. Its glyphs are lettered in the app’s web fonts, so the texture is drawn on the page itself.",
     ins: {"position": "Where the circle sits (wire the Light Dial: its center is the page’s)."},
     outs: {"circle": "The circle on gray."},
-    set: {"zoom": "Circle Size.", "amount": "Complexity: how many bands.", "form": "Organic ↔ Tech: hand-drawn at 0, machined at 100.", "variant": "Another circle."},
+    set: {"zoom": "Circle Size.", "amount": "Complexity: how many bands.", "form": "Organic ↔ Tech: hand-drawn at 0, machined at 100.", "variant": "Another circle.", from: 'What places it: the dial (its turn the way from the middle, its height how far), or its own Reach (the way still the position input’s): the Transmutation Circle’s camera dial wires its Turn to the position and its View to Reach.', reach: 'How far from the middle it stands, with Placed By on its own reach (0 the middle, 100 the edge).'},
     tips: ["Organic ↔ Tech near 100 and Complexity high: a seal on a dying screen."],
     see: ["part:sigilmarks", "part:polar"],
   },
@@ -61726,7 +61755,7 @@ function applyPersisted(s){
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
 // from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 7;
+const LOOK_VERSION = 8;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -61791,7 +61820,21 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))); }
+function retireLook(s){ return retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))))); }
+/** POSITIONING ON THE CAMERA DIAL (format 8; Ruby: "use the camera dial … when we are doing camera positioning"): the
+ *  Transmutation Circle was placed by the light dial (its turn the way, its height how far): those become the camera's
+ *  Turn and View. Rain on Water's View slider (0–85) and the Painted Landscape's Tilt slider are the camera's View now;
+ *  the Landscape's Color and Impasto step up a place. A look from before keeps its picture. */
+function retireFormat8Layer(L){
+  if(!L) return L;
+  const n = (v, d) => (v === undefined || v === null || v === '' || isNaN(+v)) ? d : +v;
+  if(L.textureType === 'summoning') return { ...L, cameraTurn: String(Math.round(n(L.textureLight, 315))), cameraView: String(Math.round(Math.min(100, n(L.textureLightTilt, 0)))), cameraZoom: '100' };
+  if(L.textureType === 'rainwater'){ const o = { ...L, cameraTurn: '0', cameraView: String(Math.round(n(L.texP5, 35)/85*100)), cameraZoom: '100' }; delete o.texP5; return o; }
+  if(L.textureType === 'landscape'){ const o = { ...L, cameraTurn: '0', cameraView: String(Math.round(n(L.texP4, 0))), cameraZoom: '100' };
+    if(L.texP5 !== undefined) o.texP4 = L.texP5; else delete o.texP4; if(L.texP6 !== undefined) o.texP5 = L.texP6; else delete o.texP5; delete o.texP6; return o; }
+  return L;
+}
+function retireFormat8(s){ if(!s || +s.lookVersion >= 8) return s; let o = retireFormat8Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat8Layer(o.baseLayer) }; return o; }
 /** THE BLACK HOLE ON THE CAMERA DIAL (format 7; Ruby: any view belongs on the camera dial): it was seen from the light
  *  dial, its turn 315° the disc level, its height how edge-on. A look from before keeps its picture: the dial's turn
  *  past 315° becomes the camera's Turn, its height the camera's View, the lens as it was. */
@@ -63069,10 +63112,11 @@ function syncTextureTools(resetToDefaults){
     const hf = $('lightTiltField'); if(hf && hf.style) hf.style.display = caps.dirOnly ? 'none' : '';
   }
 
-  // THE CAMERA DIAL: shown for a surface with a camera, beside the light dial, the hues below in two columns
+  // THE CAMERA DIAL: always beside the light dial (Ruby: "Always show the camera dial. Faded out when it isn't in use"),
+  // faded for a surface with no camera; the hues below it in two columns
   { const cam = caps.camera, row = $('cameraRow'), tools = $('textureToolRow');
-    if(row && row.classList) row.classList.toggle('tool-hidden', !cam);
-    if(tools && tools.classList) tools.classList.toggle('has-camera', !!cam);
+    if(row && row.classList){ row.classList.remove('tool-hidden'); row.classList.toggle('tool-idle', !cam); if(row.title !== undefined) row.title = cam ? '' : 'This surface has no camera'; }
+    if(tools && tools.classList) tools.classList.add('has-camera');
     if(cam && resetToDefaults && !state.locks.has('cameraTurn')){ const d = cameraStart(($('textureType') || {}).value); putCamera(d.turn, d.view, d.zoom); }
     else syncCameraPad(); }
 
@@ -63223,7 +63267,7 @@ function syncLightPad(){
   // THE TWO DIALS SIDE BY SIDE (Ruby: "always aligned … it looks good when it was symmetrical"): with Main / Rim above
   // the light dial, the camera dial steps down as far, so the two sit level
   { const seg = $('lightSeg'), tr = row && row.closest ? row.closest('.tool-row') : null;
-    if(tr && tr.classList && tr.style){ const on = reach && !!seg && !!seg.getBoundingClientRect;
+    if(tr && tr.classList && tr.style){ const on = !!seg && !!seg.getBoundingClientRect;   // (the selector always shows now: faded where the page's lights don't reach)
       tr.classList.toggle('has-seg', on);
       if(on && typeof getComputedStyle === 'function'){ const r = seg.getBoundingClientRect(), cs = getComputedStyle(seg), h = r.height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
         if(h > 0) tr.style.setProperty('--light-seg-h', h.toFixed(1) + 'px'); } } }
@@ -63410,7 +63454,9 @@ function drawCameraGuide(on){
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow();
   const type = ($('textureType') || {}).value, deg0 = parseFloat(($('textureLight') || {}).value) || 0, t0 = parseFloat(($('textureLightTilt') || {}).value);
   // (the Black Hole's disc stands where the light dial places it)
-  const ring = kind === 'disc' ? { place: dialGuidePlace({ k: 'place' }, deg0, isNaN(t0) ? 100 : t0, aspX, aspY) } : ringGuideOf(kind, type, c);
+  // (the Transmutation Circle stands where the camera dial places it, as large as its Circle Size)
+  const ring = kind === 'disc' ? { place: dialGuidePlace({ k: 'place' }, deg0, isNaN(t0) ? 100 : t0, aspX, aspY) }
+    : kind === 'circle' ? { place: dialGuidePlace({ k: 'place' }, c.turn, c.view, aspX, aspY, { size: parseFloat(($('texP1') || {}).value) || 100 }) } : ringGuideOf(kind, type, c);
   const lines = cameraGuide(kind, aspX, aspY, c, ring);
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
   const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';
@@ -63437,7 +63483,6 @@ function drawCameraGuide(on){
  *  (A surface whose dial is the day, Ringworld, has its camera's guide only.) */
 const DIAL_GUIDES = {
   crackle:     [{ k: 'sun' }, { k: 'impact' }],
-  summoning:   [{ k: 'place' }],
   blackhole:   [{ k: 'disc' }],                              // (the light dial places the hole: its disc's wireframe there)
   snow:        [{ k: 'arrow', fall: true }],                 // (the wind blows from the handle, the flakes fall with it: Wind is how far)
   rainstreaks: [{ k: 'arrow', way: -1 }],                    // (the rain comes from the handle)

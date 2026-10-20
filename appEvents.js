@@ -960,7 +960,7 @@ function applyPersisted(s){
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
 // from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 7;
+const LOOK_VERSION = 8;
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -1025,7 +1025,21 @@ function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))); }
+function retireLook(s){ return retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))))); }
+/** POSITIONING ON THE CAMERA DIAL (format 8; Ruby: "use the camera dial … when we are doing camera positioning"): the
+ *  Transmutation Circle was placed by the light dial (its turn the way, its height how far): those become the camera's
+ *  Turn and View. Rain on Water's View slider (0–85) and the Painted Landscape's Tilt slider are the camera's View now;
+ *  the Landscape's Color and Impasto step up a place. A look from before keeps its picture. */
+function retireFormat8Layer(L){
+  if(!L) return L;
+  const n = (v, d) => (v === undefined || v === null || v === '' || isNaN(+v)) ? d : +v;
+  if(L.textureType === 'summoning') return { ...L, cameraTurn: String(Math.round(n(L.textureLight, 315))), cameraView: String(Math.round(Math.min(100, n(L.textureLightTilt, 0)))), cameraZoom: '100' };
+  if(L.textureType === 'rainwater'){ const o = { ...L, cameraTurn: '0', cameraView: String(Math.round(n(L.texP5, 35)/85*100)), cameraZoom: '100' }; delete o.texP5; return o; }
+  if(L.textureType === 'landscape'){ const o = { ...L, cameraTurn: '0', cameraView: String(Math.round(n(L.texP4, 0))), cameraZoom: '100' };
+    if(L.texP5 !== undefined) o.texP4 = L.texP5; else delete o.texP4; if(L.texP6 !== undefined) o.texP5 = L.texP6; else delete o.texP5; delete o.texP6; return o; }
+  return L;
+}
+function retireFormat8(s){ if(!s || +s.lookVersion >= 8) return s; let o = retireFormat8Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat8Layer(o.baseLayer) }; return o; }
 /** THE BLACK HOLE ON THE CAMERA DIAL (format 7; Ruby: any view belongs on the camera dial): it was seen from the light
  *  dial, its turn 315° the disc level, its height how edge-on. A look from before keeps its picture: the dial's turn
  *  past 315° becomes the camera's Turn, its height the camera's View, the lens as it was. */
@@ -2303,10 +2317,11 @@ function syncTextureTools(resetToDefaults){
     const hf = $('lightTiltField'); if(hf && hf.style) hf.style.display = caps.dirOnly ? 'none' : '';
   }
 
-  // THE CAMERA DIAL: shown for a surface with a camera, beside the light dial, the hues below in two columns
+  // THE CAMERA DIAL: always beside the light dial (Ruby: "Always show the camera dial. Faded out when it isn't in use"),
+  // faded for a surface with no camera; the hues below it in two columns
   { const cam = caps.camera, row = $('cameraRow'), tools = $('textureToolRow');
-    if(row && row.classList) row.classList.toggle('tool-hidden', !cam);
-    if(tools && tools.classList) tools.classList.toggle('has-camera', !!cam);
+    if(row && row.classList){ row.classList.remove('tool-hidden'); row.classList.toggle('tool-idle', !cam); if(row.title !== undefined) row.title = cam ? '' : 'This surface has no camera'; }
+    if(tools && tools.classList) tools.classList.add('has-camera');
     if(cam && resetToDefaults && !state.locks.has('cameraTurn')){ const d = cameraStart(($('textureType') || {}).value); putCamera(d.turn, d.view, d.zoom); }
     else syncCameraPad(); }
 
@@ -2457,7 +2472,7 @@ function syncLightPad(){
   // THE TWO DIALS SIDE BY SIDE (Ruby: "always aligned … it looks good when it was symmetrical"): with Main / Rim above
   // the light dial, the camera dial steps down as far, so the two sit level
   { const seg = $('lightSeg'), tr = row && row.closest ? row.closest('.tool-row') : null;
-    if(tr && tr.classList && tr.style){ const on = reach && !!seg && !!seg.getBoundingClientRect;
+    if(tr && tr.classList && tr.style){ const on = !!seg && !!seg.getBoundingClientRect;   // (the selector always shows now: faded where the page's lights don't reach)
       tr.classList.toggle('has-seg', on);
       if(on && typeof getComputedStyle === 'function'){ const r = seg.getBoundingClientRect(), cs = getComputedStyle(seg), h = r.height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
         if(h > 0) tr.style.setProperty('--light-seg-h', h.toFixed(1) + 'px'); } } }
@@ -2644,7 +2659,9 @@ function drawCameraGuide(on){
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow();
   const type = ($('textureType') || {}).value, deg0 = parseFloat(($('textureLight') || {}).value) || 0, t0 = parseFloat(($('textureLightTilt') || {}).value);
   // (the Black Hole's disc stands where the light dial places it)
-  const ring = kind === 'disc' ? { place: dialGuidePlace({ k: 'place' }, deg0, isNaN(t0) ? 100 : t0, aspX, aspY) } : ringGuideOf(kind, type, c);
+  // (the Transmutation Circle stands where the camera dial places it, as large as its Circle Size)
+  const ring = kind === 'disc' ? { place: dialGuidePlace({ k: 'place' }, deg0, isNaN(t0) ? 100 : t0, aspX, aspY) }
+    : kind === 'circle' ? { place: dialGuidePlace({ k: 'place' }, c.turn, c.view, aspX, aspY, { size: parseFloat(($('texP1') || {}).value) || 100 }) } : ringGuideOf(kind, type, c);
   const lines = cameraGuide(kind, aspX, aspY, c, ring);
   x.clearRect(0, 0, g.width, g.height); x.lineCap = 'round'; x.lineJoin = 'round';
   const accent = (getComputedStyle(document.body).getPropertyValue('--accent') || '#E7A0B8').trim() || '#E7A0B8';
@@ -2671,7 +2688,6 @@ function drawCameraGuide(on){
  *  (A surface whose dial is the day, Ringworld, has its camera's guide only.) */
 const DIAL_GUIDES = {
   crackle:     [{ k: 'sun' }, { k: 'impact' }],
-  summoning:   [{ k: 'place' }],
   blackhole:   [{ k: 'disc' }],                              // (the light dial places the hole: its disc's wireframe there)
   snow:        [{ k: 'arrow', fall: true }],                 // (the wind blows from the handle, the flakes fall with it: Wind is how far)
   rainstreaks: [{ k: 'arrow', way: -1 }],                    // (the rain comes from the handle)

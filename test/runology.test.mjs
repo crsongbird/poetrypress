@@ -37,7 +37,7 @@ check('§Rune!name, §Glyph!name (Runology names too), §SpellRunes and §Readin
   resolvePmlVariables('§Rune!astral §Rune!lance', ctx) === '🝊 ⯤' && resolvePmlVariables('§Glyph!quintessence', ctx) === '🜚'
   && resolvePmlVariables('§SpellRunes', ctx) === '(Wind · Fire · Aether)'
   && resolvePmlVariables('§Reading', ctx) === '🜂 Smoulder' && resolvePmlVariables('§Rune!nonsense', ctx) === '§Rune!nonsense');
-check('the report shows the spell\'s reading and the surface\'s reading', ['§SpellRunes', '§Reading'].every(v => DEV_TEMPLATE.includes(v)) && !/§SeedRune|§PresetRune/.test(DEV_TEMPLATE));
+check('the report shows the surface\'s reading, and the spell\'s runes without spelling out their names (Ruby)', DEV_TEMPLATE.includes('§Reading') && !DEV_TEMPLATE.includes('§SpellRunes') && !/§SeedRune|§PresetRune/.test(DEV_TEMPLATE));
 check('their fonts are loaded and in the glyph stack (Math, Runic, Music, Canadian Aboriginal, Cherokee)',
   ['Noto+Sans+Math', 'Noto+Sans+Runic', 'Noto+Music', 'Noto+Sans+Canadian+Aboriginal', 'Noto+Sans+Cherokee'].every(f => src('index.html').includes(f))
   && ['Noto Sans Runic', 'Noto Music', 'Noto Sans Canadian Aboriginal', 'Noto Sans Cherokee'].every(f => src('spell.js').includes(f)));
