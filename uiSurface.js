@@ -189,6 +189,7 @@ export function syncTextureTools(resetToDefaults){
     const resolve = (d, fallback) =>
       d === 'accent1' ? $('accent1ColorHex').value
       : d === 'accent2' ? $('accent2ColorHex').value
+      : d === 'own' ? ''                        // (left empty: the surface's own colour, until one is chosen)
       : (d || fallback);
     state.ui.tintBySystem = true;
     setColorField('textureTint1Hex', resolve(defs[0], '#7A2B2B'));

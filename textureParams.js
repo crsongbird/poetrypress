@@ -95,7 +95,7 @@ export const TEXTURE_PARAMS = {
                   sliderOf('size', 'Print Size', 50),
                   sliderOf('ink', 'Ink', 55),
                   sliderOf('paper', 'Paper', 45),
-                  sliderOf('misreg', 'Misregistration', 25),
+                  sliderOf('medium', 'Medium', 10),
                   sliderOf('wear', 'Wear', 30),
                   sliderOf('turn', 'Turn', 50)],
   bouquets:       [sliderOf('main', 'Main Flower', 41),

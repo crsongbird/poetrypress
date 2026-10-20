@@ -1155,109 +1155,37 @@ export const TEXTURE_CHAINS = {
       [16, 5, 26, 2], [14, 1, 26, 3], [15, 1, 27, 1], [14, 1, 27, 2], [16, 2, 28, 1], [6, 1, 28, 'outHi'], [26, 1, 29, 1],
       [27, 1, 29, 2], [28, 1, 29, 3], [29, 1, 31, 1], [30, 1, 31, 2], [7, 1, 31, 'opacity'], [31, 1, 32, 1],
       [33, 1, 32, 'amount'], [32, 1, 34, 1]] },
-  imprints: { label: 'Floral Imprints', div: 2, teach: 'Flowers printed, not painted (docs/prior-art/florals.md §3): Anna Atkins’ cyanotypes, where the plant laid on the coated paper stays pale and the rest goes blue; small heads stamped in ink, a second colour slipping off register; a crest folded round from one flower, as a kamon is; or the flowers themselves pressed flat on the page. The seed chooses which (Random Number into a Map Switch). Bloom draws them: a sheet of sixteen whole plants, heads or one centred flower, the Species slider’s, or a habitat’s mix at its end; Scatter throws them, cut out by Bloom’s Mask. A Threshold over a fine noise wears the ink (Wear) and sets its weight (Ink); Offset slips the second colour (Misregistration); a Perlin Noise and a smeared one give the paper its tooth (Paper). Pressed flowers are lit by the Light Engine, a hairline shadow from the dial. Try: Prints low and Print Size high for a single cyanotype specimen.',
+  imprints: { label: 'Floral Imprints', div: 2, teach: 'Flowers printed, drawn or pressed onto the page (docs/prior-art/floral-imprints.md), in fifteen media: a cyanotype’s Prussian blue with the plant left pale where it lay; a lumen print’s mauve; white chalk on a dark page, sitting on the paper’s tooth; a crayon rubbing; graphite with its sheen; charcoal’s smudge; the flower itself, pressed and taped as on a herbarium sheet; a blind emboss and gold foil the light dial lights; letterpress pressed into the paper; a nature print in the leaf’s own veins; an eco-print’s tannin and iron halo; a rubber stamp; a risograph’s two drums off register; a watercolour wash. Specimen lays whole plants of the Species on the page, root down, as a collector lays them on a sheet (docs/prior-art/botanical-specimens.md): each with its root, bulb or cut end, its own leaves and how they grow, its flowers in several views among buds and seed (Prints: how many plants; Print Size: how tall; Turn: how they lean); its maps (layers, part, height) are merged into one picture; Imprint develops them in the Medium, on the page beneath under Normal or on the blend’s own neutral under any other blend (so Multiply lays only ink, Screen only chalk); the Light Engine lights its height and gloss from the dial. Try: Medium Blind Emboss with the light dial low, or White Chalk with Screen on a dark page.',
     nodes: [
-      ['knob', { slot: '1' }, 40, 40],                                                                                      // 1
-      ['knob', { slot: '2' }, 40, 150],                                                                                      // 2
-      ['knob', { slot: '3' }, 40, 260],                                                                                  // 3
-      ['knob', { slot: '4' }, 40, 370],                                                                                         // 4
-      ['knob', { slot: '5' }, 40, 480],                                                                                       // 5
-      ['knob', { slot: '6' }, 40, 590],                                                                             // 6
-      ['knob', { slot: '7' }, 40, 700],                                                                                        // 7
-      ['knob', { slot: '8' }, 40, 810],                                                                                        // 8
-      ['dial', {}, 40, 920],                                                                                                                          // 9
-      ['hue', { slot: '1', name: 'Paper Hue' }, 40, 1030],                                                                                            // 10
-      ['hue', { slot: '2', name: 'Ink Hue' }, 40, 1140],                                                                                              // 11
-      ['hue', { slot: '3', name: 'Petal Hue' }, 40, 1250],                                                                                            // 12
-      ['hue', { slot: '4', name: 'Center Hue' }, 40, 1360],                                                                                           // 13
-      ['hue', { slot: '5', name: 'Leaf Hue' }, 40, 1470],                                                                                             // 14
-      ['hue', { slot: '6', name: 'Second Ink Hue' }, 40, 1580],                                                                                       // 15
-      ['perlin', { scale: 160, details: 3, rough: 60, contrast: 40 }, 40, 1690],                                                                      // 16
-      ['motionblur', { length: 8, angle: 0 }, 260, 40],                                                                                               // 17
-      ['perlin', { scale: 200, details: 2, contrast: 60 }, 40, 1800],                                                                                 // 18
-      ['maprange', { outLo: 48, outHi: 52, '~outLo': '50,30', '~outHi': '50,70' }, 700, 40],                                                          // 19
-      ['math', { op: 'average' }, 480, 40],                                                                                                           // 20
-      ['gradmap', { stops: 3 }, 920, 40],                                                                                                             // 21
-      ['mix', { t: 12 }, 260, 150],                                                                                                                   // 22
-      ['mix', { t: 6 }, 260, 260],                                                                                                                    // 23
-      ['threshold', { at: 20, '~at': '0,60', soft: 30 }, 260, 370],                                                                                   // 24
-      ['perlin', { scale: 120, details: 3, contrast: 50 }, 40, 1910],                                                                                 // 25
-      ['bloom', { species: 41, view: 85, stage: 55, '~stage': '35,80', sheet: 100, stem: 100, flat: 0, jitter: 50, variant: 2 }, 260, 480],           // 26
-      ['scatter', { shape: 'picture', ground: 'black is clear', vary: 45, clump: 0, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16', count: 5, '~count': '2,12', size: 70, '~size': '40,100', big: 300, turn: 35, '~turn': '0,60' }, 480, 150],// 27
-      ['blur', { radius: 1 }, 700, 150],                                                                                                              // 28
-      ['threshold', { at: 30, '~at': '70,10', soft: 8 }, 1140, 40],                                                                                   // 29
-      ['math', { op: 'multiply' }, 920, 150],                                                                                                         // 30
-      ['maprange', { outLo: 100, outHi: 0 }, 1360, 40],                                                                                               // 31
-      ['blend', { mode: 'normal', opacity: 100 }, 1580, 40],                                                                                          // 32
-      ['maprange', { outLo: 0, outHi: 35 }, 700, 260],                                                                                                // 33
-      ['math', { op: 'multiply' }, 920, 260],                                                                                                         // 34
-      ['blend', { mode: 'screen', opacity: 60 }, 1800, 40],                                                                                           // 35
-      ['bloom', { species: 41, view: 0, stage: 50, sheet: 100, stem: 0, flat: 100, jitter: 30, variant: 5 }, 260, 590],                               // 36
-      ['scatter', { shape: 'picture', ground: 'black is clear', vary: 45, clump: 0, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16', count: 60, '~count': '8,260', size: 18, '~size': '8,40', big: 100, turn: 100, '~turn': '0,100' }, 480, 260],// 37
-      ['edges', { strength: 100 }, 700, 370],                                                                                                         // 38
-      ['edges', { strength: 100 }, 700, 480],                                                                                                         // 39
-      ['maprange', { inLo: 0, inHi: 40, outLo: 0, outHi: 100 }, 920, 370],                                                                            // 40
-      ['maprange', { inLo: 0, inHi: 30, outLo: 0, outHi: 100 }, 920, 480],                                                                            // 41
-      ['math', { op: 'max' }, 1140, 150],                                                                                                             // 42
-      ['threshold', { at: 30, '~at': '70,10', soft: 8 }, 1580, 150],                                                                                  // 43
-      ['math', { op: 'multiply' }, 1360, 150],                                                                                                        // 44
-      ['offset', { x: 0, y: 0, '~x': '0,4', '~y': '0,3' }, 700, 590],                                                                                 // 45
-      ['blend', { mode: 'multiply', opacity: 35 }, 1140, 260],                                                                                        // 46
-      ['blend', { mode: 'multiply', opacity: 100 }, 1800, 150],                                                                                       // 47
-      ['bloom', { species: 41, view: 0, '~view': '0,45', stage: 50, size: 85, '~size': '50,120', flat: 100, stem: 0, variant: 11 }, 260, 700],        // 48
-      ['random', { lo: 0, hi: 100 }, 40, 2020],                                                                                                       // 49
-      ['edges', { strength: 100 }, 480, 370],                                                                                                         // 50
-      ['kaleidoscope', { folds: 8, '~folds': '3,16', zoom: 100, turn: 270 }, 1580, 260],                                                              // 51
-      ['maprange', { outLo: 0, outHi: 100 }, 700, 700],                                                                                               // 52
-      ['math', { op: 'subtract' }, 920, 590],                                                                                                         // 53
-      ['rotate', { angle: 180, edges: 'stretch the edge' }, 1140, 370],                                                                               // 54
-      ['math', { op: 'max' }, 1360, 260],                                                                                                             // 55
-      ['shape', { form: 'circle', size: 90, soft: 2 }, 40, 2130],                                                                                     // 56
-      ['shape', { form: 'circle', size: 84, '~size': '88,74', soft: 2 }, 260, 810],                                                                   // 57
-      ['random', { lo: 0, hi: 100 }, 40, 2240],                                                                                                       // 58
-      ['threshold', { at: 45, soft: 0 }, 260, 920],                                                                                                   // 59
-      ['random', { lo: 0, hi: 100 }, 40, 2350],                                                                                                       // 60
-      ['math', { op: 'subtract' }, 480, 480],                                                                                                         // 61
-      ['math', { op: 'multiply' }, 700, 810],                                                                                                         // 62
-      ['threshold', { at: 30, '~at': '70,10', soft: 8 }, 2020, 40],                                                                                   // 63
-      ['math', { op: 'multiply' }, 1800, 260],                                                                                                        // 64
-      ['shape', { form: 'circle', size: 70, soft: 2 }, 40, 2460],                                                                                     // 65
-      ['math', { op: 'multiply' }, 2240, 40],                                                                                                         // 66
-      ['threshold', { at: 30, '~at': '70,10', soft: 8 }, 1140, 480],                                                                                  // 67
-      ['math', { op: 'multiply' }, 920, 700],                                                                                                         // 68
-      ['math', { op: 'multiply' }, 1360, 370],                                                                                                        // 69
-      ['math', { op: 'max' }, 2460, 40],                                                                                                              // 70
-      ['offset', { x: 0, y: 0, '~x': '0,4', '~y': '0,3' }, 2680, 40],                                                                                 // 71
-      ['blend', { mode: 'multiply', opacity: 60 }, 2900, 40],                                                                                         // 72
-      ['blend', { mode: 'multiply', opacity: 100 }, 3120, 40],                                                                                        // 73
-      ['bloom', { species: 41, view: 0, stage: 55, sheet: 100, stem: 100, flat: 100, jitter: 50, variant: 8 }, 260, 1030],                            // 74
-      ['scatter', { shape: 'picture', ground: 'black is clear', vary: 45, clump: 0, fade: 0, layers: 'last thrown', per: 'for the page', sheet: 'a sheet of 16', count: 5, '~count': '1,14', size: 55, '~size': '30,90', big: 300, turn: 100 }, 480, 590],// 75
-      ['blend', { mode: 'normal', opacity: 88 }, 1140, 590],                                                                                          // 76
-      ['material', { relief: 12, gloss: 5, shine: 5, shadow: 60, occlusion: 10, ambient: 55 }, 1360, 480],                                            // 77
-      ['hsv', { hue: 0, sat: 75, val: 100 }, 1580, 370],                                                                                              // 78
-      ['mapswitch', { soft: 0 }, 3340, 40],                                                                                                           // 79
-      ['random', { lo: 0, hi: 100 }, 40, 2570],                                                                                                       // 80
-      ['surface', { name: 'Floral Imprints', ground: 'colour' }, 3560, 40]],                                                                          // 81
-    wires: [[18, 1, 17, 1], [16, 1, 20, 1], [17, 1, 20, 2], [20, 1, 19, 1], [5, 1, 19, 'outLo'], [5, 1, 19, 'outHi'],
-      [19, 1, 21, 1], [10, 1, 22, 1], [11, 1, 22, 2], [22, 1, 21, 2], [10, 1, 21, 3], [10, 1, 23, 1], [15, 1, 23, 2], [23, 1, 21, 4], [25, 1, 24, 1],
-      [7, 1, 24, 'at'], [9, 1, 26, 1], [12, 1, 26, 2], [13, 1, 26, 4], [14, 1, 26, 5], [1, 1, 26, 'species'],
-      [26, 1, 27, 1], [2, 1, 27, 'count'], [3, 1, 27, 'size'], [8, 1, 27, 'turn'],
-      [27, 1, 28, 1], [28, 1, 30, 1], [24, 1, 30, 2], [30, 1, 29, 1], [4, 1, 29, 'at'], [29, 1, 31, 1], [21, 1, 32, 1], [11, 1, 32, 2],
-      [31, 1, 32, 3], [27, 1, 33, 1], [28, 1, 34, 1], [33, 1, 34, 2], [32, 1, 35, 1], [10, 1, 35, 2], [34, 1, 35, 3], [9, 1, 36, 1], [12, 1, 36, 2],
-      [13, 1, 36, 4], [14, 1, 36, 5], [1, 1, 36, 'species'], [36, 1, 37, 1], [2, 1, 37, 'count'],
-      [3, 1, 37, 'size'], [8, 1, 37, 'turn'], [37, 4, 38, 1], [37, 1, 39, 1], [38, 1, 40, 1], [39, 1, 41, 1],
-      [40, 1, 42, 1], [41, 1, 42, 2], [42, 1, 44, 1], [24, 1, 44, 2], [44, 1, 43, 1], [4, 1, 43, 'at'], [37, 1, 45, 1],
-      [6, 1, 45, 'x'], [6, 1, 45, 'y'], [21, 1, 46, 1], [15, 1, 46, 2], [45, 1, 46, 3], [46, 1, 47, 1],
-      [11, 1, 47, 2], [43, 1, 47, 3], [9, 1, 48, 1], [12, 1, 48, 2], [13, 1, 48, 4], [14, 1, 48, 5], [1, 1, 48, 'species'],
-      [3, 1, 48, 'size'], [49, 1, 48, 'view'], [48, 6, 50, 1], [50, 1, 52, 1], [48, 2, 53, 1], [52, 1, 53, 2],
-      [53, 1, 54, 1], [53, 1, 55, 1], [54, 1, 55, 2], [55, 1, 51, 1], [58, 1, 57, 'size'], [60, 1, 59, 1], [56, 1, 61, 1], [57, 1, 61, 2],
-      [61, 1, 62, 1], [59, 1, 62, 2], [51, 1, 64, 1], [24, 1, 64, 2], [64, 1, 63, 1], [4, 1, 63, 'at'], [63, 1, 66, 1], [65, 1, 66, 2],
-      [62, 1, 68, 1], [24, 1, 68, 2], [68, 1, 67, 1], [4, 1, 67, 'at'], [67, 1, 69, 1], [56, 1, 69, 2], [66, 1, 70, 1], [69, 1, 70, 2],
-      [70, 1, 71, 1], [6, 1, 71, 'x'], [6, 1, 71, 'y'], [21, 1, 72, 1], [15, 1, 72, 2], [71, 1, 72, 3],
-      [72, 1, 73, 1], [11, 1, 73, 2], [70, 1, 73, 3], [9, 1, 74, 1], [12, 1, 74, 2], [13, 1, 74, 4], [14, 1, 74, 5], [1, 1, 74, 'species'],
-      [74, 1, 75, 1], [2, 1, 75, 'count'], [3, 1, 75, 'size'], [8, 1, 75, 'turn'],
-      [21, 1, 76, 1], [75, 4, 76, 2], [75, 1, 76, 3], [76, 1, 77, 1], [75, 2, 77, 2], [9, 1, 77, 7], [77, 1, 78, 1], [80, 1, 79, 1], [35, 1, 79, 2],
-      [47, 1, 79, 3], [73, 1, 79, 4], [78, 1, 79, 5], [79, 1, 81, 1]] },
+      ['knob', { slot: '1' }, 40, 40],                                                                                // 1 Species
+      ['knob', { slot: '2' }, 40, 150],                                                                               // 2 Prints
+      ['knob', { slot: '3' }, 40, 260],                                                                               // 3 Print Size
+      ['knob', { slot: '4' }, 40, 370],                                                                               // 4 Ink
+      ['knob', { slot: '5' }, 40, 480],                                                                               // 5 Paper
+      ['knob', { slot: '6' }, 40, 590],                                                                               // 6 Medium
+      ['knob', { slot: '7' }, 40, 700],                                                                               // 7 Wear
+      ['knob', { slot: '8' }, 40, 810],                                                                               // 8 Turn
+      ['dial', {}, 40, 920],                                                                                          // 9
+      ['hue', { slot: '1', name: 'Ink Hue' }, 40, 1030],                                                              // 10
+      ['hue', { slot: '2', name: 'Second Hue' }, 40, 1140],                                                           // 11
+      ['hue', { slot: '3', name: 'Petal Hue' }, 40, 1250],                                                            // 12
+      ['hue', { slot: '4', name: 'Center Hue' }, 40, 1360],                                                           // 13
+      ['hue', { slot: '5', name: 'Leaf Hue' }, 40, 1470],                                                             // 14
+      ['backdrop', {}, 40, 1580],                                                                                     // 15 the page beneath
+      ['perlin', { scale: 190, details: 3, rough: 65, contrast: 40, '~contrast': '5,95' }, 260, 1580],              // 16 the paper's tooth
+      ['specimen', { species: 41, view: 40, stage: 55, '~stage': '35,80', page: 3, '~page': '1,6', size: 90, '~size': '60,120', turn: 50, '~turn': '35,65', flat: 100, jitter: 50, variant: 2 }, 260, 40], // 17 the plants
+      ['maprange', { outLo: 0, outHi: 60 }, 480, 260],                                                                // 18 petals → part 0.6
+      ['math', { op: 'max' }, 700, 260],                                                                              // 19 …and the centre, 1
+      ['merge', {}, 920, 260],                                                                                        // 20 layers · part · height
+      ['imprint', { medium: 10, load: 55, wear: 25, soft: 30 }, 1360, 150],                                           // 21
+      ['material', { relief: 70, gloss: 35, shine: 45, shadow: 45, occlusion: 15, ambient: 55 }, 1580, 150],         // 22 the Light Engine
+      ['surface', { name: 'Floral Imprints', ground: 'colour' }, 1800, 150]],                                         // 23
+    wires: [[5, 1, 16, 'contrast'], [9, 1, 17, 1], [12, 1, 17, 2], [13, 1, 17, 4], [14, 1, 17, 5], [1, 1, 17, 'species'],
+      [2, 1, 17, 'page'], [3, 1, 17, 'size'], [8, 1, 17, 'turn'],
+      [17, 6, 18, 1], [18, 1, 19, 1], [17, 5, 19, 2], [17, 4, 20, 1], [19, 1, 20, 2], [17, 3, 20, 3],
+      [17, 2, 21, 1], [20, 1, 21, 2], [17, 1, 21, 3], [16, 1, 21, 4], [15, 1, 21, 5], [10, 1, 21, 6], [11, 1, 21, 7], [9, 1, 21, 8],
+      [6, 1, 21, 'medium'], [4, 1, 21, 'load'], [7, 1, 21, 'wear'],
+      [21, 1, 22, 1], [21, 2, 22, 2], [21, 3, 22, 3], [9, 1, 22, 7], [22, 1, 23, 1]] },
   bouquets: { label: 'Bouquets', div: 2, teach: 'Flowers gathered (docs/prior-art/florals.md §4): a posy seen from above in its creased paper, a crown circling the page, or a bundle laid across a cloth; the seed chooses which, and where it lies. Bloom draws four sheets: the main flower (its species on the first slider), a second flower, a filler of Queen Anne’s lace, and leaves; four Scatters throw them inside the arrangement’s shape (an Ellipse, its ring, or a long one, chosen by a Map Switch), the leaves in a halo round it (Grow), the largest heads on top. Their heights, the leaves lowest and the heads highest, go to the Light Engine, which lights it all from the dial and lays its shadows (Shadow). The wrap shows round a posy only, creased in rings (Polar Coordinates on Waves). Try: a low dial for long shadows across the cloth.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],                                                                                  // 1
