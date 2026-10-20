@@ -111,13 +111,18 @@ export function clSettle(o){
   const form = { x: (R() - 0.5)*0.2, z: (R() - 0.5)*0.2*o.aspect, r: 0.2 + 0.08*folds + 0.04*R() };
   // ---- THE CONSTRAINTS: structural, shear, bending (skip-one), each a distance at rest in the flat sheet ----
   const CA = [], CB = [], CL = [], CK = [];   // a, b, rest, kind (0 structural, 1 shear, 2 bend)
-  const con = (a, b, kind, diag = false) => { CA.push(a); CB.push(b); CL.push(s*(kind === 1 ? Math.SQRT2 : kind === 2 ? (diag ? 2*Math.SQRT2 : 2) : 1)); CK.push(kind); };
+  // (a crumpled sheet's rest shape is a little irregular, its points jittered in the flat: a perfectly square grid creases
+  //  along its own lines, as cloth never does)
+  const JX = new Float64Array(n), JZ = new Float64Array(n);
+  if(hang === 'crumpled') for(let k = 0; k < n; k++){ const i = k % C, j = (k/C) | 0; if(i > 0 && i < C - 1) JX[k] = (R() - 0.5)*0.5*s; if(j > 0 && j < Rr - 1) JZ[k] = (R() - 0.5)*0.5*s; }
+  const rest = (a, b) => { const ia = a % C, ja = (a/C) | 0, ib = b % C, jb = (b/C) | 0, dx = (ib - ia)*s + JX[b] - JX[a], dz = (jb - ja)*s + JZ[b] - JZ[a]; return Math.sqrt(dx*dx + dz*dz); };
+  const con = (a, b, kind) => { CA.push(a); CB.push(b); CL.push(hang === 'crumpled' ? rest(a, b) : s*(kind === 1 ? Math.SQRT2 : kind === 2 ? (b - a === 2*C + 2 || b - a === 2*C - 2 ? 2*Math.SQRT2 : 2) : 1)); CK.push(kind); };
   for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ if(i + 1 < C) con(id(i, j), id(i + 1, j), 0); if(j + 1 < Rr) con(id(i, j), id(i, j + 1), 0); }
   for(let j = 0; j + 1 < Rr; j++) for(let i = 0; i + 1 < C; i++){ con(id(i, j), id(i + 1, j + 1), 1); con(id(i + 1, j), id(i, j + 1), 1); }
   for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ if(i + 2 < C) con(id(i, j), id(i + 2, j), 2); if(j + 2 < Rr) con(id(i, j), id(i, j + 2), 2); }
   // (bending across the diagonals too, so a crease costs the same whichever way it runs: without them folds keep to the
   //  grid's lines, and a crumpled sheet looks ruled)
-  for(let j = 0; j + 2 < Rr; j++) for(let i = 0; i + 2 < C; i++){ con(id(i, j), id(i + 2, j + 2), 2, true); con(id(i + 2, j), id(i, j + 2), 2, true); }
+  for(let j = 0; j + 2 < Rr; j++) for(let i = 0; i + 2 < C; i++){ con(id(i, j), id(i + 2, j + 2), 2); con(id(i + 2, j), id(i, j + 2), 2); }
   const NC = CA.length, A = Int32Array.from(CA), B = Int32Array.from(CB), L0 = Float64Array.from(CL), KND = Uint8Array.from(CK);
   // the tethers: each free particle to its nearest pin, no farther than in the flat sheet
   const TP = new Int32Array(n).fill(-1), TL = new Float64Array(n);
