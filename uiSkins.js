@@ -27,11 +27,11 @@ let skHapticsOn = true, skLastBuzz = 0, skinSound = null;
 export function setHaptics(on){ skHapticsOn = !!on; }
 /** A sound to go with each tick (murmur's, which plays only while Sound is on). */
 export function setSkinSound(fn){ skinSound = typeof fn === 'function' ? fn : null; }
-export function haptic(kind){
+export function haptic(kind, value){
   const now = Date.now(); if(now - skLastBuzz < 50) return; skLastBuzz = now;
-  if(skinSound) try { skinSound(kind); } catch(e){}
+  if(skinSound) try { skinSound(kind, value); } catch(e){}
   if(!skHapticsOn) return;
-  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' ? 15 : 10); } catch(e){}
+  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' || kind === 'reset' ? 15 : 10); } catch(e){}
 }
 
 // ---- the input a skin draws ----
@@ -52,9 +52,10 @@ export function skinSet(input, v, opts = {}){
   const was = +input.value;
   if(v === was) return false;
   input.value = String(v);
-  if(v === lo || v === hi) haptic('limit');
-  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick');
-  else if(def != null && !ticks.length && v === def) haptic('detent');
+  const at = (v - lo)/(hi - lo);   // (where it is, 0–1: the sound's note rises with it)
+  if(v === lo || v === hi) haptic('limit', at);
+  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick', at);
+  else if(def != null && !ticks.length && v === def) haptic('detent', at);
   input.dispatchEvent(new Event('input', { bubbles: true }));
   return true;
 }
@@ -123,7 +124,7 @@ function skDrag(el, input, mode){
     e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch(err){}
     const now = Date.now();
     if(now - lastTap < SKIN_FEEL.doubleTapMs && input.dataset && input.dataset.def != null){
-      lastTap = 0; skinSet(input, +input.dataset.def); haptic('detent'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
+      lastTap = 0; skinSet(input, +input.dataset.def); haptic('reset'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
     st = { id: e.pointerId, at: now, x: e.clientX, y: e.clientY, v: +input.value, moved: false, tier: 1, tierAt: 0, hist: [] };
     el.classList.add('turning'); showReadout(input, { hold: true });
   });

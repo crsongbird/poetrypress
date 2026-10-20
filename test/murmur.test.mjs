@@ -20,14 +20,15 @@ const ids = new Set(M.MURMUR_FUNCTIONS.map(f => f.id));
 check('every UI function has a place in the map, and the map names only UI functions', [...ids].every(k => k in D.map) && Object.keys(D.map).every(k => ids.has(k)));
 check('every mapped composition exists; most settings are silent (checkbox, menu, cards)',
   Object.values(D.map).every(c => c === null || D.compositions[c]) && ['checkbox', 'select', 'cardOpen', 'cardFold'].every(k => D.map[k] === null));
-check('a lock is a tick, not a fanfare', D.map.lock === 'tick' && D.map.unlock === 'tick' && D.compositions.tick.events.length === 1);
+check('a lock is a latch, not a fanfare: two quick ticks, shutting downward and opening upward',
+  (([a, b], [c, d]) => a.inst === 'tick' && a.midi > b.midi && c.midi < d.midi && b.at - a.at < 0.05)(M.renderComposition(D, D.map.lock), M.renderComposition(D, D.map.unlock)));
 check('the soft no asks before work is undone; a hard no refuses; a switched-off control knocks, hollow',
   D.map.confirm === 'confirm' && JSON.stringify(D.compositions.confirm.events[0].notes) === '[2,1]' && D.compositions.confirm.events[0].inst === 'pad'
   && D.map.hardNo === 'hardNo' && D.map.blocked === 'blocked' && D.instruments.thud.bright < 0.1);
-check('quiet by default: tabs, readings, undo and redo make no sound; saving, arrivals, keeping and the Athanor do',
-  ['tab', 'readingFire', 'undo', 'redo', 'reroll'].every(k => D.map[k] === null) && ['saveImage', 'preset', 'spellCreate', 'athanorOpen', 'nodeAdd', 'wireConnect'].every(k => D.map[k]));
+check('quiet by default: tabs, readings, undo and redo make no sound; saving, arrivals, keeping, dice and the Athanor do',
+  ['tab', 'readingFire', 'undo', 'redo'].every(k => D.map[k] === null) && D.map.reroll && ['saveImage', 'preset', 'spellCreate', 'athanorOpen', 'nodeAdd', 'wireConnect'].every(k => D.map[k]));
 check('it is a minor key', ['aeolian', 'dorian', 'phrygian', 'minorPent'].includes(D.scale));
-check('home sits an octave down (D2), and the bell is quiet', D.octave === -1 && M.degreeMidi(D, 0) === 38 && D.instruments.bell.level <= 0.2);
+check('home is D4, where a phone\'s speaker carries it, and the bell is quiet', D.octave === 1 && M.degreeMidi(D, 0) === 62 && D.instruments.bell.level <= 0.2);
 check('every instrument has a real body', Object.values(D.instruments).every(i => M.MURMUR_BODIES[i.body]));
 
 // every note in its scale, in range, the same every time
@@ -37,13 +38,19 @@ for(const [sk, S] of Object.entries(M.MURMUR_SCALES)){
   const d = { ...D, scale: sk };
   for(const id of Object.keys(D.compositions)) for(const index of [0, 2, 4]){
     const a = M.renderComposition(d, id, { index }), b = M.renderComposition(d, id, { index });
-    if(JSON.stringify(a) !== JSON.stringify(b)) differs = true;
-    for(const n of a){ if(!pcs.has(((n.midi % 12) + 12) % 12)) outOfKey++; const f = 440*Math.pow(2, (n.midi - 69)/12); if(f < 55 || f > 1100) outOfRange++; }
+    if(id !== 'tumble' && JSON.stringify(a) !== JSON.stringify(b)) differs = true;   // (the dice's tumble is random by design)
+    for(const n of a){ if(!pcs.has(((n.midi % 12) + 12) % 12)) outOfKey++; const f = 440*Math.pow(2, (n.midi - 69)/12); if(f < 55 || f > 1200) outOfRange++; }
   }
 }
 check('every note of every composition is in its scale, in all six scales (pentatonics snap)', outOfKey === 0);
-check('…between 55 and 1100 Hz', outOfRange === 0);
-check('…and the same notes every time (no random keys)', !differs);
+check('…between 55 and 1200 Hz', outOfRange === 0);
+check('…and the same notes every time (no random keys), but for the dice\'s tumble', !differs);
+{ const at = v => M.renderComposition(D, D.map.detent, { value: v })[0].midi, end = v => M.renderComposition(D, D.map.endStop, { value: v })[0].midi;
+  check('a knob\'s mark rises with its value, from D4 to D6, and its ends knock on home and the fifth',
+    at(0) === 62 && at(1) === 86 && at(0.5) > at(0.2) && end(0) === 62 && end(1) === 69); }
+{ const t = M.renderComposition(D, 'tumble'), last = t[t.length - 1].midi % 12;
+  check('the dice tumble three or four notes and land on home or the fifth', t.length >= 4 && t.length <= 5 && (last === 2 || last === 9)); }
+check('a reset falls a fifth to home', (r => r.length === 2 && r[0].midi - r[1].midi === 7 && r[1].midi % 12 === 2)(M.renderComposition(D, D.map.reset)));
 check('a tab plays its own note', M.renderComposition(D, 'tab', { index: 0 })[0].midi !== M.renderComposition(D, 'tab', { index: 3 })[0].midi);
 check('a design missing parts still plays (filled from the defaults)', M.normalizeDesign({ scale: 'phrygian', instruments: { bell: { level: 0.1 } } }).instruments.bell.level === 0.1
   && M.normalizeDesign({}).instruments.pad.body === 'pad' && M.renderComposition({ scale: 'nope' }, 'tick').length === 1);
