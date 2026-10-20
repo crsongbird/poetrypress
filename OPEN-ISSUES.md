@@ -18,8 +18,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   the Light Engine from height and gloss maps.
 - CRYSTAL LEAF ON THE LIGHT ENGINE (branch crystal): a druse's maps (albedo seen through the faces and bent by them,
   height, normals, gloss, the veil as translucency, the fire as light of its own); the Light Engine takes a Normal Map.
-- FAIRIES (branch fairies): about one seed in six, a small fairy light drifts over the Meadow's grass or the Windward
-  Sea; one Macro Bloom visitor in 66 is a fairy. A Fairy Light part for any graph.
 - THE SOUND PASS (branch sound; listen with Sound on): home raised to D4; a knob's marks rise with its value, its ends
   knock, a double-tap reset falls a fifth; locks a latch; dice a tumble; bursts sound twice, then rest.
 - MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
