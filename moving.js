@@ -81,6 +81,20 @@ export function sunPath(deg0, tilt0){
   return hours => { const H = H0 + hours*Math.PI/12; return [((a0 + sunAz(H)*180/Math.PI) % 360 + 360) % 360, Math.round(sunTilt(sunEl(H))*100)/100]; };
 }
 
+/**
+ * THE FILM'S CLOCK through a day (as games keep it, docs/prior-art/ringworld-time.md: the hours near sunrise and sunset
+ * given more of the film than the rest): from u, 0 to 1 along the film, the hours since it began, the clock running
+ * slowest while the sun is near the horizon (some three times slower), so a day in seconds still has a dawn and a dusk
+ * to watch. sun: a sunPath; hours: how long the film spans.
+ */
+export function filmHours(sun, hours){
+  const N = 2400, w = h => 1 + 2.2*Math.exp(-Math.pow((sun(h)[1] - 100)/14, 2)), cum = [0];
+  for(let i = 1; i <= N; i++) cum.push(cum[i - 1] + w(hours*(i - 0.5)/N));
+  const tot = cum[N];
+  return u => { const t = Math.max(0, Math.min(1, u))*tot; let lo = 0, hi = N; while(hi - lo > 1){ const m = (lo + hi) >> 1; if(cum[m] <= t) lo = m; else hi = m; }
+    return hours*(lo + (t - cum[lo])/((cum[hi] - cum[lo]) || 1))/N; };
+}
+
 // ---------- bytes ----------
 
 const enc = new TextEncoder();

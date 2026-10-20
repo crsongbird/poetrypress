@@ -529,6 +529,9 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
   if(kind === 'insects'){ // a small cloud of specks over the grass, a pair of wings catching the light on the nearer
     const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
     for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4 + (t ? Math.sin(t*(2.1 + q*0.7) + q*2.3 + X*0.01)*h*0.35 : 0), iy = cy + (R() - 0.5)*h*0.6 + (t ? Math.sin(t*(2.9 + q*0.5) + q*1.7)*h*0.18 : 0); dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));   // (with the clock, a swarm's dance)
+      // (at dusk and by night they are fireflies: each a cold yellow-green light, flashing for most of a second every five
+      //  or six, each in its own time)
+      if((c.night || 0) > 0.35){ const ph = ((t || 0)/5.5 + q*0.37 + (X*0.013 % 1)) % 1, on = !t || ph < 0.14; if(on) rgGlow(x, ix, iy, Math.max(rgPx(5), h*0.16), [200, 255, 120], 0.6*c.night); }
       if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
     return; }
   if(kind === 'fairies'){ // a few points of light drifting low, each with a faint trail behind it
@@ -1095,7 +1098,7 @@ function rgPaintLand(x, mk, dk, V){
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.2) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y < px(4) || Y > wh*0.95 || !vis(l, X - hh, X + hh, Y - hh*1.4, Y)) return;
     const glow = colsOf(o.w, wday, haze).glow;
-    const lc = { dark: rgLit(V, [34, 30, 28], wday, haze, AIR), lit: rgLit(V, [236, 240, 246], wday, haze, AIR), glow,
+    const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], wday, haze, AIR), lit: rgLit(V, [236, 240, 246], wday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
       slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR) };
     rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, V.time);
@@ -1275,6 +1278,7 @@ function rgPaintLand(x, mk, dk, V){
   painting = true;
   let prevY = null;
   const MIST = { fog: 0.075, rain: 0.035, storm: 0.03, snow: 0.045 }[V.weather] || 0, MISTC = rsMix(AIR, [236, 238, 242], 0.35);
+  const LOWMIST = (V.weather === 'clear' || V.weather === 'clouds') && seedChoice(V.seed, 'mist')() < 0.6 ? 0.22*rgClamp(1 - Math.abs(V.dayHere - 0.5)*3.5) : 0;
   lay.forEach((l, li) => {
     const { k, d, pts } = l, haze = hazeOf(d), mid = pts[pts.length >> 1], day = ringDay(L, mid.a), yC = mid.Y;
     const depth = Math.max(px(6), prevY == null ? wh : Math.abs(yC - prevY)*1.4 + px(4)); prevY = yC;
@@ -1315,6 +1319,10 @@ function rgPaintLand(x, mk, dk, V){
     bySlot[li].sort((p, q) => q.dd - p.dd); for(const t of bySlot[li]){ if(t.o) drawWork(t.o, l); else if(t.ok){ cur = t; t.draw(l); } }
     // (in fog, rain or snow the air thickens between each ridge and the next, so the far ridges sink into it, layer on layer)
     if(MIST && li < lay.length - 2){ x.fillStyle = rsCss(MISTC, MIST); x.fillRect(0, 0, ww, wh); }
+    // (at dawn and dusk on a still day, mist lies in the low land: a soft pale band along the foot of each low ridge, thicker
+    //  the lower it lies, breathing a little with the clock)
+    if(LOWMIST > 0 && d > W*0.01 && li < lay.length - 1){ const lowness = rsSmooth(TR.snow*0.25, TR.sea, mid.ec); if(lowness > 0.05){ const yB = yC + depth*0.5, a = LOWMIST*lowness*(0.8 + 0.2*Math.sin(V.time*0.002 + li));
+      const g = x.createLinearGradient(0, yC - depth*0.15, 0, yB); g.addColorStop(0, rsCss(MISTC, 0)); g.addColorStop(0.6, rsCss(MISTC, a)); g.addColorStop(1, rsCss(MISTC, 0)); x.fillStyle = g; x.fillRect(0, yC - depth*0.15, ww, depth*0.65); } }
   });
   // ---- 5. THE AIR OVER IT ALL: the sun's glare low in the sky, and the weather falling ----
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);

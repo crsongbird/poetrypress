@@ -18615,6 +18615,9 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
   if(kind === 'insects'){
     const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
     for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4 + (t ? Math.sin(t*(2.1 + q*0.7) + q*2.3 + X*0.01)*h*0.35 : 0), iy = cy + (R() - 0.5)*h*0.6 + (t ? Math.sin(t*(2.9 + q*0.5) + q*1.7)*h*0.18 : 0); dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));
+
+
+      if((c.night || 0) > 0.35){ const ph = ((t || 0)/5.5 + q*0.37 + (X*0.013 % 1)) % 1, on = !t || ph < 0.14; if(on) rgGlow(x, ix, iy, Math.max(rgPx(5), h*0.16), [200, 255, 120], 0.6*c.night); }
       if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
     return; }
   if(kind === 'fairies'){
@@ -19181,7 +19184,7 @@ function rgPaintLand(x, mk, dk, V){
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.2) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y < px(4) || Y > wh*0.95 || !vis(l, X - hh, X + hh, Y - hh*1.4, Y)) return;
     const glow = colsOf(o.w, wday, haze).glow;
-    const lc = { dark: rgLit(V, [34, 30, 28], wday, haze, AIR), lit: rgLit(V, [236, 240, 246], wday, haze, AIR), glow,
+    const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], wday, haze, AIR), lit: rgLit(V, [236, 240, 246], wday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
       slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR) };
     rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, V.time);
@@ -19361,6 +19364,7 @@ function rgPaintLand(x, mk, dk, V){
   painting = true;
   let prevY = null;
   const MIST = { fog: 0.075, rain: 0.035, storm: 0.03, snow: 0.045 }[V.weather] || 0, MISTC = rsMix(AIR, [236, 238, 242], 0.35);
+  const LOWMIST = (V.weather === 'clear' || V.weather === 'clouds') && seedChoice(V.seed, 'mist')() < 0.6 ? 0.22*rgClamp(1 - Math.abs(V.dayHere - 0.5)*3.5) : 0;
   lay.forEach((l, li) => {
     const { k, d, pts } = l, haze = hazeOf(d), mid = pts[pts.length >> 1], day = ringDay(L, mid.a), yC = mid.Y;
     const depth = Math.max(px(6), prevY == null ? wh : Math.abs(yC - prevY)*1.4 + px(4)); prevY = yC;
@@ -19401,6 +19405,10 @@ function rgPaintLand(x, mk, dk, V){
     bySlot[li].sort((p, q) => q.dd - p.dd); for(const t of bySlot[li]){ if(t.o) drawWork(t.o, l); else if(t.ok){ cur = t; t.draw(l); } }
 
     if(MIST && li < lay.length - 2){ x.fillStyle = rsCss(MISTC, MIST); x.fillRect(0, 0, ww, wh); }
+
+
+    if(LOWMIST > 0 && d > W*0.01 && li < lay.length - 1){ const lowness = rsSmooth(TR.snow*0.25, TR.sea, mid.ec); if(lowness > 0.05){ const yB = yC + depth*0.5, a = LOWMIST*lowness*(0.8 + 0.2*Math.sin(V.time*0.002 + li));
+      const g = x.createLinearGradient(0, yC - depth*0.15, 0, yB); g.addColorStop(0, rsCss(MISTC, 0)); g.addColorStop(0.6, rsCss(MISTC, a)); g.addColorStop(1, rsCss(MISTC, 0)); x.fillStyle = g; x.fillRect(0, yC - depth*0.15, ww, depth*0.65); } }
   });
 
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);
@@ -32348,7 +32356,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Miranda';
+const RELEASE = 'Uranus–Ariel';
 
 const RELEASE_DATE = '2026-10-20';
 
@@ -32626,6 +32634,20 @@ function sunPath(deg0, tilt0){
   const c = (Math.sin(el0) - Math.sin(SUN_LAT)*Math.sin(SUN_DEC))/(Math.cos(SUN_LAT)*Math.cos(SUN_DEC)), H0 = -Math.acos(Math.max(-1, Math.min(1, c)));
   const a0 = deg0 - sunAz(H0)*180/Math.PI;
   return hours => { const H = H0 + hours*Math.PI/12; return [((a0 + sunAz(H)*180/Math.PI) % 360 + 360) % 360, Math.round(sunTilt(sunEl(H))*100)/100]; };
+}
+
+
+
+
+
+
+
+function filmHours(sun, hours){
+  const N = 2400, w = h => 1 + 2.2*Math.exp(-Math.pow((sun(h)[1] - 100)/14, 2)), cum = [0];
+  for(let i = 1; i <= N; i++) cum.push(cum[i - 1] + w(hours*(i - 0.5)/N));
+  const tot = cum[N];
+  return u => { const t = Math.max(0, Math.min(1, u))*tot; let lo = 0, hi = N; while(hi - lo > 1){ const m = (lo + hi) >> 1; if(cum[m] <= t) lo = m; else hi = m; }
+    return hours*(lo + (t - cum[lo])/((cum[hi] - cum[lo]) || 1))/N; };
 }
 
 
@@ -33244,7 +33266,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 6d875e4";
+const STAMP = "2026-10-20 · 394db86";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -44082,6 +44104,7 @@ async function makeMoving(){
 
   const sun = (move === 'light' && (capsFor(($('textureType') || {}).value) || {}).dial === 'Daylight') || move === 'time' ? sunPath(light0, tilt0) : null;
   const span = move === 'time' ? (+($('movingSpan') || {}).value || 86400) : 86400, clocked = !!(capsFor(($('textureType') || {}).value) || {}).time;
+  const clock = sun ? filmHours(sun, span/3600) : null;
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
   movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving');
@@ -44093,7 +44116,7 @@ async function makeMoving(){
 
       if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
       if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
-      else if(sun){ const [a, tl] = sun(span/3600*i/n); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(span*i/n, span/n); }
+      else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
       else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360);
       else {
         const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];

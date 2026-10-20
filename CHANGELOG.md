@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Ariel (2026-10-20)
+
+- **Dawn and dusk linger in a film.** Time Passing and the Ringworld's day give the hours near sunrise and sunset about
+  three times more of the film than the rest, as games keep their clocks, so a day squeezed into seconds still has a
+  sunrise and a sunset to watch, and loops where it began.
+- **Fireflies.** At dusk and by night the Ringworld's insects are fireflies, each flashing its cold yellow-green light
+  for most of a second every five or six, each in its own time.
+- **Mist in the low land** at dawn and dusk on still days, lying along the foot of the low ridges.
+- The stars turn with the ring's spin at a degree and a half an hour (Niven's ring: once in 225 hours), and clouds in a
+  fast film drift from frame to frame instead of leaping.
+
+### Under the hood
+- moving.js's `filmHours` (the film's clock through a day, slowest near the horizon); the Moving Image suite checks it
+  runs forward from start to end and gives dawn and dusk their share.
+
 ## Uranus–Miranda (2026-10-20)
 
 - **Time Passing**, a new move in the Moving Image (on the Ringworld): an hour, six hours, a day or two days go by in
@@ -509,26 +524,3 @@ and every control behaving as it did.
   still mattered somewhere; nothing removed). The test canvas keeps what was
   drawn on a canvas that has been given back, so the knob probes still see
   it.
-
-## Saturn–Beli (2026-10-19)
-
-- **Macro Bloom is seen through a real lens.** Everything in the picture
-  has a depth, and one lens focuses it all: points in front of the focus
-  blur quickly, points behind it soften to a limit, and the lights behind
-  the flower become round discs. On a device with a graphics chip the lens
-  runs there.
-- **The camera dial frames the flower**: Zoom goes from the whole flower in
-  its setting to its heart filling the page, View tips it from face-on to
-  the side, and Turn says which way it tips and moves it toward that
-  side's third. A wireframe of its rim and heart shows where it will be
-  while the dial moves. Each seed starts from its own shot.
-- **Every slider does one thing**: Species, Stage, Aperture (how wide the
-  lens is open: the only blur control), Focus (where the plane of focus
-  lies), Lights Behind (how many points of light become discs), Dew,
-  Translucency and Visitors.
-- **Insects are rare and smaller**: about one seed in eight at the default
-  Visitors, never more than two, each on a petal partway out from the
-  heart, a quarter smaller than before, lit with the flower.
-- **New part in the Athanor: Lens Blur.** A picture and a depth map, a
-  Focus and an Aperture: the focal plane of a real lens, with round or
-  bladed discs. Bloom has a new Head Turn setting.

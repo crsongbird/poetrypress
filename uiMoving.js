@@ -18,7 +18,7 @@ import { setWorking } from './uiWorking.js';
 import { draftTimer } from './uiSurface.js';
 import { generateFilenameBase } from './uiLayout.js';
 import { restoreSettings, serializeCurrentSettings } from './uiLook.js';
-import { blendLooks, crc32, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
+import { blendLooks, crc32, filmHours, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
 
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 // (where a look's kind changes, the film fades across this middle stretch of the move)
@@ -123,6 +123,7 @@ export async function makeMoving(){
   //  scene's clock running with it, so its clouds drift, its stars wheel and its lights flicker as the hours go)
   const sun = (move === 'light' && (capsFor(($('textureType') || {}).value) || {}).dial === 'Daylight') || move === 'time' ? sunPath(light0, tilt0) : null;
   const span = move === 'time' ? (+($('movingSpan') || {}).value || 86400) : 86400, clocked = !!(capsFor(($('textureType') || {}).value) || {}).time;
+  const clock = sun ? filmHours(sun, span/3600) : null;   // (dawn and dusk given more of the film)
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
   movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving');
@@ -134,7 +135,7 @@ export async function makeMoving(){
       //  the camera turns; Time Passing runs it fast, below)
       if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
       if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
-      else if(sun){ const [a, tl] = sun(span/3600*i/n); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(span*i/n, span/n); }
+      else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
       else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360);
       else {
         const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];

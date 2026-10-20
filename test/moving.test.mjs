@@ -3,7 +3,7 @@
  * whole, the dials the short way round), and the three containers it writes (zip, MP4, WebM), read back.
  */
 import { check, done } from './harness.mjs';
-import { blendLooks, crc32, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
+import { blendLooks, crc32, filmHours, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
 
 const cat = parts => { const n = parts.reduce((s, p) => s + p.length, 0), o = new Uint8Array(n); let at = 0; for(const p of parts){ o.set(p, at); at += p.length; } return o; };
 const dv = b => new DataView(b.buffer, b.byteOffset, b.byteLength), str = (b, at, n) => String.fromCharCode(...b.subarray(at, at + n));
@@ -28,6 +28,10 @@ check('there and back loops (0 → 1 → 0), one way ends at the other look', mo
   check('a day comes round in twenty-four hours', Math.abs(f(24)[0] - 315) < 1e-6 && Math.abs(f(24)[1] - 40) < 0.01);
   check('the day is longer than the night (about fourteen hours of the twenty-four)', up > 0.55 && up < 0.65);
   check('its path is an arc, never a jump: the dial moves a little from one five minutes to the next', day.every(([a, t], i) => !i || (Math.abs(((a - day[i - 1][0] + 540) % 360) - 180) < 12 && Math.abs(t - day[i - 1][1]) < 4)));
+  { const c = filmHours(f, 24), hs = Array.from({ length: 101 }, (_, i) => c(i/100)), near = h => Math.abs(f(h)[1] - 100) < 8;
+    const share = hs.slice(1).filter((h, i) => near((h + hs[i])/2)).length/100, real = day.filter(([, t]) => Math.abs(t - 100) < 8).length/day.length;
+    check('the film\'s clock runs from the start to the end of its hours, never backward', hs[0] === 0 && Math.abs(hs[100] - 24) < 1e-6 && hs.every((h, i) => !i || h >= hs[i - 1]));
+    check('and gives dawn and dusk more of the film than the day gives them', share > real*1.8); }
   check('dusk lasts: the twilight (past the dial\'s rim, short of full night) holds for more than an hour', day.filter(([, t]) => t > 100 && t < 129.9).length/12 > 1); }
 
 // ---- the zip ----
