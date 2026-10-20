@@ -72,6 +72,8 @@ export function repaintSkins(){
   for(let i = 1; i <= 8; i++){ const input = document.getElementById && document.getElementById('texP' + i); if(input && input._skinPaints) for(const p of input._skinPaints) p(); }
 }
 
+// the angle of a point about a middle, in degrees, 0° up and clockwise (as the knob's own)
+const skAngle = (dx, dy) => Math.atan2(dx, -dy)*180/Math.PI;
 // a point on a circle, 0° up and clockwise; an arc between two such angles
 const skAt = (r, deg) => { const a = deg*Math.PI/180; return [r*Math.sin(a), -r*Math.cos(a)]; };
 const skArc = (r, d0, d1) => { if(d1 - d0 < 0.01) return ''; const [x0, y0] = skAt(r, d0), [x1, y1] = skAt(r, d1);
@@ -115,7 +117,7 @@ export function readoutStep(dir){
   showReadout(input);
 }
 
-// ---- dragging: relative, so a touch never jumps the value; finer as the finger strays sideways; a double tap resets;
+// ---- dragging: relative, so a touch never jumps the value; a KNOB turns by the angle a finger sweeps round it (up and down near its middle), a FADER by up and down, finer as the finger strays sideways; a double tap resets;
 // a tap without moving shows it in the display line; the jitter of lifting a finger is taken back ----
 function skDrag(el, input, mode){
   let st = null, lastTap = 0;
@@ -126,10 +128,22 @@ function skDrag(el, input, mode){
     if(now - lastTap < SKIN_FEEL.doubleTapMs && input.dataset && input.dataset.def != null){
       lastTap = 0; skinSet(input, +input.dataset.def); haptic('reset'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
     st = { id: e.pointerId, at: now, x: e.clientX, y: e.clientY, v: +input.value, moved: false, tier: 1, tierAt: 0, hist: [] };
+    // (a KNOB turns as a thumb moves round it, in an arc — Ruby: "my thumb wants to move the knobs in a big arc": the
+    //  angle the finger sweeps about the knob's middle turns it by as much; close to the middle, where the angle is
+    //  unsteady, up and down turn it instead)
+    if(mode !== 'fader'){ const b = el.getBoundingClientRect(); st.cx = b.left + b.width/2; st.cy = b.top + b.height/2; st.r = Math.max(12, Math.min(b.width, b.height)/2);
+      st.ang = skAngle(e.clientX - st.cx, e.clientY - st.cy); st.cur = +input.value; st.ly = e.clientY; }
     el.classList.add('turning'); showReadout(input, { hold: true });
   });
   el.addEventListener('pointermove', e => {
     if(!st || e.pointerId !== st.id) return;
+    if(mode !== 'fader'){ const [lo, hi] = skRange(input), dx = e.clientX - st.cx, dy = e.clientY - st.cy, ang = skAngle(dx, dy), now = Date.now();
+      let da = ang - st.ang; da -= Math.round(da/360)*360; st.ang = ang;
+      const step = Math.hypot(dx, dy) > st.r*0.3 ? da/(2*SK_SWEEP)*(hi - lo) : (st.ly - e.clientY)/SKIN_FEEL.knobTravel*(hi - lo);
+      st.ly = e.clientY; if(Math.hypot(e.clientX - st.x, e.clientY - st.y) > 3) st.moved = true;
+      st.cur = Math.max(lo, Math.min(hi, st.cur + step));
+      st.hist.push([now, +input.value]); if(st.hist.length > 12) st.hist.shift(); st.lastMove = Math.hypot(e.clientX - (st.px ?? e.clientX), e.clientY - (st.py ?? e.clientY)); st.px = e.clientX; st.py = e.clientY;
+      skinSet(input, st.cur); showReadout(input, { hold: true, moving: true }); return; }
     const side = Math.abs(e.clientX - st.x), want = SKIN_FEEL.tiers.reduce((t, [px, f]) => side >= px ? f : t, 1), now = Date.now();
     if(want !== st.tier){ if(!st.tierAt) st.tierAt = now; if(now - st.tierAt >= SKIN_FEEL.tierHold){ st.tier = want; st.tierAt = 0;
       // (a new tier starts from where the value is, so it doesn't jump)
