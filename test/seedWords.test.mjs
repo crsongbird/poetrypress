@@ -5,7 +5,7 @@
  * was edited or reordered (don't — see seedWords.js).
  */
 import { readFileSync } from 'fs';
-import { check, done } from './harness.mjs';
+import { check, done, uiSource } from './harness.mjs';
 const S = await import('../seedWords.js');
 
 check('the banks: 256 adjectives · 256 nouns · 128 names · 128 + 128 verbs · 64 times · 32 codas · 16 places, no word twice in a bank',
@@ -54,7 +54,7 @@ check('any other words become a seed too (hashed, one way, like a game\'s seed p
   Number.isInteger(S.seedFromText('my cat Lily')) && S.seedFromText('my cat Lily') === S.seedFromText('My Cat Lily') && S.seedFromText('a') !== S.seedFromText('b'));
 check('a negative number shows the phrase of the seed the textures actually use (32 bits)', S.seedPhrase(-1) === S.seedPhrase(2**32 - 1));
 
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const ev = uiSource(), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 check('the seed field shows the phrase; the number stays the saved value (as a tooltip only — no number on show)',
   html.includes('id="textureSeedWords"') && /id="textureSeedValue"[^>]*hidden/.test(html) && /const n = seedFromText\(box\.value\);/.test(ev));
 // (what was typed is kept with the look while it is still that seed's: audit.test.mjs, by behavior)

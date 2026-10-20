@@ -7,7 +7,7 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
-import { check, done } from './harness.mjs';
+import { check, done, UI_FILES } from './harness.mjs';
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const M = await import('../murmur.js');
 const D = M.MURMUR_DESIGN;
@@ -80,7 +80,7 @@ check('a design missing parts still plays (filled from the defaults)', M.normali
 }
 
 // in Vellum
-const app = src('appEvents.js'), html = src('index.html');
+const app = UI_FILES.map(src).join('\n'), html = src('index.html');
 const used = new Set([...app.matchAll(/murmur\.play\('(\w+)'[),]/g)].map(x => x[1]).concat([...html.matchAll(/data-sound="(\w+)"/g)].map(x => x[1])));
 check('Vellum names only UI functions the design knows', [...used].every(k => ids.has(k)) && used.size >= 12);
 check('Esoterica → Appearance has its switch and volume, off by default', /id="soundToggle"(?![^>]*checked)/.test(html) && html.includes('id="soundVolume"'));

@@ -13,10 +13,10 @@
  * (test/audit.test.mjs goes the other way: every saved key round-trips.)
  */
 import { readFileSync } from 'fs';
-import { check, done } from './harness.mjs';
+import { check, done, UI_FILES } from './harness.mjs';
 
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-const html = src('index.html'), ev = src('appEvents.js'), renderer = src('canvasRenderer.js');
+const html = src('index.html'), ev = UI_FILES.map(src).join('\n'), renderer = src('canvasRenderer.js');
 
 // controls that are deliberately NOT part of a look — each with its reason
 const EXEMPT = {
@@ -52,7 +52,7 @@ const persisted = ev.slice(ev.indexOf('const PERSISTED = ['), ev.indexOf('];', e
 const persistedIds = new Set([...persisted.matchAll(/\[\s*'[^']+',\s*'([^']+)'/g)].map(m => m[1]));
 // a control may be reached through an alias: const fontSelect = $('fontFamily');
 const aliases = {};
-for(const m of ev.matchAll(/^const (\w+) = \$\('([\w-]+)'\);/gm)) (aliases[m[2]] ||= []).push(m[1]);
+for(const m of ev.matchAll(/^(?:export )?const (\w+) = \$\('([\w-]+)'\);/gm)) (aliases[m[2]] ||= []).push(m[1]);
 // the surface's own controls are read and written per layer (the upper's or the lower's): the save reads them
 // through surfaceFromDom (canvasRenderer.js), the restore writes them through restoreSurface…() (and the page's
 // shape through restoreShape, which a draft uses too)

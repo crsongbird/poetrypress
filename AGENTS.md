@@ -142,6 +142,7 @@ python3 tools/css-audit.py                     # which CSS declarations never wi
 python3 tools/css-prune.py [--write]           # remove those, verified: no drawn element computes differently in any state
 node tools/make-murmur-studio.mjs              # rebuild tools/murmur-studio.html from its template and murmur.js
 node tools/ui-profile.mjs [rate] [out]          # the interface on a slowed phone: idle, typing, sliders, selects (PERFORMANCE-AUDIT §0; needs Playwright)
+node tools/smoke.mjs                           # click every kind of control, desk and phone: any page error? (after UI work; needs Playwright)
 ```
 
 The site must work **both built and unbuilt** (served straight from the
@@ -203,7 +204,9 @@ default.
 | File | Role |
 |---|---|
 | `index.html` · `poetrypress.css` | markup and all styles |
-| `appEvents.js` | UI wiring and the entry point. The app's state is ONE object (`state`) at its top. Persistence (`PERSISTED`), presets, locks, dice, undo, the draft, dialogs |
+| `appEvents.js` | the entry point and the UI's WIRING: every listener and every call made as the page starts, in the order they run, section by section; the values made by running something (`vault`, the controls found by id) and the variables more than one section sets. Generic bindings (`PERSISTED`) |
+| `uiState.js` | the app's state: ONE object (`state`) |
+| `uiLook.js` · `uiLocks.js` · `uiLayers.js` · `uiSurface.js` · `uiDials.js` · `uiLayout.js` · `uiHistory.js` · `uiGuard.js` · `uiAthanor.js` · `uiControls.js` · `uiWorking.js` | the UI's functions and tables, split from appEvents.js along its section banners: a look saved and restored, presets and the lit look · locks, master locks, dice, linked controls · the surface's two layers · its sliders, tools, readings and menus · the light and camera dials · page size, preview scale, pan and zoom, tabs, phone layout, focus mode · undo, redo, the filmstrip · asking first, toasts, the draft · the Athanor in the page · the editor, effects, border, moon, frame, seeds, theme, sounds, Grimoire · what's working. **Declarations only**: nothing in them runs when they load (a listener or a call goes in appEvents.js, where its section is), so they may name each other and the entry freely. Tests read them all as one (`uiSource()`, test/harness.mjs) |
 | `canvasRenderer.js` | `render()`: backdrop, texture, vignette, box, border, text, credit, spell. Also the poem's layout (`TEXT_LAYOUT`) and Text Clearing |
 | `textParsers.js` · `pmlVars.js` · `effects.js` | PML → lines and segments (`buildLines`) · `§Variables` and named styles (`§style`), resolved before PML parses · the text effect stack and `/fx:` |
 | `stitches.js` | decorative motifs along any path (rules, borders, seams, inner edges) |

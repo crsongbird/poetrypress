@@ -19,3 +19,9 @@ export function done(){
   console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
   process.exit(failures ? 1 : 0);
 }
+
+// THE UI'S SOURCE: appEvents.js (the entry and its wiring) and the modules split from it (ui*.js), for the few checks
+// that read the code itself (invariants and pitfalls). Read it whole, so a function may live in any of them.
+import { readdirSync, readFileSync } from 'fs';
+export const UI_FILES = ['appEvents.js', ...readdirSync(new URL('..', import.meta.url)).filter(f => /^ui[A-Z]\w*\.js$/.test(f)).sort()];
+export function uiSource(){ return UI_FILES.map(f => readFileSync(new URL('../' + f, import.meta.url), 'utf8')).join('\n'); }

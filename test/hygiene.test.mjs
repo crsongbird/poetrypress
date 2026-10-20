@@ -15,7 +15,7 @@
  * Run: node test/hygiene.test.mjs
  */
 import { readFileSync, readdirSync, existsSync } from 'fs';
-import { check, done } from './harness.mjs';
+import { check, done, UI_FILES } from './harness.mjs';
 globalThis.document = globalThis.document || { createElement: () => ({ getContext: () => null }) };
 const { pruneReport, pruneStrip } = await import('../tools/prune.mjs');
 
@@ -92,7 +92,7 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
   const { CARD_GAMES } = await import('../cartomancy.js');
   const { ATHANOR_MAX_JSON, ATHANOR_LIMITS } = await import('../athanor.js');
   const { ALT_MAX } = await import('../altText.js');
-  const ev = rd('appEvents.js'), cr = rd('canvasRenderer.js');
+  const ev = UI_FILES.map(rd).join('\n'), cr = rd('canvasRenderer.js');
   const WORD = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
   const n = s => WORD[s] ?? +s;
   // [doc, the sentence (its number captured), the code's number]. A sentence reworded must be reworded here too.

@@ -7,10 +7,10 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
-import { check, done } from './harness.mjs';
+import { check, done, uiSource } from './harness.mjs';
 const S = await import('../steps.js');
 const F = await import('../forge.js');
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const ev = uiSource(), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 check('the parts come from what Vellum has: inputs (knobs, hues, dial, seed), noises, textures, stitches, shaping, light & colour, a Surface',
   ['knob','hue','dial','seed','noise','cells','turing','texture','stitch','levels','warp','light','tint','blend','surface'].every(k => F.FORGE_NODES[k])

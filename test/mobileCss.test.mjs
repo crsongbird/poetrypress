@@ -12,7 +12,7 @@
  * Run: node test/mobileCss.test.mjs
  */
 import { readFileSync } from 'fs';
-import { check, done } from './harness.mjs';
+import { check, done, uiSource } from './harness.mjs';
 
 const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -29,7 +29,7 @@ const mobile = withComments.replace(/\/\*[\s\S]*?\*\//g, '');
 // reading a const declared further down is a temporal-dead-zone error.
 const edCss = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
 const js2 = edCss;
-const evJs = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
+const evJs = uiSource();
 const edJs = readFileSync(new URL('../editor.js', import.meta.url), 'utf8');
 
 
@@ -145,7 +145,7 @@ check('presets are a grid again, not a sideways scroller',
 
 // zoom/pan is a transform on the canvas; when the bitmap is resized by an
 // aspect change, a stale transform leaves the preview clipped and off-centre
-const js = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
+const js = uiSource();
 // only a change of SHAPE resets the zoom: the preview's pixel size also
 // changes when its scale steps, or while Save image renders the export
 check('zoom/pan resets when the canvas changes shape (not merely size)',

@@ -13,14 +13,14 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
-import { check, done } from './harness.mjs';
+import { check, done, uiSource } from './harness.mjs';
 
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
+const ev = uiSource();
 const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
 
 const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };

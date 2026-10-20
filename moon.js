@@ -51,7 +51,3 @@ export function moonGlyph(p, { size = 16, lit = 'currentColor', rim = 'currentCo
          `</svg>`;
 }
 
-/** The same glyph as a data: URI, for CSS backgrounds such as a slider thumb. */
-export function moonGlyphURI(p, opts){
-  return 'data:image/svg+xml;utf8,' + encodeURIComponent(moonGlyph(p, opts));
-}

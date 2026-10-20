@@ -89,7 +89,8 @@ check('bundle populates the font dropdown', registry['fontFamily'] && registry['
     const src = rf(new URL('../' + f, import.meta.url), 'utf8');
     for(const m of src.matchAll(/^import [^;]*from '\.\/([\w]+\.js)';/gm)){
       if(!pos.has(m[1])) late.push(`${f} imports ${m[1]}, which is not bundled`);
-      else if(pos.get(m[1]) > pos.get(f)) late.push(`${f} comes before its dependency ${m[1]}`);
+      // (the UI's split modules hold declarations only, so they may name what the entry and each other declare: test/hygiene)
+      else if(pos.get(m[1]) > pos.get(f) && !(/^ui[A-Z]/.test(f) && (m[1] === 'appEvents.js' || /^ui[A-Z]/.test(m[1])))) late.push(`${f} comes before its dependency ${m[1]}`);
     }
   }
   check('every module is bundled after the modules it imports', late.length === 0);

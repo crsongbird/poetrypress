@@ -140,6 +140,19 @@ const ORDER = [
   'athanorWikiParts.js',  // the Athanor wiki's page for every part
   'athanorWiki.js',       // the Athanor's wiki: articles, search, the parts' pages
   'forge.js',             // the Athanor: a node editor for new surfaces (scaffold)
+  // the UI's own modules, split from appEvents.js: declarations only (its wiring, the listeners, stays there, in order)
+  'uiState.js',           // the working state
+  'uiWorking.js',         // the line that says what is being made
+  'uiHistory.js',         // undo, redo and the filmstrip
+  'uiGuard.js',           // asking first, toasts, the draft
+  'uiAthanor.js',         // the Athanor in the page
+  'uiDials.js',           // the light and camera dials
+  'uiLocks.js',           // locks, master locks and eyes, the dice, linked controls
+  'uiLayers.js',          // the surface's two layers
+  'uiLayout.js',          // page size, preview scale, pan and zoom, tabs, phone layout, focus mode
+  'uiLook.js',            // a look saved and restored, presets, the lit look
+  'uiSurface.js',         // the surface's sliders, tools, readings and menus
+  'uiControls.js',        // the PML editor, effects, border, moon, frame, seeds, theme, sounds, Grimoire
   'appEvents.js',         // entry point, needs everything
 ];
 

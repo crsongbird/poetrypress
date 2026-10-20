@@ -8,7 +8,7 @@
  * Run: node test/invariants.test.mjs
  */
 import { readFileSync, readdirSync } from 'fs';
-import { check, done } from './harness.mjs';
+import { check, done, UI_FILES } from './harness.mjs';
 const { pruneStrip } = await import('../tools/prune.mjs');
 
 const raw = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
@@ -16,7 +16,7 @@ const src = f => pruneStrip(raw(f));                 // comments out: a rule quo
 const MODULES = readdirSync(new URL('..', import.meta.url)).filter(f => /^\w+\.js$/.test(f));
 // the modules that make surfaces (in the worker, and the parts' canvas passes)
 const SURFACE = MODULES.filter(f => /^(tex|steps|cartomancy|athanor\.js|textureGenerators|chains)/.test(f) && f !== 'textureService.js' && f !== 'textureWorker.js');
-const cr = src('canvasRenderer.js'), ev = src('appEvents.js');
+const cr = src('canvasRenderer.js'), ev = UI_FILES.map(src).join('\n');
 
 // ---- §7 PML is a contract: what a directive sets must reach the page ----
 {
@@ -90,13 +90,21 @@ check('§5.1 every frame starts from a clean context (a frame aborted mid-blend 
 }
 
 // ---- §10 The bundle ----
+{ // the UI's split modules hold declarations only: what runs as the page starts runs from appEvents.js, in its order
+  const runs = [];
+  for(const f of UI_FILES.filter(f => f !== 'appEvents.js')){
+    const lines = pruneStrip(raw(f), true).split('\n');
+    lines.forEach((l, i) => { if(/^\S/.test(l) && !/^(import|export (const|let|function|async function|\{)|const|let|function|async function|[}\])]+[,;)]*\s*$)/.test(l)) runs.push(`${f}:${i + 1} ${l.slice(0, 50)}`); });
+  }
+  check('§10 the UI\'s split modules (ui*.js) hold declarations only: nothing runs when they load', runs.length === 0, runs);
+}
 { const built = raw('dist/index.html'), at = built.indexOf('<script id="vellum-texture-worker">'), main = built.indexOf('id="vellum-worker-main"');
   check('§10 the worker\'s code comes before the page\'s script: it must exist before the page first asks for a texture',
     at > 0 && at < main && main < built.lastIndexOf('<script>\n')); }
 check('§10 the texture service starts no timers of its own (nothing to keep Node, or a phone, awake)', !/setInterval\(/.test(src('textureService.js')));
 
 // ---- §1 rule 6: user-facing words live in strings.js ----
-check('§1 the die\'s words live in strings.js, not in the code', /export const DIE = \{/.test(raw('strings.js')) && !/'(Gently|Wildly|As usual)'/.test(src('appEvents.js')));
+check('§1 the die\'s words live in strings.js, not in the code', /export const DIE = \{/.test(raw('strings.js')) && !/'(Gently|Wildly|As usual)'/.test(UI_FILES.map(src).join('\n')));
 
 // ---- §7 Phones: --vvh, never bare vh ----
 {

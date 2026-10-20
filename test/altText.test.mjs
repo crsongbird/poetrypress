@@ -4,9 +4,9 @@
  * and dc:description, set in after the JFIF header, the picture untouched.
  */
 import { readFileSync } from 'fs';
-import { check, done } from './harness.mjs';
+import { check, done, uiSource } from './harness.mjs';
 const M = await import('../jpegMeta.js');
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
+const ev = uiSource();
 
 // a tiny JPEG's skeleton: SOI, APP0 (JFIF, 16 bytes), then the rest, then EOI
 const app0 = [0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00];

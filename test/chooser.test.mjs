@@ -8,10 +8,10 @@
  * Run: node test/chooser.test.mjs
  */
 import { readFileSync } from 'fs';
-import { check, done } from './harness.mjs';
+import { check, done, uiSource } from './harness.mjs';
 const { chGroupsOf, chMatches, chCacheFor, chCached, CHOOSER_CACHE_KEY } = await import('../chooser.js');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
+const ev = uiSource();
 
 // a <select> as the markup has it, parsed simply
 const sel = html.slice(html.indexOf('<select id="textureType">'), html.indexOf('</select>', html.indexOf('<select id="textureType">')));

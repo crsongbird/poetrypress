@@ -11,11 +11,11 @@
 import { readFileSync } from 'fs';
 import { UI_STRINGS, DIALOGS, THEME_NOTES, fill, applyStrings } from '../strings.js';
 import * as TUNABLES from '../tunables.js';
-import { check, done } from './harness.mjs';
+import { check, done, uiSource } from './harness.mjs';
 
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
+const ev = uiSource();
 const vault = readFileSync(new URL('../vault.js', import.meta.url), 'utf8');
 
 const tagged = [...html.matchAll(/data-str(?:-ph)?="([^"]+)"/g)].map(m => m[1]);   // (data-str-ph: a placeholder)
