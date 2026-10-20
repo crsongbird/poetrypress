@@ -126,6 +126,7 @@ export const UI_STRINGS = {
   'label.x':                                   "—",
   'label.x2':                                  "—",
   'label.opacity':                             "Opacity",
+  'label.controls':                            "Controls",
   'label.blend_mode':                          "Blend Mode",
   'label.light_direction':                     "Light Direction",
   'label.camera':                              "Camera",

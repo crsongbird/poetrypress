@@ -42,6 +42,14 @@ const SATURN = ['Pan', 'Daphnis', 'Atlas', 'Prometheus', 'Epimetheus', 'Janus', 
   'Farbauti', 'Thrymr', 'Aegir', 'Bestla', 'Fenrir', 'Surtur', 'Kari', 'Ymir', 'Loge', 'Fornjot',
   // (the Norse group's ten named in 2022)
   'Gridr', 'Eggther', 'Angrboda', 'Beli', 'Gerd', 'Gunnlod', 'Skrymir', 'Alvaldi', 'Geirrod', 'Thiazzi'];
+// Then Uranus's named moons by distance (whillyard.com's Uranus moons list), then Neptune's (Universe Today's list,
+// with Hippocamp, the S/2004 N 1 it names, between Larissa and Proteus, and Neso the farthest); after them, Ruby:
+// "we start naming these things differently".
+const URANUS = ['Cordelia', 'Ophelia', 'Bianca', 'Cressida', 'Desdemona', 'Juliet', 'Portia', 'Rosalind', 'Cupid', 'Belinda',
+  'Perdita', 'Puck', 'Mab', 'Miranda', 'Ariel', 'Umbriel', 'Titania', 'Oberon', 'Francisco', 'Caliban', 'Stephano', 'Trinculo',
+  'Sycorax', 'Margaret', 'Prospero', 'Setebos', 'Ferdinand'];
+const NEPTUNE = ['Naiad', 'Thalassa', 'Despina', 'Galatea', 'Larissa', 'Hippocamp', 'Proteus', 'Triton', 'Nereid', 'Halimede',
+  'Sao', 'Laomedeia', 'Psamathe', 'Neso'];
 // node build.mjs --notes: print the newest section of CHANGELOG.md (the release's commit message)
 if(process.argv.includes('--notes')){
   const log = readFileSync('CHANGELOG.md', 'utf8'), at = log.indexOf('\n## '), next = log.indexOf('\n## ', at + 4);
@@ -51,9 +59,9 @@ if(process.argv.includes('--notes')){
 }
 if(process.argv.includes('--next')){
   const [planet, cur] = /RELEASE = '([^']+)'/.exec(readFileSync('release.js', 'utf8'))[1].split('–');
-  const order = [...JUPITER.map(m => ['Jupiter', m]), ...SATURN.map(m => ['Saturn', m])];
+  const order = [...JUPITER.map(m => ['Jupiter', m]), ...SATURN.map(m => ['Saturn', m]), ...URANUS.map(m => ['Uranus', m]), ...NEPTUNE.map(m => ['Neptune', m])];
   const i = order.findIndex(([p, m]) => p === planet && m === cur);
-  if(i < 0 || i + 1 >= order.length){ console.error(`No moon after ${planet}–${cur} in the list: extend SATURN in build.mjs.`); process.exit(1); }
+  if(i < 0 || i + 1 >= order.length){ console.error(`No moon after ${planet}–${cur} in the list: Ruby names what comes after Neptune (build.mjs).`); process.exit(1); }
   const [np, nm] = order[i + 1];
   writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = '${np}–${nm}'`)
     .replace(/RELEASE_DATE = '[^']*'/, `RELEASE_DATE = '${new Date().toISOString().slice(0, 10)}'`));

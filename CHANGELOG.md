@@ -4,6 +4,18 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Saturn–Thiazzi (2026-10-20)
+
+- **The surface's sliders sit under one heading, Controls**, that folds
+  shut and stays the way you left it; Opacity stays outside it, always in
+  reach.
+- **A little room on the right to scroll with** on a phone: the panel keeps
+  a slightly wider margin, and every slider stops a few pixels short of the
+  edge.
+
+### Under the hood
+- After Saturn's moons, the releases take Uranus's names, then Neptune's.
+
 ## Saturn–Geirrod (2026-10-20)
 
 Nothing you see changes in this release: it is the rest of the work to make
@@ -442,26 +454,3 @@ and every control behaving as it did.
   the preview showed it bigger than the image saved. The preview now
   scales the cap, and steps through text sizes in the saved image's
   pixels, so both pick the same size.
-
-## Saturn–Suttungr (2026-10-18)
-
-- **Ring in the Sky has depth.** The ring is a solid band now, not a flat
-  disc: its land runs along the inside, facing the star; a rim wall stands
-  in from each edge to hold its air, its top catching the light; across the
-  near side you see the band's hull, its panels lit by the light dial. It is
-  seen in a gentle perspective, so the near side is nearer and larger than
-  the far. The camera dial's View now raises your eye above the ring's
-  plane: low, the band crosses in front of the star like a wall; high, you
-  look down into it. The camera's wireframe guide matches the new ring.
-- **Border Options and Inset Box no longer open empty** while switched off.
-  A section switched off by the eye in its heading (Surface, Border, Inset
-  Box, Vignette) shows its controls faded, under a line that says it is off;
-  changing any of them switches it on. The dice never switch it on.
-- **The sun guide points the way the light dial does** on a tall page. It
-  had stood nearer upright than the dial.
-- **Shape Strength sets how far a surface built on The Poem keeps clear of
-  the words** (Ripples from the Words, Circuit Board, the starters and your
-  own graphs). At 100% it keeps its own margin; lower, the margin shrinks
-  toward the letters; at 0% nothing is kept clear. With Shape Aware off, a
-  graph keeps its own margin, as before. Rings and fades farther out keep
-  their spacing.

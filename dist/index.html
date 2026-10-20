@@ -551,7 +551,7 @@ body.is-mobile .modal{ width:100%; }
 body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }
 
 /* ---------- texture sliders: own line, full width ---------- */
-.field.full > input[type="range"]{ width:100%; display:block; }
+.field.full > input[type="range"]{ width:calc(100% - 6px); display:block; }   /* (Ruby: backed off the right edge a little) */
 body.is-mobile .field.full{ width:100%; }
 body.is-mobile .field.full > label{ display:block; margin-bottom:2px; }
 body.is-mobile .field.full > .range-val{ float:right; font-size:11px; opacity:0.8; }
@@ -1244,7 +1244,7 @@ body.is-mobile .tab-btn svg{ color:color-mix(in srgb, var(--ui-violet) 72%, var(
 .card-grid{ gap:7px; }
 body.is-mobile .card{ padding:7px 8px; margin-bottom:7px; }
 body.is-mobile .card-grid{ gap:5px; }
-body.is-mobile .controls{ padding-left:5px; padding-right:5px; }
+body.is-mobile .controls{ padding-left:5px; padding-right:10px; }   /* (Ruby: a little room on the right to scroll with) */
 
 .theme-note{
   margin:5px 0 0; font-size:11px; font-style:italic;
@@ -2441,6 +2441,15 @@ body.is-mobile .lock-btn::after, body.is-mobile .die-btn::after, body.is-mobile 
 body.is-mobile .tool-row > .field.hue-head{ grid-column:2 !important; }
 body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !important; }
 
+/* THE SURFACE'S CONTROLS: its sliders and curves under one drop-down heading (Opacity stays outside it) */
+.controls-fold{ margin:4px 0 2px; }
+.controls-fold > summary{ cursor:pointer; list-style:none; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent-2); opacity:.85; padding:4px 0 2px; }
+.controls-fold > summary::-webkit-details-marker{ display:none; }
+.controls-fold > summary::after{ content:" ▾"; opacity:.7; }
+.controls-fold:not([open]) > summary::after{ content:" ▸"; }
+.controls-fold > .field{ margin-top:6px; }
+
 </style>
 
 </head>
@@ -3221,60 +3230,64 @@ but bear with me, dear}]/jitter:200
               </div>
             </div>
           </div>
-          <div class="field full">
-            <label id="texP1Label" data-str="label.x">—</label>
-            <input type="range" id="texP1" min="0" max="100" value="100">
-            <span class="range-val" id="texP1Val"></span>
-          </div>
-          <div class="field full">
-            <label id="texP2Label" data-str="label.x2">—</label>
-            <input type="range" id="texP2" min="0" max="100" value="100">
-            <span class="range-val" id="texP2Val"></span>
-          </div>
-          <div class="field full" id="texP3Field" style="display:none">
-            <label id="texP3Label" data-str="label.form">Form</label>
-            <input type="range" id="texP3" min="0" max="100" value="50">
-            <span class="range-val" id="texP3Val"></span>
-          </div>
-          <div class="field full" id="texP4Field" style="display:none">
-            <label id="texP4Label">Knob 4</label>
-            <input type="range" id="texP4" min="0" max="100" value="0">
-            <span class="range-val" id="texP4Val"></span>
-          </div>
-          <div class="field full" id="texP5Field" style="display:none">
-            <label id="texP5Label">Knob 5</label>
-            <input type="range" id="texP5" min="0" max="100" value="0">
-            <span class="range-val" id="texP5Val"></span>
-          </div>
-          <div class="field full" id="texP6Field" style="display:none">
-            <label id="texP6Label">Knob 6</label>
-            <input type="range" id="texP6" min="0" max="100" value="0">
-            <span class="range-val" id="texP6Val"></span>
-          </div>
-          <div class="field full" id="texP7Field" style="display:none">
-            <label id="texP7Label">Knob 7</label>
-            <input type="range" id="texP7" min="0" max="100" value="0">
-            <span class="range-val" id="texP7Val"></span>
-          </div>
-          <div class="field full" id="texP8Field" style="display:none">
-            <label id="texP8Label">Knob 8</label>
-            <input type="range" id="texP8" min="0" max="100" value="0">
-            <span class="range-val" id="texP8Val"></span>
-          </div>
-          <!-- THE CURVE CONTROLS (ROADMAP D4): a graph's Curve Control parts, drawn by hand here. Drag a point; tap or click
-               the empty pad to add one; double-click or hold a point to remove it; ↺ puts back the graph's own curve -->
-          <div class="field full curve-row tool-hidden" id="texCurve1Row">
-            <div class="curve-head"><label id="texCurve1Label" for="texCurve1Pad">Curve</label>
-              <button type="button" class="snap-btn curve-reset" id="texCurve1Reset" title="Put back the graph's own curve">↺</button></div>
-            <div class="curve-pad"><canvas id="texCurve1Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
-            <input type="hidden" id="textureCurve1" value="">
-          </div>
-          <div class="field full curve-row tool-hidden" id="texCurve2Row">
-            <div class="curve-head"><label id="texCurve2Label" for="texCurve2Pad">Curve</label>
-              <button type="button" class="snap-btn curve-reset" id="texCurve2Reset" title="Put back the graph's own curve">↺</button></div>
-            <div class="curve-pad"><canvas id="texCurve2Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
-            <input type="hidden" id="textureCurve2" value="">
-          </div>
+          <!-- THE SURFACE'S CONTROLS (Ruby): its sliders and curves under one drop-down heading; Opacity stays outside it -->
+          <details class="controls-fold full" id="texControls" open>
+            <summary data-str="label.controls">Controls</summary>
+            <div class="field full">
+              <label id="texP1Label" data-str="label.x">—</label>
+              <input type="range" id="texP1" min="0" max="100" value="100">
+              <span class="range-val" id="texP1Val"></span>
+            </div>
+            <div class="field full">
+              <label id="texP2Label" data-str="label.x2">—</label>
+              <input type="range" id="texP2" min="0" max="100" value="100">
+              <span class="range-val" id="texP2Val"></span>
+            </div>
+            <div class="field full" id="texP3Field" style="display:none">
+              <label id="texP3Label" data-str="label.form">Form</label>
+              <input type="range" id="texP3" min="0" max="100" value="50">
+              <span class="range-val" id="texP3Val"></span>
+            </div>
+            <div class="field full" id="texP4Field" style="display:none">
+              <label id="texP4Label">Knob 4</label>
+              <input type="range" id="texP4" min="0" max="100" value="0">
+              <span class="range-val" id="texP4Val"></span>
+            </div>
+            <div class="field full" id="texP5Field" style="display:none">
+              <label id="texP5Label">Knob 5</label>
+              <input type="range" id="texP5" min="0" max="100" value="0">
+              <span class="range-val" id="texP5Val"></span>
+            </div>
+            <div class="field full" id="texP6Field" style="display:none">
+              <label id="texP6Label">Knob 6</label>
+              <input type="range" id="texP6" min="0" max="100" value="0">
+              <span class="range-val" id="texP6Val"></span>
+            </div>
+            <div class="field full" id="texP7Field" style="display:none">
+              <label id="texP7Label">Knob 7</label>
+              <input type="range" id="texP7" min="0" max="100" value="0">
+              <span class="range-val" id="texP7Val"></span>
+            </div>
+            <div class="field full" id="texP8Field" style="display:none">
+              <label id="texP8Label">Knob 8</label>
+              <input type="range" id="texP8" min="0" max="100" value="0">
+              <span class="range-val" id="texP8Val"></span>
+            </div>
+            <!-- THE CURVE CONTROLS (ROADMAP D4): a graph's Curve Control parts, drawn by hand here. Drag a point; tap or click
+                 the empty pad to add one; double-click or hold a point to remove it; ↺ puts back the graph's own curve -->
+            <div class="field full curve-row tool-hidden" id="texCurve1Row">
+              <div class="curve-head"><label id="texCurve1Label" for="texCurve1Pad">Curve</label>
+                <button type="button" class="snap-btn curve-reset" id="texCurve1Reset" title="Put back the graph's own curve">↺</button></div>
+              <div class="curve-pad"><canvas id="texCurve1Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+              <input type="hidden" id="textureCurve1" value="">
+            </div>
+            <div class="field full curve-row tool-hidden" id="texCurve2Row">
+              <div class="curve-head"><label id="texCurve2Label" for="texCurve2Pad">Curve</label>
+                <button type="button" class="snap-btn curve-reset" id="texCurve2Reset" title="Put back the graph's own curve">↺</button></div>
+              <div class="curve-pad"><canvas id="texCurve2Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+              <input type="hidden" id="textureCurve2" value="">
+            </div>
+          </details>
           <div class="field full">
             <label data-str="label.opacity">Opacity</label>
             <input type="range" id="textureOpacity" min="0" max="100" value="60" data-moon>
@@ -25503,6 +25516,7 @@ const UI_STRINGS = {
   'label.x':                                   "—",
   'label.x2':                                  "—",
   'label.opacity':                             "Opacity",
+  'label.controls':                            "Controls",
   'label.blend_mode':                          "Blend Mode",
   'label.light_direction':                     "Light Direction",
   'label.camera':                              "Camera",
@@ -28709,7 +28723,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Saturn–Geirrod';
+const RELEASE = 'Saturn–Thiazzi';
 
 const RELEASE_DATE = '2026-10-20';
 
@@ -29399,7 +29413,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 8f014f8";
+const STAMP = "2026-10-20 · 61f3eda";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -40465,6 +40479,14 @@ $('textureType').addEventListener('change', ()=>{
 });
 syncTextureParams(true);
 
+
+
+{ const fold = $('texControls');
+  if(fold){
+    try { const v = localStorage.getItem('uv.controls.v1'); if(v !== null) fold.open = v === '1'; } catch(e){}
+    fold.addEventListener('toggle', () => { try { localStorage.setItem('uv.controls.v1', fold.open ? '1' : '0'); } catch(e){} });
+  }
+}
 
 
 

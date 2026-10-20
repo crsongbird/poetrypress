@@ -2,6 +2,29 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Suttungr (2026-10-18)
+
+- **Ring in the Sky has depth.** The ring is a solid band now, not a flat
+  disc: its land runs along the inside, facing the star; a rim wall stands
+  in from each edge to hold its air, its top catching the light; across the
+  near side you see the band's hull, its panels lit by the light dial. It is
+  seen in a gentle perspective, so the near side is nearer and larger than
+  the far. The camera dial's View now raises your eye above the ring's
+  plane: low, the band crosses in front of the star like a wall; high, you
+  look down into it. The camera's wireframe guide matches the new ring.
+- **Border Options and Inset Box no longer open empty** while switched off.
+  A section switched off by the eye in its heading (Surface, Border, Inset
+  Box, Vignette) shows its controls faded, under a line that says it is off;
+  changing any of them switches it on. The dice never switch it on.
+- **The sun guide points the way the light dial does** on a tall page. It
+  had stood nearer upright than the dial.
+- **Shape Strength sets how far a surface built on The Poem keeps clear of
+  the words** (Ripples from the Words, Circuit Board, the starters and your
+  own graphs). At 100% it keeps its own margin; lower, the margin shrinks
+  toward the letters; at 0% nothing is kept clear. With Shape Aware off, a
+  graph keeps its own margin, as before. Rings and fades farther out keep
+  their spacing.
+
 ## Saturn–Narvi (2026-10-18)
 
 - **Every Athanor starter and Surface Study is in the Surface menu**, to try

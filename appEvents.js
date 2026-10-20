@@ -826,6 +826,14 @@ $('textureType').addEventListener('change', ()=>{
 syncTextureParams(true);
 
 
+// THE SURFACE'S CONTROLS fold open or shut, as this browser left it (a working preference, not part of a look)
+{ const fold = $('texControls');
+  if(fold){
+    try { const v = localStorage.getItem('uv.controls.v1'); if(v !== null) fold.open = v === '1'; } catch(e){}
+    fold.addEventListener('toggle', () => { try { localStorage.setItem('uv.controls.v1', fold.open ? '1' : '0'); } catch(e){} });
+  }
+}
+
 // ---------- texture tools ----------
 // Blend mode, light direction and tints are declared per texture (see
 // TEXTURE_CAPS). Anything a texture cannot use is disabled rather than left
