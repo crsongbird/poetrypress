@@ -338,9 +338,13 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
 
   const windows=(x,top,bw,bh,density)=>{
     const cw=Math.max(3,unit*0.006), ch=Math.max(3,unit*0.008), gap=cw*0.9;
+    const lit=[[],[],[]];
     for(let yy=top+ch; yy<ground-ch*1.5; yy+=ch+gap*1.1)
       for(let xx=x+gap; xx<x+bw-cw-gap*0.3; xx+=cw+gap)
-        if(Math.random()<density){ ctx.globalAlpha=0.55+Math.random()*0.45; ctx.fillStyle=rgb(win); ctx.fillRect(xx,yy,cw,ch); }
+        if(Math.random()<density){ const a=0.55+Math.random()*0.45; lit[Math.min(2, Math.floor((a-0.55)/0.15))].push(xx,yy); }
+    // (the lit panes in three brightnesses, each one path: far fewer fills than a pane at a time)
+    ctx.fillStyle=rgb(win);
+    lit.forEach((P,b)=>{ if(!P.length) return; ctx.globalAlpha=0.625+b*0.15; ctx.beginPath(); for(let i=0;i<P.length;i+=2) ctx.rect(P[i],P[i+1],cw,ch); ctx.fill(); });
   };
   // a downtown: buildings rise toward one point along the skyline
   const peakX=w*(0.2+Math.random()*0.6), peakW=w*(0.18+Math.random()*0.22);
@@ -358,7 +362,8 @@ export function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
       ctx.globalAlpha=alpha; ctx.fillStyle=grey(tone);
       const draws=[]; pkSilhouette(ctx, x, ground, bw, bh, type, ()=>{ const v=Math.random(); draws.push(v); return v; }, cpx);
       // (its windows only on the building: its own outline, drawn again with the same draws, as the clip)
-      if(density>0 && type!=='warehouse'){ let k=0; ctx.save(); pkSilhouette(ctx, x, ground, bw, bh, type, ()=>draws[k++], cpx, true); windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1)); ctx.restore(); }
+      if(density>0 && type!=='warehouse'){ const shaped = type!=='tower' && type!=='block' && type!=='spire'; let k=0; if(shaped){ ctx.save(); pkSilhouette(ctx, x, ground, bw, bh, type, ()=>draws[k++], cpx, true); }
+        windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1)); if(shaped) ctx.restore(); }
       if(type!=='house') tallest=Math.max(tallest, bh);
       x+=bw;                                              // flush: no gaps
     }
