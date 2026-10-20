@@ -28,6 +28,9 @@ prints it).
   observatories and wind turbines. The wilds have villages and farms. Each stands where it belongs: lighthouses on
   the coast, windmills, turbines, castles and observatories on rises, barns and silos at a town's edge, cathedrals and
   clock towers at its heart; trees thin out round towns, and boulders gather under slopes.
+- **The ring's walls and its unfinished stretches**: the rim walls are plated, and carry their builders' glowing
+  script, the cities' and neon's screens, and graffiti at the foot; on some rings a stretch of the far floor was never
+  laid, its bare frame showing, scaffolding along its edges and cranes leaning over it.
 - **Robots and droids**, as life where they belong: helpers on one wheel and humming drones in the builders' and
   cities' worlds, sentries and stalking walkers in the neon, scavengers in the ruins, and now and then a giant fallen
   long ago, kneeling in the grass.

@@ -219,26 +219,70 @@ function rgPaintArch(x, mk, V){
     if(edge.length) rsPoly(x, [...edge, ...back.reverse()], rsCss(rsMix(SPACE, S, 0.12), 0.96)); }
   // THE RING'S FAR FLOOR (the arch) and ITS RIM WALLS, in patches far to near: land, sea, forest, city as this world
   // lays them, its nights where the squares' shadows fall, hazed by the air low down and clear overhead
-  const quads = [], hzOf = (zc, eS) => V.air*(1 - Math.exp(-zc/(W*1.6)))*(0.25 + 0.75*Math.exp(-Math.max(0, eS)/0.22));
+  const WALL0 = rsMix([96, 104, 124], S, 0.22), quads = [], hzOf = (zc, eS) => V.air*(1 - Math.exp(-zc/(W*1.6)))*(0.25 + 0.75*Math.exp(-Math.max(0, eS)/0.22));
   const elevOf = (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, l = Math.hypot(dx, dy, dz) || 1; return -dx/l; };
   const steps = (a0, fine, coarse) => { const out = [a0]; let a = a0; while(a < Math.PI){ a = Math.min(Math.PI, a + Math.max(fine, Math.min(coarse, a*0.12))); out.push(a); } return out; };
   const LN = 3, aF = steps(W*0.25, W*0.05, W*0.35);
+  // AN UNFINISHED STRETCH (Ruby: "unfinished sections of the ring with scaffolding"): on some rings, more often where
+  // the builders are, a stretch of the far floor was never laid: the bare lattice of the ring's frame shows, scaffolding
+  // stands along its edges, and cranes lean over it
+  const UF = (() => { const R = rgRand(s, 812), p = V.world.list.includes('builders') ? 0.7 : V.world.list.includes('ruins') ? 0.45 : 0.22; if(R() > p) return null;
+    const sg = R() < 0.5 ? 1 : -1, a0 = (0.7 + R()*1.6)*sg, len = W*(1 + 3*R())*sg; return { lo: Math.min(a0, a0 + len), hi: Math.max(a0, a0 + len), R }; })();
+  const unfinished = a => UF && a >= UF.lo && a <= UF.hi;
   for(const sg of [1, -1]) for(let i = 0; i + 1 < aF.length; i++){ const a0 = aF[i]*sg, a1 = aF[i + 1]*sg, am = (a0 + a1)/2, day = ringDay(L, am);
     for(let j = 0; j < LN; j++){ const z0 = -W/2 + W*j/LN, z1 = -W/2 + W*(j + 1)/LN, zm = (z0 + z1)/2, q = [at(a0, z0, 0), at(a1, z0, 0), at(a1, z1, 0), at(a0, z1, 0)];
       if(q.some(v => !v)) continue;
       const e = V.TR.raw(am, zm, W*0.25), wet = rsSmooth(V.TR.sea + W*0.004, V.TR.sea - W*0.004, e), c = rsMix(rgGround(V, am, zm, Math.max(e, V.TR.sea + 1e-6), 4), rsMix([24, 58, 104], S, 0.35), wet), zc = (q[0][2] + q[2][2])/2, eS = elevOf(Math.cos(am), Math.sin(am), zm);
+      if(unfinished(am)){ quads.push([zc, q, rgLit(V, rsMix(WALL0, SPACE, 0.55), 0.3 + 0.7*day, hzOf(zc, eS)*0.55, AIR), null, 'frame', rgRand(s, 813, i*sg, j)]); continue; }
       quads.push([zc, q, rgLit(V, rsMix(c, [255, 255, 255], 0.06), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 && V.cityAt(am, zm, RG_PROF[V.worldAt(am, zm)].cv*(0.3 + 0.9*V.works)) > 0.3 ? V.lightsOf(V.worldAt(am, zm))[0] : null, false, rgRand(s, 805, i*sg, j)]); } }
   const Hw = L.Hw, WALL = rsMix([96, 104, 124], S, 0.22), aW = steps(0, W*0.012, W*0.4);
   for(const zw of [-W/2, W/2]) for(const sg of [1, -1]) for(let i = 0; i + 1 < aW.length; i++){ const a0 = aW[i]*sg, a1 = aW[i + 1]*sg, am = (a0 + a1)/2, q = [at(a0, zw, 0), at(a1, zw, 0), at(a1, zw, Hw), at(a0, zw, Hw)];
     if(q.some(v => !v)) continue;
     const zc = (q[0][2] + q[2][2])/2, eS = elevOf((1 - Hw*0.5)*Math.cos(am), (1 - Hw*0.5)*Math.sin(am), zw), rib = i % 4 === 0 ? 0.12 : 0, day = ringDay(L, am);
-    quads.push([zc, q, rgLit(V, rsMix(WALL, [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.45*V.air + hzOf(zc, eS)*0.7), AIR), null, true]); }
+    quads.push([zc, q, rgLit(V, rsMix(WALL, [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.45*V.air + hzOf(zc, eS)*0.7), AIR), null, true, rgRand(s, 810, i*sg, zw > 0 ? 1 : 0), V.worldAt(am, zw*0.96), day]); }
   quads.sort((p, q) => q[0] - p[0]);
-  for(const [, q, c, lights, wall, R] of quads){ rsPoly(x, q, rsCss(c)); rsPoly(mk, q, '#fff');
+  // a point inside a quad (u along it, v up or across it)
+  const inQ = (q, u, v) => [q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v + (q[2][0] - q[1][0] - q[3][0] + q[0][0])*u*v, q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v + (q[2][1] - q[1][1] - q[3][1] + q[0][1])*u*v];
+  const line = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = wd; x.beginPath(); pts.forEach(([X, Y], k) => k ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.stroke(); };
+  for(const [, q, c, lights, wall, R, ww2, wday] of quads){ rsPoly(x, q, rsCss(c)); rsPoly(mk, q, '#fff');
+    if(wall === 'frame'){ // the ring's bare frame: its ribs across and along, lit on their edges
+      const fc = rsCss(rsMix(c, [255, 255, 255], 0.3), 0.8), wd = Math.max(px(0.6), Math.abs(q[3][1] - q[0][1])*0.04);
+      for(let k = 0; k <= 3; k++){ line([inQ(q, k/3, 0), inQ(q, k/3, 1)], fc, wd); line([inQ(q, 0, k/3), inQ(q, 1, k/3)], fc, wd*0.7); }
+      line([inQ(q, 0, 0), inQ(q, 1, 1)], rsCss(c, 0.9), wd*0.5); continue; }
     if(wall){ // the wall's top, catching the light: a thin lighter band along its upper edge
-      rsPoly(x, [q[3], q[2], [q[2][0] + (q[1][0] - q[2][0])*0.05, q[2][1] + (q[1][1] - q[2][1])*0.05], [q[3][0] + (q[0][0] - q[3][0])*0.05, q[3][1] + (q[0][1] - q[3][1])*0.05]], rsCss(rsMix(c, [255, 255, 255], 0.25))); }
+      rsPoly(x, [q[3], q[2], [q[2][0] + (q[1][0] - q[2][0])*0.05, q[2][1] + (q[1][1] - q[2][1])*0.05], [q[3][0] + (q[0][0] - q[3][0])*0.05, q[3][1] + (q[0][1] - q[3][1])*0.05]], rsCss(rsMix(c, [255, 255, 255], 0.25)));
+      // THE WALLS BY THEIR BUILDERS (Ruby: "different textures of the walls depending on the builders, including graffiti
+      // or writing, some computerized bits"): seams between the plates where the wall is big enough to show them; the
+      // builders' glowing script running along it; the cities' and neon's screens; graffiti at the foot where people reach
+      const hp = Math.hypot(q[3][0] - q[0][0], q[3][1] - q[0][1]), wp = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]);
+      if(hp > px(14) && R){ const night = 1 - rsSmooth(0.3, 0.7, wday ?? 1), glowC = V.lightsOf(ww2)[0], seam = rsCss(rsMix(c, [0, 0, 0], 0.35), 0.6);
+        line([inQ(q, 0, 0.34), inQ(q, 1, 0.34)], seam, Math.max(px(0.5), hp*0.006)); line([inQ(q, 0, 0.68), inQ(q, 1, 0.68)], seam, Math.max(px(0.5), hp*0.006));
+        if((ww2 === 'builders' || ww2 === 'magic') && R() < 0.6){ // a line of script, glyph by glyph: ticks, hooks and rings of light
+          const n = Math.max(2, Math.min(40, Math.round(wp/(hp*0.05)))), gc = rsCss(glowC, 0.55 + 0.4*night);
+          for(let k = 0; k < n; k++){ const u = (k + 0.5)/n, [X, Y] = inQ(q, u, 0.5), g = hp*0.025, t = R();
+            x.strokeStyle = gc; x.lineWidth = Math.max(px(0.5), g*0.25); x.beginPath();
+            if(t < 0.3){ x.moveTo(X, Y - g); x.lineTo(X, Y + g); x.moveTo(X - g*0.6, Y - g*0.3); x.lineTo(X + g*0.6, Y - g*0.3); }
+            else if(t < 0.6){ x.arc(X, Y, g*0.6, 0, Math.PI*2); }
+            else { x.moveTo(X - g*0.6, Y + g); x.lineTo(X, Y - g); x.lineTo(X + g*0.6, Y + g*0.2); }
+            x.stroke(); } }
+        if((ww2 === 'cities' || ww2 === 'neon') && R() < 0.5){ // screens: a few lit panels, one a broadcast in the page's colours
+          for(let k = 0, nS = 1 + Math.floor(R()*3); k < nS; k++){ const u0 = R()*0.8, v0 = 0.4 + R()*0.35, a = inQ(q, u0, v0), b = inQ(q, u0 + 0.12, v0 + 0.16);
+            rsPoly(x, [a, inQ(q, u0 + 0.12, v0), b, inQ(q, u0, v0 + 0.16)], rsCss(R() < 0.5 ? glowC : V.lightsOf(ww2)[1], 0.35 + 0.55*night)); } }
+        if((ww2 === 'ruins' || ww2 === 'neon' || ww2 === 'cities') && R() < 0.45){ // graffiti: tags and scrawl near the foot, in the page's colours
+          const cols = [V.g1, V.g2, [240, 236, 228]];
+          for(let k = 0, nT = 1 + Math.floor(R()*3); k < nT; k++){ const u0 = R()*0.85, col = rsCss(cols[Math.floor(R()*3)], 0.75), pts = [];
+            for(let p = 0; p < 7; p++) pts.push(inQ(q, u0 + p*0.018 + (R() - 0.5)*0.01, 0.06 + 0.12*R()));
+            line(pts, col, Math.max(px(0.6), hp*0.008)); } } } }
     else if(lights){ const n = 2 + Math.floor(R()*3); for(let k = 0; k < n; k++){ const u = R(), v = R(), X = q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v, Y = q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v;
         x.fillStyle = rsCss(lights, 0.85); x.fillRect(X, Y, px(2.2), px(2.2)); } } }
+  // the unfinished stretch's scaffolding and cranes, along both its edges
+  if(UF){ const R = UF.R, sc = rsCss(rgLit(V, rsMix(WALL0, [255, 220, 150], 0.25), 0.8, 0.2, AIR), 0.85);
+    for(const [ae, inward] of [[UF.lo, 1], [UF.hi, -1]]){
+      for(let k = 0; k < 7; k++){ const z = -W*0.45 + W*0.9*k/6, hgt = W*(0.012 + 0.02*R()), A = at(ae, z, 0), B = at(ae, z, hgt), C = at(ae + inward*W*0.02, z, 0), D = at(ae + inward*W*0.02, z, hgt); if(!A || !B || !C || !D) continue;
+        const wd = Math.max(px(0.5), Math.abs(B[1] - A[1])*0.04); line([A, B], sc, wd); line([C, D], sc, wd); line([A, D], sc, wd*0.6); line([C, B], sc, wd*0.6); line([B, D], sc, wd); }
+      for(let k = 0; k < 2; k++){ const z = (R() - 0.5)*W*0.7, H2 = W*(0.04 + 0.03*R()), M0 = at(ae, z, 0), M1 = at(ae, z, H2), J = at(ae + inward*W*(0.08 + 0.1*R()), z + (R() - 0.5)*W*0.1, H2*0.95), Cw = at(ae - inward*W*0.02, z, H2*0.9); if(!M0 || !M1 || !J || !Cw) continue;
+        const wd = Math.max(px(0.6), Math.abs(M1[1] - M0[1])*0.03); line([M0, M1], sc, wd); line([Cw, M1, J], sc, wd*0.8); const hk = [J[0], J[1] + Math.abs(M1[1] - M0[1])*0.3]; line([J, hk], sc, wd*0.4);
+        if(dl < 0.5){ x.fillStyle = rsCss([255, 80, 70], 0.9); x.fillRect(M1[0] - px(1), M1[1] - px(1), px(2), px(2)); } } } }
   // the arch's clouds: long streaks over its land, a little above it
   for(let k = 0, nC = 4 + Math.floor(rgRand(s, 806)()*9); k < nC; k++){ const R = rgRand(s, 807, k), rnd = (a, b) => a + (b - a)*R(), sg = R() < 0.5 ? 1 : -1, a0 = sg*rnd(W*0.6, Math.PI), len = W*rnd(0.4, 2.2), zc = rnd(-0.35, 0.35)*W, dz = W*rnd(0.05, 0.16), top = [], bot = [];
     for(let q = 0; q <= 6; q++){ const u = q/6, a = a0 + len*u*sg, th = dz/2*Math.pow(Math.sin(Math.PI*u), 0.7), A = at(a, zc - th, W*0.01), B = at(a, zc + th, W*0.01); if(!A || !B){ top.length = 0; break; } top.push(A); bot.push(B); }
