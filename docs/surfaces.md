@@ -171,6 +171,18 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     moved.
 - **Contour Map:** Terrain → Contour Lines (any gray map's isolines), inked
   by Mix over the Light Engine's hillshade.
+- **Crystal Leaf** (chain `crystal`, grid ÷2; Ruby: "couldn't the crystal
+  renderer be improved with reflectance, albedo, displacement, distortion"):
+  Crystal Druse (stepsTouch.js `druseMaps`) → Light Engine → Blend (Screen,
+  the fire) → Surface. The druse hands on maps, nothing in them lit: the albedo
+  (inside the stone: its hue deepening inward, the crystals behind and the
+  inclusions seen through each face and bent by its tilt, phantoms), height
+  (shadows between the points), NORMALS (each face's facing: a height map of
+  big pyramids is too gentle for the engine's relief, so the faces are given
+  outright through the Light Engine's Normal Map input), gloss, the veil
+  (inverted: the Light Engine's translucency) and the fire (an emission).
+  The page's rim light is its second light. The old part (`crystal`,
+  genCrystalLeaf) stays for older graphs.
 - **Crackle** (Fractured Glaze, chain `crackle`):
   - Tarbell's Substrate on an ID grid: a crack stops at another's cell or
     its 4-neighbours.
