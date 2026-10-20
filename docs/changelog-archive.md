@@ -2,6 +2,16 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Hati (2026-10-18)
+
+- **The saved image's text is the size the preview shows.** Max Text Size
+  is in the saved image's pixels, but the preview, drawn smaller, used it
+  as its own, so its cap was two or three times too generous: when the
+  margins and Breathing Room left room for the poem to grow past the cap,
+  the preview showed it bigger than the image saved. The preview now
+  scales the cap, and steps through text sizes in the saved image's
+  pixels, so both pick the same size.
+
 ## Saturn–Suttungr (2026-10-18)
 
 - **Ring in the Sky has depth.** The ring is a solid band now, not a flat

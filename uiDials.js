@@ -77,7 +77,7 @@ export function syncLightPad(){
   if(dial && dial.classList){ dial.classList.toggle('has-rim', reach); dial.classList.toggle('rim-on', reach && R.on); dial.classList.toggle('pick-rim', pick === 'rim'); }
   const row = $('lightRow'); if(row && row.classList){ row.classList.toggle('has-rig', reach); row.classList.toggle('pick-rim', reach && pick === 'rim'); }
   // THE TWO DIALS SIDE BY SIDE (Ruby: "always aligned … it looks good when it was symmetrical"): with Main / Rim above
-  // the light dial, the camera dial steps down as far, so the two sit level
+  // the light dial, the camera's Zoom above its dial is made as tall, so the two sit level
   { const seg = $('lightSeg'), tr = row && row.closest ? row.closest('.tool-row') : null;
     if(tr && tr.classList && tr.style){ const on = !!seg && !!seg.getBoundingClientRect;   // (the selector always shows now: faded where the page's lights don't reach)
       tr.classList.toggle('has-seg', on);
@@ -159,7 +159,7 @@ export function syncCameraPad(){
   if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', c.view >= 99 && Math.abs(((c.turn - +t.dataset.deg + 540) % 360) - 180) < 0.5));
   if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `turned ${Math.round(c.turn)}°, ${Math.round(c.view)}% low, zoom ${Math.round(c.zoom)}%`);
   const ae = typeof document !== 'undefined' ? document.activeElement : null;
-  for(const [id, v] of [['cameraTurnIn', c.turn], ['cameraViewIn', c.view], ['cameraZoomInput', c.zoom]]){ const el = $(id); if(el && ae !== el) el.value = String(Math.round(v)); }
+  for(const [id, v] of [['cameraTurnIn', c.turn], ['cameraViewIn', c.view]]){ const el = $(id); if(el && ae !== el) el.value = String(Math.round(v)); }
   { const z = $('cameraZoomSlider'); if(z && ae !== z) z.value = String(Math.round(Math.log2(Math.max(25, Math.min(400, c.zoom))/100)*100)); }
 }
 export function setCamera(turn, view, zoom, commit){

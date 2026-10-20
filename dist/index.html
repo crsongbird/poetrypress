@@ -1550,7 +1550,8 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 #lightRow .light-seg{ display:flex; margin:2px 0 4px; }
 #lightRow:not(.has-rig) .light-seg{ opacity:.34; pointer-events:none; }
 /* (and the camera dial beside it steps down as far as Main / Rim takes, so the two dials sit level: appEvents syncLightPad) */
-.tool-row.has-camera.has-seg > #cameraRow > .light-dial-row{ margin-top:var(--light-seg-h, 38px); }
+/* the camera's Zoom stands where the light's Main / Rim does, as tall as it, so the two dials sit level */
+.tool-row.has-camera.has-seg > #cameraRow > .cam-zoom-row{ height:calc(var(--light-seg-h, 38px) - 2px); min-height:0; margin:0; }   /* (2px less: measured, the dials then stand exactly level) */
 #lightRow.has-rig:not(.pick-rim) .light-amb{ display:block; }
 #lightRow.has-rig:not(.pick-rim) #lightAmbField{ display:flex; }
 /* (with Rim chosen, the slider and its number are the rim light's strength) */
@@ -1576,7 +1577,9 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .cam-sight{ stroke:var(--accent); stroke-width:1.2; stroke-dasharray:1.8 1.6; opacity:.8; pointer-events:none; }
 .cam-corner{ fill:none; stroke:var(--text-dim); stroke-width:1.6; stroke-linecap:square; opacity:.75; pointer-events:none; }
 .cam-dial .cam-ring{ stroke-dasharray:3 2.2; }
-.cam-zoom{ display:block; width:100%; margin:2px 0 4px; }
+.cam-zoom-row{ display:flex; align-items:center; gap:8px; margin:2px 0 4px; min-height:30px; box-sizing:border-box; }
+.cam-zoom-row > label{ flex:0 0 auto; margin:0; font-size:12px; color:var(--text-dim); }
+.cam-zoom{ flex:1 1 auto; min-width:0; margin:0; }
 .cam-values input{ width:3.6em; }
 .tool-row.has-camera{ display:grid !important; grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; column-gap:10px; row-gap:6px; align-items:start; }
 .tool-row.has-camera > #lightRow{ grid-column:1; grid-row:1; padding-right:0 !important; border-left:none !important; }
@@ -3376,6 +3379,12 @@ but bear with me, dear}]/jitter:200
                the shot before the surface is made. Shown only for a surface with a camera. -->
           <div class="field full tool-idle" id="cameraRow">
             <label data-str="label.camera">Camera</label>
+            <!-- THE ZOOM on top (Ruby), where the light's Main / Rim sits, so the two dials stand level and take the same room;
+                 a wheel or a pinch on the dial zooms too; halfway is 100%, the ends 25% and 400% -->
+            <div class="cam-zoom-row">
+              <label for="cameraZoomSlider" data-str="label.zoom">Zoom</label>
+              <input type="range" class="cam-zoom" id="cameraZoomSlider" min="-200" max="200" step="1" value="0" title="Zoom: left is wider, right is closer">
+            </div>
             <div class="light-dial-row">
               <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: the center looks straight down; drag toward the rim to look lower across the ground">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
@@ -3394,12 +3403,9 @@ but bear with me, dear}]/jitter:200
               </div>
               <button type="button" class="ld-btn ld-reset" id="cameraReset" title="Reset the camera" aria-label="Reset the camera">⟲</button>
             </div>
-            <!-- the zoom, a slider of its own (a wheel or a pinch on the dial zooms too); halfway is 100%, the ends 25% and 400% -->
-            <input type="range" class="cam-zoom" id="cameraZoomSlider" min="-200" max="200" step="1" value="0" aria-label="Camera zoom" title="Zoom: left is wider, right is closer">
             <div class="ld-values cam-values">
               <label>Turn <input type="number" id="cameraTurnIn" min="0" max="359" step="1" inputmode="numeric">°</label>
               <label>View <input type="number" id="cameraViewIn" min="0" max="100" step="1" inputmode="numeric">%</label>
-              <label>Zoom <input type="number" id="cameraZoomInput" min="25" max="400" step="1" inputmode="numeric">%</label>
             </div>
             <input type="hidden" id="cameraTurn" value="0">
             <input type="hidden" id="cameraView" value="0">
@@ -25517,6 +25523,7 @@ const UI_STRINGS = {
   'label.x2':                                  "—",
   'label.opacity':                             "Opacity",
   'label.controls':                            "Controls",
+  'label.zoom':                                "Zoom",
   'label.blend_mode':                          "Blend Mode",
   'label.light_direction':                     "Light Direction",
   'label.camera':                              "Camera",
@@ -28723,7 +28730,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Saturn–Thiazzi';
+const RELEASE = 'Uranus–Cordelia';
 
 const RELEASE_DATE = '2026-10-20';
 
@@ -29413,7 +29420,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 61f3eda";
+const STAMP = "2026-10-20 · eb12aec";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -37113,7 +37120,7 @@ function syncCameraPad(){
   if(dial && dial.querySelectorAll) dial.querySelectorAll('.ld-tick').forEach(t => t.classList.toggle('active', c.view >= 99 && Math.abs(((c.turn - +t.dataset.deg + 540) % 360) - 180) < 0.5));
   if(dial && dial.setAttribute) dial.setAttribute('aria-valuetext', `turned ${Math.round(c.turn)}°, ${Math.round(c.view)}% low, zoom ${Math.round(c.zoom)}%`);
   const ae = typeof document !== 'undefined' ? document.activeElement : null;
-  for(const [id, v] of [['cameraTurnIn', c.turn], ['cameraViewIn', c.view], ['cameraZoomInput', c.zoom]]){ const el = $(id); if(el && ae !== el) el.value = String(Math.round(v)); }
+  for(const [id, v] of [['cameraTurnIn', c.turn], ['cameraViewIn', c.view]]){ const el = $(id); if(el && ae !== el) el.value = String(Math.round(v)); }
   { const z = $('cameraZoomSlider'); if(z && ae !== z) z.value = String(Math.round(Math.log2(Math.max(25, Math.min(400, c.zoom))/100)*100)); }
 }
 function setCamera(turn, view, zoom, commit){
@@ -40600,9 +40607,9 @@ if($('cameraDial') && $('cameraDial').addEventListener){
     z.addEventListener('change', () => { const c = cameraNow(); setCamera(c.turn, c.view, 100*Math.pow(2, (+z.value || 0)/100), true); }); } }
 if($('cameraReset') && $('cameraReset').addEventListener) $('cameraReset').addEventListener('click', () => { const d = cameraStart($('textureType').value); setCamera(d.turn, d.view, d.zoom, true); });
 
-for(const id of ['cameraTurnIn', 'cameraViewIn', 'cameraZoomInput']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
+for(const id of ['cameraTurnIn', 'cameraViewIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
   const c = cameraNow(), n = k => { const v = parseFloat(($(k) || {}).value); return isNaN(v) ? null : v; };
-  setCamera(n('cameraTurnIn') ?? c.turn, n('cameraViewIn') ?? c.view, n('cameraZoomInput') ?? c.zoom, true); });
+  setCamera(n('cameraTurnIn') ?? c.turn, n('cameraViewIn') ?? c.view, c.zoom, true); });
 syncLightPad();
 $('textureBlend').addEventListener('change', () => { keepGround(''); scheduleRender(); });
 

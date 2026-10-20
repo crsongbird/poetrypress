@@ -946,9 +946,9 @@ if($('cameraDial') && $('cameraDial').addEventListener){
     z.addEventListener('change', () => { const c = cameraNow(); setCamera(c.turn, c.view, 100*Math.pow(2, (+z.value || 0)/100), true); }); } }
 if($('cameraReset') && $('cameraReset').addEventListener) $('cameraReset').addEventListener('click', () => { const d = cameraStart($('textureType').value); setCamera(d.turn, d.view, d.zoom, true); });
 // typing the camera's numbers sets it exactly
-for(const id of ['cameraTurnIn', 'cameraViewIn', 'cameraZoomInput']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
+for(const id of ['cameraTurnIn', 'cameraViewIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
   const c = cameraNow(), n = k => { const v = parseFloat(($(k) || {}).value); return isNaN(v) ? null : v; };
-  setCamera(n('cameraTurnIn') ?? c.turn, n('cameraViewIn') ?? c.view, n('cameraZoomInput') ?? c.zoom, true); });
+  setCamera(n('cameraTurnIn') ?? c.turn, n('cameraViewIn') ?? c.view, c.zoom, true); });
 syncLightPad();
 $('textureBlend').addEventListener('change', () => { keepGround(''); scheduleRender(); });
 // choosing a tint yourself stops it following the accents

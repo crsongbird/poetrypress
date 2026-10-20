@@ -1517,7 +1517,8 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 #lightRow .light-seg{ display:flex; margin:2px 0 4px; }
 #lightRow:not(.has-rig) .light-seg{ opacity:.34; pointer-events:none; }
 /* (and the camera dial beside it steps down as far as Main / Rim takes, so the two dials sit level: appEvents syncLightPad) */
-.tool-row.has-camera.has-seg > #cameraRow > .light-dial-row{ margin-top:var(--light-seg-h, 38px); }
+/* the camera's Zoom stands where the light's Main / Rim does, as tall as it, so the two dials sit level */
+.tool-row.has-camera.has-seg > #cameraRow > .cam-zoom-row{ height:calc(var(--light-seg-h, 38px) - 2px); min-height:0; margin:0; }   /* (2px less: measured, the dials then stand exactly level) */
 #lightRow.has-rig:not(.pick-rim) .light-amb{ display:block; }
 #lightRow.has-rig:not(.pick-rim) #lightAmbField{ display:flex; }
 /* (with Rim chosen, the slider and its number are the rim light's strength) */
@@ -1543,7 +1544,9 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .cam-sight{ stroke:var(--accent); stroke-width:1.2; stroke-dasharray:1.8 1.6; opacity:.8; pointer-events:none; }
 .cam-corner{ fill:none; stroke:var(--text-dim); stroke-width:1.6; stroke-linecap:square; opacity:.75; pointer-events:none; }
 .cam-dial .cam-ring{ stroke-dasharray:3 2.2; }
-.cam-zoom{ display:block; width:100%; margin:2px 0 4px; }
+.cam-zoom-row{ display:flex; align-items:center; gap:8px; margin:2px 0 4px; min-height:30px; box-sizing:border-box; }
+.cam-zoom-row > label{ flex:0 0 auto; margin:0; font-size:12px; color:var(--text-dim); }
+.cam-zoom{ flex:1 1 auto; min-width:0; margin:0; }
 .cam-values input{ width:3.6em; }
 .tool-row.has-camera{ display:grid !important; grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; column-gap:10px; row-gap:6px; align-items:start; }
 .tool-row.has-camera > #lightRow{ grid-column:1; grid-row:1; padding-right:0 !important; border-left:none !important; }

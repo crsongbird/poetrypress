@@ -956,6 +956,12 @@ but bear with me, dear}]/jitter:200
                the shot before the surface is made. Shown only for a surface with a camera. -->
           <div class="field full tool-idle" id="cameraRow">
             <label data-str="label.camera">Camera</label>
+            <!-- THE ZOOM on top (Ruby), where the light's Main / Rim sits, so the two dials stand level and take the same room;
+                 a wheel or a pinch on the dial zooms too; halfway is 100%, the ends 25% and 400% -->
+            <div class="cam-zoom-row">
+              <label for="cameraZoomSlider" data-str="label.zoom">Zoom</label>
+              <input type="range" class="cam-zoom" id="cameraZoomSlider" min="-200" max="200" step="1" value="0" title="Zoom: left is wider, right is closer">
+            </div>
             <div class="light-dial-row">
               <div class="light-dial cam-dial" id="cameraDial" role="slider" tabindex="0" aria-label="Camera: the center looks straight down; drag toward the rim to look lower across the ground">
                 <svg viewBox="-50 -50 100 100" aria-hidden="true">
@@ -974,12 +980,9 @@ but bear with me, dear}]/jitter:200
               </div>
               <button type="button" class="ld-btn ld-reset" id="cameraReset" title="Reset the camera" aria-label="Reset the camera">⟲</button>
             </div>
-            <!-- the zoom, a slider of its own (a wheel or a pinch on the dial zooms too); halfway is 100%, the ends 25% and 400% -->
-            <input type="range" class="cam-zoom" id="cameraZoomSlider" min="-200" max="200" step="1" value="0" aria-label="Camera zoom" title="Zoom: left is wider, right is closer">
             <div class="ld-values cam-values">
               <label>Turn <input type="number" id="cameraTurnIn" min="0" max="359" step="1" inputmode="numeric">°</label>
               <label>View <input type="number" id="cameraViewIn" min="0" max="100" step="1" inputmode="numeric">%</label>
-              <label>Zoom <input type="number" id="cameraZoomInput" min="25" max="400" step="1" inputmode="numeric">%</label>
             </div>
             <input type="hidden" id="cameraTurn" value="0">
             <input type="hidden" id="cameraView" value="0">

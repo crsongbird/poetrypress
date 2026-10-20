@@ -4,6 +4,26 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Cordelia (2026-10-20)
+
+- **The camera's Zoom is a slider above its dial**, where the light's Main
+  and Rim sit, so the two dials stand level and take the same room; the
+  Zoom box beneath is gone (the slider, a wheel or a pinch on the dial
+  zoom as before).
+- The first release named for a moon of Uranus.
+
+### Under the hood
+- Four checks kept in the repo instead of rebuilt each time: shipping a
+  release (tools/ship.sh), the registry as data for before-and-after
+  (tools/snapshot.mjs), the GPU's results before and after
+  (tools/gpu-ab.mjs) and the page on a phone (tools/phone-shot.mjs).
+- New research, every claim with its source: synth and image-synth control
+  panels, touch knobs, faders and haptics on the web
+  (docs/prior-art/synth-controls.md); photographic floral imprints in many
+  media and ornamental borders (docs/prior-art/floral-imprints.md,
+  docs/prior-art/ornamental-borders.md); and real-time painterly rendering
+  on phones, for the game someday (docs/prior-art/realtime-game.md).
+
 ## Saturn–Thiazzi (2026-10-20)
 
 - **The surface's sliders sit under one heading, Controls**, that folds
@@ -444,13 +464,3 @@ and every control behaving as it did.
   with the other source checks now, as the invariant it is. The new rim
   controls are listed as views of the rim light's colour in the
   persistence check.
-
-## Saturn–Hati (2026-10-18)
-
-- **The saved image's text is the size the preview shows.** Max Text Size
-  is in the saved image's pixels, but the preview, drawn smaller, used it
-  as its own, so its cap was two or three times too generous: when the
-  margins and Breathing Room left room for the poem to grow past the cap,
-  the preview showed it bigger than the image saved. The preview now
-  scales the cap, and steps through text sizes in the saved image's
-  pixels, so both pick the same size.

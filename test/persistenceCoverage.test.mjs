@@ -40,7 +40,6 @@ const EXEMPT = {
   presetSearch: 'a search over the preset grid: it filters what the grid shows, and is not part of an image',
   cameraTurnIn: 'the camera dial\'s turn typed or read: a view of cameraTurn, which is saved and restored',
   cameraViewIn: 'the camera dial\'s view typed or read: a view of cameraView, which is saved and restored',
-  cameraZoomInput: 'the camera dial\'s zoom typed or read: a view of cameraZoom, which is saved and restored',
   forgeOpenSelect: 'the Athanor\'s Open drawer: picking one opens that graph on the bench; the bench is kept by itself, not as a control',
   textureSeedWords: 'the seed shown as its phrase: a view of textureSeedValue, which is saved and restored (seedWords.js turns each into the other exactly)',
 };

@@ -72,7 +72,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - A GAME, IN ITS OWN REPO SOMEDAY (Ruby, the extreme long term): a fork that explores the ringworlds, finds the idyllic
   places and has quests, around a story Ruby will write. It means some of these scenes must one day draw in (semi)
   real time at phone sizes: the node graphs go, their parts compiled into small fast blocks drawn at once, and world
-  state machines added. Prior art is being gathered. Keep it in mind when a scene's speed is chosen.
+  state machines added. Prior art: docs/prior-art/realtime-game.md. Keep it in mind when a scene's speed is chosen.
 - THE SATURN RELEASE (Ruby): once every texture is taken apart into parts, a
   creative enough user should be able to make in the Athanor anything Filter
   Forge or Blender's shader nodes can — shaders and blending included. Blend
