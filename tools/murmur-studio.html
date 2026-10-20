@@ -226,6 +226,7 @@ const MURMUR_FUNCTIONS = [
   { id: 'cardOpen',       group: 'Moving around', label: 'Open a card',            where: 'A folded section' },
   { id: 'cardFold',       group: 'Moving around', label: 'Fold a card',            where: 'A folded section' },
   { id: 'checkbox',       group: 'Settings',      label: 'Tick a checkbox',        where: 'Any checkbox' },
+  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (and their ends)' },
   { id: 'select',         group: 'Settings',      label: 'Choose from a menu',     where: 'Any drop-down' },
   { id: 'lock',           group: 'Settings',      label: 'Lock a setting',         where: 'The padlock beside a control' },
   { id: 'unlock',         group: 'Settings',      label: 'Unlock a setting',       where: 'The padlock beside a control' },
@@ -312,7 +313,7 @@ const MURMUR_DESIGN = {
     earth:    { name: 'Earth', events: [{ inst: 'tine', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.35 }] },
   },
   map: {
-    tab: null, cardOpen: null, cardFold: null, checkbox: null, select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
+    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'tick', select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
     preset: 'arrive', reroll: null, summonType: 'summon', summonBackdrop: 'summon',
     readingFire: null, readingWater: null, readingWind: null, readingEarth: null,
     spellCreate: 'keep', spellApply: 'arrive', spellShare: null, spellDissolve: null, poemRecord: 'keep', saveImage: 'done',

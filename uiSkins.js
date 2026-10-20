@@ -1,0 +1,272 @@
+/**
+ * uiSkins.js — the surface's controls given skins (Ruby: "it's about time we gave these things proper skins … a magic
+ * spell synthesizer, not a music synthesizer"): knobs and vertical faders drawn as the light and camera dials are (a
+ * thin ring, the value as an arc of light, a limb of tick dots, a diamond for a hand), one display line that says what is
+ * being turned, haptic ticks where a phone gives them, and the rule that chooses rows, knobs or faders for the Controls
+ * fold. The research behind each choice: docs/prior-art/synth-controls.md §6.
+ *
+ *   The native <input type="range"> stays the control: saving, locks, presets, dice, the keyboard and screen readers all
+ *   go through it. A skin draws it and moves it: a drag sets its value and sends `input`, letting go sends `change`, and
+ *   any value set anywhere (a restore, a reading, the die) repaints the skin.
+ *
+ * Haiku: / a ring of thin light — / turn it, and the meadow moves; / the glass hums back, once /
+ */
+import { state } from './uiState.js';
+
+const SK_NS = 'http://www.w3.org/2000/svg';
+// THE KNOB'S SWEEP: 270°, from 7:30 round to 4:30 (0° up, clockwise)
+const SK_SWEEP = 135;
+/** The feel: a finger travels `knobTravel` px for a knob's whole range; sideways it steps down through finer tiers (the
+ *  iOS scrub's: ½, ¼, ⅒), changing tier only after `tierHold` ms; a continuous value catches at its default (±`detent`
+ *  of the range); a double tap within `doubleTapMs` resets it. */
+export const SKIN_FEEL = { knobTravel: 200, tiers: [[0, 1], [24, 1/2], [72, 1/4], [140, 1/10]], tierHold: 300, detent: 0.02, doubleTapMs: 320, faderPad: 10 };
+
+// ---- HAPTICS (Ruby): a tick as a value crosses a mark, nothing between them; Android's vibration (Chrome; Firefox's
+// is silent, and Safari on iOS gives none to a drag since iOS 26.5: research §4). Rate-limited, short, firm. ----
+let skHapticsOn = true, skLastBuzz = 0, skinSound = null;
+export function setHaptics(on){ skHapticsOn = !!on; }
+/** A sound to go with each tick (murmur's, which plays only while Sound is on). */
+export function setSkinSound(fn){ skinSound = typeof fn === 'function' ? fn : null; }
+export function haptic(kind){
+  const now = Date.now(); if(now - skLastBuzz < 50) return; skLastBuzz = now;
+  if(skinSound) try { skinSound(kind); } catch(e){}
+  if(!skHapticsOn) return;
+  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' ? 15 : 10); } catch(e){}
+}
+
+// ---- the input a skin draws ----
+const skRange = input => { const lo = +input.min || 0, hi = +input.max || 100; return [lo, hi > lo ? hi : lo + 1]; };
+const skFrac = input => { const [lo, hi] = skRange(input); return Math.max(0, Math.min(1, (+input.value - lo)/(hi - lo))); };
+const skTicks = input => ((input && input.dataset && input.dataset.ticks) || '').split(',').filter(Boolean).map(Number).filter(n => isFinite(n));
+const skNearest = (list, v) => list.reduce((b, t) => Math.abs(t - v) < Math.abs(b - v) ? t : b, list[0]);
+/** Set the slider's value as a person would: snapped to its marks when it is locked to them, caught at its default on
+ *  the way past, `input` sent, a haptic tick when it crosses a mark or reaches an end. */
+export function skinSet(input, v, opts = {}){
+  const [lo, hi] = skRange(input), step = +input.step || 1, ticks = skTicks(input), def = input.dataset && input.dataset.def != null ? +input.dataset.def : null;
+  v = Math.max(lo, Math.min(hi, v));
+  if(input.dataset && input.dataset.snapTicks === '1' && ticks.length) v = skNearest(ticks, v);
+  else {
+    if(!ticks.length && def != null && opts.detent !== false && Math.abs(v - def) <= SKIN_FEEL.detent*(hi - lo)) v = def;
+    v = Math.round(v/step)*step;
+  }
+  const was = +input.value;
+  if(v === was) return false;
+  input.value = String(v);
+  if(v === lo || v === hi) haptic('limit');
+  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick');
+  else if(def != null && !ticks.length && v === def) haptic('detent');
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  return true;
+}
+/** Repaint whenever the value changes, however it was set. */
+function skWatch(input, paint){
+  if(input._skinPaints){ input._skinPaints.add(paint); return; }
+  input._skinPaints = new Set([paint]);
+  const all = () => { for(const p of input._skinPaints) p(); };
+  const nat = typeof HTMLInputElement !== 'undefined' && Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  if(nat && nat.set) Object.defineProperty(input, 'value', { configurable: true, get(){ return nat.get.call(this); }, set(v){ nat.set.call(this, v); all(); } });
+  input.addEventListener('input', all);
+}
+export function repaintSkins(){
+  for(let i = 1; i <= 8; i++){ const input = document.getElementById && document.getElementById('texP' + i); if(input && input._skinPaints) for(const p of input._skinPaints) p(); }
+}
+
+// a point on a circle, 0° up and clockwise; an arc between two such angles
+const skAt = (r, deg) => { const a = deg*Math.PI/180; return [r*Math.sin(a), -r*Math.cos(a)]; };
+const skArc = (r, d0, d1) => { if(d1 - d0 < 0.01) return ''; const [x0, y0] = skAt(r, d0), [x1, y1] = skAt(r, d1);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${d1 - d0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+const skSvg = (tag, cls) => { const e = document.createElementNS(SK_NS, tag); if(cls) e.setAttribute('class', cls); return e; };
+// the marks a skin draws: the slider's own, or (a continuous one) a faint limb every tenth, the default's dot larger
+const skLimb = input => { const t = skTicks(input); if(t.length) return { marks: t, named: true };
+  const [lo, hi] = skRange(input); return { marks: Array.from({ length: 11 }, (_, k) => lo + k/10*(hi - lo)), named: false }; };
+
+// ---- THE DISPLAY LINE: what is being turned, in one line above the controls, never under the finger ----
+let skShown = null, skHideT = null;
+function skDisplay(){ return typeof document !== 'undefined' && document.getElementById ? document.getElementById('texReadout') : null; }
+function skLabel(input){ const l = document.getElementById(input.id + 'Label'); if(!l) return '';
+  return [...l.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(); }
+/** Say what `input` is and holds: its name and value, its neighbours' names on a named slider while it moves, the
+ *  fine tier. `hold`: stay until let go. */
+export function showReadout(input, opts = {}){
+  const d = skDisplay(); if(!d) return;
+  clearTimeout(skHideT); skShown = input;
+  const val = (document.getElementById(input.id + 'Val') || {}).textContent || input.value;
+  const t = skTicks(input), names = input._skinNames || [];
+  let around = '';
+  if(opts.moving && names.length > 1){ const k = t.indexOf(skNearest(t, +input.value));
+    around = `<span class="sr-near">${skEsc(names[k - 1] || '')}</span><span class="sr-near sr-next">${skEsc(names[k + 1] || '')}</span>`; }
+  d.innerHTML = `<button type="button" class="sr-step" data-step="-1" aria-label="Less">−</button>`
+    + `<span class="sr-name">${skEsc(skLabel(input))}</span><span class="sr-val">${skEsc(val)}</span>${around}`
+    + (opts.tier && opts.tier < 1 ? `<span class="sr-tier">${opts.tier === 0.5 ? '½' : opts.tier === 0.25 ? '¼' : 'fine'}</span>` : '')
+    + `<button type="button" class="sr-step" data-step="1" aria-label="More">+</button>`;
+  d.classList.add('on');
+  if(!opts.hold) skHideT = setTimeout(() => { d.classList.remove('on'); skShown = null; }, opts.stay || 4000);
+}
+const skEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+/** The display line's − and + nudge the control it shows by one step (one mark on a named slider): a way to change a
+ *  value without dragging (WCAG 2.5.7), and the finest one. */
+export function readoutStep(dir){
+  const input = skShown; if(!input || state.locks.has(input.id)) return;
+  const t = skTicks(input), [lo, hi] = skRange(input);
+  if(t.length && input.dataset.snapTicks === '1'){ const k = t.indexOf(skNearest(t, +input.value)); skinSet(input, t[Math.max(0, Math.min(t.length - 1, k + dir))]); }
+  else skinSet(input, +input.value + dir*(+input.step || 1)*((hi - lo) > 200 ? 5 : 1), { detent: false });
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  showReadout(input);
+}
+
+// ---- dragging: relative, so a touch never jumps the value; finer as the finger strays sideways; a double tap resets;
+// a tap without moving shows it in the display line; the jitter of lifting a finger is taken back ----
+function skDrag(el, input, mode){
+  let st = null, lastTap = 0;
+  el.addEventListener('pointerdown', e => {
+    if(state.locks.has(input.id)){ showReadout(input); return; }
+    e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch(err){}
+    const now = Date.now();
+    if(now - lastTap < SKIN_FEEL.doubleTapMs && input.dataset && input.dataset.def != null){
+      lastTap = 0; skinSet(input, +input.dataset.def); haptic('detent'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
+    st = { id: e.pointerId, at: now, x: e.clientX, y: e.clientY, v: +input.value, moved: false, tier: 1, tierAt: 0, hist: [] };
+    el.classList.add('turning'); showReadout(input, { hold: true });
+  });
+  el.addEventListener('pointermove', e => {
+    if(!st || e.pointerId !== st.id) return;
+    const side = Math.abs(e.clientX - st.x), want = SKIN_FEEL.tiers.reduce((t, [px, f]) => side >= px ? f : t, 1), now = Date.now();
+    if(want !== st.tier){ if(!st.tierAt) st.tierAt = now; if(now - st.tierAt >= SKIN_FEEL.tierHold){ st.tier = want; st.tierAt = 0;
+      // (a new tier starts from where the value is, so it doesn't jump)
+      st.v = +input.value; st.y = e.clientY; } } else st.tierAt = 0;
+    const [lo, hi] = skRange(input), dy = st.y - e.clientY;
+    if(Math.abs(dy) > 3) st.moved = true;
+    // (a fader's whole range is its own height, as a desk's; a knob's a fixed travel)
+    const travel = mode === 'fader' ? Math.max(80, (el.getBoundingClientRect().height || 160)*0.88) : SKIN_FEEL.knobTravel;
+    st.hist.push([now, +input.value]); if(st.hist.length > 12) st.hist.shift(); st.lastMove = Math.hypot(e.clientX - (st.px ?? e.clientX), e.clientY - (st.py ?? e.clientY)); st.px = e.clientX; st.py = e.clientY;
+    skinSet(input, st.v + dy/travel*(hi - lo)*st.tier);
+    el.classList.toggle('fine', st.tier < 1);
+    showReadout(input, { hold: true, moving: true, tier: st.tier });
+  });
+  const end = e => {
+    if(!st || (e && e.pointerId !== st.id)) return;
+    // lifting a finger nudges it: if it had all but stopped, the value from a moment before stands
+    const now = Date.now(), before = st.hist.filter(([t]) => now - t >= 60).pop();
+    if(st.moved && before && (st.lastMove ?? 9) < 3 && Math.abs(+input.value - before[1]) <= (+input.step || 1)*2) skinSet(input, before[1], { detent: false });
+    const moved = st.moved;
+    // (only a tap that didn't move counts toward a double tap: a quick drag and a touch after it are not one)
+    lastTap = moved ? 0 : st.at;
+    st = null; el.classList.remove('turning', 'fine');
+    if(moved) input.dispatchEvent(new Event('change', { bubbles: true }));
+    showReadout(input, { stay: moved ? 1200 : 4000 });
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+
+// ---- THE KNOB: a ring with a gap below, the value as an arc of light, a limb of dots, a hand ending in a diamond ----
+export function knobSkin(input){
+  if(input._knobSkin) return input._knobSkin;
+  if(typeof document.createElementNS !== 'function') return null;
+  const wrap = document.createElement('div'); wrap.className = 'sk-knob'; wrap.setAttribute('aria-hidden', 'true');
+  const svg = skSvg('svg'); svg.setAttribute('viewBox', '-50 -50 100 100');
+  const ring = skSvg('path', 'sk-track'), fill = skSvg('path', 'sk-arc'), limb = skSvg('g', 'sk-ticks'), hand = skSvg('g', 'sk-hand');
+  // (the hand is only the diamond at the ring and a short stem: the value is written in the middle — Ruby)
+  hand.innerHTML = '<line x1="0" y1="-19" x2="0" y2="-25"/><path d="M0 -33 L4.2 -28 L0 -23 L-4.2 -28 Z"/>';
+  const val = skSvg('text', 'sk-val'); val.setAttribute('y', '5');
+  ring.setAttribute('d', skArc(36, -SK_SWEEP, SK_SWEEP));
+  svg.append(ring, limb, fill, hand, val); wrap.appendChild(svg);
+  const paint = () => {
+    const f = skFrac(input), d = -SK_SWEEP + 2*SK_SWEEP*f, [lo, hi] = skRange(input), { marks, named } = skLimb(input);
+    fill.setAttribute('d', skArc(36, -SK_SWEEP, d));
+    hand.setAttribute('transform', `rotate(${d.toFixed(1)})`);
+    const def = input.dataset && input.dataset.def != null ? +input.dataset.def : null, key = marks.join(',') + '|' + def;
+    if(limb._key !== key){ limb._key = key;
+      limb.classList.toggle('dense', marks.length > 12);
+      limb.innerHTML = marks.map(v => { const [x, y] = skAt(45, -SK_SWEEP + 2*SK_SWEEP*(v - lo)/(hi - lo));
+        const big = !named && def != null && Math.abs(v - def) < (hi - lo)/20;
+        return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${marks.length > 12 ? 1.4 : named ? 2.3 : big ? 2.3 : 1.5}" class="${named ? 'named' : big ? 'def' : ''}"/>`; }).join(''); }
+    const near = named ? skNearest(marks, +input.value) : null;
+    [...limb.children].forEach((c, i) => c.classList.toggle('on', named && marks[i] === near));
+    // the value as the slider's readout says it (55, 45°, 120%), or the bare number where that is too long for the middle
+    const said = ((document.getElementById(input.id + 'Val') || {}).textContent || '').trim();
+    val.textContent = said && said.length <= 5 ? said : String(Math.round(+input.value));
+    val.classList.toggle('long', val.textContent.length > 3);
+    wrap.classList.toggle('locked', state.locks.has(input.id));
+  };
+  skDrag(wrap, input, 'knob');
+  skWatch(input, paint); paint();
+  input._knobSkin = wrap;
+  return wrap;
+}
+
+// ---- THE FADER: a hairline, the value a bar risen from the floor, dots at its side (names beside them when few), a cap ----
+export function faderSkin(input){
+  if(input._faderSkin) return input._faderSkin;
+  if(typeof document.createElementNS !== 'function') return null;
+  const wrap = document.createElement('div'); wrap.className = 'sk-fader'; wrap.setAttribute('aria-hidden', 'true');
+  const strip = document.createElement('div'); strip.className = 'sk-strip';
+  const svg = skSvg('svg'); svg.setAttribute('viewBox', '0 0 40 160'); svg.setAttribute('preserveAspectRatio', 'none');
+  const P = SKIN_FEEL.faderPad, Y = f => 160 - P - f*(160 - 2*P);
+  const track = skSvg('line', 'sk-track'), fill = skSvg('line', 'sk-arc'), limb = skSvg('g', 'sk-ticks'), cap = skSvg('g', 'sk-cap');
+  track.setAttribute('x1', 24); track.setAttribute('x2', 24); track.setAttribute('y1', P); track.setAttribute('y2', 160 - P);
+  fill.setAttribute('x1', 24); fill.setAttribute('x2', 24); fill.setAttribute('y2', 160 - P);
+  cap.innerHTML = '<line x1="13" y1="0" x2="35" y2="0"/><path d="M24 -4.5 L28.5 0 L24 4.5 L19.5 0 Z"/>';
+  svg.append(track, limb, fill, cap); strip.appendChild(svg); wrap.appendChild(strip);
+  const names = document.createElement('div'); names.className = 'sk-names'; wrap.appendChild(names);
+  const paint = () => {
+    const f = skFrac(input), [lo, hi] = skRange(input), { marks, named } = skLimb(input), nm = input._skinNames || [];
+    fill.setAttribute('y1', Y(f).toFixed(2)); cap.setAttribute('transform', `translate(0 ${Y(f).toFixed(2)})`);
+    const def = input.dataset && input.dataset.def != null ? +input.dataset.def : null, key = marks.join(',') + '|' + def + '|' + nm.join(',');
+    if(limb._key !== key){ limb._key = key;
+      limb.classList.toggle('dense', marks.length > 12);   // (two dozen species: small dots, not a ladder of rings)
+      limb.innerHTML = marks.map(v => { const big = !named && def != null && Math.abs(v - def) < (hi - lo)/20;
+        return `<circle cx="8" cy="${Y((v - lo)/(hi - lo)).toFixed(2)}" r="${marks.length > 12 ? 1.3 : named || big ? 2.2 : 1.4}" class="${named ? 'named' : big ? 'def' : ''}"/>`; }).join('');
+      // the names beside their marks, when there are few enough to read (more, and the display line says which)
+      names.innerHTML = named && nm.length && nm.length <= 8 ? marks.map((v, i) => `<button type="button" tabindex="-1" style="top:${(Y((v - lo)/(hi - lo))/160*100).toFixed(2)}%">${skEsc(nm[i] || '')}</button>`).join('') : '';
+      wrap.classList.toggle('named', !!names.innerHTML); }
+    const near = named ? skNearest(marks, +input.value) : null;
+    [...limb.children].forEach((c, i) => c.classList.toggle('on', named && marks[i] === near));
+    [...names.children].forEach((c, i) => c.classList.toggle('on', named && marks[i] === near));
+    wrap.classList.toggle('locked', state.locks.has(input.id));
+  };
+  skDrag(strip, input, 'fader');
+  names.addEventListener('click', e => { const i = [...names.children].indexOf(e.target), t = skTicks(input);
+    if(i >= 0 && t[i] != null && !state.locks.has(input.id)){ skinSet(input, t[i]); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); } });
+  skWatch(input, paint); paint();
+  input._faderSkin = wrap;
+  return wrap;
+}
+
+// ---- THE RACK: which way each of the Controls fold's sliders is drawn ----
+/** Which way each slider is drawn (Ruby: "the most compact but also usable UI possible"):
+ *  - three or fewer: rows, the plain sliders (most precise; research §6.1);
+ *  - more, a rack: a slider with marks is a fader (it picks among kinds, and its marks read down its side), as many as
+ *    the width holds (each two knobs tall, so four at most, the fewest marks first); the rest are knobs (amounts);
+ *  - a slider may declare itself (`as` in textureParams.js: 'knob', 'fader' or 'slider'), and is drawn so in a rack.
+ *  `mode`: 'auto', 'rows' or 'rack' (the layout button). */
+export function rackPlan(fields, width, mode){
+  const shown = fields.filter(f => f.shown);
+  const rack = mode === 'rack' || (mode !== 'rows' && shown.length >= 4);
+  if(!rack) return shown.map(f => ({ ...f, as: 'row' }));
+  const room = Math.max(1, Math.min(4, Math.floor(width/96)));
+  const said = f => f.declared === 'slider' ? 'row' : f.declared;
+  const faders = [...shown.filter(f => said(f) === 'fader'), ...shown.filter(f => !f.declared && f.ticks >= 2).sort((a, b) => a.ticks - b.ticks)].slice(0, room);
+  return shown.map(f => ({ ...f, as: said(f) === 'row' ? 'row' : faders.includes(f) ? 'fader' : 'knob' }));
+}
+let skRackMode = 'auto';
+export function setRackMode(m){ skRackMode = ['auto', 'rows', 'rack'].includes(m) ? m : 'auto'; }
+export function getRackMode(){ return skRackMode; }
+/** Lay out the Controls fold (#texControls): its surface sliders as rows, knobs or faders (rackPlan), each skin mounted
+ *  once and kept, the native slider kept beneath it for the keyboard, the lock and the saving. */
+export function layoutControls(){
+  const fold = typeof document !== 'undefined' && document.getElementById && document.getElementById('texControls');
+  if(!fold || !fold.classList || typeof document.createElementNS !== 'function') return;
+  const fields = [1, 2, 3, 4, 5, 6, 7, 8].map(i => { const input = document.getElementById('texP' + i), field = input && input.parentElement;
+    return { i, input, field, shown: !!field && field.style.display !== 'none', ticks: skTicks(input).length, declared: input._skinAs || null }; }).filter(f => f.input && f.field);
+  const plan = rackPlan(fields, fold.clientWidth || 360, skRackMode);
+  fold.classList.toggle('rack', plan.some(p => p.as !== 'row'));
+  for(const f of fields){
+    const p = plan.find(q => q.i === f.i), as = p ? p.as : 'row';
+    f.field.classList.toggle('as-knob', as === 'knob'); f.field.classList.toggle('as-fader', as === 'fader'); f.field.classList.toggle('as-row', as === 'row');
+    for(const [kind, make] of [['knob', knobSkin], ['fader', faderSkin]]){
+      const sk = f.input['_' + kind + 'Skin'];
+      if(as === kind){ const k = make(f.input); if(k && k.parentNode !== f.field) f.field.insertBefore(k, f.field.firstChild); }
+      else if(sk && sk.parentNode) sk.parentNode.removeChild(sk);
+    }
+  }
+  repaintSkins();
+}
