@@ -160,7 +160,7 @@ export const TEXTURE_CHAINS = {
   // picks the game, the table, the cards and the coin (each 'seed' setting:
   // choose one instead to fix it). Its four suits are the page's two Accents
   // and the texture's two Hues. Drawn on the page at full size (a canvas pass).
-  cards: { label: 'Cartomancy', canvas: true, teach: 'Table draws a table top under a lamp; Card Deal lays a card game on it. The menus left at “seed” let the seed choose (the game, the table, the cards, the coins); pick one to fix it. The four suits are the page\'s two Accents and the texture\'s two Hues. The Knobs are this texture\'s sliders: Cards in Play, Scatter, Stakes, Clutter (what else is on the table) and Wear (how damaged the cards are). Try: set Game to “ring”, then press ⟳ Seed. A Table Objects part lays the same candles, cups and letters on any picture.', nodes: [
+  cards: { label: 'Cartomancy', canvas: true, teach: 'Table draws a table top under a lamp, and a Blend lays it over the Page Backdrop in Overlay, so the table always takes the page\'s own colors; Card Deal lays a card game on it, flat, and hands its Height and Gloss to a Light Engine, which lights the cards and coins from the Light Dial (each card\'s shadow on the ones beneath, the coins\' domes and rims, gilt and metal shining). The menus left at “seed” let the seed choose (the game, the table, the cards, the coins); pick one to fix it. The four suits are the page\'s two Accents and the texture\'s two Hues. The Knobs are this texture\'s sliders: Cards in Play, Scatter, Stakes, Clutter (what else is on the table) and Wear (how damaged the cards are). Try: set Game to “ring”, then press ⟳ Seed. A Table Objects part lays the same candles, cups and letters on any picture.', nodes: [
       ['knob', { slot: '1' }, 40, 40],            // 1  (100 of 20–300)
       ['knob', { slot: '2' }, 40, 140],                 // 2  (20 of 0–90)
       ['knob', { slot: '3' }, 40, 240],                  // 3
@@ -169,13 +169,16 @@ export const TEXTURE_CHAINS = {
       ['hue', { slot: '1', name: 'Third Suit Hue' }, 40, 500],                    // 6
       ['hue', { slot: '2', name: 'Fourth Suit Hue' }, 40, 580],                   // 7
       ['table', { mat: 'seed', lamp: 50 }, 320, 40],                              // 8
-      ['deal', { game: 'seed', stock: 'seed', gilt: 'seed', suits: 'seed', coinage: 'seed', count: 100, size: 100, scatter: 20, stakes: 50, clutter: 40, wear: 30 }, 600, 120],   // 9
-      ['surface', { name: 'Cartomancy', ground: 'colour' }, 880, 160],            // 10
+      ['deal', { game: 'seed', stock: 'seed', gilt: 'seed', suits: 'seed', coinage: 'seed', count: 100, size: 100, scatter: 20, stakes: 50, clutter: 40, wear: 30, lighting: 'the light engine' }, 880, 120],   // 9
+      ['surface', { name: 'Cartomancy', ground: 'colour' }, 1440, 160],           // 10
       ['knob', { slot: '4' }, 320, 300],                // 11
-      ['knob', { slot: '5' }, 320, 400]],                  // 12
-    wires: [[8, 1, 9, 1], [4, 1, 9, 2], [5, 1, 9, 3], [6, 1, 9, 4], [7, 1, 9, 5],
+      ['knob', { slot: '5' }, 320, 400],                   // 12
+      ['backdrop', {}, 320, 520],                                                 // 13 the page beneath
+      ['blend', { mode: 'overlay', opacity: 100 }, 600, 60],                       // 14 (Ruby: the table always blended against the page colours)
+      ['material', { relief: 60, gloss: 45, shine: 55, shadow: 70, occlusion: 30, ambient: 40 }, 1160, 140]],   // 15 the Light Engine: the cards' heights and gloss
+    wires: [[13, 1, 14, 1], [8, 1, 14, 2], [14, 1, 9, 1], [4, 1, 9, 2], [5, 1, 9, 3], [6, 1, 9, 4], [7, 1, 9, 5],
       [1, 1, 9, 'count'], [2, 1, 9, 'scatter'], [3, 1, 9, 'stakes'],
-      [11, 1, 9, 'clutter'], [12, 1, 9, 'wear'], [9, 1, 10, 1]] },
+      [11, 1, 9, 'clutter'], [12, 1, 9, 'wear'], [9, 1, 15, 1], [9, 3, 15, 2], [9, 4, 15, 3], [15, 1, 10, 1]] },
   // ♡ Sleep Haze: smoke rising in a dusty room, a shaft of light through it
   // from the dial's way, dust catching the light. Drawn by a canvas pass (the
   // smoke on its own soft grid, the motes at full size).

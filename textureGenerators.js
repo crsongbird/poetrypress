@@ -242,7 +242,8 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Facet Hue'], tintDefaults:['#FFFFFF','#808080'] },
   // a divination deck on a table, lit by the dial (shadows, curl, gilt edges)
   // a game in its own colours: the four suits are the page's two accents and these two hues (cartomancy.js)
-  cards:         { blends:['source-over','overlay','soft-light','hard-light','multiply','luminosity','screen','color'], ground:'colour', light:true, tints:2,
+  // (its table laid over the page's own backdrop: pageEnv)
+  cards:         { blends:['source-over','overlay','soft-light','hard-light','multiply','luminosity','screen','color'], ground:'colour', light:true, tints:2, pageEnv:true,
                    tintLabels:['Third Suit Hue','Fourth Suit Hue'], tintDefaults:['#3E7D4F','#2E5FA8'] },
   // — 🜚 touch — relief, so soft-light leads and light direction applies
   linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], ground:'grey', light:true, tints:2,
