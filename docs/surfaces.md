@@ -334,6 +334,18 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     the larger ones sown further off); poles carry wires along the roads (`pkWires`); boards stand beside the roads,
     each world's own and the jokey ones rare (`PK_BOARDS`, a serial verse now and then, `PK_SERIALS`); the wilds'
     standing stones are a stone circle at true scale, in the world (`pkStone`, `pkLintel`).
+  - **The view's reach** (Ruby: "make the drawing script aware of the view frustum"): each cut of the land runs as far
+    round as the page sees, its corners included (`PHI`), straight ahead and bending round the eye as a circle past 55°
+    (`smax`), so a wide lens never shows a cut's end; a thing is kept while any of it can be in view; the lens is held
+    under 118° (`ringParams`).
+  - **Streets and Clutter**: a grid of streets where towns are (lanes in villages, broken streets in ruins; the store's
+    `streets`), drawn as the roads are; the town's furniture stands along them (lamps lighting them, cars at the kerb, a
+    bench and a bike, a signal at the crossing) instead of scattered, and buildings and trees keep off them. The Clutter
+    knob (`V.clutter`) sets all the small things and boards, apart from Works. Things are set into the ground a little;
+    the ruins' wrecks half buried (`sink`, clipped at the ground).
+  - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow; heaps of
+    cloud lit from the sun's side, rain in veils, lightning, a rainbow opposite a low sun, rays from a low or clouded
+    sun, the sun's glare low over the land, mist thickening between the ridges, rain and snow falling over it all.
   - **Works** (Ruby: "works needs to be turned down significantly"): 35 by
     default, and fewer of each at any setting; the spans and bridges of light
     across the band as they were (Ruby: "the bridges and the spans were fine").

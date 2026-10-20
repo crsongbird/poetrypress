@@ -16,6 +16,14 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   detail in the distance (terraces on the steep land, a settlement's lights at night); more placing rules between
   kinds (trees kept back from a house, farmland in rings round a town); more robots; a bridge of hard light as one
   more rare nod; more interactions nobody asked for.
+- MOVING IMAGE (Ruby, 2026-10-20: yes to the plan): a long-press (or right-click) on Save opens a small sheet, Moving
+  Image. First moves: Camera round (a seamless 360° loop) and From this look to another (every control blended between
+  two saved looks); frames drawn offline and stitched by the browser's own encoder (WebCodecs) and a small muxer of our
+  own; the page, 1080p wide, 1080×1920 tall or square; 6, 12 or 24 s at 30 fps; MP4, WebM or a zip of PNG frames. The
+  poem is drawn when it's shown (the existing switch), and the credit line always.
+- EIGHT VIEWS (Ruby, 2026-10-20): every painted thing seen from eight sides (front, the half-turns, the sides, back),
+  each placed facing a way of its own (a house its street, a car along the kerb, a bench the path), drawn as the camera
+  sees it, mirrored for the other side except what carries writing.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a

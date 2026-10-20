@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Cupid (2026-10-20)
+
+- **The Ringworld fills a wide view.** The land reaches the page's edges at any lens and any shape of page (it showed
+  flat bars of colour at the sides of a wide page, even at the usual lens); things at the frame's edge slide out of it
+  instead of vanishing when their middle crosses it; and the widest lens is held back before the world turns inside out.
+- **Clutter**, a new knob for the Ringworld: how much stands about the streets and roads (lamps, signs, billboards,
+  benches, bicycles, vending machines, parked cars, hay in the fields), apart from Works. At its middle there is less
+  than before.
+- **Streets.** Towns are laid out on streets now (lanes in the villages, broken streets in the ruins), and the
+  furniture stands along them instead of being scattered: lamps along every street, lighting it at night with pools on
+  the ground; cars parked at the kerb; a bench with a bicycle against it, a bus stop, a food cart; a signal, a sign, a
+  phone box or vending machines at the crossings; mailboxes along the village lanes; in the ruins, rusted cars sunk into
+  the verge and tank traps across the way. Buildings front the streets instead of standing in them, and the main roads
+  through town are lit.
+- **Nothing floats.** Things are set into the ground a little, and the ruins' wrecks, bikes and barrels are half buried.
+- **Weather**, by the seed: mostly clear (now and then high cirrus and low bands of cloud), often heaped cumulus lit
+  from the sun's side, sometimes fog in the valleys, rarely rain falling in veils (and a rainbow opposite a low sun),
+  a storm with lightning, or snow lying down to your feet. Rays fan from a low or clouded sun, and its glare lies over
+  the land when it is low.
+
+### Under the hood
+- The cuts follow the view's reach (`PHI`, `smax`, `angOf`, `cutOf`); the store lays the streets and their furniture
+  (`RG_STREET_KINDS`, `RG_SINKS`) and the weather is chosen once for both parts (`rgWeatherOf`).
+- Housekeeping: reviewed the tests: no suite repeats another's check; the dial-guide check no longer names the retired
+  3D Ringworld; a new check holds the Ringworld's widest lens.
+
 ## Uranus–Rosalind (2026-10-20)
 
 - **The Painted Ringworld is now the Ringworld.**
@@ -501,57 +527,3 @@ and every control behaving as it did.
   Knotwork with Pattern & Order; Light, Sparks & Dust is now Light, Dust &
   Feathers; some starters and studies moved to where they belong.
 - **Removed**: the Emotional Seed part and its starter, Weather of Feeling.
-
-## Saturn–Loge (2026-10-19)
-
-- **Your credit is remembered.** The name or handle signed on the image is
-  kept in this browser, so every visit starts with it. Presets, spells and
-  shared looks never change it; clearing the field clears it.
-
-## Saturn–Ymir (2026-10-19)
-
-- **New surface: Pixel Space.** Space in pixel art, after the generators
-  pixel artists use: a nebula, worlds and stars on a grid of square pixels,
-  stepped into bands with dithered seams, every colour from six hues. The
-  seed picks the scene: a nebula band, drifting clouds, a veil of
-  filaments, a galaxy (alone, or lying in the band), a ring nebula round
-  its star; and the worlds: none, one, a close one cropped by the page, a
-  horizon, an eclipse with its corona, a belt of rocks, a little system, a
-  black hole with its glowing disc, a pulsar with its beams. The light dial
-  moves the nebula's rim and every world's lit side. Clouds are never
-  white; white is for stars, a galaxy's heart, a corona.
-- **New surface: Webb Sky.** Deep space as the Webb telescope sees it:
-  dust lit from inside in smooth gradients, stars with six long spikes and
-  two short ones, small galaxies behind everything. The seed picks the
-  dust: globules streaming away from the light, cosmic cliffs, a shell
-  round a dying star, smoke, or a deep field of galaxies with lensed arcs.
-- **New parts:** Orbs (worlds in the dial's light, with rings, moons,
-  eclipses, black holes and pulsars) and Diffraction Spikes (a telescope's
-  starfield, Webb's spikes or Hubble's).
-- **Better parts:** Posterize can dither where two steps meet (ordered,
-  checker or scattered, on Pixelate's cells); Pixelate can let each cell
-  take its brightest point, so a tiny star still lights a pixel; Scatter
-  can count its marks for the whole page; the Light Dial part has a Way
-  output, the way the light travels, as Motion Blur and Smudge read angles.
-  A graph with Pixelate in it is enlarged pixel for pixel.
-- **The Black Hole** is placed by the light dial now: its way from the
-  page's middle, and how far out. Its disc's wireframe stands where the
-  hole will be while either dial moves. The seed adds more: hot spots in
-  the disc, more or less nebula and dust behind, and sometimes a galaxy
-  right behind the hole, bent into arcs. Older looks keep their camera,
-  the hole at the page's middle.
-- **The hues are grouped**: Light Colors (main, rim and ambient light,
-  beside the dial), Surface Colors (the surface's own) and Material Colors
-  (glow, shine, shadow), each under a small heading.
-- **Starters and Surface Studies sit with their kind** in the Surface menu
-  and the Athanor's Open drawer, marked as a starter or a study; screen and
-  signal studies have a group of their own, Screens & Signals.
-- **Dappled Leaves and Window Light** throw their light along the dial, as
-  they should have (they were a quarter turn off).
-- **The Painted Landscape's sun** follows the light dial.
-- **Punctuation Particles** no longer spark on an apostrophe inside a word.
-- **Writing on a phone:** the preview's divider can be dragged again while
-  the keyboard is up; a double-tap gives back the dozen lines.
-- Under the hood: a stray link was taken out of the repository, and
-  shipping now refuses one. Floral prior art written for the floral
-  surfaces to come.

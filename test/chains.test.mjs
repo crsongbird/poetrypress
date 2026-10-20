@@ -140,6 +140,11 @@ if(canvasOK){
     seeded.every(w => RG_WORLDS.includes(w.name) && w.name !== 'seed') && new Set(seeded.map(w => w.name)).size >= 5 && seeded.every(w => w.name === 'mixed' ? w.list.length === 3 : w.list.join() === w.name)
     && mixed.name === 'mixed' && new Set(mixed.list).size === 3); }
 
+// the Ringworld's LENS is held under 118° across the page's short side however far the camera zooms out (Ruby: "clamp
+// the extremes of this fov"), and a middling zoom is left as it was
+{ const G = await import('../stepsGenerative.js'), r = zoom => G.ringParams({ band: 45, walls: 12, altitude: 15, seed: 9, lens: 75, zoom, look: 0, lift: 15 }).lens;
+  check('the Ringworld\'s widest lens is held under 118°, a middling one untouched', r(25) <= 118 && Math.abs(r(100) - 75) < 1e-9); }
+
 // the Ringworld's SUN (Ruby: the light dial sets it, in the world, whatever the camera's turn): overhead it is the
 // ring's own star; at the dial's rim it is on the horizon; facing the dial's way (camera Turn = the dial's angle) puts it
 // straight ahead; east of where you look it stands to the right; its guide is where the painting puts it

@@ -892,7 +892,9 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     const pw = Math.max(px(0.5), h*0.022), m = R() < 0.5 ? iron : pkMat(c, PK_GREENPAINT, 0.7); box(X - pw*2.2, Y - h*0.12, pw*4.4, h*0.12, m, 0.2); pkShade(x, [[X - pw*1.3, Y - h*0.1], [X - pw*0.8, Y - h], [X + pw*0.8, Y - h], [X + pw*1.3, Y - h*0.1]], m.body, Y - h, Y, 0.2);
     ln([[X, Y - h*0.97], [X + h*0.1, Y - h*1.01], [X + h*0.2, Y - h*0.97]], pkCss(m.dark), h*0.018);
     pkPoly(x, [[X + h*0.14, Y - h*0.94], [X + h*0.16, Y - h*0.99], [X + h*0.24, Y - h*0.99], [X + h*0.26, Y - h*0.94]], pkCss(m.dark)); pkPoly(x, [[X + h*0.15, Y - h*0.94], [X + h*0.25, Y - h*0.94], [X + h*0.23, Y - h*0.88], [X + h*0.17, Y - h*0.88]], pkCss(glowOn ? lamp : pkMix(m.lit, c.air || m.lit, 0.4)));
-    if(glowOn){ pkGlow(x, X + h*0.2, Y - h*0.9, h*0.4, c.glow, 0.5*night); pkGlow(x, X + h*0.2, Y, h*0.45, c.glow, 0.25*night); } return; }
+    // (by night its light: the glow about the lantern, a cone falling from it, and a pool spread on the ground beneath, wider than tall)
+    if(glowOn){ pkGlow(x, X + h*0.2, Y - h*0.9, h*0.4, c.glow, 0.5*night); x.save(); x.globalCompositeOperation = 'screen'; const g = x.createLinearGradient(0, Y - h*0.88, 0, Y); g.addColorStop(0, pkCss(c.glow, 0.22*night)); g.addColorStop(1, pkCss(c.glow, 0.04*night)); x.fillStyle = g;
+      x.beginPath(); x.moveTo(X + h*0.16, Y - h*0.88); x.lineTo(X + h*0.24, Y - h*0.88); x.lineTo(X + h*0.75, Y); x.lineTo(X - h*0.35, Y); x.closePath(); x.fill(); x.translate(X + h*0.2, Y); x.scale(1, 0.32); pkGlow(x, 0, 0, h*1.1, c.glow, 0.4*night); x.restore(); } return; }
   case 'bench': { // a park bench: slats on iron ends, a backrest
     const w = h*2.1, m = pkMat(c, R() < 0.5 ? PK_WOOD : PK_GREENPAINT, 0.7); for(const s of [-0.42, 0.42]){ ln([[X + s*w, Y], [X + s*w, Y - h*0.5], [X + s*w - w*0.05, Y - h]], pkCss(iron.body), h*0.06); ln([[X + s*w - w*0.06, Y], [X + s*w + w*0.06, Y - h*0.5]], pkCss(iron.dark), h*0.04); }
     for(let k = 0; k < 3; k++) ln([[X - w/2, Y - h*(0.48 + k*0.035)], [X + w/2, Y - h*(0.48 + k*0.035)]], pkCss(k === 2 ? m.lit : m.body), h*0.04);

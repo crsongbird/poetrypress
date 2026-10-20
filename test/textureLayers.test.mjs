@@ -162,7 +162,7 @@ check('a preset turns the lower surface off (it never leaks from one look to the
 // indicator of where on screen we are positioning a thing before the render"): every surface the dial lights, places or
 // heads shows where, and each mark stands where the picture puts its thing
 { const { dialGuideMarks, dialGuidePlace } = await import('../appEvents.js'), { TEXTURE_CAPS } = await import('../textureGenerators.js');
-  const bare = Object.keys(TEXTURE_CAPS).filter(t => (TEXTURE_CAPS[t].light || TEXTURE_CAPS[t].dial) && !dialGuideMarks(t).length && !['ringworld', 'landscape'].includes(t));
+  const bare = Object.keys(TEXTURE_CAPS).filter(t => (TEXTURE_CAPS[t].light || TEXTURE_CAPS[t].dial) && !dialGuideMarks(t).length && t !== 'landscape');
   check('every surface the light dial lights, places or heads has a guide on the page' + (bare.length ? ': not ' + bare.join(', ') : ''), !bare.length);
   const at = (t, deg, tilt, knobs) => dialGuidePlace(dialGuideMarks(t).find(m => m.k !== 'sun'), deg, tilt, 1, 1.5, knobs);
   const rain = at('rainstreaks', 0, 100), still = at('snow', 90, 100, { wind: 0 }), blown = at('snow', 90, 100, { wind: 100 }), flow = at('flowfield', 90, 100);

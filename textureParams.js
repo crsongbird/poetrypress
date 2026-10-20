@@ -210,7 +210,9 @@ export const TEXTURE_PARAMS = {
                   sliderOf('form', 'Works', 35),
                   sliderOf('alt', 'Altitude', 15),
                   sliderOf('paint', 'Paint', 0),
-                  sliderOf('brush', 'Brush', 37, { ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry'] })],
+                  sliderOf('brush', 'Brush', 37, { ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry'] }),
+                  // the small things of the streets and roads: signs, boards, lamps, benches, bikes, cars (Works is the rest)
+                  sliderOf('clutter', 'Clutter', 50)],
   // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon
   rainwater:     [sliderOf('zoom', 'Ripple Size', 100, { min:40, max:250, unit:'%' }),
                   sliderOf('amt', 'Rain', 50),

@@ -1024,11 +1024,13 @@ export function ringDay(L, phi){ let u = (phi*L.side - L.q0)/L.per; u -= Math.fl
   const sd = u >= RING_COV ? Math.min(u - RING_COV, 1 - u) : -Math.min(u, RING_COV - u), t = genClamp(0.5 + sd/0.09); return t*t*(3 - 2*t); }
 
 // the ring's settings (as the Ringworld's sliders give them) as the world it draws — shared with the camera's guide
+// (the lens held under 118° across the page's short side, Ruby: "clamp the extremes of this fov": wider, the painter's
+//  perspective turns the world inside out at the page's corners)
 export function ringParams(r){
   const b = r.band/100, W = 0.012 + 0.22*b*b, z = Math.max(0.25, (r.zoom ?? 100)/100);
   return { band: W, walls: W*(0.04 + 0.7*r.walls/100), altitude: W*Math.pow(10, -3.2 + 3*r.altitude/100), look: r.look,
     lift: Math.max(-30, Math.min(89.5, r.up != null ? 90 - 90*Math.min(1.3, r.up) : (r.lift ?? 15)*0.9)),
-    lens: 2*Math.atan(Math.tan((r.lens ?? 75)*Math.PI/360)/z)*180/Math.PI, place: (r.placeBy === 'where the seed says' ? ringPlaceOf(r.seed >>> 0) : r.place ?? 0)/100, daylight: (r.daylight ?? 80)/100,
+    lens: Math.min(118, 2*Math.atan(Math.tan((r.lens ?? 75)*Math.PI/360)/z)*180/Math.PI), place: (r.placeBy === 'where the seed says' ? ringPlaceOf(r.seed >>> 0) : r.place ?? 0)/100, daylight: (r.daylight ?? 80)/100,
     air: (a => 0.01 + 0.4*a*a)((r.air ?? 50)/100), build: 0.25 + 0.75*(r.build ?? 35)/100, seed: r.seed >>> 0,
     side: r.side ?? 1, builders: Math.max(0, Math.min(5, Math.round((r.builders ?? 0)/20))),
     landforms: (r.landforms ?? 50)/100, cities: (r.cities ?? 25)/100, traffic: (r.traffic ?? 50)/100 };
