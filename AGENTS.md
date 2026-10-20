@@ -139,6 +139,7 @@ python3 tools/fit-audit.py                     # does every control fit its pane
 python3 tools/icons.py                         # redraw the nav glyphs, the sigil and the app icons
 node test/textureFingerprints.test.mjs --update   # accept new texture renders — only those you meant to change
 node tools/compare.mjs a,b [--ref HEAD]          # before/after renders of a texture's readings, for Ruby's approval
+node tools/review.mjs a,b [--ref HEAD]           # the standard review sheet: readings, seeds, the light turned, the camera moved (every round, the same)
 node tools/prune.mjs                           # what has gone unused: names, strings, CSS, fixtures, tools (test/hygiene fails on any)
 python3 tools/css-audit.py                     # which CSS declarations never win, in any state (desk, phone, tabs, Athanor, themes)
 python3 tools/css-prune.py [--write]           # remove those, verified: no drawn element computes differently in any state
@@ -719,7 +720,8 @@ the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
    - alt-text words;
    - its TEACH note, and any new part's wiki page.
 4. If it draws text in web fonts, add it to `ON_PAGE`.
-5. Accept its first fingerprint. Check `scale-audit`. Look at it.
+5. Accept its first fingerprint. Check `scale-audit`. Look at it: `node tools/review.mjs <surface>` makes the
+   sheet Ruby reviews (readings, seeds, the light turned, the camera moved; `--ref` adds the before).
 6. **No preset for it until the presets pass** (ROADMAP Stage 4).
 
 **Replace a texture's method** (Ruby: allowed when the result is better or
