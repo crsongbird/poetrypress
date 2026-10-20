@@ -25,7 +25,9 @@ prints it).
   chosen by the land's climate (dry country, warm, jungle, the cold heights, a magic world's fey places with giant
   mushrooms and crystal trees), and 31 of building, from cottages, barns, windmills and stave churches to pagodas,
   torii, castles, lighthouses, cathedrals, mosques, clock towers, factories, capsule towers, megablocks, geodomes,
-  observatories and wind turbines. The wilds have villages and farms.
+  observatories and wind turbines. The wilds have villages and farms. Each stands where it belongs: lighthouses on
+  the coast, windmills, turbines, castles and observatories on rises, barns and silos at a town's edge, cathedrals and
+  clock towers at its heart; trees thin out round towns, and boulders gather under slopes.
 - **Drapery, a new surface**: a sheet of cloth simulated as it hangs or falls (from a rod in gathers, from two
   corners, from one, twisted, or seen from above over a hidden form, crumpled, laid flat) in nine fabrics, silk to
   velvet. Its weave follows every fold, and the Light Engine lights it from its maps: satin shines, burlap doesn't,

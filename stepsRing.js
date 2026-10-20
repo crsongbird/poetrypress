@@ -339,6 +339,15 @@ function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCo
 // So near you every level's things stand together, far off only the coarser levels' (as dense on the screen at every
 // depth), and a thing, once sown, is the same thing from wherever it is seen. Kept per world (`RG_KEPT_STORES`).
 const RG_KEPT_STORES = new Map();
+// WHAT STANDS WHERE (Ruby: "defining their relationships to each other so the generator places them in ways that make
+// sense"): a lighthouse on a coast; windmills, turbines, castles and observatories on rises; barns and silos at a town's
+// edge, among fields; cathedrals, mosques and clock towers at its heart; geodomes and landing pads on the flat. Kinds not
+// named stand wherever their world builds (ground: rgStore's `ground`; ci: how much of a city stands here, 0 to 1)
+const RG_PLACE = { lighthouse: { coast: true }, windmill: { rise: 0.4 }, turbine: { rise: 0.6 }, castle: { rise: 0.3 }, observatory: { rise: 0.6 },
+  barn: { edge: 0.35 }, silo: { edge: 0.35 }, cathedral: { heart: 0.7 }, mosque: { heart: 0.7 }, clock: { heart: 0.6 }, geodome: { flat: 0.25 }, pagoda: { rise: 0 } };
+function rgFits(kind, g, ci){ const P = RG_PLACE[kind]; if(!P) return true;
+  if(P.coast && !g.coast) return false; if(P.rise != null && g.rise < P.rise) return false; if(P.edge != null && ci > P.edge) return false;
+  if(P.heart != null && ci < P.heart) return false; if(P.flat != null && g.slope > P.flat) return false; return true; }
 function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
   const key = [s, V.world.list.join('+'), V.forms, V.life, V.works, W.toFixed(6), L.z0.toFixed(6)].join('|');
@@ -353,6 +362,12 @@ function rgStore(V){
           if(Math.abs(z) > W*0.485) continue; const r = Math.hypot(a, z - L.z0); if(r >= hi) continue;
           const o = fn(a, z, r, R); if(o){ o.a = a; o.z = z; o.r = r; o.rs = (R()*4294967296) >>> 0; out.push(o); } } }
       if(hi >= rMax) break; } };
+  // THE GROUND at a point, as the placing rules read it: its height, how steep, whether it is under water, whether water
+  // is near (a coast), and how it stands against the land round it (a rise or a hollow), in the land's own units
+  const ground = (a, z) => { const d = W*0.004, e = T.true(a, z, d), ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d);
+    const slope = Math.hypot(ex, ez)/(2*d), wet = e <= TR.sea; let coast = false, ring = 0;
+    for(let q = 0; q < 6; q++){ const an = q/6*Math.PI*2, ca = Math.cos(an), sa = Math.sin(an), en = T.true(a + ca*W*0.012, z + sa*W*0.012, d); if(en <= TR.sea) coast = true; ring += T.true(a + ca*W*0.03, z + sa*W*0.03, W*0.01); }
+    return { e, slope, wet, coast, rise: (e - ring/6)/(W*0.002) }; };
   // TREES: where the forests are, each kind by its world and the land's climate (dry country, warm, jungle, the cold
   // heights, the fey places of a magic world), sized by its kind
   const floraAt = (w, a, z) => { if(w === 'ruins') return PK_TREES.ruins;
@@ -362,7 +377,9 @@ function rgStore(V){
     return mnValue(a/(W*0.5) + 9.1, z/(W*0.5) + 1.7, s + 31) > 0.64 ? PK_FLORA.jungle : PK_TREES.wild; };
   sow(1, W*0.0036, W*0.02, W*2.5, 4, (a, z, r, R) => {
     const w = V.worldAt(a, z), P = RG_PROF[w], tot = P.tr + P.de + P.gt; if(!tot) return null;
-    if(R() > Math.min(1, V.forestAt(a, z)*V.life*1.25*tot)*(r < W*0.01 ? 0.35 : 1)) return null;
+    // (fewer trees where a town stands, none under water)
+    const town = V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works)); if(T.true(a, z, W*0.004) <= TR.sea) return null;
+    if(R() > Math.min(1, V.forestAt(a, z)*V.life*1.25*tot)*(r < W*0.01 ? 0.35 : 1)*(1 - 0.85*town)) return null;
     const u = R()*tot, kind = u < P.de ? 'dead' : u < P.de + P.gt ? 'glow' : (T2 => T2[Math.floor(R()*T2.length)])(floraAt(w, a, z));
     return { c: 'tree', w, kind, hM: pkMetres(kind, R()) }; });
   // BUILDINGS: where the cities are (and in the wilds, a few villages and farms); each archetype chosen first, then sized
@@ -370,12 +387,17 @@ function rgStore(V){
   sow(2, W*0.009, W*0.03, W*3, 2, (a, z, r, R) => {
     const w = V.worldAt(a, z), P = RG_PROF[w], ci = w === 'wilds' ? 0.7*V.cityAt(a, z, 0.12*(0.3 + 0.9*V.works)) : V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works));
     if(ci < 0.05 || R() > ci*(0.08 + 0.92*rsSmooth(W*0.012, W*0.07, r))) return null;
-    const kind = pkArchOf(PK_STYLE[w], R()), hM = pkMetres(kind, Math.pow(R(), 0.6 + 1.6*(1 - ci)))*(w === 'neon' ? 1.3 : 1), wM = pkMetres(kind, R(), 1);
+    // (what stands where: each kind on the ground it belongs on, RG_PLACE; a kind whose ground this isn't gives way to
+    //  another of the style's, up to three tries, else nothing is built here)
+    const g = ground(a, z); if(g.wet || g.slope > 0.9) return null;
+    let kind = null; for(let t = 0; t < 3 && !kind; t++){ const k = pkArchOf(PK_STYLE[w], R()); if(rgFits(k, g, ci)) kind = k; } if(!kind) return null;
+    const hM = pkMetres(kind, Math.pow(R(), 0.6 + 1.6*(1 - ci)))*(w === 'neon' ? 1.3 : 1), wM = pkMetres(kind, R(), 1);
     // (a city rises away from you: near, only what stands low; its towers further off, where they make a skyline)
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
     return { c: 'bldg', w, kind, hM, wM }; });
   // ROCKS: boulders where the land is rough
-  sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > RG_PROF[w].ro*V.forms) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
+  // (boulders gather where the land is steep, as scree under a slope)
+  sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope))) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
   // GRASS AND FLOWERS near you
   sow(4, W*0.0012, W*0.004, W*0.05, 3, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > RG_PROF[w].gr*V.life*1.4) return null; return { c: 'grass', w, kind: 'grass', hM: pkMetres('grass', R()) }; });
   // SMALL LIFE lives on some rings, not all: insects, fairies, flowers and slime, each world its own mix
