@@ -30,10 +30,9 @@ import { modalPrompt } from './uiControls.js';
 export function syncTextureParams(useDefaults){
   const defs = paramsFor($('textureType').value);
   // two knobs for every texture, a third (Form) for many, up to five for the
-  // richest (Dream Bloom), six where a camera tilts (Scrying Pool), eight at
-  // most (Lichtenberg's camera, Circuit Board's Era); a knob a texture doesn't
-  // have is hidden
-  [0,1,2,3,4,5,6,7].forEach(i=>{
+  // richest (Dream Bloom), six where a camera tilts (Scrying Pool), ten at
+  // most (Ruby, 2026-10-20); a knob a texture doesn't have is hidden
+  [0,1,2,3,4,5,6,7,8,9].forEach(i=>{
     const def = defs[i];
     const row = $('texP'+(i+1)).parentElement;
     const slider = $('texP'+(i+1));
@@ -281,7 +280,7 @@ export const keptHash = text => { let h = 2166136261; for(let i = 0; i < text.le
 export function keptOpts(json, n){
   const defs = athanorKnobs(json), knob = i => (defs.find(x => x.slot === i) || {}).def ?? 50;
   return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8', ink: '#F2F2EF',
-    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
+    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8), p9: knob(9), p10: knob(10), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
 }
 export function keptThumb(rec, canvas, unsaved){
   if(!rec || !rec.graph || rec.graph.length < 40) return false;

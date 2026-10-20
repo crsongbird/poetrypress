@@ -406,9 +406,9 @@ export const TEXTURE_ELEMENTS = {
 
   // ---- 🜉 The Athanor: its knobs mean whatever the graph makes them ----
   athanor: { def: 'earth', earth: { name: 'As Made' },
-    fire:  { name: 'Calcined', k: [85, 85, 85, 85, 85, 85, 50, 50], t: ['#FFD08A', '#5A0E08'] },
-    water: { name: 'Dissolved', k: [25, 40, 25, 40, 25, 40, 50, 50], t: ['#CFF0FF', '#0A2440'] },
-    wind:  { name: 'Sublimed',   k: [60, 15, 60, 15, 60, 15, 50, 50], t: ['#F0FFF4', '#2E4A3A'] } },
+    fire:  { name: 'Calcined', k: [85, 85, 85, 85, 85, 85, 50, 50, 50, 50], t: ['#FFD08A', '#5A0E08'] },
+    water: { name: 'Dissolved', k: [25, 40, 25, 40, 25, 40, 50, 50, 50, 50], t: ['#CFF0FF', '#0A2440'] },
+    wind:  { name: 'Sublimed',   k: [60, 15, 60, 15, 60, 15, 50, 50, 50, 50], t: ['#F0FFF4', '#2E4A3A'] } },
 };
 
 /** A texture's four readings, in button order (🜂 🜄 🜁 🜃): each its

@@ -599,6 +599,7 @@ function describeRequest(type, w, h, opts){
   // a sixth: a camera's Tilt (Scrying Pool); a seventh and eighth (Lichtenberg's camera, Circuit Board's Era)
   const v6 = defs[5] ? ((opts.p6 == null) ? defs[5].def : opts.p6) : null;
   const v7 = defs[6] ? ((opts.p7 == null) ? defs[6].def : opts.p7) : null, v8 = defs[7] ? ((opts.p8 == null) ? defs[7].def : opts.p8) : null;
+  const v9 = defs[8] ? ((opts.p9 == null) ? defs[8].def : opts.p9) : null, v10 = defs[9] ? ((opts.p10 == null) ? defs[9].def : opts.p10) : null;
 
   // (Cartomancy's first two suits are the accents; an Athanor graph with an Accent node reads them too)
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards' || type === 'ringpaint'
@@ -606,7 +607,7 @@ function describeRequest(type, w, h, opts){
   // (and a graph with an Ink part changes with the poem's ink; any other surface never sees it)
   const inkKeyed = (type === 'athanor' || type === 'athanorsteps') && /"name":\s*"ink"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''));
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
+            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (v9 == null ? '' : `_n${v9}`) + (v10 == null ? '' : `_q${v10}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (rig ? `_L${rigKey(rig)}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '') + (Array.isArray(opts.hues) && opts.hues.some(Boolean) ? `_hu${opts.hues.map(h => h || '').join(',')}` : '')
@@ -627,7 +628,7 @@ function describeRequest(type, w, h, opts){
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
 }
 /** A surface layer's lights (the look's keys) as a request's (ROADMAP C1, C2): the Ambient slider (0–200; 100 the
  *  surface's own) and the Ambient Hue, and the rim light, the light dial's second handle (its way and height; its hue,
@@ -736,7 +737,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -778,7 +779,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend) }))))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend) }))))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

@@ -287,7 +287,7 @@ export const WIKI_ARTICLES = [
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
 <p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Apply</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app asks whether to). The page shows only the controls you give it:</p>
 <ul>
-<li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees and turned on a small dial beside the slider, or a <b>switch</b>, off or on.</li>
+<li>Each <b>Knob</b> becomes one of the ten sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees and turned on a small dial beside the slider, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
 <li>Each <b>Curve Control</b> becomes a pad under the sliders, where its curve is drawn by hand (two at most).</li>
 <li>The <b>light dial</b> is always there for anything lit.</li>

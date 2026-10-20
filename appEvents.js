@@ -269,7 +269,7 @@ export function refreshUi(){
   run(() => syncSeedWords(false));
   run(() => { for(const ch of CHOOSERS) ch.refresh(); });
   run(refreshHints);
-  run(() => { for(let i = 1; i <= 8; i++) paintKnobDial($('texP' + i)); });
+  run(() => { for(let i = 1; i <= 10; i++) paintKnobDial($('texP' + i)); });
   run(paintCurves);
 }
 // the surface menus as tiles (chooser.js), filled in below once the swatch source is set
@@ -321,7 +321,7 @@ toggleSubblock('textureToggle','textureBlock');
 
 // ---------- SURFACE LAYERS (Ruby: "all controls for the second layer, a swap, every blend") ----------
 export const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
-  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex', 'textureTint9Hex', 'textureTint10Hex', 'textureTint11Hex', 'textureTint12Hex']);
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex', 'textureTint9Hex', 'textureTint10Hex', 'textureTint11Hex', 'textureTint12Hex']);
 for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
 if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
@@ -806,7 +806,7 @@ for(const k of [1, 2]){
   if(reset && reset.addEventListener) reset.addEventListener('click', () => { $('textureCurve' + k).value = ''; paintCurvePad(k); scheduleRender(); commitSoon(); });
 }
 
-['texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8'].forEach(id=>{
+['texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','texP9','texP10'].forEach(id=>{
   $(id).addEventListener('input', ()=>{
     draftWhileDragging();
     const defs = paramsFor($('textureType').value);

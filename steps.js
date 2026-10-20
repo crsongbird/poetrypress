@@ -172,7 +172,7 @@ function stepScaleByPoint(E, SC, layer){
 // - run(E, n): what it does.
 const STEP_PARTS = {
   // inputs: what the finished texture offers on the page
-  knob: { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6','7','8']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
+  knob: { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6','7','8','9','10']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
     STEP_SEL('kind', 'Kind', ['slider', 'steps', 'angle', 'switch']), [...STEP_R('steps', 'Steps', 3, 2, 12).slice(0, 4), { min: 2, max: 12, when: 'kind:steps' }],
     ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]], io: { outs: ['value'] },
     run(E, n){ const { ctx, num, P } = E;

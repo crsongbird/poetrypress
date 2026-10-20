@@ -396,10 +396,10 @@ Other parts of a look:
 How light works (the dial, the engine, the rig, shine and shadows): **docs/light.md**. Read it before touching light or a lit surface.
 
 ### 5.6 · Knobs and colour roles
-- A texture declares **2–8 knobs** in `TEXTURE_PARAMS`, read by position as
-  `texP1`…`texP8` (Ruby: eight at most). The usual keys are zoom, amt, form,
+- A texture declares **2–10 knobs** in `TEXTURE_PARAMS`, read by position as
+  `texP1`…`texP10` (Ruby: ten at most, 2026-10-20, where the rack uses the room well). The usual keys are zoom, amt, form,
   shape, hue and tilt; the seventh and eighth are a chain's own (a camera's
-  Turn and View, Circuit Board's Era). An Athanor graph's Knob has slots 1–8.
+  Turn and View, Circuit Board's Era). An Athanor graph's Knob has slots 1–10.
 - A knob may carry `ticks`, `names` and `dice`. A new knob key must be wired
   through:
   - `describeRequest` (the cache key);

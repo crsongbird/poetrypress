@@ -19,7 +19,7 @@ import { restoreSurfaceLayer } from './uiLook.js';
 // other's settings wait in state.layers.other, under the same keys the upper saves with. A look always
 // saves the upper under its own keys and the lower as `baseLayer`, whichever the controls show; Swap
 // trades the two whole, locks included.
-const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
+const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureRim', 'textureRimTilt', 'textureAmbient', 'textureTint7', 'textureTint8',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureTint9', 'textureTint10', 'textureTint11', 'textureTint12', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
   'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];

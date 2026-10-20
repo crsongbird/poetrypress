@@ -182,7 +182,7 @@ export async function revealSurface(){
   const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
   // the empty Athanor (no graph on the page yet): the editor opens as it is, to start one (Ruby: it is where anyone would go)
   if(type === 'athanor' && !page){ openAthanorNow(); return; }
-  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8].map(i => ($('texP' + i) || {}).value)));
+  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
   const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
   // the bench's work, if it is kept nowhere else, is replaced only when asked (Revert brings it back)

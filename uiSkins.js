@@ -69,7 +69,7 @@ function skWatch(input, paint){
   input.addEventListener('input', all);
 }
 export function repaintSkins(){
-  for(let i = 1; i <= 8; i++){ const input = document.getElementById && document.getElementById('texP' + i); if(input && input._skinPaints) for(const p of input._skinPaints) p(); }
+  for(let i = 1; i <= 10; i++){ const input = document.getElementById && document.getElementById('texP' + i); if(input && input._skinPaints) for(const p of input._skinPaints) p(); }
 }
 
 // the angle of a point about a middle, in degrees, 0° up and clockwise (as the knob's own)
@@ -292,7 +292,7 @@ export function getRackMode(){ return skRackMode; }
 export function layoutControls(){
   const fold = typeof document !== 'undefined' && document.getElementById && document.getElementById('texControls');
   if(!fold || !fold.classList || typeof document.createElementNS !== 'function') return;
-  const fields = [1, 2, 3, 4, 5, 6, 7, 8].map(i => { const input = document.getElementById('texP' + i), field = input && input.parentElement;
+  const fields = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => { const input = document.getElementById('texP' + i), field = input && input.parentElement;
     return { i, input, field, shown: !!field && field.style.display !== 'none', ticks: skTicks(input).length, declared: input._skinAs || null }; }).filter(f => f.input && f.field);
   const plan = rackPlan(fields, fold.clientWidth || 360, skRackMode);
   fold.classList.toggle('rack', plan.some(p => p.as !== 'row'));

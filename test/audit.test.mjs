@@ -90,7 +90,7 @@ const SLIDERS = { borderBloom:'42', vignetteAperture:'41', vignetteCx:'12', vign
   vignetteNoise:'9', typeEffectStrength:'67', typeEffectAngle:'212', typeEffectDistance:'140',
   typeEffectGrain:'33', bgRadialX:'23', bgRadialY:'71', bgRadialR:'111', borderGrain:'37',
   borderRadius:'144', cardRadius:'153', cardFxAmount:'37', cardFxScale:'71', cardGradientAngle:'217', cardOpacity:'58', borderGradientAngle:'123',
-  textureLightTilt:'63', texP4:'43', texP5:'77', texP6:'31', texP7:'19', texP8:'71', cameraTurn:'123', cameraView:'37', cameraZoom:'180', textureRim:'77', textureRimTilt:'58', textureAmbient:'143', fx1K1:'23', fx1K2:'61', fx1Angle:'137', fx2K1:'17', fx2K2:'44', fx2Angle:'211', fx3K1:'29', fx3K2:'53', fx3Angle:'301' };
+  textureLightTilt:'63', texP4:'43', texP5:'77', texP6:'31', texP7:'19', texP8:'71', texP9:'13', texP10:'66', cameraTurn:'123', cameraView:'37', cameraZoom:'180', textureRim:'77', textureRimTilt:'58', textureAmbient:'143', fx1K1:'23', fx1K2:'61', fx1Angle:'137', fx2K1:'17', fx2K2:'44', fx2Angle:'211', fx3K1:'29', fx3K2:'53', fx3Angle:'301' };
 let hexN = 0;
 const freshHex = () => '#' + (0x1a2b3c + (++hexN) * 0x050709).toString(16).slice(-6);
 

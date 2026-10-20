@@ -33,9 +33,9 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // Saturn–Kiviuq on: the Painted Ringworld and Ring in the Sky joined Sky & Cosmos
 check('the picker offers 85 textures (seven hidden: the Basics and the first Fractured Glaze), and the Athanor\'s own', new Set(textureTypes).size === 86 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
-// every surface declares two to eight sliders (AGENTS §5.6: eight at most)
-check('every texture declares two to eight sliders', Object.entries(TEXTURE_PARAMS).every(([, d]) => d.length >= 2 && d.length <= 8),
-  Object.entries(TEXTURE_PARAMS).filter(([, d]) => d.length < 2 || d.length > 8).map(([t]) => t));
+// every surface declares two to ten sliders (AGENTS §5.6: ten at most)
+check('every texture declares two to ten sliders', Object.entries(TEXTURE_PARAMS).every(([, d]) => d.length >= 2 && d.length <= 10),
+  Object.entries(TEXTURE_PARAMS).filter(([, d]) => d.length < 2 || d.length > 10).map(([t]) => t));
 const unlabelled = textureTypes.filter(t => paramsFor(t).some(d => !d.label || /value/i.test(d.label)));
 check('every param has a real label, not "value 1"', unlabelled.length === 0);
 

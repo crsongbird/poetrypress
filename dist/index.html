@@ -3381,6 +3381,16 @@ but bear with me, dear}]/jitter:200
                 <input type="range" id="texP8" min="0" max="100" value="0">
                 <span class="range-val" id="texP8Val"></span>
               </div>
+              <div class="field full" id="texP9Field" style="display:none">
+                <label id="texP9Label">Knob 9</label>
+                <input type="range" id="texP9" min="0" max="100" value="0">
+                <span class="range-val" id="texP9Val"></span>
+              </div>
+              <div class="field full" id="texP10Field" style="display:none">
+                <label id="texP10Label">Knob 10</label>
+                <input type="range" id="texP10" min="0" max="100" value="0">
+                <span class="range-val" id="texP10Val"></span>
+              </div>
               <!-- THE CURVE CONTROLS (ROADMAP D4): a graph's Curve Control parts, drawn by hand here. Drag a point; tap or click
                    the empty pad to add one; double-click or hold a point to remove it; ↺ puts back the graph's own curve -->
               <div class="field full curve-row tool-hidden" id="texCurve1Row">
@@ -20861,7 +20871,7 @@ function stepScaleByPoint(E, SC, layer){
 
 const STEP_PARTS = {
 
-  knob: { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6','7','8']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
+  knob: { cat: 'Inputs', label: 'Knob', ins: [], outs: ['value'], params: [STEP_SEL('slot', 'Slider', ['1','2','3','4','5','6','7','8','9','10']), ['name', 'Name', 'text', 'Amount'], STEP_R('def', 'Default', 50),
     STEP_SEL('kind', 'Kind', ['slider', 'steps', 'angle', 'switch']), [...STEP_R('steps', 'Steps', 3, 2, 12).slice(0, 4), { min: 2, max: 12, when: 'kind:steps' }],
     ['names', 'Mark Names', 'text', '', { when: 'kind:steps|switch' }]], io: { outs: ['value'] },
     run(E, n){ const { ctx, num, P } = E;
@@ -22303,7 +22313,7 @@ const TEXTURE_PARAMS = {
 
 
 
-  athanor:      [1,2,3,4,5,6,7,8].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
+  athanor:      [1,2,3,4,5,6,7,8,9,10].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
   guilloche:     [sliderOf('zoom', 'Rosette Size', 100, { min:50, max:250, unit:'%' }),
                   sliderOf('amt', 'Line Density', 100, { min:30, max:200, unit:'%' }),
 
@@ -25646,7 +25656,7 @@ function athanorCamera(graph){
 
 function athanorKnobs(graph){
   const out = [], reach = athanorReach(graph), all = athanorFlat(graph).nodes;
-  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-8])/.exec(v); if(m) boundSlots.add(+m[1]); }
+  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k(10|[1-9])/.exec(v); if(m) boundSlots.add(+m[1]); }
   for(const n of Object.values(all)){
     if(n.name !== 'knob') continue;
     if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(8, parseInt((n.data || {}).slot, 10) || 1)))) continue;
@@ -25658,7 +25668,7 @@ function athanorKnobs(graph){
   }
 
   for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
-    const m = typeof v === 'string' && /^@k([1-8])/.exec(v); if(!m) continue;
+    const m = typeof v === 'string' && /^@k(10|[1-9])/.exec(v); if(!m) continue;
     const slot = +m[1]; if(out.find(q => q.slot === slot)) continue;
     const part = ((STEPS[n.name] || {}).params || []).find(q => q[0] === k);
     out.push({ slot, label: String(part ? part[1] : 'Knob ' + slot).slice(0, 24), def: 50 });
@@ -25785,7 +25795,7 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const P = (n, k, d) => { const v = (n.data || {})[k]; return v === undefined || v === '' ? d : v; };
 
   const bound = (n, k, s, d) => {
-    const m = /^@(k[1-8]|dial|tilt)(?:\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\])?$/.exec(s.trim()); if(!m) return d;
+    const m = /^@(k10|k[1-9]|dial|tilt)(?:\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\])?$/.exec(s.trim()); if(!m) return d;
     const r = m[2] != null ? [+m[2], +m[3]] : null;
     if(m[1] === 'dial'){ const deg = ((ctx.light ?? 315) % 360 + 360) % 360; return r ? r[0] + (r[1] - r[0])*deg/360 : deg; }
     if(m[1] === 'tilt'){ const t = ctx.lightTilt ?? 100; return r ? r[0] + (r[1] - r[0])*t/130 : t; }
@@ -26706,6 +26716,7 @@ function describeRequest(type, w, h, opts){
 
   const v6 = defs[5] ? ((opts.p6 == null) ? defs[5].def : opts.p6) : null;
   const v7 = defs[6] ? ((opts.p7 == null) ? defs[6].def : opts.p7) : null, v8 = defs[7] ? ((opts.p8 == null) ? defs[7].def : opts.p8) : null;
+  const v9 = defs[8] ? ((opts.p9 == null) ? defs[8].def : opts.p9) : null, v10 = defs[9] ? ((opts.p10 == null) ? defs[9].def : opts.p10) : null;
 
 
   const colorKeyed = (type === 'embers' || type === 'magicparticles' || type === 'astral_stars' || type === 'cards' || type === 'ringpaint'
@@ -26713,7 +26724,7 @@ function describeRequest(type, w, h, opts){
 
   const inkKeyed = (type === 'athanor' || type === 'athanorsteps') && /"name":\s*"ink"/.test(typeof opts.graph === 'string' ? opts.graph : JSON.stringify(opts.graph || ''));
   const key = (colorKeyed ? `${type}_${w}_${h}_${accent1}_${accent2}` : `${type}_${w}_${h}`)
-            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
+            + `_s${seed}` + `_${v1}_${v2}` + (v3 == null ? '' : `_f${v3}`) + (v4 == null ? '' : `_k${v4}`) + (v5 == null ? '' : `_h${v5}`) + (v6 == null ? '' : `_v${v6}`) + (v7 == null ? '' : `_j${v7}`) + (v8 == null ? '' : `_o${v8}`) + (v9 == null ? '' : `_n${v9}`) + (v10 == null ? '' : `_q${v10}`) + (scale === 1 ? '' : `_x${scale}`) + (lightTilt === 100 ? '' : `_t${lightTilt}`)
             + (light != null ? `_l${light}` : '')
             + (rig ? `_L${rigKey(rig)}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '') + (Array.isArray(opts.hues) && opts.hues.some(Boolean) ? `_hu${opts.hues.map(h => h || '').join(',')}` : '')
@@ -26734,7 +26745,7 @@ function describeRequest(type, w, h, opts){
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
+  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
 }
 
 
@@ -26843,7 +26854,7 @@ function genChain(type, w, h, light, extra, tint1, tint2){
 }
 function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -26885,7 +26896,7 @@ function getTextureCanvas(type, w, h, opts = {}){
 
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend) }))))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend) }))))));
 
 
 
@@ -29950,9 +29961,9 @@ const TEXTURE_ELEMENTS = {
 
 
   athanor: { def: 'earth', earth: { name: 'As Made' },
-    fire:  { name: 'Calcined', k: [85, 85, 85, 85, 85, 85, 50, 50], t: ['#FFD08A', '#5A0E08'] },
-    water: { name: 'Dissolved', k: [25, 40, 25, 40, 25, 40, 50, 50], t: ['#CFF0FF', '#0A2440'] },
-    wind:  { name: 'Sublimed',   k: [60, 15, 60, 15, 60, 15, 50, 50], t: ['#F0FFF4', '#2E4A3A'] } },
+    fire:  { name: 'Calcined', k: [85, 85, 85, 85, 85, 85, 50, 50, 50, 50], t: ['#FFD08A', '#5A0E08'] },
+    water: { name: 'Dissolved', k: [25, 40, 25, 40, 25, 40, 50, 50, 50, 50], t: ['#CFF0FF', '#0A2440'] },
+    wind:  { name: 'Sublimed',   k: [60, 15, 60, 15, 60, 15, 50, 50, 50, 50], t: ['#F0FFF4', '#2E4A3A'] } },
 };
 
 
@@ -30263,7 +30274,7 @@ const RELEASE = 'Uranus–Cressida';
 const RELEASE_DATE = '2026-10-20';
 
 const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"cEUC1yq5","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
-const SWATCH_STAMP = 'JaZ-ztYp';
+const SWATCH_STAMP = 'v1-21GxF';
 
 
 /* ==== altText.js ==== */
@@ -30981,7 +30992,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 8de55c8";
+const STAMP = "2026-10-20 · 16849a2";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -32385,7 +32396,7 @@ function surfaceFromDom(){
   const v = id => { const el = $(id); return el ? el.value : undefined; }, chk = (id, d) => { const el = $(id); return el ? !!el.checked : d; };
   const b = $('textureBlend'), ds = (b && b.dataset) || {};
   const ground = ds.ground && ds.groundFor === b.value ? ds.ground : '';
-  return { textureType: v('textureType'), texP1: v('texP1'), texP2: v('texP2'), texP3: v('texP3'), texP4: v('texP4'), texP5: v('texP5'), texP6: v('texP6'), texP7: v('texP7'), texP8: v('texP8'),
+  return { textureType: v('textureType'), texP1: v('texP1'), texP2: v('texP2'), texP3: v('texP3'), texP4: v('texP4'), texP5: v('texP5'), texP6: v('texP6'), texP7: v('texP7'), texP8: v('texP8'), texP9: v('texP9'), texP10: v('texP10'),
     textureOpacity: parseFloat(v('textureOpacity')), textureBlend: v('textureBlend'), textureLight: v('textureLight'),
     textureLightTilt: $('textureLightTilt') ? v('textureLightTilt') : '100',
     cameraTurn: v('cameraTurn'), cameraView: v('cameraView'), cameraZoom: v('cameraZoom'),
@@ -32441,7 +32452,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const p1 = num(L.texP1), p2 = num(L.texP2), p3 = num(L.texP3);
 
   const has = i => (shape ? shape.top : defs.length) >= i;
-  const p4 = has(4) ? num(L.texP4) : null, p5 = has(5) ? num(L.texP5) : null, p6 = has(6) ? num(L.texP6) : null, p7 = has(7) ? num(L.texP7) : null, p8 = has(8) ? num(L.texP8) : null;
+  const p4 = has(4) ? num(L.texP4) : null, p5 = has(5) ? num(L.texP5) : null, p6 = has(6) ? num(L.texP6) : null, p7 = has(7) ? num(L.texP7) : null, p8 = has(8) ? num(L.texP8) : null, p9 = has(9) ? num(L.texP9) : null, p10 = has(10) ? num(L.texP10) : null;
   const accent1 = $('accent1ColorHex').value, accent2 = $('accent2ColorHex').value;
 
   const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom } : undefined;
@@ -32465,7 +32476,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const around = slot !== 'base' || !L.textureTextBlend ? (L.textureTextAware !== false && L.textureShapeAware ? strength : 0) : 0;
     layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S, ...(around ? { around, text: TEXT_LAYOUT } : {}) }));
   } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
-    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera }));
+    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera }));
   } else {
 
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
@@ -32482,7 +32493,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
 
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -33273,7 +33284,7 @@ function swLayer(c, L, w, h){
 
     const blend = L.textureBlend && (caps.blends.includes(L.textureBlend) || CANVAS_BLENDS.includes(L.textureBlend)) ? L.textureBlend : caps.blends[0];
 
-    const opts = { accent1: L.accent1, accent2: L.accent2, seed: (L.textureSeed != null ? L.textureSeed : SWATCH.fallbackSeed), p1: L.texP1, p2: L.texP2, p3: L.texP3, p4: L.texP4, p5: L.texP5, p6: L.texP6, p7: L.texP7, p8: L.texP8,
+    const opts = { accent1: L.accent1, accent2: L.accent2, seed: (L.textureSeed != null ? L.textureSeed : SWATCH.fallbackSeed), p1: L.texP1, p2: L.texP2, p3: L.texP3, p4: L.texP4, p5: L.texP5, p6: L.texP6, p7: L.texP7, p8: L.texP8, p9: L.texP9, p10: L.texP10,
       camera: L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom } : undefined,
       light: L.textureLight != null ? +L.textureLight : 315, lightTilt: L.textureLightTilt != null ? +L.textureLightTilt : undefined,
       tint1: L.textureTint1 || null, tint2: L.textureTint2 || null, tint3: L.textureTint3 || null, tint4: L.textureTint4 || null, tint5: L.textureTint5 || null, tint6: L.textureTint6 || null,
@@ -36404,7 +36415,7 @@ const WIKI_ARTICLES = [
   { id: 'controls', group: 'The page and your graph', title: 'Putting controls on the page', body: `
 <p>A graph is used on the page as the surface <b>From the Athanor</b> (<b>⇱ Apply</b> in the bar puts it there; when you press Done after changing a graph the page doesn’t show, the app asks whether to). The page shows only the controls you give it:</p>
 <ul>
-<li>Each <b>Knob</b> becomes one of the eight sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees and turned on a small dial beside the slider, or a <b>switch</b>, off or on.</li>
+<li>Each <b>Knob</b> becomes one of the ten sliders under Surface, labelled with the Knob’s name. Its <b>Kind</b> makes the slider plain, a few named <b>steps</b> it locks to, an <b>angle</b> read in degrees and turned on a small dial beside the slider, or a <b>switch</b>, off or on.</li>
 <li>Each <b>Hue</b> becomes one of the two hue pickers.</li>
 <li>Each <b>Curve Control</b> becomes a pad under the sliders, where its curve is drawn by hand (two at most).</li>
 <li>The <b>light dial</b> is always there for anything lit.</li>
@@ -37652,7 +37663,7 @@ async function openForge(deps){
           const bindTo = (src, range) => setData(id, { [key]: '@' + src + (range ? `[${range[0]},${range[1]}]` : '') });
           const curRange = bound ? (/\[([^\]]+)\]/.exec(v) || [])[1] : null;
           items.push({ glyph: '◐', label: 'Bind to a page slider', hint: 'it follows one of the eight sliders under Surface Texture, without a wire', sub: () => ({ title: `${label}: bind to a slider`, hint: 'The slider moves it across its range.', items:
-            [1, 2, 3, 4, 5, 6, 7, 8].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
           items.push({ glyph: '☼', label: 'Bind to the light dial', hint: 'it follows the dial\'s direction', act: () => bindTo('dial', curRange && curRange.split(',')) });
           if(port){
             items.push({ glyph: '⟾', label: 'Connect from…', hint: `then ${forgeClick()} the part that should drive it`, act: () => startWire('in', id, 'input_' + port) });
@@ -37683,7 +37694,7 @@ async function openForge(deps){
       const P = (N_(id).params.find(p => p[0] === key) || []), x = P[4] || { min: 0, max: 100 };
       const cur = parseFloat(n.data[key]); const at = isFinite(cur) ? Math.round((cur - x.min)/((x.max - x.min) || 1)*100) : 50;
       const used = new Set(Object.values(rawNodes()).filter(m => m.name === 'knob').map(m => String((m.data || {}).slot || '1')));
-      const slot = ['1', '2', '3', '4', '5', '6', '7', '8'].find(s => !used.has(s)) || '1';
+      const slot = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].find(s => !used.has(s)) || '1';
       const nid = add(kind, n.pos_x - 250, n.pos_y + 10 + (port - 1)*22, kind === 'knob' ? { slot, name: P[1] || 'Amount', def: Math.max(0, Math.min(100, at)) } : {});
       if(nid != null) ed.addConnection(nid, id, 'output_1', 'input_' + port);
     };
@@ -38544,7 +38555,7 @@ async function revealSurface(){
   const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
 
   if(type === 'athanor' && !page){ openAthanorNow(); return; }
-  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8].map(i => ($('texP' + i) || {}).value)));
+  const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
   const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
 
@@ -39529,7 +39540,7 @@ function paintSeedMoon(){
 
 
 /* ==== uiLayers.js ==== */
-const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
+const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureRim', 'textureRimTilt', 'textureAmbient', 'textureTint7', 'textureTint8',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureTint9', 'textureTint10', 'textureTint11', 'textureTint12', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
   'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
@@ -40546,6 +40557,8 @@ function restoreSurfaceDetails(s){
   if(s.texP6 !== undefined) $('texP6').value = s.texP6;
   if(s.texP7 !== undefined) $('texP7').value = s.texP7;
   if(s.texP8 !== undefined) $('texP8').value = s.texP8;
+  if(s.texP9 !== undefined) $('texP9').value = s.texP9;
+  if(s.texP10 !== undefined) $('texP10').value = s.texP10;
   for(const k of [1, 2]) if($('textureCurve' + k)) $('textureCurve' + k).value = s['textureCurve' + k] || '';
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
@@ -40833,6 +40846,8 @@ function applyPreset(p){
   if(p.texP6 !== undefined) $('texP6').value = p.texP6;
   if(p.texP7 !== undefined) $('texP7').value = p.texP7;
   if(p.texP8 !== undefined) $('texP8').value = p.texP8;
+  if(p.texP9 !== undefined) $('texP9').value = p.texP9;
+  if(p.texP10 !== undefined) $('texP10').value = p.texP10;
   syncTextureParams(false);
   if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintMoons(); }
 
@@ -40916,8 +40931,7 @@ function syncTextureParams(useDefaults){
 
 
 
-
-  [0,1,2,3,4,5,6,7].forEach(i=>{
+  [0,1,2,3,4,5,6,7,8,9].forEach(i=>{
     const def = defs[i];
     const row = $('texP'+(i+1)).parentElement;
     const slider = $('texP'+(i+1));
@@ -41165,7 +41179,7 @@ const keptHash = text => { let h = 2166136261; for(let i = 0; i < text.length; i
 function keptOpts(json, n){
   const defs = athanorKnobs(json), knob = i => (defs.find(x => x.slot === i) || {}).def ?? 50;
   return { graph: json, seed: 4242, scale: n/3072, light: 315, lightTilt: 100, tint1: '#F2E6D8', tint2: '#2A2230', accent1: '#E07A8A', accent2: '#7A8AE8', ink: '#F2F2EF',
-    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
+    p1: knob(1), p2: knob(2), p3: knob(3), p4: knob(4), p5: knob(5), p6: knob(6), p7: knob(7), p8: knob(8), p9: knob(9), p10: knob(10), text: graphUsesPoem(json) ? textLayoutNow() : undefined };
 }
 function keptThumb(rec, canvas, unsaved){
   if(!rec || !rec.graph || rec.graph.length < 40) return false;
@@ -41285,7 +41299,7 @@ function skWatch(input, paint){
   input.addEventListener('input', all);
 }
 function repaintSkins(){
-  for(let i = 1; i <= 8; i++){ const input = document.getElementById && document.getElementById('texP' + i); if(input && input._skinPaints) for(const p of input._skinPaints) p(); }
+  for(let i = 1; i <= 10; i++){ const input = document.getElementById && document.getElementById('texP' + i); if(input && input._skinPaints) for(const p of input._skinPaints) p(); }
 }
 
 
@@ -41508,7 +41522,7 @@ function getRackMode(){ return skRackMode; }
 function layoutControls(){
   const fold = typeof document !== 'undefined' && document.getElementById && document.getElementById('texControls');
   if(!fold || !fold.classList || typeof document.createElementNS !== 'function') return;
-  const fields = [1, 2, 3, 4, 5, 6, 7, 8].map(i => { const input = document.getElementById('texP' + i), field = input && input.parentElement;
+  const fields = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => { const input = document.getElementById('texP' + i), field = input && input.parentElement;
     return { i, input, field, shown: !!field && field.style.display !== 'none', ticks: skTicks(input).length, declared: input._skinAs || null }; }).filter(f => f.input && f.field);
   const plan = rackPlan(fields, fold.clientWidth || 360, skRackMode);
   fold.classList.toggle('rack', plan.some(p => p.as !== 'row'));
@@ -41867,7 +41881,7 @@ function refreshUi(){
   run(() => syncSeedWords(false));
   run(() => { for(const ch of CHOOSERS) ch.refresh(); });
   run(refreshHints);
-  run(() => { for(let i = 1; i <= 8; i++) paintKnobDial($('texP' + i)); });
+  run(() => { for(let i = 1; i <= 10; i++) paintKnobDial($('texP' + i)); });
   run(paintCurves);
 }
 
@@ -41919,7 +41933,7 @@ toggleSubblock('textureToggle','textureBlock');
 
 
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
-  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex', 'textureTint9Hex', 'textureTint10Hex', 'textureTint11Hex', 'textureTint12Hex']);
+  'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex', 'textureTint9Hex', 'textureTint10Hex', 'textureTint11Hex', 'textureTint12Hex']);
 for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
 if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
@@ -42404,7 +42418,7 @@ for(const k of [1, 2]){
   if(reset && reset.addEventListener) reset.addEventListener('click', () => { $('textureCurve' + k).value = ''; paintCurvePad(k); scheduleRender(); commitSoon(); });
 }
 
-['texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8'].forEach(id=>{
+['texP1','texP2','texP3','texP4','texP5','texP6','texP7','texP8','texP9','texP10'].forEach(id=>{
   $(id).addEventListener('input', ()=>{
     draftWhileDragging();
     const defs = paramsFor($('textureType').value);

@@ -68,7 +68,7 @@ check('opened from the top bar; a full-screen editor',
   check('the cache knows the graph (positions don\'t count)', C.athanorHash(graph) !== C.athanorHash('') && C.athanorHash(graph) === C.athanorHash(graph.replace(/"data"/, '"data"')));
   const T = await import('../textureGenerators.js');
   check('the Athanor is a surface like any other: its own Surface Variant, keyed by its graph',
-    T.TEXTURE_PARAMS.athanor.length === 8 && T.textureKeyFor('athanor', 10, 10, { graph }) !== T.textureKeyFor('athanor', 10, 10, { graph: '' })
+    T.TEXTURE_PARAMS.athanor.length === 10 && T.textureKeyFor('athanor', 10, 10, { graph }) !== T.textureKeyFor('athanor', 10, 10, { graph: '' })
     && html.includes('<option value="athanor" id="athanorOption">'));
   check('the page names its sliders and hues from the graph, before a look\'s knobs are restored',
     /function applyAthanorGraph\(redraw = true\)\{/.test(ev) && ev.indexOf("if(s.forgeGraph !== undefined && $('forgeGraph'))") < ev.indexOf('syncTextureParams(true);\n  syncTextureTools(true);'));

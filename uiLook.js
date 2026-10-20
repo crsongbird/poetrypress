@@ -490,6 +490,8 @@ function restoreSurfaceDetails(s){
   if(s.texP6 !== undefined) $('texP6').value = s.texP6;
   if(s.texP7 !== undefined) $('texP7').value = s.texP7;
   if(s.texP8 !== undefined) $('texP8').value = s.texP8;
+  if(s.texP9 !== undefined) $('texP9').value = s.texP9;
+  if(s.texP10 !== undefined) $('texP10').value = s.texP10;
   for(const k of [1, 2]) if($('textureCurve' + k)) $('textureCurve' + k).value = s['textureCurve' + k] || '';
   syncTextureParams(false);
   if(s.textureOpacity!==undefined){ $('textureOpacity').value=s.textureOpacity; paintMoons(); }
@@ -777,6 +779,8 @@ export function applyPreset(p){
   if(p.texP6 !== undefined) $('texP6').value = p.texP6;
   if(p.texP7 !== undefined) $('texP7').value = p.texP7;
   if(p.texP8 !== undefined) $('texP8').value = p.texP8;
+  if(p.texP9 !== undefined) $('texP9').value = p.texP9;
+  if(p.texP10 !== undefined) $('texP10').value = p.texP10;
   syncTextureParams(false);
   if(p.textureOpacity!==undefined){ $('textureOpacity').value=p.textureOpacity; paintMoons(); }
 

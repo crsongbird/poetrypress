@@ -950,7 +950,7 @@ export async function openForge(deps){
           const bindTo = (src, range) => setData(id, { [key]: '@' + src + (range ? `[${range[0]},${range[1]}]` : '') });
           const curRange = bound ? (/\[([^\]]+)\]/.exec(v) || [])[1] : null;
           items.push({ glyph: '◐', label: 'Bind to a page slider', hint: 'it follows one of the eight sliders under Surface Texture, without a wire', sub: () => ({ title: `${label}: bind to a slider`, hint: 'The slider moves it across its range.', items:
-            [1, 2, 3, 4, 5, 6, 7, 8].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(k => ({ glyph: String(k), label: `Slider ${k}`, act: () => bindTo('k' + k, curRange && curRange.split(',')) })) }) });
           items.push({ glyph: '☼', label: 'Bind to the light dial', hint: 'it follows the dial\'s direction', act: () => bindTo('dial', curRange && curRange.split(',')) });
           if(port){
             items.push({ glyph: '⟾', label: 'Connect from…', hint: `then ${forgeClick()} the part that should drive it`, act: () => startWire('in', id, 'input_' + port) });
@@ -981,7 +981,7 @@ export async function openForge(deps){
       const P = (N_(id).params.find(p => p[0] === key) || []), x = P[4] || { min: 0, max: 100 };
       const cur = parseFloat(n.data[key]); const at = isFinite(cur) ? Math.round((cur - x.min)/((x.max - x.min) || 1)*100) : 50;
       const used = new Set(Object.values(rawNodes()).filter(m => m.name === 'knob').map(m => String((m.data || {}).slot || '1')));
-      const slot = ['1', '2', '3', '4', '5', '6', '7', '8'].find(s => !used.has(s)) || '1';
+      const slot = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].find(s => !used.has(s)) || '1';
       const nid = add(kind, n.pos_x - 250, n.pos_y + 10 + (port - 1)*22, kind === 'knob' ? { slot, name: P[1] || 'Amount', def: Math.max(0, Math.min(100, at)) } : {});
       if(nid != null) ed.addConnection(nid, id, 'output_1', 'input_' + port);
     };

@@ -299,9 +299,9 @@ export const TEXTURE_PARAMS = {
                   // drips, and the faint wash inside the ring
                   sliderOf('form', 'Spill', 35)],
   // THE ATHANOR: a surface made in the node editor. Its knobs are the
-  // graph's Knob nodes (the page relabels them from the graph; here, eight
+  // graph's Knob nodes (the page relabels them from the graph; here, ten
   // plain ones, so a request always has its values)
-  athanor:      [1,2,3,4,5,6,7,8].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
+  athanor:      [1,2,3,4,5,6,7,8,9,10].map(i => ({ key:'k'+i, label:'Knob '+i, min:0, max:100, def:50, unit:'' })),
   guilloche:     [sliderOf('zoom', 'Rosette Size', 100, { min:50, max:250, unit:'%' }),
                   sliderOf('amt', 'Line Density', 100, { min:30, max:200, unit:'%' }),
                   // how many lobes each rosette turns: a few broad petals → a fine crown

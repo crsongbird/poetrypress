@@ -244,7 +244,7 @@ export function athanorCamera(graph){
  *  slot a part on the way binds ('@k3'); a Knob left unwired offers nothing (it would move nothing). */
 export function athanorKnobs(graph){
   const out = [], reach = athanorReach(graph), all = athanorFlat(graph).nodes;
-  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k([1-8])/.exec(v); if(m) boundSlots.add(+m[1]); }
+  const boundSlots = new Set(); for(const id of reach) for(const v of Object.values((all[id] || {}).data || {})){ const m = typeof v === 'string' && /^@k(10|[1-9])/.exec(v); if(m) boundSlots.add(+m[1]); }
   for(const n of Object.values(all)){
     if(n.name !== 'knob') continue;
     if(!reach.has(String(n.id)) && !boundSlots.has(Math.max(1, Math.min(8, parseInt((n.data || {}).slot, 10) || 1)))) continue;
@@ -256,7 +256,7 @@ export function athanorKnobs(graph){
   }
   // a param bound to a slider ('@k3') offers that slider, named after the param
   for(const n of Object.values(all)) if(reach.has(String(n.id))) for(const [k, v] of Object.entries(n.data || {})){
-    const m = typeof v === 'string' && /^@k([1-8])/.exec(v); if(!m) continue;
+    const m = typeof v === 'string' && /^@k(10|[1-9])/.exec(v); if(!m) continue;
     const slot = +m[1]; if(out.find(q => q.slot === slot)) continue;
     const part = ((STEPS[n.name] || {}).params || []).find(q => q[0] === k);
     out.push({ slot, label: String(part ? part[1] : 'Knob ' + slot).slice(0, 24), def: 50 });
@@ -294,7 +294,7 @@ export function athanorHash(graph){
 
 /**
  * The graph as a picture: { r, g, b } fields on a ww × wh grid, or null when
- * there is no Surface to show. ctx: { knobs: [eight 0..100], tints: [hex, hex],
+ * there is no Surface to show. ctx: { knobs: [ten 0..100], tints: [hex, hex],
  * light (degrees), seed, scale, and what the page gives: text, aware, fill, around, camera, page (the export's
  * [w, h], for a part laid out in whole cells) }. deps.texture(type, w, h, opts) → a canvas.
  */
@@ -383,7 +383,7 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
   const P = (n, k, d) => { const v = (n.data || {})[k]; return v === undefined || v === '' ? d : v; };
   // a param bound to a slider or the dial ('@k2', '@k2[10,700]', '@dial', '@tilt')
   const bound = (n, k, s, d) => {
-    const m = /^@(k[1-8]|dial|tilt)(?:\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\])?$/.exec(s.trim()); if(!m) return d;
+    const m = /^@(k10|k[1-9]|dial|tilt)(?:\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\])?$/.exec(s.trim()); if(!m) return d;
     const r = m[2] != null ? [+m[2], +m[3]] : null;
     if(m[1] === 'dial'){ const deg = ((ctx.light ?? 315) % 360 + 360) % 360; return r ? r[0] + (r[1] - r[0])*deg/360 : deg; }
     if(m[1] === 'tilt'){ const t = ctx.lightTilt ?? 100; return r ? r[0] + (r[1] - r[0])*t/130 : t; }
