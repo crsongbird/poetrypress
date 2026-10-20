@@ -1247,7 +1247,7 @@ body.is-mobile.focus-mode .drag-handle{
    fields. Stacked they wasted the width beside the pad, so on mobile the pad
    takes the left column and the fields stack to its right. */
 body.is-mobile .tool-row{
-  display:grid;
+  
   
   align-items:start;
 }
@@ -1354,10 +1354,6 @@ body.is-mobile #clr-picker{
     grid-template-columns:auto minmax(0,1fr);
      row-gap:4px;
   }
-  body.is-mobile .tool-row > .field:not(#lightRow){
-    border-left:1px solid color-mix(in srgb, var(--line) 80%, transparent);
-    padding-left:12px; 
-  }
   body.is-mobile .tool-row .field label{
     display:flex; align-items:center; gap:4px; 
     overflow:hidden;  font-size:11px;
@@ -1398,7 +1394,7 @@ body.is-mobile #clr-picker::-webkit-scrollbar{ display:none; }
    and the hue and seed fields stacked on the right at full width */
 body.is-mobile .tool-row{ grid-template-columns:auto minmax(0,1fr); column-gap:12px; }
 body.is-mobile .tool-row > #lightRow{
-  padding-right:12px;
+  
   
   align-self:stretch;
 }
@@ -1688,7 +1684,7 @@ body.is-mobile #clr-picker #clr-close{ display:block; width:calc(100% - 20px); m
 body.is-mobile .tool-row{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
 /* (the dial spans the rows of hues beside it; the last row is the slack, so a tall dial never spreads the hues apart) */
 body.is-mobile .tool-row:not(.has-camera){ grid-template-rows:repeat(9, auto) 1fr; }
-body.is-mobile .tool-row > #lightRow{ grid-column:1; grid-row:1 / span 10; }
+body.is-mobile .tool-row > #lightRow{ grid-column:1;  }
 body.is-mobile .tool-row > #seedRow{   padding-right:12px;   }
 /* one rule between the halves: the hues' own left edge (no second one beside it) */
 body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }
@@ -2416,7 +2412,6 @@ body.is-mobile .lock-btn::after, body.is-mobile .die-btn::after, body.is-mobile 
 /* THE HUES' GROUP HEADINGS (Light, Surface, Material Colors): a small caps line across the hues' column (both columns
    where the hues stand in two) */
 .tool-row > .field.hue-head{ grid-column:1 / -1 !important; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); opacity:.85; margin:6px 0 -2px; padding-top:0; padding-bottom:0; border-left:none !important; }
-body.is-mobile .tool-row > .field.hue-head{ grid-column:2 !important; }
 body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !important; }
 
 /* THE SURFACE'S CONTROLS: its sliders and curves under one drop-down heading (Opacity stays outside it) */
@@ -2476,7 +2471,8 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .controls-fold.rack > .fold-body > .field.as-knob > .dice-btn{ left:auto; right:-4px; top:0; transform:none; }
 .controls-fold.rack > .fold-body > .field.as-knob > .knob-dial{ display:none !important; }
 .field.hidden-off{ display:none !important; }
-.controls-fold.rack > .fold-body > .field:focus-within .sk-knob svg, .controls-fold.rack > .fold-body > .field:focus-within .sk-strip{ outline:1px dotted var(--accent-2); outline-offset:2px; }
+/* (the keyboard's focus only: a finger or a mouse holding a control draws no box round it, Ruby: "remove that blue selection box") */
+.controls-fold.rack > .fold-body > .field:has(> input:focus-visible) .sk-knob svg, .controls-fold.rack > .fold-body > .field:has(> input:focus-visible) .sk-strip{ outline:1px dotted var(--accent-2); outline-offset:2px; }
 
 .sk-knob{ order:1; width:60px; height:60px; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
 .sk-knob svg{ width:100%; height:100%; overflow:visible; display:block; }
@@ -2499,7 +2495,7 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .field-locked .snap-btn{ opacity:.25; pointer-events:none; }
 
 .sk-fader{ display:flex; align-items:stretch; justify-content:center; gap:2px; height:100%; min-height:120px; }
-.sk-strip{ width:30px; height:100%; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
+.sk-strip{ width:48px; padding:0 9px; margin:0 -9px; height:100%; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
 .sk-strip svg{ width:100%; height:100%; display:block; overflow:visible; }
 .sk-fader .sk-arc{ stroke-width:3.4; }
 .sk-cap line{ stroke:var(--text-main); stroke-width:1.4; stroke-linecap:round; }

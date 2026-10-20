@@ -212,7 +212,7 @@ check('importing the same spell twice does not duplicate it',
 {
   // (the camera taken out: an old look of a surface with a camera, saved before it, has none)
   const base = save(), { lookVersion, cameraTurn, cameraView, cameraZoom, ...old } = base;
-  check('a look says which format it was saved in', base.lookVersion === 9);
+  check('a look says which format it was saved in', base.lookVersion === 10);
   // (format 9: Floral Imprints' sixth slider became its Medium, its ink hues moved to the first two, the defaults emptied)
   load({ ...old, lookVersion: 8, texture: true, textureType: 'imprints', texP6: '70', textureTint2: '#1F4E8C', textureTint12: '#AA2200' });
   { const b = save(); check('an old Floral Imprints look: its Medium starts By the Seed, its default ink is the medium\'s own, a chosen second ink kept', b.texP6 === '0' && b.textureTint1 === '' && /^#AA2200$/i.test(b.textureTint2)); }

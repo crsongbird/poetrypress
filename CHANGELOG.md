@@ -10,6 +10,8 @@ prints it).
   column, and every knob beside it moved; the columns are now a fixed width. The display line keeps its room and only
   fades in and out. A value is said once: on the display line while the control moves, at the fader's foot otherwise.
   The Controls heading counts its sliders only while it is closed.
+- **Sliders that pick a kind** (a species, a world, a fabric) hold to their marks from the start (⊹ frees them), a
+  fader is easier to take hold of, and nothing draws a box round a control your finger is on.
 - **Knobs turn as a thumb moves round them**, in an arc: the angle swept about a knob's middle turns it by as much
   (near the middle, up and down still works).
 - **Up to ten sliders a surface**, where the rack uses the room well; an Athanor graph's Knob has slots 1–10.
