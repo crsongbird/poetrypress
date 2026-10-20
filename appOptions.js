@@ -719,7 +719,7 @@ export const TEXTURE_GROUPS = [
   { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'liminal', 'cityscape', 'landscape', 'water', 'inkscroll', 'windsea'] },
   { glyph: 'ᘓ', name: 'Flowers', types: ['botline', 'bouquets', 'ditsy', 'petals', 'imprints', 'meadow', 'flowers', 'macro'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
-  { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['crystal', 'crackle', 'kintsugi', 'spangle', 'wax', 'metalleaf', 'stainedglass', 'underglass', 'brokenglass'] },
+  { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['crystal', 'drapery', 'crackle', 'kintsugi', 'spangle', 'wax', 'metalleaf', 'stainedglass', 'underglass', 'brokenglass'] },
   { glyph: '🝓', name: 'Pattern & Order', types: ['mathnoise', 'chladni', 'circuit', 'tessellate', 'guilloche', 'halftone', 'knotwork'] },
   { glyph: '🝆', name: 'Grown & Generated', types: ['lichtenberg', 'growth', 'moss', 'turing', 'veins'] },
   { glyph: '⎐', name: 'Signs, Sigils & Cards', types: ['cards', 'sigils', 'summoning'] },

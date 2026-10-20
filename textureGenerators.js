@@ -233,6 +233,9 @@ export const TEXTURE_CAPS = {
   // Old Paper: Foxing and Fold Ghost, merged (see genOldPaper)
   oldpaper:      { blends:ledBlends('multiply', GREY_BLENDS), material:true, ground:'grey', light:true, tints:2,
                    tintLabels:['Age Hue','Mold Hue'], tintDefaults:['#8A6A3C','#5F6A4E'] },
+  // a sheet of cloth simulated as it hangs, lit from its maps (stepsCloth.js): its warp, its weft, what is behind it
+  drapery:   { blends:['source-over','multiply','overlay','soft-light','hard-light','luminosity','screen','lighten','darken'], material:true, light:true, tints:3,
+                   tintLabels:['Warp Hue','Weft Hue','Ground Hue'], tintDefaults:['#C9B7A0','#A8957C','#24202A'] },
   // looking into a crystal (genCrystalLeaf): its own colours, lit
   crystal:   { blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
                    tintLabels:['Crystal Hue','Inclusion Hue'], tintDefaults:['#B9A6D8','#D9A441'] },
@@ -329,10 +332,10 @@ for(const [type, why] of Object.entries(GLOWS)) TEXTURE_CAPS[type].hue5 = { labe
 // DIFFUSE (the light's own colour) where nothing else already says it: not
 // where a texture has its own Sun or Light hue, and not on grey textures
 // (their Light hue colours the lit marks)
-for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal']) TEXTURE_CAPS[t].diffuse = true;
+for(const t of ['kintsugi', 'moss', 'wax', 'spangle', 'crackedglaze', 'crackle', 'crystal', 'drapery']) TEXTURE_CAPS[t].diffuse = true;
 // lit by the engine (lightHeights / lightSparse): the dial may be pulled past
 // its rim for lower, rakier light than 12° (to 4°). The rest keep the rim.
-for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit',
+for(const t of ['brushstrokes', 'crackedglaze', 'crackle', 'sigils', 'tessellate', 'coldpress', 'crystal', 'drapery', 'cupring', 'dunes', 'glassrain', 'kintsugi', 'linen', 'moss', 'oldpaper', 'wax', 'spangle', 'ash', 'turing', 'frost', 'contour', 'guilloche', 'stainedglass', 'circuit',
   'veins', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'rainwater']) TEXTURE_CAPS[t].lowLight = true;   // (the last seven from the lighting audit: engine-lit, rigged, held at the rim)
 // THE DIAL AS A DIRECTION ONLY: where a texture reads only which way the dial points (a wind, a hatch, a flow), its
 // Height means nothing and the page hides it (the usability review: "Reach %" beside Hatch Direction). Measured, not
@@ -343,7 +346,7 @@ for(const t of ['aurorasky', 'aurora', 'snow', 'rainstreaks', 'hatch', 'suminaga
 // under them (texCore withLightRig); the rest draw as they always did and never show them. (Linen Tooth, Stained Glass
 // and Rain on Glass changed too little to offer them; the Ringworlds' dial is the day. Crystal's facets take them since its
 // kept structure is keyed on them: before, its cache showed the light it was first made with.)
-for(const t of ['crystal', 'circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
+for(const t of ['crystal', 'drapery', 'circuit', 'veins', 'crackle', 'knotwork', 'lichtenberg', 'growth', 'cells', 'landscape', 'brushstrokes', 'rainwater', 'sigils', 'crackedglaze',
   'oldpaper', 'spangle', 'tessellate', 'coldpress', 'guilloche', 'contour', 'turing', 'frost', 'ash', 'wax', 'dunes', 'kintsugi', 'moss']) TEXTURE_CAPS[t].rig = true;
 TEXTURE_CAPS.snow.hue5 = { label: 'Snow Hue', role: 'base', def: '#FFFFFF', why: 'the color of the flakes' };
 for(const c of Object.values(TEXTURE_CAPS)) if(c.genericTint && !c.hue5) c.hue5 = { label: 'Ground Hue', role: 'ground', def: '#808080', why: 'the surface itself, between its light and dark marks' };
@@ -412,7 +415,7 @@ const CHAIN_TINTS = {
   ...chainTintSet('tint1 tint2', ['lightleaks', 'feathers', 'flowers', 'inkbleed', 'crackedglaze', 'bokeh', 'tessellate', 'rainstreaks']),
   ...chainTintSet('tint1 tint2', ['veins', 'crackle', 'lichtenberg', 'growth', 'linen', 'oldpaper', 'stainedglass', 'suminagashi']),
   ...chainTintSet('tint1 tint2', ['skyring', 'ringpaint', 'ringworld', 'rainwater', 'ash', 'dunes', 'kintsugi', 'moss']),
-  ...chainTintSet('tint1 tint2', ['landscape', 'cityscape', 'aurora', 'cards', 'metalleaf', 'crystal']),
+  ...chainTintSet('tint1 tint2', ['landscape', 'cityscape', 'aurora', 'cards', 'metalleaf', 'crystal', 'drapery']),
   ...chainTintSet('tint1 tint2|#E8A0B8', ['macro']),
   ...chainTintSet('accent1 accent2', ['embers', 'magicparticles', 'circuit']),
   ...chainTintSet('', ['snow', 'glassrain', 'halftone', 'knotwork', 'aurorasky', 'plainnoise', 'stripes', 'polka']),

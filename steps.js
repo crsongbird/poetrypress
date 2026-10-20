@@ -41,6 +41,7 @@ import { SHARP_STEPS } from './stepsSharpness.js';
 import { CHAOS_STEPS } from './stepsChaos.js';
 import { GEN_STEPS } from './stepsGenerative.js';
 import { RING_STEPS } from './stepsRing.js';
+import { CLOTH_STEPS } from './stepsCloth.js';
 import { ROOM_STEPS } from './stepsRoom.js';
 import { FLORA_STEPS } from './stepsFlora.js';
 import { NETWORK_STEPS } from './stepsNetwork.js';
@@ -1053,7 +1054,7 @@ const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String
 /** Every step: the part, its cost and what it does. */
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) => [k, { ...part, cost: part.cost || (() => 1) }])),
   // the surfaces' own steps (each file a family; their parts carry their own cost and run)
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...STREAMER_STEPS, ...LENS_STEPS, ...IMPRINT_STEPS, ...SPECIMEN_STEPS, ...GRASS_STEPS, ...PATTERN_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...CLOTH_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...STREAMER_STEPS, ...LENS_STEPS, ...IMPRINT_STEPS, ...SPECIMEN_STEPS, ...GRASS_STEPS, ...PATTERN_STEPS };
 export const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = s.io || {};
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);

@@ -314,6 +314,7 @@ export const UI_STRINGS = {
   'option.linen_tooth':                        "Linen Tooth",
   'option.cold_press':                         "Cold Press",
   'option.crystal_leaf':                       "Crystal Leaf",
+  'option.drapery':                            "Drapery",
   'option.metal_spangle':                      "Metal Spangle",
   'option.old_paper':                          "Old Paper",
   'option.cup_ring':                           "Cup Ring",

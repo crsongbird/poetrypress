@@ -24,7 +24,7 @@ const WORKING_WORDS = {
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
   tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', inkscroll: 'Grinding the ink', windsea: 'Raising the sail', botline: 'Inking the stems', ditsy: 'Printing the cloth', macro: 'Focusing the lens', meadow: 'Walking into the meadow', petals: 'Letting the petals fall', bouquets: 'Gathering the flowers', imprints: 'Pressing the flowers', liminal: 'Finding the way back', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
-  crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
+  crystal: 'Growing the crystals', drapery: 'Hanging the cloth', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',
   water: 'Stilling the pool', glassrain: 'Beading the glass', rainwater: 'Letting the rain fall', ringworld: 'Raising the arch', ringpaint: 'Painting the ring', skyring: 'Hanging the ring', frost: 'Growing the frost', contour: 'Surveying the contours',
   watercolour: 'Wetting the wash', athanor: 'Stoking the athanor', athanorsteps: 'Showing each step', saving: 'Pressing the page at full size',

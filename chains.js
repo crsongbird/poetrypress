@@ -578,6 +578,27 @@ export const TEXTURE_CHAINS = {
       ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 1440, 140]],   // 12
     wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'clarity'], [3, 1, 8, 'fire'], [4, 1, 8, 'phantoms'], [5, 1, 8, 'inclusions'], [6, 1, 8, 2], [7, 1, 8, 3],
       [8, 1, 10, 1], [8, 2, 10, 2], [8, 3, 10, 3], [8, 7, 10, 10], [8, 4, 9, 1], [9, 1, 10, 'translucency'], [10, 1, 11, 1], [8, 5, 11, 2], [11, 1, 12, 1]] },
+  // ✋ Drapery: a sheet of cloth simulated as it hangs or falls, its weave following the folds, lit from its maps
+  drapery: { label: 'Drapery', teach: 'A sheet of cloth, simulated: Drape hangs it (from a rod in gathers, from two corners, from one, twisted, or seen from above over a hidden form, crumpled, or laid flat) and lets it settle under its own weight as real cloth does, its stiffness by the Fabric (silk makes many small folds, canvas and burlap a few broad ones). It hands on maps, not a picture: the Height of every fold, the Normals (which way each point faces), and U and V, where each point of the cloth came from on the flat sheet. Weave Maps lays threads over and under along U and V, so the weave bends round every fold and fades where a fold\'s wall turns it too fine to see; its Tone colours the warp and the weft through a Gradient Map from your two hues. Detail Normals lays the threads\' relief over the folds\' facing, and a Light Engine lights it all from the Light Dial, its Gloss from the threads (satin and silk shine, burlap does not), its gaps letting the light through. Try: Fabric on Satin and Hang on From Two Corners, then turn the Light Dial.', nodes: [
+      ['knob', { slot: '1' }, 40, 40],                // 1  Fabric
+      ['knob', { slot: '2' }, 40, 140],               // 2  Hang
+      ['knob', { slot: '3' }, 40, 240],               // 3  Folds
+      ['knob', { slot: '4' }, 40, 340],               // 4  Threads
+      ['knob', { slot: '5' }, 40, 440],               // 5  Wrinkles
+      ['hue', { slot: '1', name: 'Warp Hue' }, 40, 560],                    // 6
+      ['hue', { slot: '2', name: 'Weft Hue' }, 40, 640],                    // 7
+      ['hue', { slot: '3', name: 'Ground Hue' }, 40, 720],                  // 8
+      ['drape', { fabric: 39, '~fabric': '0,100', hang: 7, '~hang': '0,100', folds: 50, '~folds': '0,100', detail: 40, wrinkles: 50, '~wrinkles': '0,100' }, 320, 60],   // 9
+      ['weavemaps', { fabric: 39, '~fabric': '0,100', threads: 250, '~threads': '25,400' }, 600, 60],   // 10
+      ['gradmap', {}, 880, 40],                                                    // 11 (the weft's hue to the warp's)
+      ['detailnormals', { strength: 18 }, 880, 200],                               // 12 (the threads' relief over the folds' facing)
+      ['material', { relief: 100, gloss: 40, shine: 22, shadow: 55, occlusion: 60, ambient: 30, translucency: 15 }, 1160, 60],   // 13
+      ['blend', { mode: 'normal', opacity: 100 }, 1440, 120],                      // 14 (the cloth over the ground behind it)
+      ['surface', { name: 'Drapery', ground: 'colour' }, 1720, 140]],   // 15
+    wires: [[1, 1, 9, 'fabric'], [1, 1, 10, 'fabric'], [2, 1, 9, 'hang'], [3, 1, 9, 'folds'], [4, 1, 10, 'threads'], [5, 1, 9, 'wrinkles'],
+      [9, 3, 10, 1], [9, 4, 10, 2], [10, 3, 11, 1], [7, 1, 11, 2], [6, 1, 11, 3], [9, 2, 12, 1], [10, 1, 12, 2],
+      [11, 1, 13, 1], [9, 1, 13, 2], [10, 2, 13, 3], [12, 1, 13, 10], [10, 4, 13, 'translucency'],
+      [8, 1, 14, 1], [13, 1, 14, 2], [9, 6, 14, 3], [14, 1, 15, 1]] },
   suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
       ['knob', { slot: '1' }, 40, 40],                // 1  (100 of 50–250)
       ['knob', { slot: '2' }, 40, 140],                // 2  (100 of 30–250)

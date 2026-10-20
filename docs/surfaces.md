@@ -244,6 +244,28 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - `landScene(seed, …)` is the shared scene.
   - Color keeps the grey painting's value and sets only its hue
     (`landPalette`). Color 0 is exactly the grey of before.
+- **Drapery** (chain `drapery`, stepsCloth.js; Ruby: "replace those with node graphs and run a full cloth
+  simulation"; docs/prior-art/cloth.md): Drape → Weave Maps (along its U and V) → a Gradient Map of the Tone
+  (weft hue to warp hue) → Detail Normals (the threads over the folds' facing) → Light Engine (Relief 100, the
+  threads' Gloss, their Gaps as Translucency) → Blend over the Ground Hue where the Cloth is.
+  - **The simulation** (`clSettle`) is XPBD as Ten Minute Physics teaches it: structural, shear and skip-one
+    bending distance constraints, Gauss–Seidel in a fixed order, tethers to the pins (a hanging sheet would
+    stretch about a third without them), 2 substeps × 5 iterations, damped and clamped, 80 frames (110 seen from
+    above). Float64 and no sin, cos or exp inside the loop (they round differently between browsers, and a
+    settle amplifies it): every start shape is made with parabolas and half-angle tangents. Structural
+    constraints give a little in compression (Marvelous Designer's Buckling Ratio), so folds form crisply.
+  - It is kept per hang, fabric, folds, detail, shape and seed (`CL_KEPT`): a light, hue or weave changed never
+    simulates again. About 0.5 s for the default sheet in Node.
+  - **Seeing it** (`clRaster`): Catmull-Rom through the particles, three times finer, rasterized with a z-buffer;
+    hanging sheets fill the page (a curtain is the page), the rest are framed with room round them. Normals are
+    the mesh's own (never rebuilt from the depth: they are exact across a fold's edge); the height is the true
+    depth in pixels, so the Light Engine's shadows fall where they would.
+  - **Wrinkles** too fine for the particles are drawn where the cloth is gathered more than its folds take up,
+    across the way it is gathered, their size by the fabric's stiffness (fold width ∝ bending^¼), their phase
+    wandering and their length limited by noise, so they never read as ruled lines.
+  - **Weave Maps** (`clWeave`): a draft per fabric (plain, 3/1 twill, 5-harness satin, basket, herringbone),
+    threads across the cloth by the fabric (burlap 32, silk 420), slub, gaps and fuzz; where a thread falls under
+    about 1.2 pixels it fades to its average (no moiré on a fold's steep wall).
 - **Painted Ringworld** (chain `ringpaint`, canvas, stepsRing.js; Ruby: "a
   generative art piece that still looks like being on a ringworld … the same
   logic as the 3D generator but 2D", and of the flat style, "simplified, but
