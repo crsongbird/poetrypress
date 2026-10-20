@@ -2347,7 +2347,8 @@ body.is-mobile .ch-grid{ grid-template-columns:repeat(auto-fill, minmax(84px, 1f
 /* THE PRESET GRID's search, and its groups that fold */
 /* the preset level's actions, three across above the presets (two lines on a phone if they must) */
 .preset-actions{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin:0 0 8px; }
-.preset-actions button.ghost{ padding:6px 4px; line-height:1.25; white-space:normal; }
+.preset-actions button.ghost{ padding:6px 4px; line-height:1.25; white-space:normal; font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; font-size:13px; }
+body.is-mobile .preset-actions button.ghost{ font-size:clamp(11px,2.9vw,13px); letter-spacing:0.04em; }
 .preset-actions button.ghost[aria-pressed="true"]{ color:var(--text-main); border-color:var(--accent); background:color-mix(in srgb, var(--accent) 20%, transparent); }
 .preset-search{ width:100%; margin:0 0 6px; min-height:36px; }
 input.preset-search{ font-size:14px; }
