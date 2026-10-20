@@ -2343,8 +2343,9 @@ select.ch-native{ position:absolute !important; width:1px !important; height:1px
 .ch-panel input.ch-search{ width:auto; }
 .ch-close{ flex:0 0 40px; min-height:36px; background:none; border:1px solid var(--line); color:var(--text-dim); cursor:pointer; font-size:14px; }
 .ch-close:hover{ color:var(--text-main); border-color:var(--accent-dim); }
-.ch-body{ overflow:auto; overscroll-behavior:contain; padding:2px 8px 10px; flex:1 1 auto; min-height:0; }
-.ch-group > summary{ display:flex; align-items:center; gap:7px; padding:9px 2px 7px; cursor:pointer; list-style:none; position:sticky; top:0; z-index:1;
+.ch-body{ overflow:auto; overscroll-behavior:contain; padding:0 8px 10px; flex:1 1 auto; min-height:0; }
+/* (a group's name stays at the top as its tiles pass beneath; its shadow above covers the sliver some browsers leave over it) */
+.ch-group > summary{ display:flex; align-items:center; gap:7px; padding:9px 2px 7px; cursor:pointer; list-style:none; position:sticky; top:0; z-index:1; box-shadow:0 -10px 0 var(--bg-panel);
   background:var(--bg-panel); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); border-radius:0; }
 .ch-group > summary::-webkit-details-marker{ display:none; }
 .ch-group > summary::before{ content:'▸'; display:inline-block; width:10px; color:var(--text-dim); transition:transform .12s; }
