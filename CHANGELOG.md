@@ -30,6 +30,8 @@ prints it).
   corners, from one, twisted, or seen from above over a hidden form, crumpled, laid flat) in nine fabrics, silk to
   velvet. Its weave follows every fold, and the Light Engine lights it from its maps: satin shines, burlap doesn't,
   light comes through the gaps. New parts for any graph: Drape, Weave Maps and Detail Normals.
+- **The sun can slip behind Saturn.** Turn the light dial until the sun meets it: Saturn turns its night side to you,
+  ringed with lit air, its rings backlit and shining, a bead of light where the sun slips out.
 - **The 3D Ringworld is retired**: it led to the Painted Ringworld, which takes its place. Looks made with it open as
   the Painted Ringworld, keeping their band, landforms, altitude, builders, camera and day.
 - **Cartomancy on the Light Engine**: the table always blended over the page's own backdrop, the cards and coins lit

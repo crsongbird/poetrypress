@@ -406,8 +406,10 @@ export function setKnobTicks(slider, i, def){
     if(slider.dataset) slider.dataset.ticks = def.ticks.join(',');
     addAngleSnap(slider);                       // the same toggle, set to lock to ticks
     if(btn()){ btn().textContent = '⊹'; btn().title = 'Lock to the marks'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); btn()._ticks = true; }
-    // (a Knob of steps or a switch is locked to its marks from the start)
-    if(def.snap && slider.dataset){ slider.dataset.snapTicks = '1'; if(btn()) btn().setAttribute('aria-pressed', 'true'); }
+    // (a Knob of steps or a switch, and a slider whose marks are named kinds (a species, a world, a fabric), is locked to
+    //  its marks from the start: between two kinds there is nothing to choose. Ruby: "notch-lock these kinds of sliders by
+    //  default"; the ⊹ frees it)
+    if((def.snap || (def.names && def.names.length)) && slider.dataset){ slider.dataset.snapTicks = '1'; if(btn()) btn().setAttribute('aria-pressed', 'true'); }
   } else { if(slider.removeAttribute) slider.removeAttribute('list'); hideBtn(); }
   // 🎲 — a knob that asks for one (Object Shape) gets a die that picks a mark at random
   if(!slider._dice && def.dice && document.createElement && slider.parentNode && slider.parentNode.insertBefore){
