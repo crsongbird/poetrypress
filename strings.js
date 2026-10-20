@@ -244,6 +244,7 @@ export const UI_STRINGS = {
   'option.pixelspace':                        "Pixel Space",
   'option.webb':                              "Webb Sky",
   'option.inkscroll':                           "Sunrise Scroll",
+  'option.windhills':                           "Windswept Hills",
   'option.windsea':                             "Windward Sea",
   'option.botline':                             "Botanical Line",
   'option.ditsy':                               "Ditsy Print",

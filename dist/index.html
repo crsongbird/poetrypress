@@ -3223,6 +3223,7 @@ but bear with me, dear}]/jitter:200
                 <option value="landscape" data-str="option.landscape">Painted Landscape</option>
                 <option value="water" data-str="option.scrying_pool">Scrying Pool</option>
                 <option value="inkscroll" data-str="option.inkscroll">Sunrise Scroll</option>
+                <option value="windhills" data-str="option.windhills">Windswept Hills</option>
                 <option value="windsea" data-str="option.windsea">Windward Sea</option>
               </optgroup>
               <optgroup label="ᘓ Flowers">
@@ -18627,6 +18628,85 @@ const SPECIMEN_STEPS = {
 };
 
 
+/* ==== stepsGrass.js ==== */
+const GR_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+const grClamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
+const grMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
+const grCss = c => `rgb(${Math.round(grClamp(c[0])*255)},${Math.round(grClamp(c[1])*255)},${Math.round(grClamp(c[2])*255)})`;
+ 
+function grNoise(seed){
+  const h = (x, y) => { let t = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 2246822519); t = Math.imul(t ^ (t >>> 13), 1274126177); return ((t ^ (t >>> 16)) >>> 0)/4294967296; };
+  return (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), u = x - xi, v = y - yi, su = u*u*(3 - 2*u), sv = v*v*(3 - 2*v);
+    const a = h(xi, yi), b = h(xi + 1, yi), c = h(xi, yi + 1), d = h(xi + 1, yi + 1); return a + (b - a)*su + (c - a)*sv + (a - b - c + d)*su*sv; };
+}
+
+
+
+
+
+function genGrass(w, h, o){
+  const N = w*h, R = mulberry32(o.seed >>> 0), noise = grNoise(o.seed % 100003), noise2 = grNoise((o.seed + 7919) % 100003);
+  const M = o.where, Wd = o.wind, at = (F, x, y, d) => F ? F[Math.min(h - 1, Math.max(0, y | 0))*w + Math.min(w - 1, Math.max(0, x | 0))] : d;
+  const hz = o.horizon, depth = y => grClamp((y/h - hz)/Math.max(0.05, 1 - hz));
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true });
+  const sc = document.createElement('canvas'); sc.width = w; sc.height = h; const s = sc.getContext('2d', { willReadFrequently: true });
+  const mc = document.createElement('canvas'); mc.width = w; mc.height = h; const m = mc.getContext('2d', { willReadFrequently: true });
+
+  g.fillStyle = grCss(grMix(o.root, o.tip, 0.4)); g.fillRect(0, 0, w, h); s.fillStyle = '#000'; s.fillRect(0, 0, w, h); m.fillStyle = '#000'; m.fillRect(0, 0, w, h);
+
+
+  { const im = g.getImageData(0, 0, w, h), d = im.data, cs = o.unit*0.05*(0.4 + o.clumps*1.6);
+    for(let y = 0; y < h; y++){ const dp = depth(y), base = 0.62 - 0.32*dp;
+      for(let x = 0; x < w; x++){ const q = y*w + x; if(M && M[q] < 0.5) continue; const v = noise(x/(cs*(0.3 + dp)), y/(cs*0.35*(0.3 + dp)));
+        const col = grMix(o.root, o.tip, grClamp(base + (v - 0.5)*o.variety*0.6)); d[q*4] = col[0]*255; d[q*4 + 1] = col[1]*255; d[q*4 + 2] = col[2]*255; } }
+    g.putImageData(im, 0, 0); }
+
+  const L0 = o.unit*0.26*o.height, lean = o.lean, minL = Math.max(1.2, o.unit*0.006), rowStep = d => Math.max(1, o.unit*(0.003 + 0.016*d*d)/(0.35 + o.count*1.3));
+  for(let y = Math.max(0, Math.floor(hz*h)); y < h + L0*0.55; ){
+    const d = depth(y), len0 = L0*(0.12 + 0.88*d*d); const dy = rowStep(d);
+    if(len0 >= minL){ const dx = dy*1.1;
+      for(let x = -len0*0.3 + R()*dx; x < w + len0*0.3; x += dx*(0.6 + R()*0.8)){
+        const yy = y + (R() - 0.5)*dy; if(at(M, x, yy, 1) < 0.5) continue;
+
+        const cs = o.unit*0.035*(0.4 + o.clumps*2)*(0.35 + d), cv = noise(x/cs, yy/(cs*0.45)), cv2 = noise2(x/cs, yy/(cs*0.45));
+        const gust = grClamp(at(Wd, x, yy, 0)), L = len0*(0.7 + 0.6*cv)*(0.85 + R()*0.3)*(1 - gust*o.bend*0.25);
+        const a = -Math.PI/2 + lean + (cv2 - 0.5)*0.5 + (R() - 0.5)*0.35 + gust*o.bend*0.9*Math.sign(lean || 0.0001), wb = L*(0.08 + R()*0.05);
+        const tx = x + Math.cos(a)*L, ty = yy + Math.sin(a)*L, mx = x + (tx - x)*0.22, my = yy - L*0.55;
+        const nx = -Math.sin(a), ny = Math.cos(a);
+        const blade = (k, w0, cx = g) => { const bx = x + (tx - x)*k, by = yy + (ty - yy)*k, cx2 = mx + (tx - mx)*k*0.5, cy2 = my + (ty - my)*k*0.5;
+          cx.beginPath(); cx.moveTo(bx - nx*w0, by - ny*w0); cx.quadraticCurveTo(cx2 - nx*w0*0.6, cy2 - ny*w0*0.6, tx, ty); cx.quadraticCurveTo(cx2 + nx*w0*0.6, cy2 + ny*w0*0.6, bx + nx*w0, by + ny*w0); cx.closePath(); };
+        const hueShift = (cv2 - 0.5)*o.variety*0.5, root = grMix(o.root, o.tip, grClamp(0.08 + hueShift*0.4)), tip = grMix(grMix(o.tip, o.root, grClamp(-hueShift)), o.sheen, grClamp(gust*o.bend*1.1));
+
+        blade(0, wb); g.fillStyle = grCss(root); g.fill(); blade(0, wb, m); m.fillStyle = '#fff'; m.fill();
+        blade(0.42 + 0.1*cv, wb*0.62); g.fillStyle = grCss(tip); g.fill();
+        if(gust*o.bend > 0.08){ const v = Math.round(grClamp(gust*o.bend*1.4)*255); s.fillStyle = `rgb(${v},${v},${v})`; s.beginPath(); s.moveTo(x + (tx - x)*0.45, yy + (ty - yy)*0.45); s.lineTo(tx, ty); s.lineWidth = wb*1.2; s.strokeStyle = s.fillStyle; s.stroke(); }
+      } }
+    y += dy;
+  }
+
+  const pd = g.getImageData(0, 0, w, h).data, sd = s.getImageData(0, 0, w, h).data, md = m.getImageData(0, 0, w, h).data, mask = new Float32Array(N), height = new Float32Array(N), sheen = new Float32Array(N);
+  const lr = 0.299*o.root[0] + 0.587*o.root[1] + 0.114*o.root[2], lt = 0.299*o.tip[0] + 0.587*o.tip[1] + 0.114*o.tip[2], span = Math.abs(lt - lr) > 0.03 ? lt - lr : 0.1;
+  for(let q = 0; q < N; q++){ const cover = Math.max(md[q*4]/255, M ? (M[q] >= 0.5 ? 1 : 0) : 1); mask[q] = cover;
+    if(cover <= 0) continue; const l = (0.299*pd[q*4] + 0.587*pd[q*4 + 1] + 0.114*pd[q*4 + 2])/255; height[q] = grClamp(0.35 + 0.45*(l - lr)/span); sheen[q] = sd[q*4]/255; }
+  return { pic: c, mask, height, sheen };
+}
+
+const GRASS_STEPS = {
+
+  grass: { cat: 'Marks', label: 'Grass Blades', ins: ['where', 'wind', 'root hue', 'tip hue', 'sheen hue'], outs: ['picture', 'mask', 'height', 'sheen'],
+    io: { ins: ['field', 'field', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field'] }, cost: () => 4,
+    params: [GR_R('count', 'Density', 50), GR_R('height', 'Blade Length', 45), GR_R('horizon', 'Horizon', 40), GR_R('lean', 'Lean', 62), GR_R('bend', 'Gusts Bend', 55),
+      GR_R('clumps', 'Clumps', 45), GR_R('variety', 'Hue Variety', 40), GR_R('variation', 'Variation', 0, 0, 99)],
+    run(E, n){ const { ww, wh, num, input, asField } = E;
+      const hue = (j, d) => { const v = input(n, j); return Array.isArray(v) && !v.none ? [v[0], v[1], v[2]] : d; };
+      const o = { where: asField(input(n, 1)), wind: asField(input(n, 2)), root: hue(3, [0.24, 0.42, 0.18]), tip: hue(4, [0.55, 0.74, 0.3]), sheen: hue(5, [0.86, 0.92, 0.62]),
+        count: num(n, 'count', 50)/100, height: num(n, 'height', 45)/100, horizon: num(n, 'horizon', 40)/100, lean: (num(n, 'lean', 62) - 50)/50*1.0, bend: num(n, 'bend', 55)/100,
+        clumps: num(n, 'clumps', 45)/100, variety: num(n, 'variety', 40)/100, unit: E.unit, seed: ((((E.ctx.seed >>> 0) + Math.round(num(n, 'variation', 0))*7919) >>> 0) ^ 0x6a55) >>> 0 };
+      const r = genGrass(ww, wh, o);
+      return [E.readCanvas(r.pic), r.mask, r.height, r.sheen]; } },
+};
+
+
 /* ==== stepsPatterns.js ==== */
 const PAT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const PAT_SEL = (key, label, options) => [key, label, 'select', options[0], { options }];
@@ -21201,7 +21281,7 @@ const stepMapsSince = list => Object.fromEntries((list || []).filter(m => String
  
 const STEPS_RAW = { ...Object.fromEntries(Object.entries(STEP_PARTS).map(([k, part]) => [k, { ...part, cost: part.cost || (() => 1) }])),
 
-  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...STREAMER_STEPS, ...LENS_STEPS, ...IMPRINT_STEPS, ...SPECIMEN_STEPS, ...PATTERN_STEPS };
+  ...TOUCH_STEPS, ...CHAOS_STEPS, ...CARD_STEPS, ...WHIMSY_STEPS, ...LIGHT_STEPS, ...SHARP_STEPS, ...GEN_STEPS, ...RING_STEPS, ...ROOM_STEPS, ...FLORA_STEPS, ...NETWORK_STEPS, ...STREAMER_STEPS, ...LENS_STEPS, ...IMPRINT_STEPS, ...SPECIMEN_STEPS, ...GRASS_STEPS, ...PATTERN_STEPS };
 const STEPS = Object.fromEntries(Object.entries(STEPS_RAW).map(([k, s]) => {
   const io = s.io || {};
   const paramPorts = PARAM_PORTS_OFF.has(s.cat) ? [] : s.params.filter(p => p[2] === 'range').map(p => p[0]);
@@ -21607,6 +21687,14 @@ const TEXTURE_PARAMS = {
                   sliderOf('slip', 'Wash Slip', 30),
                   sliderOf('paper', 'Paper', 40),
                   sliderOf('species', 'Species', 98)],
+  windhills:      [sliderOf('hills', 'Hills', 50),
+                  sliderOf('horizon', 'Horizon', 45),
+                  sliderOf('grass', 'Grass', 45),
+                  sliderOf('wind', 'Wind', 50),
+                  sliderOf('gusts', 'Gusts', 40),
+                  sliderOf('clouds', 'Clouds', 45),
+                  sliderOf('bands', 'Toon Bands', 34),
+                  sliderOf('haze', 'Haze', 45)],
   windsea:        [sliderOf('horizon', 'Horizon', 45),
                   sliderOf('weather', 'Weather', 50),
                   sliderOf('swirls', 'Swirls', 45),
@@ -24051,6 +24139,79 @@ const TEXTURE_CHAINS = {
       [131, 2, 143, 1], [8, 1, 143, 'steps'], [143, 1, 145, 1], [145, 1, 144, 1], [13, 1, 146, 1], [10, 1, 146, 2], [146, 1, 144, 2],
       [13, 1, 147, 1], [10, 1, 147, 2], [147, 1, 144, 3], [13, 1, 144, 4], [131, 3, 148, 1], [13, 1, 149, 1], [12, 1, 149, 2], [144, 1, 150, 1],
       [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 152, 1]] },
+
+  windhills: { label: 'Windswept Hills', div: 2, teach: 'Rolling green hills under a big sky, the grass blowing, in the cel-shaded look of the great open-air adventures (docs/prior-art/cel-shaded.md §8). The hills are a Gradient raised by three broad Perlins and cut by Thresholds, band behind band (Hills, Horizon); the farthest wears the Far Hills Hue, hazed toward the sky (Haze). Grass Blades draws the nearer land blade by blade, in two flat tones, the Grass Hue at the root and the Tip Hue above, by clumps that share their height, lean and hue (Grass); one wind leans them all (Wind), and a slow Perlin is its gusts (Gusts): where one passes, the blades bow over and their tops catch the light, the pale bands that run across a field in wind (the Sheen Hue). The clouds are a Perlin cut by a Threshold in the upper sky (Clouds). The Light Engine lights the hills’ rounded forms and the clouds’ domes from the dial, and a Posterize of its light (Toon Bands) lays the light in a few flat bands. Try: Wind high and Gusts large, the dial low behind the hills.',
+    nodes: [
+      ['knob', { slot: '1' }, 40, 40],
+      ['knob', { slot: '2' }, 40, 150],
+      ['knob', { slot: '3' }, 40, 260],
+      ['knob', { slot: '4' }, 40, 370],
+      ['knob', { slot: '5' }, 40, 480],
+      ['knob', { slot: '6' }, 40, 590],
+      ['knob', { slot: '7' }, 40, 700],
+      ['knob', { slot: '8' }, 40, 810],
+      ['dial', {}, 40, 920],
+      ['hue', { slot: '1', name: 'Sky Hue' }, 40, 1030],
+      ['hue', { slot: '2', name: 'Far Hills Hue' }, 40, 1140],
+      ['hue', { slot: '3', name: 'Grass Hue' }, 40, 1250],
+      ['hue', { slot: '4', name: 'Tip Hue' }, 40, 1360],
+      ['hue', { slot: '5', name: 'Sheen Hue' }, 40, 1470],
+      ['hue', { slot: '6', name: 'Cloud Hue' }, 40, 1580],
+      ['gradient', { shape: 'linear', angle: 90 }, 260, 40],
+      ['perlin', { scale: 26, details: 2, rough: 35, contrast: 22, variation: 1 }, 260, 150],
+      ['perlin', { scale: 17, details: 2, rough: 35, contrast: 30, variation: 4 }, 260, 260],
+      ['perlin', { scale: 12, details: 2, rough: 35, contrast: 30, variation: 9 }, 260, 370],
+      ['mix', { t: 14, '~t': '6,24' }, 480, 40],
+      ['mix', { t: 22, '~t': '8,36' }, 480, 150],
+      ['mix', { t: 24, '~t': '10,40' }, 480, 260],
+      ['threshold', { at: 45, '~at': '34,58', soft: 0 }, 700, 40],
+      ['threshold', { at: 56, '~at': '45,70', soft: 0 }, 700, 150],
+      ['threshold', { at: 70, '~at': '58,84', soft: 0 }, 700, 260],
+      ['perlin', { scale: 28, '~scale': '60,12', details: 2, contrast: 40, variation: 11 }, 260, 480],
+      ['levels', { lo: 48, hi: 72, gamma: 50 }, 480, 370],
+      ['maprange', { outLo: 0, outHi: 60, '~outHi': '0,100' }, 700, 370],
+      ['grass', { count: 50, height: 45, '~height': '15,90', horizon: 45, '~horizon': '34,58', lean: 62, '~lean': '52,88', bend: 55, '~bend': '20,90', clumps: 45, variety: 40 }, 920, 150],
+      ['maprange', { inLo: 0, inHi: 60, outLo: 0, outHi: 45 }, 480, 480],
+      ['blend', { mode: 'normal', opacity: 100 }, 920, 40],
+      ['perlin', { scale: 40, details: 2, rough: 30, contrast: 60, variation: 5 }, 260, 590],
+      ['threshold', { at: 62, '~at': '82,48', soft: 6 }, 480, 590],
+      ['maprange', { inLo: 0, inHi: 50, outLo: 100, outHi: 0 }, 480, 700],
+      ['math', { op: 'multiply' }, 700, 590],
+      ['blur', { radius: 9 }, 920, 590],
+      ['threshold', { at: 45, soft: 3 }, 1140, 590],
+      ['blend', { mode: 'normal', opacity: 100 }, 1140, 40],
+      ['blend', { mode: 'normal', opacity: 100 }, 1360, 40],
+      ['blend', { mode: 'normal', opacity: 35, '~opacity': '0,75' }, 1580, 40],
+      ['blend', { mode: 'normal', opacity: 100 }, 1800, 40],
+      ['blur', { radius: 14 }, 920, 260],
+      ['warp', { amount: 30 }, 920, 370],
+      ['mix', { t: 45 }, 1140, 260],
+      ['blur', { radius: 10 }, 1140, 700],
+      ['math', { op: 'max' }, 1360, 260],
+      ['mix', { t: 18 }, 1580, 260],
+      ['material', { relief: 220, gloss: 0, shine: 0, shadow: 55, occlusion: 15, ambient: 40 }, 2020, 150],
+      ['posterize', { steps: 3, '~steps': '2,5' }, 2240, 150],
+      ['maprange', { outLo: 58, outHi: 100 }, 2460, 150],
+      ['blend', { mode: 'multiply', opacity: 100 }, 2680, 40],
+      ['blend', { mode: 'screen', opacity: 75 }, 2900, 40],
+      ['surface', { name: 'Windswept Hills', ground: 'colour' }, 3120, 40],
+      ['number', { value: 25 }, 700, 700],
+      ['invert', {}, 1140, 370],
+      ['math', { op: 'multiply' }, 1360, 370],
+      ['blend', { mode: 'multiply', opacity: 40 }, 1360, 150],
+      ['perlin', { scale: 22, details: 2, contrast: 55, variation: 13 }, 260, 700],
+      ['levels', { lo: 30, hi: 80, gamma: 50 }, 2240, 260]],
+    wires: [[16, 1, 20, 1], [17, 1, 20, 2], [16, 1, 21, 1], [18, 1, 21, 2], [16, 1, 22, 1], [19, 1, 22, 2], [1, 1, 20, 't'], [1, 1, 21, 't'], [1, 1, 22, 't'],
+      [20, 1, 23, 1], [21, 1, 24, 1], [22, 1, 25, 1], [2, 1, 23, 'at'], [2, 1, 24, 'at'], [2, 1, 25, 'at'],
+      [5, 1, 26, 'scale'], [26, 1, 27, 1], [27, 1, 28, 1], [4, 1, 28, 'outHi'],
+      [24, 1, 29, 1], [28, 1, 29, 2], [12, 1, 29, 3], [13, 1, 29, 4], [14, 1, 29, 5], [3, 1, 29, 'height'], [2, 1, 29, 'horizon'], [4, 1, 29, 'lean'], [4, 1, 29, 'bend'],
+      [16, 1, 30, 1], [10, 1, 31, 1], [15, 1, 31, 2], [30, 1, 31, 3],
+      [32, 1, 33, 1], [6, 1, 33, 'at'], [16, 1, 34, 1], [33, 1, 35, 1], [34, 1, 35, 2], [35, 1, 36, 1], [36, 1, 37, 1],
+      [31, 1, 38, 1], [15, 1, 38, 2], [37, 1, 38, 3], [57, 1, 39, 1], [11, 1, 39, 2], [23, 1, 39, 3], [39, 1, 40, 1], [10, 1, 40, 2], [23, 1, 40, 3], [8, 1, 40, 'opacity'],
+      [40, 1, 41, 1], [29, 1, 41, 2], [29, 2, 41, 3],
+      [24, 1, 42, 1], [37, 1, 43, 1], [54, 1, 43, 2], [43, 1, 55, 1], [37, 1, 56, 1], [55, 1, 56, 2], [38, 1, 57, 1], [10, 1, 57, 2], [56, 1, 57, 3], [42, 1, 44, 1], [58, 1, 44, 2], [37, 1, 45, 1], [44, 1, 46, 1], [45, 1, 46, 2], [46, 1, 47, 1], [29, 3, 47, 2],
+      [41, 1, 48, 1], [47, 1, 48, 2], [9, 1, 48, 7], [48, 2, 59, 1], [59, 1, 49, 1], [7, 1, 49, 'steps'], [49, 1, 50, 1],
+      [41, 1, 51, 1], [50, 1, 51, 2], [24, 1, 51, 3], [51, 1, 52, 1], [14, 1, 52, 2], [29, 4, 52, 3], [52, 1, 53, 1]] },
   inkscroll: { label: 'Sunrise Scroll', div: 2, v: 5, teach: 'A land painted in ink on old paper, in the cel-shaded ink-wash look of the brush-painted games and the painters they loved (docs/prior-art/cel-shaded.md §7). Mountains stand band behind band, as in a mountain-and-water painting: each ridge a noise laid along the page (a Curve’s noise through a Profile Gradient), the far ones folded into sharp crags (Peaks). Each is a flat wash of ink, diluted by distance and tinted toward the Mountain Hue by Wash, lit by the Light Engine in bands (Toon Bands), its foot fading back to paper as mist (Mist), its ridge brushed in ink, thick and thin, broken by dry-brush streaks (Ink). The sky is graded across the top as a woodblock print’s straight-line gradation; a red sun stands where the dial lays it and sinks behind the mountains; long bands of mist with rounded ends drift across the sky, outlined (Clouds); cherry petals drift over all (Blossoms); the paper darkens at its edges with age (Age). Try: Wash at nothing for bare ink.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],
@@ -25721,6 +25882,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Ground Hue', 'Flower Hue', 'Second Flower Hue', 'Third Flower Hue', 'Center Hue', 'Sprig Hue'], tintDefaults:['#F4EEE2', '#C8506A', '#5A7AC8', '#E8B21C', '#F2D27A', '#6E8A4A'] },
   botline:       { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Paper Hue', 'Ink Hue', 'Petal Wash Hue', 'Center Wash Hue', 'Leaf Wash Hue', 'Second Ink Hue'], tintDefaults:['#F4EFE4', '#2A2420', '#D88098', '#E8C040', '#8AA87A', '#4E6A3A'] },
+  windhills:     { blends:LIT_BLENDS, light:true, tints:6,
+                   tintLabels:['Sky Hue', 'Far Hills Hue', 'Grass Hue', 'Tip Hue', 'Sheen Hue', 'Cloud Hue'], tintDefaults:['#5FA8E8', '#6E9CB8', '#3C7A30', '#8CC04E', '#E6F2A6', '#FFFFFF'] },
   windsea:       { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Sky Hue', 'Sea Hue', 'Deep Sea Hue', 'Foam Hue', 'Island Hue', 'Sun Hue'], tintDefaults:['#3A7BD5', '#1F6FB8', '#0E4A8A', '#F4F8FF', '#5FA040', '#FFF2A8'] },
   inkscroll:     { blends:LIT_BLENDS, light:true, tints:6,
@@ -25955,6 +26118,7 @@ const chainTintSet = (spec, types) => Object.fromEntries(types.map(t => [t, spec
 const CHAIN_TINTS = {
   ...chainTintSet('tint1 tint2', ['clouds', 'corvids', 'liminal', 'webb', 'pixelspace', 'imprints', 'bouquets', 'petals']),
   ...chainTintSet('tint1 tint2', ['meadow', 'ditsy', 'botline', 'windsea', 'inkscroll', 'dappled', 'windowlight', 'caustics']),
+  ...chainTintSet('tint1 tint2', ['windhills']),
   ...chainTintSet('tint1 tint2', ['lightleaks', 'feathers', 'flowers', 'inkbleed', 'crackedglaze', 'bokeh', 'tessellate', 'rainstreaks']),
   ...chainTintSet('tint1 tint2', ['veins', 'crackle', 'lichtenberg', 'growth', 'linen', 'oldpaper', 'stainedglass', 'suminagashi']),
   ...chainTintSet('tint1 tint2', ['skyring', 'ringpaint', 'ringworld', 'rainwater', 'ash', 'dunes', 'kintsugi', 'moss']),
@@ -26600,6 +26764,7 @@ const UI_STRINGS = {
   'option.pixelspace':                        "Pixel Space",
   'option.webb':                              "Webb Sky",
   'option.inkscroll':                           "Sunrise Scroll",
+  'option.windhills':                           "Windswept Hills",
   'option.windsea':                             "Windward Sea",
   'option.botline':                             "Botanical Line",
   'option.ditsy':                               "Ditsy Print",
@@ -27722,7 +27887,7 @@ const TEXTURE_GROUPS = [
   { glyph: 'ᕕ', name: 'Light to Lay Over', types: ['dappled', 'lightleaks', 'caustics', 'windowlight'] },
   { glyph: '🜁', name: 'Weather', types: ['snow', 'rainstreaks', 'frost', 'glassrain', 'rainwater', 'dewwebs'] },
   { glyph: '🝊', name: 'Sky & Cosmos', types: ['aurorasky', 'blackhole', 'astral', 'moon', 'ringpaint', 'pixelspace', 'skyring', 'ringworld', 'webb'] },
-  { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'liminal', 'cityscape', 'landscape', 'water', 'inkscroll', 'windsea'] },
+  { glyph: '🜥', name: 'Places & Scenes', types: ['contour', 'dunes', 'liminal', 'cityscape', 'landscape', 'water', 'inkscroll', 'windhills', 'windsea'] },
   { glyph: 'ᘓ', name: 'Flowers', types: ['botline', 'bouquets', 'ditsy', 'petals', 'imprints', 'meadow', 'flowers', 'macro'] },
   { glyph: '🜄', name: 'Ink & Paint', types: ['flowfield', 'brushstrokes', 'inkbleed', 'hatch', 'suminagashi', 'watercolour'] },
   { glyph: 'Ᏹ', name: 'Materials & Craft', types: ['crystal', 'crackle', 'kintsugi', 'spangle', 'wax', 'metalleaf', 'stainedglass', 'underglass', 'brokenglass'] },
@@ -29166,6 +29331,10 @@ const TEXTURE_ELEMENTS = {
     fire:  { name: 'Sepia Sketch',    k: [25, 65, 55, 70, 0, 0, 55, 9], t: ['#F0E4CC',  '#5A3A22',  '#C88A6A',  '#D8A850',  '#9A8A5A',  '#5A3A22'] },
     water: { name: 'Blue Ink Herbal', k: [45, 45, 35, 45, 55, 45, 35, 30], t: ['#F6F4EE',  '#22305A',  '#8AA0D8',  '#E8C24A',  '#9AB8A0',  '#22305A'] },
     wind:  { name: 'Single Stem',     k: [5, 95, 40, 80, 60, 30, 40, 51], t: ['#F4EFE4',  '#2A2420',  '#E8B8C8',  '#F2D27A',  '#A8C098',  '#3E5A30'] } },
+  windhills: { def: 'wind', wind: { name: 'Green Hills' },
+    fire:  { name: 'Golden Hour',     k: [50, 50, 50, 45, 45, 35, 34, 55], t: ['#F2A86A',  '#9A7A9A',  '#5E6E28',  '#E8C060',  '#FFE2A0',  '#FFE8D0'], light: [250, 25] },
+    water: { name: 'Blue Hour',       k: [55, 40, 45, 30, 35, 60, 40, 60], t: ['#2E3A6A',  '#3A4A7A',  '#1E3A3A',  '#4A7A6A',  '#A8C8E8',  '#C8D0E8'], light: [80, 45] },
+    earth: { name: 'Autumn Downs',    k: [65, 50, 55, 60, 55, 30, 34, 40], t: ['#A8C8D8',  '#8A9AA0',  '#7A6A2A',  '#D8A848',  '#F2E2A0',  '#F4F0E8'], light: [300, 60] } },
   windsea: { def: 'water', water: { name: 'Fair Wind' },
     fire:  { name: 'Sunset Sail',     k: [50, 60, 50, 40, 35, 25, 55, 30], t: ['#E8805A',  '#3A4A8A',  '#1E2A5A',  '#FFE6C8',  '#4A3A5A',  '#FFD070'], light: [200, 25] },
     earth: { name: 'Squall',          k: [40, 85, 40, 80, 75, 70, 30, 20], t: ['#5A6A80',  '#2A4A60',  '#142A3A',  '#DDE6EE',  '#3A4A40',  '#C8D0D8'], light: [45, 60] },
@@ -29700,7 +29869,7 @@ const RELEASE = 'Uranus–Bianca';
 
 const RELEASE_DATE = '2026-10-20';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windhills":"GfSGcOVV","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -29719,7 +29888,7 @@ const TEXTURE_LOOKS = {
   stainedglass: 'panes of stained glass held in lead', brokenglass: 'broken glass scattered on the page, its shards catching the light and casting bright caustics', dewwebs: 'spider webs beaded with dew, glinting in the light', underglass: 'a sheet of glass over the page, catching the light: a window\'s reflection, scratches, fingerprints and dust', sigils: 'scattered hand-drawn sigils', mathnoise: 'a pattern of small binary glyphs',
   summoning: 'a transmutation circle of rings, stars and glyphs', inkbleed: 'a mirrored ink blot, like a Rorschach test',
   crackedglaze: 'cracked and crazed ceramic glaze', crackle: 'a glaze crackled by cracks spreading across it', tessellate: 'a field of faceted triangles', cards: 'a card game in progress on a table (hands, a spread or a trick, sometimes coins, and often other things left there: a candle, a cup, a letter)',
-  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', webb: 'deep space in infrared: glowing dust and stars with six-pointed spikes', inkscroll: 'an ink-wash landscape on old paper: brushed mountains in mist, a red sun, cherry petals', windsea: 'a cel-shaded sea and sky: flat-lit clouds, white wind streams, foam on a receding sea', botline: 'flowers drawn in fine ink lines with a loose wash of colour', ditsy: 'a ditsy print: tiny flowers and sprigs of leaf scattered all over cloth', macro: 'a single flower close up against soft circles of out-of-focus light', meadow: 'a summer meadow of poppies and daisies under a high sky', petals: 'fallen flowers and scattered petals on a table', bouquets: 'a bouquet of flowers among leaves, seen from above', imprints: 'flowers printed on paper: cyanotype silhouettes, inked stamps, a crest or pressed blossoms', liminal: 'an empty corridor or room under fluorescent light, its far end lost in the dark', turing: 'organic spots and stripes, like animal skin or coral',
+  blackhole: 'a black hole ringed by a bright, swirling disc', pixelspace: 'space in pixel art: a nebula, stars and worlds in square pixels', webb: 'deep space in infrared: glowing dust and stars with six-pointed spikes', windhills: 'rolling green hills under a big sky, the grass blowing in the wind', inkscroll: 'an ink-wash landscape on old paper: brushed mountains in mist, a red sun, cherry petals', windsea: 'a cel-shaded sea and sky: flat-lit clouds, white wind streams, foam on a receding sea', botline: 'flowers drawn in fine ink lines with a loose wash of colour', ditsy: 'a ditsy print: tiny flowers and sprigs of leaf scattered all over cloth', macro: 'a single flower close up against soft circles of out-of-focus light', meadow: 'a summer meadow of poppies and daisies under a high sky', petals: 'fallen flowers and scattered petals on a table', bouquets: 'a bouquet of flowers among leaves, seen from above', imprints: 'flowers printed on paper: cyanotype silhouettes, inked stamps, a crest or pressed blossoms', liminal: 'an empty corridor or room under fluorescent light, its far end lost in the dark', turing: 'organic spots and stripes, like animal skin or coral',
   chladni: 'sand gathered along the still lines of a vibrating plate', linen: 'woven linen cloth', coldpress: 'textured watercolor paper',
   spangle: 'crystalline metal spangle', crystal: 'faceted crystal', oldpaper: 'old, stained and folded paper', cupring: 'rings left by a cup',
   ash: 'charred paper, ash and embers', wax: 'pools of sealing wax', dunes: 'wind-rippled sand dunes', kintsugi: 'pottery mended with seams of gold',
@@ -30387,7 +30556,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 8b40e92";
+const STAMP = "2026-10-20 · 3c0f95f";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -35437,6 +35606,15 @@ const WIKI_PARTS = {
     tips: ['Bloom’s sheet into Scatter (Picture Is: a sheet of 16; Picture’s Ground: black is clear): a field of flowers, no two alike.', 'Height into the Light Engine and Thickness into its translucency, with the light behind: petals glowing.'],
     see: ['part:scatter', 'part:material'],
   },
+  grass: {
+    line: 'A field of grass blade by blade, in two flat tones (the root’s and the tip’s), by clumps that share their height, lean and hue, leaning with one wind and bowed over where its gusts pass, shrinking toward a horizon: toon grass.',
+    about: 'Toon grass, as the cel-shaded games draw it (docs/prior-art/cel-shaded.md §8): each blade a curve that tapers to its tip, upright at its root and bowing toward its tip, drawn in two flat tones, the Root Hue below and the Tip Hue over its upper part, a cel band and not a gradient. Blades grow in clumps (Clumps) that share their height, lean and hue, so a field is never even. One wind leans them all (Lean); the Wind input says how hard it blows from place to place (a slow Perlin), and where it blows hard the blades bow over and their tops catch the light, as Thoreau saw in a meadow, the pale bands that run across a field in wind (the Sheen Hue, and the Sheen output). Toward the Horizon the blades shrink, and where they would be too small to draw the field is its own smooth colour.',
+    ins: { where: 'Where grass grows (white). Unwired: everywhere below the Horizon.', wind: 'How hard the wind blows, place by place (a slow Perlin for gusts). Unwired: still air.', 'root hue': 'The blades’ lower tone, and the ground between them.', 'tip hue': 'Their upper tone.', 'sheen hue': 'The light a bowed blade’s top catches in a gust.' },
+    outs: { picture: 'The field, in its hues (its ground the field’s own colour).', mask: 'Where the grass is: the Where input, and blades that reach above it.', height: 'Each blade standing above the ground, its tip highest: for the Light Engine.', sheen: 'Where gusts bow the blades over: screen the Sheen Hue through it.' },
+    set: { count: 'How thickly the blades grow.', height: 'How long the nearest blades are.', horizon: 'How far down the page the field begins: the blades shrink toward it.', lean: 'Which way the wind leans them (50: upright; above to the right, below to the left).', bend: 'How far a gust bows the blades over, and how much light their tops catch.', clumps: 'How large the clumps that share a height, lean and hue.', variety: 'How much the clumps differ in hue.', variation: 'Another field from the same seed.' },
+    tips: ['A slow Perlin through Levels into Wind, and the Sheen output as the mask of a Screen of the Sheen Hue: gusts running across the field.', 'Where from a Threshold of a Gradient raised by a Perlin: grass only on the hills.'],
+    see: ['part:perlin', 'part:material', 'part:threshold'],
+  },
   specimen: {
     line: 'A whole plant of one of Bloom’s species, as a herbarium sheet or a botanical plate shows it: root down, its leaves by their real outline and arrangement, its flowers in several views among buds and seed; one plant, a sheet of them in cells, or several laid side by side on the page.',
     about: 'Bloom draws a flower; Specimen draws the plant it grows on, from the species’ own habit (docs/prior-art/botanical-specimens.md). An oxeye daisy is a basal tuft of spoon-shaped leaves, toothed leaves clasping a nearly bare stem, one head; a poppy is pinnatifid leaves, bristly stems and a nodding bud on a hooked stalk; a foxglove is a rosette of big crenate leaves and a one-sided raceme of bells, open below and in bud above; an iris is a fan of swords from a rhizome; a cherry is a woody twig with clusters of long-stalked flowers from its spurs. Each leaf is drawn from a width profile along a midrib that bends, its two halves unequal, its margin toothed as the species’ is, divided as it is (pinnatifid, pinnate, finely dissected, ternate, palmate, trifoliate), and set on the stem as it is (alternate, opposite, whorled, basal), shrinking up the stem. One leaf on each plant is turned to show its paler underside, the lowest ones brown at the tip, and the stems taper, lean and recover, with hairs or prickles where the species has them. The flowers are Bloom’s, so a rose here is the rose of every floral surface. Its outputs are Bloom’s, and lit the same way.',
@@ -37478,7 +37656,7 @@ const WORKING_WORDS = {
   brushstrokes: 'Loading the brush', halftone: 'Screening the dots', rainstreaks: 'Driving the rain', hatch: 'Hatching the shadows',
   cityscape: 'Lighting the windows', guilloche: 'Turning the rose engine', stainedglass: 'Leading the glass', underglass: 'Wiping the glass', brokenglass: 'Sweeping up the glass', dewwebs: 'Beading the silk', sigils: 'Inscribing the sigils',
   mathnoise: 'Flipping the bits', summoning: 'Chalking the circle', inkbleed: 'Folding the blot', crackedglaze: 'Firing the glaze', crackle: 'Letting the glaze crack',
-  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', inkscroll: 'Grinding the ink', windsea: 'Raising the sail', botline: 'Inking the stems', ditsy: 'Printing the cloth', macro: 'Focusing the lens', meadow: 'Walking into the meadow', petals: 'Letting the petals fall', bouquets: 'Gathering the flowers', imprints: 'Pressing the flowers', liminal: 'Finding the way back', turing: 'Letting the reaction diffuse',
+  tessellate: 'Cutting the facets', cards: 'Shuffling the deck', blackhole: 'Bending the light', pixelspace: 'Placing the pixels', webb: 'Unfolding the mirror', inkscroll: 'Grinding the ink', windsea: 'Raising the sail', windhills: 'Combing the grass', botline: 'Inking the stems', ditsy: 'Printing the cloth', macro: 'Focusing the lens', meadow: 'Walking into the meadow', petals: 'Letting the petals fall', bouquets: 'Gathering the flowers', imprints: 'Pressing the flowers', liminal: 'Finding the way back', turing: 'Letting the reaction diffuse',
   chladni: 'Bowing the plate', linen: 'Weaving the warp', coldpress: 'Pressing the paper', spangle: 'Galvanising the steel',
   crystal: 'Growing the crystals', oldpaper: 'Ageing the paper', cupring: 'Setting down the cup', ash: 'Burning the letter',
   wax: 'Pouring the wax', dunes: 'Letting the wind shape the dunes', kintsugi: 'Mending with gold', moss: 'Growing the moss',

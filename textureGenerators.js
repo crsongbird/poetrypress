@@ -174,6 +174,8 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Ground Hue', 'Flower Hue', 'Second Flower Hue', 'Third Flower Hue', 'Center Hue', 'Sprig Hue'], tintDefaults:['#F4EEE2', '#C8506A', '#5A7AC8', '#E8B21C', '#F2D27A', '#6E8A4A'] },
   botline:       { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Paper Hue', 'Ink Hue', 'Petal Wash Hue', 'Center Wash Hue', 'Leaf Wash Hue', 'Second Ink Hue'], tintDefaults:['#F4EFE4', '#2A2420', '#D88098', '#E8C040', '#8AA87A', '#4E6A3A'] },
+  windhills:     { blends:LIT_BLENDS, light:true, tints:6,
+                   tintLabels:['Sky Hue', 'Far Hills Hue', 'Grass Hue', 'Tip Hue', 'Sheen Hue', 'Cloud Hue'], tintDefaults:['#5FA8E8', '#6E9CB8', '#3C7A30', '#8CC04E', '#E6F2A6', '#FFFFFF'] },
   windsea:       { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Sky Hue', 'Sea Hue', 'Deep Sea Hue', 'Foam Hue', 'Island Hue', 'Sun Hue'], tintDefaults:['#3A7BD5', '#1F6FB8', '#0E4A8A', '#F4F8FF', '#5FA040', '#FFF2A8'] },
   inkscroll:     { blends:LIT_BLENDS, light:true, tints:6,
@@ -408,6 +410,7 @@ const chainTintSet = (spec, types) => Object.fromEntries(types.map(t => [t, spec
 const CHAIN_TINTS = {
   ...chainTintSet('tint1 tint2', ['clouds', 'corvids', 'liminal', 'webb', 'pixelspace', 'imprints', 'bouquets', 'petals']),
   ...chainTintSet('tint1 tint2', ['meadow', 'ditsy', 'botline', 'windsea', 'inkscroll', 'dappled', 'windowlight', 'caustics']),
+  ...chainTintSet('tint1 tint2', ['windhills']),
   ...chainTintSet('tint1 tint2', ['lightleaks', 'feathers', 'flowers', 'inkbleed', 'crackedglaze', 'bokeh', 'tessellate', 'rainstreaks']),
   ...chainTintSet('tint1 tint2', ['veins', 'crackle', 'lichtenberg', 'growth', 'linen', 'oldpaper', 'stainedglass', 'suminagashi']),
   ...chainTintSet('tint1 tint2', ['skyring', 'ringpaint', 'ringworld', 'rainwater', 'ash', 'dunes', 'kintsugi', 'moss']),

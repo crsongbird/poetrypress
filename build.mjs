@@ -126,6 +126,7 @@ const ORDER = [
   'stepsRoom.js',         // Liminal Spaces' Room Caster
   'stepsFlora.js',        // the floral surfaces' Bloom
   'stepsSpecimen.js',     // Specimen: a whole plant of Bloom's species (Floral Imprints)
+  'stepsGrass.js',        // Grass Blades: a field of grass in wind (Windswept Hills)
   'stepsPatterns.js',     // general parts, second shelf: Scatter, Grid & Dots, Ellipse, Polygon, Triangle Mesh, Blocks, Pyramids, Border Mask, Lookup, Displace, Gradient Map, Noise Gradient, Spectrum, HSB and Lab, Median, Map Switch, Flip, Perspective
   'stepsNetwork.js',      // Veins of Light's Network (after stepsPatterns, whose Delaunay it uses)
   'stepsStreamers.js',    // Windward Sea's Streamers
@@ -201,7 +202,7 @@ const css = readFileSync('poetrypress.css', 'utf8');
 // worker, which works from file:// too, unlike a URL). The rest of the page follows it.
 const WORKER_ORDER = [ // which modules the worker needs (textureWorker.js is its own, the rest are shared)
                       'tunables.js', 'webgl.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'textureParams.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsSpecimen.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsLens.js', 'stepsImprint.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'textureParams.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsSpecimen.js', 'stepsGrass.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsLens.js', 'stepsImprint.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 // (in the page's order, which test/bundle.test.mjs checks against the imports; they import nothing that isn't shared)
 const SHARED = ORDER.filter(f => WORKER_ORDER.includes(f));
 { const missing = SHARED.filter(f => !ORDER.includes(f)); if (missing.length) throw new Error('worker modules not on the page: ' + missing.join(', ')); }

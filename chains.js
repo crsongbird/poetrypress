@@ -2059,6 +2059,79 @@ export const TEXTURE_CHAINS = {
       [131, 2, 143, 1], [8, 1, 143, 'steps'], [143, 1, 145, 1], [145, 1, 144, 1], [13, 1, 146, 1], [10, 1, 146, 2], [146, 1, 144, 2],
       [13, 1, 147, 1], [10, 1, 147, 2], [147, 1, 144, 3], [13, 1, 144, 4], [131, 3, 148, 1], [13, 1, 149, 1], [12, 1, 149, 2], [144, 1, 150, 1],
       [149, 1, 150, 2], [148, 1, 150, 3], [130, 1, 151, 1], [150, 1, 151, 2], [131, 1, 151, 3], [151, 1, 152, 1]] },
+  // 🌾 Windswept Hills (ROADMAP L5; docs/prior-art/cel-shaded.md §8): toon grass and rolling hills in wind
+  windhills: { label: 'Windswept Hills', div: 2, teach: 'Rolling green hills under a big sky, the grass blowing, in the cel-shaded look of the great open-air adventures (docs/prior-art/cel-shaded.md §8). The hills are a Gradient raised by three broad Perlins and cut by Thresholds, band behind band (Hills, Horizon); the farthest wears the Far Hills Hue, hazed toward the sky (Haze). Grass Blades draws the nearer land blade by blade, in two flat tones, the Grass Hue at the root and the Tip Hue above, by clumps that share their height, lean and hue (Grass); one wind leans them all (Wind), and a slow Perlin is its gusts (Gusts): where one passes, the blades bow over and their tops catch the light, the pale bands that run across a field in wind (the Sheen Hue). The clouds are a Perlin cut by a Threshold in the upper sky (Clouds). The Light Engine lights the hills’ rounded forms and the clouds’ domes from the dial, and a Posterize of its light (Toon Bands) lays the light in a few flat bands. Try: Wind high and Gusts large, the dial low behind the hills.',
+    nodes: [
+      ['knob', { slot: '1' }, 40, 40],                                                                          // 1 Hills
+      ['knob', { slot: '2' }, 40, 150],                                                                         // 2 Horizon
+      ['knob', { slot: '3' }, 40, 260],                                                                         // 3 Grass
+      ['knob', { slot: '4' }, 40, 370],                                                                         // 4 Wind
+      ['knob', { slot: '5' }, 40, 480],                                                                         // 5 Gusts
+      ['knob', { slot: '6' }, 40, 590],                                                                         // 6 Clouds
+      ['knob', { slot: '7' }, 40, 700],                                                                         // 7 Toon Bands
+      ['knob', { slot: '8' }, 40, 810],                                                                         // 8 Haze
+      ['dial', {}, 40, 920],                                                                                    // 9
+      ['hue', { slot: '1', name: 'Sky Hue' }, 40, 1030],                                                        // 10
+      ['hue', { slot: '2', name: 'Far Hills Hue' }, 40, 1140],                                                  // 11
+      ['hue', { slot: '3', name: 'Grass Hue' }, 40, 1250],                                                      // 12
+      ['hue', { slot: '4', name: 'Tip Hue' }, 40, 1360],                                                        // 13
+      ['hue', { slot: '5', name: 'Sheen Hue' }, 40, 1470],                                                      // 14
+      ['hue', { slot: '6', name: 'Cloud Hue' }, 40, 1580],                                                      // 15
+      ['gradient', { shape: 'linear', angle: 90 }, 260, 40],                                                   // 16 down the page
+      ['perlin', { scale: 26, details: 2, rough: 35, contrast: 22, variation: 1 }, 260, 150],                              // 17 the far hills' rise
+      ['perlin', { scale: 17, details: 2, rough: 35, contrast: 30, variation: 4 }, 260, 260],                              // 18 the middle hills'
+      ['perlin', { scale: 12, details: 2, rough: 35, contrast: 30, variation: 9 }, 260, 370],                              // 19 the near hills'
+      ['mix', { t: 14, '~t': '6,24' }, 480, 40],                                                               // 20
+      ['mix', { t: 22, '~t': '8,36' }, 480, 150],                                                             // 21
+      ['mix', { t: 24, '~t': '10,40' }, 480, 260],                                                             // 22
+      ['threshold', { at: 45, '~at': '34,58', soft: 0 }, 700, 40],                                             // 23 the land, from the far hills down
+      ['threshold', { at: 56, '~at': '45,70', soft: 0 }, 700, 150],                                            // 24 from the middle hills
+      ['threshold', { at: 70, '~at': '58,84', soft: 0 }, 700, 260],                                            // 25 the near hills
+      ['perlin', { scale: 28, '~scale': '60,12', details: 2, contrast: 40, variation: 11 }, 260, 480],            // 26 the gusts
+      ['levels', { lo: 48, hi: 72, gamma: 50 }, 480, 370],                                                     // 27
+      ['maprange', { outLo: 0, outHi: 60, '~outHi': '0,100' }, 700, 370],                                      // 28 how strong
+      ['grass', { count: 50, height: 45, '~height': '15,90', horizon: 45, '~horizon': '34,58', lean: 62, '~lean': '52,88', bend: 55, '~bend': '20,90', clumps: 45, variety: 40 }, 920, 150], // 29
+      ['maprange', { inLo: 0, inHi: 60, outLo: 0, outHi: 45 }, 480, 480],                                     // 30 the sky paling to its horizon
+      ['blend', { mode: 'normal', opacity: 100 }, 920, 40],                                                    // 31
+      ['perlin', { scale: 40, details: 2, rough: 30, contrast: 60, variation: 5 }, 260, 590],                   // 32 the clouds
+      ['threshold', { at: 62, '~at': '82,48', soft: 6 }, 480, 590],                                            // 33
+      ['maprange', { inLo: 0, inHi: 50, outLo: 100, outHi: 0 }, 480, 700],                                     // 34 only up high
+      ['math', { op: 'multiply' }, 700, 590],                                                                  // 35
+      ['blur', { radius: 9 }, 920, 590],                                                                       // 36
+      ['threshold', { at: 45, soft: 3 }, 1140, 590],                                                           // 37 a crisp edge
+      ['blend', { mode: 'normal', opacity: 100 }, 1140, 40],                                                   // 38 the clouds on the sky
+      ['blend', { mode: 'normal', opacity: 100 }, 1360, 40],                                                   // 39 the far hills
+      ['blend', { mode: 'normal', opacity: 35, '~opacity': '0,75' }, 1580, 40],                                // 40 their haze
+      ['blend', { mode: 'normal', opacity: 100 }, 1800, 40],                                                   // 41 the grass
+      ['blur', { radius: 14 }, 920, 260],                                                                      // 42 the middle hills' crest
+      ['warp', { amount: 30 }, 920, 370],                                                                      // 43 the clouds, looked at from below
+      ['mix', { t: 45 }, 1140, 260],                                                                           // 44 (the crests, and the near hills' own rise)
+      ['blur', { radius: 10 }, 1140, 700],                                                                     // 45 the clouds' domes
+      ['math', { op: 'max' }, 1360, 260],                                                                      // 46
+      ['mix', { t: 18 }, 1580, 260],                                                                           // 47 and the blades' own
+      ['material', { relief: 220, gloss: 0, shine: 0, shadow: 55, occlusion: 15, ambient: 40 }, 2020, 150],   // 48 the Light Engine
+      ['posterize', { steps: 3, '~steps': '2,5' }, 2240, 150],                                                 // 49 Toon Bands
+      ['maprange', { outLo: 58, outHi: 100 }, 2460, 150],                                                      // 50
+      ['blend', { mode: 'multiply', opacity: 100 }, 2680, 40],                                                 // 51 the light, in bands
+      ['blend', { mode: 'screen', opacity: 75 }, 2900, 40],                                                    // 52 the gusts' sheen
+      ['surface', { name: 'Windswept Hills', ground: 'colour' }, 3120, 40],                                    // 53
+      ['number', { value: 25 }, 700, 700],                                                                     // 54 (straight down)
+      ['invert', {}, 1140, 370],                                                                               // 55
+      ['math', { op: 'multiply' }, 1360, 370],                                                                 // 56 each cloud's underside
+      ['blend', { mode: 'multiply', opacity: 40 }, 1360, 150],                                                 // 57 shaded with the sky
+      ['perlin', { scale: 22, details: 2, contrast: 55, variation: 13 }, 260, 700],                            // 58 the land's rolling rise
+      ['levels', { lo: 30, hi: 80, gamma: 50 }, 2240, 260]],                                                   // 59 (the light spread over the bands)
+    wires: [[16, 1, 20, 1], [17, 1, 20, 2], [16, 1, 21, 1], [18, 1, 21, 2], [16, 1, 22, 1], [19, 1, 22, 2], [1, 1, 20, 't'], [1, 1, 21, 't'], [1, 1, 22, 't'],
+      [20, 1, 23, 1], [21, 1, 24, 1], [22, 1, 25, 1], [2, 1, 23, 'at'], [2, 1, 24, 'at'], [2, 1, 25, 'at'],
+      [5, 1, 26, 'scale'], [26, 1, 27, 1], [27, 1, 28, 1], [4, 1, 28, 'outHi'],
+      [24, 1, 29, 1], [28, 1, 29, 2], [12, 1, 29, 3], [13, 1, 29, 4], [14, 1, 29, 5], [3, 1, 29, 'height'], [2, 1, 29, 'horizon'], [4, 1, 29, 'lean'], [4, 1, 29, 'bend'],
+      [16, 1, 30, 1], [10, 1, 31, 1], [15, 1, 31, 2], [30, 1, 31, 3],
+      [32, 1, 33, 1], [6, 1, 33, 'at'], [16, 1, 34, 1], [33, 1, 35, 1], [34, 1, 35, 2], [35, 1, 36, 1], [36, 1, 37, 1],
+      [31, 1, 38, 1], [15, 1, 38, 2], [37, 1, 38, 3], [57, 1, 39, 1], [11, 1, 39, 2], [23, 1, 39, 3], [39, 1, 40, 1], [10, 1, 40, 2], [23, 1, 40, 3], [8, 1, 40, 'opacity'],
+      [40, 1, 41, 1], [29, 1, 41, 2], [29, 2, 41, 3],
+      [24, 1, 42, 1], [37, 1, 43, 1], [54, 1, 43, 2], [43, 1, 55, 1], [37, 1, 56, 1], [55, 1, 56, 2], [38, 1, 57, 1], [10, 1, 57, 2], [56, 1, 57, 3], [42, 1, 44, 1], [58, 1, 44, 2], [37, 1, 45, 1], [44, 1, 46, 1], [45, 1, 46, 2], [46, 1, 47, 1], [29, 3, 47, 2],
+      [41, 1, 48, 1], [47, 1, 48, 2], [9, 1, 48, 7], [48, 2, 59, 1], [59, 1, 49, 1], [7, 1, 49, 'steps'], [49, 1, 50, 1],
+      [41, 1, 51, 1], [50, 1, 51, 2], [24, 1, 51, 3], [51, 1, 52, 1], [14, 1, 52, 2], [29, 4, 52, 3], [52, 1, 53, 1]] },
   inkscroll: { label: 'Sunrise Scroll', div: 2, v: 5, teach: 'A land painted in ink on old paper, in the cel-shaded ink-wash look of the brush-painted games and the painters they loved (docs/prior-art/cel-shaded.md §7). Mountains stand band behind band, as in a mountain-and-water painting: each ridge a noise laid along the page (a Curve’s noise through a Profile Gradient), the far ones folded into sharp crags (Peaks). Each is a flat wash of ink, diluted by distance and tinted toward the Mountain Hue by Wash, lit by the Light Engine in bands (Toon Bands), its foot fading back to paper as mist (Mist), its ridge brushed in ink, thick and thin, broken by dry-brush streaks (Ink). The sky is graded across the top as a woodblock print’s straight-line gradation; a red sun stands where the dial lays it and sinks behind the mountains; long bands of mist with rounded ends drift across the sky, outlined (Clouds); cherry petals drift over all (Blossoms); the paper darkens at its edges with age (Age). Try: Wash at nothing for bare ink.',
     nodes: [
       ['knob', { slot: '1' }, 40, 40],                                                                                        // 1
