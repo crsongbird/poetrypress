@@ -7131,7 +7131,12 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   const floor=unit*(0.03+depth*0.3), bend=floor*(1-1/1.33);
   const ox=-SX*ltilt*floor*0.35, oy=-SY*ltilt*floor*0.35;          // slanting light shifts the net
   const M=Math.ceil(Math.abs(ox)+Math.abs(oy)+bend*0.8+6), PW=DW+2*M, PH=DH+2*M, PN=PW*PH;
-  const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW, y=v*PH; let s=0;
+  // THE POOL IS IN THE WORLD (Ruby: panning the camera must be deterministic): its waves and everything in it are laid in
+  // the ground's own coordinates (the frame's patch less its origin), and things are thrown across a fixed stretch of
+  // the world, four pages each way, at a fixed density: turning, tipping or a half-size draft shows the same pool
+  const GX0=(F.flat ? ww/2 : F.gcx)+M, GZ0=(F.flat ? wh/2 : F.gcz)+M, LW=4*Math.max(ww,wh);
+  const worldX=()=>GX0+(Math.random()*2-1)*LW, worldY=()=>GZ0+(Math.random()*2-1)*LW;
+  const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW-GX0, y=v*PH-GZ0; let s=0;
     for(const q of waves){ const p=q.kx*x+q.ky*y+q.ph; s+=q.a*(Math.sin(p) + 0.35*turb*Math.sin(2*p+1)); } return s; });
   const GX=new Float32Array(PN), GY=new Float32Array(PN);
   for(let y=0;y<PH;y++) for(let x=0;x<PW;x++){ const i=y*PW+x;
@@ -7154,7 +7159,7 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   boxBlur(C, Math.round(1 + depth*depth*unit*0.004 + hz*unit*0.008), 2);
 
   // ---- WHAT LIVES THERE, at its depth (z: 0 the surface … 1 the floor) ----
-  const area=(DW*DH)/(ww*wh);                                     // a bigger patch holds more
+  const area=(2*LW)*(2*LW)/(ww*wh);   // (the world the pool spans, in pages: the same whatever the camera sees)                                     // a bigger patch holds more
   const FL=new Float32Array(PN), FA=new Float32Array(PN);         // the floor's own relief shading, and its albedo shift
   const OB=new Float32Array(PN), OT=new Float32Array(PN), OZ=new Float32Array(PN).fill(1);   // a swimmer: cover, tone, depth
   const LF=new Float32Array(PN), LT=new Float32Array(PN);         // the surface: leaves, pads
@@ -7166,25 +7171,25 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   // stones on the floor: lit domes, each its own tone
   const stoneN=Math.round((kind==='stream' ? 70 : kind==='well' ? 26 : 14)*area);
   for(let k=0;k<stoneN;k++){
-    const r=unit*(kind==='stream' ? 0.025+Math.random()*0.05 : 0.02+Math.random()*0.035), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, tone=(Math.random()-0.5)*0.5;
+    const r=unit*(kind==='stream' ? 0.025+Math.random()*0.05 : 0.02+Math.random()*0.035), x=worldX(), y=worldY(), ang=Math.random()*Math.PI, tone=(Math.random()-0.5)*0.5;
     ellipse(x, y, r*(1+Math.random()*0.5), r, ang, (i,u,v,q)=>{ if(q>=1) { if(q<1.5) FL[i]=Math.min(FL[i], -0.35*(1.5-q)); return; }
       const nz=Math.sqrt(1-q), nx=u, ny=v, ca=Math.cos(ang), sa=Math.sin(ang), wx=nx*ca-ny*sa, wy=nx*sa+ny*ca;
       FL[i]=Math.max(FL[i], (-(wx*SX+wy*SY)*0.8 + nz*0.4) - 0.2); FA[i]=tone; });
   }
   // coins in the well: small bright discs, a few on their edge
   if(kind==='well'){ const n=Math.round((18+Math.random()*16)*area);
-    for(let k=0;k<n;k++){ const r=unit*(0.02+Math.random()*0.012), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, squash=0.35+Math.random()*0.65;
+    for(let k=0;k<n;k++){ const r=unit*(0.02+Math.random()*0.012), x=worldX(), y=worldY(), ang=Math.random()*Math.PI, squash=0.35+Math.random()*0.65;
       ellipse(x, y, r, r*squash, ang, (i,u,v,q)=>{ if(q>=1) return; const rim=q>0.72 ? 0.5 : 0; FL[i]=0.9 - rim + Math.sin(u*9)*0.08; FA[i]=0.55; }); } }
   // weed: strands rising from the floor, swaying
   if(kind!=='well'){ const n=Math.round((kind==='stream' ? 10 : 5)*area);
-    for(let k=0;k<n;k++){ let x=Math.random()*PW, y=Math.random()*PH; const len=unit*(0.12+Math.random()*0.25), ph=Math.random()*6.28, ang=Math.random()*Math.PI*2, wdt=unit*0.006;
+    for(let k=0;k<n;k++){ let x=worldX(), y=worldY(); const len=unit*(0.12+Math.random()*0.25), ph=Math.random()*6.28, ang=Math.random()*Math.PI*2, wdt=unit*0.006;
       for(let t=0;t<1;t+=0.01){ const px=x+Math.cos(ang)*len*t + Math.sin(t*6+ph)*unit*0.02*t, py=y+Math.sin(ang)*len*t + Math.cos(t*5+ph)*unit*0.02*t, z=1-t*0.55;
         ellipse(px, py, wdt*(1.2-t), wdt*(1.2-t), 0, (i,u,v,q)=>{ if(q<1 && z<OZ[i]+0.02){ OB[i]=Math.max(OB[i], 0.75*(1-q)); OT[i]=0.55; OZ[i]=z; } }); } } }
   // fish: tapered bodies with a forked tail, curved as they swim
   const fishN=Math.round((kind==='koi' ? 5+Math.random()*4 : kind==='stream' ? 10+Math.random()*10 : 1)*area);
   for(let k=0;k<fishN;k++){
     const Lf=unit*(kind==='koi' ? 0.11+Math.random()*0.07 : kind==='stream' ? 0.03+Math.random()*0.02 : 0.08), Wf=Lf*0.2;
-    const x=Math.random()*PW, y=Math.random()*PH, hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
+    const x=worldX(), y=worldY(), hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
     const z=0.15+Math.random()*0.6, tone=kind==='koi' ? (Math.random()<0.55 ? 1.85 : Math.random()<0.5 ? 0.3 : 1.45) : 0.32;
     const pat=Math.random()*6.28, ca=Math.cos(hd), sa=Math.sin(hd), R=Lf*0.8;
     const [sxx, syy]=shadowAt(x, y, z);
@@ -7204,7 +7209,7 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   // the surface: lily pads (a notched round) or a fallen leaf; sharp shadows on the floor below
   const leafN=kind==='koi' ? Math.round((2+Math.random()*4)*area) : Math.round((Math.random()<0.6 ? 1 : 0)*area + (kind==='stream' ? 1 : 0));
   for(let k=0;k<leafN;k++){
-    const pad=kind==='koi', r=unit*(pad ? 0.05+Math.random()*0.05 : 0.025+Math.random()*0.02), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI*2, tone=pad ? 1.05+Math.random()*0.3 : 0.55+Math.random()*0.7;
+    const pad=kind==='koi', r=unit*(pad ? 0.05+Math.random()*0.05 : 0.025+Math.random()*0.02), x=worldX(), y=worldY(), ang=Math.random()*Math.PI*2, tone=pad ? 1.05+Math.random()*0.3 : 0.55+Math.random()*0.7;
     const [sxx, syy]=shadowAt(x, y, 0);
     const shapeF=(u,v,q)=>{ if(pad){ const a=Math.atan2(v,u); return q<1 && !(Math.abs(a)<0.22 && q>0.02); }
       return Math.abs(v) < 0.42*Math.pow(Math.max(0, 1-u*u), 0.9); };
@@ -25876,8 +25881,8 @@ but bear with me, dear}]/jitter:200
                  the main light, or the RIM LIGHT, a second light from its own place on the dial in its own color. Shown only
                  for a surface the page's lights reach (TEXTURE_CAPS rig) -->
             <div class="radio-group light-seg" id="lightSeg" role="group" aria-label="Which light the dial moves">
-              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main Light</span></button>
-              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim Light</span></button>
+              <button type="button" class="radio-btn active" data-light="main" aria-pressed="true" title="The dial moves the main light"><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_main">Main</span></button>
+              <button type="button" class="radio-btn" data-light="rim" aria-pressed="false" title="The dial moves the rim light: a second light, from its own place on the dial, in its own color. Moving it turns it on; ⟲ turns it off."><span class="ls-dot" aria-hidden="true"></span><span data-str="button.light_rim">Rim</span></button>
             </div>
             <div class="light-dial-row">
               <div class="light-dial" id="lightDial" role="slider" tabindex="0" aria-label="Light direction: drag from the center toward the light source; farther out is a lower light">
@@ -26820,8 +26825,8 @@ const UI_STRINGS = {
   'label.text_cut':                          "Cut Out by Text",
   'label.shape_strength':                    "Shape Strength",
   'button.layer_upper':                      "Upper",
-  'button.light_main':                       "Main Light",
-  'button.light_rim':                        "Rim Light",
+  'button.light_main':                       "Main",
+  'button.light_rim':                        "Rim",
   'button.layer_lower':                      "Lower",
   'button.layer_swap':                       "⇅ Swap",
   'label.glass_strength':                    "Strength",
@@ -34021,7 +34026,12 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   const floor=unit*(0.03+depth*0.3), bend=floor*(1-1/1.33);
   const ox=-SX*ltilt*floor*0.35, oy=-SY*ltilt*floor*0.35;          // slanting light shifts the net
   const M=Math.ceil(Math.abs(ox)+Math.abs(oy)+bend*0.8+6), PW=DW+2*M, PH=DH+2*M, PN=PW*PH;
-  const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW, y=v*PH; let s=0;
+  // THE POOL IS IN THE WORLD (Ruby: panning the camera must be deterministic): its waves and everything in it are laid in
+  // the ground's own coordinates (the frame's patch less its origin), and things are thrown across a fixed stretch of
+  // the world, four pages each way, at a fixed density: turning, tipping or a half-size draft shows the same pool
+  const GX0=(F.flat ? ww/2 : F.gcx)+M, GZ0=(F.flat ? wh/2 : F.gcz)+M, LW=4*Math.max(ww,wh);
+  const worldX=()=>GX0+(Math.random()*2-1)*LW, worldY=()=>GZ0+(Math.random()*2-1)*LW;
+  const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW-GX0, y=v*PH-GZ0; let s=0;
     for(const q of waves){ const p=q.kx*x+q.ky*y+q.ph; s+=q.a*(Math.sin(p) + 0.35*turb*Math.sin(2*p+1)); } return s; });
   const GX=new Float32Array(PN), GY=new Float32Array(PN);
   for(let y=0;y<PH;y++) for(let x=0;x<PW;x++){ const i=y*PW+x;
@@ -34044,7 +34054,7 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   boxBlur(C, Math.round(1 + depth*depth*unit*0.004 + hz*unit*0.008), 2);
 
   // ---- WHAT LIVES THERE, at its depth (z: 0 the surface … 1 the floor) ----
-  const area=(DW*DH)/(ww*wh);                                     // a bigger patch holds more
+  const area=(2*LW)*(2*LW)/(ww*wh);   // (the world the pool spans, in pages: the same whatever the camera sees)                                     // a bigger patch holds more
   const FL=new Float32Array(PN), FA=new Float32Array(PN);         // the floor's own relief shading, and its albedo shift
   const OB=new Float32Array(PN), OT=new Float32Array(PN), OZ=new Float32Array(PN).fill(1);   // a swimmer: cover, tone, depth
   const LF=new Float32Array(PN), LT=new Float32Array(PN);         // the surface: leaves, pads
@@ -34056,25 +34066,25 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   // stones on the floor: lit domes, each its own tone
   const stoneN=Math.round((kind==='stream' ? 70 : kind==='well' ? 26 : 14)*area);
   for(let k=0;k<stoneN;k++){
-    const r=unit*(kind==='stream' ? 0.025+Math.random()*0.05 : 0.02+Math.random()*0.035), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, tone=(Math.random()-0.5)*0.5;
+    const r=unit*(kind==='stream' ? 0.025+Math.random()*0.05 : 0.02+Math.random()*0.035), x=worldX(), y=worldY(), ang=Math.random()*Math.PI, tone=(Math.random()-0.5)*0.5;
     ellipse(x, y, r*(1+Math.random()*0.5), r, ang, (i,u,v,q)=>{ if(q>=1) { if(q<1.5) FL[i]=Math.min(FL[i], -0.35*(1.5-q)); return; }
       const nz=Math.sqrt(1-q), nx=u, ny=v, ca=Math.cos(ang), sa=Math.sin(ang), wx=nx*ca-ny*sa, wy=nx*sa+ny*ca;
       FL[i]=Math.max(FL[i], (-(wx*SX+wy*SY)*0.8 + nz*0.4) - 0.2); FA[i]=tone; });
   }
   // coins in the well: small bright discs, a few on their edge
   if(kind==='well'){ const n=Math.round((18+Math.random()*16)*area);
-    for(let k=0;k<n;k++){ const r=unit*(0.02+Math.random()*0.012), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, squash=0.35+Math.random()*0.65;
+    for(let k=0;k<n;k++){ const r=unit*(0.02+Math.random()*0.012), x=worldX(), y=worldY(), ang=Math.random()*Math.PI, squash=0.35+Math.random()*0.65;
       ellipse(x, y, r, r*squash, ang, (i,u,v,q)=>{ if(q>=1) return; const rim=q>0.72 ? 0.5 : 0; FL[i]=0.9 - rim + Math.sin(u*9)*0.08; FA[i]=0.55; }); } }
   // weed: strands rising from the floor, swaying
   if(kind!=='well'){ const n=Math.round((kind==='stream' ? 10 : 5)*area);
-    for(let k=0;k<n;k++){ let x=Math.random()*PW, y=Math.random()*PH; const len=unit*(0.12+Math.random()*0.25), ph=Math.random()*6.28, ang=Math.random()*Math.PI*2, wdt=unit*0.006;
+    for(let k=0;k<n;k++){ let x=worldX(), y=worldY(); const len=unit*(0.12+Math.random()*0.25), ph=Math.random()*6.28, ang=Math.random()*Math.PI*2, wdt=unit*0.006;
       for(let t=0;t<1;t+=0.01){ const px=x+Math.cos(ang)*len*t + Math.sin(t*6+ph)*unit*0.02*t, py=y+Math.sin(ang)*len*t + Math.cos(t*5+ph)*unit*0.02*t, z=1-t*0.55;
         ellipse(px, py, wdt*(1.2-t), wdt*(1.2-t), 0, (i,u,v,q)=>{ if(q<1 && z<OZ[i]+0.02){ OB[i]=Math.max(OB[i], 0.75*(1-q)); OT[i]=0.55; OZ[i]=z; } }); } } }
   // fish: tapered bodies with a forked tail, curved as they swim
   const fishN=Math.round((kind==='koi' ? 5+Math.random()*4 : kind==='stream' ? 10+Math.random()*10 : 1)*area);
   for(let k=0;k<fishN;k++){
     const Lf=unit*(kind==='koi' ? 0.11+Math.random()*0.07 : kind==='stream' ? 0.03+Math.random()*0.02 : 0.08), Wf=Lf*0.2;
-    const x=Math.random()*PW, y=Math.random()*PH, hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
+    const x=worldX(), y=worldY(), hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
     const z=0.15+Math.random()*0.6, tone=kind==='koi' ? (Math.random()<0.55 ? 1.85 : Math.random()<0.5 ? 0.3 : 1.45) : 0.32;
     const pat=Math.random()*6.28, ca=Math.cos(hd), sa=Math.sin(hd), R=Lf*0.8;
     const [sxx, syy]=shadowAt(x, y, z);
@@ -34094,7 +34104,7 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   // the surface: lily pads (a notched round) or a fallen leaf; sharp shadows on the floor below
   const leafN=kind==='koi' ? Math.round((2+Math.random()*4)*area) : Math.round((Math.random()<0.6 ? 1 : 0)*area + (kind==='stream' ? 1 : 0));
   for(let k=0;k<leafN;k++){
-    const pad=kind==='koi', r=unit*(pad ? 0.05+Math.random()*0.05 : 0.025+Math.random()*0.02), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI*2, tone=pad ? 1.05+Math.random()*0.3 : 0.55+Math.random()*0.7;
+    const pad=kind==='koi', r=unit*(pad ? 0.05+Math.random()*0.05 : 0.025+Math.random()*0.02), x=worldX(), y=worldY(), ang=Math.random()*Math.PI*2, tone=pad ? 1.05+Math.random()*0.3 : 0.55+Math.random()*0.7;
     const [sxx, syy]=shadowAt(x, y, 0);
     const shapeF=(u,v,q)=>{ if(pad){ const a=Math.atan2(v,u); return q<1 && !(Math.abs(a)<0.22 && q>0.02); }
       return Math.abs(v) < 0.42*Math.pow(Math.max(0, 1-u*u), 0.9); };
@@ -52660,11 +52670,11 @@ function fontsRequested(){ return requested.size; }
  */
 // planet and moon joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-const RELEASE = 'Saturn–Gunnlod';
+const RELEASE = 'Saturn–Skrymir';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 const RELEASE_DATE = '2026-10-20';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"lDHzk--U","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"xgw5D-MU"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"S43V6jqg","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"hMmdxNY4","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"0vhRfBfY","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"mf5jntzQ","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"zDlLn6P8","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"ZRWpeH6r","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"xgw5D-MU"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -53497,7 +53507,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 // The release's name always (release.js), and — when built — the date and a
 // hash of the code. A page served from the source files, unbuilt, still names
 // its release instead of showing the bare placeholder.
-const STAMP = "2026-10-20 · 234db25";
+const STAMP = "2026-10-20 · 01fd876";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -63080,6 +63090,9 @@ syncTextureParams(true);
 // live and inert -- a control that silently does nothing is worse than one
 // that is visibly unavailable.
 
+/** What the light dial moves on a surface where it isn't the light, in one word for the Main button (caps.dial's first
+ *  word; Position is Pos, Daylight is Day). */
+function dialWord(dial){ const w = String(dial).split(/[\s&]+/)[0]; return ({ Position: 'Pos', Daylight: 'Day' })[w] || w; }
 function syncTextureTools(resetToDefaults){
   const type = $('textureType').value;
   const caps = capsFor(type);
@@ -63108,6 +63121,9 @@ function syncTextureTools(resetToDefaults){
     // a texture may use the dial for something else, and says so: First Snow's wind
     const lbl = lightRow.querySelector('label');
     if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = labelText(lbl); setLabelText(lbl, caps.dial || lbl.dataset.lightName); }
+    // (and the Main button says it in one word, Ruby: Main, or what the dial moves instead: Pos, Wind, Rain, Hatch…)
+    { const mb = $('lightSeg') && $('lightSeg').querySelector ? $('lightSeg').querySelector('[data-light="main"] [data-str]') : null;
+      if(mb) mb.textContent = caps.dial ? dialWord(caps.dial) : (UI_STRINGS['button.light_main'] || 'Main'); }
     // (a dial that is only a direction has no height to show)
     const hf = $('lightTiltField'); if(hf && hf.style) hf.style.display = caps.dirOnly ? 'none' : '';
   }

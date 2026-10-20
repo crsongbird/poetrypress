@@ -8,7 +8,7 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- THE DIALS ALWAYS SHOW: the camera dial and Main Light / Rim Light faded where a surface doesn't use them; the colours
+- THE DIALS ALWAYS SHOW: the camera dial and Main / Rim (Main named for what the dial moves: Pos, Wind…) faded where a surface doesn't use them; the colours
   two columns beneath. The Transmutation Circle placed by the camera dial (with its guide); Rain on Water's View and the
   Painted Landscape's Tilt on the camera dial's View. Right?
 - MACRO BLOOM IN DEPTH ORDER: drawn back to front, and its shadows from the depth (a leaf near the lens shadows the

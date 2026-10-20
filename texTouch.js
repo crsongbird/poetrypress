@@ -234,7 +234,12 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   const floor=unit*(0.03+depth*0.3), bend=floor*(1-1/1.33);
   const ox=-SX*ltilt*floor*0.35, oy=-SY*ltilt*floor*0.35;          // slanting light shifts the net
   const M=Math.ceil(Math.abs(ox)+Math.abs(oy)+bend*0.8+6), PW=DW+2*M, PH=DH+2*M, PN=PW*PH;
-  const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW, y=v*PH; let s=0;
+  // THE POOL IS IN THE WORLD (Ruby: panning the camera must be deterministic): its waves and everything in it are laid in
+  // the ground's own coordinates (the frame's patch less its origin), and things are thrown across a fixed stretch of
+  // the world, four pages each way, at a fixed density: turning, tipping or a half-size draft shows the same pool
+  const GX0=(F.flat ? ww/2 : F.gcx)+M, GZ0=(F.flat ? wh/2 : F.gcz)+M, LW=4*Math.max(ww,wh);
+  const worldX=()=>GX0+(Math.random()*2-1)*LW, worldY=()=>GZ0+(Math.random()*2-1)*LW;
+  const H=smoothField(PW,PH,2,(u,v)=>{ const x=u*PW-GX0, y=v*PH-GZ0; let s=0;
     for(const q of waves){ const p=q.kx*x+q.ky*y+q.ph; s+=q.a*(Math.sin(p) + 0.35*turb*Math.sin(2*p+1)); } return s; });
   const GX=new Float32Array(PN), GY=new Float32Array(PN);
   for(let y=0;y<PH;y++) for(let x=0;x<PW;x++){ const i=y*PW+x;
@@ -257,7 +262,7 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   boxBlur(C, Math.round(1 + depth*depth*unit*0.004 + hz*unit*0.008), 2);
 
   // ---- WHAT LIVES THERE, at its depth (z: 0 the surface … 1 the floor) ----
-  const area=(DW*DH)/(ww*wh);                                     // a bigger patch holds more
+  const area=(2*LW)*(2*LW)/(ww*wh);   // (the world the pool spans, in pages: the same whatever the camera sees)                                     // a bigger patch holds more
   const FL=new Float32Array(PN), FA=new Float32Array(PN);         // the floor's own relief shading, and its albedo shift
   const OB=new Float32Array(PN), OT=new Float32Array(PN), OZ=new Float32Array(PN).fill(1);   // a swimmer: cover, tone, depth
   const LF=new Float32Array(PN), LT=new Float32Array(PN);         // the surface: leaves, pads
@@ -269,25 +274,25 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   // stones on the floor: lit domes, each its own tone
   const stoneN=Math.round((kind==='stream' ? 70 : kind==='well' ? 26 : 14)*area);
   for(let k=0;k<stoneN;k++){
-    const r=unit*(kind==='stream' ? 0.025+Math.random()*0.05 : 0.02+Math.random()*0.035), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, tone=(Math.random()-0.5)*0.5;
+    const r=unit*(kind==='stream' ? 0.025+Math.random()*0.05 : 0.02+Math.random()*0.035), x=worldX(), y=worldY(), ang=Math.random()*Math.PI, tone=(Math.random()-0.5)*0.5;
     ellipse(x, y, r*(1+Math.random()*0.5), r, ang, (i,u,v,q)=>{ if(q>=1) { if(q<1.5) FL[i]=Math.min(FL[i], -0.35*(1.5-q)); return; }
       const nz=Math.sqrt(1-q), nx=u, ny=v, ca=Math.cos(ang), sa=Math.sin(ang), wx=nx*ca-ny*sa, wy=nx*sa+ny*ca;
       FL[i]=Math.max(FL[i], (-(wx*SX+wy*SY)*0.8 + nz*0.4) - 0.2); FA[i]=tone; });
   }
   // coins in the well: small bright discs, a few on their edge
   if(kind==='well'){ const n=Math.round((18+Math.random()*16)*area);
-    for(let k=0;k<n;k++){ const r=unit*(0.02+Math.random()*0.012), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI, squash=0.35+Math.random()*0.65;
+    for(let k=0;k<n;k++){ const r=unit*(0.02+Math.random()*0.012), x=worldX(), y=worldY(), ang=Math.random()*Math.PI, squash=0.35+Math.random()*0.65;
       ellipse(x, y, r, r*squash, ang, (i,u,v,q)=>{ if(q>=1) return; const rim=q>0.72 ? 0.5 : 0; FL[i]=0.9 - rim + Math.sin(u*9)*0.08; FA[i]=0.55; }); } }
   // weed: strands rising from the floor, swaying
   if(kind!=='well'){ const n=Math.round((kind==='stream' ? 10 : 5)*area);
-    for(let k=0;k<n;k++){ let x=Math.random()*PW, y=Math.random()*PH; const len=unit*(0.12+Math.random()*0.25), ph=Math.random()*6.28, ang=Math.random()*Math.PI*2, wdt=unit*0.006;
+    for(let k=0;k<n;k++){ let x=worldX(), y=worldY(); const len=unit*(0.12+Math.random()*0.25), ph=Math.random()*6.28, ang=Math.random()*Math.PI*2, wdt=unit*0.006;
       for(let t=0;t<1;t+=0.01){ const px=x+Math.cos(ang)*len*t + Math.sin(t*6+ph)*unit*0.02*t, py=y+Math.sin(ang)*len*t + Math.cos(t*5+ph)*unit*0.02*t, z=1-t*0.55;
         ellipse(px, py, wdt*(1.2-t), wdt*(1.2-t), 0, (i,u,v,q)=>{ if(q<1 && z<OZ[i]+0.02){ OB[i]=Math.max(OB[i], 0.75*(1-q)); OT[i]=0.55; OZ[i]=z; } }); } } }
   // fish: tapered bodies with a forked tail, curved as they swim
   const fishN=Math.round((kind==='koi' ? 5+Math.random()*4 : kind==='stream' ? 10+Math.random()*10 : 1)*area);
   for(let k=0;k<fishN;k++){
     const Lf=unit*(kind==='koi' ? 0.11+Math.random()*0.07 : kind==='stream' ? 0.03+Math.random()*0.02 : 0.08), Wf=Lf*0.2;
-    const x=Math.random()*PW, y=Math.random()*PH, hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
+    const x=worldX(), y=worldY(), hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
     const z=0.15+Math.random()*0.6, tone=kind==='koi' ? (Math.random()<0.55 ? 1.85 : Math.random()<0.5 ? 0.3 : 1.45) : 0.32;
     const pat=Math.random()*6.28, ca=Math.cos(hd), sa=Math.sin(hd), R=Lf*0.8;
     const [sxx, syy]=shadowAt(x, y, z);
@@ -307,7 +312,7 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   // the surface: lily pads (a notched round) or a fallen leaf; sharp shadows on the floor below
   const leafN=kind==='koi' ? Math.round((2+Math.random()*4)*area) : Math.round((Math.random()<0.6 ? 1 : 0)*area + (kind==='stream' ? 1 : 0));
   for(let k=0;k<leafN;k++){
-    const pad=kind==='koi', r=unit*(pad ? 0.05+Math.random()*0.05 : 0.025+Math.random()*0.02), x=Math.random()*PW, y=Math.random()*PH, ang=Math.random()*Math.PI*2, tone=pad ? 1.05+Math.random()*0.3 : 0.55+Math.random()*0.7;
+    const pad=kind==='koi', r=unit*(pad ? 0.05+Math.random()*0.05 : 0.025+Math.random()*0.02), x=worldX(), y=worldY(), ang=Math.random()*Math.PI*2, tone=pad ? 1.05+Math.random()*0.3 : 0.55+Math.random()*0.7;
     const [sxx, syy]=shadowAt(x, y, 0);
     const shapeF=(u,v,q)=>{ if(pad){ const a=Math.atan2(v,u); return q<1 && !(Math.abs(a)<0.22 && q>0.02); }
       return Math.abs(v) < 0.42*Math.pow(Math.max(0, 1-u*u), 0.9); };

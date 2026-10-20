@@ -56,7 +56,7 @@ import { paintPresetSwatch, setSwatchTextureSource, swatchTexturesArrived } from
 import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { PREVIEW, SWATCH, DEFAULTS, READABLE } from './tunables.js';
-import { applyStrings, fill, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS, MODAL_RANGE, EYE_OFF } from './strings.js';
+import { applyStrings, fill, UI_STRINGS, PML_GUIDE, PICKER, CHOOSER, DIE, KEPT, BLEND_NAMES, SURFACE_LAYERS, FORGE_BAR, PROTECT, PRESET_ACTS, PAGE_SAYS, HUE5_HINTS, MODAL_RANGE, EYE_OFF } from './strings.js';
 // (a starter's or a Surface Study's place in the surface menu: 'starter:agate', 'study:fibers'; see paintTryOptions)
 const TRY_GRAPH = /^(starter|study):/;
 // soft interface sounds (murmur.js); made here so every handler below can use it
@@ -2285,6 +2285,9 @@ syncTextureParams(true);
 // live and inert -- a control that silently does nothing is worse than one
 // that is visibly unavailable.
 
+/** What the light dial moves on a surface where it isn't the light, in one word for the Main button (caps.dial's first
+ *  word; Position is Pos, Daylight is Day). */
+function dialWord(dial){ const w = String(dial).split(/[\s&]+/)[0]; return ({ Position: 'Pos', Daylight: 'Day' })[w] || w; }
 function syncTextureTools(resetToDefaults){
   const type = $('textureType').value;
   const caps = capsFor(type);
@@ -2313,6 +2316,9 @@ function syncTextureTools(resetToDefaults){
     // a texture may use the dial for something else, and says so: First Snow's wind
     const lbl = lightRow.querySelector('label');
     if(lbl){ if(!lbl.dataset.lightName) lbl.dataset.lightName = labelText(lbl); setLabelText(lbl, caps.dial || lbl.dataset.lightName); }
+    // (and the Main button says it in one word, Ruby: Main, or what the dial moves instead: Pos, Wind, Rain, Hatch…)
+    { const mb = $('lightSeg') && $('lightSeg').querySelector ? $('lightSeg').querySelector('[data-light="main"] [data-str]') : null;
+      if(mb) mb.textContent = caps.dial ? dialWord(caps.dial) : (UI_STRINGS['button.light_main'] || 'Main'); }
     // (a dial that is only a direction has no height to show)
     const hf = $('lightTiltField'); if(hf && hf.style) hf.style.display = caps.dirOnly ? 'none' : '';
   }
