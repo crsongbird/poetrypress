@@ -3298,7 +3298,7 @@ but bear with me, dear}]/jitter:200
             <span class="el-name sr-only" id="elementName" aria-live="polite"></span>
           </div>
           <div class="surface-acts full">
-            <button class="ghost" id="randomSurfaceBtn" data-sound="summonBackdrop" type="button" data-str="button.randomSurfaceBtn">⟳ New Random Surface</button>
+            <button class="ghost" id="randomSurfaceBtn" data-sound="reroll" type="button" data-str="button.randomSurfaceBtn">⟳ New Random Surface</button>
             <button class="ghost" id="revealSurfaceBtn" data-sound="athanorOpen" type="button" data-str="button.revealSurfaceBtn" title="Open this surface's parts and wires in the Athanor. The page keeps this surface until you Apply your version.">🜉 Edit in the Athanor</button>
           </div>
           <!-- THE SURFACE AND THE WORDS sit under the surface's own buttons -->
@@ -5989,6 +5989,280 @@ const wholeShare = (E, n, k, d) => E.num(n, k, d)/100;
 function seedChoice(seed, salt){ let h = 2166136261 ^ (seed >>> 0); for(let i = 0; i < salt.length; i++){ h ^= salt.charCodeAt(i); h = Math.imul(h, 16777619); } return mulberry32(h >>> 0); }
 
 
+/* ==== paintKit.js ==== */
+const pkMix = (a, b, t) => a.map((v, i) => v + (b[i] - v)*t);
+const pkCss = (c, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`;
+const pkPoly = (x, pts, fill) => { x.fillStyle = fill; x.beginPath(); pts.forEach(([X, Y], i) => i ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.closePath(); x.fill(); };
+const pkDisc = (x, X, Y, r, fill) => { if(!(r > 0)) return; x.fillStyle = fill; x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); };
+const pkEll = (x, X, Y, rx, ry, fill) => { if(!(rx > 0 && ry > 0)) return; x.fillStyle = fill; x.beginPath(); x.ellipse(X, Y, rx, ry, 0, 0, Math.PI*2); x.fill(); };
+const PK_WHITE = [255, 248, 232], PK_BLACK = [0, 0, 0];
+const pkSub = R => { const b = (R()*4294967296) >>> 0; return t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); };
+function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
+  g.addColorStop(0, pkCss(col, a)); g.addColorStop(1, pkCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
+
+const pkFoot = (x, X, Y, r, c) => pkEll(x, X - c.sd*r*0.35, Y, r, r*0.22, pkCss(c.dark, 0.28));
+
+
+
+const PK_TREES = { wild: ['spruce', 'spruce', 'broadleaf', 'broadleaf', 'pine', 'poplar', 'birch'], magic: ['broadleaf', 'glow', 'glow', 'birch', 'willow', 'spruce'], ruins: ['dead', 'dead', 'spruce', 'broadleaf', 'pine'] };
+
+
+function pkLobes(x, lobes, c, R, cx, cy, rr){
+  const lx = c.L[0], ly = c.L[1];
+  for(const [X, Y, r] of lobes) pkDisc(x, X, Y, r, pkCss(c.dark));
+  for(const [X, Y, r] of lobes) pkDisc(x, X + lx*r*0.22, Y + ly*r*0.22, r*0.78, pkCss(c.body));
+  for(const [X, Y, r] of lobes){ const fx = (X - cx)/rr, fy = (Y - cy)/rr; if(fx*lx + fy*ly < 0.05) continue;
+    pkDisc(x, X + lx*r*0.38, Y + ly*r*0.38, r*0.42, pkCss(c.lit)); }
+
+  if(rr > 6) for(let q = 0; q < 3; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = Math.atan2(ly, lx) + (R() - 0.5)*1.2; pkDisc(x, X + Math.cos(a)*r*0.6, Y + Math.sin(a)*r*0.6, r*0.14, pkCss(pkMix(c.lit, PK_WHITE, 0.35))); }
+}
+function pkTree(x, X, Y, h, c, kind, R0, px){
+  const sub = pkSub(R0), R = sub(1), RL = sub(2), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), small = h < px(7);
+  const trunk = (top, wd, lean = 0) => { x.strokeStyle = pkCss(c.trunk); x.lineWidth = Math.max(px(0.6), wd); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + lean, Y - top); x.stroke(); };
+  if(!small) pkFoot(x, X, Y, h*0.22, c);
+  if(kind === 'spruce' || kind === 'fir'){
+
+    trunk(h*0.16, h*0.05);
+    const tiers = (t => small ? 3 : t)(5 + Math.floor(R()*3)), bw = h*rnd(0.2, 0.26), base = Y - h*0.1, L = [], Rt = [];
+    for(let t = 0; t <= tiers; t++){ const u = t/tiers, yy = base - (h*0.9)*u, wd = bw*(1 - u)*(0.85 + 0.3*R());
+      L.push([X - wd, yy + h*0.03], [X - wd*0.45, yy - h*0.02]); Rt.push([X + wd, yy + h*0.03], [X + wd*0.45, yy - h*0.02]); }
+    const tip = [X, Y - h];
+    pkPoly(x, [...L, tip, ...Rt.reverse()], pkCss(c.dark));
+    const side = (sd > 0 ? Rt.slice().reverse() : L);
+    pkPoly(x, [[X, base], ...side.map(([a, b]) => [X + (a - X)*0.92, b]), tip], pkCss(c.body));
+    if(!small) for(let t = 1; t < tiers; t++){ const u = t/tiers, yy = base - h*0.9*u, wd = bw*(1 - u); pkPoly(x, [[X, yy - h*0.03], [X + sd*wd*0.85, yy + h*0.025], [X + sd*wd*0.3, yy + h*0.01]], pkCss(c.lit)); }
+    return; }
+  if(kind === 'pine'){
+
+    const lean = h*rnd(-0.08, 0.08), top = h*0.62; trunk(top, h*0.045, lean);
+    if(!small){ x.lineWidth = Math.max(px(0.5), h*0.02); x.beginPath(); x.moveTo(X + lean*0.7, Y - top*0.75); x.lineTo(X + lean*0.7 - h*0.12, Y - top*0.9); x.moveTo(X + lean*0.85, Y - top*0.85); x.lineTo(X + lean + h*0.14, Y - top*1.02); x.stroke(); }
+    const cx = X + lean, cy = Y - h*0.82, lobes = [];
+    for(let q = 0; q < (small ? 2 : 4); q++){ const u = (q/(small ? 1 : 3)) - 0.5; lobes.push([cx + u*h*0.42 + rnd(-1, 1)*h*0.03, cy + Math.abs(u)*h*0.12 + rnd(-1, 1)*h*0.03, h*rnd(0.12, 0.16)]); }
+    x.save(); x.translate(0, cy); x.scale(1, 0.55); x.translate(0, -cy); pkLobes(x, lobes, c, RL, cx, cy, h*0.3); x.restore(); return; }
+  if(kind === 'poplar'){
+
+    trunk(h*0.2, h*0.04); const lobes = [], n = small ? 3 : 7;
+    for(let q = 0; q < n; q++){ const u = q/(n - 1); lobes.push([X + rnd(-1, 1)*h*0.04, Y - h*(0.25 + 0.65*u), h*(0.13 - 0.07*u)*(0.85 + 0.3*R())]); }
+    pkLobes(x, lobes, c, RL, X, Y - h*0.6, h*0.4); return; }
+  if(kind === 'birch'){
+
+    x.strokeStyle = pkCss(pkMix(c.lit, PK_WHITE, 0.4)); x.lineWidth = Math.max(px(0.6), h*0.035); x.beginPath(); x.moveTo(X, Y); x.lineTo(X + h*0.03, Y - h*0.8); x.stroke();
+    if(!small){ x.fillStyle = pkCss(c.trunk); for(let q = 0; q < 4; q++){ const yy = Y - h*(0.15 + q*0.15); x.fillRect(X - h*0.02, yy, h*0.035, Math.max(px(0.5), h*0.012)); } }
+    const lobes = []; for(let q = 0; q < (small ? 3 : 7); q++) lobes.push([X + h*0.03 + rnd(-0.13, 0.13)*h, Y - h*rnd(0.6, 0.92), h*rnd(0.09, 0.13)]);
+    pkLobes(x, lobes, c, RL, X, Y - h*0.75, h*0.25); return; }
+  if(kind === 'willow'){
+
+    trunk(h*0.4, h*0.06); const cx = X, cy = Y - h*0.62, lobes = [];
+    for(let q = 0; q < 6; q++){ const a = Math.PI + q/5*Math.PI; lobes.push([cx + Math.cos(a)*h*0.3, cy + Math.sin(a)*h*0.18, h*0.15]); }
+    pkLobes(x, lobes, c, RL, cx, cy, h*0.35);
+    if(!small){ x.strokeStyle = pkCss(c.body); x.lineWidth = Math.max(px(0.6), h*0.025); x.beginPath();
+      for(let q = 0; q < 9; q++){ const sx = cx + (q/8 - 0.5)*h*0.7; x.moveTo(sx, cy - h*0.02); x.quadraticCurveTo(sx + (q/8 - 0.5)*h*0.1, cy + h*0.25, sx + (q/8 - 0.5)*h*0.14, cy + h*rnd(0.3, 0.5)); } x.stroke(); }
+    return; }
+  if(kind === 'dead'){
+
+    x.strokeStyle = pkCss(c.dark); x.lineCap = 'round';
+    const limb = (x0, y0, ang, len, wd, depth) => { const x1 = x0 + Math.sin(ang)*len, y1 = y0 - Math.cos(ang)*len; x.lineWidth = Math.max(px(0.5), wd); x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
+      if(depth > 0) for(const s of [-1, 1]) limb(x1, y1, ang + s*rnd(0.3, 0.7), len*rnd(0.5, 0.7), wd*0.6, depth - 1); };
+    limb(X, Y, rnd(-0.1, 0.1), h*0.45, h*0.06, small ? 1 : 3); return; }
+
+  trunk(h*0.45, h*0.06);
+  if(!small){ x.lineWidth = Math.max(px(0.5), h*0.03); x.beginPath(); x.moveTo(X, Y - h*0.3); x.lineTo(X - h*0.1, Y - h*0.5); x.moveTo(X, Y - h*0.34); x.lineTo(X + h*0.12, Y - h*0.52); x.stroke(); }
+  const cx = X, cy = Y - h*0.64, rr = h*0.34, n = (t => small ? 3 : t)(5 + Math.floor(R()*4)), lobes = [], RG = sub(3);
+  for(let q = 0; q < n; q++){ const a = Math.PI*(1.05 + 0.9*q/(n - 1)) + rnd(-0.15, 0.15), d = rr*rnd(0.4, 0.62); lobes.push([cx + Math.cos(a)*d*1.15, cy + Math.sin(a)*d*0.85 + rr*0.15, rr*rnd(0.42, 0.55)]); }
+  lobes.push([cx, cy - rr*0.15, rr*0.55]);
+  pkLobes(x, lobes, c, RL, cx, cy, rr);
+  if(kind === 'glow'){ pkGlow(x, cx, cy, rr*2.2, c.glow, 0.4);
+    for(let q = 0; q < (small ? 2 : 7); q++) pkDisc(x, cx + (RG()*1.6 - 0.8)*rr, cy + (RG()*1.3 - 0.6)*rr, Math.max(px(0.6), h*0.014), pkCss(pkMix(c.glow, PK_WHITE, 0.4), 0.95)); }
+}
+
+
+
+const PK_STYLE = { cities: 'city', neon: 'neon', builders: 'builders', ruins: 'ruins', magic: 'magic', wilds: 'city' };
+
+const PK_MATS = { city: [[196, 178, 150], [168, 96, 76], [150, 150, 146], [120, 150, 184], [72, 76, 88], null], neon: [[40, 36, 58], [30, 44, 60], null], builders: [null, null, [236, 232, 220]],
+  ruins: [[150, 128, 104], [120, 104, 92], [96, 92, 90]], magic: [[176, 160, 210], [150, 120, 150], [210, 196, 170]] };
+
+const PK_ARCH = { city: [['glass', 3], ['deco', 2], ['slab', 2], ['brick', 3], ['dome', 0.6], ['needle', 0.4]], neon: [['glass', 3], ['slab', 2], ['deco', 1], ['needle', 1]],
+  builders: [['pylon', 3], ['arch', 1], ['dome', 1.5], ['glass', 1]], ruins: [['brick', 2], ['glass', 2], ['slab', 2], ['deco', 1]], magic: [['wizard', 3], ['onion', 2], ['brick', 1]] };
+
+function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
+  const pitch = Math.max(px(3), wd*0.11), cols = Math.max(1, Math.floor(wd/pitch) - 1), rows = Math.min(90, Math.max(1, Math.floor(ht/pitch) - 1)), cw = wd/(cols + 1), rh = ht/(rows + 1);
+  if(ht < px(10)) return;
+  if(kind === 'ribbon'){
+    for(let r = 1; r <= rows; r++){ const on = night > 0.2 && R() < 0.55; x.fillStyle = on ? pkCss(c.glow, 0.8*night) : pkCss(c.dark, 0.55); x.fillRect(x0 + cw*0.4, top + r*rh, wd - cw*0.8, rh*0.38); } return; }
+  if(kind === 'mullion'){
+    x.fillStyle = pkCss(lit, 0.18); x.fillRect(x0, top, wd*0.45, ht);
+    x.strokeStyle = pkCss(c.dark, 0.45); x.lineWidth = Math.max(px(0.4), cw*0.08); x.beginPath(); for(let k = 1; k <= cols; k++){ x.moveTo(x0 + k*cw, top); x.lineTo(x0 + k*cw, top + ht); } x.stroke(); }
+  if(night > 0.2 || kind === 'neon'){ x.fillStyle = pkCss(c.glow, 0.85*Math.max(night, kind === 'neon' ? 0.5 : 0));
+    for(let r = 1; r <= rows; r++){ const floorLit = R() < 0.6; for(let k = 1; k <= cols; k++) if(R() < (floorLit ? 0.5 : 0.12)) x.fillRect(x0 + k*cw - cw*0.25, top + r*rh, cw*0.5, rh*0.45); } }
+  else if(kind !== 'mullion'){ x.fillStyle = pkCss(c.dark, 0.5); for(let r = 1; r <= rows; r++) for(let k = 1; k <= cols; k++) x.fillRect(x0 + k*cw - cw*0.22, top + r*rh, cw*0.44, rh*0.42); }
+}
+
+function pkBox(x, X, Y, top, wd, c, dep){
+  const w2 = wd/2, side = dep*c.sd;
+  pkPoly(x, [[X - w2, Y], [X - w2, top], [X + w2, top], [X + w2, Y]], pkCss(c.body));
+  pkPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top], [X + c.sd*w2 + side, top + Math.abs(side)*0.3], [X + c.sd*w2 + side, Y]], pkCss(c.dark));
+  return [X - w2, top, wd, Y - top];
+}
+function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px){
+  const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5);
+  const arch = PK_ARCH[style] || PK_ARCH.city; let tot = 0; for(const [, w] of arch) tot += w; let r = R()*tot, kind = arch[0][0]; for(const [k, w] of arch){ r -= w; if(r < 0){ kind = k; break; } }
+
+
+  { const M = PK_MATS[style] || PK_MATS.city, m = M[Math.floor(R()*M.length)], k = 0.55*(1 - (c.haze || 0));
+    if(m) c = { ...c, body: pkMix(c.body, pkMix(m, c.body, 0.3), k), lit: pkMix(c.lit, pkMix(m, PK_WHITE, 0.35), k), dark: pkMix(c.dark, pkMix(m, PK_BLACK, 0.45), k) }; }
+  const neon = style === 'neon', ruin = style === 'ruins' && h > px(6), w2 = wdt/2, top = Y - h, dep = wdt*0.32, detail = h > px(14), lit = pkMix(c.lit, PK_WHITE, 0.2);
+
+  let bk = 0;
+  if(ruin){ bk = top + h*(0.08 + 0.3*RU()); const jag = [[X + wdt*2, Y + h], [X - wdt*2, Y + h]];
+    for(let q = 0; q <= 6; q++) jag.push([X - wdt*1.2 + wdt*2.4*q/6, bk + (RU() - 0.3)*h*0.2]);
+    x.save(); x.beginPath(); jag.forEach(([a, b], q) => q ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip(); }
+  if(kind === 'deco'){
+    const b1 = top + h*0.3, b2 = top + h*0.12;
+    pkBox(x, X, Y, b1, wdt, c, dep); pkBox(x, X, b1, b2, wdt*0.72, c, dep*0.72); pkBox(x, X, b2, top, wdt*0.44, c, dep*0.44);
+    pkPoly(x, [[X - wdt*0.08, top], [X, top - h*0.16], [X + wdt*0.08, top]], pkCss(c.lit));
+    if(detail){ pkWindows(x, X - w2, b1, wdt, Y - b1, c, night, lit, RW, px); pkWindows(x, X - wdt*0.36, b2, wdt*0.72, b1 - b2, c, night, lit, RW, px);
+      x.fillStyle = pkCss(c.lit, 0.6); x.fillRect(X - wdt*0.36, b1 - px(1), wdt*0.72, Math.max(px(0.6), h*0.008)); x.fillRect(X - wdt*0.22, b2 - px(1), wdt*0.44, Math.max(px(0.6), h*0.008)); } }
+  else if(kind === 'slab'){
+    const ww = wdt*1.5, hh = h*0.6, t2 = Y - hh; pkBox(x, X, Y, t2, ww, c, dep*1.2);
+    if(detail){ pkWindows(x, X - ww/2, t2, ww, hh, c, night, lit, RW, px, neon ? 'neon' : 'ribbon'); pkBox(x, X + ww*(RT() - 0.5)*0.4, t2, t2 - hh*0.08, ww*0.25, c, dep*0.3); } }
+  else if(kind === 'brick'){
+    const hh = h*0.7, t2 = Y - hh; pkBox(x, X, Y, t2, wdt*1.1, c, dep);
+    if(detail){ pkWindows(x, X - wdt*0.55, t2, wdt*1.1, hh, c, night, lit, RW, px); x.fillStyle = pkCss(c.dark); x.fillRect(X - wdt*0.6, t2 - Math.max(px(0.6), hh*0.02), wdt*1.2, Math.max(px(1), hh*0.03));
+      if(RT() < 0.45 && !ruin){ const tx = X + wdt*(RT() - 0.5)*0.6, tw = wdt*0.22, th = tw*1.1; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), tw*0.08); x.beginPath(); x.moveTo(tx - tw*0.4, t2); x.lineTo(tx - tw*0.3, t2 - th*0.5); x.moveTo(tx + tw*0.4, t2); x.lineTo(tx + tw*0.3, t2 - th*0.5); x.stroke();
+        pkPoly(x, [[tx - tw/2, t2 - th*0.5], [tx - tw/2, t2 - th*1.2], [tx, t2 - th*1.45], [tx + tw/2, t2 - th*1.2], [tx + tw/2, t2 - th*0.5]], pkCss(c.body)); pkPoly(x, [[tx + c.sd*tw/2, t2 - th*0.5], [tx + c.sd*tw/2, t2 - th*1.2], [tx, t2 - th*1.45], [tx, t2 - th*0.5]], pkCss(c.dark)); } } }
+  else if(kind === 'dome'){
+    const dr = wdt*0.7, base = Y - h*0.35; pkBox(x, X, Y, base, dr*2, c, dep*0.5);
+    x.fillStyle = pkCss(c.body); x.beginPath(); x.ellipse(X, base, dr, dr*0.85, 0, Math.PI, 0); x.fill();
+    x.fillStyle = pkCss(c.lit); x.beginPath(); x.ellipse(X + c.sd*dr*0.25, base, dr*0.55, dr*0.8, 0, Math.PI, 0); x.fill();
+    if(detail){ x.strokeStyle = pkCss(c.dark, 0.5); x.lineWidth = Math.max(px(0.5), dr*0.04); x.beginPath(); for(let q = 1; q < 5; q++){ const u = q/5*2 - 1; x.moveTo(X + u*dr, base); x.quadraticCurveTo(X + u*dr*0.6, base - dr*0.8, X, base - dr*0.85); } x.stroke();
+      pkBox(x, X, base - dr*0.82, base - dr*1.05, dr*0.2, c, dr*0.06); }
+    if(night > 0.2) pkGlow(x, X, base - dr*0.4, dr*1.6, c.glow, 0.45*night); }
+  else if(kind === 'needle'){
+    const sh = h*1.3, st = Y - sh*0.8; x.fillStyle = pkCss(c.body); x.fillRect(X - wdt*0.08, st, wdt*0.16, sh*0.8);
+    pkEll(x, X, st, wdt*0.5, wdt*0.12, pkCss(c.body)); pkEll(x, X + c.sd*wdt*0.1, st - wdt*0.03, wdt*0.32, wdt*0.07, pkCss(c.lit));
+    x.fillRect(X - Math.max(px(0.4), wdt*0.02), st - sh*0.2, Math.max(px(0.8), wdt*0.04), sh*0.2);
+    if(night > 0.2) pkDisc(x, X, st - sh*0.2, Math.max(px(1), wdt*0.04), pkCss(c.glow2, 0.9)); }
+  else if(kind === 'pylon'){
+    const t2 = top + wdt*0.5; pkPoly(x, [[X - w2, Y], [X - w2*0.8, t2], [X + w2*0.8, t2], [X + w2, Y]], pkCss(c.body));
+    x.fillStyle = pkCss(c.body); x.beginPath(); x.arc(X, t2, w2*0.8, Math.PI, 0); x.fill();
+    pkPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2*0.8, t2], [X + c.sd*w2*0.3, t2], [X + c.sd*w2*0.4, Y]], pkCss(c.lit));
+    x.fillStyle = pkCss(c.glow, 0.85); x.fillRect(X - c.sd*w2*0.55 - px(0.5), t2, Math.max(px(0.8), wdt*0.05), Y - t2);
+    pkGlow(x, X, t2 - w2*0.5, wdt*0.9, c.glow, 0.5); }
+  else if(kind === 'arch'){
+    const aw = wdt*1.8, th = aw*0.16, ry = Y - h*0.5;
+    x.fillStyle = pkCss(c.body); x.beginPath(); x.moveTo(X - aw/2, Y); x.lineTo(X - aw/2, ry); x.arc(X, ry, aw/2, Math.PI, 0); x.lineTo(X + aw/2, Y); x.lineTo(X + aw/2 - th, Y); x.lineTo(X + aw/2 - th, ry); x.arc(X, ry, aw/2 - th, 0, Math.PI, true); x.lineTo(X - aw/2 + th, Y); x.closePath(); x.fill();
+    x.strokeStyle = pkCss(c.lit); x.lineWidth = Math.max(px(0.6), th*0.3); x.beginPath(); x.arc(X, ry, aw/2 - th*0.15, c.sd > 0 ? -Math.PI/2 : Math.PI, c.sd > 0 ? 0 : -Math.PI/2); x.stroke();
+    pkGlow(x, X, Y - h*0.15, aw*0.4, c.glow, 0.35); }
+  else if(kind === 'wizard'){
+    const tw = wdt*0.7, t2 = Y - h*0.75; pkBox(x, X, Y, t2, tw, c, tw*0.15);
+    pkPoly(x, [[X - tw*0.65, t2], [X, top - h*0.1], [X + tw*0.65, t2]], pkCss(pkMix(c.dark, c.glow, 0.2))); pkPoly(x, [[X, t2], [X, top - h*0.1], [X + c.sd*tw*0.65, t2]], pkCss(pkMix(c.body, c.glow, 0.25)));
+    if(detail) for(let q = 0; q < 3; q++){ const wy = t2 + (Y - t2)*(0.15 + q*0.28); x.fillStyle = pkCss(c.glow, 0.5 + 0.4*night); x.fillRect(X - tw*0.1, wy, tw*0.2, (Y - t2)*0.1); }
+    pkGlow(x, X, t2 + (Y - t2)*0.2, tw*0.8, c.glow, 0.3 + 0.3*night); }
+  else if(kind === 'onion'){
+    const dr = wdt*0.55, base = Y - h*0.45; pkBox(x, X, Y, base, dr*1.6, c, dep*0.4);
+    x.fillStyle = pkCss(c.body); x.beginPath(); x.moveTo(X - dr*0.7, base); x.bezierCurveTo(X - dr*1.3, base - dr*0.9, X - dr*0.2, base - dr*1.4, X, base - dr*2); x.bezierCurveTo(X + dr*0.2, base - dr*1.4, X + dr*1.3, base - dr*0.9, X + dr*0.7, base); x.fill();
+    x.fillStyle = pkCss(pkMix(c.lit, c.glow, 0.3)); x.beginPath(); x.moveTo(X, base); x.bezierCurveTo(X + c.sd*dr*1.2, base - dr*0.9, X + c.sd*dr*0.15, base - dr*1.4, X, base - dr*2); x.fill();
+    if(night > 0.2) pkGlow(x, X, base - dr, dr*2, c.glow, 0.4*night); }
+  else {
+    const sl = R() < 0.4 ? h*0.08*(R() < 0.5 ? 1 : -1) : 0;
+    pkPoly(x, [[X - w2, Y], [X - w2, top + Math.max(0, sl)], [X + w2, top + Math.max(0, -sl)], [X + w2, Y]], pkCss(c.body));
+    pkPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top + Math.max(0, c.sd > 0 ? -sl : sl)], [X + c.sd*(w2 + dep), top + Math.abs(dep)*0.3 + Math.max(0, c.sd > 0 ? -sl : sl)], [X + c.sd*(w2 + dep), Y]], pkCss(c.dark));
+    if(detail) pkWindows(x, X - w2, top + Math.abs(sl), wdt, h - Math.abs(sl), c, night, lit, RW, px, neon ? 'neon' : 'mullion');
+    if(R() < 0.35){ x.fillStyle = pkCss(c.dark); x.fillRect(X - Math.max(px(0.4), wdt*0.02), top - h*0.14, Math.max(px(0.8), wdt*0.04), h*0.14); if(night > 0.2) pkDisc(x, X, top - h*0.14, Math.max(px(0.8), wdt*0.03), pkCss([255, 80, 70], 0.9)); } }
+
+  if(neon && h > px(8) && kind !== 'needle'){ const R = RN; x.strokeStyle = pkCss(c.glow2, 0.85); x.lineWidth = Math.max(px(0.6), wdt*0.03); if(kind === 'glass'){ x.beginPath(); x.moveTo(X - w2, Y); x.lineTo(X - w2, top); x.lineTo(X + w2, top); x.lineTo(X + w2, Y); x.stroke(); }
+    if(R() < 0.65){ const sh = h*0.14, sy = top + h*(0.12 + 0.45*R()), vert = R() < 0.5, col = R() < 0.5 ? c.glow : c.glow2;
+      x.fillStyle = pkCss(col, 0.92); if(vert) x.fillRect(X - w2 - wdt*0.12, sy, wdt*0.14, sh*1.6); else x.fillRect(X - w2*0.8, sy, wdt*0.8, sh*0.45);
+      pkGlow(x, X, sy, wdt*1.3, col, 0.35); } }
+  if(ruin){ x.restore(); const air = c.air || c.body, R = RU;
+    if(detail){ x.strokeStyle = pkCss(c.dark, 0.7); x.lineWidth = Math.max(px(0.5), h*0.01); x.beginPath(); for(let q = 0; q < 3; q++){ const fy = bk + h*0.1*(q + 1); x.moveTo(X - w2, fy); x.lineTo(X + w2*(0.2 + 0.8*R()), fy); } x.stroke(); }
+    for(let q = 0; q < 4; q++) pkPoly(x, [[X + (R() - 0.5)*wdt*1.6, Y + px(0.5)], [X + (R() - 0.5)*wdt*1.2, Y - h*0.06*R()], [X + (R() - 0.5)*wdt*1.6, Y + px(0.5)]], pkCss(pkMix(c.dark, air, 0.2))); }
+}
+
+
+
+function pkRock(x, X, Y, r, col, L, R){
+  const sd = L[0] > 0 ? 1 : -1, ap = [X + sd*r*0.15 + (R() - 0.5)*r*0.3, Y - r*(0.75 + 0.3*R())], pts = [];
+  for(let q = 0; q <= 6; q++){ const t = Math.PI + q/6*Math.PI; pts.push([X + Math.cos(t)*r*(0.85 + 0.3*R()), Y + Math.sin(t)*r*(0.55 + 0.35*R())]); }
+  pkEll(x, X - sd*r*0.4, Y + r*0.05, r*1.2, r*0.22, pkCss(pkMix(col, PK_BLACK, 0.55), 0.3));
+  pkPoly(x, pts, pkCss(pkMix(col, PK_BLACK, 0.3)));
+  const litSide = sd > 0 ? pts.slice(3) : pts.slice(0, 4); pkPoly(x, [[X, Y], ...litSide, ap], pkCss(col));
+  pkPoly(x, [ap, pts[2], pts[3], pts[4]], pkCss(pkMix(col, PK_WHITE, 0.22)));
+}
+
+function pkSpire(x, X, Y, hh, c, broken, R, px){
+  const bw = hh*0.06; if(hh < 2) return;
+  pkPoly(x, [[X - bw*1.8, Y + bw*0.4], [X - bw*1.2, Y - bw*1.6], [X + bw*1.2, Y - bw*1.6], [X + bw*1.8, Y + bw*0.4]], pkCss(c.dark));
+  pkPoly(x, [[X - bw*1.2, Y - bw*1.6], [X - bw*1.2, Y - bw*1.9], [X + bw*1.2, Y - bw*1.9], [X + bw*1.2, Y - bw*1.6]], pkCss(c.lit));
+  const tip = broken ? 0.55 + 0.2*R() : 1;
+  pkPoly(x, [[X - bw, Y - bw*1.9], [X - bw*(1 - tip)*0.8, Y - hh*tip], [X + bw*(1 - tip)*0.3, Y - hh*tip*0.97], [X + bw, Y - bw*1.9]], pkCss(c.body));
+  pkPoly(x, [[X + c.sd*bw*0.1, Y - bw*1.9], [X + c.sd*bw*(1 - tip)*0.5, Y - hh*tip], [X + c.sd*bw, Y - bw*1.9]], pkCss(c.lit));
+  if(hh > px(20)){ x.fillStyle = pkCss(c.dark, 0.6); for(let q = 1; q < 4; q++){ const u = q/4*tip, wd = bw*(1 - u*0.9); x.fillRect(X - wd, Y - hh*u, wd*2, Math.max(px(0.5), hh*0.006)); } }
+  if(!broken){ const ry = Y - hh*0.42, rw = bw*2.2; x.strokeStyle = pkCss(c.glow, 0.85); x.lineWidth = Math.max(px(0.6), hh*0.006); x.beginPath(); x.ellipse(X, ry, rw, rw*0.22, 0, 0, Math.PI*2); x.stroke();
+    pkGlow(x, X, Y - hh, bw*4, c.glow, 0.6); }
+}
+
+function pkMonolith(x, X, Y, hh, c, count, R, px){
+  const mw = hh*0.22; if(hh < 1.5) return;
+  for(let q = 0; q < count; q++){ const ox = (q - (count - 1)/2)*mw*3.2, hq = hh*(q ? 0.55 + 0.35*R() : 1), tl = hq*0.12*(R() < 0.5 ? 1 : -1), Yq = Y + (count > 1 ? Math.abs(q - (count - 1)/2)*mw*0.3 : 0);
+    pkPoly(x, [[X + ox - mw, Yq + mw*0.3], [X + ox - mw, Yq - hq], [X + ox + mw, Yq - hq + tl], [X + ox + mw, Yq + mw*0.3]], pkCss(c.body));
+    pkPoly(x, [[X + ox + c.sd*mw, Yq + mw*0.3], [X + ox + c.sd*mw, Yq - hq + (c.sd > 0 ? tl : 0)], [X + ox + c.sd*mw*1.5, Yq - hq + mw*0.4], [X + ox + c.sd*mw*1.5, Yq + mw*0.5]], pkCss(c.dark));
+    pkPoly(x, [[X + ox - mw, Yq - hq], [X + ox + mw, Yq - hq + tl], [X + ox + mw*0.6, Yq - hq + tl + mw*0.15], [X + ox - mw*0.6, Yq - hq + mw*0.15]], pkCss(c.lit));
+    if(hq > px(14)){ x.strokeStyle = pkCss(c.dark, 0.55); x.lineWidth = Math.max(px(0.5), mw*0.06); x.beginPath(); for(let k = 0; k < 3; k++){ const yy = Yq - hq*(0.3 + k*0.18); x.moveTo(X + ox - mw*0.6, yy); x.lineTo(X + ox + mw*0.6, yy); } x.stroke(); } }
+}
+
+function pkDome(x, X, Y, r, c, night, px){
+  if(r < 1.5) return;
+  x.fillStyle = pkCss(c.dark); x.beginPath(); x.ellipse(X, Y, r, r*0.8, 0, Math.PI, 0); x.fill();
+  x.fillStyle = pkCss(c.body); x.beginPath(); x.ellipse(X + c.sd*r*0.12, Y, r*0.85, r*0.76, 0, Math.PI, 0); x.fill();
+  x.fillStyle = pkCss(c.lit); x.beginPath(); x.ellipse(X + c.sd*r*0.35, Y, r*0.45, r*0.66, 0, Math.PI, 0); x.fill();
+  if(r > px(8)){ x.strokeStyle = pkCss(c.dark, 0.4); x.lineWidth = Math.max(px(0.5), r*0.03); x.beginPath(); for(let q = 1; q < 4; q++){ x.ellipse(X, Y, r, r*0.8*q/4, 0, Math.PI, 0); } x.stroke(); }
+  pkEll(x, X, Y - r*0.8, r*0.12, r*0.05, pkCss(night > 0.2 ? c.glow : c.dark, 0.9));
+  if(night > 0.2) pkGlow(x, X, Y - r*0.4, r*1.6, c.glow, 0.5*night);
+}
+
+function pkCrystals(x, X, Y, cs0, cols, c, n, R, px){
+  for(let q = 0; q < n; q++){ const cs = cs0*(0.5 + R()), ang = (R() - 0.5)*0.9, ox = (R() - 0.5)*cs0*3, len = cs*(3 + 2*R()); if(cs < 1) continue;
+    const tipX = X + ox + Math.sin(ang)*len, tipY = Y - Math.cos(ang)*len, nx = Math.cos(ang)*cs, ny = Math.sin(ang)*cs, sx = X + ox + Math.sin(ang)*len*0.75, sy = Y - Math.cos(ang)*len*0.75, cc = cols[q % cols.length];
+    pkPoly(x, [[X + ox - nx, Y - ny], [sx - nx, sy - ny], [tipX, tipY], [sx + nx, sy + ny], [X + ox + nx, Y + ny]], pkCss(pkMix(cc, PK_BLACK, 0.4)));
+    pkPoly(x, [[X + ox, Y], [sx, sy], [tipX, tipY], [sx + c.sd*nx, sy + c.sd*ny], [X + ox + c.sd*nx, Y + c.sd*ny]], pkCss(cc));
+    pkPoly(x, [[sx, sy], [tipX, tipY], [sx + c.sd*nx*0.5, sy + c.sd*ny*0.5]], pkCss(pkMix(cc, PK_WHITE, 0.45)));
+    pkGlow(x, tipX, tipY, cs*2, cc, 0.5); }
+}
+
+
+
+
+
+
+
+function pkSilhouette(x, X0, ground, bw, bh, kind, R, px, clip = false){
+  const top = ground - bh, R2 = (a, b) => a + (b - a)*R();
+  x.beginPath();
+  const rect = (a, t, w2) => x.rect(a, t, w2, ground - t);
+  if(kind === 'setback'){ const s1 = bw*0.18, s2 = bw*0.34; x.moveTo(X0, ground); x.lineTo(X0, top + bh*0.35); x.lineTo(X0 + s1, top + bh*0.35); x.lineTo(X0 + s1, top + bh*0.12);
+    x.lineTo(X0 + s2, top + bh*0.12); x.lineTo(X0 + s2, top); x.lineTo(X0 + bw - s2, top); x.lineTo(X0 + bw - s2, top + bh*0.12); x.lineTo(X0 + bw - s1, top + bh*0.12); x.lineTo(X0 + bw - s1, top + bh*0.35); x.lineTo(X0 + bw, top + bh*0.35); x.lineTo(X0 + bw, ground); }
+  else if(kind === 'deco'){
+    rect(X0, top + bh*0.18, bw); rect(X0 + bw*0.15, top + bh*0.08, bw*0.7); rect(X0 + bw*0.3, top, bw*0.4);
+    x.moveTo(X0 + bw*0.42, top); x.lineTo(X0 + bw*0.5, top - bh*0.16); x.lineTo(X0 + bw*0.58, top); }
+  else if(kind === 'slant'){ const up = R() < 0.5; x.moveTo(X0, ground); x.lineTo(X0, top + (up ? bh*0.12 : 0)); x.lineTo(X0 + bw, top + (up ? 0 : bh*0.12)); x.lineTo(X0 + bw, ground); }
+  else if(kind === 'twin'){ rect(X0, top + bh*0.3, bw); rect(X0 + bw*0.05, top + bh*0.02, bw*0.36); rect(X0 + bw*0.59, top, bw*0.36); }
+  else if(kind === 'brick'){ rect(X0, top, bw); x.rect(X0 - bw*0.03, top - Math.max(px(1), bh*0.02), bw*1.06, Math.max(px(1), bh*0.03));
+    if(R() < 0.5){ const tx = X0 + bw*R2(0.2, 0.7), tw = bw*0.2; x.rect(tx, top - tw*1.5, tw, tw); x.moveTo(tx - tw*0.1, top - tw*1.5); x.lineTo(tx + tw*0.5, top - tw*1.95); x.lineTo(tx + tw*1.1, top - tw*1.5); x.rect(tx + tw*0.1, top - tw*0.6, tw*0.1, tw*0.6); x.rect(tx + tw*0.8, top - tw*0.6, tw*0.1, tw*0.6); } }
+  else if(kind === 'dome'){ x.rect(X0, top + bw*0.3, bw, bh - bw*0.3); x.moveTo(X0 + bw, top + bw*0.3); x.arc(X0 + bw/2, top + bw*0.3, bw/2, 0, Math.PI, true); }
+  else if(kind === 'house'){ x.moveTo(X0, ground); x.lineTo(X0, top + bh*0.4); x.lineTo(X0 + bw/2, top - bh*0.2); x.lineTo(X0 + bw, top + bh*0.4); x.lineTo(X0 + bw, ground);
+    x.rect(X0 + bw*0.68, top - bh*0.1, bw*0.12, bh*0.3); }
+  else if(kind === 'warehouse'){ x.moveTo(X0, ground); x.lineTo(X0, top + bh*0.3); x.quadraticCurveTo(X0 + bw/2, top - bh*0.1, X0 + bw, top + bh*0.3); x.lineTo(X0 + bw, ground); }
+  else { rect(X0, top, bw);
+
+    const r = R(); if(r < 0.35) x.rect(X0 + bw*R2(0.15, 0.5), top - bh*0.05, bw*0.35, bh*0.05); else if(r < 0.55) x.rect(X0 + bw*0.5 - Math.max(px(0.5), bw*0.015), top - bh*0.15, Math.max(px(1), bw*0.03), bh*0.15); }
+  if(clip){ x.clip(); return; }
+  x.fill();
+  if(kind === 'spire'){ x.fillRect(X0 + bw/2 - Math.max(px(0.5), bw*0.02), top - bh*0.18, Math.max(px(1), bw*0.04), bh*0.18); x.beginPath(); x.moveTo(X0 + bw*0.2, top); x.lineTo(X0 + bw/2, top - bh*0.1); x.lineTo(X0 + bw*0.8, top); x.fill(); }
+}
+
+
 /* ==== texWhimsy.js ==== */
 function buildMatterMap(){
   const bandAngle = Math.random()*Math.PI, bandOff = (Math.random()-0.5)*0.5;
@@ -7470,9 +7744,13 @@ function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
 
   const windows=(x,top,bw,bh,density)=>{
     const cw=Math.max(3,unit*0.006), ch=Math.max(3,unit*0.008), gap=cw*0.9;
+    const lit=[[],[],[]];
     for(let yy=top+ch; yy<ground-ch*1.5; yy+=ch+gap*1.1)
       for(let xx=x+gap; xx<x+bw-cw-gap*0.3; xx+=cw+gap)
-        if(Math.random()<density){ ctx.globalAlpha=0.55+Math.random()*0.45; ctx.fillStyle=rgb(win); ctx.fillRect(xx,yy,cw,ch); }
+        if(Math.random()<density){ const a=0.55+Math.random()*0.45; lit[Math.min(2, Math.floor((a-0.55)/0.15))].push(xx,yy); }
+
+    ctx.fillStyle=rgb(win);
+    lit.forEach((P,b)=>{ if(!P.length) return; ctx.globalAlpha=0.625+b*0.15; ctx.beginPath(); for(let i=0;i<P.length;i+=2) ctx.rect(P[i],P[i+1],cw,ch); ctx.fill(); });
   };
 
   const peakX=w*(0.2+Math.random()*0.6), peakW=w*(0.18+Math.random()*0.22);
@@ -7483,36 +7761,23 @@ function genCityscape(w,h,amt,zoom,tint1,tint2,GL){
     while(x<w){
       const type=types[Math.floor(Math.random()*types.length)];
       let bw=unit*(0.035+Math.random()*0.06)*scale, bh=H*scale*(0.25+Math.random()*0.75)*(0.55+0.85*Math.exp(-(((x-peakX)/peakW)**2)));
-      if(type==='block'||type==='warehouse') { bw*=1.8; bh*=0.45; }
+      if(type==='block'||type==='warehouse'||type==='brick') { bw*=type==='brick'?1.3:1.8; bh*=type==='brick'?0.6:0.45; }
+      if(type==='twin') bw*=1.4;
       if(type==='house'){ bw=unit*0.022*scale; bh=unit*0.02*scale; }
       const top=ground-bh;
       ctx.globalAlpha=alpha; ctx.fillStyle=grey(tone);
-      ctx.beginPath();
-      if(type==='setback'){
-        const s1=bw*0.18, s2=bw*0.34;
-        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.35); ctx.lineTo(x+s1,top+bh*0.35); ctx.lineTo(x+s1,top+bh*0.12);
-        ctx.lineTo(x+s2,top+bh*0.12); ctx.lineTo(x+s2,top); ctx.lineTo(x+bw-s2,top); ctx.lineTo(x+bw-s2,top+bh*0.12);
-        ctx.lineTo(x+bw-s1,top+bh*0.12); ctx.lineTo(x+bw-s1,top+bh*0.35); ctx.lineTo(x+bw,top+bh*0.35); ctx.lineTo(x+bw,ground);
-      } else if(type==='dome'){
-        ctx.rect(x,top+bw*0.3,bw,bh-bw*0.3); ctx.moveTo(x+bw,top+bw*0.3); ctx.arc(x+bw/2,top+bw*0.3,bw/2,0,Math.PI,true);
-      } else if(type==='house'){
-        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.4); ctx.lineTo(x+bw/2,top-bh*0.2); ctx.lineTo(x+bw,top+bh*0.4); ctx.lineTo(x+bw,ground);
-      } else if(type==='warehouse'){
-        ctx.moveTo(x,ground); ctx.lineTo(x,top+bh*0.3); ctx.quadraticCurveTo(x+bw/2,top-bh*0.1,x+bw,top+bh*0.3); ctx.lineTo(x+bw,ground);
-      } else {
-        ctx.rect(x,top,bw,bh);
-      }
-      ctx.fill();
-      if(type==='spire'){ ctx.fillRect(x+bw/2-unit*0.0015, top-bh*0.18, unit*0.003, bh*0.18);
-        ctx.beginPath(); ctx.moveTo(x+bw*0.2,top); ctx.lineTo(x+bw/2,top-bh*0.1); ctx.lineTo(x+bw*0.8,top); ctx.fill(); }
-      if(density>0 && type!=='warehouse') windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1));
+      const draws=[]; pkSilhouette(ctx, x, ground, bw, bh, type, ()=>{ const v=Math.random(); draws.push(v); return v; }, cpx);
+
+      if(density>0 && type!=='warehouse'){ const shaped = type!=='tower' && type!=='block' && type!=='spire'; let k=0; if(shaped){ ctx.save(); pkSilhouette(ctx, x, ground, bw, bh, type, ()=>draws[k++], cpx, true); }
+        windows(x, top+(type==='dome'?bw*0.3:0), bw, bh, density*(type==='house'?0.5:1)); if(shaped) ctx.restore(); }
       if(type!=='house') tallest=Math.max(tallest, bh);
       x+=bw;
     }
     return tallest;
   };
 
-  const types = scene==='fields' ? ['tower','block','setback'] : ['tower','tower','setback','spire','block','dome'];
+
+  const types = scene==='fields' ? ['tower','block','setback','brick','house'] : ['tower','tower','setback','deco','slant','twin','brick','spire','block','dome'];
   const f = scene==='fields' ? 0.7 : 1;
 
   const layers=[
@@ -10710,7 +10975,10 @@ function crtCard(ctx, W, H, face, look){
 
   const lift = W*(0.008 + (look.lift || 0)), rot = look.rot || 0, co = Math.cos(rot), si = Math.sin(rot);
   const toLocal = (px, py) => [px*co + py*si, -px*si + py*co];
-  { const [dx, dy] = toLocal(L.sx*lift, L.sy*lift);
+
+
+  const engine = !!look.engine;
+  if(!engine){ const [dx, dy] = toLocal(L.sx*lift, L.sy*lift);
 
     crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); outline(c, false); c.restore(); }, 0, 0, W*0.012, 0.42, 0);
     crtShadow(ctx, (c, ox, oy) => { c.save(); c.translate(ox, oy); outline(c, false); c.restore(); }, dx, dy, W*0.04, 0.26, 4); }
@@ -10719,13 +10987,13 @@ function crtCard(ctx, W, H, face, look){
   const tx = L.tx*Math.cos(rot) + L.ty*Math.sin(rot), ty = -L.tx*Math.sin(rot) + L.ty*Math.cos(rot);
   const cg = ctx.createLinearGradient(tx*W*0.6, ty*H*0.6, -tx*W*0.6, -ty*H*0.6);
   cg.addColorStop(0, crtCss(crtMix(paper, [255,255,255], 0.12))); cg.addColorStop(1, crtCss(crtMix(paper, [0,0,0], 0.12)));
-  outline(ctx); ctx.fillStyle = cg; ctx.fill();
+  if(!engine){ outline(ctx); ctx.fillStyle = cg; ctx.fill(); }
 
   const edge = gilt || crtMix(paper, [0,0,0], 0.3), eg = ctx.createLinearGradient(tx*W*0.5, ty*H*0.5, -tx*W*0.5, -ty*H*0.5);
   eg.addColorStop(0, crtCss(crtMix(edge, [255,255,255], 0.45))); eg.addColorStop(0.5, crtCss(edge)); eg.addColorStop(1, crtCss(crtMix(edge, [0,0,0], 0.45)));
-  ctx.strokeStyle = eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); outline(ctx); ctx.stroke();
+  ctx.strokeStyle = engine ? crtCss(edge) : eg; ctx.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); outline(ctx); ctx.stroke();
   ctx.save(); if(cut){ outline(ctx); ctx.clip(); } crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }); ctx.restore();
-  crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline);
+  crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline, engine);
 
   let cutDone = false;
   for(const d of dmgs){ const own = crtCut(d) ? (cutDone ? { ...d, kind: 'crease' } : d) : d; if(crtCut(own)) cutDone = true; crtDamage(ctx, W, H, r, own, paper, cols, [tx, ty], outline, !!face.back); }
@@ -10829,7 +11097,7 @@ function crtCardFace(ctx, W, H, face, { gilt, paper, ink, cols, r }){
 
 
 
-function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline = c => crtRound(c, W, H, r)){
+function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline = c => crtRound(c, W, H, r), engine = false){
   const R = Math.random;
   ctx.save(); outline(ctx); ctx.clip();
 
@@ -10843,6 +11111,7 @@ function crtCardFinish(ctx, W, H, r, S, V, paper, [tx, ty], dark, outline = c =>
 
   if(V.wear > 0.45) for(const [cx, cy] of [[-1,-1],[1,-1],[-1,1],[1,1]]) if(R() < 0.45){ const x = cx*W/2, y = cy*H/2, q = W*(0.08 + R()*0.08), g = ctx.createRadialGradient(x, y, 0, x, y, q);
     g.addColorStop(0, `rgba(255,255,255,${dark ? 0.22 : 0.18})`); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(x - q, y - q, q*2, q*2); }
+  if(engine){ ctx.restore(); return; }
 
   const gl = Math.max(0.13, S.gloss)*V.spec, along = 0.5 + 0.32*Math.sin(V.phase);
   const ax = -ty, ay = tx, bx = tx + ax*V.bow, by = ty + ay*V.bow, m = Math.hypot(bx, by) || 1;
@@ -10870,14 +11139,15 @@ function crtCoin(ctx, x, y, r, coin, look){
   const base = crtRGB(COIN_METALS[coin.metal] || COIN_METALS.gold), tone = (TONES[coin.metal] || TONES.gold)[V.phase < 3.14 ? 0 : 1];
   const M = crtMix(crtMix(base, tone, V.age*0.4), [0,0,0], 0.1 + V.wear*0.1);
 
-  if(!look.noShadow){ const dx = L.sx*lift, dy = L.sy*lift;
+  const engine = !!look.engine;
+  if(!look.noShadow && !engine){ const dx = L.sx*lift, dy = L.sy*lift;
     crtShadow(ctx, (c, ox, oy) => { c.moveTo(x + ox + r, y + oy); c.arc(x + ox, y + oy, r, 0, Math.PI*2); }, dx, dy, r*0.16, 0.5, 3);
     crtShadow(ctx, (c, ox, oy) => { c.moveTo(x + ox + r, y + oy); c.arc(x + ox, y + oy, r, 0, Math.PI*2); }, dx*2.2, dy*2.2, r*0.5, 0.18, 3); }
-  ctx.beginPath(); ctx.arc(x + L.sx*r*0.035, y + L.sy*r*0.035, r, 0, Math.PI*2); ctx.fillStyle = crtCss(crtMix(M, [0,0,0], 0.55)); ctx.fill();
+  if(!engine){ ctx.beginPath(); ctx.arc(x + L.sx*r*0.035, y + L.sy*r*0.035, r, 0, Math.PI*2); ctx.fillStyle = crtCss(crtMix(M, [0,0,0], 0.55)); ctx.fill(); }
 
   const hx = x + L.tx*r*0.45, hy = y + L.ty*r*0.45, g = ctx.createRadialGradient(hx, hy, r*0.05, x, y, r*1.05);
   g.addColorStop(0, crtCss(crtMix(M, [255,255,255], 0.3))); g.addColorStop(0.5, crtCss(M)); g.addColorStop(1, crtCss(crtMix(M, [0,0,0], 0.5)));
-  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = engine ? crtCss(M) : g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
   ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.clip();
 
   ctx.lineWidth = Math.max(cpx(0.3), r*0.012);
@@ -10889,18 +11159,19 @@ function crtCoin(ctx, x, y, r, coin, look){
 
   const rg = ctx.createLinearGradient(x + L.tx*r, y + L.ty*r, x - L.tx*r, y - L.ty*r);
   rg.addColorStop(0, crtCss(crtMix(M, [255,255,255], 0.45))); rg.addColorStop(0.5, crtCss(M)); rg.addColorStop(1, crtCss(crtMix(M, [0,0,0], 0.55)));
-  ctx.strokeStyle = rg; ctx.lineWidth = Math.max(cpx(0.8), r*0.13); ctx.beginPath(); ctx.arc(x, y, r*0.91, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = engine ? crtCss(crtMix(M, [255,255,255], 0.08)) : rg; ctx.lineWidth = Math.max(cpx(0.8), r*0.13); ctx.beginPath(); ctx.arc(x, y, r*0.91, 0, Math.PI*2); ctx.stroke();
   const beads = Math.max(12, Math.round(r*0.9)), br = r*0.035;
   for(let k = 0; k < beads; k++){ const a = k/beads*Math.PI*2, bx = x + Math.cos(a)*r*0.76, by = y + Math.sin(a)*r*0.76, lit = Math.cos(a)*L.tx + Math.sin(a)*L.ty;
-    ctx.fillStyle = crtCss(crtMix(M, lit > 0 ? [255,255,255] : [0,0,0], Math.abs(lit)*0.4 + 0.05)); ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.fill(); }
+    ctx.fillStyle = crtCss(engine ? M : crtMix(M, lit > 0 ? [255,255,255] : [0,0,0], Math.abs(lit)*0.4 + 0.05)); ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.fill(); }
 
   ctx.save(); ctx.translate(x, y); ctx.rotate(coin.turn || 0); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const struck = coin.tails ? String(coin.value || 1) : coin.mark, [lx, ly] = [L.tx*Math.cos(-(coin.turn || 0)) - L.ty*Math.sin(-(coin.turn || 0)), L.tx*Math.sin(-(coin.turn || 0)) + L.ty*Math.cos(-(coin.turn || 0))];
   ctx.font = coin.tails ? `bold ${r*0.85}px ${CRT_SERIF}` : `${r*1.0}px ${GLYPH_FONT}`;
-  ctx.fillStyle = crtCss(crtMix(M, [0,0,0], 0.62), 0.85); ctx.fillText(struck, -lx*r*0.06, -ly*r*0.06);
-  ctx.fillStyle = crtCss(crtMix(M, [255,255,255], 0.42), 0.8); ctx.fillText(struck, lx*r*0.05, ly*r*0.05);
-  ctx.fillStyle = crtCss(M); ctx.fillText(struck, 0, 0);
+  if(!engine){ ctx.fillStyle = crtCss(crtMix(M, [0,0,0], 0.62), 0.85); ctx.fillText(struck, -lx*r*0.06, -ly*r*0.06);
+    ctx.fillStyle = crtCss(crtMix(M, [255,255,255], 0.42), 0.8); ctx.fillText(struck, lx*r*0.05, ly*r*0.05); }
+  ctx.fillStyle = crtCss(engine ? crtMix(M, [0,0,0], 0.12) : M); ctx.fillText(struck, 0, 0);
   ctx.restore();
+  if(engine) return;
 
   ctx.save(); ctx.globalCompositeOperation = 'screen';
   const sx1 = x + L.tx*r*0.42, sy1 = y + L.ty*r*0.42, sg = ctx.createRadialGradient(sx1, sy1, 0, sx1, sy1, r*0.55);
@@ -10912,17 +11183,18 @@ function crtStack(ctx, x, y, r, n, coin, look){
   const M = crtRGB(COIN_METALS[coin.metal] || COIN_METALS.gold), L = look.L || crtLight(315, 1), t = r*0.16;
 
   const reach = n*t*0.5, ell = (c, ox, oy) => { c.moveTo(x + ox + r, y + oy); c.ellipse(x + ox, y + oy, r, r*0.42, 0, 0, Math.PI*2); };
-  crtShadow(ctx, ell, L.sx*r*0.05, L.sy*r*0.05, r*0.15, 0.5, 2);
-  crtShadow(ctx, ell, L.sx*reach, L.sy*reach, r*0.35, 0.3, Math.max(4, n));
+  const engine = !!look.engine;
+  if(!engine){ crtShadow(ctx, ell, L.sx*r*0.05, L.sy*r*0.05, r*0.15, 0.5, 2);
+    crtShadow(ctx, ell, L.sx*reach, L.sy*reach, r*0.35, 0.3, Math.max(4, n)); }
   for(let k = 0; k < n; k++){
     const yy = y - k*t, dx = (Math.random() - 0.5)*r*0.08;
     ctx.save();
     const side = ctx.createLinearGradient(x - r, 0, x + r, 0); side.addColorStop(0, crtCss(crtMix(M, [0,0,0], L.tx < 0 ? 0.1 : 0.5))); side.addColorStop(0.5, crtCss(M)); side.addColorStop(1, crtCss(crtMix(M, [0,0,0], L.tx > 0 ? 0.1 : 0.5)));
-    ctx.fillStyle = side; ctx.beginPath(); ctx.ellipse(x + dx, yy, r, r*0.42, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    ctx.fillStyle = engine ? crtCss(crtMix(M, [0,0,0], 0.15)) : side; ctx.beginPath(); ctx.ellipse(x + dx, yy, r, r*0.42, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
     ctx.strokeStyle = crtCss(crtMix(M, [0,0,0], 0.5), 0.6); ctx.lineWidth = Math.max(cpx(0.5), r*0.03); ctx.beginPath(); ctx.ellipse(x + dx, yy, r, r*0.42, 0, 0, Math.PI); ctx.stroke();
   }
 
-  ctx.save(); ctx.translate(x, y - (n - 1)*t); ctx.scale(1, 0.42); crtCoin(ctx, 0, -t*0.6/0.42, r, coin, { L: { ...L, sx: 0, sy: 0 }, noShadow: true }); ctx.restore();
+  ctx.save(); ctx.translate(x, y - (n - 1)*t); ctx.scale(1, 0.42); crtCoin(ctx, 0, -t*0.6/0.42, r, coin, { L: { ...L, sx: 0, sy: 0 }, noShadow: true, engine }); ctx.restore();
 }
 
 
@@ -11113,7 +11385,7 @@ function crtPaintDeal(x, w, h, o){
   const unit = Math.min(w, h), count = Math.max(0.2, o.count ?? 1), cw = unit*0.11*(o.size ?? 1)*(0.85 + 0.3/Math.sqrt(Math.max(0.3, count)));
   const dealt = crtDeal(o.game, w, h, { cw, count, scatter: o.scatter ?? 0.22, stakes: o.stakes ?? 0.5, wear: o.wear ?? 0.3, suits: o.suits, coinage: o.coinage });
   const items = dealt.concat(crtTableObjects(dealt, w, h, cw, o.clutter ?? 0.4));
-  const look = { stock: o.stock, gilt: o.gilt, suitCols: o.suitCols, L: crtLight(o.light, o.tilt) };
+  const look = { stock: o.stock, gilt: o.gilt, suitCols: o.suitCols, L: crtLight(o.light, o.tilt), engine: !!o.hx };
   const draw = it => {
     if(it.kind === 'card'){ const k = it.cw || cw; x.save(); x.translate(it.x, it.y); x.rotate(it.rot); crtCard(x, k, k*1.7, it.face, { ...look, rot: it.rot, lift: it.lift, dmg: it.dmg }); x.restore(); }
     else if(it.kind === 'coin') crtCoin(x, it.x, it.y, it.r, it.coin, look);
@@ -11124,7 +11396,35 @@ function crtPaintDeal(x, w, h, o){
   const layer = it => it.kind !== 'object' ? 2 : it.layer === 'under' ? 0 : it.layer === 'flat' ? 1 : 3;
   for(const k of [0, 1, 2, 3]) for(const it of items) if(layer(it) === k) draw(it);
   x.globalAlpha = 1; x.shadowColor = 'transparent';
+  if(o.hx) crtPaintMaps(o.hx, o.gx, items, cw, look, layer, [0, 1, 2, 3]);
   return { items, cw };
+}
+
+
+
+
+
+
+function crtPaintMaps(hx, gx, items, cw, look, layer, order){
+  const grey = v => { const g = Math.round(Math.max(0, Math.min(1, v))*255); return `rgb(${g},${g},${g})`; }, step = 0.035;
+  let level = 0.12;
+  for(const k of order) for(const it of items){ if(layer(it) !== k) continue;
+    if(it.kind === 'card'){ const W = it.cw || cw, H = W*1.7, r = W*0.06, S = CARD_STOCKS[look.stock] || CARD_STOCKS.ivory, gilt = GILT[look.gilt];
+      level = Math.min(0.8, level + step + (it.lift || 0)*0.5);
+      for(const [c, v, edge] of [[hx, level, level + step*0.4], [gx, 0.22 + Math.min(0.6, S.gloss*1.4), gilt ? 0.95 : 0.3]]){
+        c.save(); c.translate(it.x, it.y); c.rotate(it.rot); crtRound(c, W, H, r); c.fillStyle = grey(v); c.fill();
+        c.strokeStyle = grey(edge); c.lineWidth = Math.max(cpx(0.6), W*(gilt ? 0.011 : 0.005)); crtRound(c, W, H, r); c.stroke(); c.restore(); } }
+    else if(it.kind === 'coin' || it.kind === 'stack'){ const n = it.kind === 'stack' ? it.n : 1, rr = it.r, t = rr*0.16, top = level + 0.04*n, cy = it.y - (n - 1)*t;
+      if(n > 1){ hx.fillStyle = grey(level + 0.01*n); hx.beginPath(); hx.ellipse(it.x, it.y - (n - 1)*t/2, rr, rr*0.42 + (n - 1)*t/2, 0, 0, Math.PI*2); hx.fill(); }
+      const sy = n > 1 ? 0.42 : 1, g = hx.createRadialGradient(it.x, cy, 0, it.x, cy, rr); g.addColorStop(0, grey(top + 0.1)); g.addColorStop(1, grey(top + 0.03));
+      hx.save(); hx.translate(it.x, cy); hx.scale(1, sy); hx.translate(-it.x, -cy); hx.fillStyle = g; hx.beginPath(); hx.arc(it.x, cy, rr, 0, Math.PI*2); hx.fill();
+      hx.strokeStyle = grey(top + 0.12); hx.lineWidth = Math.max(cpx(0.8), rr*0.13); hx.beginPath(); hx.arc(it.x, cy, rr*0.91, 0, Math.PI*2); hx.stroke();
+      hx.font = it.coin.tails ? `bold ${rr*0.85}px ${CRT_SERIF}` : `${rr*1.0}px ${GLYPH_FONT}`; hx.textAlign = 'center'; hx.textBaseline = 'middle';
+      hx.translate(it.x, cy); hx.rotate(it.coin.turn || 0); hx.fillStyle = grey(top + 0.05); hx.fillText(it.coin.tails ? String(it.coin.value || 1) : it.coin.mark, 0, 0); hx.restore();
+      gx.save(); gx.translate(it.x, cy); gx.scale(1, sy); gx.fillStyle = grey(0.9); gx.beginPath(); gx.arc(0, 0, rr, 0, Math.PI*2); gx.fill(); gx.restore(); }
+    else { const R0 = (it.s || it.r || cw*0.3)*0.5, g = hx.createRadialGradient(it.x, it.y, 0, it.x, it.y, R0);
+      g.addColorStop(0, grey(level + (it.layer === 'tall' ? 0.25 : it.layer === 'flat' ? 0.015 : 0.03))); g.addColorStop(1, grey(level*0.5));
+      hx.fillStyle = g; hx.beginPath(); hx.arc(it.x, it.y, R0, 0, Math.PI*2); hx.fill(); } }
 }
 
 
@@ -11161,17 +11461,23 @@ const CARD_STEPS = {
     paint(E, n){ const { ww, wh, ctx, P, num } = E; const [c, x] = crtStepCanvas(E);
       crtTable(x, ww, wh, crtChooseTable(String(P(n, 'mat', 'seed'))), ctx.light, { vignette: num(n, 'lamp', 50)/100 }); return [c, null]; },
     run(E, n){ const im = E.readCanvas(this.paint(E, n)[0]); return [im, E.lum(im)]; } },
-  deal: { cat: 'Marks', label: 'Card Deal', ins: ['table', 'fire hue', 'water hue', 'air hue', 'earth hue'], outs: ['image', 'mask'], io: { ins: ['image', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
+  deal: { cat: 'Marks', label: 'Card Deal', ins: ['table', 'fire hue', 'water hue', 'air hue', 'earth hue'], outs: ['image', 'mask', 'height', 'gloss'], io: { ins: ['image', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field'] },
     params: [CRT_SEL('game', 'Game', ['seed', ...Object.keys(CARD_GAMES)]), CRT_SEL('stock', 'Card Stock', ['seed', ...Object.keys(CARD_STOCKS)]), CRT_SEL('gilt', 'Edge', ['seed', ...Object.keys(GILT)]),
       CRT_SEL('suits', 'Suits', ['seed', '2', '3', '4']), CRT_SEL('coinage', 'Coinage', ['seed', ...COINAGES.map(c => c.name)]),
       CRT_R('count', 'Cards in Play', 100, 20, 300), CRT_R('size', 'Card Size', 100, 50, 200), CRT_R('scatter', 'Scatter', 20, 0, 90), CRT_R('stakes', 'Stakes', 50),
-      CRT_R('clutter', 'Clutter', 40), CRT_R('wear', 'Wear', 30)], cost: () => 8,
+      CRT_R('clutter', 'Clutter', 40), CRT_R('wear', 'Wear', 30), CRT_SEL('lighting', 'Lit By', ['its own painting', 'the light engine'])], cost: () => 8,
 
-    paint(E, n){ const [c, x] = crtGround(E, E.input(n, 1)); const o = crtDealOpts(E, n); const d = crtPaintDeal(x, E.ww, E.wh, o); return [c, null, d]; },
-    run(E, n){ const [c, , d] = this.paint(E, n);
+
+    paint(E, n){ const [c, x] = crtGround(E, E.input(n, 1)); const o = crtDealOpts(E, n);
+      let hc = null, gc = null;
+      if(String(E.P(n, 'lighting', 'its own painting')) === 'the light engine'){ let hx, gx; [hc, hx] = crtStepCanvas(E); [gc, gx] = crtStepCanvas(E);
+        hx.fillStyle = '#000'; hx.fillRect(0, 0, E.ww, E.wh); hx.globalAlpha = 0.07; hx.drawImage(c, 0, 0); hx.globalAlpha = 1;
+        gx.fillStyle = 'rgb(30,30,30)'; gx.fillRect(0, 0, E.ww, E.wh); o.hx = hx; o.gx = gx; }
+      const d = crtPaintDeal(x, E.ww, E.wh, o); return [c, null, d, hc, gc]; },
+    run(E, n){ const [c, , d, hc, gc] = this.paint(E, n), map = m => m ? E.lum(E.readCanvas(m)) : 0;
       return [E.readCanvas(c), crtMask(E, mx => { mx.fillStyle = '#fff'; for(const it of d.items){ if(it.kind === 'card'){ const k = it.cw || d.cw; mx.save(); mx.translate(it.x, it.y); mx.rotate(it.rot); mx.fillRect(-k/2, -k*0.85, k, k*1.7); mx.restore(); }
         else if(it.kind === 'object'){ if(it.layer !== 'under'){ mx.beginPath(); mx.arc(it.x, it.y, it.s*0.5, 0, Math.PI*2); mx.fill(); } }
-        else { mx.beginPath(); mx.arc(it.x, it.y, it.r, 0, Math.PI*2); mx.fill(); } } })]; } },
+        else { mx.beginPath(); mx.arc(it.x, it.y, it.r, 0, Math.PI*2); mx.fill(); } } }), map(hc), map(gc)]; } },
 
   objects: { cat: 'Marks', label: 'Table Objects', ins: ['ground'], outs: ['image', 'mask'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [CRT_SEL('kind', 'Kind', ['seed', ...Object.keys(TABLE_OBJECTS).filter(k => TABLE_OBJECTS[k].weight > 0)]), CRT_R('count', 'How Many', 4, 1, 24), CRT_R('size', 'Size', 100, 30, 300)], cost: () => 6,
@@ -11290,6 +11596,97 @@ function touchPigment(D, img, ww, wh, col, wet, light){
   return out;
 }
 
+
+
+
+
+
+
+
+
+
+function druseMaps(ww, wh, o){
+  const unit = Math.min(ww, wh), N = ww*wh, zoom = o.zoom, clarity = o.clarity, fire = o.fire, ph = o.phantoms, inc = o.inclusions;
+  const la = ((o.light == null ? 315 : o.light) - 90)*Math.PI/180, SX = -Math.cos(la), SY = -Math.sin(la), R = Math.random;
+  const faces = cs => { const gx = Math.ceil(ww/cs) + 2, gy = Math.ceil(wh/cs) + 2, F = [];
+    for(let j = 0; j < gy; j++) for(let i = 0; i < gx; i++){ const t = R();
+      F.push({ x: (i - 1 + 0.1 + R()*0.8)*cs, y: (j - 1 + 0.1 + R()*0.8)*cs, tone: t, ghost: R() < 0.45, rot: R()*Math.PI/3, slope: 0.45 + R()*0.5, h: R()*cs*0.4, film: R(), stri: 0.4 + R()*1.2 }); }
+    return { cs, gx, gy, F }; };
+  const near = (S, x, y, out) => { const ci = Math.floor(x/S.cs) + 1, cj = Math.floor(y/S.cs) + 1; let d1 = 1e18, d2 = 1e18, f1 = null, f2 = null;
+    for(let b = cj - 1; b <= cj + 1; b++){ if(b < 0 || b >= S.gy) continue; for(let a = ci - 1; a <= ci + 1; a++){ if(a < 0 || a >= S.gx) continue; const f = S.F[b*S.gx + a], ex = x - f.x, ey = y - f.y, dd = ex*ex + ey*ey;
+      if(dd < d1){ d2 = d1; f2 = f1; d1 = dd; f1 = f; } else if(dd < d2){ d2 = dd; f2 = f; } } }
+    out.f = f1; out.edge = f2 ? (d2 - d1)/(2*Math.sqrt((f2.x - f1.x)**2 + (f2.y - f1.y)**2)) : 1e9; return out; };
+  const FRONT = faces(unit*0.42*zoom), BACK = faces(unit*0.27*zoom);
+  const np = Math.round(3 + fire*12), P = [];
+  for(let k = 0; k < np; k++){ const a = R()*Math.PI, nx = -Math.sin(a), ny = Math.cos(a), px = R()*ww, py = R()*wh;
+    const meet = Math.abs(nx*SX + ny*SY), flash = (0.25 + 0.75*Math.pow(1 - meet, 2))*(0.15 + 0.85*R()**1.5);
+    P.push({ nx, ny, c: nx*px + ny*py, wd: unit*(0.004 + R()*0.018), flash, ax: Math.cos(a), ay: Math.sin(a), mid: px*Math.cos(a) + py*Math.sin(a), len: unit*(0.15 + R()*0.5) }); }
+  const veil = makeNoiseGrid(8, 8), feathers = makeNoiseGrid(40, 40);
+
+  let IL = null;
+  if(inc > 0.02){ const [lay, lc] = kitCanvas(ww, wh), sprays = Math.round(1 + inc*5), px = o.px; lc.lineCap = 'round';
+    for(let s2 = 0; s2 < sprays; s2++){ const cx = R()*ww, cy = R()*wh, a0 = R()*Math.PI, n = Math.round(4 + inc*22), deep = 0.35 + R()*0.65;
+      for(let k = 0; k < n; k++){ const a = a0 + (R() - 0.5)*0.5, L2 = unit*(0.05 + R()*0.2), ox = cx + (R() - 0.5)*unit*0.15, oy = cy + (R() - 0.5)*unit*0.15;
+        lc.strokeStyle = `rgba(${o.IN[0]},${o.IN[1]},${o.IN[2]},${Math.min(1, (0.7 + R()*0.3)*(1.25 - deep*0.45))})`; lc.lineWidth = px(1.8 + R()*2.2);
+        lc.beginPath(); lc.moveTo(ox, oy); lc.lineTo(ox + Math.cos(a)*L2, oy + Math.sin(a)*L2); lc.stroke(); } }
+    for(let k = 0, nb = Math.round(inc*120); k < nb; k++){ const x = R()*ww, y = R()*wh, r = px(4 + R()*R()*22);
+      lc.strokeStyle = 'rgba(20,14,28,0.55)'; lc.lineWidth = r*0.28; lc.beginPath(); lc.arc(x, y, r, 0, Math.PI*2); lc.stroke();
+      lc.fillStyle = 'rgba(255,255,255,0.7)'; lc.beginPath(); lc.arc(x - SX*r*0.35, y - SY*r*0.35, r*0.22, 0, Math.PI*2); lc.fill(); }
+    IL = lc.getImageData(0, 0, ww, wh).data; lay.width = 0; lay.height = 0; }
+
+  const INS = o.inside;
+  const albedo = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, H = new Float32Array(N), G = new Float32Array(N), VEIL = new Float32Array(N);
+  const FIRE = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, FE = new Float32Array(N);
+  const NRM = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };
+  const REFR = unit*0.12, R3 = Math.sqrt(3)/2, SEC = [0, 1, 2, 3, 4, 5].map(s => (s + 0.5)*Math.PI/3), nA = { f: null, edge: 0 }, nB = { f: null, edge: 0 };
+  for(const f of FRONT.F){ const dc = new Float64Array(12); for(let k = 0; k < 6; k++){ const m = SEC[k] + f.rot; dc[k*2] = Math.cos(m); dc[k*2 + 1] = Math.sin(m); } f.dc = dc; }
+  const thinS = unit*0.0016, striS = Math.max(1, unit*0.004), backS = unit*0.004, CR = o.CR, IN = o.IN, seen = 0.5 + 0.5*clarity;
+  const hueC = [0, 1, 2].map(c => Math.max(0.04, CR[c]/255)), hueIn = hueC.map(h => Math.pow(h, 0.45));
+  for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
+    const i = y*ww + x, A = near(FRONT, x, y, nA), f = A.f, dx = x - f.x, dy = y - f.y, rr = Math.sqrt(dx*dx + dy*dy), Rf = FRONT.cs*0.62;
+    let best = -2, mx = 1, my = 0; const DC = f.dc; for(let k = 0; k < 12; k += 2){ const dd = dx*DC[k] + dy*DC[k + 1]; if(dd > best){ best = dd; mx = DC[k]; my = DC[k + 1]; } }
+    const along = dx*mx + dy*my, across = Math.abs(dx*my - dy*mx);
+
+    const stri = Math.sin(along/striS + f.film*6)*0.05*f.stri;
+    H[i] = (f.h - f.slope*along*(1 + stri))/unit;
+    { const sl = f.slope*(1 + stri), nz = 1/Math.sqrt(1 + sl*sl); NRM.r[i] = 0.5 + 0.5*mx*sl*nz; NRM.g[i] = 0.5 + 0.5*my*sl*nz; NRM.b[i] = 0.5 + 0.5*nz; }
+
+
+    let v = 0.14 + 0.1*f.tone + 0.22*Math.max(0, 1 - along/Rf*0.8);
+    const g0 = rr/(Rf*0.55); v += 0.22*clarity*Math.exp(-(g0*g0));
+    const ox = mx*f.slope*REFR, oy = my*f.slope*REFR, B = near(BACK, x + ox, y + oy, nB);
+    v += 0.07*B.f.tone + 0.3*Math.exp(-B.edge/backS)*clarity*0.7;
+    if(ph > 0.02 && f.ghost){ const st = Rf*0.22, k = along/st; if(k > 0.6 && k < 3.6){ const q = k - Math.floor(k), e = Math.min(q, 1 - q)*st/thinS; v += Math.exp(-(e*e))*ph*0.4; } }
+
+    const ridge = Math.max(0, 0.5*along - R3*across); v += 0.25*Math.exp(-ridge/thinS) + 0.2*Math.exp(-A.edge/thinS);
+    let r = 0, g = 0, b = 0; const vv = Math.min(1.2, v);
+    for(let c = 0; c < 3; c++){ const t = Math.pow(hueC[c], 1.2 - Math.min(1, vv)); const val = vv*t; if(c === 0) r = val; else if(c === 1) g = val; else b = val; }
+
+    const sx = Math.round(x + ox*0.6), sy = Math.round(y + oy*0.6);
+    if(sx >= 0 && sy >= 0 && sx < ww && sy < wh){ const j = sy*ww + sx;
+      if(INS){ const a = 0.55*clarity; r = r*(1 - a) + INS.r[j]*hueIn[0]*a; g = g*(1 - a) + INS.g[j]*hueIn[1]*a; b = b*(1 - a) + INS.b[j]*hueIn[2]*a; }
+      if(IL){ const q = j*4, a = IL[q + 3]/255*seen; if(a > 0){ r = r*(1 - a) + IL[q]/255*hueIn[0]*a; g = g*(1 - a) + IL[q + 1]/255*hueIn[1]*a; b = b*(1 - a) + IL[q + 2]/255*hueIn[2]*a; } } }
+
+    const cloud = (1 - clarity)*(0.35 + 0.65*sampleNoiseGrid(veil, 8, 8, x/ww*7, y/wh*7))*(0.7 + 0.3*sampleNoiseGrid(feathers, 40, 40, x/ww*39, y/wh*39));
+    r = r*(1 - cloud*0.55) + cloud*0.6; g = g*(1 - cloud*0.55) + cloud*0.6; b = b*(1 - cloud*0.55) + cloud*0.6;
+    albedo.r[i] = r; albedo.g[i] = g; albedo.b[i] = b; VEIL[i] = cloud;
+
+    G[i] = Math.max(0, (0.92 - 0.25*Math.exp(-A.edge/(thinS*3)))*(1 - 0.6*cloud));
+
+    let fr = 0, fg = 0, fb = 0;
+    if(fire > 0.02) for(let k = 0; k < P.length; k++){ const p = P[k], d = x*p.nx + y*p.ny - p.c; if(Math.abs(d) > p.wd*7) continue;
+      const al = x*p.ax + y*p.ay - p.mid; if(Math.abs(al) > p.len) continue;
+      const fade = Math.sin(Math.PI*0.5*(1 - Math.abs(al)/p.len)), str = p.flash*fade*(0.3 + 0.7*fire), dw = d/p.wd, dh = d/(p.wd*5), core = Math.exp(-(dw*dw))*str*0.75, halo = Math.exp(-(dh*dh))*str*0.12;
+      const t = Math.max(0, Math.min(1, 0.5 + d/(p.wd*2.5)*0.5)), dsp = 0.3 + 0.7*fire;
+      fr += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 3)))*1.5); fg += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 2)))*1.5); fb += halo + core*((1 - dsp) + dsp*Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 1)))*1.5); }
+
+    if(fire > 0.05){ const t = 0.5 + 0.5*Math.sin(along/Rf*9 + f.film*9), k2 = 0.05*fire;
+      fr += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 3)))*k2; fg += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 2)))*k2; fb += Math.max(0, Math.min(1, 1.5 - Math.abs(t*4 - 1)))*k2; }
+    FIRE.r[i] = fr; FIRE.g[i] = fg; FIRE.b[i] = fb; FE[i] = Math.max(fr, fg, fb);
+  }
+  return { albedo, H, G, VEIL, FIRE, FE, NRM };
+}
+
 const TOUCH_STEPS = {
 
   coldpress: kitWhole({ cat: 'Textures', label: 'Cold Press', ins: ['light from'], outs: ['paper'], io: { ins: ['value'], outs: ['image'] },
@@ -11345,6 +11742,16 @@ const TOUCH_STEPS = {
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 70), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 50);
       const ph = wholeShare(E, n, 'phantoms', 30), inc = wholeShare(E, n, 'inclusions', 20);
       return () => genCrystalLeaf(w, h, a, z, light, t1, t2, f, ph, inc, E.ctx.mat || null, E.ctx.glow || null); }),
+
+
+  druse: { cat: 'Textures', label: 'Crystal Druse', ins: ['inside', 'crystal hue', 'inclusion hue'], outs: ['albedo', 'height', 'gloss', 'veil', 'fire', 'fire mask', 'normals'],
+    io: { ins: ['image', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'image', 'field', 'image'] },
+    params: [TOUCH_R('zoom', 'Point Size', 100, 40, 300), TOUCH_R('clarity', 'Clarity', 70), TOUCH_R('fire', 'Fire', 50), TOUCH_R('phantoms', 'Phantoms', 30), TOUCH_R('inclusions', 'Inclusions', 20), TOUCH_R('variation', 'Variation', 0, 0, 99)], cost: () => 9,
+    run(E, n){ const { ww, wh, num, input, ctx } = E, rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d, ins = input(n, 1);
+      const M = druseMaps(ww, wh, { zoom: num(n, 'zoom', 100)/100, clarity: num(n, 'clarity', 70)/100, fire: num(n, 'fire', 50)/100, phantoms: num(n, 'phantoms', 30)/100, inclusions: num(n, 'inclusions', 20)/100,
+        light: ctx.light ?? 315, px: E.px, CR: rgb(input(n, 2), [185, 166, 216]), IN: rgb(input(n, 3), [217, 164, 65]), inside: ins == null ? null : E.asImage(ins) });
+      const H01 = new Float32Array(M.H.length); for(let i = 0; i < H01.length; i++) H01[i] = Math.max(0, Math.min(1, 0.62 + M.H[i]*1.5));
+      return [M.albedo, H01, M.G, M.VEIL, M.FIRE, M.FE, M.NRM]; } },
   marbling: kitWhole({ cat: 'Textures', label: 'Suminagashi', ins: ['breath from', 'ink hue', 'second ink hue'], outs: ['marbling'], io: { ins: ['value', 'colour', 'colour'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Ring Size', 100, 50, 250), TOUCH_R('amount', 'Drops', 100, 30, 250), TOUCH_R('form', 'Breath', 40), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 10 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), t1 = wholeHex(E, n, 2), t2 = wholeHex(E, n, 3), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 40);
@@ -15563,22 +15970,14 @@ function paintShapeLand(x, mk, dk, w, h, o){
   const nL = 3 + Math.round(o.layers*3), hy = h*o.horizon, rnd = (a, b) => a + (b - a)*R();
   const jit = (c, k = 0.07) => { const q = (R() - 0.5)*2*k; return q > 0 ? rsMix(c, [255, 255, 255], q) : rsMix(c, BLACK, -q); };
 
-  const tree = (X, Y, sz, fa, kind) => { const gc = rsMix(jit(GREEN, 0.1), AIR, fa*0.7), dark = rsMix(gc, BLACK, 0.3*(1 - fa)), lit = rsMix(gc, SUN, 0.28*(1 - fa*0.6)), sd = L[0] > 0 ? 1 : -1;
-    x.strokeStyle = rsCss(rsMix([70, 52, 40], AIR, fa*0.7)); x.lineWidth = Math.max(px(1), sz*0.08); x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - sz*0.4); x.stroke();
-    if(kind < 0.45){ for(let tier = 0; tier < 3; tier++){ const ty = Y - sz*(0.2 + tier*0.42), tw = sz*(0.42 - tier*0.1), th = sz*0.7;
-        rsPoly(x, [[X - tw, ty], [X, ty - th], [X + tw, ty]], rsCss(dark)); rsPoly(x, [[X, ty], [X, ty - th], [X + sd*tw, ty]], rsCss(lit)); } }
-    else if(kind < 0.75){ const r = sz*0.5, cy = Y - sz*0.75, pts = Array.from({ length: 7 }, (_, k) => { const a = k/7*Math.PI*2 + 0.3, rr = r*(0.85 + 0.25*R()); return [X + Math.cos(a)*rr, cy + Math.sin(a)*rr*0.9]; });
-      rsPoly(x, pts, rsCss(dark)); rsPoly(x, pts.map(([X1, Y1]) => [X + (X1 - X)*0.62 + L[0]*r*0.24, cy + (Y1 - cy)*0.62 + L[1]*r*0.24]), rsCss(lit)); }
-    else { const pw = sz*0.22, ph = sz*1.5; rsPoly(x, [[X, Y - sz*0.2], [X - pw, Y - sz*0.2 - ph*0.35], [X, Y - sz*0.2 - ph], [X + pw, Y - sz*0.2 - ph*0.35]], rsCss(dark));
-      rsPoly(x, [[X, Y - sz*0.2], [X + sd*pw, Y - sz*0.2 - ph*0.35], [X, Y - sz*0.2 - ph]], rsCss(lit)); } };
+  const tree = (X, Y, sz, fa, kind) => { const gc = rsMix(jit(GREEN, 0.1), AIR, fa*0.7), sd = L[0] > 0 ? 1 : -1;
+    const c = { trunk: rsMix([70, 52, 40], AIR, fa*0.7), dark: rsMix(gc, BLACK, 0.3*(1 - fa)), body: gc, lit: rsMix(gc, SUN, 0.28*(1 - fa*0.6)), glow: GLOW, sd, L };
+    pkTree(x, X, Y, sz*1.7, c, kind < 0.3 ? 'spruce' : kind < 0.45 ? 'pine' : kind < 0.75 ? 'broadleaf' : kind < 0.88 ? 'poplar' : 'birch', R, px); };
 
   const structure = (ax, ay, s, fa) => { const kind = R(), m = rsMix(METAL, AIR, fa*0.75), md = rsMix(m, BLACK, 0.32*(1 - fa*0.5)), gl = rsMix(GLOW, AIR, fa*0.4), sd = L[0] > 0 ? 1 : -1;
     const glow = (X, Y, r) => { x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(gl, 0.8)); g.addColorStop(1, rsCss(gl, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); };
-    if(kind < 0.3){ const bw2 = unit*0.022*s, sh = unit*(0.16 + 0.16*R())*s;
-      rsPoly(x, [[ax - bw2*1.6, ay + bw2], [ax - bw2, ay - bw2*1.2], [ax + bw2, ay - bw2*1.2], [ax + bw2*1.6, ay + bw2]], rsCss(md));
-      rsPoly(x, [[ax - bw2, ay], [ax, ay - sh], [ax + bw2, ay]], rsCss(md)); rsPoly(x, [[ax, ay], [ax, ay - sh], [ax + sd*bw2, ay]], rsCss(m));
-      rsPoly(x, [[ax - bw2*0.75, ay - sh*0.42], [ax + bw2*0.75, ay - sh*0.42], [ax + bw2*0.6, ay - sh*0.47], [ax - bw2*0.6, ay - sh*0.47]], rsCss(gl, 0.85));
-      glow(ax, ay - sh, bw2*3); }
+    const pc = { body: m, lit: rsMix(m, SUN, 0.3), dark: md, glow: gl, glow2: gl, sd, L };
+    if(kind < 0.3){ pkSpire(x, ax, ay, unit*(0.16 + 0.16*R())*s, pc, false, R, px); }
     else if(kind < 0.52){ const gw = unit*(0.07 + 0.06*R())*s, gh = gw*(1.15 + 0.5*R()), th = gw*0.24, gy = ay + th*0.4, ry = gy - gh + gw/2;
       x.fillStyle = rsCss(md); x.beginPath(); x.moveTo(ax - gw/2, gy); x.lineTo(ax - gw/2, ry); x.arc(ax, ry, gw/2, Math.PI, 0); x.lineTo(ax + gw/2, gy);
       x.lineTo(ax + gw/2 - th, gy); x.lineTo(ax + gw/2 - th, ry); x.arc(ax, ry, gw/2 - th, 0, Math.PI, true); x.lineTo(ax - gw/2 + th, gy); x.closePath(); x.fill();
@@ -15590,13 +15989,8 @@ function paintShapeLand(x, mk, dk, w, h, o){
       x.fillStyle = rsCss(md); x.beginPath(); x.arc(ax, ccy, rr, 0, Math.PI*2); x.arc(ax, ccy, rr*0.74, 0, Math.PI*2, true); x.fill();
       const a0 = sd > 0 ? -Math.PI/2 : Math.PI/2; x.fillStyle = rsCss(m); x.beginPath(); x.arc(ax, ccy, rr, a0, a0 + Math.PI); x.arc(ax, ccy, rr*0.74, a0 + Math.PI, a0, true); x.closePath(); x.fill();
       x.strokeStyle = rsCss(gl, 0.9); x.lineWidth = Math.max(px(1.5), rr*0.06); x.beginPath(); x.arc(ax, ccy, rr*0.74, 0, Math.PI*2); x.stroke(); glow(ax, ccy, rr*0.9); }
-    else if(kind < 0.86){ const mw = unit*(0.014 + 0.012*R())*s, mh = unit*(0.07 + 0.08*R())*s, tl = mh*0.14*(R() < 0.5 ? 1 : -1);
-      rsPoly(x, [[ax - mw, ay + mw*0.5], [ax - mw, ay - mh], [ax + mw, ay - mh + tl], [ax + mw, ay + mw*0.5]], rsCss(sd > 0 ? md : m));
-      rsPoly(x, [[ax + mw, ay + mw*0.5], [ax + mw, ay - mh + tl], [ax + mw*1.6, ay - mh + tl + mw*0.35], [ax + mw*1.6, ay + mw*0.8]], rsCss(sd > 0 ? m : md)); }
-    else for(let q = 0; q < 3 + Math.floor(R()*3); q++){ const cs = unit*(0.012 + 0.012*R())*s, a = (R() - 0.5)*0.9, ox = (R() - 0.5)*cs*3, c2 = rsMix(rsMix(GLOW, [176, 146, 255], R()), AIR, fa*0.5);
-        const tipX = ax + ox + Math.sin(a)*cs*4, tipY = ay - Math.cos(a)*cs*4, nx = Math.cos(a)*cs, ny = Math.sin(a)*cs;
-        rsPoly(x, [[ax + ox - nx, ay - ny], [tipX, tipY], [ax + ox + nx, ay + ny], [ax + ox, ay + cs*0.5]], rsCss(rsMix(c2, BLACK, 0.3)));
-        rsPoly(x, [[ax + ox, ay + cs*0.5], [tipX, tipY], [ax + ox + sd*nx, ay + sd*ny]], rsCss(c2)); glow(tipX, tipY, cs*1.5); } };
+    else if(kind < 0.86) pkMonolith(x, ax, ay, unit*(0.07 + 0.08*R())*s, pc, 1, R, px);
+    else pkCrystals(x, ax, ay, unit*0.018*s, [rsMix(GLOW, AIR, fa*0.5), rsMix([176, 146, 255], AIR, fa*0.5)], pc, 3 + Math.floor(R()*3), R, px); };
   for(let i = 0; i < nL; i++){
     const t = nL > 1 ? i/(nL - 1) : 1, base = hy + (h - hy)*Math.pow(t, 1.15)*0.82, amp = h*(0.03 + 0.2*o.height)*(1 - 0.5*t);
     const fa = Math.pow(1 - t, 1.2)*(0.35 + 0.65*o.haze), col = rsMix(rsMix(Lh, BLACK, 0.1 + 0.42*t), AIR, fa*0.8);
@@ -16264,7 +16658,10 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   for(let i = 0; i < Hs.length; i++) Hs[i] = H[i]*(RM ? RM[i]*unit*0.03 : rel);
 
 
-  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient' });
+
+
+  const normals = o.normals && o.normals.length >= gw*gh*3 ? o.normals : null;
+  const lit = () => lightHeights(Hs, gw, gh, { light: deg, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: o.ao, ambient: o.ambient, glossMap, components: !!o.amb, rig: 'ambient', normals });
   const L = o.tilt == null ? lit() : withLightTilt(o.tilt, lit);
   const K = new Float32Array(gw*gh), S = new Float32Array(gw*gh), f = L.flat || 1;
   for(let i = 0; i < K.length; i++){ K[i] = L.light[i]/f; S[i] = L.spec[i]; }
@@ -16275,7 +16672,7 @@ function ltLight(H, gw, gh, deg, o, glossMap){
   let K2 = null, S2 = null;
   if(o.second){ const n = o.secondSoft > 0.02 ? 3 : 1, w = o.secondSoft*60; K2 = new Float32Array(K.length); S2 = new Float32Array(K.length);
     for(let q = 0; q < n; q++){ const d = deg + o.secondTurn + (n > 1 ? (q - 1)*w/2 : 0);
-      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false }));
+      const L2 = withLightTilt(o.secondHeight, () => lightHeights(Hs, gw, gh, { light: d, relief: 1, gloss: o.gloss, shadow: o.shadow, ao: 0, ambient: 0, glossMap, components: true, rig: false, normals }));
       for(let i = 0; i < K2.length; i++){ K2[i] += L2.diffuse[i]/f/n; S2[i] += L2.spec[i]/n; } } }
 
 
@@ -16669,8 +17066,8 @@ function paintAngryStrokes(w,h,amt,zoom,form){
 
 
 const LIGHT_STEPS = {
-  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4', 'translucency:4'],
-    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
+  material: { cat: 'Light & Color', label: 'Light Engine', ins: ['picture', 'height', 'gloss map', 'shade hue', 'highlight hue', 'light hue', 'dial', 'ambient hue', 'second light hue', 'normal map'], outs: ['image', 'light', 'highlight'], maps: ['relief:4', 'gloss:4', 'translucency:4'],
+    io: { ins: ['image', 'field', 'field', 'colour', 'colour', 'colour', 'value', 'colour', 'colour', 'image'], outs: ['image', 'field', 'field'] },
     params: [LT_R('relief', 'Relief', 50, 0, 200), LT_R('gloss', 'Gloss', 25), LT_R('shine', 'Shine', 35), LT_R('shadow', 'Shadow', 60), LT_R('occlusion', 'Occlusion', 35), LT_R('ambient', 'Ambient', 35), LT_R('translucency', 'Translucency', 0),
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130),
       LT_R('second', 'Second Light', 0, -100, 100), LT_R('secondTurn', 'Second Light From', 180, 0, 360), LT_R('secondHeight', 'Second Light Height', 120, 0, 130),
@@ -16684,6 +17081,9 @@ const LIGHT_STEPS = {
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
       const G = E.input(n, 3) != null ? kitField(E.input(n, 3), gw, gh) : null;
+      if(E.input(n, 10) != null){ const [nc, nx] = kitPicture(E.input(n, 10), gw, gh), d = nx.getImageData(0, 0, gw, gh).data, NM = new Float32Array(gw*gh*3);
+        for(let i = 0; i < gw*gh; i++){ const x = d[i*4]/127.5 - 1, y = d[i*4 + 1]/127.5 - 1, z = Math.max(1e-3, d[i*4 + 2]/127.5 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
+        o.normals = NM; nc.width = 0; nc.height = 0; }
       const { K, S, A, K2, S2 } = ltLight(H, gw, gh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null;
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
@@ -16703,6 +17103,10 @@ const LIGHT_STEPS = {
       if(!H) return [img, new Float32Array(N).fill(0.5), new Float32Array(N)];
 
       const G = E.input(n, 3) != null ? E.asField(E.input(n, 3)) : o.glossMap;
+
+      if(E.input(n, 10) != null){ const nm = E.asImage(E.input(n, 10)), NM = new Float32Array(N*3);
+        for(let i = 0; i < N; i++){ const x = nm.r[i]*2 - 1, y = nm.g[i]*2 - 1, z = Math.max(1e-3, nm.b[i]*2 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
+        o.normals = NM; }
       const { K, S, A, K2, S2, TR, BD } = ltLight(H, ww, wh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null, out = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) }, lf = new Float32Array(N);
       const ch = [img.r, img.g, img.b], oc = [out.r, out.g, out.b];
       for(let i = 0; i < N; i++){ const s = S[i]*o.shine; lf[i] = ltClamp(K[i]*0.5);
@@ -16783,6 +17187,9 @@ function rgTerrain(W, Hw, seed, forms, world){
 }
 const rgClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 
+
+const rgRand = (s, a, b = 0, c = 0) => mulberry32((Math.imul(s | 0, 0x9E3779B1) ^ Math.imul(a | 0, 0x85EBCA77) ^ Math.imul(b | 0, 0xC2B2AE3D) ^ Math.imul(c | 0, 0x27D4EB2F)) >>> 0);
+
 let rgPx = v => v;
 
 
@@ -16827,7 +17234,7 @@ function rgView(E, n, ww, wh){
   const sunAt = sunUp ? proj(L.Px + D[0], D[1], L.z0 + D[2]) : null;
 
   const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
-  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU] }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf,
+  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU] }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf, psi,
     life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed') };
 }
 
@@ -16852,10 +17259,21 @@ function rgAirOf(V, day){ const dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), w =
   return w === 'ruins' ? rsMix(a, [150, 112, 88], 0.32) : w === 'neon' ? rsMix(a, V.g1, 0.22 + 0.2*(1 - day)) : w === 'magic' ? rsMix(a, V.g2, 0.15) : a; }
 
 
-function rgPaintArch(x, mk, V, R){
+
+function rgPanSky(c, x, V){
+  const { ww, wh, F } = V, ox = ((-V.psi*F) % ww + ww) % ww, oy = ((V.th*F) % wh + wh) % wh; if(ox < 0.5 && oy < 0.5) return;
+  const [t, tx] = kitCanvas(ww, wh); tx.drawImage(c, 0, 0);
+  for(const dx of [ox - ww, ox]) for(const dy of [oy - wh, oy]) x.drawImage(t, dx, dy);
+  t.width = 0; t.height = 0;
+}
+
+function rgPaintArch(x, mk, V){
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, cx, cy, proj, at, sky: S, g1, g2, px } = V, dl = V.dayHere, kday = rsSmooth(0.3, 0.75, dl), dusk = rgClamp(1 - Math.abs(dl - 0.5)*3.2);
-  const SPACE = [8, 10, 24], AIR = rgAirOf(V, dl), rnd = (a, b) => a + (b - a)*R();
+  const SPACE = [8, 10, 24], AIR = rgAirOf(V, dl), s = V.seed | 0;
+
+
+  const psi = V.psi, skyAt = (az, el) => proj(L.Px - Math.sin(el)*0.01, Math.cos(el)*Math.cos(az)*0.01, L.z0 + Math.cos(el)*Math.sin(az)*0.01);
 
   const hx = V.hx, hz = V.hz, yAt = e => { const p = proj(L.Px - Math.sin(e)*0.01, Math.cos(e)*hx*0.01, L.z0 + Math.cos(e)*hz*0.01); return p ? p[1] : null; };
 
@@ -16868,39 +17286,43 @@ function rgPaintArch(x, mk, V, R){
 
   x.save(); x.globalCompositeOperation = 'screen';
   const nebA = 0.2*(1 - 0.65*kday);
-  for(let i = 0, nW = 4 + Math.floor(R()*7), ga = rnd(-0.7, 0.7), gx = ww*rnd(0.2, 0.8), gy = wh*rnd(0.05, 0.35); i < nW; i++){ const d = (R() - 0.5)*unit*1.8, col = [S, g1, g2, rsMix(g1, g2, 0.5)][Math.floor(R()*4)];
-    const X = gx + Math.cos(ga)*d, Y = gy + Math.sin(ga)*d, rx = unit*rnd(0.15, 0.4), ry = rx*rnd(0.2, 0.45); x.save(); x.translate(X, Y); x.rotate(ga + (R() - 0.5)*0.5); x.scale(1, ry/rx);
-    const gr = x.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, rsCss(col, nebA)); gr.addColorStop(0.5, rsCss(col, nebA*0.35)); gr.addColorStop(1, rsCss(col, 0)); x.fillStyle = gr; x.fillRect(-rx, -rx, rx*2, rx*2); x.restore(); }
+  for(const sg of [0, 1]){ const R = rgRand(s, 801, sg), rnd = (a, b) => a + (b - a)*R(), az0 = sg*Math.PI + rnd(-0.9, 0.9), el0 = rnd(0.3, 0.9), ga = rnd(-0.7, 0.7);
+   for(let i = 0, nW = 4 + Math.floor(R()*7); i < nW; i++){ const d = (R() - 0.5)*0.9, col = [S, g1, g2, rsMix(g1, g2, 0.5)][Math.floor(R()*4)], rx = F*rnd(0.15, 0.4), ry = rx*rnd(0.2, 0.45), tw = (R() - 0.5)*0.5;
+    const p = skyAt(az0 + Math.cos(ga)*d, el0 + Math.sin(ga)*d*0.6); if(!p) continue; const X = p[0], Y = p[1]; x.save(); x.translate(X, Y); x.rotate(ga + tw); x.scale(1, ry/rx);
+    const gr = x.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, rsCss(col, nebA)); gr.addColorStop(0.5, rsCss(col, nebA*0.35)); gr.addColorStop(1, rsCss(col, 0)); x.fillStyle = gr; x.fillRect(-rx, -rx, rx*2, rx*2); x.restore(); } }
   x.restore();
 
 
 
   const SC_ = seedChoice(V.seed, 'saturn'), byS = SC_() < 0.25, satSky = V.saturn === 'always' || (V.saturn !== 'never' && byS), satFar = !satSky && SC_() < 0.2;
-  if(R() < 0.35){ const r = unit*rnd(0.04, 0.12), X = ww*rnd(0.1, 0.9), Y = wh*rnd(0.06, 0.3), c1 = rsMix(rsMix(g2, S, 0.5), [255, 255, 255], 0.2), c2 = rsMix(c1, SPACE, 0.45), a = 0.55 + 0.4*(1 - kday), lit = rnd(-1, 1);
+  { const R = rgRand(s, 802), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.35, r = F*rnd(0.04, 0.12), P0 = skyAt(R()*Math.PI*2, rnd(0.2, 0.6)), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
+  if(has && P0){ const c1 = rsMix(rsMix(g2, S, 0.5), [255, 255, 255], 0.2), c2 = rsMix(c1, SPACE, 0.45), a = 0.55 + 0.4*(1 - kday), lit = rnd(-1, 1);
     const bands = Array.from({ length: 5 }, (_, b) => [(b*0.4 + R()*0.2)*r, r*rnd(0.12, 0.3)]);
     if(satFar) paintSaturn(x, X, Y, r*0.6, { axis: (SC_() - 0.5)*0.9, open: (SC_() < 0.5 ? -1 : 1)*(0.2 + 0.25*SC_()), sun: [lit < 0 ? 1 : -1, -0.3], alpha: a, tint: S });
     else if(satSky){   }
     else { x.save(); x.globalAlpha = a; x.fillStyle = rsCss(c2); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); x.clip();
       for(let b = 0; b < 5; b++){ x.fillStyle = rsCss(b % 2 ? c1 : rsMix(c1, c2, 0.5)); x.fillRect(X - r, Y - r + bands[b][0], r*2, bands[b][1]); }
-      x.fillStyle = rsCss(SPACE, 0.55); x.beginPath(); x.arc(X + lit*r*0.55, Y - r*0.2, r*1.05, 0, Math.PI*2); x.fill(); x.restore(); } }
-  if(R() < 0.25){ const X = ww*rnd(0.1, 0.9), Y = wh*rnd(0.05, 0.3), ang = rnd(0.2, 0.9)*(R() < 0.5 ? 1 : -1) + Math.PI/2, len = unit*rnd(0.12, 0.3), wd = unit*0.012;
+      x.fillStyle = rsCss(SPACE, 0.55); x.beginPath(); x.arc(X + lit*r*0.55, Y - r*0.2, r*1.05, 0, Math.PI*2); x.fill(); x.restore(); } } }
+  { const R = rgRand(s, 803), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.25, P0 = skyAt(R()*Math.PI*2, rnd(0.25, 0.8)), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
+  if(has && P0){ const ang = rnd(0.2, 0.9)*(R() < 0.5 ? 1 : -1) + Math.PI/2, len = F*rnd(0.12, 0.3), wd = F*0.012;
     const tx = X - Math.cos(ang)*len, ty = Y - Math.sin(ang)*len, g = x.createLinearGradient(X, Y, tx, ty); g.addColorStop(0, rsCss([240, 250, 255], 0.8*(1 - 0.6*kday))); g.addColorStop(1, rsCss(S, 0));
-    rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); }
+    rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); } }
 
 
   const sp = V.sun.at;
   if(satSky){
 
-    const yH = yAt(6*Math.PI/180), yT = yAt(38*Math.PI/180), y0 = yT == null ? wh*0.1 : Math.max(-wh*0.1, yT), y1 = yH == null ? wh*0.55 : Math.min(wh*0.9, yH);
-    const rS = unit*(0.1 + 0.11*SC_()), X = ww*(0.12 + 0.76*SC_()), Y = y0 + (y1 - y0)*(0.25 + 0.6*SC_()), axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
+
+
+    const rS = F*(0.1 + 0.11*SC_()), az = (50 + (SC_() - 0.5)*70)*Math.PI/180, el = (18 + 22*SC_())*Math.PI/180, P0 = skyAt(az, el), X = P0 ? P0[0] : -1e4, Y = P0 ? P0[1] : -1e4, axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
     const sun = sp ? [sp[0] - X, sp[1] - Y] : V.sun.screen, sa = 0.62 + 0.38*(1 - kday);
-    paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday) });
-    if(SC_() < 0.45){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
+    if(P0) paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday) });
+    if(SC_() < 0.45 && P0){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
       paintEnceladus(x, X + ex*Math.cos(axis) - ey*Math.sin(axis), Y + ex*Math.sin(axis) + ey*Math.cos(axis), Math.max(px(3), rS*0.05), { axis, sun, alpha: sa, px }); } }
   if(sp){ const rs = unit*0.018, SC = [255, 246, 226];
     x.save(); x.globalCompositeOperation = 'screen';
     for(const [r, a] of [[rs*18, 0.3], [rs*6, 0.6]]){ const gl = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); gl.addColorStop(0, rsCss(SC, a)); gl.addColorStop(0.2, rsCss(SC, a*0.35)); gl.addColorStop(1, rsCss(SC, 0)); x.fillStyle = gl; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); }
-    for(let k = 0; k < 12; k++){ const a = k/12*Math.PI*2 + R()*0.2, Lr = rs*(k % 2 ? 4 : 9)*(0.8 + 0.4*R()), wd = rs*0.2;
+    const R = rgRand(s, 804); for(let k = 0; k < 12; k++){ const a = k/12*Math.PI*2 + R()*0.2, Lr = rs*(k % 2 ? 4 : 9)*(0.8 + 0.4*R()), wd = rs*0.2;
       rsPoly(x, [[sp[0] + Math.cos(a + Math.PI/2)*wd, sp[1] + Math.sin(a + Math.PI/2)*wd], [sp[0] + Math.cos(a)*Lr, sp[1] + Math.sin(a)*Lr], [sp[0] - Math.cos(a + Math.PI/2)*wd, sp[1] - Math.sin(a + Math.PI/2)*wd]], rsCss(SC, 0.4)); }
     x.restore(); x.fillStyle = rsCss(SC); x.beginPath(); x.arc(sp[0], sp[1], rs, 0, Math.PI*2); x.fill(); }
   const nsq = Math.round(Math.PI*2/L.per);
@@ -16917,65 +17339,79 @@ function rgPaintArch(x, mk, V, R){
     for(let j = 0; j < LN; j++){ const z0 = -W/2 + W*j/LN, z1 = -W/2 + W*(j + 1)/LN, zm = (z0 + z1)/2, q = [at(a0, z0, 0), at(a1, z0, 0), at(a1, z1, 0), at(a0, z1, 0)];
       if(q.some(v => !v)) continue;
       const e = V.TR.raw(am, zm, W*0.25), wet = rsSmooth(V.TR.sea + W*0.004, V.TR.sea - W*0.004, e), c = rsMix(rgGround(V, am, zm, Math.max(e, V.TR.sea + 1e-6), 4), rsMix([24, 58, 104], S, 0.35), wet), zc = (q[0][2] + q[2][2])/2, eS = elevOf(Math.cos(am), Math.sin(am), zm);
-      quads.push([zc, q, rgLit(V, rsMix(c, [255, 255, 255], 0.06), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 && V.cityAt(am, zm, RG_PROF[V.worldAt(am, zm)].cv*(0.3 + 0.9*V.works)) > 0.3 ? V.lightsOf(V.worldAt(am, zm))[0] : null]); } }
+      quads.push([zc, q, rgLit(V, rsMix(c, [255, 255, 255], 0.06), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 && V.cityAt(am, zm, RG_PROF[V.worldAt(am, zm)].cv*(0.3 + 0.9*V.works)) > 0.3 ? V.lightsOf(V.worldAt(am, zm))[0] : null, false, rgRand(s, 805, i*sg, j)]); } }
   const Hw = L.Hw, WALL = rsMix([96, 104, 124], S, 0.22), aW = steps(0, W*0.012, W*0.4);
   for(const zw of [-W/2, W/2]) for(const sg of [1, -1]) for(let i = 0; i + 1 < aW.length; i++){ const a0 = aW[i]*sg, a1 = aW[i + 1]*sg, am = (a0 + a1)/2, q = [at(a0, zw, 0), at(a1, zw, 0), at(a1, zw, Hw), at(a0, zw, Hw)];
     if(q.some(v => !v)) continue;
     const zc = (q[0][2] + q[2][2])/2, eS = elevOf((1 - Hw*0.5)*Math.cos(am), (1 - Hw*0.5)*Math.sin(am), zw), rib = i % 4 === 0 ? 0.12 : 0, day = ringDay(L, am);
     quads.push([zc, q, rgLit(V, rsMix(WALL, [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.45*V.air + hzOf(zc, eS)*0.7), AIR), null, true]); }
   quads.sort((p, q) => q[0] - p[0]);
-  for(const [, q, c, lights, wall] of quads){ rsPoly(x, q, rsCss(c)); rsPoly(mk, q, '#fff');
+  for(const [, q, c, lights, wall, R] of quads){ rsPoly(x, q, rsCss(c)); rsPoly(mk, q, '#fff');
     if(wall){
       rsPoly(x, [q[3], q[2], [q[2][0] + (q[1][0] - q[2][0])*0.05, q[2][1] + (q[1][1] - q[2][1])*0.05], [q[3][0] + (q[0][0] - q[3][0])*0.05, q[3][1] + (q[0][1] - q[3][1])*0.05]], rsCss(rsMix(c, [255, 255, 255], 0.25))); }
     else if(lights){ const n = 2 + Math.floor(R()*3); for(let k = 0; k < n; k++){ const u = R(), v = R(), X = q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v, Y = q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v;
         x.fillStyle = rsCss(lights, 0.85); x.fillRect(X, Y, px(2.2), px(2.2)); } } }
 
-  for(let k = 0, nC = 4 + Math.floor(R()*9); k < nC; k++){ const sg = R() < 0.5 ? 1 : -1, a0 = sg*rnd(W*0.6, Math.PI), len = W*rnd(0.4, 2.2), zc = rnd(-0.35, 0.35)*W, dz = W*rnd(0.05, 0.16), top = [], bot = [];
+  for(let k = 0, nC = 4 + Math.floor(rgRand(s, 806)()*9); k < nC; k++){ const R = rgRand(s, 807, k), rnd = (a, b) => a + (b - a)*R(), sg = R() < 0.5 ? 1 : -1, a0 = sg*rnd(W*0.6, Math.PI), len = W*rnd(0.4, 2.2), zc = rnd(-0.35, 0.35)*W, dz = W*rnd(0.05, 0.16), top = [], bot = [];
     for(let q = 0; q <= 6; q++){ const u = q/6, a = a0 + len*u*sg, th = dz/2*Math.pow(Math.sin(Math.PI*u), 0.7), A = at(a, zc - th, W*0.01), B = at(a, zc + th, W*0.01); if(!A || !B){ top.length = 0; break; } top.push(A); bot.push(B); }
     if(top.length > 2){ const am = a0 + len*0.5*sg, day = ringDay(L, am), A = top[3]; rsPoly(x, [...top, ...bot.reverse()], rsCss(rgLit(V, [246, 247, 252], day, hzOf(A[2], 0.3)*0.4, AIR), 0.72)); } }
 
   const yh = yAt(0), yh2 = yAt(14*Math.PI/180);
   if(yh != null && yh2 != null && yh - yh2 > 1){ const g = x.createLinearGradient(0, yh, 0, yh2); g.addColorStop(0, rsCss(AIR, 0.7*V.air)); g.addColorStop(1, rsCss(AIR, 0)); x.fillStyle = g; x.fillRect(0, yh2, ww, wh - yh2); }
 
-  if(R() < 0.55) for(let k = 0, n = 2 + Math.floor(R()*5); k < n; k++){ const e = rnd(2, 12)*Math.PI/180, Y = yAt(e); if(Y == null) continue; const X = ww*rnd(-0.1, 1.1), wd = unit*rnd(0.2, 0.6), ht = wd*rnd(0.03, 0.07);
+  { const R0 = rgRand(s, 808); if(R0() < 0.55) for(let k = 0, n = 8 + Math.floor(R0()*14); k < n; k++){ const R = rgRand(s, 809, k), rnd = (a, b) => a + (b - a)*R(), az = R()*Math.PI*2, e = rnd(2, 12)*Math.PI/180, P0 = skyAt(az, e); if(!P0) continue; const X = P0[0], Y = P0[1], wd = F*rnd(0.2, 0.6), ht = wd*rnd(0.03, 0.07);
     const c = rsMix(rgLit(V, [244, 244, 250], dl, 0.2, AIR), [255, 170, 140], dusk*0.4), pts = [];
     for(let q = 0; q <= 8; q++){ const u = q/8; pts.push([X - wd/2 + wd*u, Y - ht*Math.pow(Math.sin(Math.PI*u), 0.6)*rnd(0.6, 1.2)]); }
-    rsPoly(x, [...pts, [X + wd/2, Y + ht*0.25], [X - wd/2, Y + ht*0.25]], rsCss(c, 0.8)); }
+    rsPoly(x, [...pts, [X + wd/2, Y + ht*0.25], [X - wd/2, Y + ht*0.25]], rsCss(c, 0.8)); } }
 }
 
 
 
-function rgTree(x, X, Y, h, c, kind, R){
-  x.strokeStyle = rsCss(c.trunk); x.lineWidth = Math.max(rgPx(0.8), h*0.06); x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.35); x.stroke();
-  if(kind === 'fir'){ for(let t = 0; t < 3; t++){ const ty = Y - h*(0.18 + t*0.27), tw = h*(0.3 - t*0.07), th = h*0.45;
-      rsPoly(x, [[X - tw, ty], [X, ty - th], [X + tw, ty]], rsCss(c.dark)); rsPoly(x, [[X, ty], [X, ty - th], [X + c.sd*tw, ty]], rsCss(c.lit)); } }
-  else if(kind === 'poplar'){ const pw = h*0.16; rsPoly(x, [[X, Y - h*0.15], [X - pw, Y - h*0.45], [X, Y - h], [X + pw, Y - h*0.45]], rsCss(c.dark)); rsPoly(x, [[X, Y - h*0.15], [X + c.sd*pw, Y - h*0.45], [X, Y - h]], rsCss(c.lit)); }
-  else if(kind === 'dead'){ x.strokeStyle = rsCss(c.dark); x.lineWidth = Math.max(rgPx(0.8), h*0.05); x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.9);
-    for(let b = 0; b < 4; b++){ const by = Y - h*(0.4 + b*0.13), dir = b % 2 ? 1 : -1; x.moveTo(X, by); x.lineTo(X + dir*h*(0.18 + R()*0.15), by - h*(0.12 + R()*0.1)); } x.stroke(); }
-  else { const r = h*0.34, ccy = Y - h*0.62, pts = Array.from({ length: 7 }, (_, k) => { const a = k/7*Math.PI*2 + 0.3, rr = r*(0.85 + 0.25*R()); return [X + Math.cos(a)*rr, ccy + Math.sin(a)*rr*0.9]; });
-    rsPoly(x, pts, rsCss(c.dark)); rsPoly(x, pts.map(([X1, Y1]) => [X + (X1 - X)*0.6 + c.L[0]*r*0.25, ccy + (Y1 - ccy)*0.6 + c.L[1]*r*0.25]), rsCss(c.lit));
-    if(kind === 'glow'){ x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, ccy, 0, X, ccy, r*2.2); g.addColorStop(0, rsCss(c.glow, 0.45)); g.addColorStop(1, rsCss(c.glow, 0)); x.fillStyle = g; x.fillRect(X - r*2.2, ccy - r*2.2, r*4.4, r*4.4); x.restore();
-      for(let k = 0; k < 5; k++){ x.fillStyle = rsCss(c.glow, 0.9); x.beginPath(); x.arc(X + (R() - 0.5)*r*1.4, ccy + (R() - 0.5)*r*1.2, Math.max(rgPx(0.6), h*0.012), 0, Math.PI*2); x.fill(); } } }
-}
-
-function rgTower(x, X, Y, h, wdt, c, neon, broken, night, R){
-  const w2 = wdt/2, side = wdt*0.35*c.sd, top = Y - h;
-  if(broken){ const pts = [[X - w2, Y], [X - w2, top + h*0.2*R()]]; for(let k = 1; k < 5; k++) pts.push([X - w2 + wdt*k/5, top + h*(0.1 + 0.4*R())]); pts.push([X + w2, top + h*0.3*R()], [X + w2, Y]); rsPoly(x, pts, rsCss(c.body));
-    rsPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2, pts[pts.length - 2][1]], [X + c.sd*w2 + side, pts[pts.length - 2][1] + Math.abs(side)*0.3], [X + c.sd*w2 + side, Y]], rsCss(c.dark)); return; }
-  rsPoly(x, [[X - w2, Y], [X - w2, top], [X + w2, top], [X + w2, Y]], rsCss(c.body)); rsPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top], [X + c.sd*w2 + side, top + Math.abs(side)*0.3], [X + c.sd*w2 + side, Y]], rsCss(c.dark));
-  const roof = R(); if(roof < 0.25){ x.strokeStyle = rsCss(c.dark); x.lineWidth = Math.max(rgPx(0.6), wdt*0.05); x.beginPath(); x.moveTo(X, top); x.lineTo(X, top - h*0.18); x.stroke(); }
-  else if(roof < 0.45) rsPoly(x, [[X - w2*0.7, top], [X - w2*0.7, top - h*0.12], [X + w2*0.7, top - h*0.12], [X + w2*0.7, top]], rsCss(c.body));
-  else if(roof < 0.55) rsPoly(x, [[X - w2, top], [X, top - wdt*0.6], [X + w2, top]], rsCss(c.lit));
-
-
-  const pitch = Math.max(rgPx(3), wdt*0.11), cols = Math.max(1, Math.floor(wdt/pitch) - 1), rows = Math.min(80, Math.max(1, Math.floor(h/pitch) - 1)), cw = wdt/(cols + 1), rh = h/(rows + 1);
-  if(h > 10 && night <= 0.2 && !neon){ x.fillStyle = rsCss(c.dark, 0.5); for(let r = 1; r <= rows; r++) for(let k = 1; k <= cols; k++) x.fillRect(X - w2 + k*cw - cw*0.22, top + r*rh, cw*0.44, rh*0.42); }
-  if(h > 10 && (night > 0.2 || neon)){
-    x.fillStyle = rsCss(c.glow, 0.85*Math.max(night, neon ? 0.5 : 0));
-    for(let r = 1; r <= rows; r++) for(let k = 1; k <= cols; k++) if(R() < 0.45) x.fillRect(X - w2 + k*cw - cw*0.25, top + r*rh, cw*0.5, rh*0.45); }
-  if(neon){ x.strokeStyle = rsCss(c.glow2, 0.9); x.lineWidth = Math.max(rgPx(0.8), wdt*0.04); x.strokeRect(X - w2, top, wdt, h);
-    if(R() < 0.6 && h > 12){ const sh = h*0.12, sy = top + h*(0.15 + 0.4*R()); x.fillStyle = rsCss(R() < 0.5 ? c.glow : c.glow2, 0.9); x.fillRect(X - w2 - wdt*0.1, sy, wdt*0.55, sh);
-      x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, sy, 0, X, sy, wdt*1.3); g.addColorStop(0, rsCss(c.glow, 0.35)); g.addColorStop(1, rsCss(c.glow, 0)); x.fillStyle = g; x.fillRect(X - wdt*1.3, sy - wdt*1.3, wdt*2.6, wdt*2.6); x.restore(); } }
+function rgWork(x, o, X, Y, k, c, night, R, V, e){
+  const { L, W, at, px } = V, AIR = c.air, haze = c.haze, day = ringDay(L, o.a), BLACK = [0, 0, 0], sd = c.sd, F = V.F;
+    if(o.kind === 'sp'){ pkSpire(x, X, Y, W*(0.02 + 0.08*o.h)*k, c, o.w === 'ruins', R, px); }
+    else if(o.kind === 'mo'){ pkMonolith(x, X, Y, W*(0.006 + 0.02*o.h)*k, c, o.w === 'wilds' ? 3 + Math.floor(o.h2*4) : 1, R, px); }
+    else if(o.kind === 'do'){ pkDome(x, X, Y, W*(0.006 + 0.016*o.h)*k, c, night, px); }
+    else if(o.kind === 'ci' || o.kind === 'ca'){ const r = W*(o.kind === 'ci' ? 0.004 + 0.008*o.h : 0.006 + 0.014*o.h), pts = [], inn = [];
+      for(let q = 0; q < 28; q++){ const t = q/28*Math.PI*2, p = at(o.a + Math.cos(t)*r, o.z + Math.sin(t)*r, e + W*0.0002), p2 = at(o.a + Math.cos(t)*r*0.7, o.z + Math.sin(t)*r*0.7, e + W*0.0002); if(!p || !p2) return; pts.push(p); inn.push(p2); }
+      if(o.kind === 'ca'){ rsPoly(x, pts, rsCss(rgLit(V, [70, 58, 48], day, haze, AIR))); rsPoly(x, inn, rsCss(rgLit(V, [36, 30, 26], day, haze, AIR))); return; }
+      x.strokeStyle = rsCss(c.glow, 0.9); x.lineWidth = Math.max(rgPx(1), r*k*0.05); x.beginPath(); pts.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.closePath(); x.stroke();
+      x.beginPath(); inn.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.closePath(); x.stroke();
+      x.beginPath(); for(let q = 0; q < 5; q++){ const A = inn[Math.floor(q*28/5)], B = inn[Math.floor(((q + 2) % 5)*28/5)]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); } x.stroke();
+      rgGlow(x, X, Y, r*k*1.3, c.glow, 0.35); }
+    else if(o.kind === 'pi'){ const wd = W*(0.003 + 0.006*o.h)*k, top = Math.max(0, Y - W*(0.15 + 0.3*o.h2)*k); if(wd < 1) return; const g = x.createLinearGradient(X, Y, X, top); g.addColorStop(0, rsCss(c.glow, 0.7)); g.addColorStop(0.4, rsCss(c.glow, 0.25)); g.addColorStop(1, rsCss(c.glow, 0));
+      x.save(); x.globalCompositeOperation = 'screen'; x.fillStyle = g; rsPoly(x, [[X - wd/2, Y], [X - wd*0.2, top], [X + wd*0.2, top], [X + wd/2, Y]], g); x.restore(); rgGlow(x, X, Y, wd*3, c.glow, 0.6); }
+    else if(o.kind === 'cr'){ pkCrystals(x, X, Y, W*0.0021*k, [rsMix(c.glow, AIR, haze*0.4), rsMix(c.glow2, AIR, haze*0.4)], c, 3 + Math.floor(o.h2*4), R, px); }
+    else if(o.kind === 'to'){ const hh = W*(0.02 + 0.07*o.h)*k*(o.w === 'neon' ? 1.4 : 1); if(hh >= 2) pkBuilding(x, X, Y, hh, hh*(0.12 + 0.1*o.h2), c, PK_STYLE[o.w], night, R, px); }
+    else if(o.kind === 'wr'){
+      const len = W*(0.006 + 0.02*o.h)*k; if(len < 3) return; const ang = (o.h2 - 0.5)*0.7 + 0.25*(o.h2 < 0.5 ? -1 : 1), ca = Math.cos(ang), sa = Math.sin(ang), hb = len*0.22;
+      const hull = [[-0.5, 0], [-0.35, -0.8], [0.3, -1], [0.5, -0.45], [0.45, 0.3], [-0.45, 0.35]].map(([u, v]) => [X + (u*len)*ca - (v*hb)*sa, Y + (u*len)*sa + (v*hb)*ca]);
+      rsPoly(x, [[X - len*0.9, Y + hb*0.3], [X - len*0.4, Y - hb*0.1], [X + len*0.1, Y + hb*0.1], [X - len*0.5, Y + hb*0.6]], rsCss(rgLit(V, [86, 70, 56], day, haze, AIR)));
+      rsPoly(x, hull, rsCss(c.body)); rsPoly(x, [hull[1], hull[2], hull[3], [X, Y - hb*0.3]], rsCss(c.lit));
+      rsPoly(x, [[X - len*0.15*ca, Y - len*0.15*sa - hb*0.8], [X - len*0.3*ca, Y - len*0.3*sa - hb*1.9], [X - len*0.05*ca, Y - len*0.05*sa - hb*0.9]], rsCss(c.dark));
+      for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(c.glow, 0.5 + 0.4*night); x.fillRect(X + (q - 1)*len*0.12*ca - hb*0.1, Y + (q - 1)*len*0.12*sa - hb*0.55, Math.max(rgPx(1), hb*0.18), Math.max(rgPx(1), hb*0.12)); }
+      const smoke = rgLit(V, [90, 88, 92], day, haze, AIR); for(let q = 0; q < 6; q++){ const r = hb*(0.5 + q*0.35), sx = X + len*0.2 + q*hb*0.5*sd, sy = Y - hb - q*hb*1.1;
+        x.fillStyle = rsCss(smoke, 0.55 - q*0.07); x.beginPath(); for(let v = 0; v < 6; v++){ const t = v/6*Math.PI*2; x[v ? 'lineTo' : 'moveTo'](sx + Math.cos(t)*r, sy + Math.sin(t)*r*0.8); } x.closePath(); x.fill(); }
+      rgGlow(x, X + len*0.15, Y - hb*0.2, hb*2, [255, 140, 60], 0.5); }
+    else if(o.kind === 'sh'){ if(o.d < W*0.25) return; const sb = at(o.a, o.z, e + o.up); if(!sb) return; const len = W*(0.003 + 0.01*o.h)*F/sb[2]; if(len < 2) return;
+      const [SX, SY] = sb, dir = o.h2 < 0.5 ? -1 : 1, hb = len*0.11, hull = rgLit(V, [150, 156, 172], day, haze*0.8, AIR), top = rsMix(hull, [255, 250, 240], 0.3), under = rsMix(hull, BLACK, 0.35);
+      const g = x.createLinearGradient(SX - dir*len*0.5, SY, SX - dir*len*5, SY + len*0.2); g.addColorStop(0, rsCss(c.glow, 0.55)); g.addColorStop(1, rsCss(c.glow, 0));
+      x.strokeStyle = g; x.lineWidth = Math.max(rgPx(0.8), hb*0.5); x.beginPath(); x.moveTo(SX - dir*len*0.5, SY); x.lineTo(SX - dir*len*5, SY + len*0.2); x.stroke();
+      const P2 = (u, v) => [SX + dir*u*len, SY + v*hb];
+      rsPoly(x, [P2(0.5, 0), P2(0.2, -1), P2(-0.45, -0.8), P2(-0.5, 0), P2(-0.45, 0.7), P2(0.2, 0.8)], rsCss(under));
+      rsPoly(x, [P2(0.5, 0), P2(0.2, -1), P2(-0.45, -0.8), P2(-0.5, -0.1), P2(0.3, -0.1)], rsCss(top));
+      rsPoly(x, [P2(-0.2, -0.8), P2(-0.42, -2.2), P2(-0.48, -0.8)], rsCss(hull)); rsPoly(x, [P2(-0.15, 0.6), P2(-0.4, 1.8), P2(-0.45, 0.6)], rsCss(under));
+      x.fillStyle = rsCss(c.glow2, 0.9); x.fillRect(Math.min(P2(0.25, 0)[0], P2(0.35, 0)[0]), SY - hb*0.55, len*0.1, Math.max(rgPx(1), hb*0.3));
+      rgGlow(x, P2(-0.52, 0)[0], SY, hb*3, c.glow, 0.9); }
+    else if(o.kind === 'sa' || o.kind === 'br'){
+      const N = 24, outer = [], inner = [], th = W*0.012, Hw = L.Hw;
+      for(let q = 0; q <= N; q++){ const zq = -W/2 + W*q/N, u = (2*zq/W), lift = o.kind === 'sa' ? Hw + W*(0.12 + 0.12*o.h)*Math.sqrt(Math.max(0, 1 - u*u)) : Hw*(0.55 + 0.3*o.h);
+        const A = at(o.a, zq, lift), B = at(o.a, zq, lift - th*(o.kind === 'sa' ? 1 + 1.2*u*u : 0.3)); if(!A || !B) return; outer.push(A); inner.push(B); }
+      if(o.kind === 'br'){ x.save(); x.globalCompositeOperation = 'screen'; for(const [wd, al] of [[4, 0.07], [1.8, 0.16], [0.8, 0.5]]){ x.strokeStyle = rsCss(c.glow, al); x.lineWidth = Math.max(rgPx(0.8), Math.abs(outer[12][1] - inner[12][1])*wd);
+          x.beginPath(); outer.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.stroke(); } x.restore(); return; }
+      const gap = o.w === 'ruins' ? [Math.floor(N*0.35 + o.h*4), Math.floor(N*0.6 + o.h*3)] : null;
+      for(let q = 0; q < N; q++){ if(gap && q >= gap[0] && q < gap[1]) continue; rsPoly(x, [outer[q], outer[q + 1], inner[q + 1], inner[q]], rsCss(q % 2 ? c.body : rsMix(c.body, c.dark, 0.35))); }
+      if(o.w !== 'ruins'){ x.strokeStyle = rsCss(c.glow, 0.7); x.lineWidth = Math.max(rgPx(0.8), Math.abs(outer[12][1] - inner[12][1])*0.15); x.beginPath(); inner.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.stroke(); } }
 }
 
 
@@ -17008,142 +17444,89 @@ function rgSmallLife(x, X, Y, h, kind, c, R){
 function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
 
-function rgPaintLand(x, mk, dk, V, R){
+function rgPaintLand(x, mk, dk, V){
   rgPx = V.px;
-  const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, rnd = (a, b) => a + (b - a)*R(), BLACK = [0, 0, 0];
-  const sd = V.sun.sd, LT = V.sun.LT, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
+  const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, BLACK = [0, 0, 0], s = V.seed | 0;
+  const sd = V.sun.sd, LT = V.sun.LT, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere), psi = V.psi;
+
+
+
 
   const K = 16, d0 = Math.max(L.hc*2.2, W*0.0012), d1 = W*4, dOf = k => d0*Math.pow(d1/d0, k/(K - 1));
   const half = (ww/2/unit)/L.f, Sof = d => d*half*cth*1.35 + d*0.12 + W*0.002;
-
-  const dWall = Math.abs(hz) > 1e-4 ? ((hz > 0 ? W/2 : -W/2) - L.z0)/hz : Infinity;
   const hazeOf = d => V.air*(1 - Math.exp(-d/(W*1.3)));
+  const rOf = (a, z) => Math.hypot(a, z - L.z0);
+
+  const inView = (a, z, r, m = 1) => { let b = Math.atan2(z - L.z0, a) - psi; b -= Math.round(b/(Math.PI*2))*Math.PI*2; return Math.abs(b) <= Math.atan2(Sof(r), r)*m; };
 
 
-  const works = [], s = V.seed | 0, cw = W*0.035, imax = Math.ceil(d1/cw) + 1, jmax = Math.ceil(W/2/cw);
+
+  const works = [], cw = W*0.035, imax = Math.ceil(d1/cw) + 1, jmax = Math.ceil(W/2/cw);
   const kinds = ['sp', 'mo', 'do', 'ci', 'pi', 'ca', 'wr', 'to', 'cr'];
   for(let i = -imax; i <= imax; i++) for(let j = -jmax; j <= jmax; j++){
-    const h1 = mnHash(i, j, s + 501); if(h1 > 0.35*V.works + 0.01) continue;
+    const h1 = mnHash(i, j, s + 501); if(h1 > 0.16*V.works + 0.005) continue;
     const a = (i + mnHash(i, j, s + 502))*cw, z = (j + mnHash(i, j, s + 503) - 0.5)*cw; if(Math.abs(z) > W*0.48) continue;
-    const d = a*hx + (z - L.z0)*hz, sl = -a*hz + (z - L.z0)*hx; if(d < W*0.03 || d > d1 || Math.abs(sl) > Sof(d)) continue;
+    const d = rOf(a, z); if(d < W*0.03 || d > d1 || !inView(a, z, d, 1.1)) continue;
     const w = V.worldAt(a, z), P = RG_PROF[w]; let tot = 0; for(const k of kinds) tot += P[k] || 0; let r = mnHash(i, j, s + 504)*tot, kind = null;
     for(const k of kinds){ r -= P[k] || 0; if(r < 0){ kind = k; break; } }
-    if(kind) works.push({ d, a, z, kind, w, h: mnHash(i, j, s + 505), h2: mnHash(i, j, s + 506) }); }
+    if(kind) works.push({ d, a, z, kind, w, h: mnHash(i, j, s + 505), h2: mnHash(i, j, s + 506), R: rgRand(s, 501, i, j) }); }
 
   for(let i = -24; i <= 24; i++){ const a = (i + mnHash(i, 7, s + 511))*W*0.45, w = V.worldAt(a, 0), P = RG_PROF[w], r = mnHash(i, 8, s + 512)*1.6;
-    const d = a*hx + (0 - L.z0)*hz; if(d < d0 || d > d1*1.5) continue;
-    if(d > W*1.1 && Math.abs(hx) > 0.3 && r < (P.sa + P.br)*V.works*0.5) works.push({ d, a, z: 0, kind: r < P.sa*V.works*0.5 ? 'sa' : 'br', w, h: mnHash(i, 9, s + 513) }); }
-  for(let i = 0; i < 40; i++){ const w = V.world.list[i % V.world.list.length], P = RG_PROF[w]; if(mnHash(i, 1, s + 521) > P.sh*V.works*0.4) continue;
-    const d = d0*4 + (d1 - d0*4)*Math.pow(mnHash(i, 2, s + 522), 2), sl = (mnHash(i, 3, s + 523)*2 - 1)*Sof(d)*0.9, a = d*hx - sl*hz, z = Math.max(-W*0.45, Math.min(W*0.45, L.z0 + d*hz + sl*hx));
-    works.push({ d, a, z, kind: 'sh', w, h: mnHash(i, 4, s + 524), up: W*(0.006 + 0.05*mnHash(i, 5, s + 525)) }); }
+    const d = rOf(a, 0); if(d < W*1.1 || d > d1*1.5) continue;
+    if(r < (P.sa + P.br)*V.works*0.18) works.push({ d, a, z: 0, kind: r < P.sa*V.works*0.18 ? 'sa' : 'br', w, h: mnHash(i, 9, s + 513), R: rgRand(s, 511, i) }); }
+  for(let i = 0; i < 40; i++){ const w = V.world.list[i % V.world.list.length], P = RG_PROF[w]; if(mnHash(i, 1, s + 521) > P.sh*V.works*0.22) continue;
+    const a = (mnHash(i, 2, s + 522)*2 - 1)*d1, z = (mnHash(i, 3, s + 523) - 0.5)*W*0.9, d = rOf(a, z);
+    if(d < d0*4 || d > d1 || !inView(a, z, d, 1.05)) continue;
+    works.push({ d, a, z, kind: 'sh', w, h: mnHash(i, 4, s + 524), h2: mnHash(i, 6, s + 524), up: W*(0.006 + 0.05*mnHash(i, 5, s + 525)), R: rgRand(s, 521, i) }); }
   works.sort((p, q) => q.d - p.d);
   let wi = 0;
-  const colsOf = (w, day, haze, dist) => { const lights = V.lightsOf(w), g = lights[0], g2 = lights[1];
+  const colsOf = (w, day, haze) => { const lights = V.lightsOf(w), g = lights[0], g2 = lights[1];
     const metal = w === 'ruins' ? [120, 108, 96] : w === 'neon' ? [44, 42, 60] : w === 'magic' ? rsMix([200, 196, 230], V.g1, 0.15) : [212, 216, 228];
     const lit = rgLit(V, rsMix(metal, [255, 246, 226], 0.15), day, haze, AIR), dark = rgLit(V, rsMix(metal, BLACK, 0.35), day, haze, AIR);
-    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT }; };
+    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w }; };
   const drawWork = o => {
     const e = Math.max(TR.sea, T(o.a, o.z, W*0.003)), b = at(o.a, o.z, e); if(!b) return;
     const k = F/b[2], day = ringDay(L, o.a), big = { sp: 0.02 + 0.08*o.h, mo: 0.006 + 0.02*o.h, do: 0.006 + 0.016*o.h, to: 0.02 + 0.07*o.h, wr: 0.006 + 0.02*o.h, cr: 0.012 }[o.kind]; if(big && W*big/o.d > 0.4) return;
-    const night = 1 - rsSmooth(0.3, 0.7, day), haze = hazeOf(o.d), c = colsOf(o.w, day, haze), [X, Y] = b;
-    if(o.kind === 'sp'){ const hh = W*(0.02 + 0.08*o.h)*k, bw = hh*0.06; if(hh < 2) return; const broken = o.w === 'ruins';
-      rsPoly(x, [[X - bw*1.6, Y + bw*0.4], [X - bw, Y - bw*1.4], [X + bw, Y - bw*1.4], [X + bw*1.6, Y + bw*0.4]], rsCss(c.dark));
-      const tip = broken ? 0.55 + 0.2*o.h2 : 1; rsPoly(x, [[X - bw, Y], [X - bw*(1 - tip), Y - hh*tip], [X + bw*(1 - tip)*0.3, Y - hh*tip*0.97], [X + bw, Y]], rsCss(c.dark));
-      rsPoly(x, [[X, Y], [X + c.sd*bw*(1 - tip)*0.5, Y - hh*tip], [X + c.sd*bw, Y]], rsCss(c.lit));
-      if(!broken){ rsPoly(x, [[X - bw*0.8, Y - hh*0.42], [X + bw*0.8, Y - hh*0.42], [X + bw*0.65, Y - hh*0.46], [X - bw*0.65, Y - hh*0.46]], rsCss(c.glow, 0.9)); rgGlow(x, X, Y - hh, bw*5, c.glow, 0.7); } }
-    else if(o.kind === 'mo'){ const hh = W*(0.006 + 0.02*o.h)*k, mw = hh*0.22; if(hh < 1.5) return; const tl = hh*0.12*(o.h2 < 0.5 ? 1 : -1);
-      for(let q = 0; q < (o.w === 'wilds' ? 3 + Math.floor(o.h2*4) : 1); q++){ const ox = (q - 1)*mw*3.2, hq = hh*(q ? 0.6 + 0.3*((o.h2*7 + q) % 1) : 1);
-        rsPoly(x, [[X + ox - mw, Y + mw*0.3], [X + ox - mw, Y - hq], [X + ox + mw, Y - hq + tl], [X + ox + mw, Y + mw*0.3]], rsCss(c.sd > 0 ? c.dark : c.body));
-        rsPoly(x, [[X + ox + c.sd*mw, Y + mw*0.3], [X + ox + c.sd*mw, Y - hq + (c.sd > 0 ? tl : 0)], [X + ox + c.sd*mw*1.5, Y - hq + mw*0.4], [X + ox + c.sd*mw*1.5, Y + mw*0.5]], rsCss(c.sd > 0 ? c.body : c.dark)); } }
-    else if(o.kind === 'do'){ const r = W*(0.006 + 0.016*o.h)*k; if(r < 1.5) return; x.fillStyle = rsCss(c.body); x.beginPath(); x.ellipse(X, Y, r, r*0.8, 0, Math.PI, 0); x.fill();
-      x.fillStyle = rsCss(c.lit); x.beginPath(); x.ellipse(X + c.sd*r*0.2, Y, r*0.6, r*0.72, 0, Math.PI, 0); x.fill(); if(night > 0.2) rgGlow(x, X, Y - r*0.4, r*1.6, c.glow, 0.5*night); }
-    else if(o.kind === 'ci' || o.kind === 'ca'){ const r = W*(o.kind === 'ci' ? 0.004 + 0.008*o.h : 0.006 + 0.014*o.h), pts = [], inn = [];
-      for(let q = 0; q < 28; q++){ const t = q/28*Math.PI*2, p = at(o.a + Math.cos(t)*r, o.z + Math.sin(t)*r, e + W*0.0002), p2 = at(o.a + Math.cos(t)*r*0.7, o.z + Math.sin(t)*r*0.7, e + W*0.0002); if(!p || !p2) return; pts.push(p); inn.push(p2); }
-      if(o.kind === 'ca'){ rsPoly(x, pts, rsCss(rgLit(V, [70, 58, 48], day, haze, AIR))); rsPoly(x, inn, rsCss(rgLit(V, [36, 30, 26], day, haze, AIR))); return; }
-      x.strokeStyle = rsCss(c.glow, 0.9); x.lineWidth = Math.max(rgPx(1), r*k*0.05); x.beginPath(); pts.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.closePath(); x.stroke();
-      x.beginPath(); inn.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.closePath(); x.stroke();
-      x.beginPath(); for(let q = 0; q < 5; q++){ const A = inn[Math.floor(q*28/5)], B = inn[Math.floor(((q + 2) % 5)*28/5)]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); } x.stroke();
-      rgGlow(x, X, Y, r*k*1.3, c.glow, 0.35); }
-    else if(o.kind === 'pi'){ const wd = W*(0.003 + 0.006*o.h)*k, top = Math.max(0, Y - W*(0.15 + 0.3*o.h2)*k); if(wd < 1) return; const g = x.createLinearGradient(X, Y, X, top); g.addColorStop(0, rsCss(c.glow, 0.7)); g.addColorStop(0.4, rsCss(c.glow, 0.25)); g.addColorStop(1, rsCss(c.glow, 0));
-      x.save(); x.globalCompositeOperation = 'screen'; x.fillStyle = g; rsPoly(x, [[X - wd/2, Y], [X - wd*0.2, top], [X + wd*0.2, top], [X + wd/2, Y]], g); x.restore(); rgGlow(x, X, Y, wd*3, c.glow, 0.6); }
-    else if(o.kind === 'cr'){ for(let q = 0; q < 3 + Math.floor(o.h2*4); q++){ const cs = W*(0.0012 + 0.003*((o.h*13 + q*0.37) % 1))*k, ang = (((o.h2*29 + q*0.61) % 1) - 0.5)*0.9, ox = (((o.h*7 + q*0.43) % 1) - 0.5)*cs*3;
-        if(cs < 1) continue; const tipX = X + ox + Math.sin(ang)*cs*4, tipY = Y - Math.cos(ang)*cs*4, nx = Math.cos(ang)*cs, ny = Math.sin(ang)*cs, cc = rsMix(q % 2 ? c.glow : c.glow2, AIR, haze*0.4);
-        rsPoly(x, [[X + ox - nx, Y - ny], [tipX, tipY], [X + ox + nx, Y + ny], [X + ox, Y + cs*0.5]], rsCss(rsMix(cc, BLACK, 0.35))); rsPoly(x, [[X + ox, Y + cs*0.5], [tipX, tipY], [X + ox + c.sd*nx, Y + c.sd*ny]], rsCss(cc)); rgGlow(x, tipX, tipY, cs*2, cc, 0.5); } }
-    else if(o.kind === 'to'){ const hh = W*(0.02 + 0.07*o.h)*k*(o.w === 'neon' ? 1.4 : 1), tw = hh*(0.12 + 0.1*o.h2); if(hh < 2) return;
-      rgTower(x, X, Y + tw*0.1, hh, tw, c, o.w === 'neon', o.w === 'ruins', night, R); }
-    else if(o.kind === 'wr'){
-      const len = W*(0.006 + 0.02*o.h)*k; if(len < 3) return; const ang = (o.h2 - 0.5)*0.7 + 0.25*(o.h2 < 0.5 ? -1 : 1), ca = Math.cos(ang), sa = Math.sin(ang), hb = len*0.22;
-      const hull = [[-0.5, 0], [-0.35, -0.8], [0.3, -1], [0.5, -0.45], [0.45, 0.3], [-0.45, 0.35]].map(([u, v]) => [X + (u*len)*ca - (v*hb)*sa, Y + (u*len)*sa + (v*hb)*ca]);
-      rsPoly(x, [[X - len*0.9, Y + hb*0.3], [X - len*0.4, Y - hb*0.1], [X + len*0.1, Y + hb*0.1], [X - len*0.5, Y + hb*0.6]], rsCss(rgLit(V, [86, 70, 56], day, haze, AIR)));
-      rsPoly(x, hull, rsCss(c.body)); rsPoly(x, [hull[1], hull[2], hull[3], [X, Y - hb*0.3]], rsCss(c.lit));
-      rsPoly(x, [[X - len*0.15*ca, Y - len*0.15*sa - hb*0.8], [X - len*0.3*ca, Y - len*0.3*sa - hb*1.9], [X - len*0.05*ca, Y - len*0.05*sa - hb*0.9]], rsCss(c.dark));
-      for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(c.glow, 0.5 + 0.4*night); x.fillRect(X + (q - 1)*len*0.12*ca - hb*0.1, Y + (q - 1)*len*0.12*sa - hb*0.55, Math.max(rgPx(1), hb*0.18), Math.max(rgPx(1), hb*0.12)); }
-      const smoke = rgLit(V, [90, 88, 92], day, haze, AIR); for(let q = 0; q < 6; q++){ const r = hb*(0.5 + q*0.35), sx = X + len*0.2 + q*hb*0.5*sd, sy = Y - hb - q*hb*1.1;
-        x.fillStyle = rsCss(smoke, 0.55 - q*0.07); x.beginPath(); for(let v = 0; v < 6; v++){ const t = v/6*Math.PI*2; x[v ? 'lineTo' : 'moveTo'](sx + Math.cos(t)*r, sy + Math.sin(t)*r*0.8); } x.closePath(); x.fill(); }
-      rgGlow(x, X + len*0.15, Y - hb*0.2, hb*2, [255, 140, 60], 0.5); }
-    else if(o.kind === 'sh'){ if(o.d < W*0.25) return; const sb = at(o.a, o.z, e + o.up); if(!sb) return; const len = W*(0.003 + 0.01*o.h)*F/sb[2]; if(len < 2) return;
-      const [SX, SY] = sb, dir = o.h2 < 0.5 ? -1 : 1, hb = len*0.11, hull = rgLit(V, [150, 156, 172], day, haze*0.8, AIR), top = rsMix(hull, [255, 250, 240], 0.3), under = rsMix(hull, BLACK, 0.35);
-      const g = x.createLinearGradient(SX - dir*len*0.5, SY, SX - dir*len*5, SY + len*0.2); g.addColorStop(0, rsCss(c.glow, 0.55)); g.addColorStop(1, rsCss(c.glow, 0));
-      x.strokeStyle = g; x.lineWidth = Math.max(rgPx(0.8), hb*0.5); x.beginPath(); x.moveTo(SX - dir*len*0.5, SY); x.lineTo(SX - dir*len*5, SY + len*0.2); x.stroke();
-      const P2 = (u, v) => [SX + dir*u*len, SY + v*hb];
-      rsPoly(x, [P2(0.5, 0), P2(0.2, -1), P2(-0.45, -0.8), P2(-0.5, 0), P2(-0.45, 0.7), P2(0.2, 0.8)], rsCss(under));
-      rsPoly(x, [P2(0.5, 0), P2(0.2, -1), P2(-0.45, -0.8), P2(-0.5, -0.1), P2(0.3, -0.1)], rsCss(top));
-      rsPoly(x, [P2(-0.2, -0.8), P2(-0.42, -2.2), P2(-0.48, -0.8)], rsCss(hull)); rsPoly(x, [P2(-0.15, 0.6), P2(-0.4, 1.8), P2(-0.45, 0.6)], rsCss(under));
-      x.fillStyle = rsCss(c.glow2, 0.9); x.fillRect(Math.min(P2(0.25, 0)[0], P2(0.35, 0)[0]), SY - hb*0.55, len*0.1, Math.max(rgPx(1), hb*0.3));
-      rgGlow(x, P2(-0.52, 0)[0], SY, hb*3, c.glow, 0.9); }
-    else if(o.kind === 'sa' || o.kind === 'br'){
-      const N = 24, outer = [], inner = [], th = W*0.012, Hw = L.Hw;
-      for(let q = 0; q <= N; q++){ const zq = -W/2 + W*q/N, u = (2*zq/W), lift = o.kind === 'sa' ? Hw + W*(0.12 + 0.12*o.h)*Math.sqrt(Math.max(0, 1 - u*u)) : Hw*(0.55 + 0.3*o.h);
-        const A = at(o.a, zq, lift), B = at(o.a, zq, lift - th*(o.kind === 'sa' ? 1 + 1.2*u*u : 0.3)); if(!A || !B) return; outer.push(A); inner.push(B); }
-      if(o.kind === 'br'){ x.save(); x.globalCompositeOperation = 'screen'; for(const [wd, al] of [[6, 0.15], [2.5, 0.35], [1, 0.9]]){ x.strokeStyle = rsCss(c.glow, al); x.lineWidth = Math.max(rgPx(0.8), Math.abs(outer[12][1] - inner[12][1])*wd);
-          x.beginPath(); outer.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.stroke(); } x.restore(); return; }
-      const gap = o.w === 'ruins' ? [Math.floor(N*0.35 + o.h*4), Math.floor(N*0.6 + o.h*3)] : null;
-      for(let q = 0; q < N; q++){ if(gap && q >= gap[0] && q < gap[1]) continue; rsPoly(x, [outer[q], outer[q + 1], inner[q + 1], inner[q]], rsCss(q % 2 ? c.body : rsMix(c.body, c.dark, 0.35))); }
-      if(o.w !== 'ruins'){ x.strokeStyle = rsCss(c.glow, 0.7); x.lineWidth = Math.max(rgPx(0.8), Math.abs(outer[12][1] - inner[12][1])*0.15); x.beginPath(); inner.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.stroke(); } }
+    const night = 1 - rsSmooth(0.3, 0.7, day), haze = hazeOf(o.d), c = colsOf(o.w, day, haze), [X, Y] = b, R = o.R;
+    rgWork(x, o, X, Y, k, c, night, R, V, e);
   };
-
 
 
 
 
   const ROADS = { cities: ['road', 1], neon: ['neon', 1], builders: ['path', 0.8], ruins: ['broken', 0.6], magic: ['ley', 0.6], wilds: ['trail', 0.45] }, roads = [];
   { const zr = (mnHash(s, 31, 7) - 0.5)*W*0.6, w1 = V.worldAt(0.5*W, zr), ar = (0.15 + 0.5*mnHash(s, 32, 7))*W*(mnHash(s, 33, 7) < 0.5 ? -1 : 1), w2 = V.worldAt(ar, 0);
-    if(mnHash(s, 34, 7) < ROADS[w1][1]*(0.4 + V.works)) roads.push({ along: true, at: zr, w: w1, kind: ROADS[w1][0] });
-    if(mnHash(s, 35, 7) < ROADS[w2][1]*(0.2 + 0.6*V.works)) roads.push({ along: false, at: ar, w: w2, kind: ROADS[w2][0] }); }
-  const drawRoads = (dn, df) => { for(const r of roads){ const L2 = [], R2 = [], wd = W*(r.kind === 'trail' || r.kind === 'ley' ? 0.0015 : 0.003);
-      for(let q = 0; q <= 6; q++){ const d = Math.max(d0*0.4, dn) + (df - Math.max(d0*0.4, dn))*q/6; let a, z;
-        if(r.along){ if(Math.abs(hx) < 0.08) return; a = (d - (r.at - L.z0)*hz)/hx; z = r.at; } else { if(Math.abs(hz) < 0.08) return; a = r.at; z = L.z0 + (d - r.at*hx)/hz; if(Math.abs(z) > W*0.49) continue; }
-        const e = Math.max(TR.sea, T(a, z, W*0.002)) + W*0.00003, A = r.along ? at(a, z - wd, e) : at(a - wd, z, e), B = r.along ? at(a, z + wd, e) : at(a + wd, z, e); if(!A || !B) continue; L2.push(A); R2.push(B); }
-      if(L2.length < 2) continue;
-      const mid = L2[L2.length >> 1], day = ringDay(L, 0), haze = hazeOf(mid[2]), c = colsOf(r.w, day, haze), poly = [...L2, ...R2.slice().reverse()];
-      const ground = { road: [96, 96, 100], neon: [30, 28, 40], path: [214, 210, 196], broken: [92, 84, 76], ley: null, trail: [150, 124, 92] }[r.kind];
-      if(ground) rsPoly(x, poly, rsCss(rgLit(V, ground, day, haze, AIR), r.kind === 'trail' ? 0.75 : 1));
-      const line = (pts, col, wdt, dash) => { x.strokeStyle = col; x.lineWidth = wdt; if(dash && x.setLineDash) x.setLineDash(dash); x.beginPath(); pts.forEach(([X, Y], q) => q ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.stroke(); if(dash && x.setLineDash) x.setLineDash([]); };
-      const ctr = L2.map((p, q) => [(p[0] + R2[q][0])/2, (p[1] + R2[q][1])/2]), wpx = Math.max(px(1), Math.hypot(L2[0][0] - R2[0][0], L2[0][1] - R2[0][1])*0.06);
-      if(r.kind === 'road') line(ctr, rsCss([236, 230, 200], 0.8), wpx, [wpx*4, wpx*4]);
-      else if(r.kind === 'neon'){ line(L2, rsCss(c.glow, 0.9), wpx*1.2); line(R2, rsCss(c.glow2, 0.9), wpx*1.2); }
-      else if(r.kind === 'path' || r.kind === 'ley'){ x.save(); x.globalCompositeOperation = 'screen'; line(ctr, rsCss(c.glow, 0.3), wpx*5); line(ctr, rsCss(c.glow, 0.9), wpx*1.3); x.restore(); }
-      else if(r.kind === 'broken') for(let q = 0; q + 1 < ctr.length; q += 2) line([L2[q], R2[q + 1]], rsCss(rgLit(V, [40, 36, 32], day, haze, AIR)), wpx); } };
+    if(mnHash(s, 34, 7) < ROADS[w1][1]*(0.3 + 0.6*V.works)) roads.push({ along: true, at: zr, w: w1, kind: ROADS[w1][0] });
+    if(mnHash(s, 35, 7) < ROADS[w2][1]*(0.15 + 0.45*V.works)) roads.push({ along: false, at: ar, w: w2, kind: ROADS[w2][0] }); }
+  for(const r of roads){ r.segs = []; const lo = r.along ? -d1 : -W*0.49, hi = r.along ? d1 : W*0.49;
+    for(let u = lo; u < hi;){ const a = r.along ? u : r.at, z = r.along ? r.at : u, d = rOf(a, z), st = Math.max(W*0.002, d*0.05); r.segs.push([u, Math.min(hi, u + st), d]); u += st; } }
+  const drawRoads = (dn, df) => { for(const r of roads){ const wd = W*(r.kind === 'trail' || r.kind === 'ley' ? 0.0015 : 0.003);
+      let run = [];
+      const flush = () => { if(run.length >= 2) paintRoad(r, run, wd); run = []; };
+      for(const [u0, u1, d] of r.segs){ if(!(d > dn && d <= df)){ flush(); continue; }
+        for(const u of run.length ? [u1] : [u0, u1]){ const a = r.along ? u : r.at, z = r.along ? r.at : u, e = Math.max(TR.sea, T(a, z, W*0.002)) + W*0.00003;
+          const A = r.along ? at(a, z - wd, e) : at(a - wd, z, e), B = r.along ? at(a, z + wd, e) : at(a + wd, z, e); if(!A || !B){ flush(); continue; } run.push([A, B]); } }
+      flush(); } };
+  const paintRoad = (r, run, wd) => { const L2 = run.map(q => q[0]), R2 = run.map(q => q[1]);
+    const mid = L2[L2.length >> 1], day = ringDay(L, 0), haze = hazeOf(mid[2]), c = colsOf(r.w, day, haze), poly = [...L2, ...R2.slice().reverse()];
+    const ground = { road: [96, 96, 100], neon: [30, 28, 40], path: [214, 210, 196], broken: [92, 84, 76], ley: null, trail: [150, 124, 92] }[r.kind];
+    if(ground) rsPoly(x, poly, rsCss(rgLit(V, ground, day, haze, AIR), r.kind === 'trail' ? 0.75 : 1));
+    const line = (pts, col, wdt, dash) => { x.strokeStyle = col; x.lineWidth = wdt; if(dash && x.setLineDash) x.setLineDash(dash); x.beginPath(); pts.forEach(([X, Y], q) => q ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.stroke(); if(dash && x.setLineDash) x.setLineDash([]); };
+    const ctr = L2.map((p, q) => [(p[0] + R2[q][0])/2, (p[1] + R2[q][1])/2]), wpx = Math.max(px(1), Math.hypot(L2[0][0] - R2[0][0], L2[0][1] - R2[0][1])*0.06);
+    if(r.kind === 'road') line(ctr, rsCss([236, 230, 200], 0.8), wpx, [wpx*4, wpx*4]);
+    else if(r.kind === 'neon'){ line(L2, rsCss(c.glow, 0.75), wpx*1.1); line(R2, rsCss(c.glow2, 0.75), wpx*1.1); }
+    else if(r.kind === 'path' || r.kind === 'ley'){ x.save(); x.globalCompositeOperation = 'screen'; line(ctr, rsCss(c.glow, 0.22), wpx*4); line(ctr, rsCss(c.glow, 0.7), wpx*1.1); x.restore(); }
+    else if(r.kind === 'broken') for(let q = 0; q + 1 < ctr.length; q += 2) line([L2[q], R2[q + 1]], rsCss(rgLit(V, [40, 36, 32], day, haze, AIR)), wpx); };
 
 
 
-
-  const lively = R() < 0.25 + 0.6*V.life*Math.max(...V.world.list.map(w => RG_PROF[w].be)), finds = new Map();
-  if(lively){ const ok = [];
-    for(let k = 1; k < K; k++){ let d = dOf(k); if(d > dWall*1.02){ if(dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
-      const a = d*hx, z = Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*hz)), p = at(a, z, Math.max(T(a, z, 2*Sof(d)/96*1.3), TR.sea));
-      if(p && p[1] > wh*0.04 && p[1] < wh*0.9 && W*0.0007*F/p[2] >= px(5)) ok.push(k); }
-
-    for(let q = 0, n = Math.min(ok.length, Math.round(V.life*4)); q < n; q++) { const xs = Array.from({ length: 8 }, (_, i) => ww*(0.06 + 0.88*(i + R())/8));
-      for(let i = xs.length - 1; i > 0; i--){ const j = Math.floor(R()*(i + 1)); [xs[i], xs[j]] = [xs[j], xs[i]]; }
-      xs.seed = (R()*4294967296) >>> 0;
-      finds.set(ok.splice(Math.floor(R()*R()*ok.length), 1)[0], xs); } }
+  const beMax = Math.max(...V.world.list.map(w => RG_PROF[w].be)), lively = mnHash(s, 41, 9) < 0.25 + 0.6*V.life*beMax, pFind = lively ? 0.02*V.life : 0;
   let prevY = null; const seen = [];
   for(let k = K - 1; k >= 0; k--){
-    let d = dOf(k); if(d > dWall*1.02){ if(k === 0 || dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
-    const Sd = Sof(d), M = 96, pts = [], fine = 2*Sd/M*1.3;
-    for(let i = 0; i < M; i++){ const sl = -Sd + 2*Sd*i/(M - 1), a = d*hx - sl*hz, z = Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*hz + sl*hx)), er = T(a, z, fine), e = Math.max(er, TR.sea), p = at(a, z, e);
-      if(p) pts.push({ X: p[0], Y: p[1], zc: p[2], a, z, e, ec: er <= TR.sea ? TR.sea : Math.max(TR.sea + 1e-9, T.true(a, z, fine)), sea: er <= TR.sea }); }
+    const d = dOf(k), Sd = Sof(d), M = 96, hw0 = Math.atan2(Sd, d), dphi = 2*hw0/(M - 1), fine = 2*Sd/M*1.3;
+    let i0 = Math.floor((psi - hw0)/dphi) - 1; i0 -= ((i0 % 2) + 2) % 2; const i1 = Math.ceil((psi + hw0)/dphi) + 1, pts = [];
+    for(let i = i0; i <= i1; i++){ const ph = i*dphi, a = d*Math.cos(ph), z = Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*Math.sin(ph))), er = T(a, z, fine), e = Math.max(er, TR.sea), p = at(a, z, e);
+      if(p) pts.push({ X: p[0], Y: p[1], zc: p[2], a, z, e, i, ec: er <= TR.sea ? TR.sea : Math.max(TR.sea + 1e-9, T.true(a, z, fine)), sea: er <= TR.sea }); }
     if(pts.length < 2) continue;
     const haze = hazeOf(d), mid = pts[pts.length >> 1], day = ringDay(L, mid.a), yC = mid.Y;
     const depth = Math.max(px(6), prevY == null ? wh : Math.abs(yC - prevY)*1.4 + px(4)); prevY = yC;
@@ -17153,45 +17536,47 @@ function rgPaintLand(x, mk, dk, V, R){
     { const yTop = Math.min(...pts.map(p => p.Y)), g = x.createLinearGradient(0, yTop, 0, yTop + depth*1.6 + px(4)), litC = rgLit(V, rsMix(gm, [255, 244, 222], 0.22), day, haze, AIR), darkC = rgLit(V, rsMix(gm, BLACK, 0.3), day, haze, AIR);
       g.addColorStop(0, rsCss(rsMix(base, litC, 0.6))); g.addColorStop(1, rsCss(rsMix(base, darkC, 0.6))); rsPoly(x, sil, g); }
     rsPoly(mk, sil, '#fff'); { const g = Math.round(255*k/(K - 1)); rsPoly(dk, sil, `rgb(${g},${g},${g})`); }
-    const jit = (c2, k2) => { const q = (R() - 0.5)*2*k2; return q > 0 ? rsMix(c2, [255, 255, 255], q) : rsMix(c2, BLACK, -q); };
-    for(let i = 0; i + 1 < pts.length; i += 2){ const p0 = pts[i], p1 = pts[Math.min(pts.length - 1, i + 2)], gc = rgGround(V, (p0.a + p1.a)/2, (p0.z + p1.z)/2, Math.max(p0.ec, p1.ec));
+    for(let q = 0; q + 1 < pts.length; q += 2){ const p0 = pts[q], p1 = pts[Math.min(pts.length - 1, q + 2)], Rf = rgRand(s, 40 + k, p0.i), rnd = (a2, b2) => a2 + (b2 - a2)*Rf();
+      const jit = (c2, k2) => { const v = (Rf() - 0.5)*2*k2; return v > 0 ? rsMix(c2, [255, 255, 255], v) : rsMix(c2, BLACK, -v); };
+      const gc = rgGround(V, (p0.a + p1.a)/2, (p0.z + p1.z)/2, Math.max(p0.ec, p1.ec));
       const col = rgLit(V, gc, day, haze, AIR), lit = rgLit(V, rsMix(gc, [255, 244, 222], 0.3), day, haze, AIR), dark = rgLit(V, rsMix(gc, BLACK, 0.34), day, haze, AIR);
       if(p0.sea && p1.sea){ const q0 = [p0.X, p0.Y + depth*0.5], q1 = [p1.X, p1.Y + depth*0.5]; rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q1, q0], rsCss(col));
-        if(R() < 0.5){ x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.3*day + 0.05)); x.fillRect(p0.X, p0.Y + depth*R()*0.25, (p1.X - p0.X)*rnd(0.3, 0.9), Math.max(rgPx(1), depth*0.03)); } continue; }
+        if(Rf() < 0.5){ x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.3*day + 0.05)); x.fillRect(p0.X, p0.Y + depth*Rf()*0.25, (p1.X - p0.X)*rnd(0.3, 0.9), Math.max(rgPx(1), depth*0.03)); } continue; }
       const face = rsFace(dark, lit, p1.Y - p0.Y, p0.X - p1.X, LT), slope = Math.abs(p1.Y - p0.Y)/Math.max(1, Math.abs(p1.X - p0.X));
-      if(slope > 0.32){ const q0 = [p0.X + (p1.X - p0.X)*(R() - 0.5)*0.3, p0.Y + depth*rnd(0.35, 0.8)], q1 = [p1.X, p1.Y + depth*rnd(0.35, 0.8)];
+      if(slope > 0.32){ const q0 = [p0.X + (p1.X - p0.X)*(Rf() - 0.5)*0.3, p0.Y + depth*rnd(0.35, 0.8)], q1 = [p1.X, p1.Y + depth*rnd(0.35, 0.8)];
         rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03))); }
       else { const bd = depth*rnd(0.1, 0.22); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bd*rnd(0.6, 1.2)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02))); }
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
 
-    const near = k <= 1, fXs = finds.get(k), spots = []; R();
-    for(let i = 0; i + 1 < pts.length; i++){ const p0 = pts[i], p1 = pts[i + 1]; if(p0.sea && p1.sea) continue;
+
+    const near = k <= 1, spots = [];
+    for(let q = 0; q + 1 < pts.length; q++){ const p0 = pts[q], p1 = pts[q + 1]; if(p0.sea && p1.sea) continue;
+      const Rc = rgRand(s, 60 + k, p0.i), rnd = (a2, b2) => a2 + (b2 - a2)*Rc();
       const am = (p0.a + p1.a)/2, zm = (p0.z + p1.z)/2, w = V.worldAt(am, zm), P = RG_PROF[w], kpx = F/((p0.zc + p1.zc)/2), segW = 2*Sd/(M - 1), wday = ringDay(L, am), night = 1 - rsSmooth(0.3, 0.7, wday);
-      const c = colsOf(w, wday, haze), place = (n, fn) => { n = Math.floor(n) + (R() < n % 1 ? 1 : 0); for(let q = 0; q < n; q++){ const u = R(), X = p0.X + (p1.X - p0.X)*u, Y = p0.Y + (p1.Y - p0.Y)*u + depth*Math.pow(R(), 1.6)*0.55; fn(X, Y); } };
+      const c = colsOf(w, wday, haze), place = (n, fn) => { n = Math.floor(n) + (Rc() < n % 1 ? 1 : 0); for(let j = 0; j < n; j++){ const u = Rc(), X = p0.X + (p1.X - p0.X)*u, Y = p0.Y + (p1.Y - p0.Y)*u + depth*Math.pow(Rc(), 1.6)*0.55; fn(X, Y); } };
       const tH = Math.min(wh*0.3, W*0.0035*kpx), fo = V.forestAt(am, zm)*V.life*(k <= 1 ? 0.35 : 1);
-      if(tH > 1.6 && fo > 0.05){ const n = Math.min(Math.max(1, (p1.X - p0.X)/(tH*0.3)), fo*segW/(W*0.0018)*(P.tr + P.de + P.gt));
-        const tc = { trunk: rgLit(V, [70, 52, 40], wday, haze, AIR), dark: rgLit(V, rsMix(w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), wday, haze, AIR), lit: rgLit(V, rsMix(rsMix([36, 82, 50], V.land, 0.35), [255, 244, 222], 0.28), wday, haze, AIR), glow: c.glow, sd: c.sd, L: LT };
-        place(n, (X, Y) => { const r = R()*(P.tr + P.de + P.gt), kind = r < P.de ? 'dead' : r < P.de + P.gt ? 'glow' : ['fir', 'fir', 'round', 'poplar'][Math.floor(R()*4)]; rgTree(x, X, Y, tH*rnd(0.6, 1.4), tc, kind, R); }); }
+      if(tH > 1.6 && fo > 0.05){ const n = Math.min(Math.max(1, (p1.X - p0.X)/(tH*0.3)), fo*segW/(W*0.0018)*(P.tr + P.de + P.gt)), green = rsMix(w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35);
+        const tc = { trunk: rgLit(V, [70, 52, 40], wday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), wday, haze, AIR), body: rgLit(V, green, wday, haze, AIR), lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), wday, haze, AIR), glow: c.glow, sd: c.sd, L: LT };
+        place(n, (X, Y) => { const r = Rc()*(P.tr + P.de + P.gt), kind = r < P.de ? 'dead' : r < P.de + P.gt ? 'glow' : (T2 => T2[Math.floor(Rc()*T2.length)])(PK_TREES[w === 'magic' ? 'magic' : w === 'ruins' ? 'ruins' : 'wild']); pkTree(x, X, Y, tH*rnd(0.6, 1.4), tc, kind, Rc, rgPx); }); }
       const ci = V.cityAt(am, zm, P.cv*(0.3 + 0.9*V.works))*(k === 0 ? 0 : k <= 2 ? 0.3 : 1), bH = Math.min(wh*0.16, W*0.006*kpx);
       if(ci > 0.05 && bH > 1.2){ const n = Math.min(Math.max(1, (p1.X - p0.X)/(bH*0.3)), ci*segW/(W*0.004));
-        place(n, (X, Y) => { const hh = Math.min(wh*(k <= 3 ? 0.14 : 0.28), bH*rnd(0.5, 2.6)*(w === 'neon' ? 1.6 : 1)); rgTower(x, X, Y + hh*0.05, hh, hh*rnd(0.25, 0.55), c, w === 'neon', w === 'ruins' && R() < 0.6, night, R); }); }
+        place(n, (X, Y) => { const hh = Math.min(wh*(k <= 3 ? 0.14 : 0.28), bH*rnd(0.5, 2.6)*(w === 'neon' ? 1.6 : 1)); pkBuilding(x, X, Y + hh*0.05, hh, hh*rnd(0.25, 0.55), c, PK_STYLE[w], night, Rc, rgPx); }); }
       const rH = Math.min(wh*0.07, W*0.0012*kpx);
-      if(rH > 2 && P.ro*V.forms > 0.05){ place(P.ro*V.forms*segW/(W*0.004)*(k <= 1 ? 0.4 : 1), (X, Y) => { const r = rH*rnd(0.4, 1.5), rc = rgLit(V, [128, 122, 114], wday, haze, AIR), pts2 = Array.from({ length: 6 }, (_, q) => { const t = Math.PI + q/5*Math.PI; return [X + Math.cos(t)*r*rnd(0.8, 1.2), Y + Math.sin(t)*r*rnd(0.6, 1)]; });
-        rsPoly(x, pts2, rsCss(rsMix(rc, BLACK, 0.2))); rsPoly(x, [[X, Y], pts2[2], pts2[3], pts2[4]].map(([a2, b2]) => [a2, b2]), rsCss(rsMix(rc, [255, 244, 222], 0.15))); }); }
+      if(rH > 2 && P.ro*V.forms > 0.05){ const rc = rgLit(V, [128, 122, 114], wday, haze, AIR); place(P.ro*V.forms*segW/(W*0.004)*(k <= 1 ? 0.4 : 1), (X, Y) => pkRock(x, X, Y, rH*rnd(0.4, 1.5), rc, LT, Rc)); }
       const cH = W*0.0007*kpx;
-      if(fXs && cH >= px(3)) for(const fX of fXs){ const fu = (fX - p0.X)/(p1.X - p0.X || 1e-6), Y = p0.Y + (p1.Y - p0.Y)*fu;
-        if(fu >= 0 && fu < 1 && Y > px(4) && Y < wh*0.95) spots.push({ X: fX, Y, h: cH, w, wday, haze, glow: c.glow, seed: fXs.seed }); }
+      if(pFind && cH >= px(3) && Rc() < pFind*Math.max(...V.world.list.map(w2 => RG_PROF[w2].be))){ const u = Rc(), X = p0.X + (p1.X - p0.X)*u, Y = p0.Y + (p1.Y - p0.Y)*u;
+        if(Y > px(4) && Y < wh*0.95 && X > 0 && X < ww) spots.push({ X, Y, h: cH, w, wday, haze, glow: c.glow, seed: (Rc()*4294967296) >>> 0 }); }
       if(near && P.gr*V.life > 0.05){ const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), wday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), gH = W*0.00025*kpx, flw = [V.g1, V.g2, [250, 246, 240]];
-        place(P.gr*V.life*(p1.X - p0.X)/Math.max(2, gH)*0.5, (X, Y) => { for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
-          if(R() < 0.25*P.gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); } }); } }
+        place(P.gr*V.life*(p1.X - p0.X)/Math.max(2, gH)*0.5, (X, Y) => { for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (Rc() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
+          if(Rc() < 0.25*P.gr){ const fc = rsMix(flw[Math.floor(Rc()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); } }); } }
 
-    if(spots.length) seen.push(spots.map(f => [f, rgSpot(x, f.X, f.Y, px(4))]));
+    for(const f of spots) seen.push([f, rgSpot(x, f.X, f.Y, px(4))]);
 
     const dn = k > 0 ? dOf(k - 1) : 0; drawRoads(dn, d); while(wi < works.length && works[wi].d >= dn){ if(works[wi].d <= d) drawWork(works[wi]); wi++; }
   }
 
-  for(const ridge of seen){ const f = (ridge.find(([f2, before]) => rgSame(rgSpot(x, f2.X, f2.Y, px(4)), before)) || [])[0];
-    if(!f) continue; const Rf = mulberry32(f.seed), rf = (a, b) => a + (b - a)*Rf();
+  for(const [f, before] of seen){ if(!rgSame(rgSpot(x, f.X, f.Y, px(4)), before)) continue;
+    const Rf = mulberry32(f.seed), rf = (a, b) => a + (b - a)*Rf();
     if(Rf() >= 0.3 + 0.7*RG_PROF[f.w].be) continue;
 
     const mix = { magic: [1, 3, 1, 1], wilds: [3, 1, 3, 1], ruins: [2, 0.5, 1, 3], neon: [1, 2, 0.5, 1], cities: [2, 0.5, 2, 0.5], builders: [2, 1, 2, 1] }[f.w] || [2, 1, 2, 1];
@@ -17216,7 +17601,7 @@ const RING_STEPS = {
       RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99),
       ['saturn', 'Saturn', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }]], cost: () => 4,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
-      const V = rgView(E, n, ww, wh); rgPaintArch(x, mk, V, mulberry32((V.seed ^ 0xA5C4) >>> 0)); return [c, mc]; },
+      const V = rgView(E, n, ww, wh); rgPanSky(c, x, V); rgPaintArch(x, mk, V); return [c, mc]; },
     run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },
   ringland: { cat: 'Marks', label: 'Land on the Ring', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
@@ -17224,7 +17609,7 @@ const RING_STEPS = {
       RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);
       mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh); dk.fillStyle = '#fff'; dk.fillRect(0, 0, ww, wh);
-      const V = rgView(E, n, ww, wh); rgPaintLand(x, mk, dk, V, mulberry32((V.seed ^ 0x1A4D5) >>> 0)); return [c, mc, dc]; },
+      const V = rgView(E, n, ww, wh); rgPaintLand(x, mk, dk, V); return [c, mc, dc]; },
     run(E, n){ const [c, m, d] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m)), E.asField(E.readCanvas(d))]; } },
 };
 
@@ -21825,7 +22210,7 @@ const TEXTURE_PARAMS = {
 
                   sliderOf('world', 'World', 0, { ticks:[0,14,29,43,57,71,86,100], names:['By the Seed','Wilds','Cities','Neon','Builders','Magic','Ruins','Mixed'] }),
                   sliderOf('shape', 'Life', 50),
-                  sliderOf('form', 'Works', 50),
+                  sliderOf('form', 'Works', 35),
                   sliderOf('alt', 'Altitude', 15),
                   sliderOf('paint', 'Paint', 0),
                   sliderOf('brush', 'Brush', 37, { ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry'] })],
@@ -22308,7 +22693,7 @@ const TEXTURE_CHAINS = {
 
 
 
-  cards: { label: 'Cartomancy', canvas: true, teach: 'Table draws a table top under a lamp; Card Deal lays a card game on it. The menus left at “seed” let the seed choose (the game, the table, the cards, the coins); pick one to fix it. The four suits are the page\'s two Accents and the texture\'s two Hues. The Knobs are this texture\'s sliders: Cards in Play, Scatter, Stakes, Clutter (what else is on the table) and Wear (how damaged the cards are). Try: set Game to “ring”, then press ⟳ Seed. A Table Objects part lays the same candles, cups and letters on any picture.', nodes: [
+  cards: { label: 'Cartomancy', canvas: true, teach: 'Table draws a table top under a lamp, and a Blend lays it over the Page Backdrop in Overlay, so the table always takes the page\'s own colors; Card Deal lays a card game on it, flat, and hands its Height and Gloss to a Light Engine, which lights the cards and coins from the Light Dial (each card\'s shadow on the ones beneath, the coins\' domes and rims, gilt and metal shining). The menus left at “seed” let the seed choose (the game, the table, the cards, the coins); pick one to fix it. The four suits are the page\'s two Accents and the texture\'s two Hues. The Knobs are this texture\'s sliders: Cards in Play, Scatter, Stakes, Clutter (what else is on the table) and Wear (how damaged the cards are). Try: set Game to “ring”, then press ⟳ Seed. A Table Objects part lays the same candles, cups and letters on any picture.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 140],
       ['knob', { slot: '3' }, 40, 240],
@@ -22317,13 +22702,16 @@ const TEXTURE_CHAINS = {
       ['hue', { slot: '1', name: 'Third Suit Hue' }, 40, 500],
       ['hue', { slot: '2', name: 'Fourth Suit Hue' }, 40, 580],
       ['table', { mat: 'seed', lamp: 50 }, 320, 40],
-      ['deal', { game: 'seed', stock: 'seed', gilt: 'seed', suits: 'seed', coinage: 'seed', count: 100, size: 100, scatter: 20, stakes: 50, clutter: 40, wear: 30 }, 600, 120],
-      ['surface', { name: 'Cartomancy', ground: 'colour' }, 880, 160],
+      ['deal', { game: 'seed', stock: 'seed', gilt: 'seed', suits: 'seed', coinage: 'seed', count: 100, size: 100, scatter: 20, stakes: 50, clutter: 40, wear: 30, lighting: 'the light engine' }, 880, 120],
+      ['surface', { name: 'Cartomancy', ground: 'colour' }, 1440, 160],
       ['knob', { slot: '4' }, 320, 300],
-      ['knob', { slot: '5' }, 320, 400]],
-    wires: [[8, 1, 9, 1], [4, 1, 9, 2], [5, 1, 9, 3], [6, 1, 9, 4], [7, 1, 9, 5],
+      ['knob', { slot: '5' }, 320, 400],
+      ['backdrop', {}, 320, 520],
+      ['blend', { mode: 'overlay', opacity: 100 }, 600, 60],
+      ['material', { relief: 60, gloss: 45, shine: 55, shadow: 70, occlusion: 30, ambient: 40 }, 1160, 140]],
+    wires: [[13, 1, 14, 1], [8, 1, 14, 2], [14, 1, 9, 1], [4, 1, 9, 2], [5, 1, 9, 3], [6, 1, 9, 4], [7, 1, 9, 5],
       [1, 1, 9, 'count'], [2, 1, 9, 'scatter'], [3, 1, 9, 'stakes'],
-      [11, 1, 9, 'clutter'], [12, 1, 9, 'wear'], [9, 1, 10, 1]] },
+      [11, 1, 9, 'clutter'], [12, 1, 9, 'wear'], [9, 1, 15, 1], [9, 3, 15, 2], [9, 4, 15, 3], [15, 1, 10, 1]] },
 
 
 
@@ -22708,18 +23096,21 @@ const TEXTURE_CHAINS = {
       ['spangle', { zoom: 100, '~zoom': '40,300', amount: 50, '~amount': '0,100', form: 0, '~form': '0,100', irregular: 40, '~irregular': '0,100', brushing: 0, '~brushing': '0,100' }, 320, 100],
       ['surface', { name: 'Metal Spangle', ground: 'grey' }, 600, 120]],
     wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'amount'], [3, 1, 8, 'form'], [4, 1, 8, 'irregular'], [5, 1, 8, 'brushing'], [6, 1, 8, 1], [7, 1, 8, 2], [8, 1, 9, 1]] },
-  crystal: { label: 'Crystal Leaf', canvas: true, teach: 'Looking into a crystal, close up. One part makes it: Crystal Leaf cuts a few large faces, each lit from its edge by the Light Dial and fading inward, with a second set behind them seen through by refraction; Fire flashes where light meets an inner face, split into its colors. Phantoms are ghost crystals inside, Inclusions needles and bubbles. Try: Clarity at 100 and Fire at 100.', nodes: [
+  crystal: { label: 'Crystal Leaf', div: 2, teach: 'Looking into a crystal druse, close up, lit from its maps (Ruby: "reflectance, albedo, displacement, distortion"). Crystal Druse cuts the points (six-sided pyramids with growth lines across their faces) and hands on what each map holds: the Albedo, what the eye sees inside the stone (its hue deepening inward, the crystals behind seen through the face that bends them, phantoms of the smaller points it once was, and the Inclusions, needles and bubbles seen through the faces); the Height; the Gloss of the polish; the Veil, where it is milky; and the Fire, light split into its colors on the inner planes. A Light Engine lights the albedo from the Normals (each face\'s facing, so every face turns to the Light Dial on its own), the Height (the shadows between the points) and the Gloss (the shine on the polish), the Veil turned over is its Translucency, and the Fire is screened on as light of its own. Try: Clarity at 100 and Fire at 100, then turn the Light Dial.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 140],
       ['knob', { slot: '3' }, 40, 240],
       ['knob', { slot: '4' }, 40, 340],
       ['knob', { slot: '5' }, 40, 440],
-      ['dial', {}, 40, 540],
       ['hue', { slot: '1', name: 'Crystal Hue' }, 40, 640],
       ['hue', { slot: '2', name: 'Inclusion Hue' }, 40, 720],
-      ['crystal', { zoom: 100, '~zoom': '40,300', amount: 70, '~amount': '0,100', form: 50, '~form': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],
-      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 600, 120]],
-    wires: [[1, 1, 9, 'zoom'], [2, 1, 9, 'amount'], [3, 1, 9, 'form'], [4, 1, 9, 'phantoms'], [5, 1, 9, 'inclusions'], [6, 1, 9, 1], [7, 1, 9, 2], [8, 1, 9, 3], [9, 1, 10, 1]] },
+      ['druse', { zoom: 100, '~zoom': '40,300', clarity: 70, '~clarity': '0,100', fire: 50, '~fire': '0,100', phantoms: 30, '~phantoms': '0,100', inclusions: 20, '~inclusions': '0,100' }, 320, 100],
+      ['invert', {}, 600, 360],
+      ['material', { relief: 110, gloss: 80, shine: 80, shadow: 55, occlusion: 45, ambient: 45, translucency: 45 }, 880, 100],
+      ['blend', { mode: 'screen', opacity: 100 }, 1160, 120],
+      ['surface', { name: 'Crystal Leaf', ground: 'colour' }, 1440, 140]],
+    wires: [[1, 1, 8, 'zoom'], [2, 1, 8, 'clarity'], [3, 1, 8, 'fire'], [4, 1, 8, 'phantoms'], [5, 1, 8, 'inclusions'], [6, 1, 8, 2], [7, 1, 8, 3],
+      [8, 1, 10, 1], [8, 2, 10, 2], [8, 3, 10, 3], [8, 7, 10, 10], [8, 4, 9, 1], [9, 1, 10, 'translucency'], [10, 1, 11, 1], [8, 5, 11, 2], [11, 1, 12, 1]] },
   suminagashi: { label: 'Suminagashi', canvas: true, teach: 'Japanese floating ink. One part makes it: Suminagashi drops ink and clear water in turn on still water (each drop pushing the rings before it outward), lets a breath move them, and lifts the pattern onto paper. It is exact mathematical marbling: every pixel is traced back through each drop and stroke to the drop it came from. The Light Dial is the breath’s direction. Try: Breath at 0, then raise it slowly.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 140],
@@ -25958,7 +26349,8 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Facet Hue'], tintDefaults:['#FFFFFF','#808080'] },
 
 
-  cards:         { blends:['source-over','overlay','soft-light','hard-light','multiply','luminosity','screen','color'], ground:'colour', light:true, tints:2,
+
+  cards:         { blends:['source-over','overlay','soft-light','hard-light','multiply','luminosity','screen','color'], ground:'colour', light:true, tints:2, pageEnv:true,
                    tintLabels:['Third Suit Hue','Fourth Suit Hue'], tintDefaults:['#3E7D4F','#2E5FA8'] },
 
   linen:         { blends:['soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten','source-over'], ground:'grey', light:true, tints:2,
@@ -29870,7 +30262,7 @@ const RELEASE = 'Uranus–Cressida';
 
 const RELEASE_DATE = '2026-10-20';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"7KDjgF4u","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"9zF5WxQZ","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"YYynm3Sp","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"nIPj4L7t","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"R8benyFh","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"cEUC1yq5","ringworld":"XM-ZCUnb","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'JaZ-ztYp';
 
 
@@ -30099,7 +30491,9 @@ const MURMUR_FUNCTIONS = [
   { id: 'cardOpen',       group: 'Moving around', label: 'Open a card',            where: 'A folded section' },
   { id: 'cardFold',       group: 'Moving around', label: 'Fold a card',            where: 'A folded section' },
   { id: 'checkbox',       group: 'Settings',      label: 'Tick a checkbox',        where: 'Any checkbox' },
-  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (and their ends)' },
+  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (the note rises with the value)' },
+  { id: 'endStop',        group: 'Settings',      label: 'A knob reaches an end',  where: 'The surface\'s knobs and faders, at either end (once on arriving)' },
+  { id: 'reset',          group: 'Settings',      label: 'A knob back to its default', where: 'A double-tap on a knob or fader' },
   { id: 'select',         group: 'Settings',      label: 'Choose from a menu',     where: 'Any drop-down' },
   { id: 'lock',           group: 'Settings',      label: 'Lock a setting',         where: 'The padlock beside a control' },
   { id: 'unlock',         group: 'Settings',      label: 'Unlock a setting',       where: 'The padlock beside a control' },
@@ -30140,7 +30534,8 @@ const MURMUR_FUNCTIONS = [
 
 
 const MURMUR_DESIGN = {
-  v: 2, scale: 'aeolian', octave: -1, room: 18, warmth: 10, humanize: 15,
+
+  v: 3, scale: 'aeolian', octave: 1, room: 18, warmth: 10, humanize: 15,
   instruments: {
     glass: { name: 'Glass', body: 'glass', level: 0.5,  attack: 0.014, decay: 0.6,  sustain: 0,   bright: 0.35, shimmer: 0.2,  octave: 0, drop: 0 },
     bell:  { name: 'Bell',  body: 'bell',  level: 0.16, attack: 0.006, decay: 2.2,  sustain: 0,   bright: 0.25, shimmer: 0.2,  octave: 0, drop: 0 },
@@ -30151,6 +30546,17 @@ const MURMUR_DESIGN = {
   },
   compositions: {
     tick:     { name: 'Tick', events: [{ inst: 'tick', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.5 }] },
+
+    mark:     { name: 'A mark', events: [{ inst: 'tick', kind: 'value', notes: [-7, -5, -4, -3, -1, 0, 2, 3, 4, 6, 7], at: 0, gap: 0, level: 0.45 }] },
+
+    endStop:  { name: 'An end', events: [{ inst: 'thud', kind: 'value', notes: [0, 4], at: 0, gap: 0, level: 0.6 }] },
+
+    reset:    { name: 'Back to the default', events: [{ inst: 'glass', kind: 'arp', notes: [11, 7], at: 0, gap: 0.06, level: 0.4 }] },
+
+    latchShut: { name: 'A lock shuts', events: [{ inst: 'tick', kind: 'arp', notes: [7, 4], at: 0, gap: 0.025, level: 0.45 }] },
+    latchOpen: { name: 'A lock opens', events: [{ inst: 'tick', kind: 'arp', notes: [4, 7], at: 0, gap: 0.025, level: 0.45 }] },
+
+    tumble:   { name: 'Dice', events: [{ inst: 'tick', kind: 'tumble', notes: [-1, 0, 2, 3, 4], land: [0, 4], at: 0, gap: 0.07, level: 0.35 }] },
 
     confirm:  { name: 'A soft no', events: [{ inst: 'pad', kind: 'arp', notes: [2, 1], at: 0, gap: 0.12, level: 0.35 }] },
 
@@ -30186,8 +30592,8 @@ const MURMUR_DESIGN = {
     earth:    { name: 'Earth', events: [{ inst: 'tine', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.35 }] },
   },
   map: {
-    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'tick', select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
-    preset: 'arrive', reroll: null, summonType: 'summon', summonBackdrop: 'summon',
+    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'mark', endStop: 'endStop', reset: 'reset', select: null, lock: 'latchShut', unlock: 'latchOpen', dialRandom: 'tumble', soundOn: 'arrive',
+    preset: 'arrive', reroll: 'tumble', summonType: 'summon', summonBackdrop: 'summon',
     readingFire: null, readingWater: null, readingWind: null, readingEarth: null,
     spellCreate: 'keep', spellApply: 'arrive', spellShare: null, spellDissolve: null, poemRecord: 'keep', saveImage: 'done',
     athanorOpen: 'open', athanorClose: 'close', nodeAdd: 'blipUp', nodeRemove: 'blipDown', wireConnect: 'plugIn', wireDisconnect: 'plugOut', graphLoad: 'lit',
@@ -30196,7 +30602,7 @@ const MURMUR_DESIGN = {
   },
 };
 
-const M_LOW_HZ = 55, M_HIGH_HZ = 1100, M_PEAK = 0.06, M_MAX_VOICES = 24, M_REPEAT_MS = 40;
+const M_LOW_HZ = 55, M_HIGH_HZ = 1200, M_PEAK = 0.06, M_MAX_VOICES = 24, M_REPEAT_MS = 40, M_BURST_MS = 400, M_IDLE_MS = 10000;
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const murmurClamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const M_PC = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -30209,7 +30615,7 @@ function normalizeDesign(d){
   const insts = {};
   for(const k of Object.keys(D.instruments)) insts[k] = { ...D.instruments[k], ...((x.instruments || {})[k] || {}) };
   return {
-    v: 1, scale: MURMUR_SCALES[x.scale] ? x.scale : D.scale,
+    v: 3, scale: MURMUR_SCALES[x.scale] ? x.scale : D.scale,
     octave: Number.isFinite(+x.octave) ? murmurClamp(Math.round(+x.octave), -1, 1) : D.octave,
     room: Number.isFinite(+x.room) ? murmurClamp(+x.room, 0, 100) : D.room,
     warmth: Number.isFinite(+x.warmth) ? murmurClamp(+x.warmth, 0, 100) : D.warmth,
@@ -30248,6 +30654,12 @@ function renderComposition(design, id, opts = {}){
     if(!notes.length) continue;
     const at = +e.at || 0, gap = +e.gap || 0, level = Number.isFinite(+e.level) ? +e.level : 0.4;
     if(e.kind === 'index'){ push(e.inst, notes[((opts.index || 0) % notes.length + notes.length) % notes.length], at, level); continue; }
+
+    if(e.kind === 'value'){ const v = murmurClamp(Number.isFinite(+opts.value) ? +opts.value : 0.5, 0, 1); push(e.inst, notes[Math.round(v*(notes.length - 1))], at, level); continue; }
+
+    if(e.kind === 'tumble'){ const land = (Array.isArray(e.land) ? e.land : [notes[0]]).map(Number), n = 3 + Math.floor(Math.random()*2); let last = null;
+      for(let i = 0; i < n; i++){ let d; do { d = notes[Math.floor(Math.random()*notes.length)]; } while(d === last && notes.length > 1); last = d; push(e.inst, d, at + i*gap, level*(0.75 + 0.25*Math.random())); }
+      push(e.inst, land[Math.floor(Math.random()*land.length)], at + n*gap, level); continue; }
     let seq = e.kind === 'chord' ? (MURMUR_SHAPES[e.shape] || MURMUR_SHAPES.triad).map(x => notes[0] + x) : e.kind === 'note' ? [notes[0]] : notes.slice();
     if(e.dir === 'down') seq = seq.reverse();
     const lone = e.kind === 'arp';
@@ -30259,13 +30671,15 @@ function renderComposition(design, id, opts = {}){
 function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } = {}){
   let ctx = null, voices = 0, nodes = null;
   let vol = murmurClamp(volume, 0, 1), on = !!enabled, D = normalizeDesign(design);
-  const lastTime = new Map(), listeners = new Set();
+  const lastTime = new Map(), burst = new Map(), listeners = new Set();
   const hasWindow = typeof window !== 'undefined';
 
   function ensure(){
     if(ctx) return ctx;
     const AC = hasWindow && (window.AudioContext || window.webkitAudioContext);
     if(!AC) return null;
+
+    try { if(typeof navigator !== 'undefined' && navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch(e){}
     ctx = new AC();
 
     const warm = ctx.createWaveShaper(); warm.oversample = '2x';
@@ -30289,7 +30703,11 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
   }
 
   const wake = () => { if(!on) return; const c = ensure(); if(c && c.state === 'suspended') c.resume(); };
-  if(hasWindow && window.addEventListener) ['pointerdown', 'keydown', 'touchstart'].forEach(t => window.addEventListener(t, wake, { capture: true, passive: true }));
+
+  if(hasWindow && window.addEventListener) ['pointerdown', 'pointerup', 'keydown', 'touchstart', 'touchend'].forEach(t => window.addEventListener(t, wake, { capture: true, passive: true }));
+
+  let idleTimer = null;
+  const restSoon = () => { if(idleTimer) clearTimeout(idleTimer); idleTimer = setTimeout(() => { idleTimer = null; if(ctx && ctx.state === 'running' && voices === 0 && ctx.suspend) ctx.suspend().catch(() => {}); }, M_IDLE_MS); };
   const rand = (a, b) => a + Math.random() * (b - a);
 
    
@@ -30328,6 +30746,7 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
 
     if(c.state !== 'running'){ if(c.resume) c.resume().then(() => list.forEach(voice)).catch(() => {}); }
     else list.forEach(voice);
+    restSoon();
     listeners.forEach(fn => { try { fn(list); } catch(e){} });
     return list;
   }
@@ -30335,10 +30754,15 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
    
   function play(fn, opts = {}){
     if(!on || vol <= 0) return [];
+    if(typeof document !== 'undefined' && document.hidden) return [];
     const id = D.map[fn]; if(!id) return [];
-    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    if(now - (lastTime.get(fn) || 0) < M_REPEAT_MS) return [];
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now(), prev = lastTime.get(fn) || 0;
+    if(now - prev < M_REPEAT_MS) return [];
+
+
+    const run = now - prev < M_BURST_MS ? (burst.get(fn) || 1) + 1 : 1; burst.set(fn, run);
     lastTime.set(fn, now);
+    if(run > 2 && fn !== 'detent') return [];
     return playNotes(renderComposition(D, id, opts));
   }
 
@@ -30557,7 +30981,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · e4baea4";
+const STAMP = "2026-10-20 · 5d60cf8";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -34957,7 +35381,7 @@ const WIKI_PARTS = {
   material: {
     line: 'The full lighting engine: lights a picture by a height map from the dial, with shadows, shine and soft occlusion.',
     about: 'The Light Engine is what makes surfaces look physical. Give it a picture (the color) and a height map (the shape), and it lights the shape from the dial as a game engine would: slopes facing the light brighten, shadows fall behind raised parts, crevices darken (ambient occlusion), and shiny areas catch highlights.',
-    ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).', 'ambient hue': 'The color of the light that comes from everywhere (the sky’s, a room’s): it tints the whole surface by Ambient’s share, and the shaded sides most, where little else reaches. Empty or white: neutral, as before. For a subtle cast, lower Ambient or pick a paler hue.', 'second light hue': 'The second light’s color (empty: white). A cool rim against a warm key is the classic portrait’s light.' },
+    ins: { picture: 'The surface’s color.', height: 'The surface’s shape: light is high.', 'gloss map': 'Makes some areas shinier than others.', 'normal map': 'Optional: each point’s facing given outright, as a picture (red, green and blue are its x, y and z, from −1 to 1 as dark to light), for shapes with sharp faces (a crystal’s, a hammered sheet’s) that a height map smooths. The height still casts the shadows.', 'shade hue': 'Color of the shadows.', 'highlight hue': 'Color of the shine.', 'light hue': 'Color of the light.', dial: 'The light direction (empty: the page dial).', 'ambient hue': 'The color of the light that comes from everywhere (the sky’s, a room’s): it tints the whole surface by Ambient’s share, and the shaded sides most, where little else reaches. Empty or white: neutral, as before. For a subtle cast, lower Ambient or pick a paler hue.', 'second light hue': 'The second light’s color (empty: white). A cool rim against a warm key is the classic portrait’s light.' },
     outs: { image: 'The lit picture.', light: 'The lighting alone, as gray.', highlight: 'The shine alone.' },
     set: { relief: 'How tall the heights are (a map on its ⚙: taller in some places than others).', gloss: 'How tight the highlights are (a map on its ⚙ works as the gloss map does).', shine: 'How bright the highlights are.', shadow: 'How dark cast shadows are.', occlusion: 'How dark crevices get.', ambient: 'Light that reaches everywhere, filling the shadows.', translucency: 'Light passing into the surface and back out (wax, skin). A map on its ⚙ (a newer graph) is how thin each point is: there the light wraps round the shading, a band of the surface’s own colour lies where light turns to shadow, and light comes through in its colour, more as the dial sinks low or a second light shines from behind (a thin petal or leaf, backlit).', from: 'Where the light’s height comes from: the page’s dial (as every lit surface takes it), or its own Light Height, for a graph whose dial does something else (Ringworld’s is its camera).', height: 'The light’s own height, when Light Height From says so: 0 straight overhead, 100 at the horizon, past that lower still, with long shadows.', second: 'A second light beside the dial’s, as a photographer’s rim light or backlight: how strong (0: none, as before; below 0 it draws light out, for a shadowed side darker still).', secondTurn: 'Where the second light comes from, turned from the dial’s light: 180 straight behind (a backlight, edges glowing), 90 from the side.', secondHeight: 'How high the second light stands, read as Light Height is: 0 straight overhead (it lights everything), 100 low, past 100 lower still, until it only grazes the edges facing it, as a rim light does (120, as it starts).', secondSoft: 'How wide the second light is: 0 a point (crisp), higher a broad light (softer edges and shadows), at three times the work.', secondKind: 'What the second light gives: light and shine, the light alone (no highlight), or the shine alone (a glint without lighting).' },
     tips: ['Don’t also wire the height into the Surface: it would be lit twice.', 'For a rim light: Second Light 70, From 180, Height 120, and a pale hue: the edges turned away from the dial catch a thin line of light.',
@@ -35065,8 +35489,8 @@ const WIKI_PARTS = {
   deal: {
     line: 'Cards and coins from one of eleven games, laid on a table.',
     ins: { table: 'The table (Table part).', 'fire hue': 'First suit color.', 'water hue': 'Second suit.', 'air hue': 'Third suit.', 'earth hue': 'Fourth suit.' },
-    outs: { image: 'The table with cards.', mask: 'Where cards lie.' },
-    set: { game: 'Which game (seed: chosen by the seed).', stock: 'Card material.', gilt: 'Edge color.', suits: 'Number of suits.', coinage: 'Which coins.', count: 'Cards in play.', size: 'Card size.', scatter: 'How messy the layout is.', stakes: 'How much money is on the table.', clutter: 'Other objects on the table.', wear: 'Damage to the cards.' },
+    outs: { image: 'The table with cards.', mask: 'Where cards lie.', height: 'With Lit By on the Light Engine: how high everything stands (each card a thin step above what it lies on, coins domed with a raised rim and their mark struck in, the table\'s grain faintly). Wire it into a Light Engine\'s Height.', gloss: 'With Lit By on the Light Engine: what shines (the card stock\'s own gloss, gilt edges and metal bright, the table matte). Wire it into a Light Engine\'s Gloss Map.' },
+    set: { game: 'Which game (seed: chosen by the seed).', stock: 'Card material.', gilt: 'Edge color.', suits: 'Number of suits.', coinage: 'Which coins.', count: 'Cards in play.', size: 'Card size.', scatter: 'How messy the layout is.', stakes: 'How much money is on the table.', clutter: 'Other objects on the table.', wear: 'Damage to the cards.', lighting: 'Its Own Painting draws each card and coin already lit, with its shadows and sheen; The Light Engine draws them flat and hands on Height and Gloss, so a Light Engine lights them from the dial (shadows, rims and shine that follow the light).' },
   },
   objects: {
     line: 'Objects left on a table (candles, cups, dice, keys, letters…), laid on the input.',
@@ -35354,6 +35778,15 @@ const WIKI_PARTS = {
     set: {"zoom": "Crystal Size: how large a grain is.", "amount": "Dendrites: how feathered the grains are.", "form": "Terraces: flat grains at 0, stepped bismuth with its oxide colors at 100.", "irregular": "Irregularity: orderly grains like snowflakes at 0, uneven sizes and bent, missing arms toward 100.", "brushing": "Brushing: fine lines brushed across the metal.", "variant": "Other grains."},
     tips: ["Turn the dial slowly and watch the grains flash one by one."],
     see: ["part:cells", "part:material", "part:crystal"],
+  },
+  druse: {
+    line: "A crystal druse as maps: its points' albedo, height, normals and gloss, its milky veil and its fire, for a Light Engine to light.",
+    about: "Close up inside a geode: a crust of crystal points, each a six-sided pyramid with growth lines across its faces. Instead of drawing the crystal already lit, it hands on what each map holds, as a game engine's material does. The Albedo is what the eye sees inside the stone, with no light in it: the hue deepening toward the edges of each point and glowing toward its heart, the crystals behind seen through the face (each face's tilt bends where the eye lands: refraction), phantoms of the smaller points it once was, and what lies inside, seen through the faces and bent the same way: its own needles and bubbles, or any picture wired into Inside. The Height is the points' shape (for the shadows between them), the Normals each face's facing (so every face turns to the light on its own), the Gloss the polish, dulled where it is milky, the Veil the milk itself, and the Fire the light split into its colors on the inner planes, as light of its own. Wire Albedo, Height, Gloss and Normals into a Light Engine, the Veil turned over (Invert) into its Translucency, and screen the Fire over what it makes.",
+    ins: {"inside": "Optional: a picture lying inside the stone, seen through the faces and bent by them (the inclusions are drawn over it).", "crystal hue": "The stone (empty: a pale violet).", "inclusion hue": "The needles inside it (empty: a rutile gold)."},
+    outs: {"albedo": "What the eye sees inside the stone, unlit.", "height": "The points' shape, for shadows.", "gloss": "How polished each point is.", "veil": "Where it is milky (white).", "fire": "The fire, as light of its own: screen it on.", "fire mask": "Where the fire is, as gray.", "normals": "Each face's facing, as a normal map for a Light Engine."},
+    set: {"zoom": "Point Size.", "clarity": "Clarity: milky and veiled at 0, clear and deep at 100.", "fire": "Fire: how much light flashes inside.", "phantoms": "Phantoms: ghost points nested in the faces.", "inclusions": "Inclusions: needles and bubbles inside.", "variation": "Another crystal with the same settings."},
+    tips: ["Wire a Starfield into Inside for a crystal with a night sky inside it.", "Turn the Light Dial: each face lights on its own."],
+    see: ["part:material", "part:crystal"],
   },
   crystal: {
     line: "Looking into a clear crystal: cut faces, light caught inside as fire, ghost crystals and needles within.",
@@ -40810,11 +41243,11 @@ let skHapticsOn = true, skLastBuzz = 0, skinSound = null;
 function setHaptics(on){ skHapticsOn = !!on; }
  
 function setSkinSound(fn){ skinSound = typeof fn === 'function' ? fn : null; }
-function haptic(kind){
+function haptic(kind, value){
   const now = Date.now(); if(now - skLastBuzz < 50) return; skLastBuzz = now;
-  if(skinSound) try { skinSound(kind); } catch(e){}
+  if(skinSound) try { skinSound(kind, value); } catch(e){}
   if(!skHapticsOn) return;
-  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' ? 15 : 10); } catch(e){}
+  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' || kind === 'reset' ? 15 : 10); } catch(e){}
 }
 
 
@@ -40835,9 +41268,10 @@ function skinSet(input, v, opts = {}){
   const was = +input.value;
   if(v === was) return false;
   input.value = String(v);
-  if(v === lo || v === hi) haptic('limit');
-  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick');
-  else if(def != null && !ticks.length && v === def) haptic('detent');
+  const at = (v - lo)/(hi - lo);
+  if(v === lo || v === hi) haptic('limit', at);
+  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick', at);
+  else if(def != null && !ticks.length && v === def) haptic('detent', at);
   input.dispatchEvent(new Event('input', { bubbles: true }));
   return true;
 }
@@ -40906,7 +41340,7 @@ function skDrag(el, input, mode){
     e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch(err){}
     const now = Date.now();
     if(now - lastTap < SKIN_FEEL.doubleTapMs && input.dataset && input.dataset.def != null){
-      lastTap = 0; skinSet(input, +input.dataset.def); haptic('detent'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
+      lastTap = 0; skinSet(input, +input.dataset.def); haptic('reset'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
     st = { id: e.pointerId, at: now, x: e.clientX, y: e.clientY, v: +input.value, moved: false, tier: 1, tierAt: 0, hist: [] };
     el.classList.add('turning'); showReadout(input, { hold: true });
   });
@@ -41992,7 +42426,7 @@ syncTextureParams(true);
   if(hap){ try { const v = localStorage.getItem('uv.haptics.v1'); if(v !== null) hap.checked = v === '1'; } catch(e){}
     setHaptics(hap.checked);
     if(hap.addEventListener) hap.addEventListener('change', () => { setHaptics(hap.checked); try { localStorage.setItem('uv.haptics.v1', hap.checked ? '1' : '0'); } catch(e){} }); }
-  setSkinSound(() => { if(murmur && murmur.enabled) murmur.play('detent'); });
+  setSkinSound((kind, value) => { if(murmur && murmur.enabled) murmur.play(kind === 'limit' ? 'endStop' : kind === 'reset' ? 'reset' : 'detent', { value }); });
   if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => layoutControls());
   layoutControls();
 }
