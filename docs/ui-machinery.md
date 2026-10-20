@@ -197,7 +197,7 @@ How the interface works: the tabs and the phone layout, the preview, locks and d
     `dialGuideMarks`, places by `dialGuidePlace`):
     - *sun*: any surface lit by the dial, at the dial's place stretched
       onto the page (`pageSunAt`), turned against a camera that turns the
-      ground; the Painted Ringworld's through its camera (`ringSunGuide`);
+      ground; the Ringworld's through its camera (`ringSunGuide`);
       the rim light's in the second accent.
     - *impact* (Crackle: where its cracks burst from), *place* (Transmutation
       Circle: its centre and size), *arrow* (wind, rain, a flow, a run of

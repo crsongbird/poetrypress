@@ -159,7 +159,7 @@ export const UI_STRINGS = {
   'option.rain_on_glass':                    "Rain on Glass",
   'option.rain_on_water':                    "Rain on Water",
   'option.dewy_webs':                        "Dewy Webs",
-  'option.painted_ringworld':                "Painted Ringworld",
+  'option.ringworld':                        "Ringworld",
   'option.ring_in_the_sky':                  "Ring in the Sky",
   'label.fx1_type':                          "Effect 1",
   'label.fx1_color':                         "Color",

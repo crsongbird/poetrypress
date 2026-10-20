@@ -998,7 +998,7 @@ function genDrawCircuit(B, ww, wh, s, o){
 // how far off, how fine a pixel is there, and where it is day — so any noise or picture can be laid on the ring.
 export const RING_COV = 0.36, RING_SQR = 0.15;   // the share of each turn the shadow squares cover (night), and their ring's radius
 const RING_SQS = [6, 8, 10, 10, 12, 14];   // how many squares circle the star: by the seed (more of them, shorter nights)
-// the camera on the floor and the day (the Painted Ringworld's parts paint from the same camera)
+// the camera on the floor and the day (the Ringworld's parts paint from the same camera)
 export function ringCamera(o){
   const W = o.band, Hw = o.walls, hc = o.altitude, R = 1, z0 = o.place*W*0.45, fov = o.lens*Math.PI/180, f = 0.5/Math.tan(fov/2);
   const psi = o.look*Math.PI/180, th = o.lift*Math.PI/180, hx = Math.cos(psi), hz = Math.sin(psi);
@@ -1023,7 +1023,7 @@ const ringNorm = v => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0
 export function ringDay(L, phi){ let u = (phi*L.side - L.q0)/L.per; u -= Math.floor(u);
   const sd = u >= RING_COV ? Math.min(u - RING_COV, 1 - u) : -Math.min(u, RING_COV - u), t = genClamp(0.5 + sd/0.09); return t*t*(3 - 2*t); }
 
-// the ring's settings (as the Painted Ringworld's sliders give them) as the world it draws — shared with the camera's guide
+// the ring's settings (as the Ringworld's sliders give them) as the world it draws — shared with the camera's guide
 export function ringParams(r){
   const b = r.band/100, W = 0.012 + 0.22*b*b, z = Math.max(0.25, (r.zoom ?? 100)/100);
   return { band: W, walls: W*(0.04 + 0.7*r.walls/100), altitude: W*Math.pow(10, -3.2 + 3*r.altitude/100), look: r.look,
@@ -1047,7 +1047,7 @@ export function ringSunDir(L, deg, reach){
   const s = Math.hypot(L.Px, L.z0) || 1, S0 = [-L.Px/s, 0, -L.z0/s], ce = Math.cos(e), se = Math.sin(e);
   return ringNorm([S0[0]*se, Math.cos(a)*ce, Math.sin(a)*ce + S0[2]*se]);
 }
-/** Where the Painted Ringworld's sun falls on the page (0..aspX, 0..aspY), for the guide drawn while the light dial moves:
+/** Where the Ringworld's sun falls on the page (0..aspX, 0..aspY), for the guide drawn while the light dial moves:
  *  { x, y, up } (up: above the horizon), or null when it is behind you. */
 export function ringSunGuide(aspX, aspY, ring, deg, reach){
   const L = ringCamera(ringParams(ring)), D = ringSunDir(L, deg, reach), F = L.f, cx = aspX/2, cy = aspY/2;
@@ -1088,7 +1088,7 @@ export function cameraGuide(kind, aspX, aspY, cam, ring){
   }
   if(kind === 'ring' && ring){
     const L = ringCamera(ringParams(ring)), F = L.f, cx = aspX/2, cy = aspY/2;
-    // (the Painted Ringworld sees in a painter's curved perspective, stereographic: stepsRing.js)
+    // (the Ringworld sees in a painter's curved perspective, stereographic: stepsRing.js)
     const proj = ring.curved ? (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, q = Math.sqrt(dx*dx + dy*dy + dz*dz) + dx*L.fx + dy*L.fy + dz*L.fz; if(q <= 1e-6) return null;
         return [cx + 2*F*(dx*L.rx + dy*L.ry + dz*L.rz)/q, cy - 2*F*(dx*L.ux + dy*L.uy + dz*L.uz)/q]; }
       : (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, zc = dx*L.fx + dy*L.fy + dz*L.fz; if(zc <= 1e-6) return null;

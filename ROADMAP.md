@@ -110,7 +110,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
 - **C5 · The camera dial for other textures** (a standing goal: AGENTS
   "The two dials"; Ruby: any tilt, pan or position slider belongs on the
   camera dial, any light on the light dial). Done for Lichtenberg Figures,
-  the Painted Ringworld, Broken Glass, Scrying Pool, Dune Ripples and Moss on Stone.
+  the Ringworld, Broken Glass, Scrying Pool, Dune Ripples and Moss on Stone.
   Still to judge, each by its renders:
   - Rain on Water: its View knob, but rain is the same every way round,
     so the dial's Turn would change nothing. It needs a turn that means
@@ -152,7 +152,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
       Lichtenberg (they slide along the light dial's line, so turning the light moves the figure), Growth's Zoom.
     - Painted Landscape's Tilt onto the camera's View, once its Turn means something (a pan along the range).
       Rain on Water's View likewise: rain is the same every way round, so its Turn needs a meaning first (C5).
-    - The Painted Ringworld's Altitude and Ring in the Sky's Star Height are camera heights on knobs; Aurora's Horizon a
+    - The Ringworld's Altitude and Ring in the Sky's Star Height are camera heights on knobs; Aurora's Horizon a
       vertical place. Judge each by its renders.
     - Linen's `lightBasis` taught the rim and ambient; Stained Glass's panes lit with `lightLow` (they hold their
       own elevation past the rim); Rain on Glass's shine through `litS` (a coloured rim shows white now).
@@ -395,7 +395,7 @@ superseded) wait for Stage 4.
     (aircraft and contrails, birds, balloons, dragons, witches), seeded.
   - Some presets blend the overlays tastefully over other surfaces (Ruby, approving Corvid Feathers and the light
     overlays): Feathers, Corvid Feathers, Dappled Leaves, Window Light, Pool Caustics, Light Leaks.
-  - Presets for the Painted Ringworld (Ruby: in this pass), Rain on Water, Circuit
+  - Presets for the Ringworld (Ruby: in this pass), Rain on Water, Circuit
     Board's eras and Markings (the Circuitry preset could wear Circuit Board
     instead of Veins of Light), Lichtenberg's camera, and Under Glass over
     another surface (Two Surfaces).

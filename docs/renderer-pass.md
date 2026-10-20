@@ -36,7 +36,7 @@ the presets pass.
   - wax, rainwater, petals, bouquets, growth, turing, knotwork and contour;
   - windsea, botline, ditsy, hatch, rainstreaks, halftone, pixelspace, liminal and webb;
   - meadow, and the four light overlays.
-- Merged (2026-10-20): Crystal Leaf, Cartomancy, and the Painted Ringworld with Ring in the Sky's land and Night City's
+- Merged (2026-10-20): Crystal Leaf, Cartomancy, and the Ringworld with Ring in the Sky's land and Night City's
   skyline (the ring's land and its kit are being reworked: ROADMAP Stage 3).
 
 ---
@@ -53,12 +53,12 @@ test, as AGENTS §8 requires.
 | R0.3 | **Bevel** (distance from an edge, as height) | texCore's `chamferDistance` offered as a part: a mask in, a rounded or chamfered rise out | kintsugi's seams, stainedglass's came, tessellate, cupring's dried rim, guilloche's engraving, the cards' gilt edges |
 | R0.4 | **Dome / Sphere** | a height and normals for discs: a lens, a coin, a planet, a bubble, an orb | moon (lit by the dial: its phase from the light), bokeh orbs, pixelspace orbs, Cartomancy's coins, snow globes |
 | R0.5 | **Facet Normals** | faceted normals from any Cells or Triangle Mesh: each cell a tilted plane. It feeds the Light Engine's new Normal Map input | tessellate, spangle, crystal (done its own way), stainedglass, metalleaf, broken glass |
-| R0.6 | **Starfield and Particles taken apart** (J) | stars as Scatter plus glow plus Lens Blur by depth, laid in sky directions so a camera turns past them (as the Painted Ringworld's stars now pan) | aurorasky, skyring, ringpaint, ringworld, snow, embers, magicparticles, Deep Field |
+| R0.6 | **Starfield and Particles taken apart** (J) | stars as Scatter plus glow plus Lens Blur by depth, laid in sky directions so a camera turns past them (as the Ringworld's stars now pan) | aurorasky, skyring, ringpaint, ringworld, snow, embers, magicparticles, Deep Field |
 | R0.7 | **Marbling** | one part for floating ink: drops, combs and breath, traced back exactly as Suminagashi does | suminagashi, inkbleed (Rorschach), and new marbled papers |
 | R0.8 | **Environment Reflection** (C4) | the Light Engine reflects the page's backdrop, or a picture (a sky, a room), by each point's normal and gloss, with a Fresnel rise at a slant | water, kintsugi's gold, rainwater, glassrain, spangle, coins, dewwebs |
 | R0.9 | **Refraction** (F7) | Displace a picture by a normal map, with a small chromatic split: what is behind glass or water, bent | glassrain, brokenglass, underglass, dewwebs, water, crystal's Inside, raindrop and snow-globe scenes |
 | R0.10 | **Emission, wired** | the Surface's emission input used at last: windows, embers and runes giving light rather than being screened on | cityscape windows, embers, magicparticles, summoning, kintsugi's glow, veins |
-| R0.11 | **Depth everywhere** | every process part that knows depth hands it on, so Lens Blur and haze can follow | the Room Caster (liminal), Night City, snow, meadow, bokeh, the Painted Ringworld |
+| R0.11 | **Depth everywhere** | every process part that knows depth hands it on, so Lens Blur and haze can follow | the Room Caster (liminal), Night City, snow, meadow, bokeh, the Ringworld |
 | R0.12 | **Paint Detail** | branch `oil-detail` merged: Oil Paint's fine pass, so a painterly finish holds up close | landscape, ringpaint, skyring, brushstrokes, every painted scene in docs/scene-ideas.md |
 
 ---
@@ -87,7 +87,7 @@ Its sliders keep their names wherever they still mean the same. Where they don't
 
 **Painted Landscape** (`landscape`)
 - Build: ridges from Curves and Profile Gradient, as Sunrise Scroll does; a Gradient and Perlin sky.
-- Use the painted kit for trees and buildings, and the Painted Ringworld's camera-stable placement.
+- Use the painted kit for trees and buildings, and the Ringworld's camera-stable placement.
 - The seed's variety: countries and lands (the OPEN-ISSUES §2 list); water as lake, river, sea or none.
 - Real hue inputs.
 
@@ -193,7 +193,7 @@ simulation now for half the cost")
 **Ring in the Sky**
 - Take the whole Ring in the Sky part apart: Ellipse rings plus Gradients; stars by R0.6.
 
-**Ringworld and the Painted Ringworld**
+**The Ringworld (the old 3D one, retired, and the painted one)**
 - Stars by R0.6.
 - Gloss and translucency maps.
 - More than two hues for a whole world.
@@ -231,7 +231,7 @@ simulation now for half the cost")
    - the readings;
    - four seeds;
    - the light turned: every surface with form must change when the light turns;
-   - the camera moved: anything with a position must stay put while the camera sweeps (the Painted Ringworld's rule).
+   - the camera moved: anything with a position must stay put while the camera sweeps (the Ringworld's rule).
 2. **`scale-audit`**: the surface looks the same drawn small.
 3. **Its time on a phone:** the frugal grid, and nothing slower than the old version without a reason.
 4. **Ruby's yes** before merging. Old looks are translated with `retireLook` where a slider's job changed.

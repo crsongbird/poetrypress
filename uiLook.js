@@ -210,7 +210,7 @@ function retireFormat10Layer(L){
 }
 function retireFormat10(s){ if(!s || +s.lookVersion >= 10) return s; let o = retireFormat10Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat10Layer(o.baseLayer) }; return o; }
 /** THE 3D RINGWORLD RETIRED (Ruby, 2026-10-20: "it was a good concept, it's what led to this"): its looks open as the
- *  Painted Ringworld, keeping what carries over: Band Width, Landforms and Altitude, who built it as the World, how
+ *  painted Ringworld, keeping what carries over: Band Width, Landforms and Altitude, who built it as the World, how
  *  built-up it was as Works; the camera and the day as they were. */
 function retireRingworldLayer(L){
   if(!L || L.textureType !== 'ringworld') return L;

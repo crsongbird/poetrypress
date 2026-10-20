@@ -1,4 +1,4 @@
-# Painted Ringworld Kit 2: What Stands Where, Far Land, Unfinished Ring, Robots, Nods, Close-ups
+# Ringworld Kit 2: What Stands Where, Far Land, Unfinished Ring, Robots, Nods, Close-ups
 
 This follows `docs/prior-art/painted-ringworld.md`. That doc already covers kinds, real sizes and silhouettes (its §5); this one adds what Ruby asked for on 2026-10-20:
 

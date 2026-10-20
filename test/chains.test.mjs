@@ -131,28 +131,28 @@ if(canvasOK){
   const seen = A.evalAthanor(pane, 16, 16, { seed: 1, knobs: [], tints: [] }, {});
   check('…and a Glass Pane with nothing on its glass shows its picture exactly', !!seen && seen.r.every(v => Math.round(v*255) === 0x33) && seen.b.every(v => Math.round(v*255) === 0x99)); }
 
-// the Painted Ringworld's World: each band names its world; By the Seed picks one of the six (now and then Mixed),
+// the Ringworld's World: each band names its world; By the Seed picks one of the six (now and then Mixed),
 // and Mixed lays three different ones side by side
 { const { rgWorldOf, RG_WORLDS } = await import('../stepsRing.js');
   const named = [14, 29, 43, 57, 71, 86].map(v => rgWorldOf(1234, v).name), seeded = Array.from({ length: 60 }, (_, s) => rgWorldOf(s*7919, 0)), mixed = rgWorldOf(99, 100);
-  check('the Painted Ringworld\'s World: each band its world, in order', named.join() === RG_WORLDS.slice(1, 7).join());
+  check('the Ringworld\'s World: each band its world, in order', named.join() === RG_WORLDS.slice(1, 7).join());
   check('…By the Seed picks among them (and sometimes Mixed), each world a single list but Mixed\'s three, all different',
     seeded.every(w => RG_WORLDS.includes(w.name) && w.name !== 'seed') && new Set(seeded.map(w => w.name)).size >= 5 && seeded.every(w => w.name === 'mixed' ? w.list.length === 3 : w.list.join() === w.name)
     && mixed.name === 'mixed' && new Set(mixed.list).size === 3); }
 
-// the Painted Ringworld's SUN (Ruby: the light dial sets it, in the world, whatever the camera's turn): overhead it is the
+// the Ringworld's SUN (Ruby: the light dial sets it, in the world, whatever the camera's turn): overhead it is the
 // ring's own star; at the dial's rim it is on the horizon; facing the dial's way (camera Turn = the dial's angle) puts it
 // straight ahead; east of where you look it stands to the right; its guide is where the painting puts it
 { const G = await import('../stepsGenerative.js'), ring = look => ({ band: 45, walls: 12, altitude: 15, placeBy: 'where the seed says', seed: 9, lens: 75, zoom: 100, look, up: 0.6, curved: true });
   const L = G.ringCamera(G.ringParams(ring(0))), star = G.ringSunDir(L, 315, 0), s = Math.hypot(L.Px, L.z0);
-  check('the Painted Ringworld\'s sun: overhead it is the ring\'s own star, at the ring\'s middle; at the dial\'s rim, on the horizon',
+  check('the Ringworld\'s sun: overhead it is the ring\'s own star, at the ring\'s middle; at the dial\'s rim, on the horizon',
     Math.abs(star[0] + L.Px/s) < 1e-9 && Math.abs(star[2] + L.z0/s) < 1e-9 && Math.abs(G.ringSunDir(L, 120, 1)[0]) < 1e-9);
   const ahead = G.ringSunGuide(1, 1, ring(120), 120, 0.9), east = G.ringSunGuide(1, 1, ring(0), 90, 0.9), west = G.ringSunGuide(1, 1, ring(0), 270, 0.9), behind = G.ringSunGuide(1, 1, ring(180), 0, 0.95);
   const off = p => p === null || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1;
   check('…facing the dial\'s way puts it straight ahead; east of where you look it stands right, west left; behind you, off the frame',
     !!ahead && Math.abs(ahead.x - 0.5) < 0.01 && !!east && !!west && east.x > 0.5 && west.x < 0.5 && off(behind)); }
 
-// the Painted Ringworld orbiting Saturn (Ruby; The Arch's Saturn): never draws no Saturn, always does, and by the seed
+// the Ringworld orbiting Saturn (Ruby; The Arch's Saturn): never draws no Saturn, always does, and by the seed
 // it is one ring in four, the rest drawn exactly as with never
 { const M = await import('./canvasMock.mjs'), doc = globalThis.document; M.installCanvasMock();   // (the DOM mock's canvases go uncounted)
   const drawn = (saturn, seed) => { const g = A.athanorStarter('ringpaint');

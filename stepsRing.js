@@ -13,7 +13,7 @@
 import { mulberry32, kitCanvas, kitPicture, seedChoice } from './texCore.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
-import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkDome, pkCrystals, pkMetres, pkArchOf, PK_FLORA, PK_BOTS, pkRobot, PK_PROPS, pkProp, PK_EGGS, pkEgg } from './paintKit.js';
+import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
@@ -309,7 +309,9 @@ function rgPaintArch(x, mk, V){
 function rgWork(x, o, X, Y, k, c, night, R, V, e){
   const { L, W, at, px } = V, AIR = c.air, haze = c.haze, day = ringDay(L, o.a), BLACK = [0, 0, 0], sd = c.sd, F = V.F;
     if(o.kind === 'sp'){ pkSpire(x, X, Y, W*(0.02 + 0.08*o.h)*k, c, o.w === 'ruins', R, px); }
-    else if(o.kind === 'mo'){ pkMonolith(x, X, Y, W*(0.006 + 0.02*o.h)*k, c, o.w === 'wilds' ? 3 + Math.floor(o.h2*4) : 1, R, px); }
+    else if(o.kind === 'mo' && o.w !== 'builders'){ // a stone circle far off, as the store's near ones (rgHenge)
+      rgHenge(x, { a: o.a, z: o.z, n: 9 + Math.floor(o.h2*12), rr: W*0.00025*(8 + 20*o.h), hm: 2.5 + 4.5*o.h }, (a, z) => { const p = at(a, z, e); return p && [p[0], p[1], W*0.00025*F/p[2], p[2]]; }, c, R, px); }
+    else if(o.kind === 'mo'){ pkMonolith(x, X, Y, W*(0.006 + 0.02*o.h)*k, c, 1, R, px); }
     else if(o.kind === 'do'){ pkDome(x, X, Y, W*(0.006 + 0.016*o.h)*k, c, night, px); }
     else if(o.kind === 'ci' || o.kind === 'ca'){ const r = W*(o.kind === 'ci' ? 0.004 + 0.008*o.h : 0.006 + 0.014*o.h), pts = [], inn = [];
       for(let q = 0; q < 28; q++){ const t = q/28*Math.PI*2, p = at(o.a + Math.cos(t)*r, o.z + Math.sin(t)*r, e + W*0.0002), p2 = at(o.a + Math.cos(t)*r*0.7, o.z + Math.sin(t)*r*0.7, e + W*0.0002); if(!p || !p2) return; pts.push(p); inn.push(p2); }
@@ -395,10 +397,40 @@ const RG_KEPT_STORES = new Map();
 // edge, among fields; cathedrals, mosques and clock towers at its heart; geodomes and landing pads on the flat. Kinds not
 // named stand wherever their world builds (ground: rgStore's `ground`; ci: how much of a city stands here, 0 to 1)
 const RG_PLACE = { lighthouse: { coast: true }, windmill: { rise: 0.4 }, turbine: { rise: 0.6 }, castle: { rise: 0.3 }, observatory: { rise: 0.6 },
-  barn: { edge: 0.35 }, silo: { edge: 0.35 }, cathedral: { heart: 0.7 }, mosque: { heart: 0.7 }, clock: { heart: 0.6 }, geodome: { flat: 0.25 }, pagoda: { rise: 0 } };
+  barn: { edge: 0.35 }, silo: { edge: 0.35 }, cathedral: { heart: 0.7 }, mosque: { heart: 0.7 }, clock: { heart: 0.6 }, geodome: { flat: 0.25 }, pagoda: { rise: 0 },
+  radiomast: { rise: 0.5 }, gasstation: { edge: 0.4, flat: 0.3 }, motel: { edge: 0.45 }, elevator: { edge: 0.5 }, greenhouse: { flat: 0.25 }, chapel: { rise: 0 } };
 function rgFits(kind, g, ci){ const P = RG_PLACE[kind]; if(!P) return true;
   if(P.coast && !g.coast) return false; if(P.rise != null && g.rise < P.rise) return false; if(P.edge != null && ci > P.edge) return false;
   if(P.heart != null && ci < P.heart) return false; if(P.flat != null && g.slope > P.flat) return false; return true; }
+// THE ROADS a world lays (one along the ring, one across it, by the seed), shared by the land that paints them and the
+// store that sets boards beside them
+const RG_ROADS = { cities: ['road', 1], neon: ['neon', 1], builders: ['path', 0.8], ruins: ['broken', 0.6], magic: ['ley', 0.6], wilds: ['trail', 0.45] };
+function rgRoadsOf(V){ const s = V.seed | 0, W = V.W, roads = [];
+  const zr = (mnHash(s, 31, 7) - 0.5)*W*0.6, w1 = V.worldAt(0.5*W, zr), ar = (0.15 + 0.5*mnHash(s, 32, 7))*W*(mnHash(s, 33, 7) < 0.5 ? -1 : 1), w2 = V.worldAt(ar, 0);
+  if(mnHash(s, 34, 7) < RG_ROADS[w1][1]*(0.3 + 0.6*V.works)) roads.push({ along: true, at: zr, w: w1, kind: RG_ROADS[w1][0] });
+  if(mnHash(s, 35, 7) < RG_ROADS[w2][1]*(0.15 + 0.45*V.works)) roads.push({ along: false, at: ar, w: w2, kind: RG_ROADS[w2][0] });
+  return roads; }
+// the small things wider than they are tall, kept back from the very front of the view so a gate or a wall never fills it
+const RG_WIDE = ['gate', 'wall', 'hedge', 'fence', 'container', 'solar', 'pipes', 'traps', 'haybale', 'bench', 'parked', 'hulk', 'rubble', 'statue', 'dolmen'];
+// which tradition the wilds build in here: the cold north's, the dry country's, the jungle's, else the temperate land's,
+// each region its own by the seed
+function rgVernacular(V, a, z){ const W = V.W, s = V.seed | 0, dr = V.dryAt(a, z), e = V.T.true(a, z, W*0.01), r = mnValue(a/(W*0.35) + 5.5, z/(W*0.35) - 1.3, s + 51);
+  if(e > V.TR.snow*0.45) return 'north'; if(dr > 0.6) return ['steppe', 'savanna', 'mesa'][Math.floor(r*2.999)];
+  if(mnValue(a/(W*0.5) + 9.1, z/(W*0.5) + 1.7, s + 31) > 0.64 && dr < 0.5) return 'tropic'; return ['shire', 'prairie', 'apulia', 'galicia', 'kyo'][Math.floor(r*4.999)]; }
+// A STONE CIRCLE (Ruby: "five square things in a row … I don't even know what it's supposed to be"): stones of two and a
+// half to seven metres round a ring fifteen to fifty-five across, each standing in the world where it stands, the far
+// ones first; some gone, one now and then fallen, some joined by lintels (docs/prior-art/ringworld-sprites.md, Part C
+// §2). P(a, z) is where a world point meets the screen: [X, Y, px per metre, depth]
+function rgHenge(x, o, P, c, R, px){
+  const st = []; for(let q = 0; q < o.n; q++){ const t = q/o.n*Math.PI*2 + (R() - 0.5)*0.15, p = P(o.a + Math.cos(t)*o.rr, o.z + Math.sin(t)*o.rr);
+    st.push({ p, q, gone: R() < 0.15, fall: R() < 0.1, hq: o.hm*(0.65 + 0.35*R()), lin: R() < 0.4, rs: (R()*4294967296) >>> 0 }); }
+  const top = new Map(), up = s2 => s2.p && !s2.gone && !s2.fall;
+  for(const s2 of st.filter(s3 => s3.p && !s3.gone).sort((A, B) => B.p[3] - A.p[3])){ const h = s2.hq*s2.p[2];
+    if(s2.fall){ pkStone(x, s2.p[0], s2.p[1], h*0.3, c, mulberry32(s2.rs), px, { wide: 2.6 }); continue; }
+    pkStone(x, s2.p[0], s2.p[1], h, c, mulberry32(s2.rs), px); top.set(s2.q, [s2.p[0], s2.p[1] - h*0.93, h]);
+    // (a lintel over this stone and its neighbour, laid once both stand, by the nearer of the two)
+    for(const nb of [st[(s2.q + 1) % o.n], st[(s2.q + o.n - 1) % o.n]]){ const A = top.get(s2.q), B = top.get(nb.q), lead = nb.q === (s2.q + 1) % o.n ? s2 : nb;
+      if(B && lead.lin && up(nb) && Math.abs(A[0] - B[0]) < (A[2] + B[2])*0.38 && Math.abs(A[1] - B[1]) < Math.min(A[2], B[2])*0.25) pkLintel(x, A[0] < B[0] ? A : B, A[0] < B[0] ? B : A, Math.min(A[2], B[2])*0.13, c); } } }
 function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
   const key = [s, V.world.list.join('+'), V.forms, V.life, V.works, W.toFixed(6), L.z0.toFixed(6)].join('|');
@@ -441,7 +473,9 @@ function rgStore(V){
     // (what stands where: each kind on the ground it belongs on, RG_PLACE; a kind whose ground this isn't gives way to
     //  another of the style's, up to three tries, else nothing is built here)
     const g = ground(a, z); if(g.wet || g.slope > 0.9) return null;
-    let kind = null; for(let t = 0; t < 3 && !kind; t++){ const k = pkArchOf(PK_STYLE[w], R()); if(rgFits(k, g, ci)) kind = k; } if(!kind) return null;
+    // (a village in the wilds builds in its region's own tradition, by its climate: PK_VERNACULAR)
+    const fam = w === 'wilds' ? rgVernacular(V, a, z) : null;
+    let kind = null; for(let t = 0; t < 3 && !kind; t++){ const k = fam ? pkVernacularOf(fam, R()) : pkArchOf(PK_STYLE[w], R()); if(rgFits(k, g, ci)) kind = k; } if(!kind) return null;
     const hM = pkMetres(kind, Math.pow(R(), 0.6 + 1.6*(1 - ci)))*(w === 'neon' ? 1.3 : 1), wM = pkMetres(kind, R(), 1);
     // (a city rises away from you: near, only what stands low; its towers further off, where they make a skyline)
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
@@ -467,15 +501,32 @@ function rgStore(V){
       return { c: 'bot', w, kind, hM: pkMetres(kind, R()) }; }); }
   // SMALL THINGS near you (Ruby: "small things that get found closer to the player"): fences and mailboxes in the wilds,
   // lamps, benches and bicycles in town, barrels and crates in the ruins, now and then a person, for scale
-  sow(7, W*0.002, W*0.006, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], near = w === 'wilds' ? 0.04 + 0.5*V.cityAt(a, z, 0.12) : 0.05 + 0.5*V.cityAt(a, z, P.cv);
+  // (each where it belongs: hay, a scarecrow, a tractor in the open fields; a well, a shrine, a mailbox by a village; a
+  //  windpump and its trough on dry pasture; stone walls on the steep and dry, hedges on the low and wet; the town's
+  //  furniture in town; wisps by water; the poles along the roads, below. The large ones are seen from further off)
+  const propFits = (k, w, g, a, z, ci) => { const fo = V.forestAt(a, z), dr = V.dryAt(a, z);
+    switch(k){ case 'haybale': case 'haystack': case 'scarecrow': case 'tractor': case 'beehives': case 'grainbin': return fo < 0.4 && g.slope < 0.3 && ci < 0.3;
+      case 'windpump': case 'trough': return dr > 0.45 && g.slope < 0.35; case 'wall': return g.slope > 0.15 || dr > 0.5; case 'hedge': return dr < 0.55 && g.slope < 0.4;
+      case 'well': case 'shrine': case 'mailbox': case 'wishing': return ci > 0.03; case 'busstop': case 'kiosk': case 'signal': case 'phonebox': case 'vending': case 'cart': return ci > 0.15;
+      case 'wisp': return g.coast || g.rise < -0.2; case 'fairyring': return fo > 0.2 && g.slope < 0.25; case 'solar': case 'dish': return g.slope < 0.25; case 'pole': return false; default: return true; } };
+  sow(7, W*0.002, W*0.006, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], ci = V.cityAt(a, z, w === 'wilds' ? 0.12 : P.cv), near = 0.05 + 0.5*ci;
     if(R() > near*(0.4 + V.works)) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
-    const L2 = PK_PROPS[w] || PK_PROPS.cities, kind = L2[Math.floor(R()*L2.length)]; if(kind === 'figure' && R() > 0.4) return null;
-    return { c: 'prop', w, kind, hM: pkMetres(kind, R()) }; });
+    const L2 = (PK_PROPS[w] || PK_PROPS.cities).filter(k => !PK_PROPS_BIG.includes(k)), kind = L2[Math.floor(R()*L2.length)]; if(kind === 'figure' && R() > 0.4) return null;
+    if(!propFits(kind, w, g, a, z, ci)) return null; return { c: 'prop', w, kind, hM: pkMetres(kind, R()) }; });
+  sow(11, W*0.006, W*0.02, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], ci = V.cityAt(a, z, w === 'wilds' ? 0.12 : P.cv);
+    if(R() > (0.08 + 0.4*ci)*(0.4 + V.works)) return null; const g = ground(a, z); if(g.wet || g.slope > 0.6) return null;
+    const L2 = (PK_PROPS[w] || PK_PROPS.cities).filter(k => PK_PROPS_BIG.includes(k)); if(!L2.length) return null; const kind = L2[Math.floor(R()*L2.length)];
+    if(!propFits(kind, w, g, a, z, ci)) return null; return { c: 'prop', w, kind, hM: pkMetres(kind, R()) }; });
+  // THE POLES that carry the wires, every forty metres along a road, a little off it, each wired to the next
+  rgRoadsOf(V).forEach((rd, ri) => { if(rd.kind === 'ley' || rd.kind === 'path') return; const M = W*0.00025, sp = 40*M, off = 6*M*(mnHash(s, 70 + ri, 3) < 0.5 ? -1 : 1), lo = rd.along ? -W*0.25 : -W*0.48, hi = -lo;
+    for(let i = Math.ceil(lo/sp), n = Math.floor(hi/sp); i <= n; i++){ const u = i*sp, a = rd.along ? u : rd.at + off, z = rd.along ? rd.at + off : u, r = Math.hypot(a, z - L.z0); if(r > W*0.25 || Math.abs(z) > W*0.485) continue;
+      const w = V.worldAt(a, z); if(!PK_PROPS[w].includes('pole') && w !== 'wilds') continue; const R = rgRand(s, 1100 + ri, i), g = ground(a, z); if(g.wet) continue;
+      out.push({ c: 'prop', w, kind: 'pole', hM: pkMetres('pole', R()), a, z, r, rs: (R()*4294967296) >>> 0, next: rd.along ? [a + sp, z] : [a, z + sp] }); } });
   // NODS (Ruby: "Easter eggs … that nod to both [Halo and Fallout] … rarely or commonly depending on how obnoxious they
   // are and seed dependently"): each on the ground its rule asks, by the seed; the loud ones rare (PK_EGGS)
   { const KINDS = Object.keys(PK_EGGS);
     const fits = (k, g, a, z, r, ci) => k === 'gate' ? g.rise > 0.4 || g.slope > 0.5 : k === 'cogdoor' ? g.slope > 0.15 && g.slope < 0.9 && ci < 0.1 : k === 'spire' ? g.rise > 0.6
-      : k === 'pod' || k === 'suit' ? V.forestAt(a, z) < 0.35 && ci < 0.05 && g.slope < 0.4 : k === 'diner' || k === 'billboard' || k === 'car' ? ci < 0.7 && g.slope < 0.35
+      : k === 'pod' || k === 'suit' ? V.forestAt(a, z) < 0.35 && ci < 0.05 && g.slope < 0.4 : k === 'diner' || k === 'car' ? ci < 0.7 && g.slope < 0.35
       : k === 'caps' ? r < W*0.03 : true;
     sow(8, W*0.02, W*0.05, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet) return null;
       const ci = V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works)), u = R(), mine = KINDS.filter(k2 => k2 !== 'caps' && PK_EGGS[k2].worlds.includes(w)); if(!mine.length) return null;
@@ -484,6 +535,30 @@ function rgStore(V){
       return { c: 'egg', w, kind: k, hM: pkMetres(k, R()) }; });
     sow(9, W*0.0015, W*0.004, W*0.03, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(!PK_EGGS.caps.worlds.includes(w) || R() > PK_EGGS.caps.q) return null;
       return { c: 'egg', w, kind: 'caps', hM: pkMetres('caps', R()) }; }); }
+  // BOARDS (Ruby: "a wider variety of billboards … tongue in cheek, referencing fake brands"): beside the roads, facing
+  // the traffic, every sixty metres a place one might stand, each world its own (PK_BOARDS, the jokey ones rare); now and
+  // then a serial verse, a board every thirty metres; and small signs (notices, posters, shingles) about the towns
+  { const M = W*0.00025, BOARD = { cities: 0.3, neon: 0.35, ruins: 0.22, wilds: 0.1, builders: 0.08, magic: 0.1 }, PK_SMALL_BOARDS = ['shingle', 'plate', 'sheet', 'bottle'], age = (w, R) => w === 'ruins' ? 0.5 + 0.5*R() : 0.4*R()*R();
+    rgRoadsOf(V).forEach((rd, ri) => { const lo = rd.along ? -W*0.3 : -W*0.48, hi = rd.along ? W*0.3 : W*0.48;
+      for(let i = Math.ceil(lo/(60*M)), n = Math.floor(hi/(60*M)); i <= n; i++){ const R = rgRand(s, 1000 + ri, i), side = R() < 0.5 ? -1 : 1, off = (8 + 6*R())*M*side, u = i*60*M;
+        const a = rd.along ? u : rd.at + off, z = rd.along ? rd.at + off : u; if(Math.abs(z) > W*0.485) continue; const r = Math.hypot(a, z - L.z0); if(r > W*0.3) continue;
+        const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || g.slope > 0.6) continue;
+        if((w === 'wilds' || w === 'ruins') && R() < 0.035){ const v = Math.floor(R()*PK_SERIALS.length), ag = age(w, R); // a serial verse
+          for(let k = 0; k < 5; k++){ const uk = u + k*30*M*(rd.along ? 1 : -1), ak = rd.along ? uk : a, zk = rd.along ? z : uk; out.push({ c: 'board', w, kind: 'serial', v, k, aged: ag, hM: pkBoardSize('serial')[1], wM: pkBoardSize('serial')[0], a: ak, z: zk, r: Math.hypot(ak, zk - L.z0), rs: (R()*4294967296) >>> 0 }); } continue; }
+        if(R() > (BOARD[w] || 0)*(0.4 + V.works)) continue; const id = pkBoardOf(w, R()); if(!id || PK_SMALL_BOARDS.includes(PK_BOARDS[id].fmt)) continue;
+        const [bw, bh] = pkBoardSize(id); out.push({ c: 'board', w, kind: id, aged: age(w, R), hM: bh, wM: bw, a, z, r, rs: (R()*4294967296) >>> 0 }); } });
+    // (and the big boards where a town meets the country, on its approaches, where there is no road to stand by)
+    sow(12, W*0.012, W*0.03, W*0.35, 1, (a, z, r, R) => { const w = V.worldAt(a, z), ci = w === 'wilds' ? V.cityAt(a, z, 0.12) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
+      if(ci < 0.04 || ci > 0.75 || R() > (BOARD[w] || 0)*1.2*(0.4 + V.works)) return null; const g = ground(a, z); if(g.wet || g.slope > 0.45) return null;
+      const id = pkBoardOf(w, R()); if(!id || PK_SMALL_BOARDS.includes(PK_BOARDS[id].fmt) || PK_BOARDS[id].fmt === 'map') return null; const [bw, bh] = pkBoardSize(id); return { c: 'board', w, kind: id, aged: age(w, R), hM: bh, wM: bw }; });
+    sow(10, W*0.003, W*0.01, W*0.08, 1, (a, z, r, R) => { const w = V.worldAt(a, z), ci = V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works)); if(R() > 0.045*ci*(0.4 + V.works)) return null;
+      const g = ground(a, z); if(g.wet || g.slope > 0.5) return null; const id = pkBoardOf(w, R()); if(!id || !(PK_SMALL_BOARDS.includes(PK_BOARDS[id].fmt) || PK_BOARDS[id].fmt === 'map')) return null;
+      const [bw, bh] = pkBoardSize(id); return { c: 'board', w, kind: id, aged: age(w, R), hM: bh, wM: bw }; }); }
+  // STONE CIRCLES near enough to walk to, now and then, on open ground in the wilds and where there is magic (and fallen
+  // ones in the ruins)
+  sow(13, W*0.03, W*0.06, W*0.25, 1, (a, z, r, R) => { const w = V.worldAt(a, z), p = { wilds: 0.07, magic: 0.12, ruins: 0.035 }[w] || 0; if(R() > p*(0.4 + V.works)) return null;
+    const g = ground(a, z); if(g.wet || g.slope > 0.3 || V.forestAt(a, z) > 0.5 || V.cityAt(a, z, 0.12) > 0.05) return null;
+    return { c: 'henge', w, n: 9 + Math.floor(R()*14), rr: W*0.00025*(7 + 20*R()), hm: 2.5 + 4.5*R(), wM: 60 }; });
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
@@ -561,7 +636,9 @@ function rgPaintLand(x, mk, dk, V){
   const colsOf = (w, day, haze) => { const lights = V.lightsOf(w), g = lights[0], g2 = lights[1];
     const metal = w === 'ruins' ? [120, 108, 96] : w === 'neon' ? [44, 42, 60] : w === 'magic' ? rsMix([200, 196, 230], V.g1, 0.15) : [212, 216, 228];
     const lit = rgLit(V, rsMix(metal, [255, 246, 226], 0.15), day, haze, AIR), dark = rgLit(V, rsMix(metal, BLACK, 0.35), day, haze, AIR);
-    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w }; };
+    // (and any material, wood, stone, rust or paint, lit by the same light: the kit's own colours, never all one grey)
+    const mat = m => ({ body: rgLit(V, m, day, haze, AIR), lit: rgLit(V, rsMix(m, [255, 246, 226], 0.28), day, haze, AIR), dark: rgLit(V, rsMix(m, BLACK, 0.42), day, haze, AIR) });
+    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat }; };
   // where a world point meets the screen, standing on its ground: [X, Y, px per metre, distance]
   const foot = (a, z) => { const e = Math.max(TR.sea, T(a, z, W*0.0015)), p = at(a, z, e); if(!p) return null; return [p[0], p[1], W*0.00025*F/p[2], e]; };
   // THE WORLD STORE (Ruby: "handle it a little bit like a game engine: a very fast data structure holding all of the
@@ -570,7 +647,7 @@ function rgPaintLand(x, mk, dk, V){
   // kept (`rgStore`); a view only reads it, transforms, culls and sorts. Turning the camera, tilting it, zooming,
   // lighting it: nothing in the store changes, so nothing moves but your view of it.
   const store = rgStore(V); let loudDrawn = 0;
-  const marginOf = o => o.c === 'bldg' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : 0;
+  const marginOf = o => o.c === 'bldg' || o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : 0;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
   const nearCut = wh*0.6;
   // each thing painted from its record: where it stands, how big in metres, which sprite, its own stream
@@ -597,7 +674,7 @@ function rgPaintLand(x, mk, dk, V){
       return; }
     if(o.c === 'rock'){ const rr = o.hM*f[2]; if(rr < px(2) || rr > wh*0.3) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - rr, X + rr, Y - rr, Y, [X - rr*0.5, X + rr*0.5, Y - rr*0.4, Y])) return;
-      pkRock(x, X, Y, rr, rgLit(V, [128, 122, 114], wday, haze, AIR), LT, R); return; }
+      pkRock(x, X, Y, rr, rgLit(V, [128, 122, 114], wday, haze, AIR), LT, R, rgPx); return; }
     if(o.c === 'grass'){ const gH = o.hM*f[2]; if(gH < px(2.5) || gH > wh*0.12) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - gH, X + gH, Y - gH*1.4, Y)) return;
       const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), wday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
@@ -609,9 +686,15 @@ function rgPaintLand(x, mk, dk, V){
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*(o.kind === 'warden' ? 4.2 : o.kind === 'spire' ? 1.1 : 1.8), Y)) return;
       if(E.loud) loudDrawn++;
       const c = colsOf(o.w, wday, haze); pkEgg(x, X, Y, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
-    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.35) return;
+    if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, wday, haze); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
+    if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h < px(3) || h > wh*0.6) return;
+      const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - bw/2, X + bw/2, Y - h, Y)) return;
+      pkBoard(x, X, Y, m, colsOf(o.w, wday, haze), o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
+    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*(RG_WIDE.includes(o.kind) ? 0.12 : 0.35)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
-      const c = colsOf(o.w, wday, haze); pkProp(x, X, Y, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+      const c = colsOf(o.w, wday, haze); pkProp(x, X, Y, h, o.next ? { ...c, noWires: true } : c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
+      // (a road's pole wired to the next one along, the wires sagging between)
+      if(o.next){ const f2 = foot(o.next[0], o.next[1]); if(f2) pkWires(x, [X, Y - h*0.95], [f2[0], f2[1] - o.hM*f2[2]*0.95], h, c, rgPx); } return; }
     if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.5) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
       const c = colsOf(o.w, wday, haze); pkRobot(x, X, Y, h, { ...c, eye: c.glow }, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
@@ -652,10 +735,7 @@ function rgPaintLand(x, mk, dk, V){
   };
   // ROADS AND PATHS on the floor, one along the ring and one across it, as the world lays them, cut into short lengths in
   // the world, each drawn with the ridge before it, so the hills hide it
-  const ROADS = { cities: ['road', 1], neon: ['neon', 1], builders: ['path', 0.8], ruins: ['broken', 0.6], magic: ['ley', 0.6], wilds: ['trail', 0.45] }, roads = [];
-  { const zr = (mnHash(s, 31, 7) - 0.5)*W*0.6, w1 = V.worldAt(0.5*W, zr), ar = (0.15 + 0.5*mnHash(s, 32, 7))*W*(mnHash(s, 33, 7) < 0.5 ? -1 : 1), w2 = V.worldAt(ar, 0);
-    if(mnHash(s, 34, 7) < ROADS[w1][1]*(0.3 + 0.6*V.works)) roads.push({ along: true, at: zr, w: w1, kind: ROADS[w1][0] });
-    if(mnHash(s, 35, 7) < ROADS[w2][1]*(0.15 + 0.45*V.works)) roads.push({ along: false, at: ar, w: w2, kind: ROADS[w2][0] }); }
+  const roads = rgRoadsOf(V);
   for(const r of roads){ r.segs = []; const lo = r.along ? -d1 : -W*0.49, hi = r.along ? d1 : W*0.49;
     for(let u = lo; u < hi;){ const a = r.along ? u : r.at, z = r.along ? r.at : u, d = Math.hypot(a, z - L.z0), st = Math.max(W*0.002, d*0.05); r.segs.push([u, Math.min(hi, u + st)]); u += st; } }
   const drawRoads = (dn, df) => { for(const r of roads){ const wd = W*(r.kind === 'trail' || r.kind === 'ley' ? 0.0015 : 0.003);

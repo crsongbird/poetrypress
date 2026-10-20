@@ -2,6 +2,29 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Kari (2026-10-19)
+
+- **New surface: Feathers.** Procedural feathers on a transparent ground,
+  to lie on the page's colour or over another surface: shafts and barbed
+  vanes that split and fluff to down at the foot, lit by the light dial and
+  lifted off the page by their shadows. Sliders for size, how many, fluff,
+  curl, splits, markings (bars, or eyes near the tips), depth and lift; six
+  hues colour all of it, a faint sheen included.
+- **New surface: Corvid Feathers.** The crow family's feathers, the bird on
+  a slider: crow, raven, magpie and blue jay. Their sheen is structural
+  colour, as a real feather's is: it turns between two sheen hues with the
+  angle to the light dial, strongest on the raven. Every colour is a hue.
+- **New group, Light to Lay Over,** four surfaces of light made to blend
+  over a page or another surface: **Dappled Leaves** (sunlight through
+  leaves, the shadows thrown along the light dial and stretched as it
+  lowers, the sun's round spots between), **Window Light** (a window's panes
+  thrown across the page, a plant on the sill sometimes), **Pool Caustics**
+  (the bright net rippling water casts) and **Light Leaks** (film's warm
+  leaks, in three hues). Each is built in the Athanor from general parts, so
+  each opens there as a graph to take apart, and the seed changes them:
+  how many panes and where the window falls, which edge the light leaks
+  from.
+
 ## Saturn–Surtur (2026-10-19)
 
 - **A surface can have up to six hues of its own.** Where a surface draws

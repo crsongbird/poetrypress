@@ -111,7 +111,7 @@ const ORDER = [
   'moon.js',              // moon phase and its glyph
   'seedWords.js',         // word seeds: every number a phrase, and back
   'texCore.js',           // noise, colour mixing, seeded random
-  'paintKit.js',          // the painted things: trees, buildings, rocks, the builders' works (Painted Ringworld, Ring in the Sky, Night City)
+  'paintKit.js',          // the painted things: trees, buildings, rocks, the builders' works (Ringworld, Ring in the Sky, Night City)
   'texWhimsy.js',         // ♡ generators
   'texSharpness.js',      // √ generators
   'texChaos.js',          // ∆ generators
@@ -123,7 +123,7 @@ const ORDER = [
   'stepsWhimsy.js',       // steps for ♡ surfaces: smoke, light shaft, motes; painted sky, ridges, wash; Silk Ribbons, Dream Bloom, Fractal Moon
   'stepsChaos.js',        // steps for ∆ surfaces: crazing, brushwork, glaze (Fractured Glaze); sigils, blots, facets, the black hole, the transmutation circle
   'stepsLight.js',        // the engine's own parts: Light Engine, Oil Paint, Canvas Weave, Paint Swipes
-  'stepsRing.js',         // the Painted Ringworld's parts: The Arch, Land on the Ring
+  'stepsRing.js',         // the Ringworld's parts: The Arch, Land on the Ring
   'stepsCloth.js',        // cloth: Drape (a simulated sheet as maps), Weave Maps, Detail Normals
   'stepsRoom.js',         // Liminal Spaces' Room Caster
   'floraKit.js',          // what Bloom and Specimen share: leaves by species, stems, colour helpers

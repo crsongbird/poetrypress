@@ -370,9 +370,9 @@ export const TEXTURE_ELEMENTS = {
     fire:  { name: 'Ember Ring',   k: [55, 40, 75, 40, 45, 0, 37],  t: ['#B8643A', '#E8885A'], cam: [350, 30, 110], light: [250, 70] },
     water: { name: 'Tidal Ring',   k: [70, 60, 40, 75, 50, 0, 37],  t: ['#4E8A78', '#7FB4E6'], cam: [20, 55, 90] },
     earth: { name: 'Desert Ring',  k: [35, 50, 25, 45, 40, 55, 62], t: ['#B8874E', '#D9B48A'], cam: [8, 20, 130], light: [120, 75] } },
-  // Painted Ringworld: its knobs Band Width, Landforms, World (0 By the Seed, 14 Wilds, 29 Cities, 43 Neon, 57 Builders,
+  // Ringworld: its knobs Band Width, Landforms, World (0 By the Seed, 14 Wilds, 29 Cities, 43 Neon, 57 Builders,
   // 71 Magic, 86 Ruins, 100 Mixed), Life, Works, Altitude, Paint, Brush; its light the day, as Ringworld's
-  ringpaint: { def: 'wind', wind: { name: 'Painted Ringworld' },
+  ringpaint: { def: 'wind', wind: { name: 'Ringworld' },
     fire:  { name: 'Neon Arch',    k: [55, 40, 43, 30, 75, 15, 0, 37],  t: ['#4A4A5A', '#9A86C8'], cam: [50, 55, 100], light: [90, 118] },
     water: { name: 'Garden Ring',  k: [65, 45, 71, 85, 40, 20, 0, 37],  t: ['#5E8F6A', '#7FB4E6'], cam: [30, 60, 100], light: [90, 30] },
     earth: { name: 'Fallen Ring',  k: [45, 75, 86, 25, 70, 25, 30, 62], t: ['#B8874E', '#D9B48A'], cam: [60, 50, 100], light: [250, 100] } },

@@ -182,7 +182,7 @@ function guideCanvas(cls){
 function ringGuideOf(kind, type, c){
   const v = id => parseFloat(($(id) || {}).value);
   // (Ringworld's walls follow Landforms, half its range; where you stand across the band is the seed's)
-  // (a knob found by its key: Altitude is the seventh on Ringworld, the sixth on the Painted Ringworld)
+  // (a knob found by its key: Altitude is the sixth on the Ringworld)
   const slot = key => 'texP' + (paramsFor(type).findIndex(p => p.key === key) + 1);
   return kind === 'ring' ? { band: v('texP1'), walls: v('texP2')*0.5, altitude: v(slot('alt')), placeBy: 'where the seed says', seed: v('textureSeedValue') >>> 0, lens: 75, zoom: c.zoom, look: c.turn, up: c.view/100, curved: type === 'ringpaint' }
     : kind === 'ellipse' ? { centre: 0.15 + 0.7*(v(slot('height')) || 0)/100 } : null;
@@ -210,7 +210,7 @@ export function drawCameraGuide(on){
   g.classList.add('on');
 }
 // THE SUN'S GUIDE (Ruby: "a sun position guide that shows up on the image also before the render"): while the light dial
-// moves, where the light comes from is drawn over the page at once, before the surface is made: the Painted Ringworld's
+// moves, where the light comes from is drawn over the page at once, before the surface is made: the Ringworld's
 // sun where it will stand in the picture (an arrow at the edge when it is out of the frame); any other lit surface's
 // light as a sun at the dial's place on the page (the middle overhead, the rim the page's edge), turned with the camera
 // where the camera turns the ground under it; the rim light's in its own colour
@@ -218,7 +218,7 @@ export function drawCameraGuide(on){
 /** WHAT THE LIGHT DIAL PLACES, for its guide (Ruby: "anytime we use a light dial as a position selector or a light
  *  selector we need some kind of indicator of where on screen we are positioning a thing before the render"): a list of
  *  marks, each drawn over the page at once while the dial moves and until the new picture has landed.
- *   sun      the light, where it comes from (the dial laid on the page; the Painted Ringworld's through its camera)
+ *   sun      the light, where it comes from (the dial laid on the page; the Ringworld's through its camera)
  *   impact   where Crackle's cracks burst from (on the far side from the light, as the Spreading Cracks part strikes)
  *   place    where a thing stands (Transmutation Circle: its centre, by dialSquare, and its circle's size)
  *   arrow    a heading the dial gives (wind, rain, a flow, a breath): `way` +1 toward the handle, −1 away from it
@@ -275,7 +275,7 @@ export function drawDialGuide(on, linger){
   const u = Math.min(g.width, g.height), aspX = g.width/u, aspY = g.height/u, c = cameraNow(), caps = capsFor(type) || {};
   const cs = getComputedStyle(document.body), col = n => (cs.getPropertyValue(n) || '').trim();
   const main = col('--accent') || '#E7A0B8', rimC = col('--accent-2') || '#9FD0E8', dark = 'rgba(0,0,0,.55)';
-  // a light's place on the page: the Painted Ringworld's sun through its camera; else the dial laid on the page, its middle
+  // a light's place on the page: the Ringworld's sun through its camera; else the dial laid on the page, its middle
   // the page's, in the dial's own direction exactly (Ruby: "light guide seems off": stretched to a tall page it stood
   // nearer upright than the dial), as far out as the dial's handle is, its rim at the page's edge along that way; turned
   // against a camera that turns the ground

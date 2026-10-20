@@ -30,7 +30,7 @@ const textureTypes = pickerTypes.filter(t => TEXTURE_PARAMS[t] || t === 'astral'
 // retires to restore seven-per-element is Ruby's call — see OPEN-ISSUES.
 // 33: Painted Landscape (♡), Night City (√), Black Hole (∆) and the
 // Scrying Pool (🜚) joined
-// Saturn–Kiviuq on: the Painted Ringworld and Ring in the Sky joined Sky & Cosmos
+// Saturn–Kiviuq on: the Ringworld and Ring in the Sky joined Sky & Cosmos
 check('the picker offers 85 textures (seven hidden: the Basics and the first Fractured Glaze), and the Athanor\'s own', new Set(textureTypes).size === 86 && textureTypes.includes('athanor'));   // (a Set: the box's Frosted Glass is also value="frost")
 
 // every surface declares two to ten sliders (AGENTS §5.6: ten at most)

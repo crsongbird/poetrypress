@@ -35,7 +35,7 @@ seed independence: the seed picks among them.
    stairs, the Penrose triangle, Ascending and Descending). Built from the painted kit's boxes.
 4. **Coalescing Smoke**: a silhouette from the kit (a tree, a deer, a heron, a whale), used as a density target. Curl
    noise erodes it from its edges outward, so the form is clear at its heart and turbulent at its rim.
-5. **Sky Things**: the Painted Ringworld's directions-in-the-world helper, made general. Planets, moons, eclipses,
+5. **Sky Things**: the Ringworld's directions-in-the-world helper, made general. Planets, moons, eclipses,
    upside-down oceans and floating islands stand in sky directions, so a camera turns past them.
 6. **Kit Furniture**: paintKit grows interiors: shelves, counters, chairs, lamps, boarding gates, departure boards
    (text in web fonts, ON_PAGE), bookcases, washing machines. Each piece is flat shapes lit from maps.
@@ -229,7 +229,7 @@ seed independence: the seed picks among them.
 - **Twist:** it is a sleeping giant. Cities sit on its shoulders, forests cover its arms, its folded clothes are the
   mountain ranges.
 - **Seed:** the giant's pose; what it wears; its era.
-- **Parts:** Curves ridges from a body silhouette, the painted kit, the Painted Ringworld's layered land.
+- **Parts:** Curves ridges from a body silhouette, the painted kit, the Ringworld's layered land.
 
 **The Planet-Sized Museum**
 - **See:** galleries so large the exhibits are landscapes, and airships between them.
@@ -238,10 +238,10 @@ seed independence: the seed picks among them.
 - **Parts:** Portal (the frames show our own surfaces), the kit, haze.
 
 **Ringworld of Forgotten Dreams**
-- A new World for the Painted Ringworld, **Dreams**: the land changes without borders between childhood memories, the
+- A new World for the Ringworld, **Dreams**: the land changes without borders between childhood memories, the
   impossible architecture above, recurring nightmares (gentle) and half-remembered cities.
 - **Seed:** which dreams, region by region (Mixed's way).
-- **Parts:** the Painted Ringworld, Style Mask (each region its own finish).
+- **Parts:** the Ringworld, Style Mask (each region its own finish).
 
 ### Painterly worlds
 

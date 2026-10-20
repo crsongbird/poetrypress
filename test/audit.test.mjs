@@ -227,10 +227,10 @@ check('importing the same spell twice does not duplicate it',
   load({ ...base, texture: true, textureType: 'rainstreaks', texP2: '30', textureLight: '200' });
   s = save();
   check('a new look is left as it is', s.textureLight === '200' && +s.texP2 === 30);
-  // the 3D Ringworld retired (Ruby): its looks open as the Painted Ringworld, after the old formats' translations
+  // the 3D Ringworld retired (Ruby): its looks open as the (painted) Ringworld, after the old formats' translations
   load({ ...old, lookVersion: 3, texture: true, textureType: 'ringworld', texP6: '80', textureLight: '315', textureLightTilt: '100', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
   s = save();
-  check('an old Ringworld look opens as the Painted Ringworld: Daylight 80 still the light dial at 40 (morning), the camera as it was', s.textureType === 'ringpaint' && +s.textureLightTilt === 40 && s.cameraTurn === '40');
+  check('an old 3D Ringworld look opens as the painted one: Daylight 80 still the light dial at 40 (morning), the camera as it was', s.textureType === 'ringpaint' && +s.textureLightTilt === 40 && s.cameraTurn === '40');
   load({ ...old, lookVersion: 3, texture: true, textureType: 'circuit', texP7: '100' });
   s = save();
   check('an old Circuit Board look at Magitech (four eras) stays the board it was: Atomic, at 75 of five eras', +s.texP7 === 75);

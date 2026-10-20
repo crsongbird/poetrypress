@@ -1,4 +1,4 @@
-# Painted Ringworld Prior Art: Flat Things That Read, and Placement That Holds Still
+# Ringworld Prior Art: Flat Things That Read, and Placement That Holds Still
 
 **Confidence key.** **[src: URL]** means the point was read in that source during this session. **[est]** means it is my own design or implementation estimate, to be tuned by eye. **[code]** means it was observed in this repo (`paintKit.js`, `stepsRing.js`) on 2026-10-20.
 
@@ -10,7 +10,7 @@
 
 No source with technique-level detail was found for Kurzgesagt, Olly Moss, Moebius or Monument Valley. Lines that rely on them are marked [est].
 
-**What the owner asked for.** The things "are basically just squares or basic shapes". They should gain artistry while staying flat (flat-colour polygons lit on the light's side, no textures) and readable when small. `paintKit.js` is shared by Painted Ringworld, the night-city skyline and Ring in the Sky, so every recipe below lands in all three.
+**What the owner asked for.** The things "are basically just squares or basic shapes". They should gain artistry while staying flat (flat-colour polygons lit on the light's side, no textures) and readable when small. `paintKit.js` is shared by Ringworld, the night-city skyline and Ring in the Sky, so every recipe below lands in all three.
 
 ---
 

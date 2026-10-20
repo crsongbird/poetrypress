@@ -12,10 +12,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   grid. Does it hold?
 
 ## 2 · Ruby's notes to act on
-- THE RING, NEXT (Ruby, 2026-10-20): more detail in the distance (terraces on the steep land, a settlement's lights
-  at night); more placing rules between kinds (trees kept back from a house, farmland in rings round a town, the
-  best ground settled first); more robots; a bridge of hard light as one more rare nod; more interactions nobody
-  asked for.
+- THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, a less cartoony hand throughout; more
+  detail in the distance (terraces on the steep land, a settlement's lights at night); more placing rules between
+  kinds (trees kept back from a house, farmland in rings round a town); more robots; a bridge of hard light as one
+  more rare nod; more interactions nobody asked for.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a

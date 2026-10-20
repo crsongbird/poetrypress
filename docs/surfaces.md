@@ -198,13 +198,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   The painters are shared (stepsWhimsy.js): `paintSaturn` (bands, rings with
   the Cassini gap, the night side, the globe's shadow on the rings, the rings'
   in front) and `paintEnceladus` (white, tiger stripes, the plume).
-  - Painted Ringworld: one ring in four orbits Saturn (The Arch's Saturn), and
+  - Ringworld: one ring in four orbits Saturn (The Arch's Saturn), and
     now and then Enceladus beside it; otherwise the far planet is sometimes
     Saturn.
   - Starfield's small Saturn follows its Atmosphere: in space a ringed disk,
     under air (Aurora's) a faint point (Ruby: "much dimmer and fainter").
   - Starfield: about one sky in thirty-six, a small Saturn among the stars
-    (Aurora, Ring in the Sky, the Painted Ringworld and any graph with one).
+    (Aurora, Ring in the Sky, the Ringworld and any graph with one).
   - Circuit Board's Markings: a stamp now and then speaks of Saturn, Enceladus
     or the old stories of space, by its era (`CIR_SPACE`), and a little
     picture is Enceladus (`CIR_ENCELADUS`).
@@ -266,7 +266,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Weave Maps** (`clWeave`): a draft per fabric (plain, 3/1 twill, 5-harness satin, basket, herringbone),
     threads across the cloth by the fabric (burlap 32, silk 420), slub, gaps and fuzz; where a thread falls under
     about 1.2 pixels it fades to its average (no moiré on a fold's steep wall).
-- **Painted Ringworld** (chain `ringpaint`, canvas, stepsRing.js; Ruby: "a
+- **Ringworld** (chain `ringpaint`, canvas, stepsRing.js; Ruby: "a
   generative art piece that still looks like being on a ringworld … the same
   logic as the 3D generator but 2D", and of the flat style, "simplified, but
   cosmic"): Starfield → The Arch → Land on the Ring → Oil Paint (Paint 0: the
@@ -326,6 +326,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     densest; anything larger than the view is culled, never shrunk. Trees by
     the land's climate (`PK_FLORA`: dry country, warm, jungle, the cold
     heights, a magic world's fey places); a few villages and farms in the wilds.
+  - **Less cartoony, and a wider library** (Ruby: "a slightly less cartoony art style", "a wider variety of things";
+    docs/prior-art/ringworld-sprites.md): the kit's things are finished as things in the world (shaded from the sky
+    down, a cast shadow, weathering, their own materials lit by the scene through `colsOf`'s `mat`; no faces). A
+    village in the wilds builds in its region's one tradition (`rgVernacular`, `PK_VERNACULAR`); the small things are
+    placed by what they need (`propFits`: hay in open fields, a windpump on dry pasture, the town's furniture in town,
+    the larger ones sown further off); poles carry wires along the roads (`pkWires`); boards stand beside the roads,
+    each world's own and the jokey ones rare (`PK_BOARDS`, a serial verse now and then, `PK_SERIALS`); the wilds'
+    standing stones are a stone circle at true scale, in the world (`pkStone`, `pkLintel`).
   - **Works** (Ruby: "works needs to be turned down significantly"): 35 by
     default, and fewer of each at any setting; the spans and bridges of light
     across the band as they were (Ruby: "the bridges and the spans were fine").
