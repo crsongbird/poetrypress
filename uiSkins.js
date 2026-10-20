@@ -28,10 +28,12 @@ export function setHaptics(on){ skHapticsOn = !!on; }
 /** A sound to go with each tick (murmur's, which plays only while Sound is on). */
 export function setSkinSound(fn){ skinSound = typeof fn === 'function' ? fn : null; }
 export function haptic(kind, value){
-  const now = Date.now(); if(now - skLastBuzz < 50) return; skLastBuzz = now;
+  const now = Date.now(); if(now - skLastBuzz < 50 && kind !== 'done') return; skLastBuzz = now;
   if(skinSound) try { skinSound(kind, value); } catch(e){}
   if(!skHapticsOn) return;
-  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' || kind === 'reset' ? 15 : 10); } catch(e){}
+  // (each kind its own feel: a mark a tick, an end a double, a tab or drawer a light touch, a long save done a good buzz)
+  const V = { limit: [10, 40, 10], detent: 15, reset: 15, tab: 8, drawer: 12, done: [70, 50, 110] };
+  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(V[kind] ?? 10); } catch(e){}
 }
 
 // ---- the input a skin draws ----

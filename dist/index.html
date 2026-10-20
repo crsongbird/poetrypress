@@ -2522,7 +2522,11 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .sk-val.long{ font-size:12px; }
 .sk-knob.turning .sk-val{ opacity:1; fill:var(--accent); }
 .sk-knob.fine .sk-arc, .sk-fader.fine .sk-arc{ stroke:var(--accent-2); }
-.sk-knob.locked, .sk-fader.locked{ opacity:.45; cursor:not-allowed; }
+.sk-knob.locked, .sk-fader.locked{ opacity:.32; filter:grayscale(.75); cursor:not-allowed; transition:opacity .2s, filter .2s; }
+/* (locked, a knob's ring breaks into dashes and its light dims: it reads as held, not merely grey) */
+.sk-knob.locked .sk-track{ stroke-dasharray:2 4; }
+.sk-knob.locked .sk-arc, .sk-fader.locked .sk-arc{ opacity:.55; }
+.field-locked .snap-btn{ opacity:.25; pointer-events:none; }
 
 .sk-fader{ display:flex; align-items:stretch; justify-content:center; gap:2px; height:100%; min-height:120px; }
 .sk-strip{ width:30px; height:100%; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
@@ -2538,8 +2542,10 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .sk-names button.on{ color:var(--accent); }
 
 /* THE DISPLAY LINE: what is being turned, above the controls, out from under the finger */
-.sk-readout{ display:flex; align-items:center; gap:8px; min-height:0; max-height:0; overflow:hidden; opacity:0; transition:opacity .15s, max-height .15s; font-size:13px; }
-.sk-readout.on{ max-height:40px; min-height:32px; opacity:1; }
+/* the display line keeps its room always, and only fades in and out: nothing on the page moves when it shows or goes
+   (Ruby: never move the interface under a hand, while or just after it is used) */
+.sk-readout{ display:flex; align-items:center; gap:8px; height:34px; overflow:hidden; white-space:nowrap; opacity:0; visibility:hidden; transition:opacity .15s, visibility 0s linear .15s; font-size:13px; }
+.sk-readout.on{ opacity:1; visibility:visible; transition:opacity .15s, visibility 0s; }
 .controls-fold:not(.rack) .sk-readout{ display:none; }
 .sk-readout .sr-name{ color:var(--text-dim); }
 .sk-readout .sr-val{ color:var(--text-main); font-variant-numeric:tabular-nums; flex:1 1 auto; }
@@ -30992,7 +30998,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 16849a2";
+const STAMP = "2026-10-20 · 3f4dcdd";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -41258,10 +41264,12 @@ function setHaptics(on){ skHapticsOn = !!on; }
  
 function setSkinSound(fn){ skinSound = typeof fn === 'function' ? fn : null; }
 function haptic(kind, value){
-  const now = Date.now(); if(now - skLastBuzz < 50) return; skLastBuzz = now;
+  const now = Date.now(); if(now - skLastBuzz < 50 && kind !== 'done') return; skLastBuzz = now;
   if(skinSound) try { skinSound(kind, value); } catch(e){}
   if(!skHapticsOn) return;
-  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' || kind === 'reset' ? 15 : 10); } catch(e){}
+
+  const V = { limit: [10, 40, 10], detent: 15, reset: 15, tab: 8, drawer: 12, done: [70, 50, 110] };
+  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(V[kind] ?? 10); } catch(e){}
 }
 
 
@@ -42110,7 +42118,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
     render();
   }
   link.click();
-  murmur.play('saveImage');
+  murmur.play('saveImage'); haptic('done');
 
 
 
@@ -42290,7 +42298,9 @@ if(typeof document.querySelectorAll === 'function'){
     const ctl = document.querySelector && document.querySelector('.controls'); if(ctl && name !== 'more') ctl.scrollTop = 0;
     if(drawer && name === 'more') drawer.scrollTop = 0;
   }
-  tabBtns.forEach((b, i) => b.addEventListener('click', () => { if(!b.classList.contains('active')) murmur.play('tab', { index: i }); activateTab(b.dataset.tab); }));
+  tabBtns.forEach((b, i) => b.addEventListener('click', () => { if(!b.classList.contains('active')){ murmur.play('tab', { index: i }); haptic('tab'); } activateTab(b.dataset.tab); }));
+
+  document.addEventListener('toggle', e => { if(e.target && e.target.tagName === 'DETAILS' && e.isTrusted !== false) haptic('drawer'); }, true);
   activateTab('write');
 
 

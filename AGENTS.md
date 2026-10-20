@@ -196,6 +196,9 @@ segment.
    - *reviewed the tests*: read the suites against §8 Add a test; delete
      what tests a retired thing or an implementation, merge what repeats,
      move a check to the suite of its concern.
+   **No feature branches** (Ruby, 2026-10-20: "I usually don't make separate branches for every little feature"):
+   work happens on `main`, committed locally; pushing is the release. Visible new work is shown to Ruby as sheets
+   before the release that carries it.
 7. Commit to `main` with `node build.mjs --notes` as the message, then push.
    **Main is live.** The working copy is the clone of crsongbird/poetrypress
    and keeps its CNAME; release/ and node_modules are never committed.
@@ -602,7 +605,9 @@ the test to the new intent; never weaken it just to pass.
   - Saves carry no version, so never reuse an id for a different picture.
     Old ids stay loadable as hidden `<option>`s.
 - **Textures change only on purpose, and visibly only with Ruby's
-  approval.** Fingerprints (`test/fixtures/texture-fingerprints.json`) are
+  approval.** A texture gaining a capability (moved onto the Light Engine, given
+  maps, metallic, displacement) may change its look to suit it — more stylized,
+  more fitting — rather than imitate the old picture (Ruby, 2026-10-20). Fingerprints (`test/fixtures/texture-fingerprints.json`) are
   updated with `--update` only for the textures you meant to change.
   - A change Ruby can see goes through `tools/compare.mjs` first.
   - A replacement Ruby approved may keep its id; Ruby decides whether old
@@ -682,6 +687,9 @@ the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
    generated** (Ruby: "looking up prior art tends to give you ideas for what
    to make, and also how to make it unique"; and, 2026-10-19: "You should also
    look up prior art… You're not really doing that.").
+   - Look first where Ruby says the best prior art is (2026-10-20): **game development, art assets, frontend design,
+     user interfaces and scientific research** — GDC talks and studio breakdowns, asset-kit and shader write-ups,
+     design-system and interaction guides, papers.
    - Research is searching and READING, not remembering: search the web, open
      the sources (papers, photographs and the photographers' notes, artists'
      breakdowns, botany or physics of the real thing, how games and films
@@ -898,6 +906,11 @@ competing.
   never grounds.
 - Colours carry a subtle breath of nature (moss, clay, tea, sage), never
   loud.
+
+**Nothing moves under a hand** (Ruby, 2026-10-20: "never ever add [something] that moves the UI around while, or
+immediately after the user has interacted with it"). Anything that appears as a control is used (the display line,
+a hint, a readout) keeps its room always and only fades; no panel grows, shrinks or scrolls because a control was
+touched.
 
 **Motion.** Minimal: animation mostly advertises how well the browser is
 coping. The one exception is the busy shimmer (a texture being made, or a

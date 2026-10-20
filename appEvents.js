@@ -49,7 +49,7 @@ import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { DEFAULTS } from './tunables.js';
 import { applyStrings, PML_GUIDE, PICKER, CHOOSER, DIE, FORGE_BAR } from './strings.js';
-import { layoutControls, readoutStep, setRackMode, getRackMode, setHaptics, setSkinSound } from './uiSkins.js';
+import { layoutControls, readoutStep, setRackMode, getRackMode, setHaptics, setSkinSound, haptic } from './uiSkins.js';
 import { state } from './uiState.js';
 import { setWorking } from './uiWorking.js';
 import { clickId, commitHistory, commitSoon, notePoemSoon, poemHistoryNow, setFilmstrip, showShortcuts, stepAny } from './uiHistory.js';
@@ -498,7 +498,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
     render();
   }
   link.click();
-  murmur.play('saveImage');
+  murmur.play('saveImage'); haptic('done');   // (the long save done: a good buzz on the phone, Ruby)
   // Bluesky (and most places) don't read alt text from inside the file: it is
   // offered for pasting too, as the toast's button (never copied unasked: the
   // clipboard is the person's — the usability review)
@@ -678,7 +678,9 @@ if(typeof document.querySelectorAll === 'function'){
     const ctl = document.querySelector && document.querySelector('.controls'); if(ctl && name !== 'more') ctl.scrollTop = 0;
     if(drawer && name === 'more') drawer.scrollTop = 0;
   }
-  tabBtns.forEach((b, i) => b.addEventListener('click', () => { if(!b.classList.contains('active')) murmur.play('tab', { index: i }); activateTab(b.dataset.tab); }));
+  tabBtns.forEach((b, i) => b.addEventListener('click', () => { if(!b.classList.contains('active')){ murmur.play('tab', { index: i }); haptic('tab'); } activateTab(b.dataset.tab); }));
+  // (a light touch on the phone as a drawer or section opens or folds: Ruby)
+  document.addEventListener('toggle', e => { if(e.target && e.target.tagName === 'DETAILS' && e.isTrusted !== false) haptic('drawer'); }, true);
   activateTab('write');
   // ESOTERICA ON A DESK (Ruby): a click anywhere outside its drawer closes it
   // (not inside a picker, a dialog or the Athanor, which float above the page);
