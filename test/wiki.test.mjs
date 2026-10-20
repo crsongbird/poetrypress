@@ -47,7 +47,7 @@ const RETIRED_NAMES = ['Light (heights)', 'Deal (Cards)', 'Growing Line', 'Angry
 // the TEACH notes, from the modules themselves (the chains, the Surface Studies, the starters)
 const teach = [(await import('../chains.js')).TEXTURE_CHAINS, (await import('../athanorStudies.js')).ATHANOR_STUDIES, (await import('../athanor.js')).ATHANOR_STARTERS]
   .flatMap(o => Object.values(o).map(t => t.teach || ''));
-const docs = [...bodies.map(b => b[1]), ...teach, read('AGENTS.md'), appText];
+const docs = [...bodies.map(b => b[1]), ...teach, ...['AGENTS.md', 'docs/light.md', 'docs/ui-machinery.md', 'docs/athanor.md', 'docs/surfaces.md', 'docs/pitfalls.md'].map(read), appText];
 const back = RETIRED_NAMES.filter(n => docs.some(d => d.includes(n)));
 check('no retired name is back in the wiki, the TEACH notes, the menus or AGENTS.md' + (back.length ? ': ' + back.join(', ') : ''), !back.length);
 const ids = new Set([...W.WIKI_ARTICLES.map(a => a.id), ...keys.map(k => 'part:' + k)]);

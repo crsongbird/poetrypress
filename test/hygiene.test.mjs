@@ -25,8 +25,10 @@ const ls = d => existsSync(new URL(d, ROOT)) ? readdirSync(new URL(d, ROOT)) : [
 const MODULES = ls('.').filter(f => /^\w+\.js$/.test(f));
 const TESTS = ls('test').filter(f => /\.test\.mjs$/.test(f));
 const TOOLS = ls('tools').filter(f => /\.\w+$/.test(f));
-const DOCS = ['AGENTS.md', 'ROADMAP.md', 'OPEN-ISSUES.md', 'PML.md', 'README.md', 'PERFORMANCE-AUDIT.md'];
-const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-ISSUES.md'), changelog = rd('CHANGELOG.md');
+// the protocol is AGENTS.md and the long reference it points to (docs/)
+const PROTOCOL = ['AGENTS.md', 'docs/light.md', 'docs/ui-machinery.md', 'docs/athanor.md', 'docs/surfaces.md', 'docs/pitfalls.md'];
+const DOCS = [...PROTOCOL, 'ROADMAP.md', 'OPEN-ISSUES.md', 'PML.md', 'README.md', 'PERFORMANCE-AUDIT.md'];
+const agents = rd('AGENTS.md'), protocol = PROTOCOL.map(rd).join('\n'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-ISSUES.md'), changelog = rd('CHANGELOG.md');
 
 // ---------- 1 · nothing dead ----------
 {
@@ -68,7 +70,7 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
   for(const doc of [...DOCS, 'CHANGELOG.md']) for(const m of rd(doc).matchAll(/(?<![\w/.-])((?:test|tools|icons|pwa)\/[\w./-]+\.\w+|\w[\w-]*\.(?:js|mjs|py|sh|css|html|md|json|webmanifest))\b/g)){
     const f = m[1];
     if(/^(sw\.js|manifest\.webmanifest|drawflow\.min\.js|coloris\.min\.\w+|panzoom\.min\.js|index\.html|file\.js)$/.test(f)) continue;     // built, fetched, or a placeholder
-    const found = [f, 'test/' + f, 'tools/' + f, 'test/fixtures/' + f].some(p => existsSync(new URL(p, ROOT)));
+    const found = [f, 'test/' + f, 'tools/' + f, 'test/fixtures/' + f, 'docs/' + f].some(p => existsSync(new URL(p, ROOT)));
     if(!found && doc !== 'CHANGELOG.md') files.push(`${doc}: ${f}`);
   }
   check('every file the docs name exists', !files.length, [...new Set(files)]);
@@ -108,7 +110,7 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
   ];
   const wrong = [];
   for(const [doc, re, want] of FACTS){
-    const m = rd(doc).match(re);
+    const m = (doc === 'AGENTS.md' ? protocol : rd(doc)).match(re);
     if(!m) wrong.push(`${doc}: the sentence ${re} is gone (reword it here too)`);
     else if(n(m[1]) !== want) wrong.push(`${doc}: says ${m[1]} (${re}), the code says ${want}`);
   }
@@ -194,7 +196,7 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
 // ---------- 8 · the hue names the docs use are the app's ----------
 {
   const ui = rd('strings.js') + rd('index.html') + rd('textureGenerators.js');
-  const hues = [...new Set([...agents.matchAll(/\b([A-Z][a-z]+) [Hh]ue\b/g)].map(m => m[1] + " Hue"))].filter(h => !ui.includes(h) && !/^(Every|Each|The|One|A)\s/.test(h));
+  const hues = [...new Set([...protocol.matchAll(/\b([A-Z][a-z]+) [Hh]ue\b/g)].map(m => m[1] + " Hue"))].filter(h => !ui.includes(h) && !/^(Every|Each|The|One|A)\s/.test(h));
   check('every "… Hue" AGENTS.md names is a hue the app shows', !hues.length, hues);
 }
 
