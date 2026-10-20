@@ -60,8 +60,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   noise cut by a gradient (that makes blobs, not profiles); far ridges folded into crags. A Number's value is 0–100
   (num(50) is a half): a multiply by num(0.9) is nearly nothing.
 - **Windswept Hills** (chain `windhills`; one process part, `grass`, stepsGrass.js; prior art docs/prior-art/cel-shaded.md
-  §8): toon grass and rolling hills in wind. Hills: a Gradient mixed with three broad Perlins, each cut by a Threshold
-  (far, middle, near; Hills sets how far the Perlins raise the land, Horizon where it begins). The far band wears the
+  §8): toon grass and rolling hills in wind. Hills: a Gradient mixed with three Curves, each cut by a Threshold
+  (far, middle, near; their lines are noise Curves laid across the page; Hills sets how far they raise the land, Horizon where it begins). The far band wears the
   Far Hills Hue under a haze of the Sky Hue (Haze). Grass Blades fills from the middle band down. Gusts: a slow Perlin
   through Levels into a Map Range (Wind its top); the same knob leans and bends the blades. Clouds: a Perlin in the
   upper sky, blurred and cut crisp, shaded beneath by the sky (a Warp straight down, inverted, times the clouds). The

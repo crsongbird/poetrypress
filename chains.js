@@ -2078,12 +2078,12 @@ export const TEXTURE_CHAINS = {
       ['hue', { slot: '5', name: 'Sheen Hue' }, 40, 1470],                                                      // 14
       ['hue', { slot: '6', name: 'Cloud Hue' }, 40, 1580],                                                      // 15
       ['gradient', { shape: 'linear', angle: 90 }, 260, 40],                                                   // 16 down the page
-      ['perlin', { scale: 26, details: 2, rough: 35, contrast: 22, variation: 1 }, 260, 150],                              // 17 the far hills' rise
-      ['perlin', { scale: 17, details: 2, rough: 35, contrast: 30, variation: 4 }, 260, 260],                              // 18 the middle hills'
-      ['perlin', { scale: 12, details: 2, rough: 35, contrast: 30, variation: 9 }, 260, 370],                              // 19 the near hills'
-      ['mix', { t: 14, '~t': '6,24' }, 480, 40],                                                               // 20
-      ['mix', { t: 22, '~t': '8,36' }, 480, 150],                                                             // 21
-      ['mix', { t: 24, '~t': '10,40' }, 480, 260],                                                             // 22
+      ['curve', { shape: 'noise', count: 6, low: 0, high: 100, variation: 1 }, 260, 150],                     // 17 the far hills' line
+      ['curve', { shape: 'noise', count: 4, low: 0, high: 100, variation: 4 }, 260, 260],                      // 18 the middle hills'
+      ['curve', { shape: 'noise', count: 3, low: 0, high: 100, variation: 9 }, 260, 370],                      // 19 the near hills'
+      ['mix', { t: 9, '~t': '4,15' }, 480, 40],                                                               // 20
+      ['mix', { t: 11, '~t': '5,18' }, 480, 150],                                                             // 21
+      ['mix', { t: 13, '~t': '6,22' }, 480, 260],                                                             // 22
       ['threshold', { at: 45, '~at': '34,58', soft: 0 }, 700, 40],                                             // 23 the land, from the far hills down
       ['threshold', { at: 56, '~at': '45,70', soft: 0 }, 700, 150],                                            // 24 from the middle hills
       ['threshold', { at: 70, '~at': '58,84', soft: 0 }, 700, 260],                                            // 25 the near hills
@@ -2121,18 +2121,18 @@ export const TEXTURE_CHAINS = {
       ['blend', { mode: 'multiply', opacity: 40 }, 1360, 150],                                                 // 57 shaded with the sky
       ['perlin', { scale: 22, details: 2, contrast: 55, variation: 13 }, 260, 700],                            // 58 the land's rolling rise
       ['levels', { lo: 30, hi: 80, gamma: 50 }, 2240, 260],                                                    // 59 (the light spread over the bands)
-      ['curve', { shape: 'noise', count: 7, low: 0, high: 100, variation: 21 }, 260, 810],                     // 60 the far mountains' line
-      ['mix', { t: 22, '~t': '12,34' }, 480, 810],                                                             // 61
+      ['curve', { shape: 'noise', count: 6, low: 0, high: 100, variation: 21 }, 260, 810],                     // 60 the far mountains' line
+      ['mix', { t: 13, '~t': '8,20' }, 480, 810],                                                             // 61
       ['threshold', { at: 40, '~at': '32,52', soft: 0 }, 700, 810],                                            // 62
       ['blend', { mode: 'normal', opacity: 100 }, 1360, 480],                                                  // 63 the mountains on the sky
       ['blend', { mode: 'normal', opacity: 60 }, 1580, 480],                                                   // 64 bluer and paler with distance
       ['math', { op: 'subtract' }, 920, 810],                                                                  // 65 the middle hills (where trees stand)
-      ['scatter', { shape: 'dot', count: 14, size: 34, vary: 50, turn: 0, clump: 65, fade: 0, per: 'per area' }, 1140, 810], // 66 round toon trees
+      ['scatter', { shape: 'dot', count: 14, size: 20, vary: 50, turn: 0, clump: 65, fade: 0, per: 'per area' }, 1140, 810], // 66 round toon trees
       ['blend', { mode: 'multiply', opacity: 100 }, 1800, 480],                                                // 67 the trees, a deeper green
       ['math', { op: 'max' }, 1800, 260],                                                                      // 68 and their domes, for the light
       ['streamers', { shape: 0, count: 4, '~count': '0,9', strands: 2, length: 55, curl: 55, width: 35, twist: 30, depth: 50, horizon: 45, '~horizon': '34,58' }, 2680, 260], // 69 the wind's trails
       ['blend', { mode: 'normal', opacity: 85 }, 3120, 260],                                                   // 70
-      ['curve', { shape: 'noise', count: 22, low: 0, high: 30, variation: 22 }, 260, 920],                     // 71 (and its finer peaks)
+      ['curve', { shape: 'noise', count: 18, low: 0, high: 22, variation: 22 }, 260, 920],                     // 71 (and its finer peaks)
       ['number', { value: 74 }, 2460, 370],                                                                    // 72 the wind from the west
       ['math', { op: 'add' }, 480, 920]],                                                                      // 73
     wires: [[16, 1, 20, 1], [17, 1, 20, 2], [16, 1, 21, 1], [18, 1, 21, 2], [16, 1, 22, 1], [19, 1, 22, 2], [1, 1, 20, 't'], [1, 1, 21, 't'], [1, 1, 22, 't'],
