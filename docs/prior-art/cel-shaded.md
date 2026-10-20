@@ -140,6 +140,66 @@ Sources (this section):
 - Wikipedia, "Bokashi (printing)": https://en.wikipedia.org/wiki/Bokashi_(printing)
 - British Museum, "Technique: making a good impression": https://www.britishmuseum.org/blog/technique-making-good-impression
 
+## 8. Wind-swept toon grass and hills (2026-10-19; the Windswept Hills surface was dropped: Idyllic Meadow already reads as this field, so only the Grass Blades part stayed)
+
+Ruby picked it next ("Toon grass and hills"). The nod is to the great open-air cel-shaded adventure (2017) and its
+green hills, and to the fields the samurai game rides through; the surface takes their grammar, never their picture.
+
+**What the sources say**
+
+- **The art direction.** The 2017 game's look grew from the sailing game's HD remake: its art "stood out from the other
+  HD mockups" [src: Zelda Universe]. It needed to be "an information-dense, mature art style" that still read clearly,
+  so cel shading grew some realism. The team's slogan, "refreshing and full-flavoured", covered "shaders, lighting,
+  models, terrain, effects, UI, weather" [src: Zelda Universe; Thumbsticks].
+- **The grass's light.** Its blades are thought to be low-poly geometry, not alpha cards, with a translucency
+  (subsurface) approximation: sun-facing grass "become[s] almost white"; a texture probably varies its light and dark
+  apart from shadow, and its colour shifts with weather [src: Unreal forum, a reading of the game, not Nintendo's
+  word]. Grass "lighter at grazing angles" separates one hill from the next (a fresnel) [src: Polycount].
+- **A blade, a clump, a field.** In a GPU grass after Ghost of Tsushima's: each blade a cubic Bézier curve; colour from
+  a gradient along the blade, a colour per clump, and the ground's texture; blades grouped in Voronoi clumps that
+  share their parameters, "which breaks up the uniform look"; wind as scrolling 2D Perlin noise through a sine
+  [src: Rademan, ArtStation]. Ghost of Tsushima's own talk: "generating individual blades of grass on the GPU that
+  could each have their own procedural appearance and animation", and "making thousands of individual blades of grass
+  look like a natural field" [src: GDC Vault, Wohllaib].
+- **Gusts you can see.** Ghost of Tsushima's wind keeps one direction but varies its strength over the field "using
+  time-varying Perlin noise": "This is visible on large fields of grass when you can see gusts of winds blow through"
+  [src: Game Developer, Rockenbeck]. A toon grass shader takes its wind from a scrolling distortion texture
+  [src: 80.lv, after Roystan].
+- **Why a gust is pale.** Thoreau, 14 June 1852, on wind in the meadows: the light reflected from "the bent blades
+  (horizontal tops) of rank grass", and leaves' "under sides … turned up by the wind" [src: Walden.org]. A blade bowed
+  over shows its flat top to the sky and to the eye: a running pale band.
+- **Patches lean together.** "Most blades should wave almost in the same direction"; a patch a few metres across bends
+  mostly one way, with gradual shifts between regions [src: POV-Ray newsgroup].
+- **The painter's greens.** Kazuo Oga came to paint the grasses of Totoro "with an awareness of what they were", not
+  "a lot of grass … growing vaguely"; Miyazaki asked for "subdued but beautiful (kirei) colors", and Oga for "softer"
+  warm tones, not "piercing, raw primary colors" [src: Animation Obsessive].
+
+**What makes it recognizable** [est]: rolling hills band behind band, the far ones hazed toward the sky; a field of
+blades in two flat tones (root and tip), the near ones large, shrinking to a smooth colour at the horizon; one wind,
+and pale gust bands running across the grass; light in a few flat bands on the hills' rounded forms; big soft clouds.
+
+**How it is made here** [est]: one new process part, **Grass Blades** (stepsGrass.js): blades in two tones by clump,
+leaning with one wind, bowed and paled where a gust map says, shrinking toward a horizon; maps for the rest (albedo,
+height, sheen). The hills are a Gradient raised by broad Perlins and thresholded, three bands; their forms (blurred
+bands) and the clouds' domes go to the Light Engine, whose light, posterized (Toon Bands), multiplies the colours; the
+gusts are a slow Perlin; the sheen screens the Sheen Hue over the bowed blades.
+
+**Ruby's first look (2026-10-19): "If you're trying to go for a video game Love Letter it needs to be recognizable."**
+The second round adds the game's signatures, researched again:
+- its look is "painterly, gouache-inspired, *en plein air*" [src: Artpublika], "a painterly art style that combined
+  the realism of the game world with its playability" (Takizawa) [src: TweakTown; Nintendo Everything];
+- gouache's atmospheric perspective: "lightening colours of distant elements"; "the distant mountain appears as a
+  neutral blue colour, much lighter than the mountains in the foreground" [src: Fine Art Tutorials]: the mountain
+  ranges, paled and cooled;
+- its trees are foliage whose normals are transferred from a hemisphere so they shade as one round mass, grass tips
+  brighter [src: Polycount]: the round trees, lit as domes;
+- its wind is drawn: white breeze lines that glide over the land, "a 2D plane is enough" [src: three.js forum, after
+  the game]; the stylized Zelda effects use "a simple geometry with the shape of a curve", eroded at its ends
+  [src: Game Developer]: the curling trails (Streamers).
+
+**What it can do that the games can't** [est]: any hue (a lavender field, autumn gold, a blue-grass night), the light
+dial turning the bands round the hills, and words on it.
+
 ## Sources
 
 - Wikipedia, "Cel shading": https://en.wikipedia.org/wiki/Cel_shading
@@ -160,6 +220,26 @@ Sources (this section):
 - Zelda Wiki, "Thunderstorm": https://zeldawiki.wiki/wiki/Thunderstorm
 - Zelda Wiki (Fandom), "Rain": https://zelda.fandom.com/wiki/Rain
 
+- GDC Vault, Eric Wohllaib, "Procedural Grass in Ghost of Tsushima" (abstract): https://gdcvault.com/play/1027214/Advanced-Graphics-Summit-Procedural-Grass
+- Game Developer, "Using vorticles to simulate wind in Ghost of Tsushima": https://gamedeveloper.com/design/using-vorticles-to-simulate-wind-in-i-ghost-of-tsushima-i-
+- Cain Rademan, stylized grass (ArtStation): https://cainrademan.artstation.com/projects/QndNax
+- 80.lv, "Guide: Unity Grass Shader": https://80.lv/articles/guide-unity-grass-shader/
+- Unreal Engine forums, "BotW grass style": https://forums.unrealengine.com/t/botw-grass-style/437647
+- Polycount discussion: https://polycount.com/discussion/comment/2583208
+- Walden.org, Thoreau's journal, 14 June 1852: https://www.walden.org/log-entry/14-june-1852-concord-mass
+- POV-Ray newsgroup on grass: https://news.povray.org/3ca60dc4%40news.povray.org
+- Animation Obsessive, "Defining the World of My Neighbor Totoro": https://animationobsessive.substack.com/p/defining-the-world-of-my-neighbor
+- Animation Obsessive, "What Kazuo Oga Thinks About When He Thinks About Backgrounds": https://animationobsessive.substack.com/p/what-kazuo-oga-thinks-about-when
+
+- Artpublika, "The artistic adventure that is Legend of Zelda: Breath of the Wild": https://www.artpublikamag.com/post/the-artistic-adventure-that-is-legend-of-zelda-breath-of-the-wild
+- TweakTown, "Breath of the Wild art-style explained": https://www.tweaktown.com/news/63954/legend-zelda-breath-wild-art-style-explained/index.html
+- Nintendo Everything, art director on Breath of the Wild's look: https://nintendoeverything.com/art-director-on-why-zeldas-art-style-constantly-changes-and-how-breath-of-the-wilds-look-was-made/
+- Fine Art Tutorials, gouache landscape: https://finearttutorials.com/?p=10133
+- Polycount, stylized trees: https://polycount.com/discussion/comment/2677432
+- three.js forum, "Creating white breezy effect": https://discourse.threejs.org/t/creating-white-breezy-effect-seeking-guidance-and-insights/55552
+- Game Developer, "Recreating the Zelda VFX in Unity": https://www.gamedeveloper.com/art/recreating-the-zelda-vfx-in-unity
+
 **Read but thin:** Zelda Dungeon's summary of a Polycount analysis (the analysis itself is linked, not reproduced); Zelda
 Dungeon's "Analyzing The Wind Waker's Art Style" (nothing on wind, sky or weather).
-**Not read:** Wikipedia's Okami page (the fetch timed out); its facts here come from the Cel shading page.
+**Not read:** Wikipedia's Okami page (the fetch timed out); its facts here come from the Cel shading page. Roystan's
+grass shader guide itself (the permission to fetch it lapsed); 80.lv's summary of it is cited instead.
