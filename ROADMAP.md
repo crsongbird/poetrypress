@@ -371,6 +371,14 @@ superseded) wait for Stage 4.
   <!-- /not-chains -->
   - Each keeps its exact look: the fingerprints must not change.
   - Stage 4 can only offer what is a chain.
+- **R · The renderer pass** (Ruby, 2026-10-20: "a comprehensive plan to improve every surface not yet improved with
+  the new renderer features, for after current roadmap items, before the presets pass"): **docs/renderer-pass.md**.
+  First the general parts that unlock several surfaces (R0: Scatter carrying maps, Paper Tooth, Bevel, Dome, Facet
+  Normals, Starfield taken apart, Marbling, Environment Reflection, Refraction, Emission, depth everywhere, Paint
+  Detail), then every legacy or self-lit surface remade on them, in order of what it gains (R1).
+- **New scenes** (Ruby's brainstorm, the same day): **docs/scene-ideas.md**, static scenes from the document and
+  more, each a seed's choice among its variations, built on six shared features (Portal, Style Mask, an Escher camera,
+  Coalescing Smoke, Sky Things, Kit Furniture). First: Station Windows, Smoke Ecology, Cliffside of the Painted World.
 
 ### Stage 4 · Presets: the last pass
 - **H2** presets as graphs with exposed settings (needs D1, D2 and every
