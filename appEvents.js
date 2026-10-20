@@ -842,7 +842,7 @@ syncTextureParams(true);
   if(hap){ try { const v = localStorage.getItem('uv.haptics.v1'); if(v !== null) hap.checked = v === '1'; } catch(e){}
     setHaptics(hap.checked);
     if(hap.addEventListener) hap.addEventListener('change', () => { setHaptics(hap.checked); try { localStorage.setItem('uv.haptics.v1', hap.checked ? '1' : '0'); } catch(e){} }); }
-  setSkinSound(() => { if(murmur && murmur.enabled) murmur.play('detent'); });
+  setSkinSound((kind, value) => { if(murmur && murmur.enabled) murmur.play(kind === 'limit' ? 'endStop' : kind === 'reset' ? 'reset' : 'detent', { value }); });
   if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => layoutControls());
   layoutControls();
 }

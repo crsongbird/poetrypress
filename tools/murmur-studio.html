@@ -178,25 +178,30 @@ textarea{width:100%;min-height:96px;font-family:var(--mono);font-size:12px;resiz
    Everything the sounds are is DATA (MURMUR_DESIGN, below), so it can be
    shaped by ear in the Murmur Studio and pasted back here:
      scale        the notes everything is drawn from (home is D)
-     octave       where home sits (−1: D2, 0: D3)
+     octave       where home sits (−1: D2, 0: D3, 1: D4)
      room         a little air around the sounds (0–100)
      warmth       gentle saturation (0–100; 0 is clean)
-     humanize     small drifts in time and level (0–100; never in pitch)
-     instruments  five voices: a body (its partials), level, attack, decay,
+     humanize     small drifts in time and level (0–100), and in pitch by
+                  at most three cents (too little to hear as out of tune)
+     instruments  six voices: a body (its partials), level, attack, decay,
                   sustain, brightness, shimmer, octave, pitch drop
      compositions named little phrases, each a list of events:
-                  { inst, kind: note | together | arp | chord | index,
+                  { inst, kind: note | together | arp | chord | index | value | tumble,
                     notes: [scale degrees], shape (chords), at, gap, level, dir }
                   degrees: 0 is home, 7 the octave above, 2 the third, 4 the fifth
      map          which composition each UI function plays (null: silent)
 
-   The same notes every time: nothing is chosen at random but a little
-   timing and level (humanize). Pitches stay inside the scale, and between
-   55 and 1100 Hz. A sound repeated within 40 ms plays once; at most 24
-   voices; a soft limiter on the sum.
+   The same notes every time, but for a dice's tumble (random notes from
+   the snap set, never clashing) and a little timing and level (humanize).
+   Pitches stay inside the scale, and between 55 and 1200 Hz (frequent
+   sounds from D4 to D6, where a phone's speaker carries them: research,
+   docs/prior-art/ui-sound.md §6). A sound repeated within 40 ms plays once;
+   of a burst (under 400 ms apart) only the first two sound; at most 24
+   voices; a soft limiter on the sum. Nothing plays while the page is
+   hidden, and the sound stops working after ten seconds of silence.
 
      const murmur = createMurmur({ volume: 0.4, enabled: false });
-     murmur.play('saveImage'); murmur.play('tab', { index: 2 });
+     murmur.play('saveImage'); murmur.play('tab', { index: 2 }); murmur.play('detent', { value: 0.4 });
      murmur.bind(document);      // [data-sound="<ui function>"], <details>, <select>s, checkboxes
    ============================================================ */
 
@@ -226,7 +231,9 @@ const MURMUR_FUNCTIONS = [
   { id: 'cardOpen',       group: 'Moving around', label: 'Open a card',            where: 'A folded section' },
   { id: 'cardFold',       group: 'Moving around', label: 'Fold a card',            where: 'A folded section' },
   { id: 'checkbox',       group: 'Settings',      label: 'Tick a checkbox',        where: 'Any checkbox' },
-  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (and their ends)' },
+  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (the note rises with the value)' },
+  { id: 'endStop',        group: 'Settings',      label: 'A knob reaches an end',  where: 'The surface\'s knobs and faders, at either end (once on arriving)' },
+  { id: 'reset',          group: 'Settings',      label: 'A knob back to its default', where: 'A double-tap on a knob or fader' },
   { id: 'select',         group: 'Settings',      label: 'Choose from a menu',     where: 'Any drop-down' },
   { id: 'lock',           group: 'Settings',      label: 'Lock a setting',         where: 'The padlock beside a control' },
   { id: 'unlock',         group: 'Settings',      label: 'Unlock a setting',       where: 'The padlock beside a control' },
@@ -261,13 +268,14 @@ const MURMUR_FUNCTIONS = [
   { id: 'nothingToUndo',  group: 'History',       label: 'Nothing left to undo',   where: '↶ at the start' },
 ];
 
-/* Vellum's sounds: very plain, in one minor key (Aeolian, home D2), and few.
+/* Vellum's sounds: very plain, in one minor key (Aeolian, home D4), and few.
    They mark what takes a while, what changes a lot, and what needs you:
    saving, a look arriving, keeping, the Athanor's machinery, a question
    (the SOFT NO), a refusal (the HARD NO), a switched-off control (a hollow
    knock). Most settings are silent. */
 const MURMUR_DESIGN = {
-  v: 2, scale: 'aeolian', octave: -1, room: 18, warmth: 10, humanize: 15,
+  // (home raised from D2 to D4: a phone's speaker barely carries below about 300 Hz; research §6.1)
+  v: 3, scale: 'aeolian', octave: 1, room: 18, warmth: 10, humanize: 15,
   instruments: {
     glass: { name: 'Glass', body: 'glass', level: 0.5,  attack: 0.014, decay: 0.6,  sustain: 0,   bright: 0.35, shimmer: 0.2,  octave: 0, drop: 0 },
     bell:  { name: 'Bell',  body: 'bell',  level: 0.16, attack: 0.006, decay: 2.2,  sustain: 0,   bright: 0.25, shimmer: 0.2,  octave: 0, drop: 0 },
@@ -278,6 +286,17 @@ const MURMUR_DESIGN = {
   },
   compositions: {
     tick:     { name: 'Tick', events: [{ inst: 'tick', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.5 }] },
+    // a knob's MARK: a dry tick on the pentatonic ladder, D4 at the bottom to D6 at the top (up is up)
+    mark:     { name: 'A mark', events: [{ inst: 'tick', kind: 'value', notes: [-7, -5, -4, -3, -1, 0, 2, 3, 4, 6, 7], at: 0, gap: 0, level: 0.45 }] },
+    // an END STOP: a damped knock, home at the bottom, the fifth at the top
+    endStop:  { name: 'An end', events: [{ inst: 'thud', kind: 'value', notes: [0, 4], at: 0, gap: 0, level: 0.6 }] },
+    // a RESET: glass falling a fifth to home (distinct from any mark: exact home is hard to hit by hand)
+    reset:    { name: 'Back to the default', events: [{ inst: 'glass', kind: 'arp', notes: [11, 7], at: 0, gap: 0.06, level: 0.4 }] },
+    // the LATCH: a lock closing downward, opening upward
+    latchShut: { name: 'A lock shuts', events: [{ inst: 'tick', kind: 'arp', notes: [7, 4], at: 0, gap: 0.025, level: 0.45 }] },
+    latchOpen: { name: 'A lock opens', events: [{ inst: 'tick', kind: 'arp', notes: [4, 7], at: 0, gap: 0.025, level: 0.45 }] },
+    // the DICE: a tumble of ticks on random rungs, landing on home or the fifth (all in the pentatonic: nothing clashes)
+    tumble:   { name: 'Dice', events: [{ inst: 'tick', kind: 'tumble', notes: [-1, 0, 2, 3, 4], land: [0, 4], at: 0, gap: 0.07, level: 0.35 }] },
     // the SOFT NO (Ruby's): a breath that steps down a half-step and stops — the question before undoing work
     confirm:  { name: 'A soft no', events: [{ inst: 'pad', kind: 'arp', notes: [2, 1], at: 0, gap: 0.12, level: 0.35 }] },
     // the HARD NO: two knocks, and the ground falls to home — final
@@ -313,8 +332,8 @@ const MURMUR_DESIGN = {
     earth:    { name: 'Earth', events: [{ inst: 'tine', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.35 }] },
   },
   map: {
-    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'tick', select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
-    preset: 'arrive', reroll: null, summonType: 'summon', summonBackdrop: 'summon',
+    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'mark', endStop: 'endStop', reset: 'reset', select: null, lock: 'latchShut', unlock: 'latchOpen', dialRandom: 'tumble', soundOn: 'arrive',
+    preset: 'arrive', reroll: 'tumble', summonType: 'summon', summonBackdrop: 'summon',
     readingFire: null, readingWater: null, readingWind: null, readingEarth: null,
     spellCreate: 'keep', spellApply: 'arrive', spellShare: null, spellDissolve: null, poemRecord: 'keep', saveImage: 'done',
     athanorOpen: 'open', athanorClose: 'close', nodeAdd: 'blipUp', nodeRemove: 'blipDown', wireConnect: 'plugIn', wireDisconnect: 'plugOut', graphLoad: 'lit',
@@ -323,7 +342,7 @@ const MURMUR_DESIGN = {
   },
 };
 
-const M_LOW_HZ = 55, M_HIGH_HZ = 1100, M_PEAK = 0.06, M_MAX_VOICES = 24, M_REPEAT_MS = 40;
+const M_LOW_HZ = 55, M_HIGH_HZ = 1200, M_PEAK = 0.06, M_MAX_VOICES = 24, M_REPEAT_MS = 40, M_BURST_MS = 400, M_IDLE_MS = 10000;
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const murmurClamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const M_PC = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -336,7 +355,7 @@ function normalizeDesign(d){
   const insts = {};
   for(const k of Object.keys(D.instruments)) insts[k] = { ...D.instruments[k], ...((x.instruments || {})[k] || {}) };
   return {
-    v: 1, scale: MURMUR_SCALES[x.scale] ? x.scale : D.scale,
+    v: 3, scale: MURMUR_SCALES[x.scale] ? x.scale : D.scale,
     octave: Number.isFinite(+x.octave) ? murmurClamp(Math.round(+x.octave), -1, 1) : D.octave,
     room: Number.isFinite(+x.room) ? murmurClamp(+x.room, 0, 100) : D.room,
     warmth: Number.isFinite(+x.warmth) ? murmurClamp(+x.warmth, 0, 100) : D.warmth,
@@ -375,6 +394,12 @@ function renderComposition(design, id, opts = {}){
     if(!notes.length) continue;
     const at = +e.at || 0, gap = +e.gap || 0, level = Number.isFinite(+e.level) ? +e.level : 0.4;
     if(e.kind === 'index'){ push(e.inst, notes[((opts.index || 0) % notes.length + notes.length) % notes.length], at, level); continue; }
+    // a VALUE (0–1: a knob's place) picks the rung: low notes low, high notes high
+    if(e.kind === 'value'){ const v = murmurClamp(Number.isFinite(+opts.value) ? +opts.value : 0.5, 0, 1); push(e.inst, notes[Math.round(v*(notes.length - 1))], at, level); continue; }
+    // a TUMBLE: three or four random rungs (never the same twice running), landing on one of its landings
+    if(e.kind === 'tumble'){ const land = (Array.isArray(e.land) ? e.land : [notes[0]]).map(Number), n = 3 + Math.floor(Math.random()*2); let last = null;
+      for(let i = 0; i < n; i++){ let d; do { d = notes[Math.floor(Math.random()*notes.length)]; } while(d === last && notes.length > 1); last = d; push(e.inst, d, at + i*gap, level*(0.75 + 0.25*Math.random())); }
+      push(e.inst, land[Math.floor(Math.random()*land.length)], at + n*gap, level); continue; }
     let seq = e.kind === 'chord' ? (MURMUR_SHAPES[e.shape] || MURMUR_SHAPES.triad).map(x => notes[0] + x) : e.kind === 'note' ? [notes[0]] : notes.slice();
     if(e.dir === 'down') seq = seq.reverse();
     const lone = e.kind === 'arp';
@@ -386,13 +411,15 @@ function renderComposition(design, id, opts = {}){
 function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } = {}){
   let ctx = null, voices = 0, nodes = null;
   let vol = murmurClamp(volume, 0, 1), on = !!enabled, D = normalizeDesign(design);
-  const lastTime = new Map(), listeners = new Set();
+  const lastTime = new Map(), burst = new Map(), listeners = new Set();
   const hasWindow = typeof window !== 'undefined';
 
   function ensure(){
     if(ctx) return ctx;
     const AC = hasWindow && (window.AudioContext || window.webkitAudioContext);
     if(!AC) return null;
+    // (an ambient session where the browser has one: it mixes with the person's music instead of stopping it)
+    try { if(typeof navigator !== 'undefined' && navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch(e){}
     ctx = new AC();
     // voices → warmth → low-pass → (dry + room) → limiter → master → analyser → out
     const warm = ctx.createWaveShaper(); warm.oversample = '2x';
@@ -416,7 +443,11 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
   }
   // nothing is made until it is on and the page has been touched
   const wake = () => { if(!on) return; const c = ensure(); if(c && c.state === 'suspended') c.resume(); };
-  if(hasWindow && window.addEventListener) ['pointerdown', 'keydown', 'touchstart'].forEach(t => window.addEventListener(t, wake, { capture: true, passive: true }));
+  // (on a touch screen the events that may start sound are the ones that END a touch: pointerup, touchend)
+  if(hasWindow && window.addEventListener) ['pointerdown', 'pointerup', 'keydown', 'touchstart', 'touchend'].forEach(t => window.addEventListener(t, wake, { capture: true, passive: true }));
+  // after ten seconds of silence the sound rests (no work on the phone's audio while nothing plays); a touch wakes it
+  let idleTimer = null;
+  const restSoon = () => { if(idleTimer) clearTimeout(idleTimer); idleTimer = setTimeout(() => { idleTimer = null; if(ctx && ctx.state === 'running' && voices === 0 && ctx.suspend) ctx.suspend().catch(() => {}); }, M_IDLE_MS); };
   const rand = (a, b) => a + Math.random() * (b - a);
 
   /* one voice: the instrument's body, shaped by its settings */
@@ -455,6 +486,7 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
     // a context that is still waking (the first touch) plays as soon as it is up
     if(c.state !== 'running'){ if(c.resume) c.resume().then(() => list.forEach(voice)).catch(() => {}); }
     else list.forEach(voice);
+    restSoon();
     listeners.forEach(fn => { try { fn(list); } catch(e){} });
     return list;
   }
@@ -462,10 +494,15 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
   /** A UI function's sound (its composition in the map; silent if none). */
   function play(fn, opts = {}){
     if(!on || vol <= 0) return [];
+    if(typeof document !== 'undefined' && document.hidden) return [];   // (nothing for a page no one is looking at)
     const id = D.map[fn]; if(!id) return [];
-    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    if(now - (lastTime.get(fn) || 0) < M_REPEAT_MS) return [];
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now(), prev = lastTime.get(fn) || 0;
+    if(now - prev < M_REPEAT_MS) return [];
+    // a BURST (the same thing again and again, under 400 ms apart) sounds twice, then rests until it stops; a knob's
+    // marks are exempt (they are the hand's own rhythm, and already one per 50 ms)
+    const run = now - prev < M_BURST_MS ? (burst.get(fn) || 1) + 1 : 1; burst.set(fn, run);
     lastTime.set(fn, now);
+    if(run > 2 && fn !== 'detent') return [];
     return playNotes(renderComposition(D, id, opts));
   }
 

@@ -3298,7 +3298,7 @@ but bear with me, dear}]/jitter:200
             <span class="el-name sr-only" id="elementName" aria-live="polite"></span>
           </div>
           <div class="surface-acts full">
-            <button class="ghost" id="randomSurfaceBtn" data-sound="summonBackdrop" type="button" data-str="button.randomSurfaceBtn">⟳ New Random Surface</button>
+            <button class="ghost" id="randomSurfaceBtn" data-sound="reroll" type="button" data-str="button.randomSurfaceBtn">⟳ New Random Surface</button>
             <button class="ghost" id="revealSurfaceBtn" data-sound="athanorOpen" type="button" data-str="button.revealSurfaceBtn" title="Open this surface's parts and wires in the Athanor. The page keeps this surface until you Apply your version.">🜉 Edit in the Athanor</button>
           </div>
           <!-- THE SURFACE AND THE WORDS sit under the surface's own buttons -->
@@ -30064,7 +30064,9 @@ const MURMUR_FUNCTIONS = [
   { id: 'cardOpen',       group: 'Moving around', label: 'Open a card',            where: 'A folded section' },
   { id: 'cardFold',       group: 'Moving around', label: 'Fold a card',            where: 'A folded section' },
   { id: 'checkbox',       group: 'Settings',      label: 'Tick a checkbox',        where: 'Any checkbox' },
-  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (and their ends)' },
+  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (the note rises with the value)' },
+  { id: 'endStop',        group: 'Settings',      label: 'A knob reaches an end',  where: 'The surface\'s knobs and faders, at either end (once on arriving)' },
+  { id: 'reset',          group: 'Settings',      label: 'A knob back to its default', where: 'A double-tap on a knob or fader' },
   { id: 'select',         group: 'Settings',      label: 'Choose from a menu',     where: 'Any drop-down' },
   { id: 'lock',           group: 'Settings',      label: 'Lock a setting',         where: 'The padlock beside a control' },
   { id: 'unlock',         group: 'Settings',      label: 'Unlock a setting',       where: 'The padlock beside a control' },
@@ -30105,7 +30107,8 @@ const MURMUR_FUNCTIONS = [
 
 
 const MURMUR_DESIGN = {
-  v: 2, scale: 'aeolian', octave: -1, room: 18, warmth: 10, humanize: 15,
+
+  v: 3, scale: 'aeolian', octave: 1, room: 18, warmth: 10, humanize: 15,
   instruments: {
     glass: { name: 'Glass', body: 'glass', level: 0.5,  attack: 0.014, decay: 0.6,  sustain: 0,   bright: 0.35, shimmer: 0.2,  octave: 0, drop: 0 },
     bell:  { name: 'Bell',  body: 'bell',  level: 0.16, attack: 0.006, decay: 2.2,  sustain: 0,   bright: 0.25, shimmer: 0.2,  octave: 0, drop: 0 },
@@ -30116,6 +30119,17 @@ const MURMUR_DESIGN = {
   },
   compositions: {
     tick:     { name: 'Tick', events: [{ inst: 'tick', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.5 }] },
+
+    mark:     { name: 'A mark', events: [{ inst: 'tick', kind: 'value', notes: [-7, -5, -4, -3, -1, 0, 2, 3, 4, 6, 7], at: 0, gap: 0, level: 0.45 }] },
+
+    endStop:  { name: 'An end', events: [{ inst: 'thud', kind: 'value', notes: [0, 4], at: 0, gap: 0, level: 0.6 }] },
+
+    reset:    { name: 'Back to the default', events: [{ inst: 'glass', kind: 'arp', notes: [11, 7], at: 0, gap: 0.06, level: 0.4 }] },
+
+    latchShut: { name: 'A lock shuts', events: [{ inst: 'tick', kind: 'arp', notes: [7, 4], at: 0, gap: 0.025, level: 0.45 }] },
+    latchOpen: { name: 'A lock opens', events: [{ inst: 'tick', kind: 'arp', notes: [4, 7], at: 0, gap: 0.025, level: 0.45 }] },
+
+    tumble:   { name: 'Dice', events: [{ inst: 'tick', kind: 'tumble', notes: [-1, 0, 2, 3, 4], land: [0, 4], at: 0, gap: 0.07, level: 0.35 }] },
 
     confirm:  { name: 'A soft no', events: [{ inst: 'pad', kind: 'arp', notes: [2, 1], at: 0, gap: 0.12, level: 0.35 }] },
 
@@ -30151,8 +30165,8 @@ const MURMUR_DESIGN = {
     earth:    { name: 'Earth', events: [{ inst: 'tine', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.35 }] },
   },
   map: {
-    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'tick', select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
-    preset: 'arrive', reroll: null, summonType: 'summon', summonBackdrop: 'summon',
+    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'mark', endStop: 'endStop', reset: 'reset', select: null, lock: 'latchShut', unlock: 'latchOpen', dialRandom: 'tumble', soundOn: 'arrive',
+    preset: 'arrive', reroll: 'tumble', summonType: 'summon', summonBackdrop: 'summon',
     readingFire: null, readingWater: null, readingWind: null, readingEarth: null,
     spellCreate: 'keep', spellApply: 'arrive', spellShare: null, spellDissolve: null, poemRecord: 'keep', saveImage: 'done',
     athanorOpen: 'open', athanorClose: 'close', nodeAdd: 'blipUp', nodeRemove: 'blipDown', wireConnect: 'plugIn', wireDisconnect: 'plugOut', graphLoad: 'lit',
@@ -30161,7 +30175,7 @@ const MURMUR_DESIGN = {
   },
 };
 
-const M_LOW_HZ = 55, M_HIGH_HZ = 1100, M_PEAK = 0.06, M_MAX_VOICES = 24, M_REPEAT_MS = 40;
+const M_LOW_HZ = 55, M_HIGH_HZ = 1200, M_PEAK = 0.06, M_MAX_VOICES = 24, M_REPEAT_MS = 40, M_BURST_MS = 400, M_IDLE_MS = 10000;
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const murmurClamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const M_PC = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -30174,7 +30188,7 @@ function normalizeDesign(d){
   const insts = {};
   for(const k of Object.keys(D.instruments)) insts[k] = { ...D.instruments[k], ...((x.instruments || {})[k] || {}) };
   return {
-    v: 1, scale: MURMUR_SCALES[x.scale] ? x.scale : D.scale,
+    v: 3, scale: MURMUR_SCALES[x.scale] ? x.scale : D.scale,
     octave: Number.isFinite(+x.octave) ? murmurClamp(Math.round(+x.octave), -1, 1) : D.octave,
     room: Number.isFinite(+x.room) ? murmurClamp(+x.room, 0, 100) : D.room,
     warmth: Number.isFinite(+x.warmth) ? murmurClamp(+x.warmth, 0, 100) : D.warmth,
@@ -30213,6 +30227,12 @@ function renderComposition(design, id, opts = {}){
     if(!notes.length) continue;
     const at = +e.at || 0, gap = +e.gap || 0, level = Number.isFinite(+e.level) ? +e.level : 0.4;
     if(e.kind === 'index'){ push(e.inst, notes[((opts.index || 0) % notes.length + notes.length) % notes.length], at, level); continue; }
+
+    if(e.kind === 'value'){ const v = murmurClamp(Number.isFinite(+opts.value) ? +opts.value : 0.5, 0, 1); push(e.inst, notes[Math.round(v*(notes.length - 1))], at, level); continue; }
+
+    if(e.kind === 'tumble'){ const land = (Array.isArray(e.land) ? e.land : [notes[0]]).map(Number), n = 3 + Math.floor(Math.random()*2); let last = null;
+      for(let i = 0; i < n; i++){ let d; do { d = notes[Math.floor(Math.random()*notes.length)]; } while(d === last && notes.length > 1); last = d; push(e.inst, d, at + i*gap, level*(0.75 + 0.25*Math.random())); }
+      push(e.inst, land[Math.floor(Math.random()*land.length)], at + n*gap, level); continue; }
     let seq = e.kind === 'chord' ? (MURMUR_SHAPES[e.shape] || MURMUR_SHAPES.triad).map(x => notes[0] + x) : e.kind === 'note' ? [notes[0]] : notes.slice();
     if(e.dir === 'down') seq = seq.reverse();
     const lone = e.kind === 'arp';
@@ -30224,13 +30244,15 @@ function renderComposition(design, id, opts = {}){
 function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } = {}){
   let ctx = null, voices = 0, nodes = null;
   let vol = murmurClamp(volume, 0, 1), on = !!enabled, D = normalizeDesign(design);
-  const lastTime = new Map(), listeners = new Set();
+  const lastTime = new Map(), burst = new Map(), listeners = new Set();
   const hasWindow = typeof window !== 'undefined';
 
   function ensure(){
     if(ctx) return ctx;
     const AC = hasWindow && (window.AudioContext || window.webkitAudioContext);
     if(!AC) return null;
+
+    try { if(typeof navigator !== 'undefined' && navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch(e){}
     ctx = new AC();
 
     const warm = ctx.createWaveShaper(); warm.oversample = '2x';
@@ -30254,7 +30276,11 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
   }
 
   const wake = () => { if(!on) return; const c = ensure(); if(c && c.state === 'suspended') c.resume(); };
-  if(hasWindow && window.addEventListener) ['pointerdown', 'keydown', 'touchstart'].forEach(t => window.addEventListener(t, wake, { capture: true, passive: true }));
+
+  if(hasWindow && window.addEventListener) ['pointerdown', 'pointerup', 'keydown', 'touchstart', 'touchend'].forEach(t => window.addEventListener(t, wake, { capture: true, passive: true }));
+
+  let idleTimer = null;
+  const restSoon = () => { if(idleTimer) clearTimeout(idleTimer); idleTimer = setTimeout(() => { idleTimer = null; if(ctx && ctx.state === 'running' && voices === 0 && ctx.suspend) ctx.suspend().catch(() => {}); }, M_IDLE_MS); };
   const rand = (a, b) => a + Math.random() * (b - a);
 
    
@@ -30293,6 +30319,7 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
 
     if(c.state !== 'running'){ if(c.resume) c.resume().then(() => list.forEach(voice)).catch(() => {}); }
     else list.forEach(voice);
+    restSoon();
     listeners.forEach(fn => { try { fn(list); } catch(e){} });
     return list;
   }
@@ -30300,10 +30327,15 @@ function createMurmur({ volume = 0.4, enabled = false, design = MURMUR_DESIGN } 
    
   function play(fn, opts = {}){
     if(!on || vol <= 0) return [];
+    if(typeof document !== 'undefined' && document.hidden) return [];
     const id = D.map[fn]; if(!id) return [];
-    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    if(now - (lastTime.get(fn) || 0) < M_REPEAT_MS) return [];
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now(), prev = lastTime.get(fn) || 0;
+    if(now - prev < M_REPEAT_MS) return [];
+
+
+    const run = now - prev < M_BURST_MS ? (burst.get(fn) || 1) + 1 : 1; burst.set(fn, run);
     lastTime.set(fn, now);
+    if(run > 2 && fn !== 'detent') return [];
     return playNotes(renderComposition(D, id, opts));
   }
 
@@ -30522,7 +30554,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · f779a88";
+const STAMP = "2026-10-20 · d37b81a";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -40766,11 +40798,11 @@ let skHapticsOn = true, skLastBuzz = 0, skinSound = null;
 function setHaptics(on){ skHapticsOn = !!on; }
  
 function setSkinSound(fn){ skinSound = typeof fn === 'function' ? fn : null; }
-function haptic(kind){
+function haptic(kind, value){
   const now = Date.now(); if(now - skLastBuzz < 50) return; skLastBuzz = now;
-  if(skinSound) try { skinSound(kind); } catch(e){}
+  if(skinSound) try { skinSound(kind, value); } catch(e){}
   if(!skHapticsOn) return;
-  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' ? 15 : 10); } catch(e){}
+  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' || kind === 'reset' ? 15 : 10); } catch(e){}
 }
 
 
@@ -40791,9 +40823,10 @@ function skinSet(input, v, opts = {}){
   const was = +input.value;
   if(v === was) return false;
   input.value = String(v);
-  if(v === lo || v === hi) haptic('limit');
-  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick');
-  else if(def != null && !ticks.length && v === def) haptic('detent');
+  const at = (v - lo)/(hi - lo);
+  if(v === lo || v === hi) haptic('limit', at);
+  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick', at);
+  else if(def != null && !ticks.length && v === def) haptic('detent', at);
   input.dispatchEvent(new Event('input', { bubbles: true }));
   return true;
 }
@@ -40862,7 +40895,7 @@ function skDrag(el, input, mode){
     e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch(err){}
     const now = Date.now();
     if(now - lastTap < SKIN_FEEL.doubleTapMs && input.dataset && input.dataset.def != null){
-      lastTap = 0; skinSet(input, +input.dataset.def); haptic('detent'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
+      lastTap = 0; skinSet(input, +input.dataset.def); haptic('reset'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
     st = { id: e.pointerId, at: now, x: e.clientX, y: e.clientY, v: +input.value, moved: false, tier: 1, tierAt: 0, hist: [] };
     el.classList.add('turning'); showReadout(input, { hold: true });
   });
@@ -41948,7 +41981,7 @@ syncTextureParams(true);
   if(hap){ try { const v = localStorage.getItem('uv.haptics.v1'); if(v !== null) hap.checked = v === '1'; } catch(e){}
     setHaptics(hap.checked);
     if(hap.addEventListener) hap.addEventListener('change', () => { setHaptics(hap.checked); try { localStorage.setItem('uv.haptics.v1', hap.checked ? '1' : '0'); } catch(e){} }); }
-  setSkinSound(() => { if(murmur && murmur.enabled) murmur.play('detent'); });
+  setSkinSound((kind, value) => { if(murmur && murmur.enabled) murmur.play(kind === 'limit' ? 'endStop' : kind === 'reset' ? 'reset' : 'detent', { value }); });
   if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => layoutControls());
   layoutControls();
 }
