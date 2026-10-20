@@ -34,6 +34,12 @@
  */
 
 const ELEMENT_DEFAULTS = {
+  "poemShown": {
+    "tag": "input",
+    "type": "checkbox",
+    "checked": true,
+    "value": ""
+  },
   "textGradientToggle": {
     "tag": "input",
     "type": "checkbox",

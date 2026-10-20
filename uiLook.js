@@ -55,6 +55,7 @@ const PERSISTED = [
   ['borderRounded',        'borderRounded',        'check'],
   ['borderRadius',         'borderRadius',         'text', 'px'],
   ['cardToggle',           'cardToggle',           'check'],
+  ['poemShown',            'poemShown',            'check'],     // the inscription's eye: the words drawn, or kept back
   ['cardColor1',           'cardColor1Hex',        'color'],
   ['cardGradientToggle',   'cardGradientToggle',   'check'],
   ['cardColor2',           'cardColor2Hex',        'color'],

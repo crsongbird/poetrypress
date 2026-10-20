@@ -37,7 +37,7 @@ import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
 import { RELEASE_DATE, TEXTURE_STAMPS, SWATCH_STAMP } from './release.js';
-import { render, scheduleRender, noteUserActivity, TYPING_SETTLE_MS, setRenderScale, resetBackBuffer, setSurfaceSource, fontIndexByName } from './canvasRenderer.js';
+import { render, scheduleRender, noteUserActivity, TYPING_SETTLE_MS, setRenderScale, resetBackBuffer, setSurfaceSource, fontIndexByName, invalidateTextMeasurements } from './canvasRenderer.js';
 import { paramsFor, capsFor, paramReadout, dropLargeTextures, clearTexturesOfTypes, TEXTURE_PARAMS, textureKeyFor, peekTexture } from './textureGenerators.js';
 import { seedFromText } from './seedWords.js';
 import { createVault, stripToLook } from './vault.js';
@@ -377,6 +377,7 @@ $('textureSeedReroll').addEventListener('click', ()=>{
 });
 $('usernameCorner').addEventListener('change', scheduleRender);
 $('spellMark').addEventListener('change', scheduleRender);
+$('poemShown').addEventListener('change', () => { invalidateTextMeasurements(); scheduleRender(); });   // the inscription's eye
 if($('usernameField') && $('usernameField').addEventListener){
   const keepCredit = () => { try { localStorage.setItem(CREDIT_KEY, String($('usernameField').value || '').slice(0, 120)); } catch(e){} };
   $('usernameField').addEventListener('input', keepCredit); $('usernameField').addEventListener('change', keepCredit);

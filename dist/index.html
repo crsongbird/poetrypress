@@ -2453,6 +2453,10 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
 .controls-fold:not([open]) > summary::after{ content:" ▸"; }
 .controls-fold > .field{ margin-top:6px; }
 
+/* THE INSCRIPTION'S EYE beside the editor's name */
+.card-title-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.card-title-row > .card-title{ flex:1 1 auto; margin:0; }
+
 </style>
 
 </head>
@@ -2474,7 +2478,9 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
     <div class="card" data-tab="write">
-      <p class="card-title" data-str="card.incantation_editor_poetic_magick_l">  Incantation Editor (Poetic Magick Language)</p>
+      <!-- THE INSCRIPTION'S EYE (Ruby): the poem off the page and back, its words kept in the editor -->
+      <div class="card-title-row"><p class="card-title" data-str="card.incantation_editor_poetic_magick_l">  Incantation Editor (Poetic Magick Language)</p>
+        <input type="checkbox" class="eye" id="poemShown" checked title="Show the poem on the page (hidden, its words stay here)" aria-label="Show the poem on the page"></div>
       <div class="check-row editor-toggle">
         <input type="checkbox" id="highlightToggle" checked>
         <label for="highlightToggle" data-str="label.script_highlighting">Script Highlighting</label>
@@ -28730,7 +28736,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Cordelia';
+const RELEASE = 'Uranus–Ophelia';
 
 const RELEASE_DATE = '2026-10-20';
 
@@ -29420,7 +29426,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · eb12aec";
+const STAMP = "2026-10-20 · d02624f";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -30653,9 +30659,11 @@ function lightArrow(deg){
   return ARROWS[((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
 }
  
+function poemSource(){ const eye = $('poemShown'); return eye && eye.checked === false ? '' : (($('poemText') || {}).value || ''); }
+ 
 function resolvedPoemText(){
   const cv = $('poemCanvas'), W = (cv && cv.width) || 3072, H = (cv && cv.height) || 3072;
-  try { return $('poemText') ? resolvePmlVariables($('poemText').value, pmlVarContext(W, H)) : null; } catch(e){ return null; }
+  try { return $('poemText') ? resolvePmlVariables(poemSource(), pmlVarContext(W, H)) : null; } catch(e){ return null; }
 }
 function pmlVarContext(W, H){
   const on = !$('textureToggle') || $('textureToggle').checked;
@@ -31202,10 +31210,10 @@ function renderInto(canvas){
 
 
   const varCtx = pmlVarContext(W, H);
-  const rawText = resolvePmlVariables($('poemText').value, varCtx);
+  const rawText = resolvePmlVariables(poemSource(), varCtx);
 
   const shapeOf = v => String(v).replace(/\d/g, '0');
-  const shapeText = resolvePmlVariables($('poemText').value, { ...varCtx, renderMs: shapeOf(varCtx.renderMs), profile: shapeOf(varCtx.profile), cacheMB: shapeOf(varCtx.cacheMB) });
+  const shapeText = resolvePmlVariables(poemSource(), { ...varCtx, renderMs: shapeOf(varCtx.renderMs), profile: shapeOf(varCtx.profile), cacheMB: shapeOf(varCtx.cacheMB) });
   const lines = getCachedLines(rawText, accent1On, accent2On);
 
   const fontDef = FONTS[$('fontFamily').value];
@@ -37773,8 +37781,12 @@ const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the b
 
 
 
-const EYES = ['spellMark'];
-const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle'];
+const EYES = ['spellMark', 'highlightToggle', 'forgeSteps'];
+
+
+const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle',
+  'customSizeToggle', 'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'borderStitchOut', 'borderRounded', 'cardLink',
+  'cardStitchOut', 'cardRounded', 'fullPreview'];
 
 
 
@@ -38494,6 +38506,7 @@ const PERSISTED = [
   ['borderRounded',        'borderRounded',        'check'],
   ['borderRadius',         'borderRadius',         'text', 'px'],
   ['cardToggle',           'cardToggle',           'check'],
+  ['poemShown',            'poemShown',            'check'],
   ['cardColor1',           'cardColor1Hex',        'color'],
   ['cardGradientToggle',   'cardGradientToggle',   'check'],
   ['cardColor2',           'cardColor2Hex',        'color'],
@@ -40038,6 +40051,7 @@ $('textureSeedReroll').addEventListener('click', ()=>{
 });
 $('usernameCorner').addEventListener('change', scheduleRender);
 $('spellMark').addEventListener('change', scheduleRender);
+$('poemShown').addEventListener('change', () => { invalidateTextMeasurements(); scheduleRender(); });
 if($('usernameField') && $('usernameField').addEventListener){
   const keepCredit = () => { try { localStorage.setItem(CREDIT_KEY, String($('usernameField').value || '').slice(0, 120)); } catch(e){} };
   $('usernameField').addEventListener('input', keepCredit); $('usernameField').addEventListener('change', keepCredit);

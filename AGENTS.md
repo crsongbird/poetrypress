@@ -797,6 +797,13 @@ Mistakes made once, so they aren't made twice: **docs/pitfalls.md**. Skim it bef
 
 ## 11 · Design language
 
+**A spell synthesizer, not a music one** (Ruby). Controls are drawn as the light and camera dials are: thin lines,
+glyphs, rings and tick dots; flat, never skeuomorphic.
+
+**One language for toggles** (Ruby: "my favorite one is the eye"): an **eye** where something is shown or hidden (a
+section in its heading, the inscription, highlighting, the spell code, step previews); a **switch** where a feature is
+turned on (Text Aware, Rounded Corners, Sound…). No plain checkbox: uiLocks.js's `EYES` and `SWITCHES` say which.
+
 **The four elements.** Every preset, texture and colour decision belongs to
 one. Each owns a different visual channel, so they combine without
 competing.

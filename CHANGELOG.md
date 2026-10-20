@@ -4,6 +4,16 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Ophelia (2026-10-20)
+
+- **An eye on the Incantation Editor** takes the poem off the page and puts
+  it back; its words stay in the editor, and a saved look remembers it.
+- **Script Highlighting is an eye**, and every other checkbox is now a
+  switch: an eye wherever something is shown or hidden, a switch wherever a
+  feature is turned on (Text Aware, Shape Aware, Cut Out by Text, Blend with
+  Text, Custom Resolution, Points Outward, Rounded Corners, Shape Linked to
+  Border, Full-Size Preview). The Athanor's Steps is an eye too.
+
 ## Uranus–Cordelia (2026-10-20)
 
 - **The camera's Zoom is a slider above its dial**, where the light's Main
@@ -439,28 +449,3 @@ and every control behaving as it did.
   from the light. The rim light has a spike of its own, in its colour.
 - **Water's shadows fall away from the light** too. Ringworld's land is lit
   from the handle's side, a little.
-
-## Saturn–Farbauti (2026-10-19)
-
-- **`$` works wherever `§` does in PML.** `$moon`, `$spell` and the other
-  names are filled in just as `§moon` is, and the editor colours them the
-  same. A `$` that isn't one of the names (a price, `$5`) is left as it is.
-- **The rim light has its own strength slider.** With Rim chosen above the
-  light dial, the slider and number under it set how bright the rim light
-  is (0 turns it off); with Main chosen they are Ambient, as before. The
-  rim handle on the dial fades as the rim light weakens, and the rim light
-  has its own spike, in its own colour.
-- **The light and camera dials sit level** side by side, also when Main /
-  Rim is showing above the light dial.
-- **Writing on a phone keeps more of the preview.** While the keyboard is
-  up, the poem keeps about a dozen lines and the preview takes the room
-  above them, instead of folding to a strip.
-- **The PML guide opens over the preview while you write on a phone,** and
-  the keyboard stays up, so the poem stays where it was.
-- **The ⓘ hints button goes dark when you turn hints off** on a phone. A
-  tap had left it lit.
-- **Under the hood:** reviewed the tests. The check that the die's words
-  live in strings.js read the app's source from the interface suite; it is
-  with the other source checks now, as the invariant it is. The new rim
-  controls are listed as views of the rim light's colour in the
-  persistence check.

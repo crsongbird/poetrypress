@@ -81,8 +81,11 @@ check('§UVIcon draws the sigil', R('§UVIcon') === R('§Glyph!sigil'));
   const cr = src('canvasRenderer.js');
   // three times: to draw, with live numbers by their shape (the fit's key), and for the alt text
   check('nothing but the poem is resolved, and it is resolved before it is parsed',
-    (cr.match(/resolvePmlVariables\(/g) || []).length === 3 && (cr.match(/resolvePmlVariables\(\$\('poemText'\)\.value, /g) || []).length === 3
-    && /const rawText = resolvePmlVariables\(\$\('poemText'\)\.value, varCtx\);/.test(cr));
+    (cr.match(/resolvePmlVariables\(/g) || []).length === 3 && (cr.match(/resolvePmlVariables\(poemSource\(\), /g) || []).length === 3
+    && /const rawText = resolvePmlVariables\(poemSource\(\), varCtx\);/.test(cr));
+  // (the poem as drawn: its words, or none while the inscription's eye is shut)
+  check('the poem resolved is the poem as the page draws it (poemSource: none while the inscription\'s eye is shut)',
+    /export function poemSource\(\)\{ const eye = \$\('poemShown'\); return eye && eye\.checked === false \? '' : /.test(cr));
 }
 
 // ---- `code` segments ----

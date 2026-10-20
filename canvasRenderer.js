@@ -1141,10 +1141,12 @@ function lightArrow(deg){
   const ang = Math.atan2(-Math.sin(a), -Math.cos(a));
   return ARROWS[((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
 }
+/** The poem as the page draws it: its words, or none while the inscription's eye is shut (the words stay in the editor). */
+export function poemSource(){ const eye = $('poemShown'); return eye && eye.checked === false ? '' : (($('poemText') || {}).value || ''); }
 /** The poem with its §Variables filled in, as the page shows them (the alt text reads this). */
 export function resolvedPoemText(){
   const cv = $('poemCanvas'), W = (cv && cv.width) || 3072, H = (cv && cv.height) || 3072;
-  try { return $('poemText') ? resolvePmlVariables($('poemText').value, pmlVarContext(W, H)) : null; } catch(e){ return null; }
+  try { return $('poemText') ? resolvePmlVariables(poemSource(), pmlVarContext(W, H)) : null; } catch(e){ return null; }
 }
 function pmlVarContext(W, H){
   const on = !$('textureToggle') || $('textureToggle').checked;
@@ -1691,10 +1693,10 @@ function renderInto(canvas){
   // the poem; the resolved text keys the line cache, so a changed value
   // re-lays the poem
   const varCtx = pmlVarContext(W, H);
-  const rawText = resolvePmlVariables($('poemText').value, varCtx);
+  const rawText = resolvePmlVariables(poemSource(), varCtx);
   // the same text with live numbers by their shape (digits as 0): the fit's key
   const shapeOf = v => String(v).replace(/\d/g, '0');
-  const shapeText = resolvePmlVariables($('poemText').value, { ...varCtx, renderMs: shapeOf(varCtx.renderMs), profile: shapeOf(varCtx.profile), cacheMB: shapeOf(varCtx.cacheMB) });
+  const shapeText = resolvePmlVariables(poemSource(), { ...varCtx, renderMs: shapeOf(varCtx.renderMs), profile: shapeOf(varCtx.profile), cacheMB: shapeOf(varCtx.cacheMB) });
   const lines = getCachedLines(rawText, accent1On, accent2On);
 
   const fontDef = FONTS[$('fontFamily').value];

@@ -2419,3 +2419,7 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
 .controls-fold > summary::after{ content:" ▾"; opacity:.7; }
 .controls-fold:not([open]) > summary::after{ content:" ▸"; }
 .controls-fold > .field{ margin-top:6px; }
+
+/* THE INSCRIPTION'S EYE beside the editor's name */
+.card-title-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.card-title-row > .card-title{ flex:1 1 auto; margin:0; }

@@ -380,8 +380,12 @@ const CARD_EYES = { textureToggle: 'Show the surface', borderToggle: 'Show the b
 // inside a card, an eye only where a box shows or hides something (the spell code); an option that turns a feature on
 // is a switch (Ruby approved, from the usability review: eyes on Gradient Border? and Allow [Opposition] read as
 // show/hide when they are not)
-const EYES = ['spellMark'];
-const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle'];
+const EYES = ['spellMark', 'highlightToggle', 'forgeSteps'];   // (Ruby: "my favorite one is the eye")
+// ONE LANGUAGE FOR TOGGLES (Ruby: "eyes, checkboxes and switches … should mostly be the same one"): an eye where something is
+// shown or hidden, a switch where a feature is turned on; no plain checkbox is left
+const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle',
+  'customSizeToggle', 'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'borderStitchOut', 'borderRounded', 'cardLink',
+  'cardStitchOut', 'cardRounded', 'fullPreview'];
 // A SECTION'S NAME OPENS AND FOLDS IT, in every browser (Ruby, in Firefox on a phone: tapping Border Options, Inset Box
 // or Vignette did nothing). Firefox on a phone moves a tap that lands on something it thinks cannot be tapped to the
 // nearest thing that can, and a heading whose only tappable parts are its eye, die, lock and ⓘ lost its taps. A heading
