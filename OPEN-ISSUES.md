@@ -43,7 +43,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   stay); a double-tap gives back the dozen lines.
 
 ## 2 · Ruby's notes to act on
-- WINDWARD SEA: the wind about 30% less dramatic (fewer, smaller gusts by default).
 - A FAIRY now and then (Ruby: "both Hyrule Field and the wind waker need an occasional fairy showing up from the
   game"): small, a glowing nod and never the character itself, in the Meadow and the Windward Sea, and in Macro Bloom
   as a visitor at a 1-in-66 chance (small).

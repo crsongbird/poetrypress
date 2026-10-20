@@ -2076,7 +2076,7 @@ export const TEXTURE_CHAINS = {
       ['maprange', { outLo: 100, outHi: 55 }, 480, 1580],                                                                                             // 128
       ['math', { op: 'multiply' }, 920, 810],                                                                                                         // 129
       ['blend', { mode: 'normal', opacity: 84 }, 4220, 40],                                                                                           // 130
-      ['streamers', { shape: 0, count: 5, '~count': '0,16', strands: 3, length: 50, '~length': '30,80', curl: 50, '~curl': '25,85', width: 100, twist: 30, depth: 60, horizon: 45, '~horizon': '62,30' }, 1360, 700],// 131
+      ['streamers', { shape: 0, count: 5, '~count': '0,11', strands: 3, length: 50, '~length': '25,60', curl: 50, '~curl': '25,85', width: 100, twist: 30, depth: 60, horizon: 45, '~horizon': '62,30' }, 1360, 700],// 131
       ['random', { lo: 0, hi: 100 }, 40, 3780],                                                                                                       // 132
       ['maprange', { outLo: 19, outHi: 31 }, 260, 2460],                                                                                              // 133
       ['random', { lo: 0, hi: 100 }, 40, 3890],                                                                                                       // 134
