@@ -2459,6 +2459,7 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
 .controls-fold > summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; min-height:34px; padding:0 10px; margin:0 -10px;
   font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); }
 .controls-fold > summary::-webkit-details-marker{ display:none; }
+.controls-fold[open] > summary .fold-count{ display:none; }   /* (the count says what a closed fold holds; open, the sliders say it) */
 .controls-fold > summary .fold-count{ text-transform:none; letter-spacing:.02em; font-size:11.5px; color:var(--text-dim); opacity:.85; }
 .controls-fold > summary::after{ content:""; margin-left:auto; width:7px; height:7px; border-right:1.4px solid currentColor; border-bottom:1.4px solid currentColor;
   transform:rotate(45deg) translate(-2px, -2px); transition:transform .18s; }
@@ -2498,7 +2499,9 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .controls-fold.rack > .fold-body > .field.as-fader > label{ max-width:110px; margin:0 0 2px; }
 .controls-fold.rack > .fold-body > .field > label .lock-btn{ vertical-align:middle; margin-left:1px; }
 .controls-fold.rack > .fold-body > .field.as-knob > .range-val{ display:none; }   /* (the knob says its value in its middle) */
-.controls-fold.rack > .fold-body > .field.as-fader > .range-val{ grid-area:val; margin:2px 0 0; float:none !important; text-align:center; font-size:10.5px; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.controls-fold.rack > .fold-body > .field.as-fader{ width:104px; }
+.controls-fold.rack > .fold-body > .field.as-fader.said > .range-val{ visibility:hidden; }   /* (the display line says it meanwhile) */
+.controls-fold.rack > .fold-body > .field.as-fader > .range-val{ grid-area:val; margin:2px 0 0; float:none !important; text-align:center; font-size:10.5px; width:64px; max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .controls-fold.rack > .fold-body > .field.as-fader > .snap-btn{ grid-area:snap; margin:2px 0 0 4px; min-width:26px; min-height:24px; padding:0 2px; font-size:13px; }
 .controls-fold.rack > .fold-body > .field.as-fader > .dice-btn{ grid-area:dice; }
 .controls-fold.rack > .fold-body > .field.as-knob > .snap-btn{ position:absolute; top:41px; left:50%; transform:translateX(-50%); margin:0; min-width:22px; min-height:20px;
@@ -2549,7 +2552,6 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .controls-fold:not(.rack) .sk-readout{ display:none; }
 .sk-readout .sr-name{ color:var(--text-dim); }
 .sk-readout .sr-val{ color:var(--text-main); font-variant-numeric:tabular-nums; flex:1 1 auto; }
-.sk-readout .sr-near{ color:var(--text-dim); opacity:.6; font-size:11px; }
 .sk-readout .sr-tier{ color:var(--accent-2); font-size:11px; }
 .sk-readout .sr-step{ flex:0 0 34px; min-height:30px; background:none; border:1px solid var(--line); color:var(--text-main); font-size:16px; cursor:pointer; }
 .rack-btn{ background:none; border:1px solid transparent; color:var(--text-dim); font-size:14px; line-height:1; padding:4px 6px; cursor:pointer; min-width:30px; min-height:28px; }
@@ -30998,7 +31000,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 3f4dcdd";
+const STAMP = "2026-10-20 · fc840af";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -41330,19 +41332,16 @@ function skLabel(input){ const l = document.getElementById(input.id + 'Label'); 
 
 function showReadout(input, opts = {}){
   const d = skDisplay(); if(!d) return;
-  clearTimeout(skHideT); skShown = input;
+  clearTimeout(skHideT); skReadoutOff(); skShown = input;
   const val = (document.getElementById(input.id + 'Val') || {}).textContent || input.value;
-  const t = skTicks(input), names = input._skinNames || [];
-  let around = '';
-  if(opts.moving && names.length > 1){ const k = t.indexOf(skNearest(t, +input.value));
-    around = `<span class="sr-near">${skEsc(names[k - 1] || '')}</span><span class="sr-near sr-next">${skEsc(names[k + 1] || '')}</span>`; }
   d.innerHTML = `<button type="button" class="sr-step" data-step="-1" aria-label="Less">−</button>`
-    + `<span class="sr-name">${skEsc(skLabel(input))}</span><span class="sr-val">${skEsc(val)}</span>${around}`
+    + `<span class="sr-name">${skEsc(skLabel(input))}</span><span class="sr-val">${skEsc(val)}</span>`
     + (opts.tier && opts.tier < 1 ? `<span class="sr-tier">${opts.tier === 0.5 ? '½' : opts.tier === 0.25 ? '¼' : 'fine'}</span>` : '')
     + `<button type="button" class="sr-step" data-step="1" aria-label="More">+</button>`;
-  d.classList.add('on');
-  if(!opts.hold) skHideT = setTimeout(() => { d.classList.remove('on'); skShown = null; }, opts.stay || 4000);
+  d.classList.add('on'); if(input.parentElement && input.parentElement.classList) input.parentElement.classList.add('said');
+  if(!opts.hold) skHideT = setTimeout(() => { d.classList.remove('on'); skReadoutOff(); skShown = null; }, opts.stay || 4000);
 }
+function skReadoutOff(){ if(skShown && skShown.parentElement && skShown.parentElement.classList) skShown.parentElement.classList.remove('said'); }
 const skEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 
@@ -41381,7 +41380,7 @@ function skDrag(el, input, mode){
       st.ly = e.clientY; if(Math.hypot(e.clientX - st.x, e.clientY - st.y) > 3) st.moved = true;
       st.cur = Math.max(lo, Math.min(hi, st.cur + step));
       st.hist.push([now, +input.value]); if(st.hist.length > 12) st.hist.shift(); st.lastMove = Math.hypot(e.clientX - (st.px ?? e.clientX), e.clientY - (st.py ?? e.clientY)); st.px = e.clientX; st.py = e.clientY;
-      skinSet(input, st.cur); showReadout(input, { hold: true, moving: true }); return; }
+      skinSet(input, st.cur); showReadout(input, { hold: true }); return; }
     const side = Math.abs(e.clientX - st.x), want = SKIN_FEEL.tiers.reduce((t, [px, f]) => side >= px ? f : t, 1), now = Date.now();
     if(want !== st.tier){ if(!st.tierAt) st.tierAt = now; if(now - st.tierAt >= SKIN_FEEL.tierHold){ st.tier = want; st.tierAt = 0;
 
@@ -41393,7 +41392,7 @@ function skDrag(el, input, mode){
     st.hist.push([now, +input.value]); if(st.hist.length > 12) st.hist.shift(); st.lastMove = Math.hypot(e.clientX - (st.px ?? e.clientX), e.clientY - (st.py ?? e.clientY)); st.px = e.clientX; st.py = e.clientY;
     skinSet(input, st.v + dy/travel*(hi - lo)*st.tier);
     el.classList.toggle('fine', st.tier < 1);
-    showReadout(input, { hold: true, moving: true, tier: st.tier });
+    showReadout(input, { hold: true, tier: st.tier });
   });
   const end = e => {
     if(!st || (e && e.pointerId !== st.id)) return;
@@ -41535,9 +41534,10 @@ function layoutControls(){
   const plan = rackPlan(fields, fold.clientWidth || 360, skRackMode);
   fold.classList.toggle('rack', plan.some(p => p.as !== 'row'));
 
+
   const body = document.getElementById('texControlsBody');
   if(body && body.style) body.style.gridTemplateColumns = plan.some(p => p.as !== 'row')
-    ? [...Array(plan.knobCols || 0).fill('minmax(64px, 1fr)'), ...Array(plan.faders || 0).fill('auto')].join(' ') || '1fr' : '';
+    ? [...Array(plan.knobCols || 0).fill('minmax(64px, 1fr)'), ...Array(plan.faders || 0).fill('104px')].join(' ') || '1fr' : '';
 
   if(body && body.style) body.style.gridTemplateRows = plan.faders || plan.filter(p => p.as === 'knob').length > RACK.cols ? 'minmax(92px, auto) minmax(92px, auto)' : '';
   for(const f of fields){

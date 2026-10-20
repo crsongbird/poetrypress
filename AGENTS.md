@@ -146,6 +146,7 @@ python3 tools/css-audit.py                     # which CSS declarations never wi
 python3 tools/css-prune.py [--write]           # remove those, verified: no drawn element computes differently in any state
 node tools/make-murmur-studio.mjs              # rebuild tools/murmur-studio.html from its template and murmur.js
 node tools/ui-profile.mjs [rate] [out]          # the interface on a slowed phone: idle, typing, sliders, selects (PERFORMANCE-AUDIT §0; needs Playwright)
+node tools/still.mjs [surface|all]             # sweep every slider on a phone: does anything on the page move? (Nothing moves under a hand, §11)
 node tools/smoke.mjs                           # click every kind of control, desk and phone: any page error? (after UI work; needs Playwright)
 node tools/phone-shot.mjs out.png [--tex t] [--tab page] [--at id]   # the built page on a phone: look at a change before shipping it
 node tools/snapshot.mjs [repo] <out>            # the registry as data (chains, starters, sliders, caps, parts): cmp before/after a refactor

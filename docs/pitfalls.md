@@ -76,6 +76,10 @@ Mistakes made once, so they aren't made twice. Moved from AGENTS.md §10; skim i
   in a node's data, and Drawflow finds data as `[df-KEY]`. Unescaped, a graph
   carrying a range threw mid-load and opened half-built.
 
+- **A label that changes must not size its box.** The rack's fader column was `auto`, so dragging Species from Iris
+  to Tulip resized it and every knob beside it shook (Ruby). Columns and value boxes that hold changing text get a
+  fixed width; `node tools/still.mjs` sweeps every slider and names anything that moves.
+
 **Tests and tools**
 - The Node canvas mock has no `Path2D` or `isPointInPath`, and doesn't parse
   `innerHTML`. Build elements with `createElement` if the tests boot that

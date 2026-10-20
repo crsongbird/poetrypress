@@ -90,23 +90,20 @@ let skShown = null, skHideT = null;
 function skDisplay(){ return typeof document !== 'undefined' && document.getElementById ? document.getElementById('texReadout') : null; }
 function skLabel(input){ const l = document.getElementById(input.id + 'Label'); if(!l) return '';
   return [...l.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(); }
-/** Say what `input` is and holds: its name and value, its neighbours' names on a named slider while it moves, the
- *  fine tier. `hold`: stay until let go. */
+/** Say what `input` is and holds: its name and value, and the fine tier; said once (Ruby: no redundant labels), so a
+ *  fader's own value at its foot gives way (keeping its room) while the line says it. `hold`: stay until let go. */
 export function showReadout(input, opts = {}){
   const d = skDisplay(); if(!d) return;
-  clearTimeout(skHideT); skShown = input;
+  clearTimeout(skHideT); skReadoutOff(); skShown = input;
   const val = (document.getElementById(input.id + 'Val') || {}).textContent || input.value;
-  const t = skTicks(input), names = input._skinNames || [];
-  let around = '';
-  if(opts.moving && names.length > 1){ const k = t.indexOf(skNearest(t, +input.value));
-    around = `<span class="sr-near">${skEsc(names[k - 1] || '')}</span><span class="sr-near sr-next">${skEsc(names[k + 1] || '')}</span>`; }
   d.innerHTML = `<button type="button" class="sr-step" data-step="-1" aria-label="Less">−</button>`
-    + `<span class="sr-name">${skEsc(skLabel(input))}</span><span class="sr-val">${skEsc(val)}</span>${around}`
+    + `<span class="sr-name">${skEsc(skLabel(input))}</span><span class="sr-val">${skEsc(val)}</span>`
     + (opts.tier && opts.tier < 1 ? `<span class="sr-tier">${opts.tier === 0.5 ? '½' : opts.tier === 0.25 ? '¼' : 'fine'}</span>` : '')
     + `<button type="button" class="sr-step" data-step="1" aria-label="More">+</button>`;
-  d.classList.add('on');
-  if(!opts.hold) skHideT = setTimeout(() => { d.classList.remove('on'); skShown = null; }, opts.stay || 4000);
+  d.classList.add('on'); if(input.parentElement && input.parentElement.classList) input.parentElement.classList.add('said');
+  if(!opts.hold) skHideT = setTimeout(() => { d.classList.remove('on'); skReadoutOff(); skShown = null; }, opts.stay || 4000);
 }
+function skReadoutOff(){ if(skShown && skShown.parentElement && skShown.parentElement.classList) skShown.parentElement.classList.remove('said'); }
 const skEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 /** The display line's − and + nudge the control it shows by one step (one mark on a named slider): a way to change a
  *  value without dragging (WCAG 2.5.7), and the finest one. */
@@ -145,7 +142,7 @@ function skDrag(el, input, mode){
       st.ly = e.clientY; if(Math.hypot(e.clientX - st.x, e.clientY - st.y) > 3) st.moved = true;
       st.cur = Math.max(lo, Math.min(hi, st.cur + step));
       st.hist.push([now, +input.value]); if(st.hist.length > 12) st.hist.shift(); st.lastMove = Math.hypot(e.clientX - (st.px ?? e.clientX), e.clientY - (st.py ?? e.clientY)); st.px = e.clientX; st.py = e.clientY;
-      skinSet(input, st.cur); showReadout(input, { hold: true, moving: true }); return; }
+      skinSet(input, st.cur); showReadout(input, { hold: true }); return; }
     const side = Math.abs(e.clientX - st.x), want = SKIN_FEEL.tiers.reduce((t, [px, f]) => side >= px ? f : t, 1), now = Date.now();
     if(want !== st.tier){ if(!st.tierAt) st.tierAt = now; if(now - st.tierAt >= SKIN_FEEL.tierHold){ st.tier = want; st.tierAt = 0;
       // (a new tier starts from where the value is, so it doesn't jump)
@@ -157,7 +154,7 @@ function skDrag(el, input, mode){
     st.hist.push([now, +input.value]); if(st.hist.length > 12) st.hist.shift(); st.lastMove = Math.hypot(e.clientX - (st.px ?? e.clientX), e.clientY - (st.py ?? e.clientY)); st.px = e.clientX; st.py = e.clientY;
     skinSet(input, st.v + dy/travel*(hi - lo)*st.tier);
     el.classList.toggle('fine', st.tier < 1);
-    showReadout(input, { hold: true, moving: true, tier: st.tier });
+    showReadout(input, { hold: true, tier: st.tier });
   });
   const end = e => {
     if(!st || (e && e.pointerId !== st.id)) return;
@@ -298,10 +295,11 @@ export function layoutControls(){
     return { i, input, field, shown: !!field && field.style.display !== 'none', ticks: skTicks(input).length, declared: input._skinAs || null }; }).filter(f => f.input && f.field);
   const plan = rackPlan(fields, fold.clientWidth || 360, skRackMode);
   fold.classList.toggle('rack', plan.some(p => p.as !== 'row'));
-  // the rack's columns: the knobs' (even shares) then one for each fader, as wide as its names need
+  // the rack's columns: the knobs' (even shares) then one for each fader, of a FIXED width, so a fader's value or names
+  // changing never moves the knobs beside it (Ruby: nothing moves under a hand)
   const body = document.getElementById('texControlsBody');
   if(body && body.style) body.style.gridTemplateColumns = plan.some(p => p.as !== 'row')
-    ? [...Array(plan.knobCols || 0).fill('minmax(64px, 1fr)'), ...Array(plan.faders || 0).fill('auto')].join(' ') || '1fr' : '';
+    ? [...Array(plan.knobCols || 0).fill('minmax(64px, 1fr)'), ...Array(plan.faders || 0).fill('104px')].join(' ') || '1fr' : '';
   // (two rows, each at least a knob tall, when the rack has two: a fader stands in both)
   if(body && body.style) body.style.gridTemplateRows = plan.faders || plan.filter(p => p.as === 'knob').length > RACK.cols ? 'minmax(92px, auto) minmax(92px, auto)' : '';
   for(const f of fields){
