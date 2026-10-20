@@ -4,6 +4,18 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Juliet (2026-10-20)
+
+- **The Painted Ringworld up close**: small things stand near you, each world its own: fences and mailboxes in the
+  wilds; lamps, benches, hydrants and bicycles in town; barrels and crates in the ruins; signs; now and then a
+  person, for scale. A building near enough shows its door, its step, a lamp lit at night and a planter.
+- **Fields in the distance**: where people farm, the land below each crest is a patchwork of crops (ripe, green,
+  fallow, now and then in flower), hedged with dark lines.
+- **Drapery's crumpled sheet** folds as cloth does, every which way, not along the lines of its grid.
+
+### Under the hood
+- The ring's small things are in its world store with everything else (`pkProp`, `PK_PROPS`).
+
 ## Uranus–Desdemona (2026-10-20)
 
 - **Nothing shakes while a control is used.** Dragging a fader whose value is a name (Species, say) once resized its
@@ -517,18 +529,3 @@ and every control behaving as it did.
   The prior-art research for the liminal spaces is kept in the repository
   (docs/prior-art), and looking up the prior art is now the first step of
   making any new surface.
-
-## Saturn–Fenrir (2026-10-19)
-
-- **The light dial's handle reaches the ring again.** At full height it
-  sits on the ring, under your finger, and past the rim (on surfaces lit
-  from below the horizon) it goes on outside it, to the dashed circle. The
-  camera dial's handle does the same. The halfway mark moved out with it.
-- **🜚's curls grow as the light lowers:** small with the light high,
-  flaring as it sinks toward the horizon.
-- **Where the main and rim shadows cross on the dial, they mix to white**
-  (black on a light theme), as the two handles do.
-- **Under the hood:** pruned the stylesheet (every declaration it questioned
-  still mattered somewhere; nothing removed). The roadmap records Ruby's rules
-  for the new surfaces: built in the Athanor from general parts, varied by
-  the seed, every colour on a hue input.

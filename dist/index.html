@@ -6031,6 +6031,7 @@ const PK_SIZE = {
   clock: [40, 96, 8, 14], factory: [12, 25, 30, 60], watertower: [15, 35, 8, 14], capsule: [30, 60, 15, 25], megablock: [30, 50, 50, 100], geodome: [20, 55, 40, 110],
   observatory: [12, 40, 12, 40], turbine: [80, 160, 6, 8],
   helper: [1.0, 1.5], drone: [0.5, 1.0], crawler: [0.6, 1.0], sentry: [1.8, 2.8], walker: [2.5, 4.5], derelict: [10, 22],
+  fence: [0.9, 1.2], lamp: [3, 4.6], bench: [0.45, 0.5], mailbox: [1.1, 1.2], barrel: [0.9, 1.0], crate: [0.5, 1.1], sign: [1.8, 2.4], bicycle: [0.95, 1.05], hydrant: [0.6, 0.8],
   rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8] };
 
 const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
@@ -6466,6 +6467,46 @@ function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
 }
 
 
+
+
+
+
+const PK_PROPS = { wilds: ['fence', 'fence', 'sign', 'mailbox', 'figure'], cities: ['lamp', 'bench', 'hydrant', 'bicycle', 'sign', 'figure', 'mailbox'],
+  neon: ['lamp', 'sign', 'bicycle', 'crate', 'figure'], builders: ['lamp', 'crate', 'bench'], ruins: ['barrel', 'crate', 'sign', 'barrel', 'fence'], magic: ['lamp', 'fence', 'bench'] };
+function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
+  const sub = pkSub(R0), R = sub(1), sd = c.sd, ln = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = Math.max(px(0.5), wd); x.lineCap = 'round'; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+  if(kind === 'fence'){
+    const n = 5 + Math.floor(R()*5), sp = h*0.45, x0 = X - n*sp/2, lean = (R() - 0.5)*h*0.1;
+    ln([[x0, Y - h*0.35], [x0 + n*sp, Y - h*0.38 + lean]], pkCss(c.dark), h*0.07); ln([[x0, Y - h*0.75], [x0 + n*sp, Y - h*0.78 + lean]], pkCss(c.dark), h*0.07);
+    for(let k = 0; k <= n; k++){ const px0 = x0 + k*sp; pkPoly(x, [[px0 - h*0.05, Y], [px0 - h*0.05, Y - h*0.9], [px0, Y - h], [px0 + h*0.05, Y - h*0.9], [px0 + h*0.05, Y]], pkCss(k % 2 ? c.body : c.lit)); } return; }
+  if(kind === 'lamp'){
+    ln([[X, Y], [X, Y - h]], pkCss(c.dark), h*0.04); ln([[X, Y - h], [X + h*0.18, Y - h*0.97]], pkCss(c.dark), h*0.03);
+    pkEll(x, X + h*0.2, Y - h*0.95, h*0.06, h*0.03, pkCss(night > 0.2 ? pkMix(c.glow, PK_WHITE, 0.5) : c.body));
+    if(night > 0.2){ pkGlow(x, X + h*0.2, Y - h*0.93, h*0.4, c.glow, 0.5*night); pkGlow(x, X + h*0.2, Y, h*0.45, c.glow, 0.25*night); } return; }
+  if(kind === 'bench'){ const w = h*3; ln([[X - w/2, Y - h*0.5], [X + w/2, Y - h*0.5]], pkCss(c.body), h*0.12); ln([[X - w/2, Y - h], [X + w/2, Y - h]], pkCss(c.lit), h*0.1);
+    ln([[X - w*0.4, Y], [X - w*0.4, Y - h]], pkCss(c.dark), h*0.07); ln([[X + w*0.4, Y], [X + w*0.4, Y - h]], pkCss(c.dark), h*0.07); return; }
+  if(kind === 'mailbox'){ ln([[X, Y], [X, Y - h*0.65]], pkCss(c.dark), h*0.08); pkEll(x, X, Y - h*0.78, h*0.28, h*0.16, pkCss(c.body)); pkEll(x, X + sd*h*0.06, Y - h*0.82, h*0.18, h*0.08, pkCss(c.lit));
+    pkPoly(x, [[X + h*0.22, Y - h*0.82], [X + h*0.22, Y - h*1.02], [X + h*0.34, Y - h*0.97], [X + h*0.26, Y - h*0.92]], pkCss([200, 50, 44])); return; }
+  if(kind === 'barrel'){ const w = h*0.6; pkPoly(x, [[X - w/2, Y], [X - w*0.6, Y - h/2], [X - w/2, Y - h], [X + w/2, Y - h], [X + w*0.6, Y - h/2], [X + w/2, Y]], pkCss(c.body));
+    pkPoly(x, [[X + sd*w*0.1, Y], [X + sd*w*0.2, Y - h/2], [X + sd*w*0.1, Y - h], [X + sd*w/2, Y - h], [X + sd*w*0.6, Y - h/2], [X + sd*w/2, Y]], pkCss(c.lit));
+    for(const v of [0.22, 0.78]) ln([[X - w*0.58, Y - h*v], [X + w*0.58, Y - h*v]], pkCss(c.dark), h*0.06); return; }
+  if(kind === 'crate'){ const w = h*1.1; pkPoly(x, [[X - w/2, Y], [X - w/2, Y - h], [X + w/2, Y - h], [X + w/2, Y]], pkCss(c.body)); pkPoly(x, [[X + sd*w/2, Y], [X + sd*w/2, Y - h], [X + sd*w*0.75, Y - h*0.9], [X + sd*w*0.75, Y + h*0.05]], pkCss(c.dark));
+    ln([[X - w/2, Y], [X + w/2, Y - h]], pkCss(c.dark), h*0.06); ln([[X - w/2, Y - h], [X + w/2, Y - h]], pkCss(c.lit), h*0.05); return; }
+  if(kind === 'sign'){
+    ln([[X, Y], [X, Y - h]], pkCss(c.dark), h*0.06); const w = h*0.9, tilt = (R() - 0.5)*h*0.12;
+    pkPoly(x, [[X - w/2, Y - h + tilt], [X + w/2, Y - h - tilt], [X + w/2, Y - h*0.6 - tilt], [X - w/2, Y - h*0.6 + tilt]], pkCss(R() < 0.5 ? c.lit : pkMix(c.body, c.glow, 0.4)));
+    for(let k = 0; k < 2; k++) ln([[X - w*0.35, Y - h*(0.88 - k*0.14)], [X + w*(0.1 + 0.25*R()), Y - h*(0.88 - k*0.14)]], pkCss(c.dark, 0.6), h*0.04); return; }
+  if(kind === 'bicycle'){ const r = h*0.32; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.04);
+    for(const s of [-1, 1]){ x.beginPath(); x.arc(X + s*h*0.55, Y - r, r, 0, Math.PI*2); x.stroke(); }
+    ln([[X - h*0.55, Y - r], [X - h*0.1, Y - h*0.75], [X + h*0.35, Y - h*0.75], [X + h*0.55, Y - r], [X, Y - r], [X - h*0.1, Y - h*0.75]], pkCss(c.body), h*0.05);
+    ln([[X + h*0.35, Y - h*0.75], [X + h*0.32, Y - h*0.95], [X + h*0.42, Y - h*0.95]], pkCss(c.dark), h*0.04); return; }
+  if(kind === 'hydrant'){ const w = h*0.4; pkPoly(x, [[X - w/2, Y], [X - w/2, Y - h*0.75], [X + w/2, Y - h*0.75], [X + w/2, Y]], pkCss([196, 52, 44])); pkEll(x, X, Y - h*0.78, w*0.55, h*0.16, pkCss([214, 70, 56]));
+    pkEll(x, X, Y - h*0.45, w*0.8, h*0.08, pkCss([170, 40, 36])); return; }
+
+  const coat = [c.body, c.lit, pkMix(c.glow, c.body, 0.5), c.dark][Math.floor(R()*4)];
+  pkPoly(x, [[X - h*0.12, Y], [X - h*0.15, Y - h*0.72], [X + h*0.15, Y - h*0.72], [X + h*0.12, Y]], pkCss(coat));
+  pkDisc(x, X, Y - h*0.84, h*0.11, pkCss(c.dark)); pkPoly(x, [[X + sd*h*0.02, Y - h*0.1], [X + sd*h*0.03, Y - h*0.68], [X + sd*h*0.14, Y - h*0.68], [X + sd*h*0.11, Y - h*0.1]], pkCss(pkMix(coat, PK_WHITE, 0.2)));
+}
 
 
 
@@ -17326,6 +17367,12 @@ function rgStore(V){
       const g = ground(a, z); if(g.wet || g.slope > 1.2) return null; const L2 = PK_BOTS[w] || PK_BOTS.cities, kind = L2[Math.floor(R()*L2.length)];
       if(kind === 'derelict' && R() > 0.2) return null;
       return { c: 'bot', w, kind, hM: pkMetres(kind, R()) }; }); }
+
+
+  sow(7, W*0.002, W*0.006, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], near = w === 'wilds' ? 0.04 + 0.5*V.cityAt(a, z, 0.12) : 0.05 + 0.5*V.cityAt(a, z, P.cv);
+    if(R() > near*(0.4 + V.works)) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
+    const L2 = PK_PROPS[w] || PK_PROPS.cities, kind = L2[Math.floor(R()*L2.length)]; if(kind === 'figure' && R() > 0.4) return null;
+    return { c: 'prop', w, kind, hM: pkMetres(kind, R()) }; });
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
@@ -17426,7 +17473,17 @@ function rgPaintLand(x, mk, dk, V){
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), wday, haze, AIR), glow: c.glow, sd: c.sd, L: LT }, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2) || h > wh*0.75) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd, X + wd, Y - h*1.3, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      pkBuilding(x, X, Y + h*0.03, h, wd, colsOf(o.w, wday, haze), PK_STYLE[o.w], 1 - rsSmooth(0.3, 0.7, wday), R, rgPx, o.kind); return; }
+      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, cb, PK_STYLE[o.w], night, R, rgPx, o.kind);
+
+
+      const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
+        const Rb = mulberry32(o.rs ^ 0x5eed), dx = X + (Rb() - 0.5)*wd*0.5, dw = 1.0*m, dh = 2.1*m;
+        x.fillStyle = rsCss(rsMix(cb.dark, BLACK, 0.35)); x.fillRect(dx - dw/2, Y - dh, dw, dh);
+        if(night > 0.2){ x.fillStyle = rsCss(cb.glow, 0.5*night); x.fillRect(dx - dw/2 + dw*0.15, Y - dh*0.9, dw*0.7, dh*0.35); }
+        x.fillStyle = rsCss(cb.lit); x.fillRect(dx - dw*0.75, Y - m*0.15, dw*1.5, m*0.15);
+        pkProp(x, dx + dw*1.3, Y, 3.2*m, cb, 'lamp', mulberry32(o.rs ^ 0x1a3b), rgPx, night);
+        if(Rb() < 0.6){ x.fillStyle = rsCss(cb.dark); x.fillRect(dx - dw*1.9, Y - m*0.5, dw*0.7, m*0.5); for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(rgLit(V, [60, 110, 60], wday, haze, AIR)); x.beginPath(); x.arc(dx - dw*1.55 + (q - 1)*dw*0.2, Y - m*0.6, m*0.22, 0, Math.PI*2); x.fill(); } } }
+      return; }
     if(o.c === 'rock'){ const rr = o.hM*f[2]; if(rr < px(2) || rr > wh*0.3) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - rr, X + rr, Y - rr, Y, [X - rr*0.5, X + rr*0.5, Y - rr*0.4, Y])) return;
       pkRock(x, X, Y, rr, rgLit(V, [128, 122, 114], wday, haze, AIR), LT, R); return; }
@@ -17436,6 +17493,9 @@ function rgPaintLand(x, mk, dk, V){
       for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
       if(R() < 0.25*RG_PROF[o.w].gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
+    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.35) return;
+      const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
+      const c = colsOf(o.w, wday, haze); pkProp(x, X, Y, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.5) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
       const c = colsOf(o.w, wday, haze); pkRobot(x, X, Y, h, { ...c, eye: c.glow }, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
@@ -17526,7 +17586,17 @@ function rgPaintLand(x, mk, dk, V){
       const face = rsFace(dark, lit, p1.Y - p0.Y, p0.X - p1.X, LT), slope = Math.abs(p1.Y - p0.Y)/Math.max(1, Math.abs(p1.X - p0.X));
       if(slope > 0.32){ const q0 = [p0.X + (p1.X - p0.X)*(n1 - 0.5)*0.3, p0.Y + depth*(0.35 + 0.45*n2)], q1 = [p1.X, p1.Y + depth*(0.35 + 0.45*n3)];
         rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03, n4))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03, n1))); }
-      else { const bd = depth*(0.1 + 0.12*n2); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bd*(0.6 + 0.6*n3)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02, n4))); }
+      else { const bd = depth*(0.1 + 0.12*n2); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bd*(0.6 + 0.6*n3)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02, n4)));
+
+
+
+        const fw = V.worldAt(am, zm);
+        if((fw === 'wilds' || fw === 'cities' || fw === 'builders') && d > W*0.03 && d < W*2.2 && p0.ec < TR.snow*0.4 && V.forestAt(am, zm) < 0.35 && V.cityAt(am, zm, RG_PROF[fw].cv*(0.3 + 0.9*V.works)) < 0.2 && V.dryAt(am, zm) < 0.68){
+          const CROPS = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]], cs = W*0.012, hedge = rsCss(rsMix(dark, BLACK, 0.2), 0.5);
+          for(let b = 0; b < 3; b++){ const v0 = 0.18 + b*0.26, v1 = v0 + 0.22, fi = Math.floor(am/cs), fj = Math.floor(zm/cs) + b*7, hv = mnHash(fi, fj, s + 77);
+            if(hv < 0.25) continue; const crop = CROPS[Math.min(4, Math.floor(hv*hv*5.6))], fc = rgLit(V, rsMix(gc, crop, 0.45), day, haze, AIR);
+            const A = [p0.X, p0.Y + depth*v0], B = [p1.X, p1.Y + depth*v0], C2 = [p1.X, p1.Y + depth*v1], D = [p0.X, p0.Y + depth*v1];
+            rsPoly(x, [A, B, C2, D], rsCss(fc, 0.75)); x.strokeStyle = hedge; x.lineWidth = Math.max(px(0.6), depth*0.012); x.beginPath(); x.moveTo(D[0], D[1]); x.lineTo(C2[0], C2[1]); x.stroke(); } } }
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
 
     const dn = li + 1 < lay.length ? lay[li + 1].d : 0; drawRoads(dn, d);
@@ -17643,13 +17713,18 @@ function clSettle(o){
   const form = { x: (R() - 0.5)*0.2, z: (R() - 0.5)*0.2*o.aspect, r: 0.2 + 0.08*folds + 0.04*R() };
 
   const CA = [], CB = [], CL = [], CK = [];
-  const con = (a, b, kind, diag = false) => { CA.push(a); CB.push(b); CL.push(s*(kind === 1 ? Math.SQRT2 : kind === 2 ? (diag ? 2*Math.SQRT2 : 2) : 1)); CK.push(kind); };
+
+
+  const JX = new Float64Array(n), JZ = new Float64Array(n);
+  if(hang === 'crumpled') for(let k = 0; k < n; k++){ const i = k % C, j = (k/C) | 0; if(i > 0 && i < C - 1) JX[k] = (R() - 0.5)*0.5*s; if(j > 0 && j < Rr - 1) JZ[k] = (R() - 0.5)*0.5*s; }
+  const rest = (a, b) => { const ia = a % C, ja = (a/C) | 0, ib = b % C, jb = (b/C) | 0, dx = (ib - ia)*s + JX[b] - JX[a], dz = (jb - ja)*s + JZ[b] - JZ[a]; return Math.sqrt(dx*dx + dz*dz); };
+  const con = (a, b, kind) => { CA.push(a); CB.push(b); CL.push(hang === 'crumpled' ? rest(a, b) : s*(kind === 1 ? Math.SQRT2 : kind === 2 ? (b - a === 2*C + 2 || b - a === 2*C - 2 ? 2*Math.SQRT2 : 2) : 1)); CK.push(kind); };
   for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ if(i + 1 < C) con(id(i, j), id(i + 1, j), 0); if(j + 1 < Rr) con(id(i, j), id(i, j + 1), 0); }
   for(let j = 0; j + 1 < Rr; j++) for(let i = 0; i + 1 < C; i++){ con(id(i, j), id(i + 1, j + 1), 1); con(id(i + 1, j), id(i, j + 1), 1); }
   for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ if(i + 2 < C) con(id(i, j), id(i + 2, j), 2); if(j + 2 < Rr) con(id(i, j), id(i, j + 2), 2); }
 
 
-  for(let j = 0; j + 2 < Rr; j++) for(let i = 0; i + 2 < C; i++){ con(id(i, j), id(i + 2, j + 2), 2, true); con(id(i + 2, j), id(i, j + 2), 2, true); }
+  for(let j = 0; j + 2 < Rr; j++) for(let i = 0; i + 2 < C; i++){ con(id(i, j), id(i + 2, j + 2), 2); con(id(i + 2, j), id(i, j + 2), 2); }
   const NC = CA.length, A = Int32Array.from(CA), B = Int32Array.from(CB), L0 = Float64Array.from(CL), KND = Uint8Array.from(CK);
 
   const TP = new Int32Array(n).fill(-1), TL = new Float64Array(n);
@@ -30405,11 +30480,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Desdemona';
+const RELEASE = 'Uranus–Juliet';
 
 const RELEASE_DATE = '2026-10-20';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"lg6jvfzv","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"NGN0Yp07","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -31128,7 +31203,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 42955bd";
+const STAMP = "2026-10-20 · 2241669";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
