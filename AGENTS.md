@@ -221,7 +221,8 @@ default.
 
 | File | Role |
 |---|---|
-| `textureGenerators.js` | the registry (`TEXTURE_PARAMS`: knobs; `TEXTURE_CAPS`: what each can do), dispatch, the cache and its keys |
+| `textureParams.js` | every surface's sliders (`TEXTURE_PARAMS`): `sliderOf(key, label, def, { min, max, unit, ticks, names, dice })`, 0–100 and no unit unless it says |
+| `textureGenerators.js` | the registry (`TEXTURE_CAPS`: what each can do; blends as `GREY_BLENDS`, `LIT_BLENDS` or `ledBlends(first, set)`), dispatch (`CHAIN_TINTS`: which hues a chain is handed), the cache and its keys |
 | `textureService.js` · `textureWorker.js` | textures made off the page's thread |
 | `texCore.js` | shared maths: seeded random, noise, `pixelPass`, canonical pixels, `lightHeights` (the lighting engine, CPU and WebGL2), FXAA (`fxaaImage`), the steps' kit |
 | `texWhimsy.js` `texSharpness.js` `texChaos.js` `texTouch.js` | the older generators, one file per element (being taken apart into steps) |
@@ -232,7 +233,7 @@ default.
 
 | File | Role |
 |---|---|
-| `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
+| `steps.js` | THE PARTS: the general library (`STEP_PARTS`, `STEP_RUN`, `STEP_IO`, `STEP_COST`, `STEP_REQUIRED`) and the merged `STEPS` table. Also The Poem, curves and Filter Forge's primitives |
 | `stepsTouch.js` `stepsChaos.js` `stepsWhimsy.js` `stepsLight.js` `stepsSharpness.js` `stepsGenerative.js` | each family's own parts, and the older textures as whole parts (`kitWhole`) until they are taken apart. Generative: Discharge, Wood, Burn, Differential Growth, Knotwork, Growth Medium, Tendrils, Circuit Traces. Light: the Light Engine, Oil Paint, Canvas Weave, Paint Swipes. Touch: also the glass (Scratches, Smudges, Window Reflection, Shatter, Glass Pane) |
 | `stepsFlora.js` | the floral surfaces' Bloom (`FLORA_STEPS`): a flower of one of 23 species, or a sheet of them, petal by petal, lit from the dial |
 | `stepsLens.js` | Lens Blur (`LENS_STEPS`): a thin-lens focal plane from a depth map, gathered on a golden-angle spiral (background capped at twice the point's own disc), lights brighter than white first; on the GPU through texCore's `gpuKernel`, else the same gather on the CPU |
@@ -832,13 +833,13 @@ of menu textures that aren't chains yet; the hygiene test keeps it the code's.
 ### 6.2 · Anatomy of a part
 A part is `{ cat, label, ins, outs, params, run(E, n) }`:
 - **Where it is defined:**
-  - in steps.js, across `STEP_PARTS`, `STEP_RUN`, `STEP_DOCS`, `STEP_IO`,
+  - in steps.js, across `STEP_PARTS`, `STEP_RUN`, `STEP_IO`,
     `STEP_COST` and `STEP_REQUIRED`;
-  - or in one family object (`TOUCH_STEPS`, …) carrying its own `cost`,
-    `io` and `doc`.
+  - or in one family object (`TOUCH_STEPS`, …) carrying its own `cost`
+    and `io`.
 - **Its doc and its wiki page:** every part has an entry in
   `athanorWikiParts.js` (`WIKI_PARTS`): `line` (one instructive sentence,
-  shown in the parts list and menus; the part's `doc` is the same text),
+  shown in the parts list and menus: the one copy of the part's description),
   `about`, and what each input, output and setting does (`ins`, `outs`,
   `set`, keyed by port name and setting key), `tips`, `see`. A test fails
   if a part lacks one, leaves a port or setting unexplained, or names one
@@ -1172,7 +1173,6 @@ the test to the new intent; never weaken it just to pass.
 2. Define it (§6.2):
    - its params;
    - `run` (and `paint` if it works in canvas passes);
-   - `STEP_DOCS`;
    - `STEP_IO` for anything that isn't a gray map;
    - `STEP_COST`;
    - `STEP_REQUIRED` if it needs its first input.
@@ -1199,12 +1199,15 @@ the port menu's "What is …?" entry; conversions in athanor.js (`asField`,
 1. Find or write its parts.
 2. Add the chain to chains.js:
    - nodes and wires;
-   - Knob nodes as the sliders' legend;
+   - Knob nodes as the sliders' legend: `['knob', { slot }]` takes the slider's name and
+     default from `TEXTURE_PARAMS` (write `name` or `def` only where the knob differs);
+     a wire names a setting by its key (`[1, 1, 4, 'scale']`), the port found on the
+     target part;
    - its working grid (`div` or `grid`), or `canvas: true`;
    - each slider bound to the params it drives, across the slider's own
      range;
    - TEACH (what it is, how its parts make it, one "Try:").
-3. In textureGenerators.js, dispatch the type to `genChain`. Delete the old
+3. In textureGenerators.js, give the type its row in `CHAIN_TINTS` (which hues the chain is handed). Delete the old
    generator, but keep its haiku beside the part that inherited it.
 4. **Its fingerprint must not change.** If a slider's job did change: bump
    `LOOK_VERSION`, translate older looks in `retireLook`, and update the
@@ -1818,8 +1821,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   and `node --check` may not catch it. Run `sh check.sh`, or render.
 - build.mjs flattens `export async function` too. A module statement that
   survives flattening fails the build.
-- The worker's script block must be in `<head>`: it has to exist before the
-  page first asks for a texture.
+- The generators ship once: the worker's modules are the page's first script
+  (`#vellum-texture-worker`), its text also the worker's, with textureWorker.js
+  (`#vellum-worker-main`, inert) added. Both come before the page's own script:
+  they have to exist before it first asks for a texture. A worker module imports
+  only worker modules.
 - `__BUILD_STAMP__` left unreplaced reads as underline markup in PML.
 
 **Textures**

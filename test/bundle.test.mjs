@@ -23,20 +23,22 @@ function check(label, cond){
   else console.log('ok:', label);
 }
 
-// the page's own script: the texture worker's embedded copy of the generators is a separate script
-const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8')
-  .replace(/<script type="text\/js-worker" id="vellum-texture-worker">[\s\S]*?<\/script>/, '');
+// the page runs two scripts: the generators (shared with the texture worker, shipped once) and then its own
+const built = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+const sharedM = built.match(/<script id="vellum-texture-worker">\n([\s\S]*?)\n<\/script>/);
+const html = built.replace(/<script type="text\/js-worker" id="vellum-worker-main">[\s\S]*?<\/script>/, '')
+  .replace(/<script id="vellum-texture-worker">[\s\S]*?<\/script>/, '');
 
 // the bundled script is the last <script> block with no src attribute
 const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-check('bundle contains exactly one inlined script block', blocks.length === 1);
+check('bundle contains exactly one inlined script block, after the generators', blocks.length === 1 && !!sharedM && built.indexOf(sharedM[0]) < built.lastIndexOf('<script>\n'));
 check('bundle inlined the stylesheet', html.includes('<style>') && !html.includes('href="poetrypress.css"'));
 check('bundle has no leftover module script tag', !html.includes('type="module"'));
 check('no import/export statements survived', !/^\s*(import|export)\s/m.test(blocks[0] || ''));
 
 let threw = null;
 try {
-  new Function(blocks[0])();
+  new Function((sharedM ? sharedM[1] : '') + '\n' + blocks[0])();
 } catch (e) {
   threw = e;
 }
@@ -80,9 +82,14 @@ check('bundle populates the font dropdown', registry['fontFamily'] && registry['
   // the PAGE's module list only (the texture worker has a list of its own)
   const orderBlock = buildSrc.slice(buildSrc.indexOf('const ORDER = ['), buildSrc.indexOf('];', buildSrc.indexOf('const ORDER = [')));
   const order = [...orderBlock.matchAll(/^\s*'([\w]+\.js)',/gm)].map(m => m[1]);
-  const pos = new Map(order.map((f, i) => [f, i]));
+  // as the page runs them: the worker's modules first (their own script), then the rest
+  const wl = buildSrc.slice(buildSrc.indexOf('const WORKER_ORDER = ['), buildSrc.indexOf('];', buildSrc.indexOf('const WORKER_ORDER = [')));
+  const workerMods = new Set([...wl.matchAll(/'([\w]+\.js)'/g)].map(m => m[1]));
+  check('the worker\'s module list was read', workerMods.size > 20);
+  const ran = [...order.filter(f => workerMods.has(f)), ...order.filter(f => !workerMods.has(f))];
+  const pos = new Map(ran.map((f, i) => [f, i]));
   const late = [];
-  for(const f of order){
+  for(const f of ran){
     const src = rf(new URL('../' + f, import.meta.url), 'utf8');
     for(const m of src.matchAll(/^import [^;]*from '\.\/([\w]+\.js)';/gm)){
       if(!pos.has(m[1])) late.push(`${f} imports ${m[1]}, which is not bundled`);
@@ -100,13 +107,40 @@ check('bundle populates the font dropdown', registry['fontFamily'] && registry['
 
 // ---- the texture worker ----
 {
-  const html2 = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
-  const m = html2.match(/<script type="text\/js-worker" id="vellum-texture-worker">\n([\s\S]*?)\n<\/script>/);
-  check('the built page carries the texture worker, inert until the service starts it', !!m);
-  let parses = false; try { new Function(m ? m[1] : 'x x'); parses = true; } catch(e){}
-  check('the embedded worker code parses on its own', parses);
-  check('the worker ends with its own message handler', !!m && /self\.onmessage = \(e\) =>/.test(m[1]));
-  check('the page bundle never uses import.meta (a plain script, where it would not parse)', !/import\.meta/.test(html2.replace(m ? m[0] : '', '')));
+  const main = built.match(/<script type="text\/js-worker" id="vellum-worker-main">\n([\s\S]*?)\n<\/script>/);
+  check('the built page carries the worker\'s own lines, inert until the service starts it', !!main);
+  const workerSrc = (sharedM ? sharedM[1] : 'x x') + '\n' + (main ? main[1] : 'x x');
+  let parses = false; try { new Function(workerSrc); parses = true; } catch(e){}
+  check('the worker\'s code (the shared generators and its own lines) parses on its own', parses);
+  check('the worker ends with its own message handler', !!main && /self\.onmessage = \(e\) =>/.test(main[1]));
+  check('the generators ship once (no second copy of the parts)', (built.match(/\/\* ==== steps\.js ==== \*\//g) || []).length === 1);
+  check('the page bundle never uses import.meta (a plain script, where it would not parse)', !/import\.meta/.test(built.replace(main ? main[0] : '', '')));
+}
+
+// ---- the page ships without comments: the same code, token for token ----
+{
+  const { pruneStrip } = await import('../tools/prune.mjs');
+  let acorn = null;
+  for(const at of ['acorn', '/opt/npm-tools/node_modules/acorn/dist/acorn.mjs']){ try { acorn = await import(at); break; } catch(e){} }
+  const { readFileSync: rf, readdirSync: rd } = await import('fs');
+  const mods = rd(new URL('..', import.meta.url)).filter(f => /^[\w]+\.js$/.test(f));
+  if(!acorn) console.log('   (no acorn here: the build\'s own parse check stands alone)');
+  else {
+    const toks = src => { const out = []; for(const t of acorn.tokenizer(src, { ecmaVersion: 'latest', sourceType: 'module' })) out.push(t.type.label + '\u0000' + (t.value === undefined ? '' : String(t.value instanceof RegExp ? t.value : t.value))); return out; };
+    const lines = src => { const out = []; let line = 0, last = -1; for(const t of acorn.tokenizer(src, { ecmaVersion: 'latest', sourceType: 'module', locations: true })){ out.push(t.loc.start.line > last ? 1 : 0); last = t.loc.end.line; } return out; };
+    const differ = [];
+    for(const f of mods){
+      const src = rf(new URL('../' + f, import.meta.url), 'utf8'), cut = pruneStrip(src, false, true);
+      const a = toks(src), b = toks(cut);
+      if(a.length !== b.length || a.some((x, i) => x !== b[i])) { differ.push(f); continue; }
+      // and every token that began a new line still does (so no automatic semicolon is gained or lost)
+      const la = lines(src), lb = lines(cut);
+      if(la.some((x, i) => x !== lb[i])) differ.push(f + ' (line breaks)');
+    }
+    check(`stripping comments leaves every module the same, token for token and line break for line break (${mods.length})`, differ.length === 0);
+    if(differ.length) console.log('   differ:', differ.join(', '));
+  }
+  check('the shipped page carries no comments but the module seams', !/\/\/ Haiku|Haiku:/.test(built.replace(/<script type="text\/js-worker"[\s\S]*?<\/script>/, '')));
 }
 
 console.log();

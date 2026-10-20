@@ -91,9 +91,9 @@ check('§5.1 every frame starts from a clean context (a frame aborted mid-blend 
 }
 
 // ---- §10 The bundle ----
-{ const built = raw('dist/index.html'), at = built.indexOf('id="vellum-texture-worker"');
-  check('§10 the worker\'s script block goes in <head>: it must exist before the page first asks for a texture',
-    at > 0 && at < built.indexOf('</head>\n<body')); }
+{ const built = raw('dist/index.html'), at = built.indexOf('<script id="vellum-texture-worker">'), main = built.indexOf('id="vellum-worker-main"');
+  check('§10 the worker\'s code comes before the page\'s script: it must exist before the page first asks for a texture',
+    at > 0 && at < main && main < built.lastIndexOf('<script>\n')); }
 check('§10 the texture service starts no timers of its own (nothing to keep Node, or a phone, awake)', !/setInterval\(/.test(src('textureService.js')));
 
 // ---- §1 rule 6: user-facing words live in strings.js ----

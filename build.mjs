@@ -16,6 +16,8 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from 'fs';
 import { createHash } from 'crypto';
+import { Script } from 'vm';
+import { pruneStrip } from './tools/prune.mjs';
 
 // ---- release names: Jupiter's named moons, by average distance from the
 // barycentre. `node build.mjs --next` moves release.js on to the next one.
@@ -154,14 +156,27 @@ function flatten(src, filename) {
       `the bundle would be broken. First: ${leftover[0].trim()}`
     );
   }
-  return `\n/* ==== ${filename} ==== */\n${withoutExports.trim()}\n`;
+  // the comments stay in the source (the haiku and the notes); the page ships without them
+  return `\n/* ==== ${filename} ==== */\n${pruneStrip(withoutExports, false, true).trim()}\n`;
 }
 
 const css = readFileSync('poetrypress.css', 'utf8');
-let js = ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n');
+// The texture worker's modules: the generators, the parts, the chains and the evaluator.
+// They ship ONCE: a plain script on the page (it runs there, for the textures the page makes
+// itself) whose text is also the worker's, with the worker's own few lines added (a Blob
+// worker, which works from file:// too, unlike a URL). The rest of the page follows it.
+const WORKER_ORDER = [ // which modules the worker needs (textureWorker.js is its own, the rest are shared)
+                      'tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
+                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'textureParams.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsLens.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
+// (in the page's order, which test/bundle.test.mjs checks against the imports; they import nothing that isn't shared)
+const SHARED = ORDER.filter(f => WORKER_ORDER.includes(f));
+{ const missing = SHARED.filter(f => !ORDER.includes(f)); if (missing.length) throw new Error('worker modules not on the page: ' + missing.join(', ')); }
+const shared = SHARED.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
+const workerMain = flatten(readFileSync('textureWorker.js', 'utf8'), 'textureWorker.js').replace(/<\/script/gi, '<\\/script');
+let js = ORDER.filter(f => !SHARED.includes(f)).map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n');
 // §Build: which build this is — its date and a short hash of the code
 js = js.replace("'__BUILD_STAMP__'", JSON.stringify(new Date().toISOString().slice(0, 10) + ' · ' +
-  createHash('sha256').update(js).digest('hex').slice(0, 7)));
+  createHash('sha256').update(shared + js).digest('hex').slice(0, 7)));
 
 let html = readFileSync('index.html', 'utf8');
 
@@ -172,19 +187,13 @@ if (!html.includes(scriptTag)) throw new Error('module script tag not found in i
 
 // (by a function: a replacement string would read $& and the like in the code as patterns)
 html = html.replace(linkTag, () => `<style>\n${css}\n</style>`);
-html = html.replace(scriptTag, () => `<script>\n${js}\n</script>`);
-if (!html.includes(js)) throw new Error('the bundle was not inlined verbatim');
+html = html.replace(scriptTag, () => `<script id="vellum-texture-worker">\n${shared}\n</script>\n` +
+  `<script type="text/js-worker" id="vellum-worker-main">\n${workerMain}\n</script>\n<script>\n${js}\n</script>`);
+if (!html.includes(js) || !html.includes(shared) || !html.includes(workerMain)) throw new Error('the bundle was not inlined verbatim');
+// (each script must still parse once its comments are gone; bundle.test proves it the same, token for token)
+for(const [what, code] of [['the generators', shared], ['the worker', shared + '\n' + workerMain], ['the page', shared + '\n' + js]])
+  try { new Script(code); } catch(e){ throw new Error(`${what} no longer parse after stripping comments: ${e.message}`); }
 
-// The texture worker: the generator modules flattened again, with the worker's
-// own few lines last, embedded as an inert script block that the texture
-// service turns into a Blob worker (works from file:// too, unlike a URL).
-const WORKER_ORDER = ['tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
-                      'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'textureParams.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsLens.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
-const workerJs = WORKER_ORDER.map(f => flatten(readFileSync(f, 'utf8'), f)).join('\n').replace(/<\/script/gi, '<\\/script');
-// in the <head>, so it exists before the page's script first asks for a texture
-if (!html.includes('</head>')) throw new Error('no </head> in index.html — the texture worker would be dropped');
-html = html.replace('</head>', () => `<script type="text/js-worker" id="vellum-texture-worker">\n${workerJs}\n</script>\n</head>`);
-if (!html.includes(workerJs)) throw new Error('the texture worker was not inlined verbatim');
 
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/index.html', html);
@@ -200,7 +209,7 @@ mkdirSync('dist/icons', { recursive: true });
 for(const f of readdirSync('icons')) copyFileSync('icons/' + f, 'dist/icons/' + f);
 
 const kb = n => (n / 1024).toFixed(1) + 'kb';
-console.log(`built dist/index.html — ${kb(html.length)} (css ${kb(css.length)}, js ${kb(js.length)})`);
+console.log(`built dist/index.html — ${kb(html.length)} (css ${kb(css.length)}, js ${kb(shared.length + workerMain.length + js.length)}: the generators ${kb(shared.length)}, shared with the worker)`);
 console.log(`installable app: dist/ also holds sw.js (cache ${version}), manifest.webmanifest, icons/`);
 console.log(`flattened ${ORDER.length} modules into one page — upload the whole dist/ folder`);
 

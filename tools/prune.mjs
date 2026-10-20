@@ -24,15 +24,21 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const rd = f => readFileSync(join(ROOT, f), 'utf8');
 const ls = d => existsSync(join(ROOT, d)) ? readdirSync(join(ROOT, d)) : [];
 
-/** Strip comments (and, with `strings`, the insides of string literals) from JS, keeping line breaks. */
-export function pruneStrip(src, strings = false){
+/** Strip comments (and, with `strings`, the insides of string literals) from JS, keeping line breaks.
+ *  `tight` (the build, for the shipped page): a comment leaves only its line breaks (or one space), and the
+ *  spaces before a line comment go with it, so the code is the same token for token (bundle.test proves it). */
+export function pruneStrip(src, strings = false, tight = false){
   let out = '', i = 0, prev = '';
   const n = src.length;
   const regexOk = () => /[(,=:[!&|?{};+\-*%<>~^]$|^$|\b(?:return|typeof|case|in|of|delete|void|throw|new)$/.test(prev.trimEnd());
   while(i < n){
     const c = src[i], d = src[i + 1];
-    if(c === '/' && d === '/'){ while(i < n && src[i] !== '\n') i++; continue; }
-    if(c === '/' && d === '*'){ const e = src.indexOf('*/', i + 2); const chunk = src.slice(i, e < 0 ? n : e + 2); out += chunk.replace(/[^\n]/g, ' '); i = e < 0 ? n : e + 2; continue; }
+    if(c === '/' && d === '/'){ while(i < n && src[i] !== '\n') i++; if(tight) out = out.replace(/[ \t]+$/, ''); continue; }
+    if(c === '/' && d === '*'){ const e = src.indexOf('*/', i + 2); const chunk = src.slice(i, e < 0 ? n : e + 2);
+      if(!tight) out += chunk.replace(/[^\n]/g, ' ');
+      else if(chunk.includes('\n')){ out = out.replace(/[ \t]+$/, ''); out += chunk.replace(/[^\n]/g, ''); }
+      else out += ' ';
+      i = e < 0 ? n : e + 2; continue; }
     if(c === '"' || c === "'" || c === '`'){
       const q = c; let j = i + 1, body = '';
       while(j < n && src[j] !== q){
@@ -41,7 +47,7 @@ export function pruneStrip(src, strings = false){
           // a template's ${…} is code: keep it as code
           let depth = 1, k = j + 2;
           while(k < n && depth){ if(src[k] === '{') depth++; else if(src[k] === '}') depth--; k++; }
-          body += ' ' + pruneStrip(src.slice(j + 2, k - 1), strings) + ' '; j = k; continue; }
+          body += tight ? '${' + pruneStrip(src.slice(j + 2, k - 1), strings, tight) + '}' : ' ' + pruneStrip(src.slice(j + 2, k - 1), strings) + ' '; j = k; continue; }
         body += src[j]; j++; }
       out += q + (strings ? body.replace(/[^\n ]/g, ' ') : body) + q; prev = q; i = j + 1; continue; }
     if(c === '/' && regexOk()){

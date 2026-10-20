@@ -113,10 +113,12 @@ function boot(){
   try {
     if(typeof Worker !== 'function' || typeof OffscreenCanvas !== 'function' || typeof document === 'undefined' || !document.getElementById) throw 0;
     const inline = document.getElementById('vellum-texture-worker');
-    // the built page carries the worker in its <head>; if it isn't there yet,
+    // the built page carries the worker's code before its own script; if it isn't there yet,
     // the page is still loading — try again later rather than give up for good
     if(!inline && document.readyState === 'loading') return null;
-    if(inline) workerSrc = URL.createObjectURL(new Blob([inline.textContent], { type: 'text/javascript' }));
+    // (the generators are the page's own script, shipped once; the worker adds its message handler)
+    const main = inline && document.getElementById('vellum-worker-main');
+    if(inline) workerSrc = URL.createObjectURL(new Blob([inline.textContent, '\n', main ? main.textContent : ''], { type: 'text/javascript' }));
     pool = Array.from({ length: POOL_SIZE }, spawn);
   } catch(e){ broken = true; pool = null; }
   return pool;
