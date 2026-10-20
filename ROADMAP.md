@@ -305,7 +305,7 @@ Easter eggs).
   - **Small nods elsewhere:** border stitches, underlines and fonts with a game's grammar (a heart row, a dialogue
     box, a pixel font); simple backgrounds — a Sierpiński triangle's first steps is mathematics, free to use, under a
     name of its own (never the game's).
-  - **Next pass on the first two (Ruby, 2026-10-19):** the Windward Sea's wind about 30% less dramatic; an
+  - **Next pass on the first two (Ruby, 2026-10-19):** an
     occasional small fairy (a glowing nod) in the Meadow and the Windward Sea; Macro Bloom's bugs a little smaller,
     and a 1-in-66 chance of a small fairy among its visitors (OPEN-ISSUES §2).
   - **Presets (Stage 4):** the Meadow gets a preset that nods to the famous field by a name of its own (a nod, never
