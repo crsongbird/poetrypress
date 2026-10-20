@@ -8,6 +8,8 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- TIME ON THE RINGWORLD: the Moving Image's Time Passing (an hour to two days), the clouds now standing among the hills,
+  the gas giants, the moving droids and the swaying grass. Is the pace right, and what else should move?
 - MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
   grid. Does it hold?
 

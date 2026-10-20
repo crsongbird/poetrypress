@@ -3,7 +3,7 @@
  * whole, the dials the short way round), and the three containers it writes (zip, MP4, WebM), read back.
  */
 import { check, done } from './harness.mjs';
-import { blendLooks, crc32, moveAt, mp4Parts, webmBytes, wholeChanges, zipParts } from '../moving.js';
+import { blendLooks, crc32, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
 
 const cat = parts => { const n = parts.reduce((s, p) => s + p.length, 0), o = new Uint8Array(n); let at = 0; for(const p of parts){ o.set(p, at); at += p.length; } return o; };
 const dv = b => new DataView(b.buffer, b.byteOffset, b.byteLength), str = (b, at, n) => String.fromCharCode(...b.subarray(at, at + n));
@@ -21,6 +21,14 @@ check('a key only one look has keeps it', m.only === 1);
 check('a key named as not between is whole', blendLooks(a, b, 0.5, 0, k => k === 'maxSize').maxSize === '40');
 check('the whole changes are found (where the film fades)', JSON.stringify(wholeChanges(a, b).sort()) === JSON.stringify(['texture', 'textureSeedValue', 'textureType']));
 check('there and back loops (0 → 1 → 0), one way ends at the other look', moveAt(0, 180, true) === 0 && Math.abs(moveAt(90, 180, true) - 1) < 1e-9 && moveAt(179, 180, false) === 1 && moveAt(1, 180, true) > 0);
+
+// ---- the sun through a day ----
+{ const f = sunPath(315, 40), day = Array.from({ length: 24*12 }, (_, i) => f(i/12)), up = day.filter(([, t]) => t < 100).length/day.length;
+  check('the sun begins where the dial stands', Math.abs(f(0)[0] - 315) < 1e-6 && Math.abs(f(0)[1] - 40) < 0.01);
+  check('a day comes round in twenty-four hours', Math.abs(f(24)[0] - 315) < 1e-6 && Math.abs(f(24)[1] - 40) < 0.01);
+  check('the day is longer than the night (about fourteen hours of the twenty-four)', up > 0.55 && up < 0.65);
+  check('its path is an arc, never a jump: the dial moves a little from one five minutes to the next', day.every(([a, t], i) => !i || (Math.abs(((a - day[i - 1][0] + 540) % 360) - 180) < 12 && Math.abs(t - day[i - 1][1]) < 4)));
+  check('dusk lasts: the twilight (past the dial\'s rim, short of full night) holds for more than an hour', day.filter(([, t]) => t > 100 && t < 129.9).length/12 > 1); }
 
 // ---- the zip ----
 check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789')) === 0xCBF43926);

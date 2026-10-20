@@ -2,6 +2,18 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Angrboda (2026-10-19)
+
+- **A reload brings back the page as it was left.** The surface, its
+  sliders and their names come back whatever the poem is: an empty page
+  stays empty, and the welcome poem stays the welcome, each at the look it
+  was left at. Before, an empty poem or the welcome poem opened on the
+  opening look, and the browser then put back the old slider values on its
+  own, so the controls named one surface while another was drawn. Now, once
+  the page has loaded, the controls are read again as they stand, so their
+  names, readouts and hues always match what is drawn. For a fresh start,
+  use ⟲.
+
 ## Saturn–Eggther (2026-10-19)
 
 - **New surface: Windward Sea**, the first love letter to a video game: a

@@ -204,7 +204,7 @@ export const TEXTURE_CAPS = {
   // noon, at its rim dusk, past it night; its direction which way round the dusk comes
   skyring:       { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse', seeded:{ turn:[0, 360], view:[8, 70], zoom:[80, 145] } } },
-  ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
+  ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], time:true, light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },   // (View: overhead to across the water)
@@ -523,7 +523,10 @@ function cameraOf(type, opts){
   if(!has) return null;
   const c = opts.camera || {}, d = (TEXTURE_CAPS[RETIRED[type] || type] || {}).camera || {};
   const num = (v, dv) => { const x = +v; return isFinite(x) ? x : dv; };
-  return { turn: Math.round(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: Math.round(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: Math.round(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))) };
+  // (to a hundredth of a degree, so a film's camera turns smoothly; and the scene's clock, in seconds, for a film of time
+  //  passing: none at rest, so every still keys and draws as it always did)
+  const r2 = v => Math.round(v*100)/100, time = num(c.time, 0) > 0 ? r2(num(c.time, 0)) : 0, dt = time ? r2(Math.max(0, num(c.dt, 0))) : 0;
+  return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))), ...(time ? { time, dt } : {}) };
 }
 // THE PAGE'S TRUE SHAPE (Ruby: the saved image's board was not the preview's): the parts that grow by chance on
 // their grid (texCore `pageGrid`) are given the export's own size, and grow on its grid at every size. A request
@@ -582,7 +585,7 @@ function describeRequest(type, w, h, opts){
   // how low the light is, 0–100 (100: the horizon, as it always was)
   // up to 130 for the engine-lit textures (past the dial's rim: lower light); 100 for the rest
   const tiltMax = (TEXTURE_CAPS[RETIRED[type] || type] || {}).lowLight ? 130 : 100;
-  const lightTilt = (opts.lightTilt >= 0) ? Math.round(Math.min(tiltMax, opts.lightTilt)) : 100;
+  const lightTilt = (opts.lightTilt >= 0) ? Math.round(Math.min(tiltMax, opts.lightTilt)*100)/100 : 100;   // (to a hundredth: a film's sun moves smoothly)
   // THE PAGE'S LIGHTS (ROADMAP C1, C2): the Ambient slider and hue, and the rim light (the dial's second handle), for a
   // surface they light (`rig`, measured) or a graph; any other surface never sees them, and keys as it always did
   const rig = ((TEXTURE_CAPS[type] || {}).rig || type === 'athanor' || type === 'athanorsteps')
@@ -625,7 +628,7 @@ function describeRequest(type, w, h, opts){
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
             // (whether it is Text Aware, and whether it fills the letters, only for a surface that reads the poem)
             + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' + Math.round(+opts.fill*100) : '') + (opts.around ? '_R' + Math.round(+opts.around*100) : '') + (opts.aware === false ? '_A0' : '') : '')
-            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` : '')(cameraOf(type, opts)))
+            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time ? `_T${cam.time}x${cam.dt}` : '') : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };

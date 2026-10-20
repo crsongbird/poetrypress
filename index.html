@@ -1528,8 +1528,16 @@ but bear with me, dear}]/jitter:200
           <option value="light" data-str="moving.light_round">Light round</option>
           <option value="look" data-str="moving.look">To another look</option>
           <option value="lookback" data-str="moving.lookback">To another look and back</option>
+          <option value="time" data-str="moving.time">Time passing</option>
         </select></div>
-      <div class="moving-row" id="movingLookRow" hidden><label for="movingLook" data-str="moving.other">The other look</label><select id="movingLook"></select></div>
+      <!-- (the move's own choice, in one row that always keeps its room: the other look, or how much time passes) -->
+      <div class="moving-row" id="movingDetailRow"><label for="movingLook" id="movingLookLabel" data-str="moving.other">The other look</label><select id="movingLook"></select>
+        <label for="movingSpan" id="movingSpanLabel" data-str="moving.span" hidden>Time to pass</label><select id="movingSpan" hidden>
+          <option value="3600" data-str="moving.hour">An hour</option>
+          <option value="21600" data-str="moving.hours6">Six hours</option>
+          <option value="86400" selected data-str="moving.day1">A day</option>
+          <option value="172800" data-str="moving.days2">Two days</option>
+        </select></div>
       <div class="moving-row"><label for="movingSize" data-str="moving.size">Size</label>
         <select id="movingSize">
           <option value="page" data-str="moving.page">The page</option>
@@ -1542,6 +1550,13 @@ but bear with me, dear}]/jitter:200
           <option value="6" data-str="moving.s6">6 seconds</option>
           <option value="12" selected data-str="moving.s12">12 seconds</option>
           <option value="24" data-str="moving.s24">24 seconds</option>
+          <option value="30" data-str="moving.s30">30 seconds</option>
+        </select></div>
+      <div class="moving-row"><label for="movingFps" data-str="moving.fps">Frame rate</label>
+        <select id="movingFps">
+          <option value="30" selected data-str="moving.fps30">30 a second</option>
+          <option value="48" data-str="moving.fps48">48 a second</option>
+          <option value="60" data-str="moving.fps60">60 a second</option>
         </select></div>
       <div class="moving-row"><label for="movingFormat" data-str="moving.format">Format</label>
         <select id="movingFormat">

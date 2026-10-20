@@ -1271,6 +1271,10 @@ let LAST_RENDER_MS = 0, LAST_PROFILE = '';
 // shown, the saved image at 1. PAGE_SIZE is the export's own size, which the preview's rounding can't tell exactly
 // (a surface laid out in whole cells counts them from it: textureGenerators `pageOf`).
 let RENDER_SCALE = 1, PAGE_SIZE = null;
+// THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, handed to a surface with a camera
+// (the Ringworld's clouds drift, its stars wheel, its lights flicker); 0 at rest, so a still is as it always was
+let SCENE_TIME = 0, SCENE_DT = 0;
+export function setSceneTime(t, dt = 0){ SCENE_TIME = t > 0 && isFinite(t) ? t : 0; SCENE_DT = SCENE_TIME && dt > 0 ? dt : 0; }
 // a texture finished in the worker: draw the page again
 onTextureReady(() => scheduleRender());
 export function setRenderScale(s, page){ RENDER_SCALE = (s > 0 && isFinite(s)) ? s : 1; if(page && page[0] > 0 && page[1] > 0) PAGE_SIZE = [Math.round(page[0]), Math.round(page[1])]; }
@@ -1372,7 +1376,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const p4 = has(4) ? num(L.texP4) : null, p5 = has(5) ? num(L.texP5) : null, p6 = has(6) ? num(L.texP6) : null, p7 = has(7) ? num(L.texP7) : null, p8 = has(8) ? num(L.texP8) : null, p9 = has(9) ? num(L.texP9) : null, p10 = has(10) ? num(L.texP10) : null;
   const accent1 = $('accent1ColorHex').value, accent2 = $('accent2ColorHex').value;
   // the camera dial's (a texture with a camera, or a graph with a Camera Dial; the request keys it only then)
-  const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom } : undefined;
+  const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom, ...(SCENE_TIME > 0 ? { time: SCENE_TIME, dt: SCENE_DT } : {}) } : undefined;
   const name = s => slot === 'main' ? s : 'base' + (s === 'main' ? '' : s);
   // a texture that can't be drawn is skipped, never allowed to abort the frame
   const put = t => { if(!t) return; try {

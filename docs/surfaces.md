@@ -347,6 +347,26 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     a bike, a signal), poles carry wires along the main roads out of town, and buildings and trees keep off them. The
     Clutter knob (`V.clutter`) sets all the small things and boards, apart from Works. Things are set into the ground a
     little; the ruins' wrecks half buried (`sink`, clipped at the ground).
+  - **Time** (Ruby: "the simulation actually needs a time t / ∆t … nothing cartoony, only minor things";
+    docs/prior-art/ringworld-time.md): the camera carries the scene's clock (`setSceneTime`, keyed with the camera, 0 in
+    a still so a still is unchanged), read as `V.time` and `V.dt`. With it the wind carries the clouds, the stars and
+    everything beyond the ring turn with its spin (`RG_SPIN`, `farAt`), meteors cross by night (a shower's from one
+    radiant, caught by each frame's shutter), lightning flashes now and then, rain and snow fall, the grass sways in
+    travelling gusts, insects dance, the droids go about their rounds (`RG_MOVES`), lights flicker and go out and on
+    through the night, glints move on the water. The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
+    early summer, days of fourteen hours, long dusks.
+  - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
+    objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
+    (`paintHeap`), each on its own sheet laid at once so its billows never darken each other, every billow a gradient
+    so its edges are soft; more and smaller billows the nearer the cloud; rain falls from a heap's base to the ground
+    below it, lightning strikes from one down to the land. High and far, the cirrus and the clear sky's low bands stay
+    in the sky.
+  - **Gas giants** (`rgGiant`, `RG_GIANTS`): The Arch's Gas Giant setting hangs Saturn (with Titan), Jupiter, Neptune or
+    Uranus in the sky, by the seed, with their moons along their equators.
+  - **Runes on the walls** (`rgRune`): the builders' script on the rim walls is a band of runes between ruled lines;
+    graffiti at a wall's foot is runes too, thrown up outlined in the towns, scrawled in the ruins, paint running.
+    Near, the walls show their plates' seams, weather run down them, hatches, lights along their tops for the ships.
+  - **The surface near** (`pkGrain`): a painted face large on the page shows a faint mottle and streaks of its material.
   - **The countryside** (Ruby: "farmland in rings round a town", "terraces", "a settlement's lights at night", "trees
     kept back from a house"; docs/prior-art/ringworld-countryside.md): the store lays fields (`out.fields`) round each
     gathering of houses (the farms' hearts, where the houses gather as the buildings are placed), on each farm's own

@@ -9,7 +9,7 @@
  */
 import { $ } from './appOptions.js';
 import { MOVING, fill } from './strings.js';
-import { render, setRenderScale } from './canvasRenderer.js';
+import { render, setRenderScale, setSceneTime } from './canvasRenderer.js';
 import { texturesSettled, setDrafting } from './textureService.js';
 import { capsFor } from './textureGenerators.js';
 import { readStore, SPELL_KEY, stripToLook } from './vault.js';
@@ -18,9 +18,8 @@ import { setWorking } from './uiWorking.js';
 import { draftTimer } from './uiSurface.js';
 import { generateFilenameBase } from './uiLayout.js';
 import { restoreSettings, serializeCurrentSettings } from './uiLook.js';
-import { blendLooks, crc32, moveAt, mp4Parts, webmBytes, wholeChanges, zipParts } from './moving.js';
+import { blendLooks, crc32, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
 
-const MOVING_FPS = 30;
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 // (where a look's kind changes, the film fades across this middle stretch of the move)
 const MOVING_FADE = [0.38, 0.62];
@@ -41,6 +40,7 @@ export function openMoving(){
   const move = $('movingMove'), opt = v => move && [...move.options].find(o => o.value === v);
   if(opt('camera')) opt('camera').disabled = !caps.camera;
   if(opt('light')){ opt('light').disabled = !caps.light; opt('light').textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light; }
+  if(opt('time')) opt('time').disabled = !caps.time;   // (a surface that keeps a clock: the Ringworld)
   const looks = movingLooks(), pick = $('movingLook');
   if(pick){ pick.innerHTML = ''; for(const l of looks){ const o = document.createElement('option'); o.value = l.value; o.textContent = l.label; pick.appendChild(o); } }
   for(const v of ['look', 'lookback']) if(opt(v)) opt(v).disabled = !looks.length;
@@ -53,24 +53,25 @@ export function openMoving(){
 export function closeMoving(){ if(movingRun.busy){ movingRun.stop = true; return; } const s = $('movingSheet'); if(s) s.hidden = true; }
 /** The rows the chosen move needs (the other look only for a move to one). */
 export function paintMoving(){
-  const m = ($('movingMove') || {}).value, row = $('movingLookRow');
-  if(row) row.hidden = !(m === 'look' || m === 'lookback');
+  const m = ($('movingMove') || {}).value, looked = m === 'look' || m === 'lookback', timed = m === 'time', row = $('movingDetailRow');
+  for(const [id, on] of [['movingLook', looked], ['movingLookLabel', looked], ['movingSpan', timed], ['movingSpanLabel', timed]]){ const el = $(id); if(el) el.hidden = !on; }
+  if(row && row.classList) row.classList.toggle('moving-idle', !looked && !timed);
   const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? MOVING.stop : MOVING.make;
-  for(const id of ['movingMove', 'movingLook', 'movingSize', 'movingLength', 'movingFormat']){ const el = $(id); if(el) el.disabled = movingRun.busy; }
+  for(const id of ['movingMove', 'movingLook', 'movingSpan', 'movingSize', 'movingLength', 'movingFps', 'movingFormat']){ const el = $(id); if(el) el.disabled = movingRun.busy; }
 }
 /** The encoder's settings, the first this browser can make at this size: H.264 for an MP4, VP9 (or VP8) for a WebM. */
-async function movingCodec(fmt, w, h){
+async function movingCodec(fmt, w, h, fps){
   if(typeof VideoEncoder === 'undefined') return null;
-  const bitrate = Math.round(Math.min(40e6, Math.max(4e6, w*h*MOVING_FPS*0.15)));
+  const bitrate = Math.round(Math.min(40e6, Math.max(4e6, w*h*fps*0.15)));
   const tries = fmt === 'mp4' ? ['avc1.640028', 'avc1.640033', 'avc1.640034', 'avc1.4d0028', 'avc1.4d0033', 'avc1.420028'] : ['vp09.00.40.08', 'vp09.00.50.08', 'vp09.00.51.08', 'vp8'];
   for(const codec of tries){
-    const cfg = { codec, width: w, height: h, bitrate, framerate: MOVING_FPS, ...(fmt === 'mp4' ? { avc: { format: 'avc' } } : {}) };
+    const cfg = { codec, width: w, height: h, bitrate, framerate: fps, ...(fmt === 'mp4' ? { avc: { format: 'avc' } } : {}) };
     try { const r = await VideoEncoder.isConfigSupported(cfg); if(r && r.supported) return cfg; } catch(e){ /* the next */ }
   }
   return null;
 }
 /** Where the frames go: a PNG each into a zip, or each into the encoder and on into an MP4 or a WebM. */
-function movingSink(fmt, cfg, w, h){
+function movingSink(fmt, cfg, w, h, fps){
   if(fmt === 'png'){
     const entries = []; let total = 0;
     return {
@@ -88,56 +89,52 @@ function movingSink(fmt, cfg, w, h){
   return {
     add: async (canvas, i) => {
       if(failed) throw failed;
-      const vf = new VideoFrame(canvas, { timestamp: Math.round(i*1e6/MOVING_FPS), duration: Math.round(1e6/MOVING_FPS), alpha: 'discard' });
-      encoder.encode(vf, { keyFrame: i % (MOVING_FPS*2) === 0 }); vf.close();
+      const vf = new VideoFrame(canvas, { timestamp: Math.round(i*1e6/fps), duration: Math.round(1e6/fps), alpha: 'discard' });
+      encoder.encode(vf, { keyFrame: i % (fps*2) === 0 }); vf.close();
       while(encoder.encodeQueueSize > 3) await new Promise(r => setTimeout(r, 4));
     },
     done: async () => {
       await encoder.flush(); encoder.close(); if(failed) throw failed;
       // (no reordered frames: the containers here keep one time per frame, in order)
       if(stamps.some((s, i) => i && s < stamps[i - 1])) throw new Error('reordered frames');
-      if(fmt === 'mp4'){ if(!avcC) throw new Error('no avcC'); return new Blob(mp4Parts({ width: w, height: h, fps: MOVING_FPS, avcC, frames }), { type: 'video/mp4' }); }
-      return new Blob([webmBytes({ width: w, height: h, fps: MOVING_FPS, codec: cfg.codec === 'vp8' ? 'V_VP8' : 'V_VP9', frames })], { type: 'video/webm' });
+      if(fmt === 'mp4'){ if(!avcC) throw new Error('no avcC'); return new Blob(mp4Parts({ width: w, height: h, fps, avcC, frames }), { type: 'video/mp4' }); }
+      return new Blob([webmBytes({ width: w, height: h, fps, codec: cfg.codec === 'vp8' ? 'V_VP8' : 'V_VP9', frames })], { type: 'video/webm' });
     },
     drop: () => { try { encoder.close(); } catch(e){ /* closed already */ } } };
-}
-/**
- * A day on the Ringworld, where the light dial is the sun: from where it stands now, on up (the dial's middle is noon),
- * down the far side to dusk at the rim, under it for the night (past the rim, to 130), and up again at dawn where it
- * began. u from 0 to 1 gives [the dial's turn, its tilt]: once round is a whole day, so the film loops.
- */
-function movingDay(a0, tilt0){
-  const h = t => t <= 100 ? 1 - t/100 : -(t - 100)/30, h0 = Math.max(-1, Math.min(1, h(tilt0))), th0 = Math.asin(h0);
-  return u => { const th = th0 + u*Math.PI*2, up = Math.sin(th), rising = Math.cos(th) >= 0;
-    return [((rising ? a0 : a0 + 180) % 360 + 360) % 360, up >= 0 ? 100 - 100*up : 100 - 30*up]; };
 }
 // a frame: the page drawn, the textures it asks for made, and drawn again with them (as Save does)
 async function movingFrame(){ render(); await texturesSettled(); render(); }
 /** Make the film (or, while one is being made, stop it). */
 export async function makeMoving(){
   if(movingRun.busy){ movingRun.stop = true; return; }
-  const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, n = (+$('movingLength').value || 12)*MOVING_FPS;
+  const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, fps = +($('movingFps') || {}).value || 30, n = Math.min(30, +$('movingLength').value || 12)*fps;
   let [w, h] = MOVING_SIZES[$('movingSize').value] || [state.page.exportW || canvas.width, state.page.exportH || canvas.height];
   if(fmt !== 'png'){   // (a film's page held to 4K's area, past which the encoders' levels end; and even sides, as H.264 and VP9 take)
     const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }
   const start = serializeCurrentSettings(), looked = move === 'look' || move === 'lookback';
   const other = looked ? movingLooks().find(l => l.value === ($('movingLook') || {}).value) : null;
   if(looked && !other){ movingNote(MOVING.noLook); return; }
-  const cfg = fmt === 'png' ? null : await movingCodec(fmt, w, h);
+  const cfg = fmt === 'png' ? null : await movingCodec(fmt, w, h, fps);
   if(fmt !== 'png' && !cfg){ movingNote(fill(MOVING.noCodec, fmt.toUpperCase())); return; }
   const end = other ? other.look() : null, snap = k => { const el = $(k) || $(k + 'Hex'); return !!(el && el.tagName === 'SELECT'); };
   const fades = end ? wholeChanges(start, end, snap).filter(k => k !== 'lookName' && k !== 'spell') : [];
   const pw = canvas.width, ph = canvas.height, num = id => parseFloat(($(id) || {}).value) || 0, cam0 = num('cameraTurn'), light0 = num('textureLight'), tilt0 = num('textureLightTilt');
-  const day = move === 'light' && (capsFor(($('textureType') || {}).value) || {}).dial === 'Daylight' ? movingDay(light0, tilt0) : null;
-  const sink = movingSink(fmt, cfg, w, h);
+  // (on the Ringworld the light dial is the sun: a Light Round is one day of it; Time Passing as long as was chosen, the
+  //  scene's clock running with it, so its clouds drift, its stars wheel and its lights flicker as the hours go)
+  const sun = (move === 'light' && (capsFor(($('textureType') || {}).value) || {}).dial === 'Daylight') || move === 'time' ? sunPath(light0, tilt0) : null;
+  const span = move === 'time' ? (+($('movingSpan') || {}).value || 86400) : 86400, clocked = !!(capsFor(($('textureType') || {}).value) || {}).time;
+  const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
   movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving');
   if(document.body && document.body.classList) document.body.classList.add('saving');
   try {
     canvas.width = w; canvas.height = h; setDrafting(false); clearTimeout(draftTimer); setRenderScale(1, [w, h]);
     for(let i = 0; i < n && !movingRun.stop; i++){
+      // (a surface that keeps a clock runs it in every film: in real time, so the grass sways and the drones hover as
+      //  the camera turns; Time Passing runs it fast, below)
+      if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
       if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
-      else if(day){ const [a, tl] = day(i/n); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); }
+      else if(sun){ const [a, tl] = sun(span/3600*i/n); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(span*i/n, span/n); }
       else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360);
       else {
         const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
@@ -159,7 +156,7 @@ export async function makeMoving(){
     sink.drop(); made = null; movingNote(err && err.message === 'too big' ? MOVING.tooBig : MOVING.failed);
     if(typeof console !== 'undefined') console.warn('Moving Image:', err && err.message);
   } finally {
-    if(looked) restoreSettings(start);
+    setSceneTime(0); if(looked) restoreSettings(start);
     else for(const [id, v] of [['cameraTurn', cam0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
     canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
     if(document.body && document.body.classList) document.body.classList.remove('saving');

@@ -35,7 +35,22 @@ const pkFoot = (x, X, Y, r, c) => pkEll(x, X - c.sd*r*0.35, Y, r, r*0.22, pkCss(
 // by the scene's light rather than all one grey.
 // a face, shaded from top to foot (plain when too small to show it)
 const pkShade = (x, pts, col, y0, y1, k = 0.14) => { if(!(y1 - y0 > 2)) return pkPoly(x, pts, pkCss(col));
-  const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, pkCss(pkMix(col, PK_WHITE, k*0.5))); g.addColorStop(0.62, pkCss(col)); g.addColorStop(1, pkCss(pkMix(col, PK_BLACK, k*1.2))); pkPoly(x, pts, g); };
+  const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, pkCss(pkMix(col, PK_WHITE, k*0.5))); g.addColorStop(0.62, pkCss(col)); g.addColorStop(1, pkCss(pkMix(col, PK_BLACK, k*1.2))); pkPoly(x, pts, g);
+  if(y1 - y0 > 70) pkGrain(x, pts, col); };
+// THE SURFACE NEAR (Ruby: "some minor texturing to the primitives especially when they're close"): a face large on the
+// page shows what it is made of, faintly: a mottle of slightly lighter and darker patches, and fine streaks along it,
+// kept inside the face; keyed to where the face stands, so it holds still as long as the thing does (a level of
+// detail: nothing at all where the face is small)
+function pkGrain(x, pts, col){
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for(const [a, b] of pts){ x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); }
+  const w = x1 - x0, h = y1 - y0; if(w < 24 || h < 24) return;
+  const R = mulberry32((Math.round(x0*7.13) ^ Math.imul(Math.round(y0*3.7), 2654435761) ^ Math.round(w*11)) >>> 0), n = Math.min(90, Math.floor(w*h/1400));
+  x.save(); x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+  for(let q = 0; q < n; q++){ const cx = x0 + R()*w, cy = y0 + R()*h, r = Math.max(2, Math.min(w, h)*(0.03 + 0.08*R())), lt = R() < 0.5;
+    x.fillStyle = pkCss(pkMix(col, lt ? PK_WHITE : PK_BLACK, 0.06 + 0.06*R()), 0.5); x.beginPath(); x.ellipse(cx, cy, r*(1 + R()), r*(0.5 + 0.4*R()), 0, 0, Math.PI*2); x.fill(); }
+  x.strokeStyle = pkCss(pkMix(col, PK_BLACK, 0.12), 0.18); x.lineWidth = h*0.004; x.beginPath();
+  for(let q = 0, m = Math.min(24, Math.floor(h/18)); q < m; q++){ const yy = y0 + R()*h, xa = x0 + R()*w*0.6; x.moveTo(xa, yy); x.lineTo(xa + w*(0.1 + 0.3*R()), yy + (R() - 0.5)*2); } x.stroke();
+  x.restore(); }
 // the shadow a thing from X0 to X1, h tall, throws on the ground away from the light, foreshortened
 const pkCast = (x, X0, X1, Y, h, c, a = 0.22) => { const dx = -c.sd*h*0.42, dy = h*0.07; pkPoly(x, [[X0, Y], [X1, Y], [X1 + dx, Y + dy], [X0 + dx, Y + dy]], pkCss(pkMix(c.dark, PK_BLACK, 0.5), a)); };
 // streaks of weather down a wall from x0..x0+w, top..top+ht (only where large enough to carry them)

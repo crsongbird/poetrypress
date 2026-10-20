@@ -117,8 +117,17 @@ function rgView(E, n, ww, wh){
   // (the land's facets and the painted things, lit from the sun's side of the screen, and from above as it rises)
   const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
   return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU] }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf, psi,
-    life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed') };
+    life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
+    // THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, and the time between its frames
+    // (0 in a still, so a still draws as it always did); and the ring's slow spin under the stars since then
+    time: (E.ctx.camera && E.ctx.camera.time) || 0, dt: (E.ctx.camera && E.ctx.camera.dt) || 0, spin: ((E.ctx.camera && E.ctx.camera.time) || 0)*RG_SPIN };
 }
+// THE RING'S SPIN under the stars (docs/prior-art/ringworld-time.md: Niven's ring turns once in seven and a half of its
+// thirty-hour days, 225 hours): radians a second of the film's clock turns the sky, a degree and a half an hour
+const RG_SPIN = Math.PI*2/(225*3600);
+// THE CLOUDS' CLOCK: when a film's frames are far apart in time (a day in seconds), the clouds would leap a kilometre
+// from frame to frame; they are carried as though each frame were twenty seconds on, so they drift rather than jump
+const rgCloudTime = V => V.dt > 20 ? V.time/V.dt*20 : V.time;
 // the ground's own colour at a point (before light, night and haze): the Land Hue as each world lays it, dry land,
 // forest, city, rock high up, snow on the tallest; the sea below its level
 function rgGround(V, a, z, e, coarse = 1){
@@ -143,7 +152,7 @@ function rgAirOf(V, day){ const dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), w =
 // THE STARS BEHIND (what the Arch is laid over) pan with the camera, wrapping round, so turning the camera turns the sky
 // with the land instead of leaving the stars pinned to the page
 function rgPanSky(c, x, V){
-  const { ww, wh, F } = V, ox = ((-V.psi*F) % ww + ww) % ww, oy = ((V.th*F) % wh + wh) % wh; if(ox < 0.5 && oy < 0.5) return;
+  const { ww, wh, F } = V, ox = ((-V.psi*F) % ww + ww) % ww, oy = (((V.th + V.spin*V.hx)*F) % wh + wh) % wh; if(ox < 0.5 && oy < 0.5) return;
   const [t, tx] = kitCanvas(ww, wh); tx.drawImage(c, 0, 0);
   for(const dx of [ox - ww, ox]) for(const dy of [oy - wh, oy]) x.drawImage(t, dx, dy);
   t.width = 0; t.height = 0;
@@ -153,6 +162,77 @@ function rgPanSky(c, x, V){
 // mostly clear, often clouds, now and then fog, rarely rain, a storm or snow (never snow where it's neon or ruins hot)
 function rgWeatherOf(seed, chosen, world){ if(chosen && chosen !== 'by the seed') return chosen; const u = mnHash(seed | 0, 77, 5);
   return u < 0.46 ? 'clear' : u < 0.74 ? 'clouds' : u < 0.84 ? 'fog' : u < 0.93 ? 'rain' : u < 0.97 ? 'storm' : world.list.includes('neon') ? 'rain' : 'snow'; }
+// A RUNE (Ruby: "better rune graffiti"): a letter of a runic hand, as the old futhark is cut, straight strokes only (a
+// knife's or a brush's): a stave, and twigs from it (up or down, one side or both, from its top or its middle), now and
+// then a bow or a lozenge; the same seed always cuts the same letter. (X, Y) its middle, g half its height
+function rgRune(x, X, Y, g, u){ const k = Math.floor(u*24), w = g*0.55, P = (a, b) => [X + a*w, Y + b*g];
+  const seg = (A, B) => { x.moveTo(...P(...A)); x.lineTo(...P(...B)); };
+  x.beginPath(); if(k % 6 !== 5) seg([0, -1], [0, 1]);   // the stave (all but the lozenges)
+  switch(k % 6){ case 0: seg([0, -1], [1, -0.4]); if(k & 8) seg([0, -0.3], [1, 0.3]); break;                    // twigs up and out, one or two
+    case 1: seg([0, -1], [-1, -0.4]); seg([0, -1], [1, -0.4]); break;                                             // twigs both ways from the top
+    case 2: seg([0, -1], [0.9, -0.5]); seg([0.9, -0.5], [0, 0]); if(k & 8) seg([0, 0], [0.9, 1]); break;            // a bow (and a leg)
+    case 3: seg([-0.9, -0.4], [0.9, 0.4]); if(k & 8) seg([-0.9, 0.4], [0.9, -0.4]); break;                        // a cross-stroke (or two)
+    case 4: seg([0, 0], [-0.9, 0.6]); seg([0, 0], [0.9, 0.6]); if(k & 8) seg([0, -1], [0.7, -0.6]); break;         // twigs down from the middle
+    default: seg([0, -1], [0.8, 0]); seg([0.8, 0], [0, 1]); seg([0, 1], [-0.8, 0]); seg([-0.8, 0], [0, -1]); if(k & 8){ seg([-0.8, 0], [-1, 0.8]); seg([0.8, 0], [1, 0.8]); } }
+  x.stroke(); }
+// THE GAS GIANTS the ring may orbit (Ruby: "a random gas giant including Jupiter, Saturn, Uranus, Neptune (with some of
+// their moons)"; docs/prior-art/ringworld-time.md): Saturn is paintSaturn's; the other three here, in flat shapes as a
+// space painter blocks them: JUPITER's cream zones and rust belts, their edges waved, the Great Red Spot in the south;
+// URANUS a pale cyan ball almost without a mark, its thin dark rings standing nearly upright (it lies on its side);
+// NEPTUNE deep blue, its dark spot and the white streaks of high cloud. Each lit from the ring's star (its night side
+// away from it, the terminator soft), and its moons strung along its equator, each a small disc with its own night
+// side: Io, Europa, Ganymede and Callisto; Miranda to Oberon; Triton. (X, Y) its middle, r its radius.
+//   far giant, banded —
+//   the moons keep their little nights
+//   on the line of its waist
+const RG_GIANTS = {
+  jupiter: { base: [222, 206, 182], bands: [[236, 226, 206], [186, 136, 100], [230, 214, 190], [168, 122, 92], [226, 210, 186], [196, 152, 116], [214, 200, 180]], poles: [150, 140, 130],
+    moons: [['Io', [232, 210, 120], 0.026], ['Europa', [226, 216, 196], 0.022], ['Ganymede', [170, 160, 150], 0.037], ['Callisto', [116, 106, 98], 0.034]] },
+  uranus: { base: [174, 216, 224], bands: [[180, 220, 228], [170, 212, 222], [184, 224, 230]], poles: [196, 230, 234],
+    moons: [['Miranda', [170, 170, 170], 0.0185], ['Ariel', [196, 192, 186], 0.045], ['Umbriel', [120, 118, 116], 0.046], ['Titania', [176, 168, 160], 0.062], ['Oberon', [156, 146, 138], 0.059]] },
+  neptune: { base: [64, 98, 196], bands: [[70, 106, 204], [58, 88, 184], [76, 114, 210], [60, 92, 190]], poles: [52, 80, 170],
+    moons: [['Triton', [216, 198, 192], 0.055]] } };
+function rgGiant(x, X, Y, r, kind, o){
+  const G = RG_GIANTS[kind], a = o.alpha ?? 1, SPACE = [8, 10, 24], tint = c => o.tint ? rsMix(c, o.tint, 0.1) : c, R = o.R, px = o.px || (v => v);
+  const sl = Math.hypot(...o.sun) || 1, sun = o.sun.map(v => v/sl), axis = kind === 'uranus' ? Math.PI/2 + (o.axis || 0)*0.2 : (o.axis || 0)*0.5;
+  const moons = G.moons.map(([, c, k], i) => { const side = R() < 0.5 ? -1 : 1, d = r*(1.8 + i*1.15 + R()*0.6); return { c: tint(c), rr: Math.max(px(1.2), r*k*2.2), dx: Math.cos(axis)*d*side, dy: Math.sin(axis)*d*side, behind: R() < 0.4 }; });
+  const moon = m => { const mx = X + m.dx, my = Y + m.dy; x.fillStyle = rsCss(m.c, a); x.beginPath(); x.arc(mx, my, m.rr, 0, Math.PI*2); x.fill();
+    x.save(); x.beginPath(); x.arc(mx, my, m.rr, 0, Math.PI*2); x.clip(); x.fillStyle = rsCss(SPACE, 0.7*a); x.beginPath(); x.arc(mx - sun[0]*m.rr*1.3, my - sun[1]*m.rr*1.3, m.rr*1.05, 0, Math.PI*2); x.fill(); x.restore(); };
+  // (Uranus's thin rings, the far half first: narrow and dark, standing nearly upright round it)
+  const ringsU = far => { if(kind !== 'uranus') return; x.save(); x.translate(X, Y); x.rotate(axis + Math.PI/2); x.scale(1, 0.92);
+    for(const [k, al] of [[1.6, 0.3], [1.75, 0.22], [1.95, 0.45]]){ x.strokeStyle = rsCss(rsMix(G.base, SPACE, 0.55), al*a); x.lineWidth = Math.max(px(0.5), r*0.012); x.beginPath(); x.arc(0, 0, r*k, far ? Math.PI : 0, far ? Math.PI*2 : Math.PI); x.stroke(); }
+    x.restore(); };
+  for(const m of moons) if(m.behind) moon(m);
+  ringsU(true);
+  x.fillStyle = rsCss(o.behind || SPACE); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill();
+  x.save(); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.clip(); x.translate(X, Y); x.rotate(axis);
+  x.fillStyle = rsCss(tint(G.base), a); x.fillRect(-r, -r, 2*r, 2*r);
+  // (the bands, their edges waved where the winds shear them: Jupiter's strongly, the ice giants' faintly)
+  const wav = kind === 'jupiter' ? 0.025 : 0.008; let y = -r*0.92;
+  for(let i = 0; y < r*0.92; i++){ const hh = r*(0.08 + 0.12*R()), c = tint(G.bands[i % G.bands.length]); x.fillStyle = rsCss(c, a); x.beginPath(); x.moveTo(-r, y);
+    for(let q = 0; q <= 24; q++){ const u = -r + 2*r*q/24; x.lineTo(u, y + Math.sin(q*1.7 + i*2.3)*r*wav); }
+    for(let q = 24; q >= 0; q--){ const u = -r + 2*r*q/24; x.lineTo(u, y + hh + Math.sin(q*1.9 + i*1.3)*r*wav); } x.closePath(); x.fill(); y += hh; }
+  x.fillStyle = rsCss(tint(G.poles), 0.5*a); x.fillRect(-r, -r, 2*r, r*0.16); x.fillRect(-r, r*0.84, 2*r, r*0.16);
+  if(kind === 'jupiter'){ // the Great Red Spot, in the southern belt, with its pale collar
+    const gx = (R() - 0.5)*r*0.8, gy = r*0.36; x.fillStyle = rsCss(tint([236, 222, 200]), 0.8*a); x.beginPath(); x.ellipse(gx, gy, r*0.2, r*0.1, 0, 0, Math.PI*2); x.fill();
+    x.fillStyle = rsCss(tint([196, 112, 80]), a); x.beginPath(); x.ellipse(gx, gy, r*0.15, r*0.07, 0, 0, Math.PI*2); x.fill(); }
+  if(kind === 'neptune'){ // the Great Dark Spot, and its bright companion clouds, high streaks of white
+    const gx = (R() - 0.5)*r*0.7, gy = -r*0.25; x.fillStyle = rsCss([34, 52, 128], 0.9*a); x.beginPath(); x.ellipse(gx, gy, r*0.16, r*0.08, 0, 0, Math.PI*2); x.fill();
+    x.strokeStyle = rsCss([236, 242, 255], 0.75*a); x.lineWidth = Math.max(px(0.5), r*0.025); x.lineCap = 'round';
+    for(let k = 0; k < 4; k++){ const sy = (R() - 0.5)*r*1.4, sx = (R() - 0.5)*r, len = r*(0.15 + 0.25*R()); x.beginPath(); x.moveTo(sx - len/2, sy); x.lineTo(sx + len/2, sy + r*0.01); x.stroke(); } }
+  x.restore();
+  // its night side, away from the star: two soft steps of dark, so the terminator is soft
+  x.save(); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.clip();
+  x.fillStyle = rsCss(SPACE, 0.6*a); x.beginPath(); x.arc(X - sun[0]*r*1.25, Y - sun[1]*r*1.25, r*1.02, 0, Math.PI*2); x.fill();
+  x.fillStyle = rsCss(SPACE, 0.22*a); x.beginPath(); x.arc(X - sun[0]*r*0.85, Y - sun[1]*r*0.85, r*1.02, 0, Math.PI*2); x.fill();
+  if(o.eclipse > 0){ x.fillStyle = rsCss(SPACE, 0.88*o.eclipse*a); x.fillRect(X - r, Y - r, 2*r, 2*r); }
+  x.restore();
+  // (the thin air at its limb on the lit side, and in eclipse all round it)
+  { x.save(); x.globalCompositeOperation = 'screen'; const L = rsMix(G.base, [255, 255, 255], 0.5), k = Math.max(0.15, o.eclipse || 0), g = x.createRadialGradient(X, Y, r*0.97, X, Y, r*1.08);
+    g.addColorStop(0, rsCss(L, 0)); g.addColorStop(0.3, rsCss(L, 0.35*k*a)); g.addColorStop(1, rsCss(L, 0)); x.fillStyle = g; x.beginPath(); x.arc(X, Y, r*1.08, 0, Math.PI*2); x.fill(); x.restore(); }
+  ringsU(false);
+  for(const m of moons) if(!m.behind) moon(m);
+}
 function rgPaintArch(x, mk, V){
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, cx, cy, proj, at, sky: S, g1, g2, px } = V, dl = V.dayHere, kday = rsSmooth(0.3, 0.75, dl), dusk = rgClamp(1 - Math.abs(dl - 0.5)*3.2);
@@ -160,6 +240,10 @@ function rgPaintArch(x, mk, V){
   // (everything in the sky stands in a DIRECTION of the world, so turning the camera turns past it: skyAt is where a
   //  bearing and an elevation fall on the page, and F the pixels a radian spans at the middle of the view)
   const psi = V.psi, skyAt = (az, el) => proj(L.Px - Math.sin(el)*0.01, Math.cos(el)*Math.cos(az)*0.01, L.z0 + Math.cos(el)*Math.sin(az)*0.01);
+  // (what lies beyond the ring, the nebula, the planets, a comet, turns with the stars as the ring spins: about the
+  //  axis across the ring; the star at its middle, the arch and the air stay where they are)
+  const cs0 = Math.cos(V.spin), sn0 = Math.sin(V.spin), farAt = (az, el) => { const dx = -Math.sin(el), dy = Math.cos(el)*Math.cos(az);
+    return proj(L.Px + (dx*cs0 - dy*sn0)*0.01, (dx*sn0 + dy*cs0)*0.01, L.z0 + Math.cos(el)*Math.sin(az)*0.01); };
   // elevation → the screen's height, through the camera's middle (the camera never rolls, so near enough a line)
   const hx = V.hx, hz = V.hz, yAt = e => { const p = proj(L.Px - Math.sin(e)*0.01, Math.cos(e)*hx*0.01, L.z0 + Math.cos(e)*hz*0.01); return p ? p[1] : null; };
   // THE SKY: the air thick at the horizon, thin overhead, where space shows with its stars
@@ -174,14 +258,14 @@ function rgPaintArch(x, mk, V){
   const nebA = 0.2*(1 - 0.65*kday);
   for(const sg of [0, 1]){ const R = rgRand(s, 801, sg), rnd = (a, b) => a + (b - a)*R(), az0 = sg*Math.PI + rnd(-0.9, 0.9), el0 = rnd(0.3, 0.9), ga = rnd(-0.7, 0.7);   // (two clouds of nebula, one each way along the ring)
    for(let i = 0, nW = 4 + Math.floor(R()*7); i < nW; i++){ const d = (R() - 0.5)*0.9, col = [S, g1, g2, rsMix(g1, g2, 0.5)][Math.floor(R()*4)], rx = F*rnd(0.15, 0.4), ry = rx*rnd(0.2, 0.45), tw = (R() - 0.5)*0.5;
-    const p = skyAt(az0 + Math.cos(ga)*d, el0 + Math.sin(ga)*d*0.6); if(!p) continue; const X = p[0], Y = p[1]; x.save(); x.translate(X, Y); x.rotate(ga + tw); x.scale(1, ry/rx);
+    const p = farAt(az0 + Math.cos(ga)*d, el0 + Math.sin(ga)*d*0.6); if(!p) continue; const X = p[0], Y = p[1]; x.save(); x.translate(X, Y); x.rotate(ga + tw); x.scale(1, ry/rx);
     const gr = x.createRadialGradient(0, 0, 0, 0, 0, rx); gr.addColorStop(0, rsCss(col, nebA)); gr.addColorStop(0.5, rsCss(col, nebA*0.35)); gr.addColorStop(1, rsCss(col, 0)); x.fillStyle = gr; x.fillRect(-rx, -rx, rx*2, rx*2); x.restore(); } }
   x.restore();
   // (Ruby: "Ringworld should sometimes be orbiting Saturn": a ring in four orbits it, as the old games' rings orbit
   //  their gas giants, and SATURN hangs huge in its sky, beyond the far arch; by the seed, or The Arch's Saturn. Now and
   //  then, when it doesn't, the far planet is Saturn: an Easter egg)
   const SC_ = seedChoice(V.seed, 'saturn'), byS = SC_() < 0.25, satSky = V.saturn === 'always' || (V.saturn !== 'never' && byS), satFar = !satSky && SC_() < 0.2;
-  { const R = rgRand(s, 802), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.35, r = F*rnd(0.04, 0.12), P0 = skyAt(R()*Math.PI*2, rnd(0.2, 0.6)), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
+  { const R = rgRand(s, 802), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.35, r = F*rnd(0.04, 0.12), P0 = farAt(R()*Math.PI*2, rnd(0.2, 0.6)), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
   if(has && P0){ const c1 = rsMix(rsMix(g2, S, 0.5), [255, 255, 255], 0.2), c2 = rsMix(c1, SPACE, 0.45), a = 0.55 + 0.4*(1 - kday), lit = rnd(-1, 1);
     const bands = Array.from({ length: 5 }, (_, b) => [(b*0.4 + R()*0.2)*r, r*rnd(0.12, 0.3)]);
     if(satFar) paintSaturn(x, X, Y, r*0.6, { axis: (SC_() - 0.5)*0.9, open: (SC_() < 0.5 ? -1 : 1)*(0.2 + 0.25*SC_()), sun: [lit < 0 ? 1 : -1, -0.3], alpha: a, tint: S });
@@ -189,10 +273,34 @@ function rgPaintArch(x, mk, V){
     else { x.save(); x.globalAlpha = a; x.fillStyle = rsCss(c2); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); x.clip();
       for(let b = 0; b < 5; b++){ x.fillStyle = rsCss(b % 2 ? c1 : rsMix(c1, c2, 0.5)); x.fillRect(X - r, Y - r + bands[b][0], r*2, bands[b][1]); }
       x.fillStyle = rsCss(SPACE, 0.55); x.beginPath(); x.arc(X + lit*r*0.55, Y - r*0.2, r*1.05, 0, Math.PI*2); x.fill(); x.restore(); } } }
-  { const R = rgRand(s, 803), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.25, P0 = skyAt(R()*Math.PI*2, rnd(0.25, 0.8)), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
+  { const R = rgRand(s, 803), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.25, P0 = farAt(R()*Math.PI*2 + V.time/86400*1.5*Math.PI/180, rnd(0.25, 0.8)), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
   if(has && P0){ const ang = rnd(0.2, 0.9)*(R() < 0.5 ? 1 : -1) + Math.PI/2, len = F*rnd(0.12, 0.3), wd = F*0.012;
     const tx = X - Math.cos(ang)*len, ty = Y - Math.sin(ang)*len, g = x.createLinearGradient(X, Y, tx, ty); g.addColorStop(0, rsCss([240, 250, 255], 0.8*(1 - 0.6*kday))); g.addColorStop(1, rsCss(S, 0));
     rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); } }
+  // METEORS by night (Ruby: "comets, meteor shower"; docs/prior-art/ringworld-time.md): with the scene's clock running,
+  // every so often a meteor, a fraction of a second, caught by each frame's shutter (its time between frames, up to
+  // twenty seconds, as a long exposure catches them); on some rings a shower, many more, all streaking out from one
+  // point among the stars (the radiant), turning with them
+  if(V.time > 0 && kday < 0.6){ const MC = seedChoice(V.seed, 'meteors'), shower = MC() < 0.4, rate = shower ? 120 : 10, tau = 3600/rate, raz = MC()*Math.PI*2, rel = (25 + 50*MC())*Math.PI/180, expo = Math.min(20, Math.max(1/60, V.dt || 1/30));
+    x.save(); x.globalCompositeOperation = 'screen';
+    for(let k = Math.floor(V.time/tau); k*tau < V.time + expo; k++){ const R = rgRand(s, 830, k), tk = (k + R())*tau; if(tk < V.time || tk >= V.time + expo) continue;
+      const ang = R()*Math.PI*2, d0 = (shower ? 8 + 40*R() : 0)*Math.PI/180, len = (4 + 14*R())*Math.PI/180, az0 = shower ? raz : R()*Math.PI*2, el0 = shower ? rel : (20 + 60*R())*Math.PI/180;
+      const pt = d => [az0 + Math.cos(ang)*d/Math.max(0.2, Math.cos(el0)), el0 + Math.sin(ang)*d], A = farAt(...pt(d0)), B = farAt(...pt(d0 + len)); if(!A || !B) continue;
+      const br = 0.35 + 0.65*R()*R(), col = R() < 0.3 ? [190, 255, 210] : [255, 246, 220], g = x.createLinearGradient(A[0], A[1], B[0], B[1]);
+      g.addColorStop(0, rsCss(col, 0)); g.addColorStop(0.8, rsCss(col, 0.8*br*(1 - kday))); g.addColorStop(1, rsCss([255, 255, 255], br*(1 - kday)));
+      x.strokeStyle = g; x.lineWidth = Math.max(px(0.6), px(1.4)*br); x.lineCap = 'round'; x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke(); }
+    x.restore(); }
+  // AN AURORA, now and then by night where there is magic or the builders' fields: faint curtains of light low over
+  // one side of the horizon, folded, their hems bright and their tops fading; with the clock they ripple and drift
+  { const AC = seedChoice(V.seed, 'aurora'); if((V.world.list.includes('magic') || V.world.list.includes('builders')) && AC() < 0.3 && kday < 0.35){
+    const az0 = AC()*Math.PI*2, span = (50 + 60*AC())*Math.PI/180, hue = [g1, g2, [120, 255, 170]][Math.floor(AC()*3)], a0 = 0.16*(1 - kday/0.35);
+    x.save(); x.globalCompositeOperation = 'screen';
+    for(let q = 0; q < 60; q++){ const u = q/59, az = az0 + (u - 0.5)*span, wob = Math.sin(u*9 + V.time*0.05 + AC()*6)*0.6 + Math.sin(u*23 - V.time*0.11)*0.25;
+      const B = skyAt(az, (6 + 3*wob)*Math.PI/180), T2 = skyAt(az, (22 + 8*wob + 6*Math.sin(u*5 + V.time*0.03))*Math.PI/180); if(!B || !T2) continue;
+      const g = x.createLinearGradient(B[0], B[1], T2[0], T2[1]), al = a0*(0.4 + 0.6*Math.pow(Math.sin(Math.PI*u), 0.6))*(0.6 + 0.4*Math.sin(u*31 + V.time*0.2));
+      g.addColorStop(0, rsCss(rsMix(hue, [255, 255, 255], 0.3), al)); g.addColorStop(0.25, rsCss(hue, al*0.7)); g.addColorStop(1, rsCss(hue, 0));
+      x.strokeStyle = g; x.lineWidth = Math.max(px(1), F*span/60*1.3); x.beginPath(); x.moveTo(B[0], B[1]); x.lineTo(T2[0], T2[1]); x.stroke(); }
+    x.restore(); } }
   // THE STAR, at the ring's middle (so on the arch's own line), and the SHADOW SQUARES circling close about it: they
   // stand between it and the land, and make its nights (where you stand under one, it hides the star)
   const sp = V.sun.at;
@@ -209,15 +317,20 @@ function rgPaintArch(x, mk, V){
     // now and then ENCELADUS beside it, its plume rising (Ruby's favorite moon)
     // (it hangs in one direction of the world, so turning the camera turns past it: the way the camera faces by default
     //  (Turn 50°, View 55), give or take, and high enough to be framed there)
-    const rS = F*(0.1 + 0.11*SC_()), az = (50 + (SC_() - 0.5)*70)*Math.PI/180, el = (18 + 22*SC_())*Math.PI/180, P0 = skyAt(az, el), X = P0 ? P0[0] : -1e4, Y = P0 ? P0[1] : -1e4, axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
+    const rS = F*(0.1 + 0.11*SC_()), az = (50 + (SC_() - 0.5)*70)*Math.PI/180, el = (18 + 22*SC_())*Math.PI/180, P0 = farAt(az, el), X = P0 ? P0[0] : -1e4, Y = P0 ? P0[1] : -1e4, axis = (SC_() - 0.5)*1.1, open = (SC_() < 0.5 ? -1 : 1)*(0.14 + 0.26*SC_());
     const sun = sp ? [sp[0] - X, sp[1] - Y] : V.sun.screen, sa = 0.62 + 0.38*(1 - kday);
     const ecl = sp && P0 ? 1 - rsSmooth(rS*0.55, rS*1.5, Math.hypot(sp[0] - X, sp[1] - Y)) : 0;
-    if(P0) paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind: rsMix(rsMix(SPACE, S, 0.12), AIR, kday), eclipse: ecl });
+    // (which giant, by the seed: Saturn most often, then Jupiter; Neptune and Uranus the rarer)
+    const GU = seedChoice(V.seed, 'giant')(), GK = GU < 0.4 ? 'saturn' : GU < 0.7 ? 'jupiter' : GU < 0.85 ? 'neptune' : 'uranus', behind = rsMix(rsMix(SPACE, S, 0.12), AIR, kday);
+    if(P0 && GK === 'saturn') paintSaturn(x, X, Y, rS, { axis, open, sun, alpha: sa, tint: S, behind, eclipse: ecl });
+    else if(P0) rgGiant(x, X, Y, rS*(GK === 'jupiter' ? 1.1 : 0.85), GK, { axis, sun, alpha: sa, tint: S, behind, eclipse: ecl, R: rgRand(s, 816), px });
     // (the sun just past its limb: a single bright bead of light where it slips out, as a diamond ring)
     if(ecl > 0.05 && ecl < 0.95 && sp){ const d = Math.hypot(sp[0] - X, sp[1] - Y) || 1, bx = X + (sp[0] - X)/d*rS, by = Y + (sp[1] - Y)/d*rS, k = 1 - Math.abs(ecl - 0.5)*2;
       rgGlow(x, bx, by, rS*0.8*k, [255, 248, 232], 0.95*k); rgGlow(x, bx, by, rS*0.2, [255, 255, 255], k);
       if(k > 0.3) for(let q = 0; q < 4; q++){ const an = q*Math.PI/2 + 0.4, Lr = rS*(q % 2 ? 0.5 : 1.1)*k; rsPoly(x, [[bx - Math.sin(an)*px(1.2), by + Math.cos(an)*px(1.2)], [bx + Math.cos(an)*Lr, by + Math.sin(an)*Lr], [bx + Math.sin(an)*px(1.2), by - Math.cos(an)*px(1.2)], [bx - Math.cos(an)*Lr, by - Math.sin(an)*Lr]], rsCss([255, 252, 240], 0.7*k)); } }
-    if(SC_() < 0.45 && P0){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
+    if(GK === 'saturn' && P0){ const tR = rgRand(s, 817), td = rS*(4.6 + tR()*1.2)*(tR() < 0.5 ? -1 : 1), tr = Math.max(px(1.5), rS*0.07);   // (Titan, orange in its haze, out along the rings' plane)
+      const tx = X + Math.cos(axis)*td, ty = Y + Math.sin(axis)*td; x.fillStyle = rsCss(rsMix([214, 170, 90], S, 0.1), sa); x.beginPath(); x.arc(tx, ty, tr, 0, Math.PI*2); x.fill(); x.fillStyle = rsCss(SPACE, 0.6*sa); x.beginPath(); x.arc(tx - sun[0]/(Math.hypot(...sun) || 1)*tr*1.3, ty - sun[1]/(Math.hypot(...sun) || 1)*tr*1.3, tr*1.05, 0, Math.PI*2); x.fill(); }
+    if(GK === 'saturn' && SC_() < 0.45 && P0){ const th2 = (SC_() < 0.5 ? 0.25 : 0.75)*Math.PI*2 + (SC_() - 0.5)*0.9, d = 3.95*rS, ex = Math.cos(th2)*d, ey = Math.sin(th2)*d*open;
       paintEnceladus(x, X + ex*Math.cos(axis) - ey*Math.sin(axis), Y + ex*Math.sin(axis) + ey*Math.cos(axis), Math.max(px(3), rS*0.05), { axis, sun, alpha: sa, px }); } }
   const nsq = Math.round(Math.PI*2/L.per);
   for(let k = 0; k < nsq; k++){ const ph0 = (L.q0 + k*L.per)*L.side, ph1 = (L.q0 + (k + RING_COV)*L.per)*L.side, edge = [], back = [];
@@ -263,22 +376,34 @@ function rgPaintArch(x, mk, V){
       const hp = Math.hypot(q[3][0] - q[0][0], q[3][1] - q[0][1]), wp = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]);
       if(hp > px(14) && R){ const night = 1 - rsSmooth(0.3, 0.7, wday ?? 1), glowC = V.lightsOf(ww2)[0], seam = rsCss(rsMix(c, [0, 0, 0], 0.35), 0.6);
         line([inQ(q, 0, 0.34), inQ(q, 1, 0.34)], seam, Math.max(px(0.5), hp*0.006)); line([inQ(q, 0, 0.68), inQ(q, 1, 0.68)], seam, Math.max(px(0.5), hp*0.006));
-        if((ww2 === 'builders' || ww2 === 'magic') && R() < 0.6){ // a line of script, glyph by glyph: ticks, hooks and rings of light
-          const n = Math.max(2, Math.min(40, Math.round(wp/(hp*0.05)))), gc = rsCss(glowC, 0.55 + 0.4*night);
-          for(let k = 0; k < n; k++){ const u = (k + 0.5)/n, [X, Y] = inQ(q, u, 0.5), g = hp*0.025, t = R();
-            x.strokeStyle = gc; x.lineWidth = Math.max(px(0.5), g*0.25); x.beginPath();
-            if(t < 0.3){ x.moveTo(X, Y - g); x.lineTo(X, Y + g); x.moveTo(X - g*0.6, Y - g*0.3); x.lineTo(X + g*0.6, Y - g*0.3); }
-            else if(t < 0.6){ x.arc(X, Y, g*0.6, 0, Math.PI*2); }
-            else { x.moveTo(X - g*0.6, Y + g); x.lineTo(X, Y - g); x.lineTo(X + g*0.6, Y + g*0.2); }
-            x.stroke(); } }
+        // (near, the plates' upright seams too, and weather run down the wall from each seam; a hatch at the foot now and
+        //  then, its frame catching the light; and along the top, lights for the ships, blinking by night)
+        if(wp > px(30)){ for(const u of [0.25, 0.5, 0.75]) line([inQ(q, u, 0), inQ(q, u, 1)], rsCss(rsMix(c, [0, 0, 0], 0.25), 0.4), Math.max(px(0.4), hp*0.004));
+          for(const v of [0.34, 0.68]) for(let k = 0; k < 4; k++){ const u = R(), A = inQ(q, u, v), B = inQ(q, u, v - 0.06 - 0.1*R()); line([A, B], rsCss(rsMix(c, [0, 0, 0], 0.3), 0.18), Math.max(px(0.5), wp*0.01)); } }
+        if(hp > px(40) && wp > px(20) && R() < 0.3 && ww2 !== 'magic'){ const u0 = 0.2 + 0.5*R(), A = inQ(q, u0, 0), B = inQ(q, u0 + 0.08, 0), C2 = inQ(q, u0 + 0.08, 0.07), D = inQ(q, u0, 0.07);
+          rsPoly(x, [A, B, C2, D], rsCss(rsMix(c, [0, 0, 0], 0.5))); line([A, D, C2, B], rsCss(rsMix(c, [255, 255, 255], 0.3), 0.8), Math.max(px(0.4), hp*0.004));
+          if(night > 0.3) rsPoly(x, [inQ(q, u0 + 0.01, 0.005), inQ(q, u0 + 0.07, 0.005), inQ(q, u0 + 0.07, 0.06), inQ(q, u0 + 0.01, 0.06)], rsCss(glowC, 0.4*night)); }
+        if(night > 0.4 && ww2 !== 'ruins' && (R() < 0.5)){ const [X, Y] = inQ(q, 0.5, 0.985), on = !V.time || Math.sin(V.time*Math.PI*0.75 + (X*0.05)) > 0.4; if(on) rgGlow(x, X, Y, Math.max(px(3), hp*0.02), [255, 70, 60], 0.7*night); }
+        if((ww2 === 'builders' || ww2 === 'magic') && R() < 0.6){ // a band of their runes, glowing, between two ruled lines, words parted by a dot
+          const n = Math.max(2, Math.min(48, Math.round(wp/(hp*0.045)))), gc = rsCss(glowC, 0.55 + 0.4*night), g = hp*0.022, vR = 0.44 + 0.12*R();
+          x.strokeStyle = gc; x.lineWidth = Math.max(px(0.5), g*0.22); x.lineCap = 'round';
+          line([inQ(q, 0, vR - 0.045), inQ(q, 1, vR - 0.045)], gc, Math.max(px(0.4), g*0.12)); line([inQ(q, 0, vR + 0.045), inQ(q, 1, vR + 0.045)], gc, Math.max(px(0.4), g*0.12));
+          for(let k = 0; k < n; k++){ const [X, Y] = inQ(q, (k + 0.5)/n, vR), t = R(); x.strokeStyle = gc; x.lineWidth = Math.max(px(0.5), g*0.22);
+            if(t < 0.14){ x.fillStyle = gc; x.beginPath(); x.arc(X, Y, Math.max(px(0.5), g*0.18), 0, Math.PI*2); x.fill(); } else rgRune(x, X, Y, g, R()); }
+          if(night > 0.3) rgGlow(x, ...inQ(q, 0.5, vR), Math.min(hp*0.3, wp*0.5), glowC, 0.12*night); }
         if((ww2 === 'cities' || ww2 === 'neon') && R() < 0.5){ // screens: a few lit panels, one a broadcast in the page's colours
           for(let k = 0, nS = 1 + Math.floor(R()*3); k < nS; k++){ const u0 = R()*0.8, v0 = 0.4 + R()*0.35, a = inQ(q, u0, v0), b = inQ(q, u0 + 0.12, v0 + 0.16);
             rsPoly(x, [a, inQ(q, u0 + 0.12, v0), b, inQ(q, u0, v0 + 0.16)], rsCss(R() < 0.5 ? glowC : V.lightsOf(ww2)[1], 0.35 + 0.55*night)); } }
-        if((ww2 === 'ruins' || ww2 === 'neon' || ww2 === 'cities') && R() < 0.45){ // graffiti: tags and scrawl near the foot, in the page's colours
-          const cols = [V.g1, V.g2, [240, 236, 228]];
-          for(let k = 0, nT = 1 + Math.floor(R()*3); k < nT; k++){ const u0 = R()*0.85, col = rsCss(cols[Math.floor(R()*3)], 0.75), pts = [];
-            for(let p = 0; p < 7; p++) pts.push(inQ(q, u0 + p*0.018 + (R() - 0.5)*0.01, 0.06 + 0.12*R()));
-            line(pts, col, Math.max(px(0.6), hp*0.008)); } } } }
+        if((ww2 === 'ruins' || ww2 === 'neon' || ww2 === 'cities') && R() < 0.45){ // GRAFFITI near the foot where people reach, in runes: in the
+          // towns a word thrown up big in one colour outlined in another, in the ruins scrawled thin and hurried; paint
+          // running down from the heaviest strokes; older pieces faded under newer
+          const cols = [V.g1, V.g2, [240, 236, 228], [30, 30, 34]];
+          for(let k = 0, nT = 1 + Math.floor(R()*3); k < nT; k++){ const u0 = R()*0.8, v0 = 0.08 + 0.1*R(), nL = 2 + Math.floor(R()*4), g = hp*(ww2 === 'ruins' ? 0.025 : 0.04)*(0.7 + 0.6*R()), fade = 0.45 + 0.5*R();
+            const fill = cols[Math.floor(R()*3)], edge = cols[(Math.floor(R()*3) + 1) % 4], tilt = (R() - 0.5)*0.3, us = g*1.6/Math.max(1, wp);
+            for(let pass = ww2 === 'ruins' ? 1 : 0; pass < 2; pass++){ x.strokeStyle = rsCss(pass ? fill : edge, (pass ? 0.85 : 0.8)*fade); x.lineCap = 'round'; x.lineJoin = 'round';
+              x.lineWidth = Math.max(px(0.6), g*(ww2 === 'ruins' ? 0.12 : pass ? 0.32 : 0.55));
+              const Rr = rgRand(s, 819, Math.round(u0*1e4), k); for(let c = 0; c < nL; c++){ const [X, Y] = inQ(q, u0 + c*us, v0 + c*us*tilt*hp/Math.max(1, wp)*20); rgRune(x, X, Y - g, g, Rr()); } }
+            for(let d = 0; d < nL*2; d++) if(R() < 0.35){ const [X, Y] = inQ(q, u0 + R()*nL*us, v0); line([[X, Y - g*0.2], [X, Y + g*(0.6 + 1.6*R())]], rsCss(fill, 0.55*fade), Math.max(px(0.4), g*0.06)); } } } } }
     else if(lights){ const n = 2 + Math.floor(R()*3); for(let k = 0; k < n; k++){ const u = R(), v = R(), X = q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v, Y = q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v;
         x.fillStyle = rsCss(lights, 0.85); x.fillRect(X, Y, px(2.2), px(2.2)); } } }
   // the unfinished stretch's scaffolding and cranes, along both its edges
@@ -310,36 +435,26 @@ function rgPaintArch(x, mk, V){
   const wx = V.weather, cloudy = wx === 'clouds' || wx === 'rain' || wx === 'storm' || wx === 'snow', R0 = rgRand(s, 808), lowSun = sp && V.sun.D && Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))) < 0.5;
   const cWhite = rsMix(rgLit(V, [244, 244, 250], dl, 0.2, AIR), [255, 170, 140], dusk*0.4), cGrey = rsMix(cWhite, [70, 74, 86], wx === 'storm' ? 0.6 : wx === 'rain' ? 0.38 : wx === 'snow' ? 0.15 : 0.05);
   const SL = V.sun.screen, lx = SL[0] > 0 ? 1 : -1;
-  if(wx === 'clear' && R0() < 0.55) for(let k = 0, n = 8 + Math.floor(R0()*14); k < n; k++){ const R = rgRand(s, 809, k), rnd = (a, b) => a + (b - a)*R(), az = R()*Math.PI*2, e = rnd(2, 12)*Math.PI/180, P0 = skyAt(az, e); if(!P0) continue; const X = P0[0], Y = P0[1], wd = F*rnd(0.2, 0.6), ht = wd*rnd(0.03, 0.07), pts = [];
+  // THE WIND (Ruby: "clouds moving"; docs/prior-art/ringworld-time.md): by the seed a way and a speed; as the scene's clock
+  // runs, each cloud rides on its own layer (the heaps low, the cirrus high and faster) a plane over the land, and the
+  // plane carries it: across the sky, growing as it nears and shrinking down to the horizon, gone past it and coming
+  // round again from the far side (a still: every cloud where it always was)
+  const WD = seedChoice(V.seed, 'wind'), wAng = WD()*Math.PI*2, wSp = 4 + 10*WD();
+  // (each cloud keeps to its own circle of the plane, as far out as it began: it crosses the sky along a chord of it with
+  //  the wind, and past the horizon comes in again on the far side, so the sky keeps the clouds it began with)
+  const drift = (az, e, hc, k = 1) => { if(!V.time) return [az, e, 1]; const d = hc/Math.tan(e), ux = Math.cos(wAng), uy = Math.sin(wAng), x0 = d*Math.cos(az), y0 = d*Math.sin(az);
+    const u0 = x0*ux + y0*uy, w = -x0*uy + y0*ux, Dc = Math.sqrt(Math.max(1, d*d - w*w)), u = ((u0 + wSp*k*rgCloudTime(V) + Dc) % (2*Dc) + 2*Dc) % (2*Dc) - Dc;
+    const xx = u*ux - w*uy, yy = u*uy + w*ux, d2 = Math.max(hc*0.3, Math.hypot(xx, yy));
+    return [Math.atan2(yy, xx), Math.atan(hc/d2), Math.min(1.6, d/d2)]; };
+  if(wx === 'clear' && R0() < 0.55) for(let k = 0, n = 8 + Math.floor(R0()*14); k < n; k++){ const R = rgRand(s, 809, k), rnd = (a, b) => a + (b - a)*R(), [az, e, gk] = drift(R()*Math.PI*2, rnd(2, 12)*Math.PI/180, 1200), P0 = skyAt(az, e); if(!P0) continue; const X = P0[0], Y = P0[1], wd = F*rnd(0.2, 0.6)*gk, ht = wd*rnd(0.03, 0.07), pts = [];
     for(let q = 0; q <= 8; q++){ const u = q/8; pts.push([X - wd/2 + wd*u, Y - ht*Math.pow(Math.sin(Math.PI*u), 0.6)*rnd(0.6, 1.2)]); }
     rsPoly(x, [...pts, [X + wd/2, Y + ht*0.25], [X - wd/2, Y + ht*0.25]], rsCss(cWhite, 0.8)); }
   if(wx === 'clear' || wx === 'clouds') if(R0() < 0.5) for(let k = 0, n = 5 + Math.floor(R0()*8); k < n; k++){ // cirrus: long thin streaks high up, combed one way
-    const R = rgRand(s, 812, k), rnd = (a, b) => a + (b - a)*R(), P0 = skyAt(R()*Math.PI*2, rnd(18, 50)*Math.PI/180); if(!P0) continue; const len = F*rnd(0.2, 0.7), ang = rnd(-0.25, 0.25), th = F*rnd(0.004, 0.012);
+    const R = rgRand(s, 812, k), rnd = (a, b) => a + (b - a)*R(), [caz, ce] = drift(R()*Math.PI*2, rnd(18, 50)*Math.PI/180, 9000, 2.5), P0 = skyAt(caz, ce); if(!P0) continue; const len = F*rnd(0.2, 0.7), ang = rnd(-0.25, 0.25), th = F*rnd(0.004, 0.012);
     x.save(); x.translate(P0[0], P0[1]); x.rotate(ang); const g = x.createLinearGradient(-len/2, 0, len/2, 0); g.addColorStop(0, rsCss(cWhite, 0)); g.addColorStop(0.5, rsCss(cWhite, 0.35*(0.4 + 0.6*kday))); g.addColorStop(1, rsCss(cWhite, 0)); x.fillStyle = g;
     for(let q = 0; q < 3; q++){ x.beginPath(); x.ellipse(rnd(-0.1, 0.1)*len, (q - 1)*th*2.2, len/2*rnd(0.6, 1), th, 0, 0, Math.PI*2); x.fill(); } x.restore(); }
-  const heaps = []; if(cloudy){ const n = wx === 'clouds' ? 9 + Math.floor(R0()*8) : 14 + Math.floor(R0()*10);
-    for(let k = 0; k < n; k++){ const R = rgRand(s, 813, k), rnd = (a, b) => a + (b - a)*R(), az = R()*Math.PI*2, e = rnd(3, wx === 'storm' ? 16 : 22)*Math.PI/180, P0 = skyAt(az, e); if(!P0) continue;
-      const wd = F*rnd(0.12, 0.38)*(wx === 'storm' ? 1.4 : 1), ht = wd*rnd(0.35, wx === 'storm' ? 1.3 : 0.7), X = P0[0], Y = P0[1]; heaps.push([X, Y, wd, ht, R]);
-      // a heap: puffs piled from a flat base, each shaded below and lit on the sun's side; a storm's grows an anvil
-      const base = rsMix(cGrey, [40, 44, 60], 0.25), lit = rsMix(cGrey, [255, 248, 236], 0.35*kday + 0.1), puffs = [];
-      // (many small puffs, not a few balls: a heap's edge is broken into cauliflower; the lower ones squashed flat)
-      for(let q = 0; q < 28; q++){ const u = R(), up = Math.pow(1 - Math.abs(u - 0.5)*2, 0.7), v = up*rnd(0.2, 0.95); puffs.push([X - wd/2 + wd*u, Y - ht*v, wd*rnd(0.045, 0.1)*(0.6 + 0.7*up)*(0.7 + 0.5*v)]); }
-      const pl = Math.min(...puffs.map(q => q[0] - q[2]*0.6)), pr = Math.max(...puffs.map(q => q[0] + q[2]*0.6)), pt = Math.min(...puffs.map(q => q[1] - q[2]));
-      if(wx === 'storm' && ht > wd*0.6){ x.fillStyle = rsCss(base, 0.85); x.beginPath(); x.moveTo(pl + wd*0.2, pt + ht*0.1); x.lineTo(pl - wd*0.15, pt - ht*0.02); x.lineTo(pr + wd*0.35, pt - ht*0.06); x.lineTo(pr, pt + ht*0.12); x.closePath(); x.fill(); }
-      for(const [px0, py, r] of puffs){ x.fillStyle = rsCss(base, 0.88); x.beginPath(); x.arc(px0, py, r, 0, Math.PI*2); x.fill(); }
-      for(const [px0, py, r] of puffs){ x.fillStyle = rsCss(rsMix(base, lit, 0.5), 0.85); x.beginPath(); x.arc(px0 + lx*r*0.15, py - r*0.18, r*0.82, 0, Math.PI*2); x.fill(); }
-      for(const [px0, py, r] of puffs) if(py < Y - ht*0.3){ x.fillStyle = rsCss(lit, 0.6); x.beginPath(); x.arc(px0 + lx*r*0.3, py - r*0.32, r*0.5, 0, Math.PI*2); x.fill(); }
-      // (its flat base: a few squashed puffs along it, shaded, where the heap sits)
-      for(let q = 0; q < 5; q++){ const u = 0.2 + 0.6*q/4, bx = pl + (pr - pl)*u; x.fillStyle = rsCss(base, 0.85); x.beginPath(); x.ellipse(bx, Y - ht*0.06, (pr - pl)*0.12, ht*0.08, 0, 0, Math.PI*2); x.fill(); }
-      if((wx === 'rain' || wx === 'storm') && R() < 0.6){ // rain falling from it in a veil, slanting with the wind, fading to the ground
-        const g = x.createLinearGradient(0, Y, 0, Y + ht*2.5); g.addColorStop(0, rsCss(base, 0.22)); g.addColorStop(1, rsCss(base, 0)); x.fillStyle = g; const sl = wd*0.25;
-        for(let q = 0; q < 7; q++){ const u0 = -0.4 + 0.7*R(), w0 = wd*rnd(0.03, 0.1), ln = ht*rnd(1.5, 2.6); x.beginPath(); x.moveTo(X + u0*wd, Y); x.lineTo(X + u0*wd + w0, Y); x.lineTo(X + u0*wd + w0 + sl*ln/(ht*2.5), Y + ln); x.lineTo(X + u0*wd + sl*ln/(ht*2.5), Y + ln); x.fill(); } } } }
-  if(wx === 'storm' && heaps.length && R0() < 0.7){ // lightning: one bolt, jagged, forking once, from a cloud's base to the land
-    const [X, Y, wd, ht, R] = heaps[Math.floor(R0()*heaps.length)]; let bx = X + (R() - 0.5)*wd*0.4, by = Y; const pts = [[bx, by]];
-    for(let q = 0; q < 9; q++){ bx += (R() - 0.5)*wd*0.18; by += ht*0.35; pts.push([bx, by]); }
-    x.save(); x.globalCompositeOperation = 'screen'; x.strokeStyle = rsCss([220, 220, 255], 0.95); x.lineWidth = Math.max(px(1), F*0.003); x.beginPath(); pts.forEach(([a, b], q) => q ? x.lineTo(a, b) : x.moveTo(a, b));
-    const f = pts[4]; x.moveTo(f[0], f[1]); x.lineTo(f[0] + wd*0.12, f[1] + ht*0.5); x.lineTo(f[0] + wd*0.08, f[1] + ht*0.9); x.stroke();
-    const gl = x.createRadialGradient(pts[0][0], pts[0][1], 0, pts[0][0], pts[0][1], wd*1.2); gl.addColorStop(0, rsCss([200, 200, 255], 0.5)); gl.addColorStop(1, rsCss([200, 200, 255], 0)); x.fillStyle = gl; x.fillRect(pts[0][0] - wd*1.2, pts[0][1] - wd*1.2, wd*2.4, wd*2.4); x.restore(); }
+  // (the heaps of cumulus, and the storm's towers with their lightning, stand in the world over the land, and are drawn
+  //  with it: rgPaintLand's clouds)
   // the SUN'S RAYS: when it stands low, or the sky is heaped with cloud, light fanning from it across the air in shafts,
   // a gap between each (crepuscular rays), soft, in the sun's own colour
   // (they fan downward and to the sides, as shafts through broken cloud do, some gaps wide; soft-edged, faint)
@@ -408,17 +523,17 @@ function rgWork(x, o, X, Y, k, c, night, R, V, e){
 // SMALL LIFE (Ruby: "insects, fairies, flowers, slime creatures … all subtle"): never more than a few marks, small for
 // their distance and quiet in colour, so they are found rather than seen. Each kind at the ground point (X, Y), at
 // h, the height a body would stand there.
-function rgSmallLife(x, X, Y, h, kind, c, R){
+function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
   // (each mark has a floor in the export's pixels: smaller than that, a find is not subtle but missing)
   const rnd = (a, b) => a + (b - a)*R(), dot = (cx, cy, r, lo, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(rgPx(lo), r), 0, Math.PI*2); x.fill(); };
   if(kind === 'insects'){ // a small cloud of specks over the grass, a pair of wings catching the light on the nearer
     const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
-    for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4, iy = cy + (R() - 0.5)*h*0.6; dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));
+    for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4 + (t ? Math.sin(t*(2.1 + q*0.7) + q*2.3 + X*0.01)*h*0.35 : 0), iy = cy + (R() - 0.5)*h*0.6 + (t ? Math.sin(t*(2.9 + q*0.5) + q*1.7)*h*0.18 : 0); dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));   // (with the clock, a swarm's dance)
       if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
     return; }
   if(kind === 'fairies'){ // a few points of light drifting low, each with a faint trail behind it
     const n = 1 + Math.floor(R()*3);
-    for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2, fy = Y - h*rnd(0.4, 1.4), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);
+    for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2 + (t ? Math.sin(t*0.45 + q*2.1)*h*0.6 : 0), fy = Y - h*rnd(0.4, 1.4) + (t ? Math.sin(t*0.7 + q)*h*0.2 : 0), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);   // (drifting, with the clock)
       rgGlow(x, fx, fy, Math.max(rgPx(12), h*0.32), c.glow, 0.4);
       for(let t = 1; t <= 3; t++) dot(fx - dx*t, fy + dx*0.15*t*t*Math.sign(dx), h*0.025*(1 - t*0.22), 1 - t*0.2, rsCss(c.glow, 0.32/t));
       dot(fx, fy, h*0.04, 2.2, rsCss(rsMix(c.glow, [255, 255, 255], 0.6), 0.85)); }
@@ -495,7 +610,7 @@ const RG_CROPS = { wheat: { c: [214, 184, 100] }, barley: { c: [200, 190, 128] }
   hay: { c: [150, 170, 90], stripe: [10, [178, 192, 112]] }, pasture: { c: [104, 146, 72] }, ploughed: { c: [124, 94, 66], row: [1.6, [92, 68, 48]] },
   rapeseed: { c: [234, 210, 52] }, maize: { c: [88, 128, 56], row: [1.5, [66, 98, 44]] }, lavender: { c: [126, 106, 168], row: [1.2, [176, 156, 118]] },
   vines: { c: [150, 128, 96], row: [2.6, [80, 110, 58]] }, rice: { c: [118, 156, 112], water: true, row: [0.7, [96, 150, 70]] }, tea: { c: [74, 110, 62], row: [1.6, [52, 88, 48]] },
-  garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, moonflower: { c: [178, 186, 226], row: [2, [138, 148, 200]], glow: true }, fallow: { c: [146, 136, 94] } };
+  garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, moonflower: { c: [150, 166, 186], row: [2, [128, 140, 176]], glow: true }, fallow: { c: [146, 136, 94] } };
 const RG_STREET_KINDS = ['lamp', 'hydrant', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'scooter'];
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
@@ -614,7 +729,7 @@ function rgStore(V){
   // the pasture with its shepherd, a scarecrow, hives by the flowers, a harvester at work
   const fields = [], FBIN = W*0.006, fbins = new Map();
   const cropOf = (w, a, z, e, R) => { const dr = V.dryAt(a, z), cold = e > TR.snow*0.32, u = R();
-    if(w === 'ruins') return u < 0.75 ? 'fallow' : 'wheat'; if(w === 'builders') return u < 0.6 ? 'garden' : 'pasture'; if(w === 'magic') return u < 0.45 ? 'moonflower' : u < 0.7 ? 'wheat' : 'pasture';
+    if(w === 'ruins') return u < 0.75 ? 'fallow' : 'wheat'; if(w === 'builders') return u < 0.6 ? 'garden' : 'pasture'; if(w === 'magic') return u < 0.2 ? 'moonflower' : u < 0.55 ? 'wheat' : u < 0.7 ? 'hay' : 'pasture';
     if(cold) return u < 0.5 ? 'pasture' : u < 0.8 ? 'hay' : 'ploughed';
     if(dr > 0.62) return u < 0.3 ? 'lavender' : u < 0.6 ? 'vines' : u < 0.85 ? 'wheat' : 'stubble';
     if(dr < 0.38 && mnValue(a/(W*0.3) + 2.2, z/(W*0.3) - 6.1, s + 81) > 0.58) return u < 0.85 ? 'rice' : 'pasture';
@@ -901,12 +1016,23 @@ function rgPaintLand(x, mk, dk, V){
   // A SETTLEMENT'S LIGHTS (Ruby: "a settlement's lights at night"): a house too far off to draw is a window's light at
   // night, a street lamp a point on its string of them; they come on one by one through the dusk (each its own moment,
   // by its stream), warm or cold by its world's lights, the brightest with a little bloom
+  // (with the clock: a light now and then going out for the night or coming on again, each half hour; a fire in the
+  //  ruins and one light in sixteen flickering)
   const nightDot = (o, f, l, wday, haze, big = 1) => { const nt = 1 - rsSmooth(0.3, 0.7, wday); if(nt < 0.15 || (o.rs % 997)/997 > nt*1.4 - 0.15) return;
+    if(V.time && mnHash(o.rs & 4095, Math.floor(V.time/1800 + (o.rs % 97)/97), s + 840) < 0.15) return;
+    const fl = V.time && (o.w === 'ruins' || (o.rs & 15) === 5) ? 0.55 + 0.45*Math.abs(Math.sin(V.time*(7 + (o.rs & 7)) + (o.rs & 255))) : 1;
     const X = f[0], Y = stand(l, X, f[1]) - px(0.6)*big; if(!vis(l, X - px(1), X + px(1), Y - px(2), Y + px(1))) return;
     const lights = V.lightsOf(o.w), col = rsMix(o.rs & 2 ? lights[0] : lights[1] || lights[0], AIR, haze*0.5), r = px(0.55 + 0.5*((o.rs >> 3) % 3)/2)*big;
-    x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.35), Math.min(1, nt*1.3)); x.fillRect(X - r, Y - r, r*2, r*2);
+    x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.35), Math.min(1, nt*1.3)*fl); x.fillRect(X - r, Y - r, r*2, r*2);
     if((o.rs & 12) === 12) rgGlow(x, X, Y, r*5, col, 0.35*nt); };
-  const rgPaintThing = (o, l, dd) => {
+  // WHAT MOVES (Ruby: "robots moving, minor animations"): with the scene's clock, each droid about its work, back and
+  // forth along the way it faces (turning round at each end) or round a small circle, at its own pace; a sheep's few
+  // steps as it grazes. [metres of its path, seconds for a round, circling?] by kind; the rest stand still
+  const RG_MOVES = { helper: [8, 70], drone: [3, 22, 1], crawler: [4, 120], walker: [15, 90], harvester: [30, 300], shepherd: [10, 45, 1], crab: [3, 40], lamplighter: [10, 60], sheep: [0.8, 50] };
+  const moved = o => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, ph = (o.rs % 1000)/1000*Math.PI*2, w = Math.PI*2/mv[1], f0 = o.face ?? (o.rs % 62832)/10000;
+    if(mv[2]){ const an = V.time*w + ph; return { ...o, a: o.a + Math.cos(an)*mv[0]*M1, z: o.z + Math.sin(an)*mv[0]*M1, face: an + Math.PI/2 }; }
+    const u = Math.sin(V.time*w + ph), back = Math.cos(V.time*w + ph) < 0; return { ...o, a: o.a + Math.cos(f0)*u*mv[0]*M1, z: o.z + Math.sin(f0)*u*mv[0]*M1, face: back ? f0 + Math.PI : f0 }; };
+  const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs);
     if(o.c === 'tree'){ const h = o.hM*f[2]; if(h < px(1.6) || h > nearCut) return;
@@ -935,7 +1061,9 @@ function rgPaintLand(x, mk, dk, V){
     if(o.c === 'grass'){ const gH = o.hM*f[2]; if(gH < px(2.5) || gH > wh*0.12) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - gH, X + gH, Y - gH*1.4, Y)) return;
       const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), wday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
-      for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
+      // (with the clock the tufts sway: gusts travelling over the field, each blade's top leaning and coming back)
+      const sway = V.time ? gH*(0.16*Math.sin(V.time*1.7 - o.a/(W*0.002) + (o.rs & 7)) + 0.08*Math.sin(V.time*4.3 + (o.rs & 31))) : 0;
+      for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4 + sway*(1 + 0.15*b), Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
       if(R() < 0.25*RG_PROF[o.w].gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
     if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h < px(o.kind === 'caps' ? 1.2 : 3) || h > wh*0.6) return;
@@ -961,7 +1089,8 @@ function rgPaintLand(x, mk, dk, V){
       const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;   // (out only about dusk, on its round)
       if(o.kind === 'harvester'){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: viewOf(o) }, o.kind, R, rgPx, nt); return; }
-      if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+      const bob = V.time && o.kind === 'drone' ? Math.sin(V.time*1.3 + (o.rs & 63))*h*0.12 : 0;   // (a drone hovering, rising and dipping a little)
+      if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     // small life: found rather than seen
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.2) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y < px(4) || Y > wh*0.95 || !vis(l, X - hh, X + hh, Y - hh*1.4, Y)) return;
@@ -969,7 +1098,7 @@ function rgPaintLand(x, mk, dk, V){
     const lc = { dark: rgLit(V, [34, 30, 28], wday, haze, AIR), lit: rgLit(V, [236, 240, 246], wday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
       slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR) };
-    rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R);
+    rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, V.time);
   };
   // THE WORKS, standing in the world: spires, monoliths, domes, circles, pillars, craters, wrecks, towers, crystals
   // (Ruby: "works needs to be turned down significantly": fewer of each)
@@ -1088,6 +1217,57 @@ function rgPaintLand(x, mk, dk, V){
           if(f.edge === 'hedge') rsPoly(x, [[X - hh*0.3, Y + hh*0.1], [X, Y - hh*(0.15 + 0.25*Rh())], [X + hh*0.3, Y + hh*0.1]], rsCss(lit(rsMix(col, Rh() < 0.5 ? [255, 246, 226] : [0, 0, 0], 0.15))));
           else { x.fillStyle = rsCss(lit(rsMix(col, Rh() < 0.5 ? [255, 246, 226] : [0, 0, 0], 0.18)), 0.8); x.fillRect(X - hh*0.25, Y + hh*(0.15 + 0.6*Rh()), hh*0.45, hh*0.2); } } } } };
 
+  // THE CLOUDS AS THINGS IN THE WORLD (Ruby: "clouds will need distance, lod, parallaxing, transparency, blending, and to
+  // not clip with other objects"): each heap of cumulus stands at its own place over the band, its base at its own height
+  // above the sea, its size in metres, so it is drawn at its distance among the ridges (a nearer hill hides it, a far
+  // range stands behind it, a high peak pokes up through it), seen from below or, from high up, from above; hazed as
+  // the land is by the air between; detailed by how large it is (more and smaller billows near, a few far); painted
+  // whole on its own sheet and laid on the page at once, see-through at its edges, so its billows never darken each
+  // other; and with the clock carried by the wind. A storm's towers carry their anvils, rain falls from their bases to
+  // the ground below them, and lightning strikes from one of them down to the land
+  { const wx = V.weather, cloudy = wx === 'clouds' || wx === 'rain' || wx === 'storm' || wx === 'snow';
+    if(cloudy){ const R0 = rgRand(s, 850), n = wx === 'clouds' ? 12 + Math.floor(R0()*8) : 18 + Math.floor(R0()*10), M1 = W*0.00025, A = W*1.6, Zh = W*0.44, storm = wx === 'storm';
+      const WDc = seedChoice(V.seed, 'wind'), wAng = WDc()*Math.PI*2, wSp = 4 + 10*WDc(), wrap = (v, h) => ((v + h) % (2*h) + 2*h) % (2*h) - h;
+      const lxC = V.sun.screen[0] > 0 ? 1 : -1, strike = storm && (!V.time || mnHash(Math.floor(V.time/Math.max(0.25, Math.min(4, V.dt || 0.25))), 3, s + 818) < 0.12) ? Math.floor(R0()*n) : -1;
+      for(let k = 0; k < n; k++){ const R = rgRand(s, 851, k), rnd = (a, b) => a + (b - a)*R();
+        const tc = rgCloudTime(V), a = wrap((R()*2 - 1)*A + Math.cos(wAng)*wSp*M1*tc, A), z = wrap((R()*2 - 1)*Zh + Math.sin(wAng)*wSp*M1*tc*0.3, Zh);
+        const eb = Math.max(TR.sea, TR.snow*rnd(0.7, 1.05)), wd = rnd(250, 900)*M1*(storm ? 1.4 : 1), ht = wd*rnd(0.35, storm ? 1.3 : 0.7), seed = (R()*4294967296) >>> 0, rain = (wx === 'rain' || storm) && R() < 0.6;
+        const dd = keep(a, z, wd); if(dd == null) continue;
+        things.push({ dd, draw: l => paintHeap({ a, z, eb, wd, ht, seed, rain, bolt: k === strike }, l, dd) }); }
+      const paintHeap = (h, l, dd) => { const B = at(h.a, h.z, h.eb); if(!B) return; const kpx = F/B[2], W0 = h.wd*kpx, H0 = h.ht*kpx; if(W0 < px(2) || W0 > ww*3) return;
+        const X = B[0], Y = B[1]; if(!vis(l, X - W0*0.8, X + W0*0.8, Y - H0*1.2, Y)) return;
+        const day = ringDay(L, h.a), haze = hazeOf(dd), dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), R = mulberry32(h.seed), rnd = (a, b) => a + (b - a)*R();
+        const white = rsMix(rgLit(V, [244, 244, 250], day, 0, AIR), [255, 170, 140], dusk*0.4), grey = rsMix(white, [70, 74, 86], storm ? 0.6 : wx === 'rain' ? 0.38 : wx === 'snow' ? 0.15 : 0.05);
+        const base = rsMix(rsMix(grey, [40, 44, 60], 0.25), AIR, haze*0.85), lit = rsMix(rsMix(grey, [255, 248, 236], 0.35*rsSmooth(0.3, 0.75, day) + 0.1), AIR, haze*0.85);
+        // (its billows: as many as fill its size, more and smaller the nearer and larger it is, the lower ones squashed flat
+        //  on the base; a tower's billows climb it)
+        const S0 = Math.sqrt(W0*Math.max(H0, W0*0.35)), pr0 = S0*0.11, np = Math.max(10, Math.min(64, Math.round(W0*H0/(pr0*pr0)*0.55), Math.round(W0/px(4))));
+        const pad = W0*0.25 + pr0*1.5, cw = Math.ceil(W0*1.5 + pad*2), ch = Math.ceil(H0*1.3 + pad*2), ox = X - cw/2, oy = Y - H0*1.15 - pad;
+        if(cw*ch > 4.2e6) return; const [cc, cx] = kitCanvas(cw, ch), L0 = (px0, py) => [px0 - ox, py - oy], puffs = [];
+        for(let q = 0; q < np; q++){ const v = Math.pow(R(), 0.8), half = 0.5*Math.pow(1 - v, 0.5)*(0.75 + 0.25*R()) + 0.08, u = 0.5 + (R()*2 - 1)*half;
+          puffs.push([X - W0/2 + W0*u, Y - H0*v*0.92 - pr0*0.4, pr0*rnd(0.7, 1.35)*(0.75 + 0.5*(1 - Math.abs(u - 0.5)*2))]); }
+        // (soft as a painter's cloud: each billow a gradient, its rim fading into the air, so the edge is soft and no
+        //  billow outlines another; then its body lit toward the sun and from above; the lit caps on top; the flat
+        //  shaded base beneath it all)
+        for(let q = 0; q < 6; q++){ const [qx, qy] = L0(X - W0*0.42 + W0*0.84*q/5, Y - pr0*0.2), g = cx.createRadialGradient(qx, qy, 0, qx, qy, W0*0.16); g.addColorStop(0, rsCss(base, 0.8)); g.addColorStop(1, rsCss(base, 0));
+          cx.save(); cx.translate(qx, qy); cx.scale(1, 0.32); cx.translate(-qx, -qy); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, W0*0.16, 0, Math.PI*2); cx.fill(); cx.restore(); }
+        for(const [p0, p1, r] of puffs){ const [qx, qy] = L0(p0, p1), g = cx.createRadialGradient(qx, qy, r*0.55, qx, qy, r*1.3); g.addColorStop(0, rsCss(base, 0.95)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r*1.3, 0, Math.PI*2); cx.fill(); }
+        puffs.sort((p, q) => q[1] - p[1]);   // (the lower billows first, so the upper ones sit on them)
+        for(const [p0, p1, r] of puffs){ const [qx, qy] = L0(p0, p1), up = rsSmooth(Y, Y - H0, p1), body = rsMix(base, lit, 0.35 + 0.4*up), g = cx.createRadialGradient(qx + lxC*r*0.3, qy - r*0.35, 0, qx, qy, r);
+          g.addColorStop(0, rsCss(rsMix(body, lit, 0.5))); g.addColorStop(0.7, rsCss(body)); g.addColorStop(1, rsCss(rsMix(body, base, 0.6), 0.6)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r, 0, Math.PI*2); cx.fill(); }
+        for(const [p0, p1, r] of puffs) if(p1 < Y - H0*0.45){ const [qx, qy] = L0(p0 + lxC*r*0.3, p1 - r*0.35), g = cx.createRadialGradient(qx, qy, 0, qx, qy, r*0.6); g.addColorStop(0, rsCss(lit, 0.75)); g.addColorStop(1, rsCss(lit, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r*0.6, 0, Math.PI*2); cx.fill(); }
+        // rain from its base to the ground under it, slanting with the wind, fading as it falls
+        if(h.rain){ const G = at(h.a, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ const ln = G[1] - Y, sl = Math.cos(wAng)*W0*0.12, g = x.createLinearGradient(0, Y, 0, G[1]);
+          g.addColorStop(0, rsCss(base, 0.3)); g.addColorStop(1, rsCss(base, 0.04)); x.fillStyle = g;
+          for(let q = 0; q < 7; q++){ const u0 = -0.4 + 0.7*R(), w0 = W0*rnd(0.03, 0.1); x.beginPath(); x.moveTo(X + u0*W0, Y); x.lineTo(X + u0*W0 + w0, Y); x.lineTo(X + u0*W0 + w0 + sl, G[1]); x.lineTo(X + u0*W0 + sl, G[1]); x.fill(); } } }
+        x.save(); x.globalAlpha = 0.93 - 0.25*haze; x.drawImage(cc, ox, oy); x.restore(); cc.width = 0;
+        // a bolt of lightning from its base down to the land (with the clock, now and then)
+        if(h.bolt){ const G = at(h.a + W0/kpx*0.1, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ let bx = X + (R() - 0.5)*W0*0.3, by = Y; const pts = [[bx, by]], steps = 10;
+          for(let q = 0; q < steps; q++){ bx += (G[0] - bx)/(steps - q) + (R() - 0.5)*W0*0.08; by += (G[1] - by)/(steps - q); pts.push([bx, by]); }
+          x.save(); x.globalCompositeOperation = 'screen'; x.strokeStyle = rsCss([226, 226, 255], 0.95); x.lineWidth = Math.max(px(1), W0*0.006); x.lineJoin = 'round'; x.beginPath(); pts.forEach(([p0, p1], q) => q ? x.lineTo(p0, p1) : x.moveTo(p0, p1));
+          const fk = pts[4]; x.moveTo(fk[0], fk[1]); x.lineTo(fk[0] + W0*0.08, fk[1] + (G[1] - Y)*0.2); x.lineTo(fk[0] + W0*0.05, fk[1] + (G[1] - Y)*0.35); x.stroke();
+          rgGlow(x, pts[0][0], pts[0][1], W0*0.9, [200, 200, 255], 0.45); rgGlow(x, G[0], G[1], W0*0.25, [220, 220, 255], 0.5); x.restore(); } } }; } }
+
   // ---- 4. BACK TO FRONT ----
   const bySlot = lay.map(() => []);
   for(const t of things){ const j = slot(t.dd); if(j >= 0){ t.l = lay[j]; bySlot[j].push(t); } }
@@ -1111,11 +1291,14 @@ function rgPaintLand(x, mk, dk, V){
       const gc = rgGround(V, am, zm, Math.max(p0.ec, p1.ec));
       const cl = rgLit(V, gc, day, haze, AIR), lit = rgLit(V, rsMix(gc, [255, 244, 222], 0.3), day, haze, AIR), dark = rgLit(V, rsMix(gc, BLACK, 0.34), day, haze, AIR);
       if(p0.sea && p1.sea){ rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + depth*0.5], [p0.X, p0.Y + depth*0.5]], rsCss(cl));
-        if(n1 < 0.5){ x.fillStyle = rsCss(rsMix(cl, [255, 255, 255], 0.3*day + 0.05)); x.fillRect(p0.X, p0.Y + depth*n2*0.25, (p1.X - p0.X)*(0.3 + 0.6*n3), Math.max(rgPx(1), depth*0.03)); } continue; }
+        // (with the clock the glints move on the water)
+        if((V.time ? wn(am + V.time*W*0.000002, zm, l.ws, 1) : n1) < 0.5){ x.fillStyle = rsCss(rsMix(cl, [255, 255, 255], 0.3*day + 0.05)); x.fillRect(p0.X, p0.Y + depth*n2*0.25, (p1.X - p0.X)*(0.3 + 0.6*n3), Math.max(rgPx(1), depth*0.03)); } continue; }
       const face = rsFace(dark, lit, p1.Y - p0.Y, p0.X - p1.X, LT), slope = Math.abs(p1.Y - p0.Y)/Math.max(1, Math.abs(p1.X - p0.X));
       if(slope > 0.32){ const q0 = [p0.X + (p1.X - p0.X)*(n1 - 0.5)*0.3, p0.Y + depth*(0.35 + 0.45*n2)], q1 = [p1.X, p1.Y + depth*(0.35 + 0.45*n3)];
         rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03, n4))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03, n1))); }
-      else { const bd = depth*(0.1 + 0.12*n2); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bd*(0.6 + 0.6*n3)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02, n4)));
+      // (the lit band under a gentle crest: its lower edge by the land's own noise at each point, so it runs on from
+      //  facet to facet without a step)
+      else { const bdOf = p => depth*(0.1 + 0.14*wn(p.a, p.z, l.ws, 2)), bd = bdOf(p1); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bdOf(p0)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02, n4)));
         // FIELDS (Ruby: "more detail in the distance … in the ground"): where people farm (open, low, not forest, not
         // town), the land below a crest is a mosaic of fields, each its crop's colour by where it lies (ripe, green,
         // fallow, now and then in flower), hedged with a dark line; far off, at the scale a painter shows them
@@ -1137,10 +1320,12 @@ function rgPaintLand(x, mk, dk, V){
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(col, 0.22)); g.addColorStop(0.4, rsCss(col, 0.07)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
   if(V.weather === 'rain' || V.weather === 'storm'){ const R = rgRand(s, 820), n = Math.round(ww*wh/(px(26)*px(26))), sl = 0.18; x.strokeStyle = rsCss(rsMix(AIR, [230, 236, 246], 0.5), V.weather === 'storm' ? 0.24 : 0.18); x.lineWidth = Math.max(px(0.5), px(0.9)); x.beginPath();
-    for(let k = 0; k < Math.min(n, 4000); k++){ const X = R()*ww, Y = R()*wh, ln = px(10 + 30*R()); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
+    // (with the clock each streak falls on, steeply, and comes round again at the top)
+    const fall = V.time*wh*1.6; for(let k = 0; k < Math.min(n, 4000); k++){ const ln = px(10 + 30*R()), X0 = R()*ww, Y = ((R()*wh + fall) % (wh + ln)) - ln, X = ((X0 + fall*sl) % ww); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
     if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); } }
   if(V.weather === 'snow'){ const R = rgRand(s, 821), n = Math.min(3000, Math.round(ww*wh/(px(34)*px(34)))); x.fillStyle = rsCss([250, 252, 255], 0.85); x.beginPath();
-    for(let k = 0; k < n; k++){ const X = R()*ww, Y = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)); x.moveTo(X + r, Y); x.arc(X, Y, r, 0, Math.PI*2); } x.fill(); }
+    for(let k = 0; k < n; k++){ const X0 = R()*ww, Y0 = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)), sp2 = wh*(0.05 + 0.04*r/px(3.4)), Y = (Y0 + V.time*sp2) % wh, X = ((X0 + Math.sin(V.time*0.8 + k)*px(6)*(V.time ? 1 : 0)) % ww + ww) % ww;   // (with the clock: drifting down, swaying, the near flakes faster)
+      x.moveTo(X + r, Y); x.arc(X, Y, r, 0, Math.PI*2); } x.fill(); }
 }
 
 // the weather (both parts read it the same way, so the arch's clouds and the land's rain agree)
@@ -1150,7 +1335,7 @@ export const RING_STEPS = {
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
       RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99),
-      ['saturn', 'Saturn', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }], RG_WEATHER_SEL], cost: () => 4,
+      ['saturn', 'Gas Giant', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }], RG_WEATHER_SEL], cost: () => 4,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
       const V = rgView(E, n, ww, wh); rgPanSky(c, x, V); rgPaintArch(x, mk, V); return [c, mc]; },
     run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },

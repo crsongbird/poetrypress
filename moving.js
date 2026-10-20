@@ -59,6 +59,28 @@ export function moveAt(i, n, back){
   return 0.5 - 0.5*Math.cos(Math.PI*s);
 }
 
+// ---------- the sun through a day ----------
+
+/**
+ * THE SUN'S PATH (Ruby: "sunset / sunrise in a parabolic arc with physically accurate timing rather than just a circle,
+ * with slightly longer days than nights, extended sunset and sunrise"; docs/prior-art/ringworld-time.md): the sun of a
+ * place at 48° in early summer (declination 15°), its elevation and bearing from the hour angle as the solar
+ * calculators give them, so it climbs the sky in an arc and sinks slowly along the horizon, the day some fourteen hours
+ * and the night ten. On the light dial: its turn the bearing (from where the dial stands now), its tilt the height
+ * (the middle overhead, the rim the horizon, past the rim the twilight deepening to night at 18° below).
+ * Starting where the dial is, it gives for any hours since [the dial's turn, its tilt].
+ */
+const SUN_LAT = 48*Math.PI/180, SUN_DEC = 15*Math.PI/180;
+const sunEl = H => Math.asin(Math.sin(SUN_LAT)*Math.sin(SUN_DEC) + Math.cos(SUN_LAT)*Math.cos(SUN_DEC)*Math.cos(H));
+const sunAz = H => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(SUN_LAT) - Math.tan(SUN_DEC)*Math.cos(SUN_LAT));
+const sunTilt = el => el >= 0 ? 100*(1 - el/(Math.PI/2)) : 100 + 30*Math.min(1, -el/(18*Math.PI/180));
+export function sunPath(deg0, tilt0){
+  const el0 = tilt0 <= 100 ? (1 - tilt0/100)*Math.PI/2 : -Math.min(1, (tilt0 - 100)/30)*18*Math.PI/180;
+  const c = (Math.sin(el0) - Math.sin(SUN_LAT)*Math.sin(SUN_DEC))/(Math.cos(SUN_LAT)*Math.cos(SUN_DEC)), H0 = -Math.acos(Math.max(-1, Math.min(1, c)));   // (the morning's)
+  const a0 = deg0 - sunAz(H0)*180/Math.PI;
+  return hours => { const H = H0 + hours*Math.PI/12; return [((a0 + sunAz(H)*180/Math.PI) % 360 + 360) % 360, Math.round(sunTilt(sunEl(H))*100)/100]; };
+}
+
 // ---------- bytes ----------
 
 const enc = new TextEncoder();

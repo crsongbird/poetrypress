@@ -1778,7 +1778,8 @@ body.is-mobile .shortcut-btn{ display:none; }
 /* the Moving Image sheet: a label and its choice to a row */
 .moving-sheet{ width:min(420px, 92vw); }
 .moving-row{ display:grid; grid-template-columns:7.5em 1fr; align-items:center; gap:10px; margin:8px 0; }
-.moving-row[hidden]{ display:none; }
+.moving-row.moving-idle{ visibility:hidden; }   /* (the row keeps its room: nothing moves when the move changes) */
+.moving-row [hidden]{ display:none; }
 .moving-row select{ width:100%; min-width:0; }
 .moving-note{ min-height:1.4em; }
 .keys{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:13px; }
