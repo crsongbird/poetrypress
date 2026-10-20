@@ -44,7 +44,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - A FAIRY now and then (Ruby: "both Hyrule Field and the wind waker need an occasional fairy showing up from the
   game"): small, a glowing nod and never the character itself, in the Meadow and the Windward Sea, and in Macro Bloom
   as a visitor at a 1-in-66 chance (small).
-- SUNRISE SCROLL (branch `ink`): Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
+- SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a
   village of roofs and gates, fields under a great tree, a cursed land under red miasma.
 - THE GPU (Ruby: "implement most of these things on the GPU to accelerate rendering as much as inhumanly possible"):

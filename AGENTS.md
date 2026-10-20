@@ -1384,6 +1384,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   WebGL2, an emulator, or `setGpuPasses(false)`, and the part then runs its CPU path (Node and the tests always do).
   Write the CPU path first, then the kernel, and check them against each other in Chromium with `setGpuSoftware(true)`
   (ROADMAP C9: the graph's passes move here one by one).
+- **Sunrise Scroll** (chain `inkscroll`, `v: 5`; general parts only; prior art docs/prior-art/cel-shaded.md §7):
+  ink-wash mountains band behind band. A ridge is a 1D noise (a Curve's noise through a Profile Gradient), never a 2D
+  noise cut by a gradient (that makes blobs, not profiles); far ridges folded into crags. A Number's value is 0–100
+  (num(50) is a half): a multiply by num(0.9) is nearly nothing.
 - **Windward Sea** (chain `windsea`, `v: 5`; one process part, `streamers`, stepsStreamers.js; prior art
   docs/prior-art/cel-shaded.md): the first love letter to a video game, cel-shaded. Light in bands: the Light
   Engine's light (or Streamers' Facing) through a Posterize (Toon Bands) into a three-stop Gradient Map. The

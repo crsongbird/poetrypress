@@ -96,6 +96,50 @@ Built [est]:
 - **Small nods**: stitches and underlines with a game's grammar (a row of hearts, a dialogue box), a pixel font, a
   Sierpiński triangle's first steps (mathematics, under a name of its own).
 
+## 7. The ink-painted one: Sunrise Scroll (2026-10-19)
+
+Read for it:
+- The brush-painted wolf game "features a sumi-e-inspired cel-shaded visual style"; its world is "a woodcut, watercolor
+  style, cel-shaded environment" that resembles "an animated Japanese ink-illustration", drawing on the "wood carving
+  techniques used in notable works such as those of Hokusai". Realistic rendering strained the console; a designer
+  "drew the wolf character using a brush", and the leads took up ukiyo-e and sumi-e, which "better conveyed the
+  connection of restoring nature". An early demo had flowers "blossoming in its wake"; a later port kept "a paper
+  parchment filter applied to all on-screen elements" [src: Wikipedia, Ōkami]. Its look is "hand drawn, cel shaded"
+  [src: TheXboxHub].
+- Ink painting's methods: kouroku, a form outlined; mokkotsu, a form "expressed by the shading of sumi ink or color
+  rather than by using outlines"; tarashikomi, pigments bleeding into a natural blur; bokashi, water added to applied
+  paint for shading; and mist and clouds, painted to "give perspective or express the height of mountains", or placed
+  at intervals to mark a change of scene [src: Nomura Kakejiku].
+- Sumi ink gives "very intense blacks" and, diluted, transparent greys enough for "volume, texture, and atmosphere";
+  blank paper is left to make "both atmosphere and light"; "a single, well-executed line is better than a hundred rough
+  lines" [src: Dessindigo].
+- The woodblock's gradation, bokashi: ichimonji bokashi, a brush drawn across the block, "most associated with horizons,
+  seas, and skies"; Prussian blue fading in skies and water for depth; itabokashi, edges abraded so the transition is
+  ruffled [src: Wikipedia, Bokashi (printing)]. A print's outline block left "a network of raised ridges", and Hokusai's
+  Thirty-six Views first used only Prussian blue and indigo [src: British Museum].
+
+Built [est], general parts only:
+- **Mountains band behind band** (a mountain-and-water painting): each ridge a 1D noise laid along the page (a Curve's
+  noise in two octaves, through a Profile Gradient), so it is a true profile, not a blob; the far ones folded at their
+  middle into crags. Each a flat wash of ink diluted by distance (mokkotsu), tinted by Wash, lit by the Light Engine in
+  toon bands, its foot fading to paper as mist (kiri, bokashi), its ridge brushed in ink (kouroku): the line thick and
+  thin where a noise lifts the brush, broken by dry-brush streaks.
+- **The sky** graded across the top in the Sky Hue, its edge a little ragged (ichimonji bokashi, itabokashi); a red sun
+  where the dial lays it, sinking behind the mountains as its height falls.
+- **Mist bands** with rounded ends across the sky (suyari-gasumi), a few curled, outlined.
+- **Cherry petals** adrift (Bloom's cherry petals, thrown), the flowers in the game's wake.
+- **The paper**: its tooth through everything, and its edges darkened with Age (the parchment filter).
+- **Readings**: Spring Scroll; Vermilion Dusk; Indigo Print (a blue print, after the Prussian-blue prints); Bare Ink
+  (no colour at all).
+
+Sources (this section):
+- Wikipedia, "Ōkami": https://en.wikipedia.org/wiki/%C5%8Ckami
+- TheXboxHub, "Looking back to 2006 and the doodlings of Okami": https://www.thexboxhub.com/looking-back-to-2006-and-the-doodlings-of-okami/
+- Nomura Kakejiku, "Methods of expression": https://nomurakakejiku.com/lesson_lineup/methods-of-expression
+- Dessindigo, "What is Sumi-e painting?": https://dessindigo.com/en/blog/advice/sumi-e-painting
+- Wikipedia, "Bokashi (printing)": https://en.wikipedia.org/wiki/Bokashi_(printing)
+- British Museum, "Technique: making a good impression": https://www.britishmuseum.org/blog/technique-making-good-impression
+
 ## Sources
 
 - Wikipedia, "Cel shading": https://en.wikipedia.org/wiki/Cel_shading
