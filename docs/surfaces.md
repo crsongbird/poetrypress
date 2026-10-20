@@ -278,35 +278,47 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     air's tint.
   - **The camera sweeps; the world stays** (Ruby: "we should be able to sweep
     the camera and see it not really change much but get a different
-    perspective"). The land is 16 ridges, each the land at one DISTANCE from
-    you: an arc round where you stand, sampled at fixed bearings of the world
-    (`i*dphi`), so turning in place walks the same arcs. Every stretch of
-    every arc draws from its own stream (`rgRand(seed, layer, bearing index)`),
-    every work from its cell's, every road is cut into world lengths and drawn
-    with the layer at its distance; the sky's things (nebula, planet, comet,
-    the low clouds, Saturn) stand in directions of the world (`skyAt`), and
-    the stars behind are panned with the camera (`rgPanSky`). Nothing reads
-    the shared stream any more, so what is drawn never depends on what
-    happened to be in view. (The near arcs bow down at the frame's sides: the
-    cost of being arcs.)
-  - Each ridge: a wash (lit crest, deeper below), facets where steep, a bright
-    rim; on it what grows and stands (trees, buildings, rocks, grass, by
-    stochastic counts so small segments still get their share). The works
-    stand in world cells (`cw`), drawn between the ridges they lie between
-    (so hills hide them); nothing anchored is drawn larger than it can be seen
-    whole (`big`).
+    perspective"). The land is 16 straight ridges across the view (arcs were
+    tried, and the land looked worse: Ruby), each the land's true height along
+    one cut; a facet's choices come from the world's own smooth noise where it
+    stands (`wn`), so a cut moving with the camera changes smoothly, never
+    jumps. Everything else stands in the WORLD: trees, buildings, rocks, grass
+    and finds are sown in cells keyed by where they are (`scatter`: a cell
+    doubles in size with each doubling of distance, so the screen holds about
+    as many at every depth), the works in their own cells, roads cut into world
+    lengths; the sky's things stand in directions of the world (`skyAt`), and
+    the stars behind are panned with the camera (`rgPanSky`).
+  - **How it is painted** (Ruby's method from game development): the ridges are
+    found first; for each, the highest of the nearer crests in every column is
+    its occlusion horizon. Then every thing is measured nearest first, the
+    solid heart of each (a crown, a building's lower body, a boulder) laid in
+    its columns; a thing wholly below the nearer ridges, or wholly inside what
+    nearer things cover, is never drawn (`vis`). Then all is painted back to
+    front, each thing after the ridge behind it, standing on the ground that
+    shows (never above that ridge's crest: `stand`). About nine in ten things
+    in a city are culled before they are drawn.
+  - **One ruler** (Ruby: "buildings that are the size (small) of lil shrubs"):
+    every thing has a size in metres (paintKit's `PK_SIZE`), drawn at the
+    ring's px per metre where it stands (`W·0.00025·F` over its depth); a
+    building's archetype is chosen first, then sized, tall ones where a city is
+    densest; anything larger than the view is culled, never shrunk. Trees by
+    the land's climate (`PK_FLORA`: dry country, warm, jungle, the cold
+    heights, a magic world's fey places); a few villages and farms in the wilds.
   - **Works** (Ruby: "works needs to be turned down significantly"): 35 by
-    default, and fewer of each at any setting; spans and bridges of light
-    across the band are rare and faint.
+    default, and fewer of each at any setting; the spans and bridges of light
+    across the band as they were (Ruby: "the bridges and the spans were fine").
   - **The painted things are paintKit.js's**, shared with Ring in the Sky's
-    land and Night City's skyline (docs/prior-art/painted-ringworld.md): trees
-    of seven kinds as lobes and tiers, buildings of a dozen archetypes (glass
-    towers, Art Deco setbacks, slabs, mid-rises with water towers, domes,
-    needles, the builders' pylons and arches, the magi's towers and onion
-    domes), each in its own material, roof furniture and windows only where
-    large enough; rocks in three facets; spires, monoliths, domes, crystals.
-    Each thing takes ONE number from its caller's stream and keys its features
-    to streams of its own (`pkSub`), so detail appearing never reshuffles it.
+    land and Night City's skyline (docs/prior-art/painted-ringworld.md §5):
+    23 kinds of tree (spruce, fir, the pines, cedar, cypress, palm, baobab,
+    acacia, saguaro, Joshua tree, bamboo, tree fern, giant mushroom, crystal
+    tree, cherry, bush and the rest) and 31 of building (glass, Art Deco, slab,
+    brick, cottage, A-frame, barn, silo, windmill, stave church, terrace,
+    pagoda, torii, castle, lighthouse, cathedral, mosque, clock tower, factory,
+    water tower, capsule tower, megablock, geodome, observatory, wind turbine,
+    the builders' pylons and arches, the magi's towers and onion domes), each
+    style its own mix (`pkArchOf`); rocks in three facets; spires, monoliths,
+    domes, crystals. Each thing takes ONE number from its caller's stream and
+    keys its features to streams of its own (`pkSub`).
   - **Saturn** (Ruby: "Ringworld should sometimes be orbiting Saturn"): by the
     seed (one ring in four) or The Arch's Saturn setting, the ring orbits it as
     the old games' rings orbit their gas giants, and Saturn hangs huge in the
@@ -314,11 +326,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     before the arch and its air so they pass in front; now and then Enceladus
     beside it. It takes the far planet's place.
   - **Small life** (`rgSmallLife`; Ruby: "insects, fairies, flowers, slime
-    creatures … all subtle"): on some rings (`lively`, by the seed), each
-    stretch of each near-enough arc may hold a find (more with Life), decided by
-    its own stream; once its ridge is painted its pixels are noted (`rgSpot`),
-    and at the end it is drawn only if nothing nearer has covered it since
-    (`rgSame` allows a passing glow). The kind is by the world (fairies in
+    creatures … all subtle"): on some rings (`lively`, by the seed), finds are
+    sown in the world as everything else is (more with Life), and drawn in their
+    place in the order, so a nearer ridge or thing covers them as it would
+    anything; never where nearer land hides them. The kind is by the world (fairies in
     magic, slime in ruins); every mark has a floor in canonical pixels.
 - **Particles** (First Snow, Burning Mana, Euphoria Dust) draw under
   `withSeed(ctx.seed + Scatter·7919)`. This keeps them pixel-identical;

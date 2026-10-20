@@ -28,9 +28,34 @@ export function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.g
 // a soft shadow where a thing stands, thrown away from the light
 const pkFoot = (x, X, Y, r, c) => pkEll(x, X - c.sd*r*0.35, Y, r, r*0.22, pkCss(c.dark, 0.28));
 
+// ---------------- SIZES, IN METRES (docs/prior-art/painted-ringworld.md §5.1) ----------------
+// One ruler for every painted thing (Ruby: "tag them all with a size range … buildings that are the size (small) of lil
+// shrubs"): a caller turns metres into pixels with its own px-per-metre at the thing's distance, so a tree and a house
+// stand in their true proportion at any distance. Heights [lo, hi]; buildings also their width. A thing larger than
+// the view is culled by the caller, never shrunk.
+export const PK_SIZE = {
+  spruce: [18, 35], fir: [20, 45], stonepine: [12, 22], cedar: [20, 30], cypress: [12, 25], palm: [15, 28], baobab: [10, 22], acacia: [6, 14], saguaro: [5, 14],
+  joshua: [5, 9], bamboo: [8, 20], fern: [3, 7], mushroom: [4, 20], crystal: [6, 20], cherry: [8, 12], bush: [1, 3], broadleaf: [12, 22], pine: [12, 20], poplar: [15, 25], birch: [10, 22], willow: [9, 15], dead: [8, 18], glow: [8, 18],
+  brick: [9, 32, 12, 26], glass: [45, 220, 20, 45], deco: [70, 300, 30, 60], slab: [18, 55, 22, 45], dome: [16, 45, 18, 40], needle: [150, 450, 18, 30],
+  pylon: [60, 400, 10, 30], arch: [30, 120, 30, 70], wizard: [22, 60, 8, 14], onion: [18, 50, 14, 30],
+  cottage: [5, 8, 7, 12], aframe: [6, 10, 6, 10], barn: [9, 13, 8, 14], silo: [10, 25, 4, 8], windmill: [15, 25, 6, 9], stave: [10, 15, 7, 10], row: [7, 14, 15, 30],
+  pagoda: [20, 45, 10, 16], torii: [4, 12, 5, 12], castle: [18, 40, 20, 40], lighthouse: [12, 40, 4, 8], cathedral: [45, 150, 40, 70], mosque: [35, 70, 40, 70],
+  clock: [40, 96, 8, 14], factory: [12, 25, 30, 60], watertower: [15, 35, 8, 14], capsule: [30, 60, 15, 25], megablock: [30, 50, 50, 100], geodome: [20, 55, 40, 110],
+  observatory: [12, 40, 12, 40], turbine: [80, 160, 6, 8],
+  rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8] };
+// a size in its range, tall specimens rarer (u: a draw from 0 to 1)
+export const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
+// the archetype a style raises, by weight (the caller may choose it first, to size it before it is drawn)
+export function pkArchOf(style, u){ const arch = PK_ARCH[style] || PK_ARCH.city; let tot = 0; for(const [, w] of arch) tot += w; let r = u*tot;
+  for(const [k, w] of arch){ r -= w; if(r < 0) return k; } return arch[0][0]; }
+
 // ---------------- TREES ----------------
 // which trees each kind of world grows (the caller picks one of these by its stream)
 export const PK_TREES = { wild: ['spruce', 'spruce', 'broadleaf', 'broadleaf', 'pine', 'poplar', 'birch'], magic: ['broadleaf', 'glow', 'glow', 'birch', 'willow', 'spruce'], ruins: ['dead', 'dead', 'spruce', 'broadleaf', 'pine'] };
+// (and by the land's climate: dry country, warm country, jungle, and the fey places of magic worlds)
+export const PK_FLORA = { dry: ['saguaro', 'saguaro', 'joshua', 'acacia', 'acacia', 'baobab', 'bush', 'dead'], warm: ['stonepine', 'stonepine', 'cypress', 'cypress', 'cedar', 'palm', 'broadleaf', 'cherry', 'bush'],
+  jungle: ['palm', 'palm', 'fern', 'fern', 'bamboo', 'broadleaf', 'broadleaf', 'bush'], cold: ['fir', 'fir', 'spruce', 'spruce', 'birch', 'pine', 'bush'],
+  fey: ['mushroom', 'mushroom', 'crystal', 'cherry', 'fern', 'glow', 'bamboo', 'willow'] };
 // a crown of lobes (a broadleaf, a willow's, a poplar's): every lobe in shadow first, then each again smaller and
 // toward the light in the body's colour, then a few small lit lobes on the lit side of the crown's top
 function pkLobes(x, lobes, c, R, cx, cy, rr){
@@ -46,7 +71,7 @@ export function pkTree(x, X, Y, h, c, kind, R0, px){
   const sub = pkSub(R0), R = sub(1), RL = sub(2), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), small = h < px(7);
   const trunk = (top, wd, lean = 0) => { x.strokeStyle = pkCss(c.trunk); x.lineWidth = Math.max(px(0.6), wd); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + lean, Y - top); x.stroke(); };
   if(!small) pkFoot(x, X, Y, h*0.22, c);
-  if(kind === 'spruce' || kind === 'fir'){
+  if(kind === 'spruce'){
     // a spruce: a narrow cone of drooping tiers, each a jag below the last; its lit side a strip from the axis out
     trunk(h*0.16, h*0.05);
     const tiers = (t => small ? 3 : t)(5 + Math.floor(R()*3)), bw = h*rnd(0.2, 0.26), base = Y - h*0.1, L = [], Rt = [];
@@ -90,6 +115,123 @@ export function pkTree(x, X, Y, h, c, kind, R0, px){
     const limb = (x0, y0, ang, len, wd, depth) => { const x1 = x0 + Math.sin(ang)*len, y1 = y0 - Math.cos(ang)*len; x.lineWidth = Math.max(px(0.5), wd); x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
       if(depth > 0) for(const s of [-1, 1]) limb(x1, y1, ang + s*rnd(0.3, 0.7), len*rnd(0.5, 0.7), wd*0.6, depth - 1); };
     limb(X, Y, rnd(-0.1, 0.1), h*0.45, h*0.06, small ? 1 : 3); return; }
+  // ---- the silhouette families (docs/prior-art/painted-ringworld.md §5.2): each a few flat shapes its real tree's
+  // proportions give, lit on the light's side ----
+  if(kind === 'fir'){
+    // a subalpine fir: a needle, many small stiff tiers to a long spike, barely wider than a column
+    trunk(h*0.08, h*0.03); const tiers = small ? 4 : 10 + Math.floor(R()*4), bw = h*rnd(0.07, 0.1), L = [], Rt = [];
+    for(let t = 0; t <= tiers; t++){ const u = t/tiers, yy = Y - h*0.06 - h*0.86*u, wd = bw*(1 - u*0.85)*(0.85 + 0.3*R()); L.push([X - wd, yy], [X - wd*0.55, yy - h*0.03]); Rt.push([X + wd, yy], [X + wd*0.55, yy - h*0.03]); }
+    pkPoly(x, [...L, [X, Y - h], ...Rt.slice().reverse()], pkCss(c.dark));
+    pkPoly(x, [[X, Y - h*0.06], ...(sd > 0 ? Rt : L).map(([a, b]) => [X + (a - X)*0.8, b]), [X, Y - h]], pkCss(c.body));
+    if(!small) pkPoly(x, [[X, Y - h*0.5], [X + sd*bw*0.6, Y - h*0.3], [X + sd*bw*0.25, Y - h*0.75]], pkCss(c.lit, 0.7));
+    return; }
+  if(kind === 'stonepine'){
+    // a stone pine: a straight trunk under one wide dome, flat beneath, an umbrella
+    trunk(h*0.62, h*0.05, h*rnd(-0.04, 0.04)); const cy = Y - h*0.72, rx = h*rnd(0.38, 0.5), ry = h*0.2;
+    if(!small){ x.lineWidth = Math.max(px(0.5), h*0.025); x.beginPath(); x.moveTo(X, Y - h*0.5); x.lineTo(X - rx*0.5, cy + ry*0.4); x.moveTo(X, Y - h*0.55); x.lineTo(X + rx*0.45, cy + ry*0.4); x.stroke(); }
+    x.fillStyle = pkCss(c.dark); x.beginPath(); x.ellipse(X, cy, rx, ry*1.3, 0, Math.PI, 0); x.lineTo(X - rx, cy); x.fill();
+    pkEll(x, X, cy, rx, ry*0.3, pkCss(c.dark));
+    x.fillStyle = pkCss(c.body); x.beginPath(); x.ellipse(X + sd*rx*0.08, cy - ry*0.08, rx*0.9, ry*1.15, 0, Math.PI, 0); x.fill();
+    if(!small){ x.fillStyle = pkCss(c.lit); x.beginPath(); x.ellipse(X + sd*rx*0.35, cy - ry*0.35, rx*0.42, ry*0.75, 0, Math.PI, 0); x.fill(); }
+    return; }
+  if(kind === 'cedar'){
+    // a cedar of Lebanon: three to five flat shelves, each pushed a little aside, flat-topped
+    trunk(h*0.85, h*0.05); const n = small ? 2 : 3 + Math.floor(R()*3);
+    for(let q = 0; q < n; q++){ const u = q/(n - 1 || 1), yy = Y - h*(0.3 + 0.62*u), wd = h*(0.5 - 0.28*u)*(0.8 + 0.4*R()), ox = rnd(-1, 1)*h*0.08, th = h*0.07;
+      pkPoly(x, [[X + ox - wd, yy], [X + ox - wd*0.8, yy - th], [X + ox + wd*0.8, yy - th*1.1], [X + ox + wd, yy], [X + ox + wd*0.6, yy + th*0.5], [X + ox - wd*0.6, yy + th*0.5]], pkCss(c.dark));
+      pkPoly(x, [[X + ox - wd*0.85, yy - th*0.2], [X + ox - wd*0.7, yy - th], [X + ox + wd*0.75, yy - th*1.05], [X + ox + wd*0.9, yy - th*0.2]], pkCss(c.body));
+      if(!small) x.fillStyle = pkCss(c.lit), x.fillRect(X + ox + (sd > 0 ? 0 : -wd*0.7), yy - th*1.05, wd*0.7, Math.max(px(0.6), th*0.25)); }
+    return; }
+  if(kind === 'cypress'){
+    // an Italian cypress: one dark flame, widest a third of the way up, pointed
+    trunk(h*0.06, h*0.04); const wd = h*rnd(0.06, 0.08), pts = (k) => { const P = []; for(let q = 0; q <= 10; q++){ const u = q/10, yy = Y - h*0.04 - h*0.96*u, w = wd*k*Math.sin(Math.PI*Math.pow(u, 0.62))*(u < 0.33 ? 1 : 1 - (u - 0.33)*0.35); P.push([X + w, yy]); } return P; };
+    const Rp = pts(1), Lp = pts(-1); pkPoly(x, [...Lp, ...Rp.reverse()], pkCss(c.dark));
+    pkPoly(x, [[X, Y - h*0.04], ...pts(sd*0.85), [X, Y - h]], pkCss(c.body));
+    if(!small) pkPoly(x, [[X + sd*wd*0.15, Y - h*0.2], ...pts(sd*0.5).slice(2, 9), [X + sd*wd*0.1, Y - h*0.8]], pkCss(c.lit, 0.8));
+    return; }
+  if(kind === 'palm'){
+    // a palm: a thin trunk curving up to one knot, eight to twelve fronds arching out and down from it
+    const lean = h*rnd(0.08, 0.22)*(R() < 0.5 ? -1 : 1), tx = X + lean, ty = Y - h*0.9;
+    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.6), h*0.035); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + lean*0.1, Y - h*0.5, tx, ty); x.stroke();
+    const n = small ? 5 : 8 + Math.floor(R()*5);
+    for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const a = Math.PI*(1 + q/(n - 1)) + rnd(-0.12, 0.12), len = h*rnd(0.3, 0.42), ex = tx + Math.cos(a)*len, ey = ty + Math.sin(a)*len*0.35 + len*0.35, mx = tx + Math.cos(a)*len*0.55, my = ty - len*0.2 + Math.sin(a)*len*0.2;
+      const lit = Math.cos(a)*sd > 0.2; if(pass === 0 ? lit : !lit) continue;
+      x.strokeStyle = pkCss(lit ? c.body : c.dark); x.lineWidth = Math.max(px(0.6), h*0.03); x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(mx, my, ex, ey); x.stroke();
+      if(!small && lit){ x.strokeStyle = pkCss(c.lit, 0.8); x.lineWidth = Math.max(px(0.4), h*0.01); x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(mx, my - h*0.01, ex, ey); x.stroke(); } }
+    if(!small) pkDisc(x, tx, ty + h*0.02, h*0.03, pkCss(pkMix(c.trunk, PK_BLACK, 0.3)));
+    return; }
+  if(kind === 'baobab'){
+    // a baobab: a bottle of a trunk, stubby branches like roots in the air, a few small leaf pads
+    const bw = h*rnd(0.16, 0.22), top = Y - h*0.62; x.fillStyle = pkCss(c.trunk); x.beginPath(); x.moveTo(X - bw, Y); x.bezierCurveTo(X - bw*1.1, Y - h*0.35, X - bw*0.5, top + h*0.05, X - bw*0.45, top); x.lineTo(X + bw*0.45, top); x.bezierCurveTo(X + bw*0.5, top + h*0.05, X + bw*1.1, Y - h*0.35, X + bw, Y); x.fill();
+    x.fillStyle = pkCss(pkMix(c.trunk, PK_WHITE, 0.25)); x.beginPath(); x.moveTo(X + sd*bw*0.1, Y); x.bezierCurveTo(X + sd*bw*0.3, Y - h*0.35, X + sd*bw*0.35, top + h*0.05, X + sd*bw*0.35, top); x.lineTo(X + sd*bw*0.45, top); x.bezierCurveTo(X + sd*bw*0.5, top + h*0.05, X + sd*bw*1.1, Y - h*0.35, X + sd*bw, Y); x.fill();
+    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const pads = [];
+    for(let q = 0; q < (small ? 3 : 6); q++){ const sx = X + (q/(small ? 2 : 5) - 0.5)*bw*0.8, ex = sx + (q/(small ? 2 : 5) - 0.5)*h*0.4 + rnd(-1, 1)*h*0.04, ey = top - h*rnd(0.18, 0.34);
+      x.lineWidth = Math.max(px(0.5), h*0.03); x.beginPath(); x.moveTo(sx, top + h*0.02); x.quadraticCurveTo((sx + ex)/2, top - h*0.02, ex, ey); x.stroke(); pads.push([ex, ey, h*rnd(0.04, 0.07)]); }
+    if(!small) pkLobes(x, pads, c, RL, X, top - h*0.25, h*0.3);
+    return; }
+  if(kind === 'acacia'){
+    // an umbrella thorn: two or three limbs forking up to one flat, wide crown
+    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const cy = Y - h*0.82, cw = h*rnd(0.75, 1);
+    for(const [ex, wd] of [[-0.35, 0.05], [0.3, 0.045], [0.05, 0.035]]){ x.lineWidth = Math.max(px(0.5), h*wd); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + ex*cw*0.2, Y - h*0.45, X + ex*cw, cy + h*0.04); x.stroke(); }
+    pkPoly(x, [[X - cw, cy + h*0.02], [X - cw*0.8, cy - h*0.1], [X + cw*0.85, cy - h*0.11], [X + cw, cy + h*0.02], [X + cw*0.4, cy + h*0.07], [X - cw*0.45, cy + h*0.07]], pkCss(c.dark));
+    pkPoly(x, [[X - cw*0.85, cy - h*0.02], [X - cw*0.7, cy - h*0.11], [X + cw*0.75, cy - h*0.12], [X + cw*0.9, cy - h*0.02]], pkCss(c.body));
+    if(!small) pkPoly(x, [[X + (sd > 0 ? 0 : -cw*0.7), cy - h*0.11], [X + (sd > 0 ? cw*0.72 : 0), cy - h*0.12], [X + (sd > 0 ? cw*0.6 : -cw*0.1), cy - h*0.07], [X + (sd > 0 ? 0.05*cw : -cw*0.6), cy - h*0.07]], pkCss(c.lit));
+    return; }
+  if(kind === 'saguaro' || kind === 'joshua'){
+    const col = kind === 'saguaro';
+    if(col){ // a saguaro: a ribbed column, arms going out and then up
+      const wd = h*0.09, arm = (side, at, len) => { const ax = X + side*wd, ay = Y - h*at, ox = ax + side*h*0.12; x.strokeStyle = pkCss(side === sd ? c.body : c.dark); x.lineWidth = wd*1.4; x.lineCap = 'round'; x.beginPath(); x.moveTo(ax - side*wd*0.5, ay); x.lineTo(ox, ay); x.lineTo(ox, ay - h*len); x.stroke(); };
+      const n = small ? 1 : Math.floor(R()*4); for(let q = 0; q < n; q++) arm(q % 2 ? 1 : -1, rnd(0.35, 0.6), rnd(0.15, 0.3));
+      x.strokeStyle = pkCss(c.dark); x.lineWidth = wd*2; x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h + wd); x.stroke();
+      x.strokeStyle = pkCss(c.body); x.lineWidth = wd; x.beginPath(); x.moveTo(X + sd*wd*0.4, Y); x.lineTo(X + sd*wd*0.4, Y - h + wd); x.stroke();
+      if(!small){ x.strokeStyle = pkCss(c.lit, 0.7); x.lineWidth = Math.max(px(0.4), wd*0.2); x.beginPath(); x.moveTo(X + sd*wd*0.6, Y); x.lineTo(X + sd*wd*0.6, Y - h + wd*1.5); x.stroke(); }
+      return; }
+    // a Joshua tree: a shaggy trunk, crooked arms, each ending in a spiky ball
+    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const ends = [];
+    const limb = (x0, y0, ang, len, wd, depth) => { const x1 = x0 + Math.sin(ang)*len, y1 = y0 - Math.cos(ang)*len; x.lineWidth = Math.max(px(0.5), wd); x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
+      if(depth > 0) for(const s of [-1, 1]) limb(x1, y1, ang + s*rnd(0.4, 0.9), len*rnd(0.55, 0.8), wd*0.75, depth - 1); else ends.push([x1, y1]); };
+    limb(X, Y, rnd(-0.1, 0.1), h*0.45, h*0.07, small ? 1 : 2);
+    for(const [ex, ey] of ends){ const r = h*0.08; for(let q = 0; q < (small ? 3 : 9); q++){ const a = q/9*Math.PI*2; x.strokeStyle = pkCss(Math.cos(a)*sd > 0 ? c.lit : c.body); x.lineWidth = Math.max(px(0.5), r*0.25); x.beginPath(); x.moveTo(ex, ey); x.lineTo(ex + Math.cos(a)*r, ey + Math.sin(a)*r); x.stroke(); } }
+    return; }
+  if(kind === 'bamboo'){
+    // a stand of bamboo: thin culms, ringed at their nodes, feathery at the top
+    const n = small ? 4 : 7 + Math.floor(R()*8), spread = h*0.3;
+    for(let q = 0; q < n; q++){ const bx = X + (q/(n - 1) - 0.5)*spread + rnd(-1, 1)*h*0.02, hh = h*rnd(0.7, 1), lean = rnd(-0.08, 0.08)*h, lit = q/(n - 1) - 0.5 > 0 === sd > 0;
+      x.strokeStyle = pkCss(lit ? pkMix(c.body, c.lit, 0.4) : c.body); x.lineWidth = Math.max(px(0.5), h*0.012); x.beginPath(); x.moveTo(bx, Y); x.quadraticCurveTo(bx + lean*0.3, Y - hh*0.5, bx + lean, Y - hh); x.stroke();
+      if(!small){ x.fillStyle = pkCss(c.dark); for(let k = 1; k < 6; k++){ const u = k/6; x.fillRect(bx + lean*u*u - h*0.008, Y - hh*u, h*0.016, Math.max(px(0.4), h*0.004)); }
+        for(let k = 0; k < 4; k++){ const a = -Math.PI/2 + rnd(-1.3, 1.3), len = h*rnd(0.06, 0.12); x.strokeStyle = pkCss(k % 2 ? c.body : c.dark); x.lineWidth = Math.max(px(0.5), h*0.012); x.beginPath(); x.moveTo(bx + lean*0.8, Y - hh*0.85); x.lineTo(bx + lean*0.8 + Math.cos(a)*len, Y - hh*0.85 + Math.sin(a)*len); x.stroke(); } } }
+    return; }
+  if(kind === 'fern'){
+    // a tree fern: a shaggy trunk, a shuttlecock of fronds arching out and down
+    trunk(h*0.6, h*0.06); const tx = X, ty = Y - h*0.6, n = small ? 5 : 10;
+    for(let q = 0; q < n; q++){ const a = Math.PI*(1.05 + 0.9*q/(n - 1)), len = h*rnd(0.35, 0.45), ex = tx + Math.cos(a)*len, ey = ty + Math.sin(a)*len*0.4 + len*0.25, lit = Math.cos(a)*sd > 0.1;
+      x.strokeStyle = pkCss(lit ? c.body : c.dark); x.lineWidth = Math.max(px(0.6), h*0.04); x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(tx + Math.cos(a)*len*0.5, ty - h*0.2, ex, ey); x.stroke();
+      if(!small && lit){ x.strokeStyle = pkCss(c.lit, 0.6); x.lineWidth = Math.max(px(0.4), h*0.012); x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(tx + Math.cos(a)*len*0.5, ty - h*0.21, ex, ey); x.stroke(); } }
+    return; }
+  if(kind === 'mushroom'){
+    // a giant mushroom: a pale stalk, a dome of a cap, its gills dark beneath (aglow by night where the world is magic)
+    const sw = h*rnd(0.06, 0.1), cr = h*rnd(0.28, 0.45), cy = Y - h*0.72, cap = pkMix(c.glow, c.body, 0.45);
+    pkPoly(x, [[X - sw, Y], [X - sw*0.7, cy], [X + sw*0.7, cy], [X + sw, Y]], pkCss(pkMix(c.lit, PK_WHITE, 0.3)));
+    pkPoly(x, [[X + sd*sw*0.1, Y], [X + sd*sw*0.1, cy], [X - sd*sw*0.7, cy], [X - sd*sw, Y]], pkCss(pkMix(c.body, PK_WHITE, 0.15)));
+    pkEll(x, X, cy, cr, cr*0.18, pkCss(pkMix(c.glow, PK_BLACK, 0.5)));
+    x.fillStyle = pkCss(pkMix(cap, PK_BLACK, 0.25)); x.beginPath(); x.ellipse(X, cy, cr, cr*0.75, 0, Math.PI, 0); x.fill();
+    x.fillStyle = pkCss(cap); x.beginPath(); x.ellipse(X + sd*cr*0.15, cy - cr*0.05, cr*0.75, cr*0.62, 0, Math.PI, 0); x.fill();
+    if(!small) for(let q = 0; q < 5; q++) pkDisc(x, X + rnd(-0.7, 0.7)*cr, cy - cr*rnd(0.15, 0.55), cr*rnd(0.05, 0.1), pkCss(pkMix(c.lit, PK_WHITE, 0.5), 0.8));
+    pkGlow(x, X, cy + cr*0.1, cr*1.2, c.glow, 0.22);
+    return; }
+  if(kind === 'crystal'){
+    // a crystal tree: prisms of glass rising and spreading like limbs, their tips alight
+    const n = small ? 3 : 5 + Math.floor(R()*4), glass = pkMix(c.glow, c.lit, 0.4);
+    for(let q = 0; q < n; q++){ const a = (q/(n - 1) - 0.5)*1.1 + rnd(-0.1, 0.1), len = h*(q === Math.floor(n/2) ? 1 : rnd(0.45, 0.8)), wd = h*rnd(0.04, 0.07), ex = X + Math.sin(a)*len, ey = Y - Math.cos(a)*len, nx = Math.cos(a)*wd, ny = Math.sin(a)*wd;
+      pkPoly(x, [[X - nx, Y - ny], [ex - nx, ey - ny], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + nx, ey + ny], [X + nx, Y + ny]], pkCss(pkMix(glass, PK_BLACK, 0.35), 0.85));
+      pkPoly(x, [[X, Y], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + sd*nx, ey + sd*ny], [X + sd*nx, Y + sd*ny]], pkCss(glass, 0.85));
+      pkGlow(x, ex, ey, wd*4, c.glow, 0.35); }
+    return; }
+  if(kind === 'bush'){
+    // a bush: three to five low lobes, wider than tall
+    const lobes = [], n = small ? 3 : 3 + Math.floor(R()*3);
+    for(let q = 0; q < n; q++){ const u = q/(n - 1) - 0.5; lobes.push([X + u*h*1.1, Y - h*(0.35 + 0.15*(1 - Math.abs(u)*2)), h*rnd(0.32, 0.42)]); }
+    pkLobes(x, lobes, c, RL, X, Y - h*0.4, h*0.6); return; }
   // a broadleaf (and the glowing trees): a trunk forking under a domed crown of five to eight lobes
   trunk(h*0.45, h*0.06);
   if(!small){ x.lineWidth = Math.max(px(0.5), h*0.03); x.beginPath(); x.moveTo(X, Y - h*0.3); x.lineTo(X - h*0.1, Y - h*0.5); x.moveTo(X, Y - h*0.34); x.lineTo(X + h*0.12, Y - h*0.52); x.stroke(); }
@@ -97,19 +239,25 @@ export function pkTree(x, X, Y, h, c, kind, R0, px){
   for(let q = 0; q < n; q++){ const a = Math.PI*(1.05 + 0.9*q/(n - 1)) + rnd(-0.15, 0.15), d = rr*rnd(0.4, 0.62); lobes.push([cx + Math.cos(a)*d*1.15, cy + Math.sin(a)*d*0.85 + rr*0.15, rr*rnd(0.42, 0.55)]); }
   lobes.push([cx, cy - rr*0.15, rr*0.55]);
   pkLobes(x, lobes, c, RL, cx, cy, rr);
+  if(kind === 'cherry' && !small){ const RB = sub(4); for(let q = 0; q < 26; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.9;
+      pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*0.16), pkCss(pkMix([248, 214, 226], c.lit, 0.25), 0.9)); } }
   if(kind === 'glow'){ pkGlow(x, cx, cy, rr*2.2, c.glow, 0.4);
     for(let q = 0; q < (small ? 2 : 7); q++) pkDisc(x, cx + (RG()*1.6 - 0.8)*rr, cy + (RG()*1.3 - 0.6)*rr, Math.max(px(0.6), h*0.014), pkCss(pkMix(c.glow, PK_WHITE, 0.4), 0.95)); }
 }
 
 // ---------------- BUILDINGS ----------------
 // each world's way of building (the caller passes one)
-export const PK_STYLE = { cities: 'city', neon: 'neon', builders: 'builders', ruins: 'ruins', magic: 'magic', wilds: 'city' };
+export const PK_STYLE = { cities: 'city', neon: 'neon', builders: 'builders', ruins: 'ruins', magic: 'magic', wilds: 'village' };
 // the materials each style builds in (null: the world's own colour)
 const PK_MATS = { city: [[196, 178, 150], [168, 96, 76], [150, 150, 146], [120, 150, 184], [72, 76, 88], null], neon: [[40, 36, 58], [30, 44, 60], null], builders: [null, null, [236, 232, 220]],
-  ruins: [[150, 128, 104], [120, 104, 92], [96, 92, 90]], magic: [[176, 160, 210], [150, 120, 150], [210, 196, 170]] };
+  ruins: [[150, 128, 104], [120, 104, 92], [96, 92, 90]], magic: [[176, 160, 210], [150, 120, 150], [210, 196, 170]], village: [[214, 196, 160], [176, 92, 70], [230, 226, 214], [150, 120, 90]] };
 // the archetypes each style raises, by weight
-const PK_ARCH = { city: [['glass', 3], ['deco', 2], ['slab', 2], ['brick', 3], ['dome', 0.6], ['needle', 0.4]], neon: [['glass', 3], ['slab', 2], ['deco', 1], ['needle', 1]],
-  builders: [['pylon', 3], ['arch', 1], ['dome', 1.5], ['glass', 1]], ruins: [['brick', 2], ['glass', 2], ['slab', 2], ['deco', 1]], magic: [['wizard', 3], ['onion', 2], ['brick', 1]] };
+const PK_ARCH = { city: [['glass', 3], ['deco', 2], ['slab', 2], ['brick', 3], ['dome', 0.6], ['needle', 0.4], ['row', 2.5], ['factory', 0.8], ['watertower', 0.5], ['clock', 0.3], ['cathedral', 0.25], ['mosque', 0.2]],
+  neon: [['glass', 3], ['slab', 2], ['deco', 1], ['needle', 1], ['capsule', 1.5], ['megablock', 1.5]],
+  builders: [['pylon', 3], ['arch', 1], ['dome', 1.5], ['glass', 1], ['geodome', 1.5], ['observatory', 0.8], ['turbine', 1]],
+  ruins: [['brick', 2], ['glass', 2], ['slab', 2], ['deco', 1], ['castle', 0.8], ['cathedral', 0.3], ['factory', 1], ['lighthouse', 0.3]],
+  magic: [['wizard', 3], ['onion', 2], ['brick', 1], ['pagoda', 1.5], ['torii', 0.8], ['stave', 0.8], ['observatory', 0.4]],
+  village: [['cottage', 3], ['aframe', 1], ['barn', 1.5], ['silo', 1], ['windmill', 0.8], ['stave', 0.5], ['row', 1], ['lighthouse', 0.3], ['turbine', 0.4]] };
 // windows on a pitch of their own (a near building has many, not a few huge ones): panes by day, lamplit by night
 function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
   const pitch = Math.max(px(3), wd*0.11), cols = Math.max(1, Math.floor(wd/pitch) - 1), rows = Math.min(90, Math.max(1, Math.floor(ht/pitch) - 1)), cw = wd/(cols + 1), rh = ht/(rows + 1);
@@ -130,9 +278,128 @@ function pkBox(x, X, Y, top, wd, c, dep){
   pkPoly(x, [[X + c.sd*w2, Y], [X + c.sd*w2, top], [X + c.sd*w2 + side, top + Math.abs(side)*0.3], [X + c.sd*w2 + side, Y]], pkCss(c.dark));
   return [X - w2, top, wd, Y - top];
 }
-export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px){
+// (kind0: the archetype, when the caller chose it to size the building; the draw that would have chosen it is still
+//  taken, so every other feature keeps its stream)
+// ---- THE WIDER KIT: each kind drawn at (X, Y), h tall and wd wide, in the caller's lit colours ----
+// a gable roof over [x0, x1] from eave height ye up to the ridge yr; its lit slope toward the light
+const pkGable = (x, x0, x1, ye, yr, c, over = 0.08) => { const w = x1 - x0, m = (x0 + x1)/2; pkPoly(x, [[x0 - w*over, ye], [m, yr], [x1 + w*over, ye]], pkCss(c.dark));
+  pkPoly(x, c.sd > 0 ? [[m, yr], [x1 + w*over, ye], [m, ye]] : [[m, yr], [x0 - w*over, ye], [m, ye]], pkCss(pkMix(c.dark, c.body, 0.6))); };
+const pkDoor = (x, X, Y, h, c, o) => { if(h > o.px(3)) x.fillStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.4)), x.fillRect(X - h*0.22, Y - h, h*0.44, h); };
+// a lit window: a pane by day, lamplight by night
+const pkPane = (x, X, Y, w, h, c, night, R) => { x.fillStyle = night > 0.2 && R() < 0.7 ? pkCss(c.glow, 0.85*night) : pkCss(pkMix(c.dark, PK_BLACK, 0.2), 0.7); x.fillRect(X, Y, w, h); };
+const PK_BUILT = {
+  cottage(x, X, Y, h, wd, c, night, lit, o){ // walls, a fat hump of thatch twice their height, a chimney
+    const ye = Y - h*0.4, w2 = wd/2; pkBox(x, X, Y, ye, wd, c, o.dep*0.4);
+    x.fillStyle = pkCss(pkMix(c.dark, [150, 120, 70], 0.35)); x.beginPath(); x.moveTo(X - w2*1.15, ye + h*0.04); x.quadraticCurveTo(X - w2*0.9, Y - h*1.02, X, Y - h); x.quadraticCurveTo(X + w2*0.9, Y - h*1.02, X + w2*1.15, ye + h*0.04); x.fill();
+    x.fillStyle = pkCss(pkMix(c.lit, [214, 180, 110], 0.4)); x.beginPath(); x.moveTo(X, Y - h*0.98); x.quadraticCurveTo(X + c.sd*w2*0.85, Y - h*0.98, X + c.sd*w2*1.1, ye + h*0.02); x.lineTo(X + c.sd*w2*0.3, ye); x.fill();
+    x.fillStyle = pkCss(c.dark); x.fillRect(X - c.sd*w2*0.55, Y - h*1.05, wd*0.1, h*0.3);
+    if(o.detail){ pkDoor(x, X - w2*0.3, Y, h*0.32, c, o); pkPane(x, X + w2*0.2, Y - h*0.3, wd*0.14, h*0.12, c, night, o.R); } },
+  aframe(x, X, Y, h, wd, c, night, lit, o){ // one tall triangle down to the ground, its gable glazed
+    const w2 = wd/2; pkPoly(x, [[X - w2, Y], [X, Y - h], [X + w2, Y]], pkCss(c.dark)); pkPoly(x, [[X, Y - h], [X + c.sd*w2, Y], [X, Y]], pkCss(c.body));
+    pkPoly(x, [[X - w2*0.6, Y], [X, Y - h*0.62], [X + w2*0.6, Y]], pkCss(night > 0.2 ? pkMix(c.glow, c.dark, 0.3) : pkMix(lit, c.dark, 0.4)));
+    if(o.detail){ x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(o.px(0.5), wd*0.02); x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.62); x.moveTo(X - w2*0.4, Y - h*0.2); x.lineTo(X + w2*0.4, Y - h*0.2); x.stroke(); } },
+  barn(x, X, Y, h, wd, c, night, lit, o){ // a gambrel roof over a box, big braced doors, a hay hood
+    const w2 = wd/2, ye = Y - h*0.45, red = pkMix(c.body, [168, 60, 48], 0.55); pkPoly(x, [[X - w2, Y], [X - w2, ye], [X + w2, ye], [X + w2, Y]], pkCss(red));
+    pkPoly(x, [[X - w2*1.06, ye], [X - w2*0.78, Y - h*0.82], [X, Y - h], [X + w2*0.78, Y - h*0.82], [X + w2*1.06, ye]], pkCss(pkMix(c.dark, PK_BLACK, 0.2)));
+    pkPoly(x, [[X, Y - h], [X + c.sd*w2*0.78, Y - h*0.82], [X + c.sd*w2*1.06, ye], [X, ye]], pkCss(c.dark));
+    if(o.detail){ const dw = wd*0.32, dh = h*0.32; x.fillStyle = pkCss(pkMix(red, PK_BLACK, 0.3)); x.fillRect(X - dw/2, Y - dh, dw, dh); x.strokeStyle = pkCss(PK_WHITE, 0.8); x.lineWidth = Math.max(o.px(0.5), wd*0.015);
+      x.strokeRect(X - dw/2, Y - dh, dw, dh); x.beginPath(); x.moveTo(X - dw/2, Y - dh); x.lineTo(X + dw/2, Y); x.moveTo(X + dw/2, Y - dh); x.lineTo(X - dw/2, Y); x.stroke(); } },
+  silo(x, X, Y, h, wd, c, night, lit, o){ // a cylinder under a dome cap, hoop bands
+    const w2 = wd/2, t = Y - h + w2; pkPoly(x, [[X - w2, Y], [X - w2, t], [X + w2, t], [X + w2, Y]], pkCss(c.body)); pkPoly(x, [[X + c.sd*w2*0.2, Y], [X + c.sd*w2*0.2, t], [X + c.sd*w2, t], [X + c.sd*w2, Y]], pkCss(c.lit));
+    x.fillStyle = pkCss(c.dark); x.beginPath(); x.arc(X, t, w2, Math.PI, 0); x.fill();
+    if(o.detail){ x.fillStyle = pkCss(c.dark, 0.5); for(let q = 1; q < 6; q++) x.fillRect(X - w2, t + (Y - t)*q/6, wd, Math.max(o.px(0.5), h*0.006)); } },
+  windmill(x, X, Y, h, wd, c, night, lit, o){ // a tapered tower, a cap, four sails in an X
+    const w2 = wd/2, bt = Y - h*0.62; pkPoly(x, [[X - w2, Y], [X - w2*0.55, bt], [X + w2*0.55, bt], [X + w2, Y]], pkCss(c.body)); pkPoly(x, [[X, Y], [X, bt], [X + c.sd*w2*0.55, bt], [X + c.sd*w2, Y]], pkCss(c.lit));
+    pkEll(x, X, bt, w2*0.7, w2*0.4, pkCss(c.dark)); const hub = [X, bt - w2*0.1], ang = o.R()*Math.PI/2, L2 = h*0.4;
+    for(let q = 0; q < 4; q++){ const a = ang + q*Math.PI/2, ex = hub[0] + Math.cos(a)*L2, ey = hub[1] + Math.sin(a)*L2, nx = -Math.sin(a)*L2*0.09, ny = Math.cos(a)*L2*0.09;
+      pkPoly(x, [[hub[0] + Math.cos(a)*L2*0.15, hub[1] + Math.sin(a)*L2*0.15], [ex, ey], [ex + nx, ey + ny], [hub[0] + Math.cos(a)*L2*0.15 + nx, hub[1] + Math.sin(a)*L2*0.15 + ny]], pkCss(pkMix(c.lit, PK_WHITE, 0.3), 0.85)); }
+    pkDisc(x, hub[0], hub[1], Math.max(o.px(0.6), w2*0.12), pkCss(c.dark)); },
+  stave(x, X, Y, h, wd, c, night, lit, o){ // a stave church: steep roofs stacked like a pine cone, dragon heads at the gables
+    const w2 = wd/2, tar = pkMix(c.dark, [70, 44, 30], 0.4); pkBox(x, X, Y, Y - h*0.2, wd, { ...c, body: tar }, o.dep*0.3);
+    for(let q = 0; q < 4; q++){ const u = q/4, w = w2*(1.1 - u*0.65), yb = Y - h*(0.2 + u*0.18), yt = Y - h*(0.36 + u*0.2); pkGable(x, X - w, X + w, yb, yt, { ...c, dark: tar }, 0.1);
+      if(o.detail && q < 3) for(const s of [-1, 1]){ x.strokeStyle = pkCss(tar); x.lineWidth = Math.max(o.px(0.5), h*0.012); x.beginPath(); x.moveTo(X + s*w*0.5, yt + (yb - yt)*0.5); x.quadraticCurveTo(X + s*w*0.7, yt, X + s*w*0.85, yt + h*0.02); x.stroke(); } }
+    x.fillStyle = pkCss(tar); x.fillRect(X - wd*0.03, Y - h, wd*0.06, h*0.25); },
+  row(x, X, Y, h, wd, c, night, lit, o){ // a terrace: three to five narrow houses sharing their walls, chimney stacks between
+    const n = 3 + Math.floor(o.R()*3), hw = wd/n, M = [[176, 92, 70], [200, 182, 150], [150, 150, 146], [196, 120, 96]];
+    for(let q = 0; q < n; q++){ const hx = X - wd/2 + hw*(q + 0.5), hh = h*(0.75 + 0.25*o.R()), col = pkMix(c.body, M[Math.floor(o.R()*M.length)], 0.35);
+      pkPoly(x, [[hx - hw/2, Y], [hx - hw/2, Y - hh*0.75], [hx + hw/2, Y - hh*0.75], [hx + hw/2, Y]], pkCss(col)); pkGable(x, hx - hw/2, hx + hw/2, Y - hh*0.75, Y - hh, c, 0);
+      x.fillStyle = pkCss(c.dark); x.fillRect(hx + hw/2 - hw*0.08, Y - hh*1.02, hw*0.16, hh*0.2);
+      if(o.detail){ pkDoor(x, hx - hw*0.2, Y, hh*0.28, c, o); for(let f = 1; f <= 2; f++) pkPane(x, hx + hw*0.05, Y - hh*0.26*f - hh*0.06, hw*0.28, hh*0.14, c, night, o.RW); } } },
+  pagoda(x, X, Y, h, wd, c, night, lit, o){ // five roofs stacked, each narrower, their eaves curling up; a spire of rings
+    const n = 3 + Math.floor(o.R()*3), w2 = wd/2, roof = pkMix(c.dark, [60, 50, 50], 0.3), wall = pkMix(c.body, [190, 70, 50], 0.45);
+    for(let q = 0; q < n; q++){ const u = q/n, yb = Y - h*0.82*u, yt = Y - h*0.82*(u + 1/n), w = w2*(1 - u*0.55);
+      pkPoly(x, [[X - w*0.55, yb], [X - w*0.55, yt + (yb - yt)*0.35], [X + w*0.55, yt + (yb - yt)*0.35], [X + w*0.55, yb]], pkCss(wall));
+      const ey = yt + (yb - yt)*0.38; x.fillStyle = pkCss(roof); x.beginPath(); x.moveTo(X - w*1.15, ey - (yb - yt)*0.15); x.quadraticCurveTo(X - w*0.7, ey, X - w*0.4, yt + (yb - yt)*0.05); x.lineTo(X + w*0.4, yt + (yb - yt)*0.05); x.quadraticCurveTo(X + w*0.7, ey, X + w*1.15, ey - (yb - yt)*0.15); x.lineTo(X, ey + (yb - yt)*0.05); x.fill();
+      if(o.detail && night > 0.2) pkGlow(x, X, yb - (yb - yt)*0.2, w*0.6, c.glow, 0.3*night); }
+    x.fillStyle = pkCss(roof); x.fillRect(X - wd*0.02, Y - h, wd*0.04, h*0.2); },
+  torii(x, X, Y, h, wd, c, night, lit, o){ // two posts, a curved lintel, a tie beam: vermilion
+    const v = pkMix([206, 64, 40], c.body, 0.3), w2 = wd/2, pw = Math.max(o.px(0.6), wd*0.08); x.fillStyle = pkCss(v);
+    x.fillRect(X - w2*0.75 - pw/2, Y - h*0.88, pw, h*0.88); x.fillRect(X + w2*0.75 - pw/2, Y - h*0.88, pw, h*0.88); x.fillRect(X - w2*0.85, Y - h*0.72, wd*0.85, h*0.06);
+    x.fillStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3)); x.beginPath(); x.moveTo(X - w2*1.1, Y - h*0.96); x.quadraticCurveTo(X, Y - h*0.86, X + w2*1.1, Y - h*0.96); x.lineTo(X + w2*1.05, Y - h*0.88); x.quadraticCurveTo(X, Y - h*0.8, X - w2*1.05, Y - h*0.88); x.fill(); },
+  castle(x, X, Y, h, wd, c, night, lit, o){ // a square keep, its corner turrets, its top a row of merlons
+    const w2 = wd/2, kt = Y - h*0.82; pkBox(x, X, Y, kt, wd*0.7, c, o.dep*0.5);
+    for(const s of [-1, 1]){ pkPoly(x, [[X + s*w2*0.35, Y], [X + s*w2*0.35, Y - h], [X + s*w2*0.62, Y - h], [X + s*w2*0.62, Y]], pkCss(s === c.sd ? c.lit : c.body)); }
+    const mw = wd*0.06; x.fillStyle = pkCss(c.body); for(let q = 0; q < 6; q++) x.fillRect(X - w2*0.35 + q*wd*0.12, kt - mw, mw, mw);
+    if(o.detail){ x.fillStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3)); for(let q = 0; q < 3; q++) x.fillRect(X - wd*0.01 + (q - 1)*wd*0.15, kt + h*0.2, Math.max(o.px(0.5), wd*0.02), h*0.08); x.beginPath(); x.arc(X, Y - h*0.12, wd*0.07, Math.PI, 0); x.lineTo(X + wd*0.07, Y); x.lineTo(X - wd*0.07, Y); x.fill(); } },
+  lighthouse(x, X, Y, h, wd, c, night, lit, o){ // a tapered, banded tower, a gallery, a lantern alight
+    const w2 = wd/2, gt = Y - h*0.82; pkPoly(x, [[X - w2, Y], [X - w2*0.6, gt], [X + w2*0.6, gt], [X + w2, Y]], pkCss(pkMix(c.lit, PK_WHITE, 0.3)));
+    x.fillStyle = pkCss(pkMix(c.body, [190, 50, 48], 0.6)); for(let q = 0; q < 3; q++){ const y0 = Y - h*0.82*(0.15 + q*0.3), y1 = y0 - h*0.1, k0 = 1 - 0.4*(Y - y0)/(Y - gt), k1 = 1 - 0.4*(Y - y1)/(Y - gt); pkPoly(x, [[X - w2*k0, y0], [X - w2*k1, y1], [X + w2*k1, y1], [X + w2*k0, y0]], x.fillStyle); }
+    x.fillStyle = pkCss(c.dark); x.fillRect(X - w2*0.8, gt - h*0.02, wd*0.8, h*0.02); pkPoly(x, [[X - w2*0.4, gt - h*0.02], [X - w2*0.4, gt - h*0.12], [X + w2*0.4, gt - h*0.12], [X + w2*0.4, gt - h*0.02]], pkCss(pkMix(c.glow2 || c.glow, PK_WHITE, 0.4)));
+    pkPoly(x, [[X - w2*0.5, gt - h*0.12], [X, Y - h], [X + w2*0.5, gt - h*0.12]], pkCss(c.dark)); pkGlow(x, X, gt - h*0.07, wd*(1.5 + 3*night), pkMix(c.glow2 || c.glow, PK_WHITE, 0.5), 0.5 + 0.4*night); },
+  cathedral(x, X, Y, h, wd, c, night, lit, o){ // a long nave under a steep roof, two west towers with spires, a rose window
+    const w2 = wd/2, ne = Y - h*0.3; pkBox(x, X + w2*0.2, Y, ne, wd*0.7, c, o.dep*0.3); pkGable(x, X - w2*0.15, X + w2*0.9, ne, Y - h*0.45, c, 0.02);
+    for(const s of [-0.65, -0.25]){ const tx = X + s*w2, tw = wd*0.13; pkPoly(x, [[tx - tw, Y], [tx - tw, Y - h*0.58], [tx + tw, Y - h*0.58], [tx + tw, Y]], pkCss(s < -0.4 ? c.body : c.lit)); pkPoly(x, [[tx - tw*1.05, Y - h*0.58], [tx, Y - h], [tx + tw*1.05, Y - h*0.58]], pkCss(c.dark));
+      if(o.detail){ x.fillStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3)); x.fillRect(tx - tw*0.25, Y - h*0.5, tw*0.5, h*0.12); } }
+    if(o.detail) pkDisc(x, X - w2*0.45, Y - h*0.32, wd*0.05, pkCss(night > 0.2 ? c.glow : pkMix(c.dark, c.glow, 0.3), 0.9)); },
+  mosque(x, X, Y, h, wd, c, night, lit, o){ // a great dome over half-domes stepping down, needle minarets with balconies
+    const w2 = wd/2, db = Y - h*0.42, dr = wd*0.24; pkBox(x, X, Y, Y - h*0.3, wd*0.8, c, o.dep*0.3);
+    for(const s of [-1, 1]) { x.fillStyle = pkCss(c.body); x.beginPath(); x.arc(X + s*dr*1.1, Y - h*0.3, dr*0.55, Math.PI, 0); x.fill(); }
+    x.fillStyle = pkCss(c.body); x.fillRect(X - dr, db, dr*2, Y - h*0.3 - db); x.beginPath(); x.arc(X, db, dr, Math.PI, 0); x.fill();
+    x.fillStyle = pkCss(c.lit); x.beginPath(); x.arc(X + c.sd*dr*0.25, db, dr*0.7, Math.PI, 0); x.fill(); x.fillRect(X - wd*0.006, db - dr - h*0.08, wd*0.012, h*0.08);
+    for(const s of [-1, 1]){ const mx = X + s*w2*0.95, mw = Math.max(o.px(0.6), wd*0.03); pkPoly(x, [[mx - mw, Y], [mx - mw*0.7, Y - h*0.88], [mx + mw*0.7, Y - h*0.88], [mx + mw, Y]], pkCss(s === c.sd ? c.lit : c.body));
+      pkPoly(x, [[mx - mw*0.8, Y - h*0.88], [mx, Y - h], [mx + mw*0.8, Y - h*0.88]], pkCss(c.dark)); if(o.detail) for(const b of [0.55, 0.75]) x.fillStyle = pkCss(c.dark), x.fillRect(mx - mw*1.6, Y - h*b, mw*3.2, Math.max(o.px(0.5), h*0.012)); } },
+  clock(x, X, Y, h, wd, c, night, lit, o){ // a square shaft, a clock face, a belfry, a steep spire
+    const w2 = wd/2, ft = Y - h*0.62; pkBox(x, X, Y, ft - wd*0.3, wd, c, o.dep*0.4); pkPoly(x, [[X - w2*1.05, ft - wd*0.3], [X, Y - h], [X + w2*1.05, ft - wd*0.3]], pkCss(c.dark));
+    pkPoly(x, [[X, Y - h], [X + c.sd*w2*1.05, ft - wd*0.3], [X, ft - wd*0.3]], pkCss(pkMix(c.dark, c.body, 0.5)));
+    pkDisc(x, X, ft + wd*0.15, wd*0.32, pkCss(night > 0.2 ? pkMix(c.glow, PK_WHITE, 0.4) : pkMix(c.lit, PK_WHITE, 0.4)));
+    if(o.detail){ x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(o.px(0.4), wd*0.03); x.beginPath(); x.moveTo(X, ft + wd*0.15); x.lineTo(X, ft - wd*0.08); x.moveTo(X, ft + wd*0.15); x.lineTo(X + wd*0.15, ft + wd*0.2); x.stroke(); } },
+  factory(x, X, Y, h, wd, c, night, lit, o){ // a saw-tooth shed, tall chimneys, a tank
+    const w2 = wd/2, st = Y - h*0.35, n = 4 + Math.floor(o.R()*3); pkPoly(x, [[X - w2, Y], [X - w2, st], [X + w2, st], [X + w2, Y]], pkCss(c.body));
+    for(let q = 0; q < n; q++){ const x0 = X - w2 + wd*q/n, x1 = x0 + wd/n; pkPoly(x, [[x0, st], [x1, st - h*0.12], [x1, st]], pkCss(c.dark)); if(night > 0.2) x.fillStyle = pkCss(c.glow, 0.7*night), x.fillRect(x1 - wd/n*0.12, st - h*0.1, wd/n*0.1, h*0.1); }
+    for(let q = 0; q < 1 + Math.floor(o.R()*3); q++){ const cx = X - w2*0.6 + q*wd*0.25, cw = Math.max(o.px(0.6), wd*0.04); pkPoly(x, [[cx - cw, st], [cx - cw*0.7, Y - h], [cx + cw*0.7, Y - h], [cx + cw, st]], pkCss(pkMix(c.body, [150, 80, 60], 0.4)));
+      if(o.detail){ x.fillStyle = pkCss(PK_WHITE, 0.5); x.fillRect(cx - cw*0.75, Y - h*0.92, cw*1.5, h*0.02); } } },
+  watertower(x, X, Y, h, wd, c, night, lit, o){ // four legs braced, a tank with a cone roof
+    const w2 = wd/2, tb = Y - h*0.62; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(o.px(0.5), wd*0.04); x.beginPath(); for(const s of [-1, -0.35, 0.35, 1]){ x.moveTo(X + s*w2*0.7, Y); x.lineTo(X + s*w2*0.45, tb); } x.moveTo(X - w2*0.6, Y - h*0.3); x.lineTo(X + w2*0.6, Y - h*0.3); x.stroke();
+    pkPoly(x, [[X - w2*0.6, tb], [X - w2*0.6, Y - h*0.88], [X + w2*0.6, Y - h*0.88], [X + w2*0.6, tb]], pkCss(c.body)); pkPoly(x, [[X + c.sd*w2*0.1, tb], [X + c.sd*w2*0.1, Y - h*0.88], [X + c.sd*w2*0.6, Y - h*0.88], [X + c.sd*w2*0.6, tb]], pkCss(c.lit));
+    pkPoly(x, [[X - w2*0.68, Y - h*0.88], [X, Y - h], [X + w2*0.68, Y - h*0.88]], pkCss(c.dark)); },
+  capsule(x, X, Y, h, wd, c, night, lit, o){ // two core shafts, cubes stuck on at every side, a round porthole each
+    const w2 = wd/2, cs = Math.max(wd*0.22, h*0.07); for(const s of [-0.25, 0.25]) pkPoly(x, [[X + s*wd - wd*0.06, Y], [X + s*wd - wd*0.06, Y - h], [X + s*wd + wd*0.06, Y - h], [X + s*wd + wd*0.06, Y]], pkCss(c.dark));
+    for(let yy = Y - cs; yy > Y - h; yy -= cs*1.05) for(const s of [-1, 1]) if(o.R() < 0.8){ const cx = X + s*(w2*0.55 + o.R()*cs*0.3); pkPoly(x, [[cx - cs/2, yy + cs], [cx - cs/2, yy], [cx + cs/2, yy], [cx + cs/2, yy + cs]], pkCss(o.R() < 0.5 ? c.body : c.lit));
+      if(o.detail) pkDisc(x, cx, yy + cs/2, cs*0.22, pkCss(night > 0.2 && o.RW() < 0.6 ? c.glow : pkMix(c.dark, PK_BLACK, 0.3))); } },
+  megablock(x, X, Y, h, wd, c, night, lit, o){ // many slabs grown into one mass, a flat common roof bristling with aerials, a field of lit windows
+    const w2 = wd/2, n = 5 + Math.floor(o.R()*4); for(let q = 0; q < n; q++){ const x0 = X - w2 + wd*q/n, hh = h*(0.85 + 0.15*o.R()); pkPoly(x, [[x0, Y], [x0, Y - hh], [x0 + wd/n + 0.5, Y - hh], [x0 + wd/n + 0.5, Y]], pkCss(q % 2 ? c.body : pkMix(c.body, c.dark, 0.25)));
+      if(o.detail){ for(let r = 0; r < 14; r++) for(let k = 0; k < 3; k++) if(o.RW() < (night > 0.2 ? 0.45 : 0.25)) x.fillStyle = night > 0.2 ? pkCss(o.RW() < 0.3 ? c.glow2 || c.glow : c.glow, 0.85) : pkCss(c.dark, 0.5), x.fillRect(x0 + wd/n*(0.15 + k*0.28), Y - hh + hh*(0.04 + r*0.068), wd/n*0.16, hh*0.03); }
+      x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(o.px(0.4), h*0.004); x.beginPath(); for(let k = 0; k < 3; k++){ const ax = x0 + wd/n*o.R(); x.moveTo(ax, Y - hh); x.lineTo(ax, Y - hh - h*0.08*o.R()); } x.stroke(); } },
+  geodome(x, X, Y, h, wd, c, night, lit, o){ // a glass bubble of hexes, gardens inside
+    const w2 = wd/2, r = Math.min(w2, h); x.fillStyle = pkCss(pkMix(c.body, c.glow, 0.2), 0.75); x.beginPath(); x.ellipse(X, Y, w2, h, 0, Math.PI, 0); x.fill();
+    if(o.detail){ x.fillStyle = pkCss([60, 110, 70], 0.7); x.beginPath(); x.ellipse(X, Y, w2*0.7, h*0.25, 0, Math.PI, 0); x.fill();
+      x.strokeStyle = pkCss(c.lit, 0.6); x.lineWidth = Math.max(o.px(0.4), r*0.012); x.beginPath(); for(let q = 1; q < 6; q++){ const a = Math.PI*(1 + q/6); x.moveTo(X, Y); x.lineTo(X + Math.cos(a)*w2, Y + Math.sin(a)*h); } x.stroke();
+      for(let q = 1; q < 4; q++){ x.beginPath(); x.ellipse(X, Y, w2, h*q/4, 0, Math.PI, 0); x.stroke(); } }
+    x.fillStyle = pkCss(PK_WHITE, 0.35); x.beginPath(); x.ellipse(X + c.sd*w2*0.35, Y - h*0.6, w2*0.18, h*0.22, c.sd*0.5, 0, Math.PI*2); x.fill(); },
+  observatory(x, X, Y, h, wd, c, night, lit, o){ // a drum, a white hemisphere, a dark slit open to the sky
+    const w2 = wd/2, db = Y - h + w2*0.9; pkBox(x, X, Y, db, wd, c, o.dep*0.3);
+    x.fillStyle = pkCss(pkMix(c.lit, PK_WHITE, 0.25)); x.beginPath(); x.ellipse(X, db, w2, w2*0.9, 0, Math.PI, 0); x.fill();
+    x.fillStyle = pkCss(c.body); x.beginPath(); x.ellipse(X - c.sd*w2*0.3, db, w2*0.65, w2*0.85, 0, Math.PI, 0); x.fill();
+    x.fillStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.4)); x.fillRect(X - w2*0.08, db - w2*0.88, w2*0.16, w2*0.88); },
+  turbine(x, X, Y, h, wd, c, night, lit, o){ // a white stalk, a nacelle, three long blades
+    const hub = [X, Y - h*0.62], bl = h*0.38, sw = Math.max(o.px(0.6), h*0.012), white = pkMix(c.lit, PK_WHITE, 0.4);
+    pkPoly(x, [[X - sw*1.5, Y], [X - sw*0.7, hub[1]], [X + sw*0.7, hub[1]], [X + sw*1.5, Y]], pkCss(white)); const a0 = o.R()*Math.PI*2;
+    for(let q = 0; q < 3; q++){ const a = a0 + q*Math.PI*2/3, ex = hub[0] + Math.cos(a)*bl, ey = hub[1] + Math.sin(a)*bl, nx = -Math.sin(a)*sw*1.6, ny = Math.cos(a)*sw*1.6; pkPoly(x, [[hub[0] + nx, hub[1] + ny], [ex, ey], [hub[0] - nx*0.3, hub[1] - ny*0.3]], pkCss(white)); }
+    pkEll(x, hub[0], hub[1], sw*2.4, sw*1.3, pkCss(c.body)); if(night > 0.2) pkDisc(x, hub[0], hub[1] - sw*1.5, sw, pkCss([255, 70, 60], 0.9)); },
+};
+export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5);
-  const arch = PK_ARCH[style] || PK_ARCH.city; let tot = 0; for(const [, w] of arch) tot += w; let r = R()*tot, kind = arch[0][0]; for(const [k, w] of arch){ r -= w; if(r < 0){ kind = k; break; } }
+  const kind = (k => kind0 || k)(pkArchOf(style, R()));
   // each building its own material (warm stone, brick, concrete, blue glass, dark steel), laid over the world's own
   // colour and fading into the air with distance, so a city is many buildings and not one white block
   { const M = PK_MATS[style] || PK_MATS.city, m = M[Math.floor(R()*M.length)], k = 0.55*(1 - (c.haze || 0));
@@ -190,6 +457,9 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px){
     x.fillStyle = pkCss(c.body); x.beginPath(); x.moveTo(X - dr*0.7, base); x.bezierCurveTo(X - dr*1.3, base - dr*0.9, X - dr*0.2, base - dr*1.4, X, base - dr*2); x.bezierCurveTo(X + dr*0.2, base - dr*1.4, X + dr*1.3, base - dr*0.9, X + dr*0.7, base); x.fill();
     x.fillStyle = pkCss(pkMix(c.lit, c.glow, 0.3)); x.beginPath(); x.moveTo(X, base); x.bezierCurveTo(X + c.sd*dr*1.2, base - dr*0.9, X + c.sd*dr*0.15, base - dr*1.4, X, base - dr*2); x.fill();
     if(night > 0.2) pkGlow(x, X, base - dr, dr*2, c.glow, 0.4*night); }
+  // ---- the wider kit (docs/prior-art/painted-ringworld.md §5.3): houses and farms, landmarks, the neon's and the
+  // builders' own; each a few flat shapes in true proportion, its door and floors where it is large enough ----
+  else if(PK_BUILT[kind]) PK_BUILT[kind](x, X, Y, h, wdt, c, night, lit, { R: RT, RW, px, detail, dep, top });
   else { // 'glass': a tower of glass, a slanted or stepped top, a mast
     const sl = R() < 0.4 ? h*0.08*(R() < 0.5 ? 1 : -1) : 0;
     pkPoly(x, [[X - w2, Y], [X - w2, top + Math.max(0, sl)], [X + w2, top + Math.max(0, -sl)], [X + w2, Y]], pkCss(c.body));
