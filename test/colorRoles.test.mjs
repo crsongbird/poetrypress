@@ -13,8 +13,7 @@
  * grey one gets a Material (ground) colour; one with no colour at all gets
  * a base colour. Each hue's "none" draws exactly as before.
  */
-let failures = 0;
-const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
+import { check, done } from './harness.mjs';
 
 const T = await import('../textureGenerators.js');
 const C = await import('../texCore.js');
@@ -57,6 +56,4 @@ check('a glow at 0% alpha keys the cache exactly like no glow',
 check('DIFFUSE (the light\'s own colour) only where nothing else says it: not beside a Sun or Light hue, not on grey textures',
   caps.filter(([, c]) => c.diffuse).every(([, c]) => !c.genericTint && !(c.tintLabels || []).some(l => /^(Sun|Light) Hue$/.test(l))) && T.TEXTURE_CAPS.kintsugi.diffuse);
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

@@ -7,8 +7,7 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
-let failures = 0;
-const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
+import { check, done } from './harness.mjs';
 const S = await import('../steps.js');
 const F = await import('../forge.js');
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -159,6 +158,4 @@ check('opened from the top bar; a full-screen editor',
   edit('textureOpacity'); await wait(500);
   check('editing the graph is not an undo step of the look (the next change in the controls is, and carries it)', before && afterGraph && !undo.disabled); }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

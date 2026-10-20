@@ -6,12 +6,11 @@
  * Run: node test/blendsAndTints.test.mjs
  */
 import * as M from './canvasMock.mjs';
+import { check, done } from './harness.mjs';
 M.installCanvasMock();
 const { blendFamily, pixelPass } = await import('../texCore.js');
 const T = await import('../textureGenerators.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 // the tint pass (texCore pixelPass) on real pixels: a row of them on a stand-in canvas
 const pass = (px, light, dark, family, ground) => { const data = new Uint8ClampedArray(px.flat());
   pixelPass({ width: px.length, height: 1, getContext: () => ({ getImageData: () => ({ data }), putImageData: () => {} }) }, light, dark, family, ground); return [...data]; };
@@ -126,6 +125,4 @@ check('it renders across the whole depth range', wthrew === null);
     globalThis.document = doc; globalThis.Path2D = P2; }
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

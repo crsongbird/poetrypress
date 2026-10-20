@@ -10,6 +10,7 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 // this browser's storage, holding one saved spell (a custom preset) that carries more than a look
 const store = new Map([['uv.firstvisit.v1', '1'], ['uv.spells.v1', JSON.stringify([{ name: 'Mine',
@@ -20,8 +21,6 @@ const registry = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
 const { PRESETS } = await import('../appOptions.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 const walk = (n, cls, out = []) => { for(const c of n.children || []){ if(String(c.className || '').split(' ').includes(cls)) out.push(c); walk(c, cls, out); } return out; };
 
@@ -102,6 +101,4 @@ check('that size still matches the box\'s aspect',
   check('the swatch is painted from the tunable size', swatches.every(c => c.width === SWATCH.width && c.height === SWATCH.height));
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

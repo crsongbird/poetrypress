@@ -11,9 +11,8 @@
 import { readFileSync } from 'fs';
 import { UI_STRINGS, DIALOGS, THEME_NOTES, fill, applyStrings } from '../strings.js';
 import * as TUNABLES from '../tunables.js';
+import { check, done } from './harness.mjs';
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
@@ -131,6 +130,4 @@ if(sentenceCase.length) console.log('   not title case:', sentenceCase.slice(0, 
 check('units stay lowercase', !visible.some(v => /\((Px|Deg|Ms)\)/.test(v)));
 check('the first tab is spelled Inscription', UI_STRINGS['tab.inscription'] === 'Inscription');
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

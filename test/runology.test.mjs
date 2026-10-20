@@ -5,8 +5,7 @@
  * Runology, and the §Variables that write them into a poem.
  */
 import { readFileSync } from 'fs';
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
+import { check, done } from './harness.mjs';
 const R = await import('../runology.js');
 const { resolvePmlVariables } = await import('../pmlVars.js');
 const { DEV_TEMPLATE } = await import('../appOptions.js');
@@ -42,6 +41,4 @@ check('their fonts are loaded and in the glyph stack (Math, Runic, Music, Canadi
   ['Noto+Sans+Math', 'Noto+Sans+Runic', 'Noto+Music', 'Noto+Sans+Canadian+Aboriginal', 'Noto+Sans+Cherokee'].every(f => src('index.html').includes(f))
   && ['Noto Sans Runic', 'Noto Music', 'Noto Sans Canadian Aboriginal', 'Noto Sans Cherokee'].every(f => src('spell.js').includes(f)));
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

@@ -7,9 +7,8 @@
  * Run: node test/cartomancy.test.mjs
  */
 import { installCanvasMock } from './canvasMock.mjs';
+import { check, done } from './harness.mjs';
 installCanvasMock();
-let failures = 0;
-const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
 const C = await import('../cartomancy.js'), TT = await import('../cartomancyTable.js'), S = await import('../steps.js'), A = await import('../athanor.js'), CH = await import('../chains.js');
 
 check('the seed picks one of the games (CARD_GAMES), each a game of its own', Object.keys(C.CARD_GAMES).length >= 11);
@@ -32,6 +31,4 @@ check('its parts are the Athanor\'s: Table, Card Deal (a picture and four suit c
     CH.TEXTURE_CHAINS.cards && CH.TEXTURE_CHAINS.cards.canvas && Object.values(d).some(n => n.name === 'deal' && n.data.game === 'seed'));
 }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

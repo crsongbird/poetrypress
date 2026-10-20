@@ -7,12 +7,11 @@
  *
  * Run: node test/presets.test.mjs
  */
+import { check, done } from './harness.mjs';
 const { PRESETS, PRESET_GROUPS, FONTS } = await import('../appOptions.js');
 const { ARCHETYPES } = await import('../runology.js');
 const { validateSpell } = await import('../spell.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 const names = PRESETS.map(p => p.name);
 const listed = PRESET_GROUPS.flatMap(g => g.presets);
@@ -80,5 +79,4 @@ check('PRESETS contains only presets', PRESETS.every(p => p && p.name && p.bg1 &
   check('every preset\'s text and accents reach 3:1 against the worst stop of what is behind them (box or page)' + (low.length ? ': ' + low.slice(0, 4).join(', ') : ''), low.length === 0);
 }
 
-console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

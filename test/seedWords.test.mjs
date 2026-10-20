@@ -5,8 +5,7 @@
  * was edited or reordered (don't — see seedWords.js).
  */
 import { readFileSync } from 'fs';
-let failures = 0;
-const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
+import { check, done } from './harness.mjs';
 const S = await import('../seedWords.js');
 
 check('the banks: 256 adjectives · 256 nouns · 128 names · 128 + 128 verbs · 64 times · 32 codas · 16 places, no word twice in a bank',
@@ -65,6 +64,4 @@ check('one line, the whole width, last in the tools; a hair-thin themed scroller
 { const { resolvePmlVariables } = await import('../pmlVars.js');
   check('the report can print it: §SeedPhrase', resolvePmlVariables('[§SeedPhrase]', { seed: 0, seedPhrase: S.seedPhrase(0) }) === '[' + S.seedPhrase(0) + ']'); }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

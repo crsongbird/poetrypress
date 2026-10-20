@@ -11,14 +11,13 @@
 import { validateSpell } from '../spell.js';
 import { formatPoemEntry, poemTime, encodeSpell, decodeSpell, readImport, SHARE_PREFIX, encodeSpellShort, decodeSpellAny, readImportAny } from '../vault.js';
 import { PRESETS as SHARE_PRESETS } from '../appOptions.js';
+import { check, done } from './harness.mjs';
 import {
   SPELL_KEY, POEM_KEY, readStore, writeStore,
   isValidSpell, isValidPoem, mergeRecords, spellKeyOf, poemKeyOf,
   poemTitleFrom, createVault,
 } from '../vault.js';
 
-let failures = 0;
-const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++, console.log('FAIL:', label)); };
 
 // ---- in-memory localStorage ----
 const store = new Map();
@@ -241,6 +240,4 @@ check('a record with no glyphs at all is still accepted',
   check('a cut-short short code is refused', (await decodeSpellAny(short.slice(0, -12))) === null);
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

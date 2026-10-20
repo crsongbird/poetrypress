@@ -11,6 +11,7 @@
  */
 import { readFileSync } from 'fs';
 import { installCanvasMock } from './canvasMock.mjs';
+import { check, done } from './harness.mjs';
 installCanvasMock();
 const { TEXTURE_PARAMS, TEXTURE_CAPS, paramsFor, paramReadout, getTextureCanvas, clearTextureCache } = await import('../textureGenerators.js');
 const { clearAthanorCache } = await import('../athanor.js');
@@ -18,8 +19,6 @@ const { clearAthanorCache } = await import('../athanor.js');
 const fresh = () => { clearTextureCache(); clearAthanorCache(); };
 const { PRESETS } = await import('../appOptions.js');
 
-let failures = 0;
-const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++, console.log('FAIL:', label)); };
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const pickerTypes = [...html.matchAll(/<option value="([a-zA-Z]+)"[^>]*>([^<]+)<\/option>/g)]
@@ -213,6 +212,4 @@ check('an absolute readout never reaches zero', sample.base > 0 && count(sample.
 for(const t of ['metalleaf','aurora','astral'])
   check(`${t} accepts a tint`, (TEXTURE_CAPS[t] || {}).tints >= 1);
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

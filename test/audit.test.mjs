@@ -15,6 +15,7 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
@@ -22,8 +23,6 @@ await import('../appEvents.js');
 const { ASPECTS, PRESETS, FONTS } = await import('../appOptions.js');
 const { paramsFor, capsFor } = await import('../textureGenerators.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
 const load = obj => { reg['advancedJson'].value = JSON.stringify(obj); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
@@ -263,6 +262,4 @@ check('importing the same spell twice does not duplicate it',
   load(base);
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

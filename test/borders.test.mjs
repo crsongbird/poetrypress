@@ -9,6 +9,7 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 // every 2D context the page makes, watched: its gradients, its rectangles and strokes (with their alpha and width)
 const seen = [];
@@ -23,8 +24,6 @@ const reg = installDomMock((w, h) => watch(makeMockContext(w, h)), watchedCanvas
 await import('../appEvents.js');
 const R = await import('../canvasRenderer.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const set = o => { for(const [k, v] of Object.entries(o)){ const el = reg[k] || document.getElementById(k); typeof v === 'boolean' ? el.checked = v : el.value = String(v); } };
 const draw = o => { set(o); seen.length = 0; R.render(); return seen.slice(); };
 const page = () => { const c = reg['poemCanvas']; return [c.width, c.height]; };
@@ -98,6 +97,4 @@ const OFF = { borderToggle: false, vignetteToggle: false };
   check('a rounded rectangle is a closed path, its normal pointing inward', ring.closed && ring.point(30, 5)[1] > 0);
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

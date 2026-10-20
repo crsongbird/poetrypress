@@ -10,9 +10,8 @@
  */
 import { GLYPHS, SPELL_PRIMES, isPrime, generateSpell, validateSpell, spellToPML, spellForSeed } from '../spell.js';
 import { buildLines } from '../textParsers.js';
+import { check, done } from './harness.mjs';
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 check('the safe glyph set is non-trivial', GLYPHS.length >= 60);
 check('no duplicate glyphs in the safe set', new Set(GLYPHS).size === GLYPHS.length);
@@ -65,6 +64,4 @@ check('different seeds give different spells', spellForSeed(1) !== spellForSeed(
 check('a seeded spell is valid', validateSpell(spellForSeed(99)).ok);
 // (the spells stored on the presets: presets.test.mjs)
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

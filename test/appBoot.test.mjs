@@ -21,6 +21,7 @@
  */
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { check, done } from './harness.mjs';
 
 // ---------------- one boot (child process) ----------------
 if(process.env.BOOT_COLORIS){
@@ -39,11 +40,6 @@ if(process.env.BOOT_COLORIS){
 }
 
 // ---------------- the checks ----------------
-let failures = 0;
-function check(label, cond){
-  if(!cond){ failures++; console.log('FAIL:', label); }
-  else console.log('ok:', label);
-}
 const self = fileURLToPath(import.meta.url);
 function boot(coloris){
   const r = spawnSync(process.execPath, [self], { encoding: 'utf8', timeout: 60000, env: { ...process.env, BOOT_COLORIS: coloris } });
@@ -68,6 +64,4 @@ const throws = boot('throws');
 check('appEvents.js loads without throwing even when Coloris throws internally', throws.threw === null);
 check('preset grid still populates when Coloris throws internally', throws.grid > 0);
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

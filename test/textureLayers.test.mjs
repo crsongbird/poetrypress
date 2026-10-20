@@ -12,6 +12,7 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
@@ -21,8 +22,6 @@ const { SURFACE_BLENDS } = await import('../canvasRenderer.js');
 const { BLEND_NAMES } = await import('../strings.js');
 const { BOX_GPU_BLENDS } = await import('../boxFx.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return JSON.parse(reg['advancedJson'].value); };
 const load = obj => { reg['advancedJson'].value = JSON.stringify(obj); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
 const show = which => reg['layerSeg'].dispatchEvent({ type: 'click', target: { closest: () => ({ dataset: { layer: which } }) } });
@@ -187,6 +186,4 @@ check('a preset turns the lower surface off (it never leaks from one look to the
   check('a switched-off section keeps its controls in view (faded), and a change made there by hand switches it on; a roll\'s does not',
     block.classList.contains('eye-block') && reg['cardBlock'].classList.contains('eye-block') && still && box.checked === true && woke === 1); }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

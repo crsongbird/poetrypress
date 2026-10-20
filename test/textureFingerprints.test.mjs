@@ -20,6 +20,7 @@
  */
 import { readFileSync, writeFileSync } from 'fs';
 import * as M from './canvasMock.mjs';
+import { check, done } from './harness.mjs';
 M.installCanvasMock();
 const T = await import('../textureGenerators.js');
 
@@ -49,8 +50,6 @@ if(process.argv.includes('--update')){
 }
 
 const stored = JSON.parse(readFileSync(FIXTURE, 'utf8'));
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const missing = Object.keys(stored).filter(k => !(k in current));
 const added = Object.keys(current).filter(k => !(k in stored));
 const changed = Object.keys(stored).filter(k => k in current && JSON.stringify(stored[k]) !== JSON.stringify(current[k]));
@@ -64,6 +63,4 @@ if(changed.length){
   console.log('   changed textures:', tex.join(', '));
   console.log('   if deliberate: node test/textureFingerprints.test.mjs --update');
 }
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

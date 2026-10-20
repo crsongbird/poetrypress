@@ -7,8 +7,7 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
+import { check, done } from './harness.mjs';
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const M = await import('../murmur.js');
 const D = M.MURMUR_DESIGN;
@@ -101,6 +100,4 @@ check('the Murmur Studio carries this very engine (node tools/make-murmur-studio
   check('kept in this browser (uv.sound.on, uv.sound.volume), never in a look',
     store.get('uv.sound.on') === '1' && store.get('uv.sound.volume') === '0.7' && !Object.keys(look).some(k => /sound|volume/i.test(k))); }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

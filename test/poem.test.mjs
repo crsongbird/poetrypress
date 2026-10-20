@@ -9,12 +9,11 @@
  * Run: node test/poem.test.mjs
  */
 import { readFileSync } from 'fs';
+import { check, done } from './harness.mjs';
 globalThis.document = { createElement: () => ({ getContext: () => null }) };
 const { STEPS, poemRuns, stepDistance } = await import('../steps.js'), { WIKI_PARTS } = await import('../athanorWikiParts.js');
 const { evalAthanor, athanorStarter } = await import('../athanor.js');
 const { textureKeyFor } = await import('../textureGenerators.js');
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const cr = readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8');
 
 // the exact distance transform
@@ -106,5 +105,4 @@ check('Text Clearing takes a soft mask of the words out of each surface layer (d
     T.chainReadsPoem('circuit') && !T.chainReadsPoem('rainwater') && T.poemLines(a) === T.poemLines(b)
     && T.textureKeyFor('circuit', 64, 64, { text: a }) === T.textureKeyFor('circuit', 64, 64, { text: b }) && T.textureKeyFor('circuit', 64, 64, { text: a }) !== T.textureKeyFor('circuit', 64, 64, { text: c })
     && T.textureKeyFor('rainwater', 64, 64, { text: a }) === T.textureKeyFor('rainwater', 64, 64, { text: c })); }
-console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

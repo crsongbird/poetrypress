@@ -6,11 +6,10 @@
  * Run: node test/pmlVars.test.mjs
  */
 import { readFileSync } from 'fs';
+import { check, done } from './harness.mjs';
 const { resolvePmlVariables, phaseFromSigned, BUILD } = await import('../pmlVars.js');
 const G = await import('../glyphs.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 const ctx = { surfName: 'Lotus Pond', blendName: 'Hard Light', lightArrow: '↘', seed: 4242,
@@ -155,6 +154,4 @@ check('…a named style defined with $style works as with §style; an unknown na
 { const { highlightLine } = await import('../editor.js'), h = highlightLine('$SurfName $5', 0);
   check('the editor marks $SurfName as a variable, and leaves $5 plain', /pml-var">\$SurfName</.test(h) && !/pml-var">\$5/.test(h)); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

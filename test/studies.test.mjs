@@ -6,13 +6,12 @@
  */
 import { installCanvasMock } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 installDomMock(); installCanvasMock();
 const S = await import('../steps.js');
 const { WIKI_PARTS } = await import('../athanorWikiParts.js');
 const A = await import('../athanor.js');
 const { ATHANOR_STUDIES } = await import('../athanorStudies.js');
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const W = 40, H = 40;
 const node = (id, name, data, ins = {}) => ({ id, name, data, inputs: Object.fromEntries(Object.entries(ins).map(([k, [nd, o]]) => ['input_' + k, { connections: [{ node: String(nd), input: 'output_' + o }] }])), outputs: { output_1: { connections: [] } } });
 const graph = (nodes, v = 3) => JSON.stringify({ v, drawflow: { Home: { data: Object.fromEntries(nodes.map(n => [n.id, n])) } } });
@@ -49,5 +48,4 @@ for(const [k] of st){
   const knobs = A.athanorKnobs(JSON.stringify(g));
   check(`${k}: opens as a newest-version graph, validates clean, and its knobs reach the Surface`, g.v === A.ATHANOR_VERSION && v.ok && !v.problems.length && knobs.length >= (g.drawflow.Home.data && Object.values(g.drawflow.Home.data).filter(n => n.name === 'knob').length));
 }
-console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

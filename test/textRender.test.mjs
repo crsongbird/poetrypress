@@ -13,6 +13,7 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 // every 2D context the page makes, watched: each run of text it draws, where, and in which font
 const drawn = [];
@@ -25,11 +26,6 @@ const registry = installDomMock((w, h) => watch(makeMockContext(w, h)), watchedC
 await import('../appEvents.js');
 const { render } = await import('../canvasRenderer.js');
 
-let failures = 0;
-function check(label, cond){
-  if(!cond){ failures++; console.log('FAIL:', label); }
-  else console.log('ok:', label);
-}
 
 function tryRender(label, poemText){
   registry['poemText'].value = poemText;
@@ -132,6 +128,4 @@ check('a font by its name, any case', fontIndexByName('cinzel') >= 0 && fontInde
     marks.length === 2 && marks[0][2] === 2 && marks[1][2] === 1 && marks[0][0] < marks[1][0] && marks.every(([x, y]) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]));
   check('…and the runs read as they did (the marks are three numbers: passed over by every reader of the runs)', runs.length === 2 && lay.split(';').length === 4); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

@@ -13,9 +13,8 @@
  * (test/audit.test.mjs goes the other way: every saved key round-trips.)
  */
 import { readFileSync } from 'fs';
+import { check, done } from './harness.mjs';
 
-let failures = 0;
-const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const html = src('index.html'), ev = src('appEvents.js'), renderer = src('canvasRenderer.js');
 
@@ -91,6 +90,4 @@ check('the Workbench JSON shows serializeCurrentSettings() and loads with restor
 // filter, which drops only the poem, locks, highlighting and credit: audit.test.mjs, "a saved spell carries the look")
 check('undo and redo step through restoreSettings()', /restoreSettings\(JSON\.parse\(h\.stack\[to\]\)\);/.test(ev));
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

@@ -8,8 +8,7 @@
  * Run: node test/interface.test.mjs
  */
 import { readFileSync } from 'fs';
-let failures = 0;
-const check = (name, ok) => { console.log((ok ? 'ok: ' : 'FAIL: ') + name); if(!ok) failures++; };
+import { check, done } from './harness.mjs';
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const html = src('index.html');
 
@@ -44,6 +43,4 @@ const html = src('index.html');
     [...Object.values(A.ATHANOR_STARTERS), ...Object.values(CH.TEXTURE_CHAINS)].every(t => /Try: /.test(t.teach) && t.teach.split(/\s+/).length >= 15 && !/^This (graph makes|is) /.test(t.teach)));
 }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

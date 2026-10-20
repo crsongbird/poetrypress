@@ -5,12 +5,11 @@
  */
 import { installCanvasMock } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 installDomMock(); installCanvasMock();
 const S = await import('../steps.js');
 const W = await import('../athanorWiki.js');
 const P = await import('../athanorWikiParts.js');
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const keys = Object.keys(S.STEPS);
 check('every part has a wiki entry with a line and an article', keys.every(k => P.WIKI_PARTS[k] && P.WIKI_PARTS[k].line.length > 30));
 check('every part has its one line in the wiki (its one source: the editor\'s part list reads it there)', keys.every(k => typeof P.WIKI_PARTS[k].line === 'string' && P.WIKI_PARTS[k].line.length > 20));
@@ -79,5 +78,4 @@ check('search finds articles and parts', W.wikiSearch('mask').length > 3 && W.wi
   check('a page shows where it sits: its section, then its subsection', /wk-kicker">.*sec:data.*Ports and settings/.test(W.wikiArticleHtml('ranges', ctx)) && /sec:parts/.test(W.wikiArticleHtml('part:levels', ctx)));
   check('only Getting Started is read in order (Previous and Next); its last page leads to the next section',
     W.wikiWalks('welcome') && W.wikiWalks('reading') && !W.wikiWalks('ranges') && !W.wikiWalks('part:levels') && W.wikiWalkNeighbors('reading').next.id === 'sec:data' && !W.wikiWalkNeighbors('welcome').prev); }
-console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

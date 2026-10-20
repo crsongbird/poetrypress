@@ -8,14 +8,13 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
 const Th = await import('../theme.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
 const THEMES = ['rose', 'aether', 'fathom', 'vellum'];
 
@@ -56,6 +55,4 @@ check('an unknown theme is the default', Th.savedTheme() === Th.DEFAULT_THEME);
   globalThis.localStorage = real;
   check('a browser with storage switched off still themes (and falls back to the default)', ok); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

@@ -8,13 +8,12 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const poem = reg['poemText'], undo = reg['undoBtn'], redo = reg['redoBtn'];
 const type = t => { poem.value = t; poem.dispatchEvent({ type: 'input', target: poem }); };
@@ -39,6 +38,4 @@ click(undo);
 check('one ☋ puts back what was cut', poem.value === 'the first line of my own\nand a second, longer line');
 
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

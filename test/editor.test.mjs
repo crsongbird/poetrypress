@@ -12,8 +12,6 @@
  */
 import { highlightLine, highlightDocument, findBracketPair } from '../editor.js';
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 // strip tags and decode the few entities we emit
 const textOf = html => String(html)
@@ -108,6 +106,7 @@ check('a trailing empty line still occupies a row',
 // element, so stripping tags also removes the newlines between them. Compare
 // per line element instead.
 import { readFileSync } from 'fs';
+import { check, done } from './harness.mjs';
 const htmlSrc = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const defaultPoem = htmlSrc.match(/<textarea id="poemText"[^>]*>([\s\S]*?)<\/textarea>/)[1];
 const renderedLines = textOf(highlightDocument(defaultPoem))
@@ -177,6 +176,4 @@ check('no pair is shown while selecting a range',
   check('a flagged directive carries the underline class', /pml-unknown/.test(highlightLine('<x/zzz>')) && !/pml-unknown/.test(highlightLine('<x/glass/op:50>')));
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

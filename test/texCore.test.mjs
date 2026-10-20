@@ -6,9 +6,8 @@
  *
  * Run: node test/texCore.test.mjs
  */
+import { check, done } from './harness.mjs';
 const C = await import('../texCore.js');
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 // ---- canonical pixels ----
 check('S is 1 unless set, and withScale restores it afterwards',
@@ -137,6 +136,4 @@ check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never 
   check('a tilted camera builds a larger patch of ground than the page', !t.flat && t.GW * t.GH > 200 * 150);
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

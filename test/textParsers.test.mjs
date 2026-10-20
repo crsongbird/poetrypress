@@ -11,12 +11,8 @@
  */
 import { buildLines, applyEscapes, tokenizeInline } from '../textParsers.js';
 import { readFileSync } from 'fs';
+import { check, fail, done } from './harness.mjs';
 
-let failures = 0;
-function check(label, cond){
-  if(!cond){ failures++; console.log('FAIL:', label); }
-  else console.log('ok:', label);
-}
 
 // nesting
 const nested = tokenizeInline('**bold [with accent] still bold**', true, true);
@@ -47,8 +43,7 @@ try {
   // a '>' line, which is not a property of the parser.
   check('segmentation parts detected', lines.some(l => l.parts));
 } catch(e){
-  failures++;
-  console.log('FAIL: default poem threw:', e.message);
+  fail('default poem threw: ' + e.message);
 }
 
 // Quote lines, tested directly rather than via whatever the default poem is
@@ -202,6 +197,4 @@ const it = buildLines('*leaning\nstill* not', true, true);
 check('italic left open runs on to its closer', it[0].segments.every(s => s.italic) && it[1].segments[0].italic && !it[1].segments[it[1].segments.length - 1].italic);
 check('a bold never closed still ends with its line', buildLines('**alone\nplain', true, true)[1].segments.every(s => !s.bold));
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : failures+' FAILURES');
-process.exit(failures === 0 ? 0 : 1);
+done();

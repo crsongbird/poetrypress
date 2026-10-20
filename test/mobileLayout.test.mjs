@@ -6,6 +6,7 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock, installMobileEnv } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const registry = installDomMock(makeMockContext, makeMockCanvas);
@@ -14,8 +15,6 @@ const { panels, buttons, bodyClasses } = installMobileEnv(registry);
 let threw = null;
 try { await import('../appEvents.js'); } catch(e){ threw = e; }
 
-let failures = 0;
-const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++, console.log('FAIL:', label)); };
 
 check('appEvents.js boots on a mobile device without throwing', threw === null);
 if(threw) console.log('  threw:', threw.stack || threw.message);
@@ -83,6 +82,4 @@ check('closing the keyboard returns the bar to the bottom', vars['--kb-height'] 
     opened && folded && cancelled === 2);
   check('…and a tap on the heading\'s own controls (its eye) is left to them', !details.open && cancelled === 2); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

@@ -13,15 +13,11 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const registry = installDomMock(makeMockContext, makeMockCanvas);
 
-let failures = 0;
-function check(label, cond){
-  if(!cond){ failures++; console.log('FAIL:', label); }
-  else console.log('ok:', label);
-}
 
 // the page runs two scripts: the generators (shared with the texture worker, shipped once) and then its own
 const built = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
@@ -143,6 +139,4 @@ check('bundle populates the font dropdown', registry['fontFamily'] && registry['
   check('the shipped page carries no comments but the module seams', !/\/\/ Haiku|Haiku:/.test(built.replace(/<script type="text\/js-worker"[\s\S]*?<\/script>/, '')));
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

@@ -7,14 +7,13 @@
  * Run with: node test/patterns.test.mjs
  */
 import { installCanvasMock, makeMockContext } from './canvasMock.mjs';
+import { check, done } from './harness.mjs';
 installCanvasMock();
 const S = await import('../steps.js');
 const A = await import('../athanor.js');
 const P = await import('../stepsPatterns.js');
 const { readFileSync } = await import('fs');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const ctx = { seed: 5, knobs: [50, 50, 50, 50, 50, 50], tints: ['#ffffff', '#202020'], light: 315, all: true };
 const runAll = (spec, w = 48) => A.evalAthanor(A.athanorGraphOf(spec), w, w, ctx);
 
@@ -77,6 +76,4 @@ check('the wiki has a page for Pavements and the new Scatter settings', (await i
   check('the Surface has inputs for reflectivity, reflection blur, metallic and emission', S.STEPS.surface.ins.slice(2).join() === 'reflectivity,reflection blur,metallic,emission');
   check('emission makes it glow brighter; metal and a matte finish each change it', sum(glow) > sum(plain)*1.2 && sum(metal) !== sum(plain) && sum(matte) < sum(mat([[4, 1, 3, 3]]))); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

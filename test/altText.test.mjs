@@ -4,8 +4,7 @@
  * and dc:description, set in after the JFIF header, the picture untouched.
  */
 import { readFileSync } from 'fs';
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
+import { check, done } from './harness.mjs';
 const M = await import('../jpegMeta.js');
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 
@@ -52,6 +51,4 @@ const longAlt = A.describeLook(longLook);
 check('never more than 1500 characters: a long poem gives way (at a word) before the description does', longAlt.length <= 1500 && longAlt.includes('An image created with PoetryPress') && /…\n\n--- Description ---\nAn image/.test(longAlt) && A.describeLook({ ...longLook, credit: 'Ruby' }).includes('--- Image credit ---\nBy Ruby.'));
 check('every texture in the picker is described', Object.keys((await import('../textureElements.js')).TEXTURE_ELEMENTS).every(t => A.TEXTURE_LOOKS[t]));
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

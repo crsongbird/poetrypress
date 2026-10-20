@@ -13,13 +13,12 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
@@ -153,6 +152,4 @@ check('the lock is a drawn padlock, not an emoji', /const LOCK_GLYPH\s*=\s*\n?\s
 check('a locked control is inert and dimmed, its lock still live',
   /\.field-locked [^{]*\{[^}]*pointer-events:none/.test(css) && /\.field-locked \.lock-btn\{[^}]*pointer-events:auto/.test(css) && /\.field-locked[^{]*\{[^}]*opacity:\.3/.test(css));
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

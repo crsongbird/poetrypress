@@ -8,12 +8,11 @@
  */
 import { readFileSync } from 'fs';
 import { installCanvasMock } from './canvasMock.mjs';
+import { check, done } from './harness.mjs';
 installCanvasMock();
 const { TEXTURE_PARAMS, TEXTURE_CAPS, getTextureCanvas, clearTextureCache } = await import('../textureGenerators.js');
 const { TEXTURE_ELEMENTS, PRIMAL_ELEMENTS, elementsFor } = await import('../textureElements.js');
 
-let failures = 0;
-const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++, console.log('FAIL:', label)); };
 const bad = (label, list) => { check(label, list.length === 0); if(list.length) console.log('   ', list.slice(0, 12).join(' | ')); };
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -115,6 +114,4 @@ check('the Athanor\'s glyph is 🜉 (Creation, the Cosmological Archetype)', htm
     kept === hued.t[0].toUpperCase() && kept !== before.textureTint1.toUpperCase() && String(s.texP1) === String(before.texP1) && s.textureTint1.toUpperCase() === before.textureTint1.toUpperCase());
 }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

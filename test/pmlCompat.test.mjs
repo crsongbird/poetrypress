@@ -14,9 +14,8 @@
  */
 import { readFileSync } from 'fs';
 import { buildLines } from '../textParsers.js';
+import { check, done } from './harness.mjs';
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 
 const golden = JSON.parse(readFileSync(new URL('./fixtures/pml-golden.json', import.meta.url), 'utf8'));
 // the poem the fixture was captured from ("Wanting", the default page until Taygete — the app now
@@ -83,6 +82,4 @@ check('an effect can sit alongside an outline',
   check('every page font is requested from Google Fonts', FONTS.every(f => html.includes('family=' + f.family.replace(/ /g, '+'))));
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

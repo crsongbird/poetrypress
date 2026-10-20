@@ -15,11 +15,10 @@
  * Run: node test/hygiene.test.mjs
  */
 import { readFileSync, readdirSync, existsSync } from 'fs';
+import { check, done } from './harness.mjs';
 globalThis.document = globalThis.document || { createElement: () => ({ getContext: () => null }) };
 const { pruneReport, pruneStrip } = await import('../tools/prune.mjs');
 
-let failures = 0;
-const check = (l, c, bad) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l + (bad && bad.length ? ':\n     ' + bad.slice(0, 8).join('\n     ') + (bad.length > 8 ? `\n     … and ${bad.length - 8} more` : '') : ''))); };
 const ROOT = new URL('..', import.meta.url);
 const rd = f => readFileSync(new URL(f, ROOT), 'utf8');
 const ls = d => existsSync(new URL(d, ROOT)) ? readdirSync(new URL(d, ROOT)) : [];
@@ -201,8 +200,10 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
 {
   const headless = TESTS.filter(t => !new RegExp('^/\\*\\*\\n \\* ' + t.replace(/\./g, '\\.') + ' — ').test(rd('test/' + t)));
   check('every suite opens by naming itself and what it guards', !headless.length, headless);
-  const silent = TESTS.filter(t => !/ALL PASSED|PASS \(no throw\)/.test(rd('test/' + t)));
-  check('every suite reports ALL PASSED, so test.sh can count it', !silent.length, silent);
+  const silent = TESTS.filter(t => !/import \{[^}]*\bdone\b[^}]*\} from '\.\/harness\.mjs'/.test(rd('test/' + t)) || !/^done\(\);/m.test(rd('test/' + t)));
+  check('every suite ends with the shared harness\'s done() (ALL PASSED, so test.sh can count it)', !silent.length, silent);
+  const copies = TESTS.filter(t => t !== 'hygiene.test.mjs' && /\blet failures\b|const check = /.test(rd('test/' + t)));
+  check('no suite keeps its own copy of the check harness (test/harness.mjs)', !copies.length, copies);
   // the pictures are guarded by the fingerprints: a test that reads a surface's code tests how, not what
   const SURFACE = /(?:'|\.\.\/)(tex(?:Whimsy|Sharpness|Chaos|Touch|Core)|steps\w*|cartomancy\w*|chains|athanorStudies|textureGenerators)\.js/;
   const peek = TESTS.filter(t => t !== 'invariants.test.mjs' && t !== 'hygiene.test.mjs').filter(t => {
@@ -220,5 +221,4 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
 }
 
 console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

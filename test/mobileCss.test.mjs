@@ -12,6 +12,7 @@
  * Run: node test/mobileCss.test.mjs
  */
 import { readFileSync } from 'fs';
+import { check, done } from './harness.mjs';
 
 const css = readFileSync(new URL('../poetrypress.css', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -48,8 +49,6 @@ function effective(css, selector, prop){
   return val;
 }
 
-let failures = 0;
-const check = (label, cond) => { cond ? console.log('ok:', label) : (failures++, console.log('FAIL:', label)); };
 
 // 1. (no bare vh in phone rules: invariants.test.mjs §7)
 
@@ -323,6 +322,4 @@ check('focus mode leaves room for the focus ring beside the scrollbar', parseFlo
 check('dragging the dial never scrolls the page', /\.light-dial\{[^}]*touch-action:none/.test(css));
 // (⟲ resetting the light, the main light and the rim light: textureLayers.test, by behavior)
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

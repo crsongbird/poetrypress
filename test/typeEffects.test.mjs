@@ -9,6 +9,7 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 installCanvasMock();
 const reg = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
@@ -17,8 +18,6 @@ const { TYPE_EFFECT_NAMES } = await import('../textParsers.js');
 const E = await import('../effects.js');
 const St = await import('../stitches.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const fire = (id, type) => { const el = reg[id]; if(el && el.dispatchEvent) el.dispatchEvent({ type }); };
 const calls = () => { const ctx = reg['poemCanvas'].getContext('2d'); return ctx._stats ? (ctx._stats.fillText || 0) + (ctx._stats.strokeText || 0) : 0; };
 
@@ -107,6 +106,4 @@ check('/under: takes a stitch, a colour and a weight', (() => { const u = E.pars
 check('§TypeEffect describes the stack compactly',
   E.describeStack([E.makeEffect('shadow', '#000', 14, 10, 45)], { style: 'wave' }) === 'drop shadow 14px 10px ∠45° #000 · under wave');
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

@@ -8,8 +8,7 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
+import { check, done } from './harness.mjs';
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 
 const { STEPS, stepRange, paramPort } = await import('../steps.js');
@@ -173,6 +172,4 @@ if(canvasOK){
   check('Ringworld View\'s Saturn: always shows it in the opening shot, never doesn\'t; a seed without it is as never', seen('always', plain) !== seen('never', plain) && seen('by the seed', plain) === seen('never', plain));
   globalThis.document = doc; }
 
-console.log();
-console.log(failures ? `${failures} FAILURES` : 'ALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

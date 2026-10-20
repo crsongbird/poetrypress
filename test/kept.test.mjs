@@ -7,14 +7,13 @@
 import { readFileSync } from 'fs';
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 const store = {};
 globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
 installCanvasMock(); const reg = installDomMock(makeMockContext, makeMockCanvas);
 const F = await import('../forge.js');
 const A = await import('../athanor.js');
 const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const ruby = src('test/fixtures/kept-halftone2.json');
 const validate = j => A.validateGraph(j);
 
@@ -69,5 +68,4 @@ check('a broken surface among good ones is counted and left out', (() => { const
   t.options = ['linen', 'starter:agate', 'study:fibers', 'starter:sparks', 'inkbleed'].map(value => ({ value }));
   const rolled = new Set(); for(let i = 0; i < 40; i++){ reg['randomSurfaceBtn'].dispatchEvent({ type: 'click' }); rolled.add(t.value); }
   check('New Random Surface never lands on a starter or a study', rolled.has('linen') && rolled.has('inkbleed') && [...rolled].every(v => !/^(starter|study):/.test(v))); }
-console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

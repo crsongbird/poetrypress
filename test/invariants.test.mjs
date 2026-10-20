@@ -8,10 +8,9 @@
  * Run: node test/invariants.test.mjs
  */
 import { readFileSync, readdirSync } from 'fs';
+import { check, done } from './harness.mjs';
 const { pruneStrip } = await import('../tools/prune.mjs');
 
-let failures = 0;
-const check = (l, c, bad) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l + (bad && bad.length ? ': ' + bad.slice(0, 5).join(', ') : ''))); };
 const raw = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const src = f => pruneStrip(raw(f));                 // comments out: a rule quoted in a comment is not a use
 const MODULES = readdirSync(new URL('..', import.meta.url)).filter(f => /^\w+\.js$/.test(f));
@@ -161,6 +160,4 @@ check('§1 the die\'s words live in strings.js, not in the code', /export const 
 // ---- §7 Text: no HTML entities in strings.js ----
 check('§7 strings.js has no HTML entities (text nodes do not decode them)', !/&(amp|lt|gt|nbsp|quot|#\d+);/.test(src('strings.js')));
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

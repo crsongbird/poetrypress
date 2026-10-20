@@ -8,13 +8,12 @@
  * the Surface. Run: node test/filterforge.test.mjs
  */
 import { readFileSync } from 'fs';
+import { check, done } from './harness.mjs';
 globalThis.document = { createElement: () => ({ getContext: () => null }) };
 const S = await import('../steps.js');
 const { WIKI_PARTS } = await import('../athanorWikiParts.js');
 const C = await import('../athanor.js');
 const F = await import('../forge.js');
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const W = 40, H = 40;
 const node = (id, name, data, ins = {}) => ({ id, name, data, inputs: Object.fromEntries(Object.entries(ins).map(([k, [nd, o]]) => ['input_' + k, { connections: [{ node: String(nd), input: 'output_' + o }] }])), outputs: { output_1: { connections: [] } } });
 const graph = (nodes, v = 3) => JSON.stringify({ v, drawflow: { Home: { data: Object.fromEntries(nodes.map(n => [n.id, n])) } } });
@@ -233,5 +232,4 @@ check('a Note makes nothing and breaks nothing', run([node(5, 'note', { text: 'h
 { const g5 = graph([node(3, 'hue', { slot: '5', name: 'Star Hue' }), node(2, 'tint', {}, { 1: [9, 1], 2: [3, 1], 3: [3, 1] }), node(9, 'noise', {}), node(99, 'surface', { ground: 'colour' }, { 1: [2, 1] })]);
   const hues = C.athanorHues(g5), im = C.evalAthanor(g5, 8, 8, { seed: 1, tints: ['#000000', '#000000', '#000000', '#000000', '#FF0000', '#000000'] }, {});
   check('a Hue part reads the fifth of six hues, and the page shows that picker by its name', hues.length === 1 && hues[0].slot === 5 && hues[0].label === 'Star Hue' && im && im.r[0] > 0.9 && im.g[0] < 0.1); }
-console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+done();

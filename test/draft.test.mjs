@@ -17,6 +17,7 @@
  */
 import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { check, done } from './harness.mjs';
 
 const DRAFT_KEY = 'uv.draft.v1', FIRST_VISIT_KEY = 'uv.firstvisit.v1';
 
@@ -61,8 +62,6 @@ if(process.env.DRAFT_BOOT){
 }
 
 // ---------------- the checks ----------------
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const self = fileURLToPath(import.meta.url);
 function boot(store = {}, act = '', extra = {}){
   const r = spawnSync(process.execPath, [self], { encoding: 'utf8', timeout: 60000, input: JSON.stringify(store),
@@ -141,6 +140,4 @@ check('a first visit with a draft still seeds the examples once', fv.store[FIRST
     blank.threw === null && blank.poemAtBoot === '  \n ' && blank.aspectAtBoot === '1:1');
   check('…the theme as it was, and the draft kept', blank.store['uv.theme.v1'] === 'aether' && DRAFT_KEY in blank.store); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

@@ -12,6 +12,7 @@ import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock
 import { installDomMock } from './domMock.mjs';
 import { READABLE } from '../tunables.js';
 import { PROTECT } from '../strings.js';
+import { check, done } from './harness.mjs';
 
 // the ground the probe sees: a grey of the test's choosing, for the clearing the page has now
 let ground = () => 255;
@@ -28,8 +29,6 @@ const reg = installDomMock(makeMockContext, probeCanvas);
 await import('../appEvents.js');
 const R = await import('../canvasRenderer.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const settle = () => new Promise(r => setTimeout(r, 80));
 const protect = async from => { reg['textureClearing'].value = String(from); document.getElementById('toast').textContent = ''; reg['protectTextBtn'].dispatchEvent({ type: 'click' }); await settle();
   return { amount: parseFloat(reg['textureClearing'].value), said: document.getElementById('toast').textContent || '' }; };
@@ -101,6 +100,4 @@ reg['textureToggle'].checked = true; reg['textColorHex'].value = '#000000';
   check('a lock on Text Clearing holds it', got.amount === 5 && got.said === PROTECT.locked);
   load({ ...save(), locks: [] }); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

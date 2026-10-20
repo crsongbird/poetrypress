@@ -9,13 +9,12 @@
  * Run with: node test/groups.test.mjs
  */
 import { installCanvasMock } from './canvasMock.mjs';
+import { check, done } from './harness.mjs';
 installCanvasMock();
 const A = await import('../athanor.js');
 const S = await import('../steps.js');
 const { TEXTURE_CHAINS } = await import('../chains.js');
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const copy = o => JSON.parse(JSON.stringify(o));
 const node = (id, name, data = {}, inputs = {}) => ({ id, name, data, class: '', html: '', typenode: false, inputs, outputs: {}, pos_x: 0, pos_y: 0 });
 const wire = (n, o = 1) => ({ connections: [{ node: String(n), input: 'output_' + o }] });
@@ -122,6 +121,4 @@ check('a saved v5 graph is named, and walks as the numbered one', (() => { const
   check('a graph without groups is read as it always was', A.athanorFlat(old).nodes === A.athanorNodes(old) || JSON.stringify(A.athanorFlat(old).nodes) === JSON.stringify(A.athanorNodes(old)));
   check('a v4 graph loads and draws unchanged', A.athanorVersion(old) === 4 && !A.athanorIsNamed(old) && same(A.evalAthanor(old, 32, 32, ctx), A.evalAthanor({ ...copy(agate), v: 4 }, 32, 32, ctx))); }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

@@ -8,16 +8,12 @@
  */
 import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
 import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
 installCanvasMock();
 const registry = installDomMock(makeMockContext, makeMockCanvas);
 await import('../appEvents.js');
 
-let failures = 0;
-function check(label, cond){
-  if(!cond){ failures++; console.log('FAIL:', label); }
-  else console.log('ok:', label);
-}
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
@@ -54,6 +50,4 @@ check('the FIRST swatch is the field\'s live value (tap it to get back)', afterO
     [3, 4, 5, 6, 7, 8].every(k => withAlpha.includes('#textureTint' + k + 'Hex'))); }
 check('then the theme\'s 15, then white and black', JSON.stringify(afterOpen.swatches.slice(1,16)) === JSON.stringify(afterPresetClick.swatches.slice(1,16)) && afterOpen.swatches[16] === '#FFFFFF' && afterOpen.swatches[17] === '#000000');
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

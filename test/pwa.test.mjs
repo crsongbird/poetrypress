@@ -4,9 +4,8 @@
  * Run: node test/pwa.test.mjs   (after node build.mjs)
  */
 import { readFileSync, existsSync } from 'fs';
+import { check, done } from './harness.mjs';
 
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const at = p => new URL('../' + p, import.meta.url);
 const read = p => readFileSync(at(p), 'utf8');
 
@@ -62,6 +61,4 @@ check('every file the worker precaches is in the build', shell.every(f => exists
     && /setColorScheme\(LIGHT_THEMES\.includes\(theme\) \? 'light' : 'dark'\);/.test(th) && /:root\{ color-scheme:dark; \}/.test(css) && /:root\[data-theme="vellum"\]\{ color-scheme:light; \}/.test(css));
 }
 
-console.log();
-console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILURES`);
-process.exit(failures === 0 ? 0 : 1);
+done();

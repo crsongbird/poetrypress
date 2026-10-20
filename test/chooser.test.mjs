@@ -8,9 +8,8 @@
  * Run: node test/chooser.test.mjs
  */
 import { readFileSync } from 'fs';
+import { check, done } from './harness.mjs';
 const { chGroupsOf, chMatches, chCacheFor, chCached, CHOOSER_CACHE_KEY } = await import('../chooser.js');
-let failures = 0;
-const check = (l, c) => { c ? console.log('ok:', l) : (failures++, console.log('FAIL:', l)); };
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const ev = readFileSync(new URL('../appEvents.js', import.meta.url), 'utf8');
 
@@ -47,5 +46,4 @@ check('a thumbnail is the surface as a preset wears it, made at three times the 
   /const wornBy = type =>/.test(ev) && /canvas\.width\*3, canvas\.height\*3/.test(ev));
 check('the preset grid has a search, and its group headings are buttons that fold',
   /id="presetSearch"/.test(html) && /hd\.type = 'button'; hd\.className = 'preset-group-head'/.test(ev) && /PRESET_FOLD_KEY = 'uv\.presets\.folded'/.test(ev));
-console.log(failures ? `\n${failures} FAILURES` : '\nALL PASSED');
-process.exit(failures ? 1 : 0);
+done();
