@@ -12,7 +12,8 @@
  * Every other param arrives at the generator as `amt`, a plain multiplier
  * around 1.0 that each one applies to whatever its dominant quantity is.
  */
-// a slider: its key, label and default; 0–100 and no unit unless it says otherwise (min, max, unit, ticks, names)
+// a slider: its key, label and default; 0–100 and no unit unless it says otherwise (min, max, unit, ticks, names);
+// `as` ('knob', 'fader' or 'slider') says how the Controls rack draws it, where the rule (uiSkins.js rackPlan) shouldn't choose
 const sliderOf = (key, label, def, more) => ({ key, label, min: 0, max: 100, def, unit: '', ...more });
 export const TEXTURE_PARAMS = {
   clouds:        [sliderOf('zoom', 'Lift', 100, { min:40, max:250, unit:'%' }),
@@ -178,7 +179,7 @@ export const TEXTURE_PARAMS = {
                   sliderOf('fluff', 'Fluff', 15),
                   sliderOf('curl', 'Curl', 30),
                   sliderOf('splits', 'Splits', 30),
-                  sliderOf('marks', 'Markings', 0, { ticks:[0,33,66,100], names:['Plain','Bars','Bars','Eyes'] }),
+                  sliderOf('marks', 'Markings', 0, { ticks:[0,33,60,100], names:['Plain','Light Bars','Bold Bars','Eyes'] }),
                   sliderOf('depth', 'Depth', 50),
                   sliderOf('lift', 'Lift', 50)],
   flowers:       [sliderOf('zoom', 'Bloom Size', 150, { min:50, max:450, unit:'%' }),

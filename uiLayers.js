@@ -80,11 +80,15 @@ function paintLayerBar(){
 }
 export function syncBaseUi(){ if(!lowerOn() && state.layers.editing === 'lower') editLayer('upper'); paintLayerBar(); }
 /** Shape Aware needs the words: on the first surface, it waits (greyed) while the surface is not Text Aware. Cut Out by
- *  Text means nothing for a surface drawn only inside the letters, so it waits while Blend with Text is on. */
+ *  Text means nothing for a surface drawn only inside the letters, so it waits while Blend with Text is on. Shape
+ *  Strength is hidden while Shape Aware is off. */
 export function paintLayerWords(){ const lower = state.layers && state.layers.editing === 'lower', chk = id => !!($(id) && $(id).checked);
   const grey = (id, off) => { const el = $(id); if(!el) return; el.disabled = off; if(el.closest){ const row = el.closest('.check-row'); if(row && row.classList) row.classList.toggle('off', off); } };
   grey('textureShapeAware', !lower && !chk('textureTextAware')); grey('textureTextCut', lower && chk('textureTextBlend'));
-  grey('textureShapeStrength', !chk('textureShapeAware') || !!($('textureShapeAware') || {}).disabled); }
+  const strengthOff = !chk('textureShapeAware') || !!($('textureShapeAware') || {}).disabled;
+  grey('textureShapeStrength', strengthOff);
+  // (Ruby: Shape Strength only shows while Shape Aware is on)
+  const sf = $('textureShapeStrength'), row = sf && sf.closest && sf.closest('.field'); if(row && row.classList) row.classList.toggle('hidden-off', strengthOff); }
 /** The reading a waiting surface wears, as its row would say it (§Reading). */
 export function readingOf(L, ui){
   if(!L || !ui || !ui.element) return '';

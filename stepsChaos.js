@@ -274,7 +274,7 @@ export const CHAOS_STEPS = {
       return [own ? withLightTilt(E.num(n, 'view', 100)/100, draw) : draw()]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
+    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), [...CHAOS_R('form', 'Mode', 40).slice(0, 4), { min: 0, max: 100, marks: [0, 100/6, 200/6, 50, 400/6, 500/6, 100] }], CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
     // a canvas pass at full size, its grains under the texture's own seed (+ Variant): Chladni Sand as it was
     paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null, dv = E.input(n, 2);
       const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null, light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);

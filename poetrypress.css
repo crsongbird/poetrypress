@@ -2422,8 +2422,8 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
   transform:rotate(45deg) translate(-2px, -2px); transition:transform .18s; }
 .controls-fold:not([open]) > summary::after{ transform:rotate(-45deg); }
 .controls-fold[open] > summary{ border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-.controls-fold > .field{ margin:6px 0 0; }
-.controls-fold > .field:last-of-type{ margin-bottom:8px; }
+.controls-fold .fold-body > .field{ margin:6px 0 0; }
+.controls-fold .fold-body{ padding-bottom:8px; }
 .controls-fold > .field{ margin-top:6px; }
 
 /* THE INSCRIPTION'S EYE beside the editor's name */
@@ -2433,3 +2433,78 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
 /* THE TAB BAR (Ruby: "the same size, and everything lined up"): five equal tabs, each glyph fitted to the same box and
    centred (index.html's viewBoxes), with a faint line between them, as the app's other buttons have */
 body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+
+/* ---------- THE SKINS (uiSkins.js): knobs and faders drawn as the light and camera dials are ---------- */
+/* THE RACK (Ruby's rules, uiSkins.js rackPlan): two rows; the knobs cluster at the left, the faders stand at the far right,
+   each a column two knobs tall; what doesn't fit is a slider on a row of its own underneath. The columns are set by
+   layoutControls (the knobs' even shares, then one for each fader). */
+.controls-fold.rack > .fold-body{ display:grid; grid-auto-flow:row dense; grid-auto-rows:auto; align-items:start; justify-items:center; gap:4px 4px; }
+.controls-fold.rack > .fold-body > .curve-row, .controls-fold.rack > .fold-body > .field.as-row{ grid-column:1 / -1; justify-self:stretch; width:100%; order:3; }
+.controls-fold.rack > .fold-body > .field[style*="display: none"], .controls-fold.rack > .fold-body > .field[style*="display:none"]{ display:none !important; }
+.controls-fold.rack > .fold-body > .field.as-knob, .controls-fold.rack > .fold-body > .field.as-fader{ position:relative; width:auto; margin:4px 0 0; display:grid; column-gap:2px; }
+/* a knob: the dial, its name under it; the marks' lock ⊹ sits in the dial's open mouth at the bottom */
+.controls-fold.rack > .fold-body > .field.as-knob{ order:2; min-width:64px; grid-template-columns:auto; grid-template-areas:"skin" "name"; justify-items:center; }
+/* a fader: its name on top, the strip filling both rows, at its foot the value with the marks' lock ⊹ (and a die) beside
+   it; a fader with named marks lights the name it stands on, so its foot holds only the ⊹ */
+.controls-fold.rack > .fold-body > .field.as-fader{ order:1; align-self:stretch; grid-template-columns:auto auto auto; grid-template-rows:auto 1fr auto; grid-template-areas:"name name name" "skin skin skin" "val snap dice"; justify-content:center; justify-items:center; align-items:center; }
+.controls-fold.rack > .fold-body > .field.as-fader:has(> .sk-fader.named) > .range-val{ display:none; }
+.controls-fold.rack > .fold-body > .field > .sk-knob, .controls-fold.rack > .fold-body > .field > .sk-fader{ grid-area:skin; }
+.controls-fold.rack > .fold-body > .field.as-knob > input[type="range"], .controls-fold.rack > .fold-body > .field.as-fader > input[type="range"]{
+  position:absolute; width:1px !important; height:1px; opacity:0; pointer-events:none; margin:0; }
+.controls-fold.rack > .fold-body > .field.as-knob > label, .controls-fold.rack > .fold-body > .field.as-fader > label{ grid-area:name; font-size:11.5px; line-height:1.2; text-align:center;
+  max-width:92px; margin:2px 0 0; display:block; }
+.controls-fold.rack > .fold-body > .field.as-fader > label{ max-width:110px; margin:0 0 2px; }
+.controls-fold.rack > .fold-body > .field > label .lock-btn{ vertical-align:middle; margin-left:1px; }
+.controls-fold.rack > .fold-body > .field.as-knob > .range-val{ display:none; }   /* (the knob says its value in its middle) */
+.controls-fold.rack > .fold-body > .field.as-fader > .range-val{ grid-area:val; margin:2px 0 0; float:none !important; text-align:center; font-size:10.5px; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.controls-fold.rack > .fold-body > .field.as-fader > .snap-btn{ grid-area:snap; margin:2px 0 0 4px; min-width:26px; min-height:24px; padding:0 2px; font-size:13px; }
+.controls-fold.rack > .fold-body > .field.as-fader > .dice-btn{ grid-area:dice; }
+.controls-fold.rack > .fold-body > .field.as-knob > .snap-btn{ position:absolute; top:41px; left:50%; transform:translateX(-50%); margin:0; min-width:22px; min-height:20px;
+  padding:0; font-size:12px; line-height:1; background:none; border:0; }
+.controls-fold.rack > .fold-body > .field.as-knob > .dice-btn{ left:auto; right:-4px; top:0; transform:none; }
+.controls-fold.rack > .fold-body > .field.as-knob > .knob-dial{ display:none !important; }
+.field.hidden-off{ display:none !important; }
+.controls-fold.rack > .fold-body > .field:focus-within .sk-knob svg, .controls-fold.rack > .fold-body > .field:focus-within .sk-strip{ outline:1px dotted var(--accent-2); outline-offset:2px; }
+
+.sk-knob{ order:1; width:60px; height:60px; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
+.sk-knob svg{ width:100%; height:100%; overflow:visible; display:block; }
+.sk-track{ fill:none; stroke:var(--text-main); stroke-opacity:.32; stroke-width:1.4; stroke-linecap:round; }
+.sk-arc{ fill:none; stroke:var(--accent); stroke-width:3.2; stroke-linecap:round; }
+.sk-ticks circle{ fill:var(--bg-panel, #1a1717); stroke:var(--accent); stroke-width:.9; opacity:.55; }
+.sk-ticks circle.def{ opacity:.9; }
+.sk-ticks circle.named{ opacity:.8; }
+.sk-ticks circle.on{ fill:var(--accent); opacity:1; }
+.sk-hand line{ stroke:var(--accent); stroke-width:1.6; stroke-linecap:round; }
+.sk-hand path{ fill:var(--accent); stroke:var(--bg-panel, #1a1717); stroke-width:.9; }
+.sk-val{ fill:var(--text-main); font-size:15px; text-anchor:middle; font-family:var(--ui-sans); font-variant-numeric:tabular-nums; opacity:.85; pointer-events:none; }
+.sk-val.long{ font-size:12px; }
+.sk-knob.turning .sk-val{ opacity:1; fill:var(--accent); }
+.sk-knob.fine .sk-arc, .sk-fader.fine .sk-arc{ stroke:var(--accent-2); }
+.sk-knob.locked, .sk-fader.locked{ opacity:.45; cursor:not-allowed; }
+
+.sk-fader{ display:flex; align-items:stretch; justify-content:center; gap:2px; height:100%; min-height:120px; }
+.sk-strip{ width:30px; height:100%; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
+.sk-strip svg{ width:100%; height:100%; display:block; overflow:visible; }
+.sk-fader .sk-arc{ stroke-width:3.4; }
+.sk-cap line{ stroke:var(--text-main); stroke-width:1.4; stroke-linecap:round; }
+.sk-cap path{ fill:var(--accent); stroke:var(--bg-panel, #1a1717); stroke-width:.8; }
+.sk-fader.turning .sk-cap line{ stroke-width:.8; }
+.sk-names{ position:relative; width:0; height:100%; }
+.sk-fader.named .sk-names{ width:70px; }
+.sk-names button{ position:absolute; left:0; transform:translateY(-50%); background:none; border:0; padding:2px 0; margin:0; font:inherit; font-size:11px; line-height:1;
+  color:var(--text-dim); white-space:nowrap; cursor:pointer; text-align:left; }
+.sk-names button.on{ color:var(--accent); }
+
+/* THE DISPLAY LINE: what is being turned, above the controls, out from under the finger */
+.sk-readout{ display:flex; align-items:center; gap:8px; min-height:0; max-height:0; overflow:hidden; opacity:0; transition:opacity .15s, max-height .15s; font-size:13px; }
+.sk-readout.on{ max-height:40px; min-height:32px; opacity:1; }
+.controls-fold:not(.rack) .sk-readout{ display:none; }
+.sk-readout .sr-name{ color:var(--text-dim); }
+.sk-readout .sr-val{ color:var(--text-main); font-variant-numeric:tabular-nums; flex:1 1 auto; }
+.sk-readout .sr-near{ color:var(--text-dim); opacity:.6; font-size:11px; }
+.sk-readout .sr-tier{ color:var(--accent-2); font-size:11px; }
+.sk-readout .sr-step{ flex:0 0 34px; min-height:30px; background:none; border:1px solid var(--line); color:var(--text-main); font-size:16px; cursor:pointer; }
+.rack-btn{ background:none; border:1px solid transparent; color:var(--text-dim); font-size:14px; line-height:1; padding:4px 6px; cursor:pointer; min-width:30px; min-height:28px; }
+.rack-btn:hover{ color:var(--accent-2); border-color:var(--line); }
+
+.sk-ticks.dense circle{ stroke:none; fill:var(--accent); opacity:.35; } .sk-ticks.dense circle.on{ opacity:1; }

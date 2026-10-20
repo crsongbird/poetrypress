@@ -34,6 +34,12 @@
  */
 
 const ELEMENT_DEFAULTS = {
+  "hapticsToggle": {
+    "tag": "input",
+    "type": "checkbox",
+    "checked": true,
+    "value": ""
+  },
   "poemShown": {
     "tag": "input",
     "type": "checkbox",

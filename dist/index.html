@@ -2455,8 +2455,8 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
   transform:rotate(45deg) translate(-2px, -2px); transition:transform .18s; }
 .controls-fold:not([open]) > summary::after{ transform:rotate(-45deg); }
 .controls-fold[open] > summary{ border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-.controls-fold > .field{ margin:6px 0 0; }
-.controls-fold > .field:last-of-type{ margin-bottom:8px; }
+.controls-fold .fold-body > .field{ margin:6px 0 0; }
+.controls-fold .fold-body{ padding-bottom:8px; }
 .controls-fold > .field{ margin-top:6px; }
 
 /* THE INSCRIPTION'S EYE beside the editor's name */
@@ -2466,6 +2466,81 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
 /* THE TAB BAR (Ruby: "the same size, and everything lined up"): five equal tabs, each glyph fitted to the same box and
    centred (index.html's viewBoxes), with a faint line between them, as the app's other buttons have */
 body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+
+/* ---------- THE SKINS (uiSkins.js): knobs and faders drawn as the light and camera dials are ---------- */
+/* THE RACK (Ruby's rules, uiSkins.js rackPlan): two rows; the knobs cluster at the left, the faders stand at the far right,
+   each a column two knobs tall; what doesn't fit is a slider on a row of its own underneath. The columns are set by
+   layoutControls (the knobs' even shares, then one for each fader). */
+.controls-fold.rack > .fold-body{ display:grid; grid-auto-flow:row dense; grid-auto-rows:auto; align-items:start; justify-items:center; gap:4px 4px; }
+.controls-fold.rack > .fold-body > .curve-row, .controls-fold.rack > .fold-body > .field.as-row{ grid-column:1 / -1; justify-self:stretch; width:100%; order:3; }
+.controls-fold.rack > .fold-body > .field[style*="display: none"], .controls-fold.rack > .fold-body > .field[style*="display:none"]{ display:none !important; }
+.controls-fold.rack > .fold-body > .field.as-knob, .controls-fold.rack > .fold-body > .field.as-fader{ position:relative; width:auto; margin:4px 0 0; display:grid; column-gap:2px; }
+/* a knob: the dial, its name under it; the marks' lock ⊹ sits in the dial's open mouth at the bottom */
+.controls-fold.rack > .fold-body > .field.as-knob{ order:2; min-width:64px; grid-template-columns:auto; grid-template-areas:"skin" "name"; justify-items:center; }
+/* a fader: its name on top, the strip filling both rows, at its foot the value with the marks' lock ⊹ (and a die) beside
+   it; a fader with named marks lights the name it stands on, so its foot holds only the ⊹ */
+.controls-fold.rack > .fold-body > .field.as-fader{ order:1; align-self:stretch; grid-template-columns:auto auto auto; grid-template-rows:auto 1fr auto; grid-template-areas:"name name name" "skin skin skin" "val snap dice"; justify-content:center; justify-items:center; align-items:center; }
+.controls-fold.rack > .fold-body > .field.as-fader:has(> .sk-fader.named) > .range-val{ display:none; }
+.controls-fold.rack > .fold-body > .field > .sk-knob, .controls-fold.rack > .fold-body > .field > .sk-fader{ grid-area:skin; }
+.controls-fold.rack > .fold-body > .field.as-knob > input[type="range"], .controls-fold.rack > .fold-body > .field.as-fader > input[type="range"]{
+  position:absolute; width:1px !important; height:1px; opacity:0; pointer-events:none; margin:0; }
+.controls-fold.rack > .fold-body > .field.as-knob > label, .controls-fold.rack > .fold-body > .field.as-fader > label{ grid-area:name; font-size:11.5px; line-height:1.2; text-align:center;
+  max-width:92px; margin:2px 0 0; display:block; }
+.controls-fold.rack > .fold-body > .field.as-fader > label{ max-width:110px; margin:0 0 2px; }
+.controls-fold.rack > .fold-body > .field > label .lock-btn{ vertical-align:middle; margin-left:1px; }
+.controls-fold.rack > .fold-body > .field.as-knob > .range-val{ display:none; }   /* (the knob says its value in its middle) */
+.controls-fold.rack > .fold-body > .field.as-fader > .range-val{ grid-area:val; margin:2px 0 0; float:none !important; text-align:center; font-size:10.5px; max-width:96px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.controls-fold.rack > .fold-body > .field.as-fader > .snap-btn{ grid-area:snap; margin:2px 0 0 4px; min-width:26px; min-height:24px; padding:0 2px; font-size:13px; }
+.controls-fold.rack > .fold-body > .field.as-fader > .dice-btn{ grid-area:dice; }
+.controls-fold.rack > .fold-body > .field.as-knob > .snap-btn{ position:absolute; top:41px; left:50%; transform:translateX(-50%); margin:0; min-width:22px; min-height:20px;
+  padding:0; font-size:12px; line-height:1; background:none; border:0; }
+.controls-fold.rack > .fold-body > .field.as-knob > .dice-btn{ left:auto; right:-4px; top:0; transform:none; }
+.controls-fold.rack > .fold-body > .field.as-knob > .knob-dial{ display:none !important; }
+.field.hidden-off{ display:none !important; }
+.controls-fold.rack > .fold-body > .field:focus-within .sk-knob svg, .controls-fold.rack > .fold-body > .field:focus-within .sk-strip{ outline:1px dotted var(--accent-2); outline-offset:2px; }
+
+.sk-knob{ order:1; width:60px; height:60px; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
+.sk-knob svg{ width:100%; height:100%; overflow:visible; display:block; }
+.sk-track{ fill:none; stroke:var(--text-main); stroke-opacity:.32; stroke-width:1.4; stroke-linecap:round; }
+.sk-arc{ fill:none; stroke:var(--accent); stroke-width:3.2; stroke-linecap:round; }
+.sk-ticks circle{ fill:var(--bg-panel, #1a1717); stroke:var(--accent); stroke-width:.9; opacity:.55; }
+.sk-ticks circle.def{ opacity:.9; }
+.sk-ticks circle.named{ opacity:.8; }
+.sk-ticks circle.on{ fill:var(--accent); opacity:1; }
+.sk-hand line{ stroke:var(--accent); stroke-width:1.6; stroke-linecap:round; }
+.sk-hand path{ fill:var(--accent); stroke:var(--bg-panel, #1a1717); stroke-width:.9; }
+.sk-val{ fill:var(--text-main); font-size:15px; text-anchor:middle; font-family:var(--ui-sans); font-variant-numeric:tabular-nums; opacity:.85; pointer-events:none; }
+.sk-val.long{ font-size:12px; }
+.sk-knob.turning .sk-val{ opacity:1; fill:var(--accent); }
+.sk-knob.fine .sk-arc, .sk-fader.fine .sk-arc{ stroke:var(--accent-2); }
+.sk-knob.locked, .sk-fader.locked{ opacity:.45; cursor:not-allowed; }
+
+.sk-fader{ display:flex; align-items:stretch; justify-content:center; gap:2px; height:100%; min-height:120px; }
+.sk-strip{ width:30px; height:100%; touch-action:none; cursor:ns-resize; user-select:none; -webkit-user-select:none; }
+.sk-strip svg{ width:100%; height:100%; display:block; overflow:visible; }
+.sk-fader .sk-arc{ stroke-width:3.4; }
+.sk-cap line{ stroke:var(--text-main); stroke-width:1.4; stroke-linecap:round; }
+.sk-cap path{ fill:var(--accent); stroke:var(--bg-panel, #1a1717); stroke-width:.8; }
+.sk-fader.turning .sk-cap line{ stroke-width:.8; }
+.sk-names{ position:relative; width:0; height:100%; }
+.sk-fader.named .sk-names{ width:70px; }
+.sk-names button{ position:absolute; left:0; transform:translateY(-50%); background:none; border:0; padding:2px 0; margin:0; font:inherit; font-size:11px; line-height:1;
+  color:var(--text-dim); white-space:nowrap; cursor:pointer; text-align:left; }
+.sk-names button.on{ color:var(--accent); }
+
+/* THE DISPLAY LINE: what is being turned, above the controls, out from under the finger */
+.sk-readout{ display:flex; align-items:center; gap:8px; min-height:0; max-height:0; overflow:hidden; opacity:0; transition:opacity .15s, max-height .15s; font-size:13px; }
+.sk-readout.on{ max-height:40px; min-height:32px; opacity:1; }
+.controls-fold:not(.rack) .sk-readout{ display:none; }
+.sk-readout .sr-name{ color:var(--text-dim); }
+.sk-readout .sr-val{ color:var(--text-main); font-variant-numeric:tabular-nums; flex:1 1 auto; }
+.sk-readout .sr-near{ color:var(--text-dim); opacity:.6; font-size:11px; }
+.sk-readout .sr-tier{ color:var(--accent-2); font-size:11px; }
+.sk-readout .sr-step{ flex:0 0 34px; min-height:30px; background:none; border:1px solid var(--line); color:var(--text-main); font-size:16px; cursor:pointer; }
+.rack-btn{ background:none; border:1px solid transparent; color:var(--text-dim); font-size:14px; line-height:1; padding:4px 6px; cursor:pointer; min-width:30px; min-height:28px; }
+.rack-btn:hover{ color:var(--accent-2); border-color:var(--line); }
+
+.sk-ticks.dense circle{ stroke:none; fill:var(--accent); opacity:.35; } .sk-ticks.dense circle.on{ opacity:1; }
 
 </style>
 
@@ -3251,60 +3326,66 @@ but bear with me, dear}]/jitter:200
           </div>
           <!-- THE SURFACE'S CONTROLS (Ruby): its sliders and curves under one drop-down heading; Opacity stays outside it -->
           <details class="controls-fold full" id="texControls" open>
-            <summary><span data-str="label.controls">Controls</span><span class="fold-count" id="texControlsCount"></span></summary>
-            <div class="field full">
-              <label id="texP1Label" data-str="label.x">—</label>
-              <input type="range" id="texP1" min="0" max="100" value="100">
-              <span class="range-val" id="texP1Val"></span>
-            </div>
-            <div class="field full">
-              <label id="texP2Label" data-str="label.x2">—</label>
-              <input type="range" id="texP2" min="0" max="100" value="100">
-              <span class="range-val" id="texP2Val"></span>
-            </div>
-            <div class="field full" id="texP3Field" style="display:none">
-              <label id="texP3Label" data-str="label.form">Form</label>
-              <input type="range" id="texP3" min="0" max="100" value="50">
-              <span class="range-val" id="texP3Val"></span>
-            </div>
-            <div class="field full" id="texP4Field" style="display:none">
-              <label id="texP4Label">Knob 4</label>
-              <input type="range" id="texP4" min="0" max="100" value="0">
-              <span class="range-val" id="texP4Val"></span>
-            </div>
-            <div class="field full" id="texP5Field" style="display:none">
-              <label id="texP5Label">Knob 5</label>
-              <input type="range" id="texP5" min="0" max="100" value="0">
-              <span class="range-val" id="texP5Val"></span>
-            </div>
-            <div class="field full" id="texP6Field" style="display:none">
-              <label id="texP6Label">Knob 6</label>
-              <input type="range" id="texP6" min="0" max="100" value="0">
-              <span class="range-val" id="texP6Val"></span>
-            </div>
-            <div class="field full" id="texP7Field" style="display:none">
-              <label id="texP7Label">Knob 7</label>
-              <input type="range" id="texP7" min="0" max="100" value="0">
-              <span class="range-val" id="texP7Val"></span>
-            </div>
-            <div class="field full" id="texP8Field" style="display:none">
-              <label id="texP8Label">Knob 8</label>
-              <input type="range" id="texP8" min="0" max="100" value="0">
-              <span class="range-val" id="texP8Val"></span>
-            </div>
-            <!-- THE CURVE CONTROLS (ROADMAP D4): a graph's Curve Control parts, drawn by hand here. Drag a point; tap or click
-                 the empty pad to add one; double-click or hold a point to remove it; ↺ puts back the graph's own curve -->
-            <div class="field full curve-row tool-hidden" id="texCurve1Row">
-              <div class="curve-head"><label id="texCurve1Label" for="texCurve1Pad">Curve</label>
-                <button type="button" class="snap-btn curve-reset" id="texCurve1Reset" title="Put back the graph's own curve">↺</button></div>
-              <div class="curve-pad"><canvas id="texCurve1Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
-              <input type="hidden" id="textureCurve1" value="">
-            </div>
-            <div class="field full curve-row tool-hidden" id="texCurve2Row">
-              <div class="curve-head"><label id="texCurve2Label" for="texCurve2Pad">Curve</label>
-                <button type="button" class="snap-btn curve-reset" id="texCurve2Reset" title="Put back the graph's own curve">↺</button></div>
-              <div class="curve-pad"><canvas id="texCurve2Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
-              <input type="hidden" id="textureCurve2" value="">
+            <summary><span data-str="label.controls">Controls</span><span class="fold-count" id="texControlsCount"></span>
+              <button type="button" class="rack-btn" id="rackModeBtn" title="Lay out the controls: as knobs and faders when there are many, as rows, or always as knobs and faders">◎</button></summary>
+            <!-- THE DISPLAY LINE: the control being turned, its name and value (and the marks beside it), never under the finger;
+                 its − and + nudge it one step -->
+            <div class="sk-readout" id="texReadout" aria-live="polite"></div>
+            <div class="fold-body" id="texControlsBody">
+              <div class="field full">
+                <label id="texP1Label" data-str="label.x">—</label>
+                <input type="range" id="texP1" min="0" max="100" value="100">
+                <span class="range-val" id="texP1Val"></span>
+              </div>
+              <div class="field full">
+                <label id="texP2Label" data-str="label.x2">—</label>
+                <input type="range" id="texP2" min="0" max="100" value="100">
+                <span class="range-val" id="texP2Val"></span>
+              </div>
+              <div class="field full" id="texP3Field" style="display:none">
+                <label id="texP3Label" data-str="label.form">Form</label>
+                <input type="range" id="texP3" min="0" max="100" value="50">
+                <span class="range-val" id="texP3Val"></span>
+              </div>
+              <div class="field full" id="texP4Field" style="display:none">
+                <label id="texP4Label">Knob 4</label>
+                <input type="range" id="texP4" min="0" max="100" value="0">
+                <span class="range-val" id="texP4Val"></span>
+              </div>
+              <div class="field full" id="texP5Field" style="display:none">
+                <label id="texP5Label">Knob 5</label>
+                <input type="range" id="texP5" min="0" max="100" value="0">
+                <span class="range-val" id="texP5Val"></span>
+              </div>
+              <div class="field full" id="texP6Field" style="display:none">
+                <label id="texP6Label">Knob 6</label>
+                <input type="range" id="texP6" min="0" max="100" value="0">
+                <span class="range-val" id="texP6Val"></span>
+              </div>
+              <div class="field full" id="texP7Field" style="display:none">
+                <label id="texP7Label">Knob 7</label>
+                <input type="range" id="texP7" min="0" max="100" value="0">
+                <span class="range-val" id="texP7Val"></span>
+              </div>
+              <div class="field full" id="texP8Field" style="display:none">
+                <label id="texP8Label">Knob 8</label>
+                <input type="range" id="texP8" min="0" max="100" value="0">
+                <span class="range-val" id="texP8Val"></span>
+              </div>
+              <!-- THE CURVE CONTROLS (ROADMAP D4): a graph's Curve Control parts, drawn by hand here. Drag a point; tap or click
+                   the empty pad to add one; double-click or hold a point to remove it; ↺ puts back the graph's own curve -->
+              <div class="field full curve-row tool-hidden" id="texCurve1Row">
+                <div class="curve-head"><label id="texCurve1Label" for="texCurve1Pad">Curve</label>
+                  <button type="button" class="snap-btn curve-reset" id="texCurve1Reset" title="Put back the graph's own curve">↺</button></div>
+                <div class="curve-pad"><canvas id="texCurve1Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+                <input type="hidden" id="textureCurve1" value="">
+              </div>
+              <div class="field full curve-row tool-hidden" id="texCurve2Row">
+                <div class="curve-head"><label id="texCurve2Label" for="texCurve2Pad">Curve</label>
+                  <button type="button" class="snap-btn curve-reset" id="texCurve2Reset" title="Put back the graph's own curve">↺</button></div>
+                <div class="curve-pad"><canvas id="texCurve2Pad" width="480" height="240" tabindex="0" title="Drag a point to shape the curve; tap the pad to add one; double-tap or hold a point to remove it."></canvas></div>
+                <input type="hidden" id="textureCurve2" value="">
+              </div>
             </div>
           </details>
           <div class="field full">
@@ -3769,6 +3850,11 @@ but bear with me, dear}]/jitter:200
       </div>
       <!-- hints: written out under every section's controls, or only where ⓘ asks (Ruby: both smaller and switchable,
            since the page's density matters too); this browser's preference, never part of a look -->
+      <!-- haptics: a tick under the finger as a knob or fader crosses a mark (Android's Chrome; this browser's preference) -->
+      <div class="sound-row">
+        <input type="checkbox" id="hapticsToggle" class="switch" checked>
+        <label for="hapticsToggle" data-str="label.hapticsToggle" title="A small tick under your finger as a knob or fader crosses a mark, where the phone can give one.">Haptics</label>
+      </div>
       <div class="sound-row">
         <input type="checkbox" id="hintsToggle" class="switch">
         <label for="hintsToggle" data-str="label.hintsToggle" title="Write every section's hints under its controls. Off: ⓘ in a section's heading shows that section's alone.">Hints</label>
@@ -15951,7 +16037,7 @@ const CHAOS_STEPS = {
       return [own ? withLightTilt(E.num(n, 'view', 100)/100, draw) : draw()]; },
     run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } },
   sand: { cat: 'Marks', label: 'Chladni Sand', ins: ['where', 'light from'], outs: ['sand'], io: { ins: ['field', 'value'], outs: ['image'] },
-    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), CHAOS_R('form', 'Mode', 40), CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
+    params: [CHAOS_R('zoom', 'Grain Size', 100, 50, 300), CHAOS_R('amount', 'Sand', 100, 20, 300), [...CHAOS_R('form', 'Mode', 40).slice(0, 4), { min: 0, max: 100, marks: [0, 100/6, 200/6, 50, 400/6, 500/6, 100] }], CHAOS_R('variant', 'Variation', 0, 0, 99)], cost: () => 4,
 
     paint(E, n){ const { ww: w, wh: h } = E, wv = E.input(n, 1), wf = wv != null ? E.asField(wv) : null, dv = E.input(n, 2);
       const where = wf ? (u, v) => wf[Math.min(h - 1, v*h | 0)*w + Math.min(w - 1, u*w | 0)] : null, light = typeof dv === 'number' ? dv*360 : (E.ctx.light ?? 315);
@@ -17403,7 +17489,9 @@ const FLORA_KEYS = FLORA_SPECIES.map(s => s[0]);
 const FLORA = Object.fromEntries(FLORA_SPECIES);
  
 const FLORA_HABITATS = [['daisy', 'poppy', 'cornflower', 'buttercup', 'clover', 'queenannes', 'chamomile'], ['bluebell', 'foxglove', 'violet', 'anemone'], ['rose', 'peony', 'lavender', 'foxglove'], ['tulip', 'cherry', 'forgetmenot']];
-const FLORA_SPECIES_LABEL = 'Species: ' + ['Daisy', 'Chamomile', 'Cosmos', 'Sunflower', 'Zinnia', 'Cornflower', 'Poppy', 'Anemone', 'Buttercup', 'Rose', 'Peony', 'Tulip', 'Lily', 'Iris', 'Cherry', 'Forget-me-not', 'Violet', 'Bluebell', 'Foxglove', 'Lavender', 'Clover', 'Queen Anne’s Lace', 'Hydrangea', 'Mixed (seeded)'].join(' · ');
+
+const FLORA_NAMES = ['Daisy', 'Chamomile', 'Cosmos', 'Sunflower', 'Zinnia', 'Cornflower', 'Poppy', 'Anemone', 'Buttercup', 'Rose', 'Peony', 'Tulip', 'Lily', 'Iris', 'Cherry', 'Forget-me-not', 'Violet', 'Bluebell', 'Foxglove', 'Lavender', 'Clover', 'Queen Anne’s Lace', 'Hydrangea', 'Mixed (seeded)'];
+const FLORA_SPECIES_LABEL = 'Species: ' + FLORA_NAMES.join(' · ');
 
  
 function flWidth(shape, s){
@@ -17806,7 +17894,7 @@ const FLORA_STEPS = {
 
   bloom: { cat: 'Marks', label: 'Bloom', ins: ['light from', 'petal hue', 'tip hue', 'center hue', 'foliage hue'], outs: ['picture', 'mask', 'height', 'thickness', 'center', 'petals', 'gloss', 'facing'],
     io: { ins: ['value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field'] },
-    params: [FL_R('species', FLORA_SPECIES_LABEL, 0), FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
+    params: [[...FL_R('species', FLORA_SPECIES_LABEL, 0).slice(0, 4), { min: 0, max: 100, bands: FLORA_NAMES.map(nm => nm.replace(' (seeded)', '')) }], FL_R('view', 'View: Face → Side', 30), FL_R('stage', 'Stage: Bud → Open → Wilted → Seed Head', 45), FL_R('jitter', 'Jitter', 40),
       FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf · Visitor', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0), FL_R('visitor', 'Visitor: Seeded · ' + ['Ladybird', 'Jumping Spider', 'Hoverfly', 'Ant', 'Aphids', 'Fallen Petal', 'Seed Fluff'].join(' · '), 0), FL_R('turn', 'Head Turn', 0)], cost: () => 3,
     run(E, n){ const { ww, wh, num } = E, k = Math.min(FLORA_KEYS.length, Math.floor(num(n, 'species', 0)/100*(FLORA_KEYS.length + 1))), d = E.input(n, 1);
       const deg = typeof d === 'number' ? d*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, t = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
@@ -20643,7 +20731,7 @@ const TEXTURE_PARAMS = {
                   sliderOf('fluff', 'Fluff', 15),
                   sliderOf('curl', 'Curl', 30),
                   sliderOf('splits', 'Splits', 30),
-                  sliderOf('marks', 'Markings', 0, { ticks:[0,33,66,100], names:['Plain','Bars','Bars','Eyes'] }),
+                  sliderOf('marks', 'Markings', 0, { ticks:[0,33,60,100], names:['Plain','Light Bars','Bold Bars','Eyes'] }),
                   sliderOf('depth', 'Depth', 50),
                   sliderOf('lift', 'Lift', 50)],
   flowers:       [sliderOf('zoom', 'Bloom Size', 150, { min:50, max:450, unit:'%' }),
@@ -23960,6 +24048,21 @@ for(const [key, c] of Object.entries(TEXTURE_CHAINS)){
     const { slot, name = p.label, def = Math.round((p.def - p.min)/(p.max - p.min)*100), ...rest } = d;
     nd[1] = { slot, name, def, ...rest }; }
   for(const w of c.wires || []) if(typeof w[3] === 'string'){ const to = (c.nodes || [])[w[2] - 1]; if(to) w[3] = paramPort(to[0], w[3]); }
+
+
+
+  c.nodes.forEach((nd, i) => { if(nd[0] !== 'knob') return; const p = sliders[(+nd[1].slot || 1) - 1]; if(!p || p.ticks) return;
+    for(const w of c.wires || []){ if(w[0] !== i + 1) continue; const to = c.nodes[w[2] - 1], st = to && STEPS[to[0]]; if(!st) continue;
+      const key = st.paramPorts[w[3] - st.dataIns - 1], par = key && st.params.find(q => q[0] === key), o = par && par[4];
+      if(!o || !(o.bands || o.marks)) continue;
+      const [lo, hi] = String(to[1]['~' + key] || `${o.min},${o.max}`).split(',').map(Number);
+      const at = o.bands ? o.bands.map((_, b) => o.min + (b + 0.5)/o.bands.length*(o.max - o.min)) : o.marks;
+      const inside = at.map((m, b) => [(m - lo)/(hi - lo), b]).filter(([f]) => f > -0.001 && f < 1.001);
+      if(inside.length < 2) continue;
+      p.ticks = inside.map(([f]) => Math.round(p.min + Math.max(0, Math.min(1, f))*(p.max - p.min)));
+      if(o.bands) p.names = inside.map(([, b]) => o.bands[b]);
+      break; }
+  });
 }
 
 
@@ -25540,6 +25643,7 @@ const UI_STRINGS = {
   'label.opacity':                             "Opacity",
   'label.controls':                            "Controls",
   'label.zoom':                                "Zoom",
+  'label.hapticsToggle':                       "Haptics",
   'label.blend_mode':                          "Blend Mode",
   'label.light_direction':                     "Light Direction",
   'label.camera':                              "Camera",
@@ -28984,6 +29088,7 @@ const MURMUR_FUNCTIONS = [
   { id: 'cardOpen',       group: 'Moving around', label: 'Open a card',            where: 'A folded section' },
   { id: 'cardFold',       group: 'Moving around', label: 'Fold a card',            where: 'A folded section' },
   { id: 'checkbox',       group: 'Settings',      label: 'Tick a checkbox',        where: 'Any checkbox' },
+  { id: 'detent',         group: 'Settings',      label: 'A knob crosses a mark',  where: 'The surface\'s knobs and faders, at each mark (and their ends)' },
   { id: 'select',         group: 'Settings',      label: 'Choose from a menu',     where: 'Any drop-down' },
   { id: 'lock',           group: 'Settings',      label: 'Lock a setting',         where: 'The padlock beside a control' },
   { id: 'unlock',         group: 'Settings',      label: 'Unlock a setting',       where: 'The padlock beside a control' },
@@ -29070,7 +29175,7 @@ const MURMUR_DESIGN = {
     earth:    { name: 'Earth', events: [{ inst: 'tine', kind: 'note', notes: [7], at: 0, gap: 0, level: 0.35 }] },
   },
   map: {
-    tab: null, cardOpen: null, cardFold: null, checkbox: null, select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
+    tab: null, cardOpen: null, cardFold: null, checkbox: null, detent: 'tick', select: null, lock: 'tick', unlock: 'tick', dialRandom: null, soundOn: 'arrive',
     preset: 'arrive', reroll: null, summonType: 'summon', summonBackdrop: 'summon',
     readingFire: null, readingWater: null, readingWind: null, readingEarth: null,
     spellCreate: 'keep', spellApply: 'arrive', spellShare: null, spellDissolve: null, poemRecord: 'keep', saveImage: 'done',
@@ -29441,7 +29546,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · c845bb8";
+const STAMP = "2026-10-20 · 14c8d0a";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -37377,7 +37482,8 @@ function addAngleSnap(input){
 function setKnobTicks(slider, i, def){
   const btn = () => slider._snapBtn;
   const hideBtn = () => { if(btn() && btn().style){ btn().style.display = 'none'; btn().setAttribute('aria-pressed', 'false'); } };
-  slider.step = String(def.step || 1); if(slider.dataset) delete slider.dataset.snapTicks;
+
+  slider.step = String(def.step || 1); if(slider.dataset){ delete slider.dataset.snapTicks; delete slider.dataset.ticks; }
   if(def.key === 'angle'){
     addAngleSnap(slider); if(slider.setAttribute) slider.setAttribute('list', 'angleTicks');
     if(btn()){ btn().textContent = '∡'; btn().title = 'Snap to 15°'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); }
@@ -38005,10 +38111,14 @@ function paintLayerBar(){
 function syncBaseUi(){ if(!lowerOn() && state.layers.editing === 'lower') editLayer('upper'); paintLayerBar(); }
 
 
+
 function paintLayerWords(){ const lower = state.layers && state.layers.editing === 'lower', chk = id => !!($(id) && $(id).checked);
   const grey = (id, off) => { const el = $(id); if(!el) return; el.disabled = off; if(el.closest){ const row = el.closest('.check-row'); if(row && row.classList) row.classList.toggle('off', off); } };
   grey('textureShapeAware', !lower && !chk('textureTextAware')); grey('textureTextCut', lower && chk('textureTextBlend'));
-  grey('textureShapeStrength', !chk('textureShapeAware') || !!($('textureShapeAware') || {}).disabled); }
+  const strengthOff = !chk('textureShapeAware') || !!($('textureShapeAware') || {}).disabled;
+  grey('textureShapeStrength', strengthOff);
+
+  const sf = $('textureShapeStrength'), row = sf && sf.closest && sf.closest('.field'); if(row && row.classList) row.classList.toggle('hidden-off', strengthOff); }
  
 function readingOf(L, ui){
   if(!L || !ui || !ui.element) return '';
@@ -39333,6 +39443,8 @@ function syncTextureParams(useDefaults){
 
 
     setKnobTicks(slider, i, def);
+
+    if(slider.dataset) slider.dataset.def = String(def.def); slider._skinNames = def.names || []; slider._skinAs = def.as || null;
     if(useDefaults || slider.value === '' || +slider.value < def.min || +slider.value > def.max){
       slider.value = def.def;
     }
@@ -39341,6 +39453,7 @@ function syncTextureParams(useDefaults){
   });
 
   { const c = $('texControlsCount'), n = defs.filter(d => d && !d.hidden).length; if(c) c.textContent = n ? `${n} slider${n === 1 ? '' : 's'}` : ''; }
+  layoutControls();
   syncCurveControls();
 }
 
@@ -39621,6 +39734,296 @@ function openTileStamp(value){
   if(v.startsWith('kept:') || !v) return '';
   if(v !== k){ const g = athanorStarter(k); return g ? keptHash(JSON.stringify(g)) + '|' + SWATCH_STAMP : ''; }
   return surfaceTiles ? surfaceTiles.stamp(v) : '';
+}
+
+
+/* ==== uiSkins.js ==== */
+const SK_NS = 'http://www.w3.org/2000/svg';
+
+const SK_SWEEP = 135;
+
+
+
+const SKIN_FEEL = { knobTravel: 200, tiers: [[0, 1], [24, 1/2], [72, 1/4], [140, 1/10]], tierHold: 300, detent: 0.02, doubleTapMs: 320, faderPad: 10 };
+
+
+
+let skHapticsOn = true, skLastBuzz = 0, skinSound = null;
+function setHaptics(on){ skHapticsOn = !!on; }
+ 
+function setSkinSound(fn){ skinSound = typeof fn === 'function' ? fn : null; }
+function haptic(kind){
+  const now = Date.now(); if(now - skLastBuzz < 50) return; skLastBuzz = now;
+  if(skinSound) try { skinSound(kind); } catch(e){}
+  if(!skHapticsOn) return;
+  try { if(typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(kind === 'limit' ? [10, 40, 10] : kind === 'detent' ? 15 : 10); } catch(e){}
+}
+
+
+const skRange = input => { const lo = +input.min || 0, hi = +input.max || 100; return [lo, hi > lo ? hi : lo + 1]; };
+const skFrac = input => { const [lo, hi] = skRange(input); return Math.max(0, Math.min(1, (+input.value - lo)/(hi - lo))); };
+const skTicks = input => ((input && input.dataset && input.dataset.ticks) || '').split(',').filter(Boolean).map(Number).filter(n => isFinite(n));
+const skNearest = (list, v) => list.reduce((b, t) => Math.abs(t - v) < Math.abs(b - v) ? t : b, list[0]);
+
+
+function skinSet(input, v, opts = {}){
+  const [lo, hi] = skRange(input), step = +input.step || 1, ticks = skTicks(input), def = input.dataset && input.dataset.def != null ? +input.dataset.def : null;
+  v = Math.max(lo, Math.min(hi, v));
+  if(input.dataset && input.dataset.snapTicks === '1' && ticks.length) v = skNearest(ticks, v);
+  else {
+    if(!ticks.length && def != null && opts.detent !== false && Math.abs(v - def) <= SKIN_FEEL.detent*(hi - lo)) v = def;
+    v = Math.round(v/step)*step;
+  }
+  const was = +input.value;
+  if(v === was) return false;
+  input.value = String(v);
+  if(v === lo || v === hi) haptic('limit');
+  else if(ticks.some(t => (was < t && v >= t) || (was > t && v <= t))) haptic('tick');
+  else if(def != null && !ticks.length && v === def) haptic('detent');
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  return true;
+}
+ 
+function skWatch(input, paint){
+  if(input._skinPaints){ input._skinPaints.add(paint); return; }
+  input._skinPaints = new Set([paint]);
+  const all = () => { for(const p of input._skinPaints) p(); };
+  const nat = typeof HTMLInputElement !== 'undefined' && Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  if(nat && nat.set) Object.defineProperty(input, 'value', { configurable: true, get(){ return nat.get.call(this); }, set(v){ nat.set.call(this, v); all(); } });
+  input.addEventListener('input', all);
+}
+function repaintSkins(){
+  for(let i = 1; i <= 8; i++){ const input = document.getElementById && document.getElementById('texP' + i); if(input && input._skinPaints) for(const p of input._skinPaints) p(); }
+}
+
+
+const skAt = (r, deg) => { const a = deg*Math.PI/180; return [r*Math.sin(a), -r*Math.cos(a)]; };
+const skArc = (r, d0, d1) => { if(d1 - d0 < 0.01) return ''; const [x0, y0] = skAt(r, d0), [x1, y1] = skAt(r, d1);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${d1 - d0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+const skSvg = (tag, cls) => { const e = document.createElementNS(SK_NS, tag); if(cls) e.setAttribute('class', cls); return e; };
+
+const skLimb = input => { const t = skTicks(input); if(t.length) return { marks: t, named: true };
+  const [lo, hi] = skRange(input); return { marks: Array.from({ length: 11 }, (_, k) => lo + k/10*(hi - lo)), named: false }; };
+
+
+let skShown = null, skHideT = null;
+function skDisplay(){ return typeof document !== 'undefined' && document.getElementById ? document.getElementById('texReadout') : null; }
+function skLabel(input){ const l = document.getElementById(input.id + 'Label'); if(!l) return '';
+  return [...l.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(); }
+
+
+function showReadout(input, opts = {}){
+  const d = skDisplay(); if(!d) return;
+  clearTimeout(skHideT); skShown = input;
+  const val = (document.getElementById(input.id + 'Val') || {}).textContent || input.value;
+  const t = skTicks(input), names = input._skinNames || [];
+  let around = '';
+  if(opts.moving && names.length > 1){ const k = t.indexOf(skNearest(t, +input.value));
+    around = `<span class="sr-near">${skEsc(names[k - 1] || '')}</span><span class="sr-near sr-next">${skEsc(names[k + 1] || '')}</span>`; }
+  d.innerHTML = `<button type="button" class="sr-step" data-step="-1" aria-label="Less">−</button>`
+    + `<span class="sr-name">${skEsc(skLabel(input))}</span><span class="sr-val">${skEsc(val)}</span>${around}`
+    + (opts.tier && opts.tier < 1 ? `<span class="sr-tier">${opts.tier === 0.5 ? '½' : opts.tier === 0.25 ? '¼' : 'fine'}</span>` : '')
+    + `<button type="button" class="sr-step" data-step="1" aria-label="More">+</button>`;
+  d.classList.add('on');
+  if(!opts.hold) skHideT = setTimeout(() => { d.classList.remove('on'); skShown = null; }, opts.stay || 4000);
+}
+const skEsc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+
+function readoutStep(dir){
+  const input = skShown; if(!input || state.locks.has(input.id)) return;
+  const t = skTicks(input), [lo, hi] = skRange(input);
+  if(t.length && input.dataset.snapTicks === '1'){ const k = t.indexOf(skNearest(t, +input.value)); skinSet(input, t[Math.max(0, Math.min(t.length - 1, k + dir))]); }
+  else skinSet(input, +input.value + dir*(+input.step || 1)*((hi - lo) > 200 ? 5 : 1), { detent: false });
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  showReadout(input);
+}
+
+
+
+function skDrag(el, input, mode){
+  let st = null, lastTap = 0;
+  el.addEventListener('pointerdown', e => {
+    if(state.locks.has(input.id)){ showReadout(input); return; }
+    e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch(err){}
+    const now = Date.now();
+    if(now - lastTap < SKIN_FEEL.doubleTapMs && input.dataset && input.dataset.def != null){
+      lastTap = 0; skinSet(input, +input.dataset.def); haptic('detent'); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); return; }
+    st = { id: e.pointerId, at: now, x: e.clientX, y: e.clientY, v: +input.value, moved: false, tier: 1, tierAt: 0, hist: [] };
+    el.classList.add('turning'); showReadout(input, { hold: true });
+  });
+  el.addEventListener('pointermove', e => {
+    if(!st || e.pointerId !== st.id) return;
+    const side = Math.abs(e.clientX - st.x), want = SKIN_FEEL.tiers.reduce((t, [px, f]) => side >= px ? f : t, 1), now = Date.now();
+    if(want !== st.tier){ if(!st.tierAt) st.tierAt = now; if(now - st.tierAt >= SKIN_FEEL.tierHold){ st.tier = want; st.tierAt = 0;
+
+      st.v = +input.value; st.y = e.clientY; } } else st.tierAt = 0;
+    const [lo, hi] = skRange(input), dy = st.y - e.clientY;
+    if(Math.abs(dy) > 3) st.moved = true;
+
+    const travel = mode === 'fader' ? Math.max(80, (el.getBoundingClientRect().height || 160)*0.88) : SKIN_FEEL.knobTravel;
+    st.hist.push([now, +input.value]); if(st.hist.length > 12) st.hist.shift(); st.lastMove = Math.hypot(e.clientX - (st.px ?? e.clientX), e.clientY - (st.py ?? e.clientY)); st.px = e.clientX; st.py = e.clientY;
+    skinSet(input, st.v + dy/travel*(hi - lo)*st.tier);
+    el.classList.toggle('fine', st.tier < 1);
+    showReadout(input, { hold: true, moving: true, tier: st.tier });
+  });
+  const end = e => {
+    if(!st || (e && e.pointerId !== st.id)) return;
+
+    const now = Date.now(), before = st.hist.filter(([t]) => now - t >= 60).pop();
+    if(st.moved && before && (st.lastMove ?? 9) < 3 && Math.abs(+input.value - before[1]) <= (+input.step || 1)*2) skinSet(input, before[1], { detent: false });
+    const moved = st.moved;
+
+    lastTap = moved ? 0 : st.at;
+    st = null; el.classList.remove('turning', 'fine');
+    if(moved) input.dispatchEvent(new Event('change', { bubbles: true }));
+    showReadout(input, { stay: moved ? 1200 : 4000 });
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+
+
+function knobSkin(input){
+  if(input._knobSkin) return input._knobSkin;
+  if(typeof document.createElementNS !== 'function') return null;
+  const wrap = document.createElement('div'); wrap.className = 'sk-knob'; wrap.setAttribute('aria-hidden', 'true');
+  const svg = skSvg('svg'); svg.setAttribute('viewBox', '-50 -50 100 100');
+  const ring = skSvg('path', 'sk-track'), fill = skSvg('path', 'sk-arc'), limb = skSvg('g', 'sk-ticks'), hand = skSvg('g', 'sk-hand');
+
+  hand.innerHTML = '<line x1="0" y1="-19" x2="0" y2="-25"/><path d="M0 -33 L4.2 -28 L0 -23 L-4.2 -28 Z"/>';
+  const val = skSvg('text', 'sk-val'); val.setAttribute('y', '5');
+  ring.setAttribute('d', skArc(36, -SK_SWEEP, SK_SWEEP));
+  svg.append(ring, limb, fill, hand, val); wrap.appendChild(svg);
+  const paint = () => {
+    const f = skFrac(input), d = -SK_SWEEP + 2*SK_SWEEP*f, [lo, hi] = skRange(input), { marks, named } = skLimb(input);
+    fill.setAttribute('d', skArc(36, -SK_SWEEP, d));
+    hand.setAttribute('transform', `rotate(${d.toFixed(1)})`);
+    const def = input.dataset && input.dataset.def != null ? +input.dataset.def : null, key = marks.join(',') + '|' + def;
+    if(limb._key !== key){ limb._key = key;
+      limb.classList.toggle('dense', marks.length > 12);
+      limb.innerHTML = marks.map(v => { const [x, y] = skAt(45, -SK_SWEEP + 2*SK_SWEEP*(v - lo)/(hi - lo));
+        const big = !named && def != null && Math.abs(v - def) < (hi - lo)/20;
+        return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${marks.length > 12 ? 1.4 : named ? 2.3 : big ? 2.3 : 1.5}" class="${named ? 'named' : big ? 'def' : ''}"/>`; }).join(''); }
+    const near = named ? skNearest(marks, +input.value) : null;
+    [...limb.children].forEach((c, i) => c.classList.toggle('on', named && marks[i] === near));
+
+    const said = ((document.getElementById(input.id + 'Val') || {}).textContent || '').trim();
+    val.textContent = said && said.length <= 5 ? said : String(Math.round(+input.value));
+    val.classList.toggle('long', val.textContent.length > 3);
+    wrap.classList.toggle('locked', state.locks.has(input.id));
+  };
+  skDrag(wrap, input, 'knob');
+  skWatch(input, paint); paint();
+  input._knobSkin = wrap;
+  return wrap;
+}
+
+
+function faderSkin(input){
+  if(input._faderSkin) return input._faderSkin;
+  if(typeof document.createElementNS !== 'function') return null;
+  const wrap = document.createElement('div'); wrap.className = 'sk-fader'; wrap.setAttribute('aria-hidden', 'true');
+  const strip = document.createElement('div'); strip.className = 'sk-strip';
+  const svg = skSvg('svg'); svg.setAttribute('viewBox', '0 0 30 160'); svg.setAttribute('preserveAspectRatio', 'none');
+  const P = SKIN_FEEL.faderPad, Y = f => 160 - P - f*(160 - 2*P);
+  const track = skSvg('line', 'sk-track'), fill = skSvg('line', 'sk-arc'), limb = skSvg('g', 'sk-ticks'), cap = skSvg('g', 'sk-cap');
+  track.setAttribute('x1', 18); track.setAttribute('x2', 18); track.setAttribute('y1', P); track.setAttribute('y2', 160 - P);
+  fill.setAttribute('x1', 18); fill.setAttribute('x2', 18); fill.setAttribute('y2', 160 - P);
+  cap.innerHTML = '<line x1="8" y1="0" x2="28" y2="0"/><path d="M18 -4.5 L22.5 0 L18 4.5 L13.5 0 Z"/>';
+  svg.append(track, limb, fill, cap); strip.appendChild(svg); wrap.appendChild(strip);
+  const names = document.createElement('div'); names.className = 'sk-names'; wrap.appendChild(names);
+  const paint = () => {
+    const f = skFrac(input), [lo, hi] = skRange(input), { marks, named } = skLimb(input), nm = input._skinNames || [];
+    fill.setAttribute('y1', Y(f).toFixed(2)); cap.setAttribute('transform', `translate(0 ${Y(f).toFixed(2)})`);
+    const def = input.dataset && input.dataset.def != null ? +input.dataset.def : null, key = marks.join(',') + '|' + def + '|' + nm.join(',');
+    if(limb._key !== key){ limb._key = key;
+      limb.classList.toggle('dense', marks.length > 12);
+      limb.innerHTML = marks.map(v => { const big = !named && def != null && Math.abs(v - def) < (hi - lo)/20;
+        return `<circle cx="5" cy="${Y((v - lo)/(hi - lo)).toFixed(2)}" r="${marks.length > 12 ? 1.3 : named || big ? 2.2 : 1.4}" class="${named ? 'named' : big ? 'def' : ''}"/>`; }).join('');
+
+      names.innerHTML = named && nm.length && nm.length <= 8 ? marks.map((v, i) => `<button type="button" tabindex="-1" style="top:${(Y((v - lo)/(hi - lo))/160*100).toFixed(2)}%">${skEsc(nm[i] || '')}</button>`).join('') : '';
+      wrap.classList.toggle('named', !!names.innerHTML); }
+    const near = named ? skNearest(marks, +input.value) : null;
+    [...limb.children].forEach((c, i) => c.classList.toggle('on', named && marks[i] === near));
+    [...names.children].forEach((c, i) => c.classList.toggle('on', named && marks[i] === near));
+    wrap.classList.toggle('locked', state.locks.has(input.id));
+  };
+  skDrag(strip, input, 'fader');
+  names.addEventListener('click', e => { const i = [...names.children].indexOf(e.target), t = skTicks(input);
+    if(i >= 0 && t[i] != null && !state.locks.has(input.id)){ skinSet(input, t[i]); input.dispatchEvent(new Event('change', { bubbles: true })); showReadout(input); } });
+  skWatch(input, paint); paint();
+  input._faderSkin = wrap;
+  return wrap;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+const RACK = { cols: 4, rows: 2 };
+function rackPlan(fields, width, mode){
+  const shown = fields.filter(f => f.shown);
+  if(mode === 'rows' || (mode !== 'rack' && shown.length <= 3)) return shown.map(f => ({ ...f, as: 'row' }));
+  const said = f => f.declared === 'slider' ? 'row' : f.declared;
+  const cells = RACK.cols*RACK.rows;
+  let sliders = shown.filter(f => said(f) === 'row');
+  const rest = shown.filter(f => !sliders.includes(f));
+
+  const oneRow = rest.length <= RACK.cols;
+  let faders = oneRow ? [] : rest.filter(f => said(f) === 'fader' || (!f.declared && f.ticks >= 2));
+
+
+  const most = Math.min(RACK.cols, Math.max(2, cells - rest.length));
+  if(faders.length > most){ const keep = [...faders.filter(f => said(f) === 'fader'), ...faders.filter(f => said(f) !== 'fader').sort((a, b) => a.ticks - b.ticks)].slice(0, most); faders = faders.filter(f => keep.includes(f)); }
+  let knobs = rest.filter(f => !faders.includes(f) && !sliders.includes(f));
+
+  while(knobs.length + 2*faders.length > cells && knobs.length){ const k = [...knobs].reverse().find(f => !f.declared) || knobs[knobs.length - 1]; knobs = knobs.filter(f => f !== k); sliders = [...sliders, k]; }
+
+  if(faders.length && knobs.length + 2*faders.length <= RACK.cols){ knobs = [...knobs, ...faders]; faders = []; }
+
+  const knobCols = !knobs.length ? 0 : !faders.length && knobs.length <= RACK.cols ? knobs.length : Math.ceil(knobs.length/RACK.rows);
+  const fcol = new Map(faders.map((f, k) => [f, knobCols + 1 + k]));
+  const plan = shown.map(f => ({ ...f, as: faders.includes(f) ? 'fader' : knobs.includes(f) ? 'knob' : 'row', col: fcol.get(f) || null }));
+  plan.knobCols = knobCols; plan.faders = faders.length;
+  return plan;
+}
+let skRackMode = 'auto';
+function setRackMode(m){ skRackMode = ['auto', 'rows', 'rack'].includes(m) ? m : 'auto'; }
+function getRackMode(){ return skRackMode; }
+
+
+function layoutControls(){
+  const fold = typeof document !== 'undefined' && document.getElementById && document.getElementById('texControls');
+  if(!fold || !fold.classList || typeof document.createElementNS !== 'function') return;
+  const fields = [1, 2, 3, 4, 5, 6, 7, 8].map(i => { const input = document.getElementById('texP' + i), field = input && input.parentElement;
+    return { i, input, field, shown: !!field && field.style.display !== 'none', ticks: skTicks(input).length, declared: input._skinAs || null }; }).filter(f => f.input && f.field);
+  const plan = rackPlan(fields, fold.clientWidth || 360, skRackMode);
+  fold.classList.toggle('rack', plan.some(p => p.as !== 'row'));
+
+  const body = document.getElementById('texControlsBody');
+  if(body && body.style) body.style.gridTemplateColumns = plan.some(p => p.as !== 'row')
+    ? [...Array(plan.knobCols || 0).fill('minmax(64px, 1fr)'), ...Array(plan.faders || 0).fill('auto')].join(' ') || '1fr' : '';
+
+  if(body && body.style) body.style.gridTemplateRows = plan.faders || plan.filter(p => p.as === 'knob').length > RACK.cols ? 'minmax(92px, auto) minmax(92px, auto)' : '';
+  for(const f of fields){
+    const p = plan.find(q => q.i === f.i), as = p ? p.as : 'row';
+    f.field.classList.toggle('as-knob', as === 'knob'); f.field.classList.toggle('as-fader', as === 'fader'); f.field.classList.toggle('as-row', as === 'row');
+
+    if(f.field.style){ f.field.style.gridColumn = as === 'fader' && p.col ? String(p.col) : ''; f.field.style.gridRow = as === 'fader' ? '1 / span 2' : ''; }
+    for(const [kind, make] of [['knob', knobSkin], ['fader', faderSkin]]){
+      const sk = f.input['_' + kind + 'Skin'];
+      if(as === kind){ const k = make(f.input); if(k && k.parentNode !== f.field) f.field.insertBefore(k, f.field.firstChild); }
+      else if(sk && sk.parentNode) sk.parentNode.removeChild(sk);
+    }
+  }
+  repaintSkins();
 }
 
 
@@ -40516,6 +40919,25 @@ $('textureType').addEventListener('change', ()=>{
 });
 syncTextureParams(true);
 
+
+
+
+{ const ro = $('texReadout'); if(ro && ro.addEventListener) ro.addEventListener('click', e => { const b = e.target && e.target.closest ? e.target.closest('[data-step]') : null; if(b) readoutStep(+b.dataset.step); });
+  const MODES = ['auto', 'rack', 'rows'], GLYPH = { auto: '◎', rack: '⊚', rows: '☰' }, btn = $('rackModeBtn');
+  const paintMode = () => { if(btn){ btn.textContent = GLYPH[getRackMode()]; btn.setAttribute('aria-label', 'Layout: ' + getRackMode()); } };
+  try { const m = localStorage.getItem('uv.rack.v1'); if(m) setRackMode(m); } catch(e){}
+  paintMode();
+  if(btn && btn.addEventListener) btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation();
+    setRackMode(MODES[(MODES.indexOf(getRackMode()) + 1) % MODES.length]); try { localStorage.setItem('uv.rack.v1', getRackMode()); } catch(err){}
+    paintMode(); layoutControls(); });
+  const hap = $('hapticsToggle');
+  if(hap){ try { const v = localStorage.getItem('uv.haptics.v1'); if(v !== null) hap.checked = v === '1'; } catch(e){}
+    setHaptics(hap.checked);
+    if(hap.addEventListener) hap.addEventListener('change', () => { setHaptics(hap.checked); try { localStorage.setItem('uv.haptics.v1', hap.checked ? '1' : '0'); } catch(e){} }); }
+  setSkinSound(() => { if(murmur && murmur.enabled) murmur.play('detent'); });
+  if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => layoutControls());
+  layoutControls();
+}
 
 
 { const fold = $('texControls');

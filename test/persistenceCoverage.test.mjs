@@ -25,6 +25,7 @@ const EXEMPT = {
   forgeChannel: 'which channel the Athanor\'s preview shows: a view of the graph while working on it, never part of an image',
   soundToggle:  'interface sounds on or off (murmur.js): this browser\'s preference, kept in localStorage, not part of an image',
   soundVolume:  'interface sound volume: this browser\'s preference, kept in localStorage, not part of an image',
+  hapticsToggle: 'haptic ticks on or off: this browser\'s preference, kept in localStorage, not part of an image',
   hintsToggle:  'hints written out under every section: this browser\'s preference, kept in localStorage, not part of an image',
   fullPreview:  'a view preference (the preview at full size), not part of an image',
   advancedJson: 'the Workbench JSON box IS the saved look',

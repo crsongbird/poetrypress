@@ -49,6 +49,7 @@ import { deriveThemePalette } from './palette.js';
 import { installEditor } from './editor.js';
 import { DEFAULTS } from './tunables.js';
 import { applyStrings, PML_GUIDE, PICKER, CHOOSER, DIE, FORGE_BAR } from './strings.js';
+import { layoutControls, readoutStep, setRackMode, getRackMode, setHaptics, setSkinSound } from './uiSkins.js';
 import { state } from './uiState.js';
 import { setWorking } from './uiWorking.js';
 import { clickId, commitHistory, commitSoon, notePoemSoon, poemHistoryNow, setFilmstrip, showShortcuts, stepAny } from './uiHistory.js';
@@ -826,6 +827,25 @@ $('textureType').addEventListener('change', ()=>{
 });
 syncTextureParams(true);
 
+
+// THE SKINS (uiSkins.js): the display line's − and + nudge what it shows; the layout chosen (rows, a rack, or as the count
+// decides) and haptics kept by this browser; a tick of sound with each mark while Sound is on; laid out again on a resize
+{ const ro = $('texReadout'); if(ro && ro.addEventListener) ro.addEventListener('click', e => { const b = e.target && e.target.closest ? e.target.closest('[data-step]') : null; if(b) readoutStep(+b.dataset.step); });
+  const MODES = ['auto', 'rack', 'rows'], GLYPH = { auto: '◎', rack: '⊚', rows: '☰' }, btn = $('rackModeBtn');
+  const paintMode = () => { if(btn){ btn.textContent = GLYPH[getRackMode()]; btn.setAttribute('aria-label', 'Layout: ' + getRackMode()); } };
+  try { const m = localStorage.getItem('uv.rack.v1'); if(m) setRackMode(m); } catch(e){}
+  paintMode();
+  if(btn && btn.addEventListener) btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation();
+    setRackMode(MODES[(MODES.indexOf(getRackMode()) + 1) % MODES.length]); try { localStorage.setItem('uv.rack.v1', getRackMode()); } catch(err){}
+    paintMode(); layoutControls(); });
+  const hap = $('hapticsToggle');
+  if(hap){ try { const v = localStorage.getItem('uv.haptics.v1'); if(v !== null) hap.checked = v === '1'; } catch(e){}
+    setHaptics(hap.checked);
+    if(hap.addEventListener) hap.addEventListener('change', () => { setHaptics(hap.checked); try { localStorage.setItem('uv.haptics.v1', hap.checked ? '1' : '0'); } catch(e){} }); }
+  setSkinSound(() => { if(murmur && murmur.enabled) murmur.play('detent'); });
+  if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', () => layoutControls());
+  layoutControls();
+}
 
 // THE SURFACE'S CONTROLS fold open or shut, as this browser left it (a working preference, not part of a look)
 { const fold = $('texControls');

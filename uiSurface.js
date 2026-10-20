@@ -20,6 +20,7 @@ import { keptByValue, openAthanorNow, paintShelfOptions, revealSurface, whenText
 import { openSheetMenu, withLocksPreserved } from './uiLocks.js';
 import { setDrafting } from './textureService.js';
 import { state } from './uiState.js';
+import { layoutControls } from './uiSkins.js';
 import { CHOOSERS, canvas, setColorField, surfaceChooser, surfaceTiles } from './appEvents.js';
 import { modalPrompt } from './uiControls.js';
 
@@ -48,6 +49,8 @@ export function syncTextureParams(useDefaults){
     // (Lotus's species, Linen's weaves, bokeh shapes) gets those and ⊹, which
     // locks it to the nearest tick; any other knob gets neither
     setKnobTicks(slider, i, def);
+    // (what a skin needs: the default a double tap returns to, the marks' names)
+    if(slider.dataset) slider.dataset.def = String(def.def); slider._skinNames = def.names || []; slider._skinAs = def.as || null;
     if(useDefaults || slider.value === '' || +slider.value < def.min || +slider.value > def.max){
       slider.value = def.def;
     }
@@ -56,6 +59,7 @@ export function syncTextureParams(useDefaults){
   });
   // the drawer says what it holds, shut or open
   { const c = $('texControlsCount'), n = defs.filter(d => d && !d.hidden).length; if(c) c.textContent = n ? `${n} slider${n === 1 ? '' : 's'}` : ''; }
+  layoutControls();
   syncCurveControls();
 }
 // THE CURVE CONTROLS (ROADMAP D4, Filter Forge's Curve control): a graph's Curve Control parts that reach its Surface,

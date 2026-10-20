@@ -3,6 +3,7 @@
  *
  *   node tools/phone-shot.mjs out.png [--tex meadow] [--tab page] [--at texP1] [--width 412]
  *     --tab   the tab to open (write, type, style, page, more)    --at  scroll the element with this id into view
+ *     --el    shoot only the element with this id (e.g. texControls); --tex may list several surfaces, one shot each (out-<tex>.png)
  * It also prints any page error, and where the element --at sits (its left and right edge against the screen's width).
  */
 import http from 'http'; import fs from 'fs'; import path from 'path'; import { createRequire } from 'module';
@@ -17,6 +18,20 @@ const browser = await pw.chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: +arg('--width', 412), height: 860 }, deviceScaleFactor: 2.6, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
 const page = await ctx.newPage(), errs = []; page.on('pageerror', e => errs.push(String(e)));
 await page.goto(`http://127.0.0.1:${server.address().port}/index.html`); await page.waitForTimeout(1200);
+const texes = (arg('--tex') || '').split(',').filter(Boolean), EL = arg('--el');
+if(texes.length > 1 || EL){
+  await page.click(`.tab-btn[data-tab="${arg('--tab', 'page')}"]`); await page.waitForTimeout(600);
+  for(const t of texes.length ? texes : ['']){
+    if(t) await page.evaluate(t => { const s = document.getElementById('textureType'); s.value = t; s.dispatchEvent(new Event('change', { bubbles: true })); }, t);
+    await page.waitForTimeout(500);
+    const file = texes.length > 1 ? OUT.replace(/\.png$/, '') + '-' + t + '.png' : OUT;
+    const el = EL ? await page.$('#' + EL) : null;
+    if(el){ await el.scrollIntoViewIfNeeded(); await el.screenshot({ path: file }); } else await page.screenshot({ path: file });
+    console.log('wrote', file);
+  }
+  console.log(errs.length ? 'ERRORS: ' + errs.join(' | ') : '(no page errors)');
+  await browser.close(); server.close(); process.exit(0);
+}
 if(arg('--tex')) await page.evaluate(t => { const s = document.getElementById('textureType'); s.value = t; s.dispatchEvent(new Event('change', { bubbles: true })); }, arg('--tex'));
 await page.click(`.tab-btn[data-tab="${arg('--tab', 'page')}"]`); await page.waitForTimeout(800);
 const at = arg('--at');

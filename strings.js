@@ -128,6 +128,7 @@ export const UI_STRINGS = {
   'label.opacity':                             "Opacity",
   'label.controls':                            "Controls",
   'label.zoom':                                "Zoom",
+  'label.hapticsToggle':                       "Haptics",
   'label.blend_mode':                          "Blend Mode",
   'label.light_direction':                     "Light Direction",
   'label.camera':                              "Camera",

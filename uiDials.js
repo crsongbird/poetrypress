@@ -393,7 +393,8 @@ export function addAngleSnap(input){
 export function setKnobTicks(slider, i, def){
   const btn = () => slider._snapBtn;
   const hideBtn = () => { if(btn() && btn().style){ btn().style.display = 'none'; btn().setAttribute('aria-pressed', 'false'); } };
-  slider.step = String(def.step || 1); if(slider.dataset) delete slider.dataset.snapTicks;
+  // (the marks of the surface before go too: a slider kept another surface's marks, and its skin drew them — 2026-10-19)
+  slider.step = String(def.step || 1); if(slider.dataset){ delete slider.dataset.snapTicks; delete slider.dataset.ticks; }
   if(def.key === 'angle'){
     addAngleSnap(slider); if(slider.setAttribute) slider.setAttribute('list', 'angleTicks');
     if(btn()){ btn().textContent = '∡'; btn().title = 'Snap to 15°'; btn().style.display = ''; btn().setAttribute('aria-pressed', 'false'); }

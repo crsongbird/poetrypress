@@ -169,6 +169,7 @@ const ORDER = [
   'uiLayout.js',          // page size, preview scale, pan and zoom, tabs, phone layout, focus mode
   'uiLook.js',            // a look saved and restored, presets, the lit look
   'uiSurface.js',         // the surface's sliders, tools, readings and menus
+  'uiSkins.js',             // the surface's controls as knobs and faders, haptics, the display line
   'uiControls.js',        // the PML editor, effects, border, moon, frame, seeds, theme, sounds, Grimoire
   'appEvents.js',         // entry point, needs everything
 ];
