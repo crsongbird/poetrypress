@@ -2383,8 +2383,7 @@ button.preset-group-head[aria-expanded="true"]::before{ transform:rotate(90deg);
 button.preset-group-head:hover .pg-name{ color:var(--text-main); }
 button.preset-group-head:focus-visible{ outline:1px solid var(--accent-2); outline-offset:2px; }
 .preset-group-head .pg-glyph{ font-size:14px; letter-spacing:0; }
-.preset-group-head .pg-name{ flex:1 1 auto; }
-.preset-group-head .pg-count{ color:var(--text-dim); letter-spacing:.04em; font-size:10.5px; }
+.preset-group-head .pg-name{ flex:0 0 auto; margin-right:10px; }   /* (the rule after it starts right after the name) */
 .preset-btn[hidden], .preset-group-head[hidden]{ display:none; }
 
 /* a REQUIRED input still empty (Filter Forge's red port): the part has nothing to work on yet */
@@ -29437,7 +29436,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · 879bb82";
+const STAMP = "2026-10-20 · 59c580b";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -38986,7 +38985,7 @@ function groupTile(tile, group){ if(tile.dataset) tile.dataset.group = group; re
 function groupHead(g){
   const hd = document.createElement('button'); hd.type = 'button'; hd.className = 'preset-group-head';
   if(hd.dataset) hd.dataset.group = g.name;
-  for(const [cls, text] of [['pg-glyph', g.glyph || ''], ['pg-name', g.name], ['pg-count', String((g.presets || []).length)]]){
+  for(const [cls, text] of [['pg-glyph', g.glyph || ''], ['pg-name', g.name]]){
     const sp = document.createElement('span'); sp.className = cls; sp.textContent = text; hd.appendChild(sp); }
   const open = !presetFolded().has(g.name); hd.setAttribute('aria-expanded', String(open));
   if(hd.addEventListener) hd.addEventListener('click', () => {
@@ -39014,10 +39013,9 @@ function filterPresets(){
     if(hit) shown.set(g, (shown.get(g) || 0) + 1);
   });
   presetGrid.querySelectorAll('.preset-group-head').forEach(h => {
-    const g = h.dataset.group, n = shown.get(g) || 0, total = PRESET_GROUPS.find(x => x.name === g)?.presets.length || 0;
+    const g = h.dataset.group, n = shown.get(g) || 0;
     h.hidden = !!q && !n;
     h.setAttribute('aria-expanded', String(q ? true : !shut.has(g)));
-    const c = h.querySelector('.pg-count'); if(c) c.textContent = q ? n + ' / ' + total : total;
   });
   const none = $('presetNone'); if(none) none.hidden = !q || shown.size > 0;
 }

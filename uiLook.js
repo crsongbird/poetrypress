@@ -3,7 +3,7 @@
  *
  * Split from appEvents.js (its wiring, the listeners, stays there, in the order it runs).
  */
-import { $, FONTS, PRESETS, PRESET_GROUPS } from './appOptions.js';
+import { $, FONTS, PRESETS } from './appOptions.js';
 import { FRAME_DEFAULTS, lockablesIn, paintMasterLocks, paintMoons, paintSeedMoon, restoreLockState, restoreLocked, rollSection, snapshotLocked, syncLinkedBox, syncStopFields } from './uiLocks.js';
 import { LIGHT_KEPT_PARTS, LIGHT_TURNED, SURFACE_HUE_KEYS, capsFor, paramsFor } from './textureGenerators.js';
 import { PRESET_ACTS } from './strings.js';
@@ -524,7 +524,7 @@ export function groupTile(tile, group){ if(tile.dataset) tile.dataset.group = gr
 export function groupHead(g){
   const hd = document.createElement('button'); hd.type = 'button'; hd.className = 'preset-group-head';
   if(hd.dataset) hd.dataset.group = g.name;
-  for(const [cls, text] of [['pg-glyph', g.glyph || ''], ['pg-name', g.name], ['pg-count', String((g.presets || []).length)]]){
+  for(const [cls, text] of [['pg-glyph', g.glyph || ''], ['pg-name', g.name]]){   // (no count: Ruby, "not necessary")
     const sp = document.createElement('span'); sp.className = cls; sp.textContent = text; hd.appendChild(sp); }
   const open = !presetFolded().has(g.name); hd.setAttribute('aria-expanded', String(open));
   if(hd.addEventListener) hd.addEventListener('click', () => {
@@ -552,10 +552,9 @@ export function filterPresets(){
     if(hit) shown.set(g, (shown.get(g) || 0) + 1);
   });
   presetGrid.querySelectorAll('.preset-group-head').forEach(h => {
-    const g = h.dataset.group, n = shown.get(g) || 0, total = PRESET_GROUPS.find(x => x.name === g)?.presets.length || 0;
+    const g = h.dataset.group, n = shown.get(g) || 0;
     h.hidden = !!q && !n;
     h.setAttribute('aria-expanded', String(q ? true : !shut.has(g)));
-    const c = h.querySelector('.pg-count'); if(c) c.textContent = q ? n + ' / ' + total : total;
   });
   const none = $('presetNone'); if(none) none.hidden = !q || shown.size > 0;
 }

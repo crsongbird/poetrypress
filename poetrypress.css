@@ -2350,8 +2350,7 @@ button.preset-group-head[aria-expanded="true"]::before{ transform:rotate(90deg);
 button.preset-group-head:hover .pg-name{ color:var(--text-main); }
 button.preset-group-head:focus-visible{ outline:1px solid var(--accent-2); outline-offset:2px; }
 .preset-group-head .pg-glyph{ font-size:14px; letter-spacing:0; }
-.preset-group-head .pg-name{ flex:1 1 auto; }
-.preset-group-head .pg-count{ color:var(--text-dim); letter-spacing:.04em; font-size:10.5px; }
+.preset-group-head .pg-name{ flex:0 0 auto; margin-right:10px; }   /* (the rule after it starts right after the name) */
 .preset-btn[hidden], .preset-group-head[hidden]{ display:none; }
 
 /* a REQUIRED input still empty (Filter Forge's red port): the part has nothing to work on yet */
