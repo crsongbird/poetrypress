@@ -42,6 +42,7 @@ export const PK_SIZE = {
   pagoda: [20, 45, 10, 16], torii: [4, 12, 5, 12], castle: [18, 40, 20, 40], lighthouse: [12, 40, 4, 8], cathedral: [45, 150, 40, 70], mosque: [35, 70, 40, 70],
   clock: [40, 96, 8, 14], factory: [12, 25, 30, 60], watertower: [15, 35, 8, 14], capsule: [30, 60, 15, 25], megablock: [30, 50, 50, 100], geodome: [20, 55, 40, 110],
   observatory: [12, 40, 12, 40], turbine: [80, 160, 6, 8],
+  helper: [1.0, 1.5], drone: [0.5, 1.0], crawler: [0.6, 1.0], sentry: [1.8, 2.8], walker: [2.5, 4.5], derelict: [10, 22],
   rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8] };
 // a size in its range, tall specimens rarer (u: a draw from 0 to 1)
 export const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
@@ -478,6 +479,56 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
 
 // ---------------- ROCKS AND THE BUILDERS' WORKS ----------------
 // a boulder in three facets: its top catching the light, its lit side, its shadow side; and its shadow on the ground
+// ---------------- ROBOTS AND DROIDS (as life, where they belong) ----------------
+// Shape language, as games use it: round, soft and big-eyed is a friend (a helper on its wheel, a drone humming along,
+// a crawler tending the pipes); angular, spiked, red-eyed and low is a threat (a sentry on its tripod, a walker stalking);
+// and one giant, fallen long ago, kneels rusting in the ruins. Each drawn standing at (X, Y), h tall (a drone floats
+// above its spot), in the caller's lit colours; c.eye its eye's light (the world's), night how dark it is.
+export const PK_BOTS = { builders: ['helper', 'drone', 'crawler', 'walker'], cities: ['helper', 'drone', 'drone'], neon: ['drone', 'sentry', 'walker', 'helper'],
+  ruins: ['sentry', 'crawler', 'derelict', 'sentry'], wilds: ['helper', 'derelict'], magic: ['drone'] };
+export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
+  const sub = pkSub(R0), R = sub(1), sd = c.sd, eye = c.eye || c.glow, threat = kind === 'sentry' || kind === 'walker';
+  const eyeCol = threat ? pkMix([255, 60, 50], eye, 0.2) : eye, glowA = 0.5 + 0.5*night;
+  const dot = (ex, ey, r) => { pkGlow(x, ex, ey, r*4, eyeCol, 0.35*glowA); pkDisc(x, ex, ey, r, pkCss(pkMix(eyeCol, PK_WHITE, 0.4))); };
+  if(h > px(6)) pkFoot(x, X, Y, h*0.3, c);
+  if(kind === 'helper'){ // a round body on one wheel, a dome of a head, one big eye: it waves
+    const r = h*0.32; pkDisc(x, X, Y - r*0.5, r*0.5, pkCss(c.dark));
+    pkEll(x, X, Y - h*0.45, r, r*1.05, pkCss(c.body)); pkEll(x, X + sd*r*0.3, Y - h*0.5, r*0.55, r*0.8, pkCss(c.lit));
+    pkEll(x, X, Y - h*0.82, r*0.7, r*0.55, pkCss(c.body)); pkEll(x, X + sd*r*0.15, Y - h*0.86, r*0.4, r*0.3, pkCss(c.lit));
+    dot(X + sd*r*0.15, Y - h*0.8, Math.max(px(0.6), r*0.18));
+    x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.04); x.lineCap = 'round'; x.beginPath(); x.moveTo(X - sd*r*0.9, Y - h*0.5); x.lineTo(X - sd*r*1.4, Y - h*(0.75 + 0.15*R())); x.stroke(); return; }
+  if(kind === 'drone'){ // a little sphere hovering, two fins, its eye and a soft light beneath it
+    const r = h*0.3, cy = Y - h*(1.6 + 1.6*R()); pkGlow(x, X, Y - h*0.05, r*2, eye, 0.18*glowA);
+    pkPoly(x, [[X - r*1.9, cy], [X - r*0.8, cy - r*0.35], [X - r*0.8, cy + r*0.25]], pkCss(c.dark)); pkPoly(x, [[X + r*1.9, cy], [X + r*0.8, cy - r*0.35], [X + r*0.8, cy + r*0.25]], pkCss(c.dark));
+    pkDisc(x, X, cy, r, pkCss(c.body)); pkDisc(x, X + sd*r*0.3, cy - r*0.3, r*0.5, pkCss(c.lit)); dot(X, cy + r*0.1, Math.max(px(0.5), r*0.25)); return; }
+  if(kind === 'crawler'){ // a low tracked tender, an arm folded over it, a lamp at its end
+    const w = h*1.4; pkPoly(x, [[X - w/2, Y], [X - w/2 + h*0.1, Y - h*0.35], [X + w/2 - h*0.1, Y - h*0.35], [X + w/2, Y]], pkCss(c.dark));
+    pkPoly(x, [[X - w*0.4, Y - h*0.3], [X - w*0.3, Y - h*0.6], [X + w*0.25, Y - h*0.6], [X + w*0.35, Y - h*0.3]], pkCss(c.body));
+    x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.08); x.lineCap = 'round'; x.beginPath(); x.moveTo(X + w*0.2, Y - h*0.6); x.lineTo(X + w*0.1, Y - h*1.0); x.lineTo(X - w*0.3, Y - h*0.85); x.stroke();
+    dot(X - w*0.3, Y - h*0.85, Math.max(px(0.5), h*0.07)); return; }
+  if(kind === 'sentry'){ // a turret on three legs: a wedge of a head, a slit of red eye, spikes along its back
+    x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.05); x.beginPath(); for(const s of [-1, 0, 1]){ x.moveTo(X, Y - h*0.45); x.lineTo(X + s*h*0.35, Y); } x.stroke();
+    pkPoly(x, [[X - h*0.45, Y - h*0.5], [X - h*0.2, Y - h*0.95], [X + h*0.5, Y - h*0.7], [X + h*0.25, Y - h*0.45]], pkCss(pkMix(c.dark, c.body, 0.3)));
+    pkPoly(x, [[X - h*0.2, Y - h*0.95], [X + h*0.5, Y - h*0.7], [X + h*0.1, Y - h*0.75]], pkCss(c.lit));
+    for(let q = 0; q < 3; q++) pkPoly(x, [[X - h*(0.4 - q*0.18), Y - h*(0.56 + q*0.12)], [X - h*(0.5 - q*0.18), Y - h*(0.8 + q*0.12)], [X - h*(0.3 - q*0.18), Y - h*(0.62 + q*0.12)]], pkCss(c.dark));
+    x.fillStyle = pkCss(eyeCol, 0.95); x.fillRect(X + h*0.15, Y - h*0.72, h*0.25, Math.max(px(0.6), h*0.04)); pkGlow(x, X + h*0.28, Y - h*0.7, h*0.5, eyeCol, 0.4*glowA); return; }
+  if(kind === 'walker'){ // four jointed legs, a long low body, a head held forward: it hunts
+    const bw = h*0.9, by = Y - h*0.62; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.05); x.lineCap = 'round'; x.beginPath();
+    for(const [lx, f] of [[-0.4, -1], [-0.15, 1], [0.15, -1], [0.4, 1]]){ const kx = X + lx*bw + f*h*0.12; x.moveTo(X + lx*bw*0.8, by); x.lineTo(kx, by - h*0.15); x.lineTo(X + lx*bw*1.1, Y); } x.stroke();
+    pkPoly(x, [[X - bw/2, by + h*0.06], [X - bw*0.4, by - h*0.12], [X + bw*0.4, by - h*0.14], [X + bw/2, by + h*0.04]], pkCss(c.body));
+    pkPoly(x, [[X + sd*bw*0.45, by - h*0.06], [X + sd*bw*0.75, by - h*0.12], [X + sd*bw*0.8, by + h*0.02], [X + sd*bw*0.5, by + h*0.05]], pkCss(pkMix(c.dark, c.body, 0.4)));
+    dot(X + sd*bw*0.72, by - h*0.05, Math.max(px(0.5), h*0.035)); return; }
+  // a derelict: a giant, fallen long ago, kneeling, one arm on the ground, rust and moss on it, its eye long dark
+  const rust = pkMix(c.body, [140, 80, 50], 0.45), moss = pkMix(c.dark, [70, 100, 60], 0.4);
+  pkPoly(x, [[X - h*0.35, Y], [X - h*0.3, Y - h*0.35], [X - h*0.05, Y - h*0.38], [X, Y]], pkCss(c.dark));                       // the knee
+  pkPoly(x, [[X - h*0.25, Y - h*0.3], [X - h*0.3, Y - h*0.75], [X + h*0.25, Y - h*0.8], [X + h*0.3, Y - h*0.35]], pkCss(rust));   // the torso
+  pkPoly(x, [[X + sd*h*0.02, Y - h*0.32], [X + sd*h*0.27, Y - h*0.38], [X + sd*h*0.24, Y - h*0.78], [X + sd*h*0.02, Y - h*0.76]], pkCss(pkMix(rust, PK_WHITE, 0.12)));
+  pkPoly(x, [[X - h*0.12, Y - h*0.8], [X - h*0.1, Y - h*1.0], [X + h*0.15, Y - h*0.98], [X + h*0.14, Y - h*0.8]], pkCss(rust));   // the head
+  x.fillStyle = pkCss(PK_BLACK, 0.6); x.fillRect(X - h*0.04, Y - h*0.92, h*0.14, h*0.035);
+  pkPoly(x, [[X + h*0.28, Y - h*0.75], [X + h*0.55, Y - h*0.4], [X + h*0.6, Y], [X + h*0.48, Y], [X + h*0.44, Y - h*0.38], [X + h*0.22, Y - h*0.6]], pkCss(c.dark));   // the arm on the ground
+  for(let q = 0; q < 5; q++) pkEll(x, X + (R() - 0.5)*h*0.5, Y - h*(0.3 + R()*0.5), h*0.06, h*0.03, pkCss(moss, 0.8));
+}
+
 export function pkRock(x, X, Y, r, col, L, R){
   const sd = L[0] > 0 ? 1 : -1, ap = [X + sd*r*0.15 + (R() - 0.5)*r*0.3, Y - r*(0.75 + 0.3*R())], pts = [];
   for(let q = 0; q <= 6; q++){ const t = Math.PI + q/6*Math.PI; pts.push([X + Math.cos(t)*r*(0.85 + 0.3*R()), Y + Math.sin(t)*r*(0.55 + 0.35*R())]); }

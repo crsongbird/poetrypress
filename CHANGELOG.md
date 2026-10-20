@@ -28,6 +28,9 @@ prints it).
   observatories and wind turbines. The wilds have villages and farms. Each stands where it belongs: lighthouses on
   the coast, windmills, turbines, castles and observatories on rises, barns and silos at a town's edge, cathedrals and
   clock towers at its heart; trees thin out round towns, and boulders gather under slopes.
+- **Robots and droids**, as life where they belong: helpers on one wheel and humming drones in the builders' and
+  cities' worlds, sentries and stalking walkers in the neon, scavengers in the ruins, and now and then a giant fallen
+  long ago, kneeling in the grass.
 - **Drapery, a new surface**: a sheet of cloth simulated as it hangs or falls (from a rod in gathers, from two
   corners, from one, twisted, or seen from above over a hidden form, crumpled, laid flat) in nine fabrics, silk to
   velvet. Its weave follows every fold, and the Light Engine lights it from its maps: satin shines, burlap doesn't,

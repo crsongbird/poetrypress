@@ -13,7 +13,7 @@
 import { mulberry32, kitCanvas, kitPicture, seedChoice } from './texCore.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
-import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkDome, pkCrystals, pkMetres, pkArchOf, PK_FLORA } from './paintKit.js';
+import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkDome, pkCrystals, pkMetres, pkArchOf, PK_FLORA, PK_BOTS, pkRobot } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
@@ -406,6 +406,14 @@ function rgStore(V){
     if(lively) sow(5, W*0.003, W*0.01, W*0.12, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.12*V.life*(0.3 + 0.7*RG_PROF[w].be)) return null;
       const mix = MIX[w] || [2, 1, 2, 1], tot = mix.reduce((p, q) => p + q, 0); let pick = R()*tot, ki = 0; while(ki < 3 && pick > mix[ki]){ pick -= mix[ki]; ki++; }
       return { c: 'life', w, kind: KINDS[ki] }; }); }
+  // ROBOTS AND DROIDS, as life, where they belong (Ruby: "cute robots and threatening ones, in appropriate biomes
+  // only"): the builders' helpers and drones, the neon's sentries and walkers, the ruins' scavengers, and now and then
+  // a giant fallen long ago, kneeling in the grass
+  { const BOTS = { builders: 0.2, neon: 0.14, cities: 0.07, ruins: 0.1, wilds: 0.012, magic: 0.015 };
+    sow(6, W*0.004, W*0.012, W*0.3, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > (BOTS[w] || 0)*(0.3 + V.life)) return null;
+      const g = ground(a, z); if(g.wet || g.slope > 1.2) return null; const L2 = PK_BOTS[w] || PK_BOTS.cities, kind = L2[Math.floor(R()*L2.length)];
+      if(kind === 'derelict' && R() > 0.2) return null;
+      return { c: 'bot', w, kind, hM: pkMetres(kind, R()) }; }); }
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
@@ -492,7 +500,7 @@ function rgPaintLand(x, mk, dk, V){
   // kept (`rgStore`); a view only reads it, transforms, culls and sorts. Turning the camera, tilting it, zooming,
   // lighting it: nothing in the store changes, so nothing moves but your view of it.
   const store = rgStore(V);
-  const marginOf = o => o.c === 'bldg' ? o.wM*W*0.00025 : o.c === 'tree' ? o.hM*W*0.00025 : 0;
+  const marginOf = o => o.c === 'bldg' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' ? o.hM*W*0.00025 : 0;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
   const nearCut = wh*0.6;
   // each thing painted from its record: where it stands, how big in metres, which sprite, its own stream
@@ -516,6 +524,9 @@ function rgPaintLand(x, mk, dk, V){
       for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
       if(R() < 0.25*RG_PROF[o.w].gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
+    if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.5) return;
+      const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
+      const c = colsOf(o.w, wday, haze); pkRobot(x, X, Y, h, { ...c, eye: c.glow }, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     // small life: found rather than seen
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.2) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y < px(4) || Y > wh*0.95 || !vis(l, X - hh, X + hh, Y - hh*1.4, Y)) return;
