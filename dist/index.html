@@ -106,7 +106,7 @@ body{
 label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:3px; letter-spacing:0.015em}
 .field{margin:0;}
 
-select, textarea, input[type="text"], input[type="number"]{
+select, textarea, input[type="text"], input[type="number"], input[type="search"]{
   width:100%;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
   border:1px solid var(--line);
@@ -117,6 +117,10 @@ select, textarea, input[type="text"], input[type="number"]{
   font-size:14px;
   outline:none; box-shadow:inset 0 1px 2px var(--well); }
 select:focus, textarea:focus, input:focus{ border-color:var(--accent-dim); }
+/* (a search field wears the same skin as every field: the browser's own grey read as switched off — Ruby, 2026-10-19;
+   and a text field and a menu side by side stand the same height) */
+input[type="search"]{ -webkit-appearance:none; appearance:none; }
+select, input[type="text"], input[type="number"], input[type="search"]{ min-height:34px; box-sizing:border-box; }
 
 textarea{
   min-height:280px;
@@ -384,6 +388,7 @@ body.is-mobile label { font-size: clamp(10px, 2.6vw, 12px); }
 /* no zoom-on-focus, bigger targets */
 body.is-mobile input[type="text"],
 body.is-mobile input[type="number"],
+body.is-mobile input[type="search"],
 body.is-mobile select,
 body.is-mobile textarea { font-size: 16px; }   /* 16px: a phone never zooms in on a tapped field */
 
@@ -548,7 +553,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .modal-range .mr-note{ min-height:1.3em; margin:0 0 8px; font-size:12px; color:var(--accent); }
 body.is-mobile .modal-range .mr-row{ grid-template-columns:1fr 3.5em; } body.is-mobile .modal-range label{ grid-column:1 / -1; }
 body.is-mobile .modal{ width:100%; }
-body.is-mobile .btn-major, body.is-mobile .btn-danger{ font-size:clamp(12px,3vw,13px); }
+body.is-mobile .btn-major, body.is-mobile .btn-danger, body.is-mobile .btn-row > button.ghost{ font-size:clamp(12px,3vw,13px); }
 
 /* ---------- texture sliders: own line, full width ---------- */
 .field.full > input[type="range"]{ width:calc(100% - 6px); display:block; }   /* (Ruby: backed off the right edge a little) */
@@ -1740,14 +1745,14 @@ body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padd
 
 /* square, everywhere (circles stay circles: they have no corners) */
 .card, details.card, summary, button, .radio-btn, .preset-btn, .tab-btn, .ld-btn, .seed-moon, .snap-btn,
-select, textarea, input[type="text"], input[type="number"], .subblock, .eso-drawer, .hint code,
+select, textarea, input[type="text"], input[type="number"], input[type="search"], .subblock, .eso-drawer, .hint code,
 .clr-field button, .clr-picker, .clr-swatches button, .download-btn, .modal, .toast,
 body:not(.is-mobile) .tab-btn, .preset-group-head{ border-radius:0 !important; }
 
 /* surfaces: a little depth */
 
 /* fields sit a hair below the surface; focus is the second accent */
-:root[data-theme="vellum"] select, :root[data-theme="vellum"] textarea, :root[data-theme="vellum"] input[type="text"], :root[data-theme="vellum"] input[type="number"]{
+:root[data-theme="vellum"] select, :root[data-theme="vellum"] textarea, :root[data-theme="vellum"] input[type="text"], :root[data-theme="vellum"] input[type="number"], :root[data-theme="vellum"] input[type="search"]{
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 92%, #5a4128 8%), var(--bg-panel-2) 55%);
 }
 select:focus, textarea:focus, input[type="text"]:focus, input[type="number"]:focus{
@@ -2005,7 +2010,8 @@ body.is-mobile .ld-values input{  width:4.4em; }
 
 /* sound: a switch and its volume, on one line */
 .sound-row{ display:flex; align-items:center; gap:10px; margin-top:8px; }
-.sound-row label{ margin:0; }
+.sound-row label{ margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }   /* (as every switch's and eye's name: Ruby saw Sound and Hints dimmer and smaller than Show Spell Code) */
+body.is-mobile .sound-row label{ font-size:15px; }
 .sound-row input[type=range]{ flex:1; min-width:0; }
 input.switch{ appearance:none; -webkit-appearance:none; width:34px; height:18px; margin:0; border:1px solid var(--line); background:var(--bg-card); position:relative; cursor:pointer; flex:0 0 auto; }
 input.switch::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--text-dim); transition:left .15s; }
@@ -2122,6 +2128,8 @@ input, select, textarea, button{ font-family:inherit; }
 .btn-major, .btn-danger, .download-btn, #clr-picker .clr-close, .forge-title{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; font-variation-settings:normal; }
 label, .field > label, .check-row label, .hint small, .ld-values, .fp-in, .fp-out, .forge-param span, .forge-status, .forge-sub{ font-family:var(--ui-sans); font-weight:400; }
 button.ghost, .chip, .seg button, .shortcut-btn, .forge-part, .forge-menu-item, .toast, .toast-act{ font-family:var(--ui-sans); font-weight:400; letter-spacing:0.02em; }
+/* (a plain button in a row of the big ones speaks as they do: Share beside Create, Invoke and Dissolve — Ruby) */
+.btn-row > button.ghost{ font-family:var(--ui-caps); font-weight:500; letter-spacing:0.06em; }
 .hint{ font-family:var(--ui-text); font-style:italic; }
 .hint code, code, kbd{ font-style:normal; }
 output, .val, .readout, .range-val, .angle-val{ font-family:var(--ui-sans); font-variant-numeric:tabular-nums; }
