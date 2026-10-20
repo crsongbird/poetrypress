@@ -83,19 +83,27 @@ export function clSettle(o){
     const lift = hang === 'over a hidden form' ? 0.42 : 0.06;
     // (pushed about in the plane too, a little, so the buckles run every way and not along the threads)
     const push = hang === 'over a hidden form' ? 0 : hang === 'crumpled' ? 0.035 : 0.01;
+    // (a crumpled or laid sheet is turned a little in the plane, and a crumpled one pushed together toward two or three
+    //  places, as a hand gathers it: its buckles then run every way, not along its threads)
+    const t = hang === 'crumpled' ? (R() - 0.5)*0.9 : 0, cr = (1 - t*t)/(1 + t*t), sr = 2*t/(1 + t*t), gat = [];
+    if(hang === 'crumpled') for(let q = 0, m = 2 + Math.floor(R()*2); q < m; q++) gat.push([(R() - 0.5)*0.6, (R() - 0.5)*0.6*o.aspect, 0.25 + 0.2*R(), 0.18 + 0.25*folds]);
     for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ const u = i/(C - 1), v = j/(Rr - 1);
-      set(id(i, j), (u - 0.5)*sq + push*bumps(v*0.9 + 0.31, u*0.9 + 0.17), lift + (hang === 'crumpled' ? 0.12 : hang === 'laid flat' ? 0.03 : 0.02)*(bumps(u, v) + 1),
-        (v - 0.5)*o.aspect*sq + push*bumps(u*0.8 + 0.53, 1 - v*0.8)); }
+      let x = (u - 0.5)*sq + push*bumps(v*0.9 + 0.31, u*0.9 + 0.17), z = (v - 0.5)*o.aspect*sq + push*bumps(u*0.8 + 0.53, 1 - v*0.8);
+      for(const [gx, gz, gr, gk] of gat){ const dx = x - gx, dz = z - gz, f = Math.max(0, 1 - (dx*dx + dz*dz)/(gr*gr)); x -= dx*gk*f*f; z -= dz*gk*f*f; }
+      set(id(i, j), x*cr - z*sr, lift + (hang === 'crumpled' ? 0.12 : hang === 'laid flat' ? 0.03 : 0.02)*(bumps(u, v) + 1), x*sr + z*cr); }
   }
   for(const k of pins) W[k] = 0;
   // the form beneath (a sphere and a lower box-ish bump): where it is, by the seed
   const form = { x: (R() - 0.5)*0.2, z: (R() - 0.5)*0.2*o.aspect, r: 0.2 + 0.08*folds + 0.04*R() };
   // ---- THE CONSTRAINTS: structural, shear, bending (skip-one), each a distance at rest in the flat sheet ----
   const CA = [], CB = [], CL = [], CK = [];   // a, b, rest, kind (0 structural, 1 shear, 2 bend)
-  const con = (a, b, kind) => { CA.push(a); CB.push(b); CL.push(s*(kind === 1 ? Math.SQRT2 : kind === 2 ? 2 : 1)); CK.push(kind); };
+  const con = (a, b, kind, diag = false) => { CA.push(a); CB.push(b); CL.push(s*(kind === 1 ? Math.SQRT2 : kind === 2 ? (diag ? 2*Math.SQRT2 : 2) : 1)); CK.push(kind); };
   for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ if(i + 1 < C) con(id(i, j), id(i + 1, j), 0); if(j + 1 < Rr) con(id(i, j), id(i, j + 1), 0); }
   for(let j = 0; j + 1 < Rr; j++) for(let i = 0; i + 1 < C; i++){ con(id(i, j), id(i + 1, j + 1), 1); con(id(i + 1, j), id(i, j + 1), 1); }
   for(let j = 0; j < Rr; j++) for(let i = 0; i < C; i++){ if(i + 2 < C) con(id(i, j), id(i + 2, j), 2); if(j + 2 < Rr) con(id(i, j), id(i, j + 2), 2); }
+  // (bending across the diagonals too, so a crease costs the same whichever way it runs: without them folds keep to the
+  //  grid's lines, and a crumpled sheet looks ruled)
+  for(let j = 0; j + 2 < Rr; j++) for(let i = 0; i + 2 < C; i++){ con(id(i, j), id(i + 2, j + 2), 2, true); con(id(i + 2, j), id(i, j + 2), 2, true); }
   const NC = CA.length, A = Int32Array.from(CA), B = Int32Array.from(CB), L0 = Float64Array.from(CL), KND = Uint8Array.from(CK);
   // the tethers: each free particle to its nearest pin, no farther than in the flat sheet
   const TP = new Int32Array(n).fill(-1), TL = new Float64Array(n);
@@ -129,7 +137,7 @@ export function clSettle(o){
   }
   // how gathered the cloth is at each particle: its structural neighbours nearer than at rest
   const CP = new Float64Array(n), CU = new Float64Array(n), CV = new Float64Array(n), cnt = new Float64Array(n);
-  for(let c = 0; c < NC; c++){ if(KND[c] === 1) continue; const a = A[c], b = B[c], qa = a*3, qb = b*3, len = Math.hypot(P[qb] - P[qa], P[qb + 1] - P[qa + 1], P[qb + 2] - P[qa + 2]);
+  for(let c = 0; c < NC; c++){ if(KND[c] === 1 || L0[c] > 2.5*s) continue; const a = A[c], b = B[c], qa = a*3, qb = b*3, len = Math.hypot(P[qb] - P[qa], P[qb + 1] - P[qa + 1], P[qb + 2] - P[qa + 2]);
     const e = Math.max(0, 1 - len/L0[c]), across = b - a < C; for(const k of [a, b]){ (across ? CU : CV)[k] += e; cnt[k] += 0.5; } }
   for(let k = 0; k < n; k++) if(cnt[k]){ CU[k] /= cnt[k]; CV[k] /= cnt[k]; CP[k] = CU[k] + CV[k]; }
   return { P, C, Rr, view: top ? 'top' : 'front', fill: hang === 'from a rod, gathered' || hang === 'twisted' || hang === 'laid flat', CU, CV };
