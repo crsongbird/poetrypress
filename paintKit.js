@@ -44,6 +44,7 @@ export const PK_SIZE = {
   observatory: [12, 40, 12, 40], turbine: [80, 160, 6, 8],
   helper: [1.0, 1.5], drone: [0.5, 1.0], crawler: [0.6, 1.0], sentry: [1.8, 2.8], walker: [2.5, 4.5], derelict: [10, 22],
   fence: [0.9, 1.2], lamp: [3, 4.6], bench: [0.45, 0.5], mailbox: [1.1, 1.2], barrel: [0.9, 1.0], crate: [0.5, 1.1], sign: [1.8, 2.4], bicycle: [0.95, 1.05], hydrant: [0.6, 0.8],
+  warden: [1.0, 1.4], gate: [14, 22], pod: [3, 4], spire: [90, 160], cogdoor: [8, 11], diner: [5, 6.5], car: [1.4, 1.6], billboard: [7, 9], suit: [6, 8], caps: [0.12, 0.15],
   rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8] };
 // a size in its range, tall specimens rarer (u: a draw from 0 to 1)
 export const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
@@ -518,6 +519,91 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   const coat = [c.body, c.lit, pkMix(c.glow, c.body, 0.5), c.dark][Math.floor(R()*4)];
   pkPoly(x, [[X - h*0.12, Y], [X - h*0.15, Y - h*0.72], [X + h*0.15, Y - h*0.72], [X + h*0.12, Y]], pkCss(coat));
   pkDisc(x, X, Y - h*0.84, h*0.11, pkCss(c.dark)); pkPoly(x, [[X + sd*h*0.02, Y - h*0.1], [X + sd*h*0.03, Y - h*0.68], [X + sd*h*0.14, Y - h*0.68], [X + sd*h*0.11, Y - h*0.1]], pkCss(pkMix(coat, PK_WHITE, 0.2)));
+}
+
+// ---------------- NODS (Ruby: "a few Easter eggs … that nod to both of those games but without infringing") ----------
+// docs/prior-art/painted-ringworld-2.md §E: genre stock drawn in shapes of our own, never a series' marks, names, logos
+// or designs. Halo-leaning: a pair of lens wardens, a keyless gate in a cliff, a drop-pod opened like a flower, a spire
+// beaming to the arch. Fallout-leaning: a toothed door rolled aside in a hill (no number), an atomic-age diner, a
+// finned wreck, a billboard with a grinning crescent moon, a rusted colossus suit kneeling in a field; crimped caps.
+// Each at (X, Y), h its height in pixels, in the caller's lit colours (c.glow its light), night how dark it is.
+// (q: the chance a place the rule allows holds one, tuned so a scene shows a common nod about one time in two, an
+//  uncommon one in seven, a rare one in twenty-five, a very rare one hardly ever; loud ones one to a scene)
+export const PK_EGGS = {
+  warden:   { worlds: ['builders', 'ruins'], q: 0.03, loud: false },  gate:     { worlds: ['builders', 'ruins'], q: 0.003, loud: true },
+  pod:      { worlds: ['wilds', 'ruins'], q: 0.015, loud: true },      spire:    { worlds: ['builders'], q: 0.006, loud: true },
+  cogdoor:  { worlds: ['wilds', 'ruins'], q: 0.02, loud: false },      diner:    { worlds: ['ruins', 'cities'], q: 0.27, loud: false },
+  car:      { worlds: ['ruins', 'cities'], q: 1, loud: false },        billboard: { worlds: ['ruins', 'cities'], q: 0.05, loud: false },
+  suit:     { worlds: ['ruins', 'wilds'], q: 0.015, loud: true },      caps:     { worlds: ['ruins', 'cities'], q: 0.015, loud: false } };
+export function pkEgg(x, X, Y, h, c, kind, R0, px, night = 0){
+  const sub = pkSub(R0), R = sub(1), sd = c.sd, glow = c.glow, rust = pkMix(c.body, [150, 86, 52], 0.45), moss = pkMix(c.dark, [70, 104, 58], 0.45);
+  const ln = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = Math.max(px(0.5), wd); x.lineCap = 'round'; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+  if(kind === 'warden'){ // two lens-bodied drones drifting together, a pale slit eye each, three hanging tassels of light
+    for(const [ox, oy] of [[-h*0.9, 0], [h*0.7, -h*0.6]]){ const cx = X + ox, cy = Y - h*3.5 + oy;
+      pkGlow(x, cx, Y - h*0.05, h*0.8, glow, 0.15 + 0.2*night);
+      pkEll(x, cx, cy, h*0.55, h*0.2, pkCss(c.body)); pkEll(x, cx + sd*h*0.12, cy - h*0.06, h*0.3, h*0.09, pkCss(c.lit));
+      x.fillStyle = pkCss(pkMix(glow, PK_WHITE, 0.5), 0.95); x.fillRect(cx - h*0.18, cy - h*0.02, h*0.36, Math.max(px(0.5), h*0.04)); pkGlow(x, cx, cy, h*0.5, glow, 0.35 + 0.3*night);
+      for(let k = -1; k <= 1; k++) ln([[cx + k*h*0.18, cy + h*0.18], [cx + k*h*0.2, cy + h*0.5]], pkCss(glow, 0.6), h*0.04); }
+    return; }
+  if(kind === 'gate'){ // a keyless gate: a tall slab set into the hill, a slit of light, two leaning buttresses, script on its lintel
+    const w = h*0.5; pkPoly(x, [[X - w*0.9, Y], [X - w*0.55, Y - h], [X - w*0.35, Y - h], [X - w*0.5, Y]], pkCss(c.dark)); pkPoly(x, [[X + w*0.9, Y], [X + w*0.55, Y - h], [X + w*0.35, Y - h], [X + w*0.5, Y]], pkCss(c.dark));
+    pkPoly(x, [[X - w*0.5, Y], [X - w*0.4, Y - h*1.05], [X + w*0.4, Y - h*1.05], [X + w*0.5, Y]], pkCss(c.body)); pkPoly(x, [[X, Y], [X, Y - h*1.05], [X + sd*w*0.4, Y - h*1.05], [X + sd*w*0.5, Y]], pkCss(c.lit));
+    x.fillStyle = pkCss(pkMix(glow, PK_WHITE, 0.4), 0.9); x.fillRect(X - w*0.03, Y - h*0.85, w*0.06, h*0.85); pkGlow(x, X, Y - h*0.4, w*0.8, glow, 0.35 + 0.3*night);
+    for(let k = 0; k < 7; k++){ const gx = X - w*0.3 + k*w*0.1, gy = Y - h*0.96; ln(R() < 0.5 ? [[gx, gy - h*0.03], [gx, gy + h*0.03]] : [[gx - w*0.03, gy + h*0.03], [gx, gy - h*0.03], [gx + w*0.03, gy + h*0.03]], pkCss(glow, 0.8), h*0.012); }
+    for(let k = 0; k < 4; k++) pkEll(x, X + (R() - 0.5)*w, Y - h*0.03*R(), w*0.12, h*0.03, pkCss(moss, 0.85)); return; }
+  if(kind === 'pod'){ // a drop-pod half-buried, its three doors splayed open like petals, a scorch, a wisp of smoke
+    pkEll(x, X - sd*h*0.6, Y + h*0.02, h*1.6, h*0.18, pkCss(PK_BLACK, 0.35));
+    for(const s of [-1, 0, 1]) pkPoly(x, [[X + s*h*0.15, Y - h*0.35], [X + s*h*0.75 + (s === 0 ? sd*h*0.2 : 0), Y - h*(s === 0 ? 0.95 : 0.5)], [X + s*h*0.55, Y - h*0.12]], pkCss(s === sd ? c.lit : c.body));
+    pkPoly(x, [[X - h*0.3, Y], [X - h*0.25, Y - h*0.5], [X, Y - h*0.65], [X + h*0.25, Y - h*0.5], [X + h*0.3, Y]], pkCss(c.dark)); pkGlow(x, X, Y - h*0.4, h*0.4, glow, 0.25 + 0.3*night);
+    for(let k = 0; k < 4; k++){ const r = h*(0.15 + k*0.08); pkDisc(x, X + sd*h*0.2*k, Y - h*(0.8 + k*0.35), r, pkCss(pkMix(c.lit, c.dark, 0.5), 0.35 - k*0.07)); } return; }
+  if(kind === 'spire'){ // a pulse spire: tall and angular, a collar halfway up, a beam from its tip up toward the arch
+    const w = h*0.05; pkPoly(x, [[X - w, Y], [X - w*0.3, Y - h], [X + w*0.3, Y - h], [X + w, Y]], pkCss(c.dark)); pkPoly(x, [[X, Y], [X, Y - h], [X + sd*w*0.3, Y - h], [X + sd*w, Y]], pkCss(c.body));
+    pkEll(x, X, Y - h*0.5, w*2.2, w*0.6, pkCss(c.lit)); x.save(); x.globalCompositeOperation = 'screen';
+    const g = x.createLinearGradient(X, Y - h, X, Y - h*6); g.addColorStop(0, pkCss(glow, 0.8)); g.addColorStop(1, pkCss(glow, 0)); x.fillStyle = g; x.fillRect(X - w*0.25, Y - h*6, w*0.5, h*5); x.restore();
+    pkGlow(x, X, Y - h, w*6, glow, 0.6); return; }
+  if(kind === 'cogdoor'){ // a great round toothed door rolled aside from a dark round opening in the hill; an apron, two striped bollards
+    const r = h*0.5, cx = X - r*0.3, cy = Y - r; pkEll(x, X, Y, r*2.2, r*0.25, pkCss(pkMix(c.lit, c.body, 0.5)));
+    pkDisc(x, cx, cy, r, pkCss(pkMix(PK_BLACK, c.dark, 0.3)));
+    const dx = cx + r*1.35, tooth = 12; x.fillStyle = pkCss(R() < 0.5 ? rust : pkMix(c.body, [150, 40, 46], 0.4)); x.beginPath();
+    for(let k = 0; k < tooth*2; k++){ const a = k/(tooth*2)*Math.PI*2, rr = k % 2 ? r*1.0 : r*1.1; x.lineTo(dx + Math.cos(a)*rr*0.35, cy + Math.sin(a)*rr); } x.closePath(); x.fill();
+    pkEll(x, dx + sd*r*0.08, cy, r*0.22, r*0.75, pkCss(c.lit, 0.5));
+    for(const s of [-1, 1]){ const bx = X + s*r*1.6; ln([[bx, Y], [bx, Y - r*0.5]], pkCss([214, 182, 70]), r*0.12); ln([[bx, Y - r*0.15], [bx, Y - r*0.25]], pkCss(PK_BLACK, 0.7), r*0.12); }
+    if(night > 0.2) pkGlow(x, cx + r*0.9, cy - r*0.9, r*0.4, [255, 190, 110], 0.5*night); return; }
+  if(kind === 'diner'){ // an atomic diner: a low glass box under an upswept roof, a pylon sign with a starburst and a rocket on top, EATS
+    const w = h*2.2, top = Y - h*0.45; pkPoly(x, [[X - w/2, Y], [X - w/2, top], [X + w/2, top], [X + w/2, Y]], pkCss(c.body));
+    x.fillStyle = pkCss(night > 0.2 ? pkMix(glow, PK_WHITE, 0.3) : pkMix(c.lit, [150, 200, 220], 0.4), night > 0.2 ? 0.8 : 0.7); x.fillRect(X - w*0.42, top + h*0.08, w*0.84, h*0.22);
+    pkPoly(x, [[X - w*0.6, top + h*0.05], [X - w*0.1, top - h*0.12], [X + w*0.62, top - h*0.3], [X + w*0.55, top - h*0.2], [X - w*0.05, top - h*0.02]], pkCss(pkMix(c.lit, [230, 120, 110], 0.35)));
+    const px0 = X + w*0.7; ln([[px0, Y], [px0, Y - h*1.4]], pkCss(c.dark), h*0.05);
+    for(let k = 0; k < 8; k++){ const a = k/8*Math.PI*2; ln([[px0, Y - h*1.15], [px0 + Math.cos(a)*h*0.18, Y - h*1.15 + Math.sin(a)*h*0.18]], pkCss(pkMix(glow, PK_WHITE, 0.3)), h*0.02); }
+    pkPoly(x, [[px0, Y - h*1.7], [px0 - h*0.06, Y - h*1.45], [px0 + h*0.06, Y - h*1.45]], pkCss(c.lit));
+    x.fillStyle = pkCss(night > 0.2 ? glow : [200, 60, 60], 0.95); x.font = `bold ${Math.max(4, Math.round(h*0.22))}px sans-serif`; x.textAlign = 'center'; x.fillText('EATS', px0, Y - h*0.75);
+    if(night > 0.2) pkGlow(x, px0, Y - h*0.82, h*0.5, glow, 0.5*night); return; }
+  if(kind === 'car'){ // a finned wreck: long and low, its tailfins high, its wheels flat, rust through it, a bush growing in it
+    const L = h*3.6, dir = R() < 0.5 ? 1 : -1, P = (u, v) => [X + dir*u*L, Y - v*h];
+    pkPoly(x, [P(-0.5, 0.15), P(-0.5, 0.5), P(-0.45, 0.62), P(-0.15, 0.62), P(0, 0.95), P(0.25, 0.95), P(0.35, 0.65), P(0.48, 0.6), P(0.5, 0.15)], pkCss(R() < 0.5 ? rust : pkMix(c.body, [110, 150, 160], 0.4)));
+    pkPoly(x, [P(-0.5, 0.5), P(-0.52, 0.9), P(-0.42, 0.62)], pkCss(c.lit)); pkPoly(x, [P(-0.05, 0.9), P(0.22, 0.9), P(0.3, 0.66), P(0.02, 0.66)], pkCss(c.dark, 0.7));
+    for(const u of [-0.32, 0.32]) pkEll(x, P(u, 0)[0], Y - h*0.12, h*0.22, h*0.16, pkCss(c.dark));
+    pkEll(x, P(0.1, 0.5)[0], Y - h*0.45, h*0.3, h*0.2, pkCss(rust, 0.6)); if(R() < 0.6) for(let k = 0; k < 4; k++) pkDisc(x, P(-0.1, 0.8)[0] + (R() - 0.5)*h*0.6, Y - h*(0.85 + R()*0.4), h*0.18, pkCss(moss)); return; }
+  if(kind === 'billboard'){ // a peeling billboard on two posts: a crescent moon grinning in a nightcap, a glass in its hand, an older layer under a torn strip
+    const w = h*1.6, b = Y - h*0.35, t = Y - h; ln([[X - w*0.3, Y], [X - w*0.3, b]], pkCss(c.dark), h*0.05); ln([[X + w*0.3, Y], [X + w*0.3, b]], pkCss(c.dark), h*0.05);
+    pkPoly(x, [[X - w/2, b], [X - w/2, t], [X + w/2, t], [X + w/2, b]], pkCss(pkMix(c.lit, [236, 220, 170], 0.4)));
+    const mx = X - w*0.18, my = (b + t)/2, mr = (b - t)*0.36; pkDisc(x, mx, my, mr, pkCss([240, 200, 70])); pkDisc(x, mx + mr*0.45, my - mr*0.15, mr*0.85, pkCss(pkMix(c.lit, [236, 220, 170], 0.4)));
+    ln([[mx - mr*0.55, my + mr*0.2], [mx - mr*0.3, my + mr*0.45], [mx - mr*0.05, my + mr*0.35]], pkCss(PK_BLACK, 0.7), mr*0.08); pkDisc(x, mx - mr*0.45, my - mr*0.2, mr*0.08, pkCss(PK_BLACK, 0.8));
+    pkPoly(x, [[mx - mr*0.8, my - mr*0.7], [mx - mr*0.1, my - mr*1.25], [mx + mr*0.1, my - mr*0.6]], pkCss([60, 90, 160])); pkDisc(x, mx + mr*0.1, my - mr*1.25, mr*0.12, pkCss(PK_WHITE));
+    pkPoly(x, [[mx + mr*0.3, my + mr*0.3], [mx + mr*0.55, my + mr*0.3], [mx + mr*0.5, my + mr*0.8], [mx + mr*0.35, my + mr*0.8]], pkCss(pkMix(glow, PK_WHITE, 0.3), 0.85));
+    for(let k = 0; k < 2; k++){ x.fillStyle = pkCss(PK_BLACK, 0.55); x.fillRect(X + w*0.08, t + (b - t)*(0.3 + k*0.25), w*(0.25 + 0.12*R()), (b - t)*0.08); }
+    pkPoly(x, [[X + w*0.32, t], [X + w*0.5, t], [X + w*0.5, t + (b - t)*0.6], [X + w*0.42, t + (b - t)*0.4]], pkCss(pkMix(c.body, [120, 160, 190], 0.4))); return; }
+  if(kind === 'suit'){ // a rust colossus: a barrel-chested suit kneeling, a porthole helmet, its chest hatch open, moss and a nest
+    pkPoly(x, [[X - h*0.3, Y], [X - h*0.25, Y - h*0.32], [X + h*0.02, Y - h*0.34], [X + h*0.05, Y]], pkCss(c.dark));
+    pkEll(x, X, Y - h*0.55, h*0.3, h*0.26, pkCss(rust)); pkEll(x, X + sd*h*0.1, Y - h*0.58, h*0.15, h*0.18, pkCss(pkMix(rust, PK_WHITE, 0.15)));
+    pkPoly(x, [[X - h*0.08, Y - h*0.62], [X + h*0.1, Y - h*0.62], [X + h*0.12, Y - h*0.45], [X - h*0.1, Y - h*0.45]], pkCss(PK_BLACK, 0.6));
+    pkDisc(x, X, Y - h*0.88, h*0.15, pkCss(rust)); pkDisc(x, X + sd*h*0.03, Y - h*0.88, h*0.08, pkCss(pkMix(c.dark, [120, 170, 190], 0.4)));
+    ln([[X + h*0.28, Y - h*0.65], [X + h*0.45, Y - h*0.35], [X + h*0.42, Y]], pkCss(c.dark), h*0.12); ln([[X - h*0.28, Y - h*0.65], [X - h*0.4, Y - h*0.35]], pkCss(c.dark), h*0.12);
+    for(let k = 0; k < 5; k++) pkEll(x, X + (R() - 0.5)*h*0.5, Y - h*(0.4 + R()*0.55), h*0.06, h*0.03, pkCss(moss, 0.85));
+    pkEll(x, X + h*0.05, Y - h*1.03, h*0.08, h*0.035, pkCss([110, 84, 60])); return; }
+  // caps: a few crimped bottle caps in the grass, bone, red and blue
+  for(let k = 0, n = 3 + Math.floor(R()*7); k < n; k++){ const cx = X + (R() - 0.5)*h*4, cy = Y - R()*h*0.4, col = [[230, 222, 200], [196, 56, 50], [70, 100, 170]][Math.floor(R()*3)];
+    pkEll(x, cx, cy, h*0.5, h*0.22, pkCss(pkMix(col, c.dark, 0.25))); pkEll(x, cx - sd*h*0.08, cy - h*0.04, h*0.3, h*0.12, pkCss(col)); }
 }
 
 // ---------------- ROBOTS AND DROIDS (as life, where they belong) ----------------

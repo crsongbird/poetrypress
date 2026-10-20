@@ -13,7 +13,7 @@
 import { mulberry32, kitCanvas, kitPicture, seedChoice } from './texCore.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
-import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkDome, pkCrystals, pkMetres, pkArchOf, PK_FLORA, PK_BOTS, pkRobot, PK_PROPS, pkProp } from './paintKit.js';
+import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkDome, pkCrystals, pkMetres, pkArchOf, PK_FLORA, PK_BOTS, pkRobot, PK_PROPS, pkProp, PK_EGGS, pkEgg } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
@@ -290,6 +290,13 @@ function rgPaintArch(x, mk, V){
   // THE AIR the walls hold in, low along the horizon, softening where the land will meet the sky
   const yh = yAt(0), yh2 = yAt(14*Math.PI/180);
   if(yh != null && yh2 != null && yh - yh2 > 1){ const g = x.createLinearGradient(0, yh, 0, yh2); g.addColorStop(0, rsCss(AIR, 0.7*V.air)); g.addColorStop(1, rsCss(AIR, 0)); x.fillStyle = g; x.fillRect(0, yh2, ww, wh - yh2); }
+  // THE FAR BLOOM (a nod, very rare, and only over ruins): a faint mushroom of cloud on the far horizon, the colour of the
+  // haze, barely there: what happened here, long ago
+  { const R = rgRand(s, 815); if(V.world.list.includes('ruins') && R() < 0.08){ const P0 = skyAt(R()*Math.PI*2, 1.5*Math.PI/180), sz = F*(0.05 + 0.04*R());
+    if(P0){ const [X, Y] = P0, c = rsMix(rsMix(AIR, [200, 170, 150], 0.35), [255, 255, 255], 0.1);
+      rsPoly(x, [[X - sz*0.12, Y], [X - sz*0.08, Y - sz*1.1], [X + sz*0.08, Y - sz*1.1], [X + sz*0.12, Y]], rsCss(c, 0.22));
+      for(let k = 0; k < 7; k++){ const a = k/7*Math.PI*2, r = sz*(0.28 + 0.06*R()); x.fillStyle = rsCss(c, 0.2); x.beginPath(); x.ellipse(X + Math.cos(a)*sz*0.35, Y - sz*1.25 + Math.sin(a)*sz*0.12, r, r*0.7, 0, 0, Math.PI*2); x.fill(); }
+      x.fillStyle = rsCss(c, 0.16); x.beginPath(); x.ellipse(X, Y - sz*0.55, sz*0.3, sz*0.06, 0, 0, Math.PI*2); x.fill(); } } }
   // and the weather's clouds now and then, low over the land, as flat bands
   { const R0 = rgRand(s, 808); if(R0() < 0.55) for(let k = 0, n = 8 + Math.floor(R0()*14); k < n; k++){ const R = rgRand(s, 809, k), rnd = (a, b) => a + (b - a)*R(), az = R()*Math.PI*2, e = rnd(2, 12)*Math.PI/180, P0 = skyAt(az, e); if(!P0) continue; const X = P0[0], Y = P0[1], wd = F*rnd(0.2, 0.6), ht = wd*rnd(0.03, 0.07);
     const c = rsMix(rgLit(V, [244, 244, 250], dl, 0.2, AIR), [255, 170, 140], dusk*0.4), pts = [];
@@ -464,6 +471,19 @@ function rgStore(V){
     if(R() > near*(0.4 + V.works)) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
     const L2 = PK_PROPS[w] || PK_PROPS.cities, kind = L2[Math.floor(R()*L2.length)]; if(kind === 'figure' && R() > 0.4) return null;
     return { c: 'prop', w, kind, hM: pkMetres(kind, R()) }; });
+  // NODS (Ruby: "Easter eggs … that nod to both [Halo and Fallout] … rarely or commonly depending on how obnoxious they
+  // are and seed dependently"): each on the ground its rule asks, by the seed; the loud ones rare (PK_EGGS)
+  { const KINDS = Object.keys(PK_EGGS);
+    const fits = (k, g, a, z, r, ci) => k === 'gate' ? g.rise > 0.4 || g.slope > 0.5 : k === 'cogdoor' ? g.slope > 0.15 && g.slope < 0.9 && ci < 0.1 : k === 'spire' ? g.rise > 0.6
+      : k === 'pod' || k === 'suit' ? V.forestAt(a, z) < 0.35 && ci < 0.05 && g.slope < 0.4 : k === 'diner' || k === 'billboard' || k === 'car' ? ci < 0.7 && g.slope < 0.35
+      : k === 'caps' ? r < W*0.03 : true;
+    sow(8, W*0.02, W*0.05, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet) return null;
+      const ci = V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works)), u = R(), mine = KINDS.filter(k2 => k2 !== 'caps' && PK_EGGS[k2].worlds.includes(w)); if(!mine.length) return null;
+      const k = mine[Math.floor(R()*mine.length)], E = PK_EGGS[k];
+      if(u > E.q*(0.5 + V.works)/0.85 || !fits(k, g, a, z, r, ci)) return null;
+      return { c: 'egg', w, kind: k, hM: pkMetres(k, R()) }; });
+    sow(9, W*0.0015, W*0.004, W*0.03, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(!PK_EGGS.caps.worlds.includes(w) || R() > PK_EGGS.caps.q) return null;
+      return { c: 'egg', w, kind: 'caps', hM: pkMetres('caps', R()) }; }); }
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
@@ -549,8 +569,8 @@ function rgPaintLand(x, mk, dk, V){
   // rock, tuft and find within sight of where you stand, in the world's own coordinates, made once for this world and
   // kept (`rgStore`); a view only reads it, transforms, culls and sorts. Turning the camera, tilting it, zooming,
   // lighting it: nothing in the store changes, so nothing moves but your view of it.
-  const store = rgStore(V);
-  const marginOf = o => o.c === 'bldg' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' ? o.hM*W*0.00025 : 0;
+  const store = rgStore(V); let loudDrawn = 0;
+  const marginOf = o => o.c === 'bldg' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : 0;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
   const nearCut = wh*0.6;
   // each thing painted from its record: where it stands, how big in metres, which sprite, its own stream
@@ -584,6 +604,11 @@ function rgPaintLand(x, mk, dk, V){
       for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4, Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
       if(R() < 0.25*RG_PROF[o.w].gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
+    if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h < px(o.kind === 'caps' ? 1.2 : 3) || h > wh*0.6) return;
+      if(E.loud && loudDrawn >= 1) return;
+      const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*(o.kind === 'warden' ? 4.2 : o.kind === 'spire' ? 1.1 : 1.8), Y)) return;
+      if(E.loud) loudDrawn++;
+      const c = colsOf(o.w, wday, haze); pkEgg(x, X, Y, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.35) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
       const c = colsOf(o.w, wday, haze); pkProp(x, X, Y, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }

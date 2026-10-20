@@ -2,6 +2,22 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Surtur (2026-10-19)
+
+- **A surface can have up to six hues of its own.** Where a surface draws
+  more colours than two, each gets its own picker under Surface, named for
+  what it colours, starting at the colour it was designed with. They are
+  saved with the look, carried by its readings and by the lower surface,
+  and locked like the others.
+- **In the Athanor, a Hue part reads any of the six.** A graph shows a
+  picker on the page for every Hue slot that reaches its Surface.
+- **Under the hood:** reviewed the tests. The phone suite checked twice that
+  the download button sits in the preview frame (once its rule, once its
+  markup); it is one check now.
+  The prior-art research for the liminal spaces is kept in the repository
+  (docs/prior-art), and looking up the prior art is now the first step of
+  making any new surface.
+
 ## Saturn–Fenrir (2026-10-19)
 
 - **The light dial's handle reaches the ring again.** At full height it
