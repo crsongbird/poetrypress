@@ -159,8 +159,8 @@ export const TEXTURE_CAPS = {
   // (Webb's false colour: every colour a hue, defaults its orange dust and blue stars; the light dial lights the dust and streams it)
   webb:          { blends:['source-over','screen','lighten','luminosity','overlay','soft-light','hard-light','multiply'], light:true, tints:6,
                    tintLabels:['Deep Sky Hue','Dust Shadow Hue','Dust Hue','Dust Light Hue','Starlight Hue','Ionized Gas Hue'], tintDefaults:['#04050E','#3A1406','#C2581A','#FFC774','#A9C4FF','#3E5CC8'] },
-  imprints:      { blends:LIT_BLENDS, light:true, tints:6,
-                   tintLabels:['Paper Hue', 'Ink Hue', 'Petal Hue', 'Center Hue', 'Leaf Hue', 'Second Ink Hue'], tintDefaults:['#F2EFE4', '#1F4E8C', '#C8506A', '#E8B21C', '#5E7A4A', '#C8402E'] },
+  imprints:      { blends:LIT_BLENDS, light:true, tints:5, pageEnv:true,
+                   tintLabels:['Ink Hue', 'Second Hue', 'Petal Hue', 'Center Hue', 'Leaf Hue'], tintDefaults:['own', 'own', 'own', 'own', 'own'] },
   bouquets:      { blends:LIT_BLENDS, light:true, tints:6,
                    tintLabels:['Ground Hue', 'Main Bloom Hue', 'Second Bloom Hue', 'Filler Hue', 'Foliage Hue', 'Wrap Hue'], tintDefaults:['#E8DFD2', '#C2264B', '#F3C6CF', '#F5F3EC', '#4E6E3A', '#C8A880'] },
   petals:        { blends:LIT_BLENDS, light:true, tints:6,
@@ -609,7 +609,7 @@ function describeRequest(type, w, h, opts){
             + (light != null ? `_l${light}` : '')
             + (rig ? `_L${rigKey(rig)}` : '')
             + (tint1 ? `_t${tint1}` : '') + (tint2 ? `_u${tint2}` : '') + (Array.isArray(opts.hues) && opts.hues.some(Boolean) ? `_hu${opts.hues.map(h => h || '').join(',')}` : '')
-            + (blend ? `_b${blendFamily(blend)}` : '')
+            + (blend ? `_b${blendNeutral(blend)}` : '')
             + (t3 ? `_m${t3}` : '') + (t4 ? `_n${t4}` : '') + (t5 ? `_g${t5}` : '') + (t6 ? `_d${t6}` : '')
             + (env ? `_e${env}` : '')
             + ((type === 'athanor' || type === 'athanorsteps') ? `_c${athanorHash(opts.graph)}` : '')
@@ -650,7 +650,7 @@ function genAthanor(w, h, light, tint1, tint2, extra){
   const img = B.tooMany ? null : evalAthanor(extra.graph || '', ww, wh,
     // (a v3 graph is told its grid's divisor, as a texture's own chain always was: canonical sizes and counts come out true;
     //  an older graph keeps drawing as it did, a quarter of the marks at twice the size)
-    { knobs: extra.knobs, tints: [tint1, tint2, ...(extra.hues || [])], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
+    { neutral: extra.neutral || 'page', knobs: extra.knobs, tints: [tint1, tint2, ...(extra.hues || [])], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null,
       channel: ATHANOR_CHANNELS.includes(extra.channel) && extra.channel !== 'final' ? extra.channel : null, aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 2*k), ...(athanorVersion(extra.graph || '') >= 3 ? { div } : {}) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
@@ -676,7 +676,7 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const cx = c.getContext('2d', CPU); cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
   if(!ids.length || athanorBudget(extra.graph || '').tooMany) return c;
-  const all = evalAthanor(extra.graph || '', t, t, { knobs: extra.knobs, tints: [tint1, tint2, ...(extra.hues || [])], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null },
+  const all = evalAthanor(extra.graph || '', t, t, { neutral: extra.neutral || 'page', knobs: extra.knobs, tints: [tint1, tint2, ...(extra.hues || [])], light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1, all: true, accents: extra.accents || null, text: extra.text || '', box: extra.box || null, curves: extra.curves || null, env: extra.env || null, camera: extra.camera || null },
     { texture: (ty, tw, th, opts) => getTextureCanvas(ty, tw, th, opts) });
   const tile = document.createElement('canvas'); tile.width = t; tile.height = t;
   const tx = tile.getContext('2d', CPU);
@@ -694,7 +694,11 @@ function genAthanorSteps(w, h, light, tint1, tint2, extra){
 const chainGraphs = new Map();
 /** A chain's hues, slots 1–6: the two pickers, then the four more a surface may ask for (ROADMAP L0), each its default
  *  when empty. */
-const chainHues = (td, t1, t2, more) => [t1 || td[0], t2 || td[1], ...[0, 1, 2, 3].map(i => ((more || [])[i]) || td[i + 2])];
+// ('own': a hue left empty, so the part uses its own colour — a medium's ink, a species' petals)
+const chainHues = (td, t1, t2, more) => [t1 || td[0], t2 || td[1], ...[0, 1, 2, 3].map(i => ((more || [])[i]) || td[i + 2])].map(h => h === 'own' ? '' : h);
+/** What a graph lays its marks on when it draws over the page (an Imprint's ground): the page itself under Normal, else
+ *  the blend's own neutral (white for Multiply's family, black for Screen's, grey for Overlay's), so only marks touch it. */
+function blendNeutral(blend){ return !blend || blend === 'source-over' || blend === 'normal' ? 'page' : blendFamily(blend); }
 function genChain(type, w, h, light, extra, tint1, tint2){
   const chain = TEXTURE_CHAINS[type];
   if(!chainGraphs.has(type)) chainGraphs.set(type, athanorStarter(type));
@@ -704,14 +708,14 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   const td = (TEXTURE_CAPS[type] || {}).tintDefaults || [];
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
-    const out = evalAthanor(chainGraphs.get(type), w, h, { knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
+    const out = evalAthanor(chainGraphs.get(type), w, h, { neutral: extra.neutral || 'page', knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
       accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true,
       text: chain.poem && extra.text ? poemLines(extra.text) : '', aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 1) }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
     if(out) return out;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
   }
   const div = cappedDiv(chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
-  const img = evalAthanor(chainGraphs.get(type), ww, wh, { knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
+  const img = evalAthanor(chainGraphs.get(type), ww, wh, { neutral: extra.neutral || 'page', knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
       aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
@@ -773,7 +777,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null] }))))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend) }))))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and

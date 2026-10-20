@@ -135,7 +135,7 @@ export function applyPersisted(s){
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
 // from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 8;
+const LOOK_VERSION = 9;
 export function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -199,7 +199,17 @@ export function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))))); }
+function retireLook(s){ return retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))))); }
+/** FLORAL IMPRINTS IN FIFTEEN MEDIA (format 9; Ruby: "everything from white chalk to cyanotype …"): Misregistration's
+ *  place is the Medium's (an old look: By the Seed, as its seed chose before); the Paper Hue goes (the page is the paper
+ *  now), the Ink and Second Ink Hues lead, and an ink left at its old default is left empty, the medium's own. */
+function retireFormat9Layer(L){
+  if(!L || L.textureType !== 'imprints') return L;
+  const o = { ...L, texP6: '0' }, ink = String(L.textureTint2 || ''), ink2 = String(L.textureTint12 || '');
+  o.textureTint1 = /^#1F4E8C$/i.test(ink) ? '' : ink; o.textureTint2 = /^#C8402E$/i.test(ink2) ? '' : ink2; delete o.textureTint12;
+  return o;
+}
+function retireFormat9(s){ if(!s || +s.lookVersion >= 9) return s; let o = retireFormat9Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat9Layer(o.baseLayer) }; return o; }
 /** POSITIONING ON THE CAMERA DIAL (format 8; Ruby: "use the camera dial … when we are doing camera positioning"): the
  *  Transmutation Circle was placed by the light dial (its turn the way, its height how far): those become the camera's
  *  Turn and View. Rain on Water's View slider (0–85) and the Painted Landscape's Tilt slider are the camera's View now;

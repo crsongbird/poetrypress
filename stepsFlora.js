@@ -19,10 +19,10 @@
 import { mulberry32, CPU, freeCanvas } from './texCore.js';
 
 const FL_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
-const flClamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
-const flHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-const flMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
-const flCss = (c, k = 1, a = 1) => `rgba(${Math.round(flClamp(c[0]*k, 0, 255))},${Math.round(flClamp(c[1]*k, 0, 255))},${Math.round(flClamp(c[2]*k, 0, 255))},${a})`;
+export const flClamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
+export const flHex = h => { const n = parseInt(String(h || '#808080').replace('#', '').slice(0, 6), 16) || 0; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+export const flMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
+export const flCss = (c, k = 1, a = 1) => `rgba(${Math.round(flClamp(c[0]*k, 0, 255))},${Math.round(flClamp(c[1]*k, 0, 255))},${Math.round(flClamp(c[2]*k, 0, 255))},${a})`;
 
 /**
  * THE SPECIES (florals.md §2), in the Species slider's order, neighbours alike. type: how its petals are laid out;
@@ -55,10 +55,10 @@ export const FLORA_SPECIES = [
   ['queenannes', { type: 'umbel',  n: [10, 18], shape: 'bud',    tip: 'round', cup: 0,  len: 1,    wid: 1,    disc: ['dot', 0.05],     cols: ['#F5F3EC', '#FFFFFF', '#4A1F3D', '#6A8A5A'] }],
   ['hydrangea',  { type: 'ball',   n: [40, 70], shape: 'round',  tip: 'round', cup: 0,  len: 1,    wid: 1,    disc: ['none', 0],       cols: ['#7E9BD6', '#E79BB8', '#4A5AA0', '#4E7A4A'], ball: 'florets' }],
 ];
-const FLORA_KEYS = FLORA_SPECIES.map(s => s[0]);
-const FLORA = Object.fromEntries(FLORA_SPECIES);
+export const FLORA_KEYS = FLORA_SPECIES.map(s => s[0]);
+export const FLORA = Object.fromEntries(FLORA_SPECIES);
 /** The "mixed" stop: a habitat's species (florals.md §8). */
-const FLORA_HABITATS = [['daisy', 'poppy', 'cornflower', 'buttercup', 'clover', 'queenannes', 'chamomile'], ['bluebell', 'foxglove', 'violet', 'anemone'], ['rose', 'peony', 'lavender', 'foxglove'], ['tulip', 'cherry', 'forgetmenot']];
+export const FLORA_HABITATS = [['daisy', 'poppy', 'cornflower', 'buttercup', 'clover', 'queenannes', 'chamomile'], ['bluebell', 'foxglove', 'violet', 'anemone'], ['rose', 'peony', 'lavender', 'foxglove'], ['tulip', 'cherry', 'forgetmenot']];
 export const FLORA_SPECIES_LABEL = 'Species: ' + ['Daisy', 'Chamomile', 'Cosmos', 'Sunflower', 'Zinnia', 'Cornflower', 'Poppy', 'Anemone', 'Buttercup', 'Rose', 'Peony', 'Tulip', 'Lily', 'Iris', 'Cherry', 'Forget-me-not', 'Violet', 'Bluebell', 'Foxglove', 'Lavender', 'Clover', 'Queen Anne’s Lace', 'Hydrangea', 'Mixed (seeded)'].join(' · ');
 
 /** A petal's half-width at s (0 at its base, 1 at its tip), by its outline. */
@@ -78,7 +78,7 @@ function flWidth(shape, s){
  * its head's radius R px. f: { sp, view (0 face … 1 side), stage, spin, turn, jitter, flat, light: [lx, ly, lz] toward
  * the light, cols: [petal, tip, centre, foliage] rgb, stem }
  */
-function flDrawBloom(L, R, cx, cy, Rad, f){
+export function flDrawBloom(L, R, cx, cy, Rad, f){
   const S = f.sp, rnd = (a, b) => a + R()*(b - a);
   const alpha = (f.flat ? 0 : f.view)*Math.PI/2*0.95, ca = Math.cos(alpha), sa = Math.sin(alpha), tc = Math.cos(f.turn), ts = Math.sin(f.turn);
   // a point of the flower (x, y in its plane, z toward its face) on the page, and how near you
@@ -414,7 +414,7 @@ function flVisitor(L, R, cx, cy, s, ang, kind, c, light){
 }
 
 /** The layers a Bloom draws on, each a canvas w × h (picture on black; the rest grey on black). */
-function flLayers(w, h){
+export function flLayers(w, h){
   const mk = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', CPU); x.fillStyle = '#000'; x.fillRect(0, 0, w, h); return x; };
   return { pic: mk(), mask: mk(), height: mk(), thick: mk(), cen: mk(), ids: mk(), gloss: mk(), face: mk() };
 }
@@ -466,7 +466,7 @@ export const FLORA_STEPS = {
       FL_R('size', 'Size', 100, 30, 300), FL_R('flat', 'Pressed', 0), FL_R('part', 'Part: Whole · Petal · Leaf · Visitor', 0), FL_R('sheet', 'Sheet: One · 4 · 8 · 16', 0), FL_R('stem', 'Stem', 100), FL_R('variant', 'Variation', 0, 0, 99), FL_R('x', 'Across', 50), FL_R('y', 'Down', 50), FL_R('lit', 'Lit By: Bloom · The Light Engine', 0), FL_R('visitor', 'Visitor: Seeded · ' + ['Ladybird', 'Jumping Spider', 'Hoverfly', 'Ant', 'Aphids', 'Fallen Petal', 'Seed Fluff'].join(' · '), 0), FL_R('turn', 'Head Turn', 0)], cost: () => 3,
     run(E, n){ const { ww, wh, num } = E, k = Math.min(FLORA_KEYS.length, Math.floor(num(n, 'species', 0)/100*(FLORA_KEYS.length + 1))), d = E.input(n, 1);
       const deg = typeof d === 'number' ? d*360 : (E.ctx.light ?? 315), a = (deg - 90)*Math.PI/180, t = Math.min(1, Math.max(0, (E.ctx.lightTilt ?? 100)/100));
-      const hue = j => { const v = E.input(n, j); return Array.isArray(v) ? v.map(c => c*255) : null; };
+      const hue = j => { const v = E.input(n, j); return Array.isArray(v) && !v.none ? v.map(c => c*255) : null; };   // (an empty hue: the species' own)
       const sh = [1, 4, 8, 16][Math.min(3, Math.floor(num(n, 'sheet', 0)/100*4))], pv = num(n, 'part', 0), part = pv > 95 ? 'visitor' : ['whole', 'petal', 'leaf'][Math.min(2, Math.floor(pv/100*3))];
       const o = { species: k >= FLORA_KEYS.length ? 'mixed' : FLORA_KEYS[k], view: num(n, 'view', 30)/100, stage: num(n, 'stage', 45)/100, jitter: num(n, 'jitter', 40)/100, size: num(n, 'size', 100)/100,
         flat: num(n, 'flat', 0)/100, part, cells: sh, stem: num(n, 'stem', 100) > 50, light: [Math.cos(a)*t, Math.sin(a)*t, Math.sqrt(Math.max(0.05, 1 - t*t))], cols: [hue(2), hue(3), hue(4), hue(5)],
