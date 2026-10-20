@@ -58,6 +58,15 @@ if(process.argv.includes('--next')){
   writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = '${np}–${nm}'`)
     .replace(/RELEASE_DATE = '[^']*'/, `RELEASE_DATE = '${new Date().toISOString().slice(0, 10)}'`));
   console.log(`release: ${planet}–${cur} → ${np}–${nm}`);
+  // THE CHANGELOG keeps the newest twenty releases; the older ones go to docs/changelog-archive.md, newest first
+  const KEEP = 20, log = readFileSync('CHANGELOG.md', 'utf8'), parts = log.split(/^(?=## )/m);
+  if(parts.length - 1 > KEEP){
+    const ARCHIVE = 'docs/changelog-archive.md', head = '# Changelog, older releases\n\nThe releases before the newest twenty (CHANGELOG.md), newest first.\n\n';
+    let old = ''; try { old = readFileSync(ARCHIVE, 'utf8').replace(/^[\s\S]*?(?=^## )/m, ''); } catch(e){}
+    writeFileSync(ARCHIVE, head + parts.slice(1 + KEEP).join('').trimEnd() + '\n\n' + old);
+    writeFileSync('CHANGELOG.md', parts.slice(0, 1 + KEEP).join('').trimEnd() + '\n');
+    console.log(`changelog: ${parts.length - 1 - KEEP} older releases to ${ARCHIVE}`);
+  }
 }
 
 // THE SURFACE MENUS' THUMBNAILS are kept in each browser until their surface changes (Ruby: "saved so they

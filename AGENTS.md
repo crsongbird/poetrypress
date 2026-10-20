@@ -124,7 +124,7 @@ OPEN-ISSUES / this file → ship (§3).
 node build.mjs            # flatten every module into dist/index.html (+ the texture worker, sw.js, manifest)
 sh test.sh                # parse check + build + every test suite — must end "all N suites passed"
 sh check.sh file.js …     # syntax-check modules (really parses them; `node --check` passes broken modules here)
-node build.mjs --next     # advance release.js to the next moon — once per shipped release
+node build.mjs --next     # advance release.js to the next moon — once per shipped release (and archive the changelog past twenty releases)
 node build.mjs --notes    # print the newest CHANGELOG section (the release's commit message)
 node build.mjs --zip      # archive the project into release/ (old archives deleted first)
 

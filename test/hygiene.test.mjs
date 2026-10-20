@@ -135,8 +135,10 @@ const agents = rd('AGENTS.md'), roadmap = rd('ROADMAP.md'), issues = rd('OPEN-IS
   const { RELEASE } = await import('../release.js');
   const first = (changelog.match(/^## (.+?) \(/m) || [])[1];
   check('CHANGELOG.md leads with this release, ' + RELEASE, first === RELEASE);
-  const names = [...changelog.matchAll(/^## (.+?) \(/gm)].map(m => m[1]);
-  check('every release appears once in the changelog', new Set(names).size === names.length);
+  const archive = existsSync(new URL('docs/changelog-archive.md', ROOT)) ? rd('docs/changelog-archive.md') : '';
+  const names = [...(changelog + '\n' + archive).matchAll(/^## (.+?) \(/gm)].map(m => m[1]);
+  check('every release appears once in the changelog and its archive', new Set(names).size === names.length);
+  check('the changelog keeps the newest twenty releases (node build.mjs --next moves the rest to docs/changelog-archive.md)', (changelog.match(/^## /gm) || []).length <= 21);
   // housekeeping (AGENTS.md §3 step 6): the tests reviewed within every five releases, the stylesheet pruned
   // within every ten (Ruby: the prune is slow)
   const within = n => changelog.split(/^## /m).slice(1, n + 1).join('\n');
