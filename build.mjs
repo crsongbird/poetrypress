@@ -82,6 +82,7 @@ const ORDER = [
   // still in its temporal dead zone. test/bundle.test.mjs checks this order
   // against the real import statements.
   'tunables.js',          // pure data: the numbers
+  'webgl.js',             // the one way WebGL2 is opened (the lighting, the GPU passes, the box's glass)
   'strings.js',           // pure data: the text
   'appOptions.js',        // fonts, presets, aspects, $
   'stitches.js',           // decorative stitches along any path (rules, borders, seams)
@@ -166,7 +167,7 @@ const css = readFileSync('poetrypress.css', 'utf8');
 // itself) whose text is also the worker's, with the worker's own few lines added (a Blob
 // worker, which works from file:// too, unlike a URL). The rest of the page follows it.
 const WORKER_ORDER = [ // which modules the worker needs (textureWorker.js is its own, the rest are shared)
-                      'tunables.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
+                      'tunables.js', 'webgl.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'texWhimsy.js', 'texSharpness.js',
                       'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'textureParams.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsRoom.js', 'stepsFlora.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsLens.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 // (in the page's order, which test/bundle.test.mjs checks against the imports; they import nothing that isn't shared)
 const SHARED = ORDER.filter(f => WORKER_ORDER.includes(f));

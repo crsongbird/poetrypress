@@ -14,6 +14,7 @@
  * those round trips were crashing the GPU. The visible preview stays on the
  * GPU, where drawing is fast; only these offscreen working canvases move.
  */
+import { glOpen, glProgram } from './webgl.js';
 export const CPU = { willReadFrequently: true };
 
 // a smooth multi-octave noise sampler, on grids drawn from the seed (texTouch's surfaces; the Terrain part)
@@ -361,35 +362,18 @@ export let GPU_LIGHT = true;
 export function setGpuLight(on){ GPU_LIGHT = !!on; }
 // for tests only: allow software-emulated WebGL (normally refused: it is slower than the CPU)
 let GPU_SOFT_OK = false;
-export function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; GK = undefined; } }
+export function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; GK = undefined; GL_SHARED = undefined; GK_PROGS.clear(); } }
+// ONE CONTEXT for the lighting and the GPU passes: a worker holds one, not two (each pass sets all the state it uses)
+let GL_SHARED = undefined;
+function glShared(){ if(GL_SHARED === undefined){ try { GL_SHARED = glOpen(GPU_SOFT_OK); } catch(e){ GL_SHARED = null; } } return GL_SHARED; }
 /** What lit this texture: 'gpu', or 'cpu' (no WebGL2, an emulator, or switched off). */
 export function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }   // test hook: which path lights (Node: always the CPU)
 function gpu(){
   if(GPU !== undefined) return GPU;
   GPU = null;
   try {
-    if(typeof OffscreenCanvas !== 'function') return null;
-    const cv = new OffscreenCanvas(1, 1);
-    const gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-    if(!gl) return null;
-    // WebGL emulated in software (no GPU, or a blocklisted driver) is SLOWER
-    // than the CPU path — measured at about twice its time — so step aside
-    // when the renderer says it's an emulator.
-    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-    const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    if(!GPU_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
-    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-      if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-    const prog = gl.createProgram();
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, `#version 300 es
-in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
-    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, LIGHT_FRAG));
-    gl.linkProgram(prog);
-    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
-    const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const W = glShared(); if(!W) return null;
+    const { gl, cv } = W, { prog, vao } = glProgram(W, LIGHT_FRAG);
     const U = n => gl.getUniformLocation(prog, n);
     GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG',
       'uRim','uSteps2','uStride2','uDoShadow2','uL2','uHalf2','uK2','uRise2','uStep2X','uStep2Y'].map(n => [n, U(n)])) };
@@ -480,13 +464,8 @@ function gpuKernels(){
   if(GK !== undefined) return GK;
   GK = null;
   try {
-    if(typeof OffscreenCanvas !== 'function') return null;
-    const cv = new OffscreenCanvas(1, 1), gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-    if(!gl) return null;
-    const dbg = gl.getExtension('WEBGL_debug_renderer_info'), renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    if(!GPU_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
-    const float = !!gl.getExtension('EXT_color_buffer_float');
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    const W = glShared(); if(!W) return null;
+    const { gl, cv, buf } = W, float = !!gl.getExtension('EXT_color_buffer_float');
     GK = { gl, cv, buf, float };
   } catch(e){ GK = null; }
   return GK;
@@ -504,14 +483,7 @@ export function gpuKernel(name, body, w, h, textures, uniforms = {}){
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE); if(w > maxTex || h > maxTex) return null;
     let P = GK_PROGS.get(name);
     if(!P){
-      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-        if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-      const prog = gl.createProgram();
-      gl.attachShader(prog, sh(gl.VERTEX_SHADER, '#version 300 es\nin vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }'));
-      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, '#version 300 es\nprecision highp float; precision highp int; precision highp sampler2D;\nout vec4 o;\n' + body));
-      gl.linkProgram(prog); if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-      const vao = gl.createVertexArray(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, K.buf);
-      const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      const { prog, vao } = glProgram(K, '#version 300 es\nprecision highp float; precision highp int; precision highp sampler2D;\nout vec4 o;\n' + body);
       P = { prog, vao, u: new Map() }; GK_PROGS.set(name, P);
     }
     const U = n => { if(!P.u.has(n)) P.u.set(n, gl.getUniformLocation(P.prog, n)); return P.u.get(n); };

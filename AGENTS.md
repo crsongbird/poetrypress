@@ -224,6 +224,7 @@ default.
 | `textureParams.js` | every surface's sliders (`TEXTURE_PARAMS`): `sliderOf(key, label, def, { min, max, unit, ticks, names, dice })`, 0–100 and no unit unless it says |
 | `textureGenerators.js` | the registry (`TEXTURE_CAPS`: what each can do; blends as `GREY_BLENDS`, `LIT_BLENDS` or `ledBlends(first, set)`), dispatch (`CHAIN_TINTS`: which hues a chain is handed), the cache and its keys |
 | `textureService.js` · `textureWorker.js` | textures made off the page's thread |
+| `webgl.js` | the one way WebGL2 is opened: `glOpen` (a context, or null on none or a software emulator) and `glProgram` (a quad drawn by a fragment shader). The worker's lighting and GPU passes share one context |
 | `texCore.js` | shared maths: seeded random, noise, `pixelPass`, canonical pixels, `lightHeights` (the lighting engine, CPU and WebGL2), FXAA (`fxaaImage`), the steps' kit |
 | `texWhimsy.js` `texSharpness.js` `texChaos.js` `texTouch.js` | the older generators, one file per element (being taken apart into steps) |
 | `textureElements.js` | each texture's four readings (🜂 🜄 🜁 🜃), one of them its default |

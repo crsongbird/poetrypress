@@ -4006,6 +4006,39 @@ const SPELLS = {
 const SHARE_HOME = 'https://vellum.unfixable.place/';
 
 
+/* ==== webgl.js ==== */
+const GL_OPTS = { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false };
+const GL_VERTEX = '#version 300 es\nin vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }';
+
+
+
+function glOpen(softOk){
+  if(typeof OffscreenCanvas !== 'function') return null;
+  const cv = new OffscreenCanvas(1, 1), gl = cv.getContext('webgl2', GL_OPTS);
+  if(!gl) return null;
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+  if(!softOk && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  return { gl, cv, buf };
+}
+ 
+function glProgram(G, frag){
+  const { gl } = G;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, GL_VERTEX));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, frag));
+  gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, G.buf);
+  const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  return { prog, vao };
+}
+
+
 /* ==== stitches.js ==== */
 function pathFromPoints(pts, closed){
   const P = closed ? pts.concat([pts[0]]) : pts.slice();
@@ -5050,35 +5083,18 @@ let GPU_LIGHT = true;
 function setGpuLight(on){ GPU_LIGHT = !!on; }
 
 let GPU_SOFT_OK = false;
-function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; GK = undefined; } }
+function setGpuSoftware(on){ if(GPU_SOFT_OK !== !!on){ GPU_SOFT_OK = !!on; GPU = undefined; GK = undefined; GL_SHARED = undefined; GK_PROGS.clear(); } }
+
+let GL_SHARED = undefined;
+function glShared(){ if(GL_SHARED === undefined){ try { GL_SHARED = glOpen(GPU_SOFT_OK); } catch(e){ GL_SHARED = null; } } return GL_SHARED; }
  
 function lightBackend(){ return GPU_LIGHT && gpu() ? 'gpu' : 'cpu'; }
 function gpu(){
   if(GPU !== undefined) return GPU;
   GPU = null;
   try {
-    if(typeof OffscreenCanvas !== 'function') return null;
-    const cv = new OffscreenCanvas(1, 1);
-    const gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-    if(!gl) return null;
-
-
-
-    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-    const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    if(!GPU_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
-    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-      if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-    const prog = gl.createProgram();
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, `#version 300 es
-in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
-    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, LIGHT_FRAG));
-    gl.linkProgram(prog);
-    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
-    const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const W = glShared(); if(!W) return null;
+    const { gl, cv } = W, { prog, vao } = glProgram(W, LIGHT_FRAG);
     const U = n => gl.getUniformLocation(prog, n);
     GPU = { gl, cv, prog, vao, u: Object.fromEntries(['uH','uSize','uL','uHalf','uRelief','uShine','uSpecK','uShadow','uAO','uAmbient','uRise','uStepX','uStepY','uSteps','uStride','uDoShadow','uR','uN','uHasN','uMode','uG','uHasG',
       'uRim','uSteps2','uStride2','uDoShadow2','uL2','uHalf2','uK2','uRise2','uStep2X','uStep2Y'].map(n => [n, U(n)])) };
@@ -5169,13 +5185,8 @@ function gpuKernels(){
   if(GK !== undefined) return GK;
   GK = null;
   try {
-    if(typeof OffscreenCanvas !== 'function') return null;
-    const cv = new OffscreenCanvas(1, 1), gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-    if(!gl) return null;
-    const dbg = gl.getExtension('WEBGL_debug_renderer_info'), renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    if(!GPU_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
-    const float = !!gl.getExtension('EXT_color_buffer_float');
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+    const W = glShared(); if(!W) return null;
+    const { gl, cv, buf } = W, float = !!gl.getExtension('EXT_color_buffer_float');
     GK = { gl, cv, buf, float };
   } catch(e){ GK = null; }
   return GK;
@@ -5193,14 +5204,7 @@ function gpuKernel(name, body, w, h, textures, uniforms = {}){
     const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE); if(w > maxTex || h > maxTex) return null;
     let P = GK_PROGS.get(name);
     if(!P){
-      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-        if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-      const prog = gl.createProgram();
-      gl.attachShader(prog, sh(gl.VERTEX_SHADER, '#version 300 es\nin vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }'));
-      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, '#version 300 es\nprecision highp float; precision highp int; precision highp sampler2D;\nout vec4 o;\n' + body));
-      gl.linkProgram(prog); if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-      const vao = gl.createVertexArray(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, K.buf);
-      const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      const { prog, vao } = glProgram(K, '#version 300 es\nprecision highp float; precision highp int; precision highp sampler2D;\nout vec4 o;\n' + body);
       P = { prog, vao, u: new Map() }; GK_PROGS.set(name, P);
     }
     const U = n => { if(!P.u.has(n)) P.u.set(n, gl.getUniformLocation(P.prog, n)); return P.u.get(n); };
@@ -26829,25 +26833,8 @@ function bfxGl(){
   if(BFX_GL !== undefined) return BFX_GL;
   BFX_GL = null;
   try {
-    if(typeof OffscreenCanvas !== 'function') return null;
-    const cv = new OffscreenCanvas(1, 1);
-    const gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-    if(!gl) return null;
-    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-    const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    if(!BFX_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
-    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-      if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-    const prog = gl.createProgram();
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, `#version 300 es
-in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
-    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, BFX_FRAG));
-    gl.linkProgram(prog);
-    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
-    const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const W = glOpen(BFX_SOFT_OK); if(!W) return null;
+    const { gl, cv } = W, { prog, vao } = glProgram(W, BFX_FRAG);
     const U = n => gl.getUniformLocation(prog, n);
     BFX_GL = { gl, cv, prog, vao, u: Object.fromEntries(['uSrc','uAux','uSize','uMode','uAmt','uScale','uDir','uSeed','uBlend','uOpacity'].map(n => [n, U(n)])) };
   } catch(e){ BFX_GL = null; }
@@ -29417,7 +29404,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-20 · a7b9352";
+const STAMP = "2026-10-20 · 45b4e8a";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

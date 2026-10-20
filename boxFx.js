@@ -19,6 +19,7 @@
  * on the long side), measured in canonical pixels like the rest of the page.
  * No imports: the page hands in canvases and numbers.
  */
+import { glOpen, glProgram } from './webgl.js';
 
 const BFX_MAX = 1024;            // the working rectangle's long side, at most
 export const BOX_GPU_BLENDS = ['vivid-light', 'linear-light', 'pin-light', 'linear-burn', 'subtract', 'divide'];
@@ -87,25 +88,8 @@ function bfxGl(){
   if(BFX_GL !== undefined) return BFX_GL;
   BFX_GL = null;
   try {
-    if(typeof OffscreenCanvas !== 'function') return null;
-    const cv = new OffscreenCanvas(1, 1);
-    const gl = cv.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false, preserveDrawingBuffer: false });
-    if(!gl) return null;
-    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-    const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    if(!BFX_SOFT_OK && /swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return null;
-    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-      if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
-    const prog = gl.createProgram();
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, `#version 300 es
-in vec2 aPos; void main(){ gl_Position = vec4(aPos, 0.0, 1.0); }`));
-    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, BFX_FRAG));
-    gl.linkProgram(prog);
-    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
-    const loc = gl.getAttribLocation(prog, 'aPos'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const W = glOpen(BFX_SOFT_OK); if(!W) return null;
+    const { gl, cv } = W, { prog, vao } = glProgram(W, BFX_FRAG);
     const U = n => gl.getUniformLocation(prog, n);
     BFX_GL = { gl, cv, prog, vao, u: Object.fromEntries(['uSrc','uAux','uSize','uMode','uAmt','uScale','uDir','uSeed','uBlend','uOpacity'].map(n => [n, U(n)])) };
   } catch(e){ BFX_GL = null; }
