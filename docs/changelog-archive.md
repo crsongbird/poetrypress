@@ -2,6 +2,21 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Ariel (2026-10-20)
+
+- **Dawn and dusk linger in a film.** Time Passing and the Ringworld's day give the hours near sunrise and sunset about
+  three times more of the film than the rest, as games keep their clocks, so a day squeezed into seconds still has a
+  sunrise and a sunset to watch, and loops where it began.
+- **Fireflies.** At dusk and by night the Ringworld's insects are fireflies, each flashing its cold yellow-green light
+  for most of a second every five or six, each in its own time.
+- **Mist in the low land** at dawn and dusk on still days, lying along the foot of the low ridges.
+- The stars turn with the ring's spin at a degree and a half an hour (Niven's ring: once in 225 hours), and clouds in a
+  fast film drift from frame to frame instead of leaping.
+
+### Under the hood
+- moving.js's `filmHours` (the film's clock through a day, slowest near the horizon); the Moving Image suite checks it
+  runs forward from start to end and gives dawn and dusk their share.
+
 ## Uranus–Miranda (2026-10-20)
 
 - **Time Passing**, a new move in the Moving Image (on the Ringworld): an hour, six hours, a day or two days go by in

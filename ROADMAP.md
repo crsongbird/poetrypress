@@ -140,7 +140,7 @@ IDs are for cross-reference. They are not priorities (see §3 for the order).
     plainnoise, stripes, polka, checker, softgradient.
   - **Speed:** no hand-lit surface would be faster on the engine. On a CPU the engine costs ~223 ms for a 768×960
     field (~341 ms with a rim light, ~71 ms with no shadow and no occlusion); on a GPU about what the hand-lit ones
-    cost. The slow surfaces are slow for their simulations, not their light: Growth (~2.1 s), Landscape (~2.0 s),
+    cost. The slow surfaces are slow for their simulations, not their light: Growth (~2.1 s), Landscape (~3 s),
     Lichtenberg (~1.6 s), Turing (~1.1 s) in Node. Worth measuring on a phone's GPU: lightSparse
     makes one GPU call per piece (Sigils 8, Ash 6); one call for the whole field may be faster.
   - Done from it: Crystal takes the page's lights (its kept structure was keyed without them, so it showed stale

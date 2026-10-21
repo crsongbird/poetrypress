@@ -260,6 +260,25 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     so the reaches meet exactly. Its value is the sky's by Schlick's Fresnel at the angle down to it (light far, dark
     near), its colour the sky's at the height it mirrors; a dark strip under the far bank, a light water line there and
     a dark lip under the near bank; level ripples; glitter only in the sun's column; trees and bushes along its banks.
+  - Each band carries its country's own marks (`landMarks`; Ruby: "more variety in the water and land textures";
+    docs/prior-art/painted-landscape.md), on a stream of their own so nothing else in a painting moves. A mark is sized
+    by how near the ground under it is, not by its band (a far band's face can reach your feet): what stands up only
+    shrinks, what lies on the ground also flattens by the angle down to it, and the air takes their contrast. They are
+    broad value shapes, so the Oil Paint over them keeps them; its finer ones show whole with Impasto at 0.
+    Grassland: honami, flower drifts (a soft mass, single blooms near), now and then a strip field, leaning tufts with
+    seed heads. Fields: a patchwork in perspective, tiers down the face, parcels bounded by lines to one vanishing point,
+    sown in converging rows, level strips or pasture, hedges along the bounds. Forest and jungle: crowns massed in rows
+    and a few large masses, a clearing, the jungle's emergents and low mist, the far forest's spiky edge. Mountains:
+    cracks dipping one way, dark with a light lip; scree aprons. The volcano: gullies converging on the summit (an old
+    cone deeply cut), a lava tongue, blocky or lobed. Mesas: cliff-and-bench beds, a caprock, desert varnish, talus.
+    Desert: sinuous dune crests over their slip faces, ripples near, scrub, an outcrop. Tundra: patterned ground, ponds,
+    heath, snow streaks. The coast: wet sand, swash, lines of surf.
+  - One wind per seed (`landScene` gives it): the grass's lean, which side of a dune is its slip face, the snow
+    streaks, the volcano's plume, the water's puffs and foam lines, the point the fields' rows run back to.
+  - The water's mood carries a Beaufort number (`waterMarks`): still 0 or 1, ruffled 1 or 2, choppy 3 to 5. Wind lines
+    cut through quiet reflections; a lake keeps a mirror strip under its far shore; dark puffs; foam lines along a
+    light steady wind, running back to its point on the horizon; on rough water pointed waves, larger near, white
+    crests, and on the sea one great swell at your feet.
 - **Drapery** (chain `drapery`, stepsCloth.js; Ruby: "replace those with node graphs and run a full cloth
   simulation"; docs/prior-art/cloth.md): Drape → Weave Maps (along its U and V) → a Gradient Map of the Tone
   (weft hue to warp hue) → Detail Normals (the threads over the folds' facing) → Light Engine (Relief 100, the

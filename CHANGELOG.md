@@ -4,6 +4,31 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Nereid (2026-10-21)
+
+- Painted Landscape's countries each have their own marks now, sized by how near the ground under them is, so the near
+  part of a band is worked large and its far part small. Fields are a patchwork seen in perspective: parcels in tiers
+  down the hills, bounded by lines running back to one point of the horizon, sown in converging rows, level strips or
+  pasture, with hedges along the bounds. Grassland has patches where the wind bends the grass, drifts of flowers
+  (a soft mass far off, single blooms near), now and then a strip field, and tufts leaning with the wind. Forests are
+  crowns massed in rows with a few large masses and a clearing, the far forest's edge spiky; jungles have emergent
+  trees and a low mist. Mountains have cracks dipping one way and aprons of scree; a volcano's cone has gullies
+  converging on its summit (an old cone deeply cut) and a lava tongue, blocky or lobed. Mesas show their beds, cliff
+  and bench, under a light caprock. Deserts have sinuous dune crests over their slip faces, ripples near and scrub.
+  Tundra has its patterned ground, ponds and heath. Coasts have wet sand and lines of surf.
+- One wind blows through each painting: the grass leans with it, dunes put their slip faces on its lee, the volcano's
+  plume leans on it, and it writes on the water.
+- Water has more moods: a mirror, scales of ripple, glassy wavelets, then white horses a few, frequent or many. Wind
+  lines cut through the reflections on quiet water, a lake keeps a mirror strip under its far shore, gusts lie dark on
+  it, and on a light steady wind lines of foam run back along the wind; rough water has pointed waves, larger near,
+  and the sea one great swell at your feet.
+
+### Under the hood
+- `landMarks` and `waterMarks` (stepsWhimsy.js), each on its own seeded stream so nothing else in a painting moves;
+  `landScene` gives the seed's `wind`. The research is in docs/prior-art/painted-landscape.md. The fields' parcels are
+  drawn as their own shapes rather than clipped, which kept them cheap; a full-size landscape takes about 3 s now.
+  Fingerprints: Painted Landscape's only.
+
 ## Neptune–Triton (2026-10-21)
 
 - Sunrise Scroll paints many lands now, by the seed or by its new Land knob: the scroll as it was (Peaks), Misty
@@ -291,18 +316,3 @@ prints it).
 
 ### Under the hood
 - stepsRing.js's `rgWind` and `rgCloudTime`; each heap's life cycle keyed to the clouds' clock, so a still is unchanged.
-
-## Uranus–Ariel (2026-10-20)
-
-- **Dawn and dusk linger in a film.** Time Passing and the Ringworld's day give the hours near sunrise and sunset about
-  three times more of the film than the rest, as games keep their clocks, so a day squeezed into seconds still has a
-  sunrise and a sunset to watch, and loops where it began.
-- **Fireflies.** At dusk and by night the Ringworld's insects are fireflies, each flashing its cold yellow-green light
-  for most of a second every five or six, each in its own time.
-- **Mist in the low land** at dawn and dusk on still days, lying along the foot of the low ridges.
-- The stars turn with the ring's spin at a degree and a half an hour (Niven's ring: once in 225 hours), and clouds in a
-  fast film drift from frame to frame instead of leaping.
-
-### Under the hood
-- moving.js's `filmHours` (the film's clock through a day, slowest near the horizon); the Moving Image suite checks it
-  runs forward from start to end and gives dawn and dusk their share.

@@ -265,7 +265,10 @@ export function landScene(seed, o = {}){
   if(o.country && LAND_BIOMES[o.country]) kind = o.country;
   if(o.time && LAND_TIMES[o.time]) time = o.time;
   const B = LAND_BIOMES[kind], pitch = Math.max(0, Math.min(1, o.tilt || 0));
-  return { kind, B, time, TM: LAND_TIMES[time], pitch,
+  // (ONE WIND for the whole country, on its own stream: which way it blows across the page (s), how hard (k), the point
+  //  of the horizon its lines and the fields' rows run back to (vp), and the way the rock's grain dips)
+  const WR = seedChoice(seed, 'landscape wind'), wind = { s: WR() < 0.5 ? -1 : 1, k: 0.3 + 0.7*WR(), vp: 0.2 + 0.6*WR(), dip: (WR() - 0.5)*1.2 };
+  return { kind, B, time, TM: LAND_TIMES[time], pitch, seed, wind,
     horizon: h => Math.max(h*0.08, h*(B.horizon + (hz - 0.5)*0.08) - pitch*h*0.3),
     // (THE SUN FOLLOWS THE DIAL, Ruby: laid on the page as the sun's guide lays it, kept just above the horizon when the
     //  dial would set it lower; without a dial, the seed's)
@@ -429,6 +432,231 @@ export function paintSky(ctx, w, h, S, o){
   ctx.globalAlpha = 1;
 }
 
+// ======== THE GROUND'S AND THE WATER'S OWN MARKS (Ruby: "more variety in the water and land textures";
+// docs/prior-art/painted-landscape.md) ========
+// (a soft oval of one colour, strongest at its middle and gone at its edge: honami, puffs, drifts seen from afar)
+function landSoft(ctx, x, y, rx, ry, rgba, tone, col, a){ if(!(rx > 0 && ry > 0)) return; ctx.save(); ctx.translate(x, y); ctx.scale(1, ry/rx);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx); g.addColorStop(0, rgba(tone, col, a)); g.addColorStop(0.6, rgba(tone, col, a*0.55)); g.addColorStop(1, rgba(tone, col, 0));
+  ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+/**
+ * A BAND'S OWN MARKS, what a painter puts on a country so it reads from across a valley. Each mark is sized by how near
+ * the ground under it is (G: 0 at the horizon, 1 at the page's foot, so the near part of a deep band is worked large
+ * and its far part small): what stands up only shrinks; what lies on the ground also flattens by the angle down to it;
+ * the air takes their contrast. They are broad marks, value shapes a brush lays, so the Oil Paint over them keeps
+ * them. One wind for the whole country turns them, and the sun's side lights them.
+ * Grassland: honami (patches where the wind bends the grass to show another face), drifts of flowers following the
+ * ground (a soft mass of their colour, and near, single blooms densest in the middle, a few standing out), now and
+ * then a strip field, and near, leaning blades with seed heads. Fields: a patchwork in perspective, tiers down the
+ * face, parcels bounded by lines running back to one point of the horizon, sown in rows converging there, or in level
+ * strips, or left as pasture; hedges along the bounds. Forest and jungle: crowns massed in rows, shadowed below and lit
+ * on top; a clearing; the jungle's emergents and low mist; the far forest's spiky edge. Mountains: cracks and veins
+ * running one way, dark with a light lip; scree fanning below the steep flanks, coarser at the foot. The volcano's cone:
+ * gullies converging on the summit (an old cone deeply cut, a young one barely), a lava tongue down one flank, blocky or
+ * lobed. Mesas: cliff-and-bench beds across the walls, a light caprock, desert varnish hanging down, talus. Desert: a
+ * dune field, each dune a sharp crest over its slip face on the wind's lee; ripples near; scrub; an outcrop. Tundra:
+ * patterned ground, its net of low polygons, ponds holding the sky, heath, snow streaks along the wind. The coast: wet
+ * sand at the waterline, swash, and lines of surf parallel to the beach. All on a stream of its own (R), so nothing
+ * else in the painting moves.
+ */
+function landMarks(ctx, o){
+  const { kind, prof, t, i, tone, bandCol, pal, face, base, unit, w, h, horizon, wl, sunSide, paint, rgba, mixC, TM, zoom, R, wind, cone } = o;
+  const rnd = (a, b) => a + (b - a)*R(), n = prof.length, px0 = prof[0][0], pdx = (prof[n - 1][0] - px0)/(n - 1) || 1;
+  const yAt = x => { const f = (x - px0)/pdx, j = Math.max(0, Math.min(n - 2, Math.floor(f))), u = Math.max(0, Math.min(1, f - j)); return Math.min(wl, prof[j][1]*(1 - u) + prof[j + 1][1]*u); };
+  const G = y => Math.max(0.03, Math.min(1.1, (y - horizon)/Math.max(1, h - horizon))), S = y => (0.15 + 0.85*G(y))*zoom, C = y => 0.4 + 0.6*Math.min(1, G(y)*1.8);
+  const tv = (d, y) => Math.max(0, Math.min(255, tone + d*1.5*C(y))), lite = mixC(bandCol, TM.light, 0.45), shade = mixC(bandCol, TM.shadow, 0.45), bot = Math.min(h + 40, wl), ys = prof.map(p => Math.min(p[1], wl));
+  const ytop = Math.min(...ys), pick = a => a[Math.floor(R()*a.length)];
+  // (a broad flat stroke as the brush lays it, a little bowed, with a thinner one of broken colour along it)
+  const brush = (x0, y0, x1, y1, wd, v, col, a) => { ctx.lineCap = 'butt'; ctx.globalAlpha = a; ctx.strokeStyle = paint(v, col); ctx.lineWidth = wd; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo((x0 + x1)/2, (y0 + y1)/2 - wd*0.4, x1, y1); ctx.stroke();
+    ctx.globalAlpha = a*0.6; ctx.strokeStyle = paint(Math.max(0, Math.min(255, v + (R() < 0.5 ? -14 : 14))), col); ctx.lineWidth = wd*0.4; ctx.beginPath(); ctx.moveTo(x0, y0 - wd*0.18); ctx.lineTo(x1, y1 - wd*0.18); ctx.stroke(); ctx.lineCap = 'round'; };
+  const line = (pts, v, col, a, wd) => { if(pts.length < 2) return; ctx.globalAlpha = a; ctx.strokeStyle = paint(v, col); ctx.lineWidth = wd; ctx.beginPath(); pts.forEach(([x, y], q) => q ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); };
+  const dab = (x, y, rx, ry, v, col, a, rot = 0) => { ctx.globalAlpha = a; ctx.fillStyle = paint(v, col); ctx.beginPath(); ctx.ellipse(x, y, Math.max(1e-3, rx), Math.max(1e-3, ry), rot, 0, Math.PI*2); ctx.fill(); };
+  const soft = (x, y, rx, ry, v, col, a) => landSoft(ctx, x, y, rx, ry, rgba, v, col, a);
+  const shape = pts => { ctx.beginPath(); pts.forEach(([x, y], q) => q ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); };
+  const between = (A, Bp) => shape([...A, ...Bp.slice().reverse()]);
+  // (a line following the ground, so far down the band's face)
+  const along = (down, x0 = -20, x1 = w + 20) => { const pts = [], st = Math.max(unit*0.004, (x1 - x0)/160); for(let x = x0; x <= x1 + st*0.5; x += st) pts.push([x, yAt(x) + down]); return pts; };
+  const steepAt = x => Math.abs(yAt(x + unit*0.01) - yAt(x - unit*0.01))/(unit*0.02);
+  // (a fan of stones below a steep place: concave, sorted, the coarse ones at the foot)
+  const apron = (x, ay, fh, nk) => { soft(x, ay + fh*0.6, fh*0.7, fh*0.45, tv(16, ay + fh), lite, 0.35);
+    for(let k = 0; k < nk*0.6; k++){ const u = Math.pow(R(), 0.7), sy = ay + fh*Math.pow(u, 1.6), r = unit*0.003*S(sy)*(0.5 + 2*u), up = R() < 0.5;
+    dab(x + (R() - 0.5)*fh*(0.2 + 1.2*u), sy, r, r*0.65, tv(up ? 26 : -30, sy), up ? lite : shade, 0.4); } };
+  const grassy = kind === 'grass' || kind === 'plains' || kind === 'river' || kind === 'coast';
+  // ---- marks lying on the band's face: kept inside it ----
+  ctx.save(); ctx.beginPath(); ctx.moveTo(px0, bot); prof.forEach(([x, y]) => ctx.lineTo(x, Math.min(y, wl))); ctx.lineTo(prof[n - 1][0], bot); ctx.closePath(); ctx.clip();
+  if(grassy){
+    for(let q = 0, nh = 2 + Math.floor(R()*3) + (kind === 'plains' ? 2 : 0); q < nh; q++){ const x = w*R(), y = yAt(x) + face*rnd(0.15, 0.7), rx = unit*rnd(0.14, 0.34)*S(y)*(kind === 'plains' ? 1.4 : 1), up = R() < 0.7;
+      soft(x, y, rx, rx*G(y)*rnd(0.45, 0.7), tv(up ? 40 : -20, y), up ? lite : shade, 0.7); soft(x - wind.s*rx*0.4, y, rx*0.55, rx*G(y)*0.35, tv(up ? 48 : -26, y), up ? lite : shade, 0.5); }
+    if(R() < 0.65){ const lightSp = R() < 0.6, fc = lightSp ? pick([[250, 246, 232], [240, 212, 92], [236, 236, 244]]) : pick([[196, 52, 44], [112, 86, 176], [176, 70, 120]]), dv = lightSp ? 34 : -34;
+      for(let q = 0, nd = 1 + Math.floor(R()*3); q < nd; q++){ const cx = w*R(), y0 = yAt(cx) + face*rnd(0.1, 0.6), g = G(y0), span = unit*rnd(0.15, 0.4)*S(y0);
+        soft(cx, y0, span, span*g*0.3, tv(dv*0.8, y0), fc, 0.6);
+        if(g > 0.3) for(let k = 0, nk = Math.round(span/unit*1400*g); k < nk; k++){ const u = (R() + R() + R() - 1.5)/1.5, x = cx + u*span, y = y0 + (R() - 0.5)*span*g*0.4*(1 - Math.abs(u)), r = unit*0.0045*S(y)*(0.6 + 0.8*R());
+          dab(x, y, r, r*0.7, tv(dv*(R() < 0.12 ? 2 : 1.2), y), fc, 0.85); } } }
+    if(kind !== 'coast' && R() < 0.25){ const cx = w*R(), y0 = yAt(cx) + face*rnd(0.15, 0.45), span = unit*rnd(0.2, 0.45)*S(y0), ns = 3 + Math.floor(R()*4), dh = span*G(y0)*rnd(0.06, 0.1);
+      const ySm = x => { let a = 0; for(let q = -4; q <= 4; q++) a += yAt(x + q*span*0.06); return a/9 + (y0 - yAt(cx)); }, strip = k => { const pts = []; for(let q = 0; q <= 24; q++){ const u = q/24*2 - 1, x = cx + u*span; pts.push([x, ySm(x) + k*dh*Math.sqrt(1 - u*u)]); } return pts; };
+      if(G(y0) > 0.25) for(let k = 0; k < ns; k++){ between(strip(k), strip(k + 1)); ctx.globalAlpha = 0.42; ctx.fillStyle = paint(tv(k % 2 ? 26 : -18, y0), k % 2 ? mixC(bandCol, [214, 190, 110], 0.5) : bandCol); ctx.fill(); } }
+    for(let k = 0, nb = Math.round(w/unit*70); k < nb; k++){ const x = w*R(), y = yAt(x) + face*Math.pow(R(), 0.8)*0.95; if(G(y) < 0.5) continue;
+      const up = R() < 0.5, lean = wind.s*wind.k*0.45 + (R() - 0.5)*0.3;
+      for(let b = 0, nbl = 3 + Math.floor(R()*4); b < nbl; b++){ const hb = unit*rnd(0.016, 0.036)*S(y), a = lean + (b - nbl/2)*0.18 + (R() - 0.5)*0.15, bx = x + (b - nbl/2)*unit*0.003*S(y), tx = bx + Math.sin(a)*hb, ty = y - Math.cos(a)*hb;
+        brush(bx, y, tx, ty, unit*0.005*S(y), tv(up ? 20 : -28, y), up ? lite : shade, 0.45);
+        if(R() < 0.25) dab(tx, ty, hb*0.08, hb*0.18, tv(32, y), lite, 0.65, a); } }
+    if(kind === 'coast' && wl < h){ const hs = unit*0.012*S(wl);
+      for(let x = -10; x < w + 10; x += unit*0.006){ if(yAt(x) > wl - hs*1.5) continue; ctx.globalAlpha = 0.4; ctx.fillStyle = paint(Math.min(250, tone + 50), mixC(TM.skyLow, [236, 226, 200], 0.4)); ctx.fillRect(x, wl - hs, unit*0.0062, hs);
+        if(R() < 0.08) dab(x, wl, unit*rnd(0.008, 0.025)*S(wl), hs*rnd(0.6, 1.4), Math.min(250, tone + 70), mixC([244, 246, 250], TM.light, 0.3), 0.5); } }
+  }
+  if(kind === 'fields'){
+    const vx = w*wind.vp, b2 = Math.min(h + 40, base + face*1.25), nt = 1 + Math.floor(R()*1.5 + (b2 - ytop)/Math.max(1, h - horizon)*3), dmax = b2 - Math.min(...ys.map(y => y)), hedges = [];
+    const ray = (x, yref) => y => vx + (x - vx)*(y - horizon)/Math.max(1, yref - horizon);
+    // (no clip per parcel, which costs a mask the page's size each time: each parcel is its own shape, its back and
+    //  front following the ground, its sides the lines to the vanishing point)
+    for(let k = 0; k < nt; k++){ const d0 = dmax*Math.pow(k/nt, 0.85), d1 = dmax*Math.pow((k + 1)/nt, 0.85), yB = Math.max(horizon + 1, base + d0), yF = Math.max(yB + 1, base + d1);
+      const gs = Math.max(unit*0.01, yF - horizon), ft = Math.max(0.2, (yB - horizon)/Math.max(1, yF - horizon)), xL = vx - (vx + 20)/ft, xR = vx + (w + 20 - vx)/ft;
+      if(k + 1 < nt) hedges.push(along(d1));
+      for(let xa = xL - R()*gs; xa < xR;){ const xb = xa + gs*rnd(0.5, 1.6)*zoom, A = ray(xa, yF), Bq = ray(xb, yF), kind2 = R(), col = mixC(pick(pal), TM.skyLow, (1 - G(yF))*0.5);
+        const qx0 = Math.min(A(yB), A(yF)), qx1 = Math.max(Bq(yB), Bq(yF));
+        if(qx1 < -20 || qx0 > w + 20){ xa = xb; continue; }   // (wholly off the page)
+        const cut = (d, y) => along(d, Math.max(-20, A(y)), Math.min(w + 20, Bq(y)));
+        between(cut(d0, yB), cut(d1, yF)); ctx.globalAlpha = 0.55; ctx.fillStyle = paint(tv((R() < 0.5 ? 1 : -1)*rnd(10, 30), yF), col); ctx.fill();
+        if(kind2 < 0.45 && G(yF) > 0.15){ const rs = unit*0.026*S(yF)*rnd(0.7, 1.3);
+          for(let x = xa + rs*R(); x < xb; x += rs){ const Rr = ray(x, yF), ya0 = yAt(Rr(yB)) + d0, yz0 = yAt(Rr(yF)) + d1; if(Rr(yF) < -20 || Rr(yB) > w + 20) continue;
+            for(let s = 0; s < 6; s++){ const ya = ya0 + (yz0 - ya0)*s/6, yz = ya0 + (yz0 - ya0)*(s + 1)/6;
+              brush(Rr(ya), ya, Rr(yz), yz, rs*0.36*Math.max(0.25, G((ya + yz)/2)/G(yF)), tv(-32, yz), mixC(col, TM.shadow, 0.4), 0.42); } } }
+        else if(kind2 < 0.7){ const dh = (d1 - d0)/(3 + Math.floor(R()*4)); for(let q = 1, d = d0 + dh; d + dh <= d1 + 0.5; q++, d += dh) if(q % 2){ between(cut(d, base + d), cut(d + dh, base + d + dh)); ctx.globalAlpha = 0.4; ctx.fillStyle = paint(tv(24, base + d), mixC(col, TM.light, 0.3)); ctx.fill(); } }
+        else for(let q = 0, nq = Math.round((xb - xa)/unit*60*G(yF)); q < nq; q++){ const u = R(), Rr = ray(xa + (xb - xa)*u, yF), ya0 = yAt(Rr(yB)) + d0, y = ya0 + (yAt(Rr(yF)) + d1 - ya0)*R(), x = Rr(y), r = unit*0.004*S(y);
+          brush(x - r, y, x + r, y - r*0.2, r*0.7, tv(R() < 0.5 ? 24 : -24, y), R() < 0.5 ? lite : shade, 0.45); }
+        if(R() < 0.65) hedges.push({ ray: A, y0: yB, y1: yF, d0, d1 });
+        xa = xb; } }
+    // the hedges, over the parcels: dark rounded bushes close along each bound, lit on the sun's side, a tree now and then
+    const bush = (x, y) => { const r = unit*0.013*S(y)*rnd(0.7, 1.3)*(R() < 0.06 ? 2 : 1); dab(x, y - r*0.4, r, r*0.75, tv(-48, y), shade, 0.62); if(R() < 0.6) dab(x + sunSide*r*0.3, y - r*0.75, r*0.55, r*0.38, tv(16, y), lite, 0.45); };
+    for(const hd of hedges){ if(Array.isArray(hd)){ if(R() < 0.6) for(let q = 0; q < hd.length; q++){ const [x, y] = hd[q]; if(R() < 0.85) bush(x, y); if(hd[q + 1] && R() < 0.85) bush((x + hd[q + 1][0])/2, (y + hd[q + 1][1])/2); } continue; }
+      // (a bush every so far along the bound, by its own size there; none so far off they would be specks)
+      const sl = Math.hypot(hd.ray(hd.y1) - hd.ray(hd.y0), hd.y1 - hd.y0)/Math.max(1e-3, hd.y1 - hd.y0);
+      for(let y = Math.max(hd.y0, horizon + (h - horizon)*0.05); y < hd.y1; y += unit*0.013*S(y)*0.7/sl){ const x = hd.ray(y), yy = yAt(x) + hd.d0 + (hd.d1 - hd.d0)*(y - hd.y0)/Math.max(1, hd.y1 - hd.y0); if(x > -20 && x < w + 20 && R() < 0.85) bush(x, yy); } }
+  }
+  if(kind === 'forest' || kind === 'jungle'){ const jg = kind === 'jungle';
+    for(let d = face*0.04*R(), rows = 0; d < face*0.95 && rows < 30; rows++){ const g = G(base + d), cr = unit*0.028*S(base + d)*(jg ? 1.3 : 1), a = 0.2 + 0.18*Math.min(1, g*2);
+      for(let x = -cr*R(); x < w + cr; x += cr*rnd(0.9, 1.7)){ const y = yAt(x) + d + cr*(0.5 + (R() - 0.5)*0.5), fl = 0.55 + 0.45*g, rr = cr*rnd(0.75, 1.2);
+        dab(x, y + rr*0.3, rr*1.05, rr*0.75*fl, tv(-28, y), shade, a); dab(x + sunSide*rr*0.28, y - rr*0.15, rr*0.6, rr*0.4*fl, tv(22, y), lite, a*0.9); }
+      d += cr*(0.6 + 0.5*g); }
+    for(let q = 0, nq = 2 + Math.floor(R()*4); q < nq; q++){ const x = w*R(), y = yAt(x) + face*rnd(0.15, 0.75), rx = unit*rnd(0.15, 0.4)*S(y), up = R() < 0.4; soft(x, y, rx, rx*G(y)*0.5, tv(up ? 22 : -30, y), up ? lite : shade, 0.45); }
+    if(R() < 0.4){ const x = w*R(), y = yAt(x) + face*rnd(0.3, 0.6), rx = unit*rnd(0.08, 0.18)*S(y); soft(x, y, rx, rx*G(y)*0.4, tv(22, y), mixC(bandCol, [170, 170, 96], 0.5), 0.55); }
+    if(jg && t < 0.95){ const y0 = base + face*0.4, y1 = base + face*0.95, g = ctx.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, rgba(205, TM.skyLow, 0)); g.addColorStop(0.65, rgba(205, TM.skyLow, 0.3*(1.1 - t))); g.addColorStop(1, rgba(205, TM.skyLow, 0)); ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(-20, y0, w + 40, y1 - y0); }
+  }
+  if(kind === 'mountain' || kind === 'lake' || kind === 'volcano'){
+    for(let q = 0, nq = Math.round((10 + 30*t)*(kind === 'volcano' ? 0.5 : 1)); q < nq; q++){ const x = w*R(), y = yAt(x) + face*Math.pow(R(), 1.4)*0.7, len = unit*rnd(0.02, 0.07)*S(y), a = wind.dip + (R() - 0.5)*0.3, wd = unit*0.0022*S(y), pts = [];
+      for(let s = 0; s <= 4; s++) pts.push([x + Math.cos(a)*len*s/4 + (s && s < 4 ? (R() - 0.5)*len*0.12 : 0), y + Math.sin(a)*len*s/4]);
+      line(pts, tv(-46, y), shade, 0.55, wd*1.4); line(pts.map(([px, py]) => [px - sunSide*wd*1.4, py - wd]), tv(36, y), lite, 0.45, wd); }
+    if(kind !== 'volcano') for(let q = 0, ns = 1 + Math.floor(R()*3); q < ns; q++){ let x = w*R(); for(let k = 0; k < 12 && steepAt(x) < 0.3; k++) x = w*R(); apron(x, yAt(x) + face*0.04, face*rnd(0.2, 0.45), Math.round(50 + 120*t)); }
+    if(kind === 'volcano'){ for(let k = 0, nk = Math.round(w/unit*120); k < nk; k++){ const x = w*R(), y = yAt(x) + face*R()*0.9, r = unit*0.002*S(y); dab(x, y, r, r*0.7, tv(-42, y), shade, 0.45); }
+      if(cone && i === cone.band){ const top = base - cone.hgt*0.93, old = R() < 0.55, ng = old ? 10 + Math.floor(R()*7) : 5 + Math.floor(R()*3), wd = cone.half*0.012;
+        const on = (ph, s) => { const ss = Math.pow(s, 1.15); return [cone.x + cone.half*Math.min(1, ss)*Math.sin(ph) + Math.max(0, ss - 1)*cone.half*Math.sin(ph)*1.5, top + (base - top)*ss + face*0.12*ss*Math.cos(ph)]; };
+        // (each gully its own: where it heads and where it fades, wandering a little, wider as it deepens down the flank)
+        for(let g = 0; g < ng; g++){ const ph0 = ((g + R()*0.8 + 0.1)/ng*2 - 1)*1.25, s0 = rnd(0.06, 0.3), s1 = rnd(0.55, 1), wob = rnd(0.03, 0.08), wf = rnd(4, 9), wp = R()*6, pts = [];
+          for(let s = s0; s <= s1; s += 0.04) pts.push(on(ph0 + Math.sin(s*wf + wp)*wob, s));
+          for(let q = 0; q + 1 < pts.length; q++){ const u = q/(pts.length - 1), env = Math.sin(Math.PI*Math.min(1, u*1.3)), wq = wd*(0.4 + 1.2*u)*(old ? 1.5 : 1);
+            line([pts[q], pts[q + 1]], tone - 44, shade, (old ? 0.55 : 0.35)*env, wq); line([[pts[q][0] - sunSide*wq*1.2, pts[q][1]], [pts[q + 1][0] - sunSide*wq*1.2, pts[q + 1][1]]], tone + 30, lite, (old ? 0.4 : 0.25)*env, wq*0.6); } }
+        const ph = rnd(-0.9, 0.9), aa = R() < 0.5, Lp = [], Rp = [], mid = [];
+        const mf = rnd(5, 9), mp = R()*6; for(let s = 0.08; s <= 1.3; s += 0.04){ const [x, y] = on(ph + Math.sin(s*mf + mp)*0.06*s, s), hw = cone.half*(0.012 + 0.05*s)*(0.8 + 0.4*Math.sin(s*13 + mp)); Lp.push([x - hw, y]); Rp.push([x + hw, y]); mid.push([x, y, hw]); }
+        between(Lp, Rp); ctx.globalAlpha = 0.6; ctx.fillStyle = paint(Math.max(0, tone - 58), mixC(bandCol, [40, 30, 30], 0.5)); ctx.fill();
+        for(const [x, y, hw] of mid) for(let k = 0; k < 3; k++){ const bx = x + (R() - 0.5)*hw*1.8, r = hw*rnd(0.18, 0.38);
+          if(aa){ ctx.globalAlpha = 0.5; ctx.fillStyle = paint(tv(R() < 0.5 ? -72 : -20, y), shade); ctx.fillRect(bx - r, y - r*0.5, r*2, r); }
+          else dab(bx, y, r*1.3, r*0.6, tv(R() < 0.5 ? -68 : -24, y), shade, 0.5); }
+        if(!aa){ const [x, y, hw] = mid[mid.length - 1]; for(let k = 0; k < 4; k++) dab(x + (k - 1.5)*hw*0.9, y + hw*rnd(0.1, 0.5), hw*0.5, hw*0.3, tv(-58, y), shade, 0.6); } } }
+  }
+  if(kind === 'mesa'){ const yfl = ys.slice().sort((a, b) => a - b)[Math.floor(ys.length*0.85)], span = yfl - ytop;
+    if(span > unit*0.01){ const ns = 4 + Math.floor(R()*4);
+      ctx.save(); ctx.beginPath(); ctx.rect(-20, ytop - 2, w + 40, span + 2); ctx.clip();
+      for(let k = 0, y = ytop + span*rnd(0.06, 0.1); k < ns && y < yfl; k++){ const th = span/ns*rnd(0.6, 1.3), hard = k % 2 === 0;
+        ctx.globalAlpha = hard ? 0.42 : 0.32; ctx.fillStyle = paint(tv(hard ? -30 : 20, y), hard ? shade : lite); ctx.fillRect(-20, y, w + 40, th*(hard ? 0.6 : 0.4));
+        if(!hard){ ctx.globalAlpha = 0.4; ctx.fillStyle = paint(tv(36, y), lite); ctx.fillRect(-20, y, w + 40, unit*0.003*S(y)); } y += th; }
+      for(let q = 0, nq = Math.round(w/unit*8); q < nq; q++){ const x = w*R(), y0 = yAt(x); if(y0 > yfl - span*0.25) continue; brush(x, y0 + span*0.05, x + (R() - 0.5)*unit*0.004, y0 + (yfl - y0)*rnd(0.3, 0.8), unit*0.009*S(y0), tv(-34, y0), shade, 0.2); }
+      ctx.restore();
+      for(let x = -10; x < w + 10; x += unit*0.006){ const y0 = yAt(x); if(y0 - ytop < span*0.3 && steepAt(x) < 0.2) brush(x, y0 + unit*0.003*S(y0), x + unit*0.007, yAt(x + unit*0.007) + unit*0.003*S(y0), unit*0.004*S(y0), tv(30, y0), lite, 0.45); }
+      for(let q = 0; q < 3; q++){ let x = w*R(); for(let k = 0; k < 12 && steepAt(x) < 0.6; k++) x = w*R(); const y0 = yAt(x); apron(x, y0 + (yfl - y0)*0.5, (yfl - y0)*0.5 + span*0.25, Math.round(30 + 90*t)); } }
+  }
+  if(kind === 'desert'){ const slipV = wind.s === sunSide ? 18 : -38;
+    for(let q = 0, nc = 1 + Math.floor(R()*3); q < nc; q++){ const d0 = face*rnd(0.15, 0.8), lam = unit*rnd(0.06, 0.16)*S(base + d0), A = unit*rnd(0.01, 0.03)*S(base + d0)*(0.4 + G(base + d0)), p1 = R()*6, p2 = R()*6, ph = R()*6;
+      const crest = []; for(let x = -20; x <= w + 20; x += Math.max(unit*0.004, lam/8)) crest.push([x, yAt(x) + d0 + A*Math.sin(x/lam + p1) + A*0.45*Math.sin(x/(lam*0.43) + p2)]);
+      const gy = base + d0, hS = unit*rnd(0.02, 0.045)*S(gy)*(0.5 + G(gy)), hL = hS*1.6, seg = 10;
+      for(let k = 0; k + 1 < crest.length; k += seg){ const part = crest.slice(k, k + seg + 1), lf = 0.55 + 0.45*Math.sin(part[0][0]/(unit*0.25) + ph); if(lf < 0.15) continue;
+        for(let j = 0; j < 5; j++){ line(part.map(([x, y]) => [x, y + hS*(j + 0.5)/5]), tv(slipV, gy), slipV > 0 ? lite : shade, 0.5*lf*(1 - j/5), hS/5*1.15);
+          line(part.map(([x, y]) => [x, y - hL*(j + 0.5)/5]), tv(slipV > 0 ? -26 : 22, gy), slipV > 0 ? shade : lite, 0.38*lf*(1 - j/5), hL/5*1.15); }
+        line(part, tv(48, gy), lite, 0.75*lf, unit*0.0035*S(gy)); } }
+    for(let q = 0; q < 2; q++){ const cx = w*R(), cy = yAt(cx) + face*rnd(0.4, 0.9); if(G(cy) < 0.55) continue; const span = unit*rnd(0.15, 0.3)*S(cy), dd = unit*0.022*S(cy)*G(cy);
+      for(let y = cy - span*G(cy)*0.4; y < cy + span*G(cy)*0.4; y += dd) for(let x = cx - span; x < cx + span;){ const len = unit*rnd(0.03, 0.06)*S(y), u = Math.abs(x - cx)/span, a = 0.5*(1 - u*u), wv = Math.sin(x/(unit*0.03) + y)*dd*0.3;
+        if(a > 0.05){ brush(x, y + wv, x + len, y - wv, unit*0.004*S(y), tv(30, y), lite, a); brush(x, y + wv + unit*0.005*S(y), x + len, y - wv + unit*0.005*S(y), unit*0.003*S(y), tv(-32, y), shade, a*0.8); }
+        x += len*rnd(1.05, 1.4); } }
+    for(let k = 0, nk = Math.round(w/unit*50); k < nk; k++){ const x = w*R(), y = yAt(x) + face*R()*0.9; if(G(y) > 0.85) continue;
+      for(let c = 0, nc = 1 + Math.floor(R()*4); c < nc; c++){ const r = unit*0.003*S(y)*rnd(0.6, 1.3); dab(x + (R() - 0.5)*r*6, y + (R() - 0.5)*r*G(y)*3, r, r*0.65, tv(-46, y), mixC(shade, [70, 80, 50], 0.4), 0.55); } }
+    if(R() < 0.35){ const x = w*R(), y = yAt(x) + face*rnd(0.2, 0.5), r = unit*rnd(0.012, 0.03)*S(y); dab(x, y, r*1.3, r*0.6, tv(-42, y), shade, 0.65); dab(x + sunSide*r*0.3, y - r*0.25, r*0.8, r*0.3, tv(32, y), lite, 0.55); }
+  }
+  if(kind === 'tundra'){ const cw0 = unit*rnd(0.04, 0.065);
+    // (a bound between two polygons: its trough dark and wet, a light rim beside it; some lost)
+    const bounds = [], bound = (P, Q) => { if(R() < 0.15) return; const wd = unit*0.0045*S(P[1]); line([P, Q], tv(-30, P[1]), shade, 0.55, wd); line([[P[0], P[1] - wd*1.2], [Q[0], Q[1] - wd*1.2]], tv(26, P[1]), lite, 0.32, wd*0.7); };
+    for(let d = face*0.02, rows = [], prev = null; d < face*0.98 && rows.length < 60;){ const y = base + d, g = G(y), cw = Math.max(unit*0.012, cw0*S(y)*rnd(0.8, 1.25)), ch = Math.max(unit*0.004, cw*g*1.2), row = [];
+      if(g > 0.08){ for(let x = -cw*R(); x < w + cw; x += cw*rnd(0.6, 1.4)) row.push([x + (R() - 0.5)*cw*0.5, yAt(x) + d + (R() - 0.5)*ch*0.6]);
+        row.forEach(([x, yy], k) => { if(row[k + 1]) bounds.push([[x, yy], row[k + 1]]);
+          if(prev){ let best = prev[0]; for(const p of prev) if(Math.abs(p[0] - x) < Math.abs(best[0] - x)) best = p; bounds.push([[x, yy], best]);
+            if(row[k + 1]){ const cx = (x + row[k + 1][0])/2, cy = (yy + best[1])/2, rx = Math.abs(row[k + 1][0] - x)*0.5, ry = Math.max(rx*g*0.5, Math.abs(yy - best[1])*0.5), z = R();
+              if(z < 0.04) dab(cx, cy, rx*rnd(0.6, 1.1), ry*0.7, Math.min(250, tone + 50), TM.skyLow, 0.7);
+              else dab(cx, cy, rx*0.9, ry*0.9, tv(z < 0.35 ? -24 : z < 0.6 ? -10 : 12, cy), z < 0.6 ? mixC(shade, [120, 100, 80], 0.3) : lite, 0.5); } } });
+        prev = row; rows.push(row); }
+      d += ch; }
+    for(const [P, Q] of bounds) bound(P, Q);
+    for(let q = 0, nq = 4 + Math.floor(R()*5); q < nq; q++){ const x = w*R(), y = yAt(x) + face*rnd(0.1, 0.8), rx = unit*rnd(0.08, 0.2)*S(y); soft(x, y, rx, rx*G(y)*0.35, tv(-44, y), mixC(shade, [120, 90, 80], 0.4), 0.6); }
+    for(let q = 0, nq = Math.round(10 + 20*t); q < nq; q++){ const x = w*R(), y = yAt(x) + face*rnd(0.05, 0.9), len = unit*rnd(0.04, 0.14)*S(y); brush(x, y, x + wind.s*len, y + len*0.01, unit*0.004*S(y)*G(y), tv(40, y), lite, 0.45); }
+  }
+  ctx.restore();
+  // ---- marks standing up from the crest, or out on the water in front ----
+  if(grassy) for(let k = 0, nb = Math.round(w/unit*90); k < nb; k++){ const x = w*R(), y = yAt(x) + unit*0.002; if(G(y) < 0.45 || y >= wl - unit*0.004) continue;
+    const hb = unit*rnd(0.012, 0.03)*S(y), a = wind.s*wind.k*0.45 + (R() - 0.5)*0.5; brush(x, y, x + Math.sin(a)*hb, y - Math.cos(a)*hb, unit*0.0028*S(y), tv(-12, y), bandCol, 0.6); }
+  if(kind === 'forest') for(let x = -10; x < w + 10;){ const y = yAt(x) + unit*0.001, g = G(y), hs = unit*rnd(0.006, 0.016)*S(y); x += hs*rnd(0.3, 0.7); if(g > 0.3) continue;
+    ctx.globalAlpha = 0.85; ctx.fillStyle = paint(tone, bandCol); shape([[x - hs*0.3, y], [x, y - hs], [x + hs*0.3, y]]); ctx.fill(); }
+  if(kind === 'jungle' && t > 0.15 && t < 0.85) for(let q = 0, ne = R() < 0.7 ? 1 + Math.floor(R()*2) : 0; q < ne; q++){ const x = w*rnd(0.05, 0.95), y = yAt(x) + unit*0.002, he = unit*0.1*S(y)*rnd(0.8, 1.4), rx = he*0.55;
+    brush(x, y, x + (R() - 0.5)*he*0.1, y - he, unit*0.006*S(y), tv(-22, y), shade, 0.85);
+    dab(x, y - he, rx, rx*0.28, tv(-14, y), bandCol, 0.92); dab(x + sunSide*rx*0.25, y - he - rx*0.1, rx*0.6, rx*0.14, tv(24, y), lite, 0.65); }
+  if(kind === 'coast' && wl < h){ const runs = []; let on = null;
+    for(let x = -10; x <= w + 10; x += unit*0.008){ const land = yAt(x) < wl - unit*0.01; if(land && on == null) on = x; if(!land && on != null){ runs.push([on, x]); on = null; } } if(on != null) runs.push([on, w + 10]);
+    const nb = 2 + Math.floor(R()*3), g0 = unit*0.012*S(wl)*G(wl), foam = mixC([244, 246, 250], TM.light, 0.3), wd = unit*0.003*S(wl);
+    for(const [xa, xb] of runs) for(let k = 1; k <= nb; k++){ const y = wl + g0*k*(1 + 0.6*k), pts = []; for(let x = xa; x <= xb; x += unit*0.006) pts.push([x, y + Math.sin(x/(unit*0.03) + k*2.1)*g0*0.3]);
+      line(pts, 222, foam, 0.55/k, wd); for(const [px, py] of pts) if(R() < 0.35) dab(px, py + wd*0.5, unit*0.006*S(wl)*rnd(0.5, 1.5), wd*0.8, 232, foam, 0.5/k); }
+  }
+  ctx.globalAlpha = 1;
+}
+/**
+ * THE WATER'S OWN MARKS (docs/prior-art/painted-landscape.md §10–13), over the water a painting has laid: its mood as a
+ * Beaufort number (0 a mirror; 1 scales of ripple; 2 glassy wavelets; 3 a few white horses; 4 frequent; 5 many). Wind
+ * lines cut level through the reflections on quiet water; the wind's puffs lie dark on it; under the far shore a strip
+ * of mirror where the land shelters it; on a light steady wind, lines of foam drawn out along the wind, running back to
+ * its point on the horizon; on rough water pointed waves, larger near, their crests broken white, and at your feet
+ * one great swell with its foam laced along it. On a stream of its own (R).
+ */
+function waterMarks(ctx, o){
+  const { top, prof, tone, col, w, h, horizon, unit, bft, wind, R, paint, rgba, mixC, TM, waterCol } = o, rnd = (a, b) => a + (b - a)*R(), dep = y => Math.max(0, (y - top)/Math.max(1, h - top));
+  const light = mixC([240, 244, 250], TM.light, 0.4), dark = mixC(waterCol, TM.shadow, 0.45), hair = y => unit*0.0018*(1 + 2*dep(y)), vx = w*wind.vp;
+  let rh = 0; if(prof) for(const [, y] of prof) rh = Math.max(rh, (top - Math.min(top, y))*0.9);
+  if(prof && bft >= 1){ const sh = unit*rnd(0.006, 0.02)*(bft >= 3 ? 0.5 : 1); ctx.save(); ctx.beginPath(); ctx.rect(-20, top, w + 40, sh); ctx.clip();
+    ctx.globalAlpha = 0.55; ctx.fillStyle = paint(tone, col); ctx.beginPath(); ctx.moveTo(-20, top); prof.forEach(([x, y]) => ctx.lineTo(x, top + (top - Math.min(top, y))*0.9)); ctx.lineTo(w + 20, top); ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.globalAlpha = 0.3; ctx.fillStyle = paint(118, dark); ctx.fillRect(-20, top + sh, w + 40, hair(top)); }
+  if(bft <= 2) for(let k = 0, nk = 2 + Math.floor(R()*4); k < nk; k++){ const y = top + (rh > 2 ? R()*rh*1.1 : Math.pow(R(), 1.5)*(h - top)*0.5), x = w*rnd(-0.1, 0.6), len = w*rnd(0.2, 0.6), tilt = dep(y)*0.03*wind.s;
+    ctx.globalAlpha = 0.4 + 0.2*R(); ctx.strokeStyle = paint(218, light); ctx.lineWidth = hair(y)*1.4; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y + len*tilt); ctx.stroke(); }
+  if(bft >= 1 && bft <= 3) for(let k = 0, nk = 1 + Math.floor(R()*3); k < nk; k++){ const y = top + (h - top)*rnd(0.08, 0.75), d = dep(y), rx = unit*(0.06 + 0.3*d)*rnd(0.7, 1.3), ry = rx*(0.05 + 0.2*d), x = w*R();
+    landSoft(ctx, x, y, rx, ry*0.8, rgba, 104, dark, 0.42); landSoft(ctx, x - wind.s*rx*0.35, y, rx*0.5, ry*0.6, rgba, 96, dark, 0.3); }
+  if(bft >= 1 && bft <= 2 && R() < 0.65){ ctx.save(); ctx.beginPath(); ctx.rect(-20, top + rh*0.7, w + 40, h); ctx.clip();
+    for(let k = 0, nk = 2 + Math.floor(R()*2); k < nk; k++){ const xb = vx + (R() - 0.5)*w*2.5, X = y => vx + (xb - vx)*(y - horizon)/Math.max(1, h - horizon);
+      for(let y = Math.max(top, horizon + 1); y < h;){ const dy = unit*0.004*(1 + 8*dep(y)); if(R() < 0.6){ ctx.globalAlpha = 0.42; ctx.strokeStyle = paint(224, light); ctx.lineWidth = hair(y)*1.3; ctx.beginPath(); ctx.moveTo(X(y), y); ctx.lineTo(X(y + dy*0.7), y + dy*0.7); ctx.stroke(); } y += dy; } }
+    ctx.restore(); }
+  if(bft >= 3){ const lens = (x, y, L, th, tl) => { ctx.beginPath(); ctx.moveTo(x - L/2, y - tl*L/2); ctx.quadraticCurveTo(x, y - th, x + L/2, y + tl*L/2); ctx.quadraticCurveTo(x, y + th*0.35, x - L/2, y - tl*L/2); ctx.closePath(); };
+    for(let k = 0, nW = Math.round([0, 0, 0, 10, 26, 50][bft]*w/unit); k < nW; k++){ const y = top + (h - top)*Math.pow(R(), 1.35), d = dep(y), L = unit*(0.01 + 0.08*d)*rnd(0.6, 1.4), th = L*0.14, x = w*R(), tl = wind.s*0.06;
+      ctx.globalAlpha = 0.28; ctx.fillStyle = paint(105, dark); lens(x, y + th*0.6, L, th*1.4, tl); ctx.fill();
+      if(R() < 0.25 + 0.15*(bft - 3)){ ctx.globalAlpha = 0.5 + 0.2*R(); ctx.fillStyle = paint(232, light); lens(x + L*0.08*wind.s, y, L*rnd(0.3, 0.6), th, tl); ctx.fill(); } }
+    if(bft >= 4 && !prof){ const y = top + (h - top)*rnd(0.72, 0.88), am = unit*0.012, ph = R()*6, pts = []; for(let x = -20; x <= w + 20; x += unit*0.01) pts.push([x, y + Math.sin(x/(unit*0.12) + ph)*am + (x - w/2)*0.02*wind.s]);
+      ctx.globalAlpha = 0.3; ctx.strokeStyle = paint(96, dark); ctx.lineWidth = unit*0.008; ctx.beginPath(); pts.forEach(([x, yy], q) => q ? ctx.lineTo(x, yy + am*1.2) : ctx.moveTo(x, yy + am*1.2)); ctx.stroke();
+      ctx.strokeStyle = paint(228, light); ctx.lineWidth = hair(y)*2; for(let q = 0; q + 1 < pts.length; q++){ const a = 0.55*Math.max(0, Math.sin(pts[q][0]/(unit*0.2) + ph*2)); if(a < 0.08) continue; ctx.globalAlpha = a; ctx.beginPath(); ctx.moveTo(...pts[q]); ctx.lineTo(...pts[q + 1]); ctx.stroke(); }
+      ctx.fillStyle = paint(236, light); for(const [x, yy] of pts) if(R() < 0.45){ ctx.globalAlpha = 0.45; ctx.beginPath(); ctx.ellipse(x + (R() - 0.5)*unit*0.01, yy + am*R(), unit*rnd(0.002, 0.007), unit*0.0015, 0, 0, Math.PI*2); ctx.fill(); } }
+  }
+  ctx.globalAlpha = 1;
+}
 /**
  * THE RIDGES, painted over whatever is on the canvas (a sky): the country's
  * bands, far to near — each laid in, its crest brushed, worked over with
@@ -440,7 +668,7 @@ export function paintSky(ctx, w, h, S, o){
 export function paintRidges(ctx, w, h, S, o){
   const amt = o.amt ?? 1, zoom = o.zoom ?? 1, CK = o.colour || 0, unit = Math.min(w, h), B = S.B, TM = S.TM, pitch = S.pitch;
   const horizon = S.horizon(h), sun = S.sun(w, horizon, h), sunX = sun.x, sunY = sun.y, sunSide = sunX < w/2 ? -1 : 1;
-  const { paint, mixC, jitHue } = landPalette(CK, TM), pick = a => a[Math.floor(Math.random()*a.length)];
+  const { paint, rgba, mixC, jitHue } = landPalette(CK, TM), pick = a => a[Math.floor(Math.random()*a.length)];
   const bands = Math.max(2, Math.round((B.bands[0] + Math.random()*(B.bands[1] - B.bands[0]))*amt));
   const ridge = (x, seed, amp, decay, bump) => {
     // mountains are broad masses: a long base wavelength, so peaks are wide for their height
@@ -465,6 +693,8 @@ export function paintRidges(ctx, w, h, S, o){
   // THE WATER'S MOOD, by the seed, where there is water: still (a mirror, its reflections whole, a few strokes), ruffled
   // (as it was), or choppy (short strokes crowding, white on their crests, the reflections broken)
   const mood = B.sea || B.lake || B.river ? ['still', 'ruffled', 'choppy'][Math.floor(Math.random()*3)] : 'ruffled', calm = mood === 'still' ? 1 : 0, chop = mood === 'choppy' ? 1 : 0;
+  // (and its Beaufort number within the mood, on the water's own stream: still 0 or 1, ruffled 1 or 2, choppy 3 to 5)
+  const RW = mulberry32((Math.imul((S.seed | 0) + 1, 0x9E3779B1) ^ 0x5EA5) >>> 0), bft = calm ? (RW() < 0.65 ? 0 : 1) : chop ? 3 + Math.floor(RW()*3) : 1 + Math.floor(RW()*2);
   // THE RIVER (Ruby: "that river needs work"; docs/prior-art/painted-rivers.md): one course laid on the valley floor in
   // the world and seen in perspective, never a strip per band. It bends as rivers do (its direction a sine of the
   // distance along it, a bend every thirteen to eighteen widths, swinging up to some fifty degrees off the valley's line),
@@ -508,6 +738,7 @@ export function paintRidges(ctx, w, h, S, o){
       if(chop && Math.random() < 0.45){ ctx.globalAlpha = 0.4; ctx.strokeStyle = paint(225, mixC([244, 246, 250], TM.light, 0.35)); ctx.lineWidth = unit*0.0012*(1 + (y - top)/(h - top)*2);
         ctx.beginPath(); ctx.moveTo(x + len*0.2, y - unit*0.0015); ctx.lineTo(x + len*0.7, y - unit*0.0015); ctx.stroke(); }
     }
+    waterMarks(ctx, { top, prof, tone, col, w, h, horizon, unit, bft, wind: S.wind, R: RW, paint, rgba, mixC, TM, waterCol });
   };
   if(B.sea) water(horizon, null, 0);
   let lakeTop = null;
@@ -603,6 +834,10 @@ export function paintRidges(ctx, w, h, S, o){
       ctx.beginPath(); ctx.moveTo(x + wide*0.2, y - wide*0.18); ctx.lineTo(ex - wide*0.4, ey - wide*0.18); ctx.stroke();
     }
     ctx.lineCap = 'round';
+    // ITS COUNTRY'S OWN MARKS (Ruby: "more variety in the water and land textures"): see landMarks
+    { const nb2 = i + 1 < bands ? horizon + (h - horizon)*Math.pow((i + 1)/(bands - 1), 1.35 + pitch*0.9)*0.92 : h;
+      landMarks(ctx, { kind: S.kind, prof, t, i, tone, bandCol, pal: B.pal, face: Math.max(unit*0.01, nb2 - base + amp*0.6), base, unit, w, h, horizon, wl, sunSide, paint, rgba, mixC, TM, zoom, wind: S.wind, cone,
+        R: mulberry32((Math.imul((S.seed | 0) + 1, 0x9E3779B1) ^ Math.imul(i + 1, 0x85EBCA6B) ^ Math.round(prof[0][1]*977)) >>> 0) }); }
     // THE RIVER'S REACH ON THIS BAND'S FACE: from this band's depth down to the next nearer band's (which paints over the
     // rest), kept inside this band (never over the hills behind it), so the reaches meet exactly. Water reads as water by
     // its values (the prior art): it mirrors the sky more the flatter you see it (Schlick's Fresnel by the angle down to
@@ -653,7 +888,8 @@ export function paintRidges(ctx, w, h, S, o){
     ctx.globalAlpha = 0.12*(1 - t); ctx.strokeStyle = paint(200, TM.skyLow); ctx.lineWidth = unit*0.01;
     ctx.beginPath(); prof.forEach(([x, y], j) => j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
     // the volcano's plume, leaning on the wind
-    if(cone && i === cone.band){ const tx = cone.x, ty = base - cone.hgt*0.93, lean = (Math.random() < 0.5 ? -1 : 1)*unit*0.25;
+    if(cone && i === cone.band){ Math.random();   // (the stream keeps its draw: the plume leans on the seed's one wind now)
+      const tx = cone.x, ty = base - cone.hgt*0.93, lean = S.wind.s*unit*0.25;
       for(let k = 0; k < 70; k++){ const q = k/70, px = tx + lean*q*q + (Math.random() - 0.5)*unit*0.03*(1 + q*3), py = ty - unit*0.35*q, r = unit*(0.012 + q*0.05);
         ctx.globalAlpha = 0.1*(1 - q*0.6); ctx.fillStyle = paint(120 + q*60, mixC([90, 84, 86], TM.skyLow, q*0.6)); ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI*2); ctx.fill(); } }
     // TREES, painted (Ruby: "the trees need to be painted too"): evergreens with a fan brush, broadleaf
