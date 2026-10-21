@@ -33,7 +33,7 @@ import { graphScattersGlyphs } from './stepsPatterns.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
-import { closeMoving, makeMoving, openMoving, paintMoving } from './uiMoving.js';
+import { closeMoving, makeMoving, movingBusy, movingWake, openMoving, paintMoving } from './uiMoving.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, retireOldPanel, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
@@ -522,6 +522,10 @@ $('downloadBtn').addEventListener('click', async ()=>{
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
     $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
   }
+  // (while a film is made: the screen kept awake again when the page is shown again, and the browser asked first
+  //  before the page is closed or left, which would end it)
+  if(typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') movingWake(); });
+  if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('beforeunload', e => { if(movingBusy()){ e.preventDefault(); e.returnValue = ''; } });
 }
 
 // ---------- settings: save and restore (the Workbench JSON, spells) ----------

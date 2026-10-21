@@ -1344,6 +1344,24 @@ function athanorShape(graph){
   }
   return athanorShapeMemo;
 }
+// (where a surface layer's texture is asked for: the service, or, looking ahead for a film, a list)
+let SURFACE_REQUEST = requestTexture;
+/**
+ * THE FILM'S LOOK AHEAD (the Moving Image): the textures the page as it stands would ask for, at w×h, without drawing
+ * anything: each { type, w, h, opts }, exactly as the frame's drawing will ask for them, so a film can have them made
+ * ahead on spare workers and find them waiting.
+ */
+export function surfaceRequests(w, h){
+  const asked = [], stub = { save(){}, restore(){}, drawImage(){}, canvas: { width: w, height: h } };
+  if(!($('textureToggle') && $('textureToggle').checked)) return asked;
+  const bgStopCount = parseInt(getActiveRadioValue('bgStopsGroup'), 10) || 2, bg1 = $('bgColor1Hex').value, env = () => pageEnvNow(bgStopCount, bg1);
+  const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null, dom = surfaceFromDom();
+  const upper = !src || src.editing !== 'lower' ? dom : src.other, lower = src && src.lowerOn ? (src.editing === 'lower' ? dom : src.other) : null;
+  SURFACE_REQUEST = (slot, type, W, H, opts) => { asked.push({ type, w: W, h: H, opts }); return null; };
+  try { for(const [L, slot] of [[lower, 'base'], [upper, 'main']]) if(L && L.textureType) drawSurfaceLayer(stub, L, slot, { W: w, H: h, S: RENDER_SCALE, canvas: stub, clearing: 0, env }); }
+  finally { SURFACE_REQUEST = requestTexture; }
+  return asked;
+}
 /** One surface layer onto the page: its texture made (or found in the cache), cleared around the words, blended. */
 function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const type = L.textureType, caps = capsFor(type), defs = paramsFor(type);
@@ -1392,12 +1410,12 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const strength = Math.max(0, Math.min(1, (isFinite(+L.textureShapeStrength) ? +L.textureShapeStrength : 100)/100));
   if(type === 'astral'){
     // the light slot stays empty here; the nebula colour is a TINT
-    layer(blend === 'lighten' ? 'overlay' : blend, requestTexture(name('fog'), 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
+    layer(blend === 'lighten' ? 'overlay' : blend, SURFACE_REQUEST(name('fog'), 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
     // (Shape Aware on the page: its stars fade round the words)
     const around = slot !== 'base' || !L.textureTextBlend ? (L.textureTextAware !== false && L.textureShapeAware ? strength : 0) : 0;
-    layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S, ...(around ? { around, text: TEXT_LAYOUT } : {}) }));   // (tint5: the airglow's own colour)
+    layer(blend, SURFACE_REQUEST(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S, ...(around ? { around, text: TEXT_LAYOUT } : {}) }));   // (tint5: the airglow's own colour)
   } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
-    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera }));
+    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera }));
   } else {
     // (an Athanor surface carries its graph: the worker makes it from that)
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
@@ -1414,7 +1432,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
     // (the curves drawn under Surface, for a graph with a Curve Control: '' is the control's own Default)
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 

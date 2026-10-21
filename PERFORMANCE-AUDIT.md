@@ -281,6 +281,23 @@ An Athanor surface costs what its parts cost, inside its work budget.
 Text effects: glow, shadow and bevel blur as canvas shadows (`softText`), not
 `ctx.filter` — glow ~200 → ~10 ms a frame, three stacked ~350 → ~17 ms.
 
+## The Moving Image (Neptune–Thalassa)
+
+Ruby saw a film use about 5% of a desk machine's CPU and 2% of its GPU: one worker made one frame's texture at a time
+while the page waited, then drew the frame twice (once before its texture came, once after), and a slow texture was
+made first as a quarter-size draft nobody saw. Now:
+- **Frames ahead on every core** (`setFilmPool`, `prefetchTexture`, `surfaceRequests`): the frames to come are set up
+  one by one and their textures made side by side on a worker per spare core (up to eight; a phone or a machine short
+  of memory keeps its usual pool), up to twice as many frames ahead as workers and as memory allows at the size. Each
+  is put in the cache as its frame comes up (`adoptPrefetched`), and the frame is drawn once.
+- **No drafts** in a film, and the encoder waited on by its own `dequeue` event, not a timer a hidden tab slows.
+- **Measured** (Playwright's Chromium on a two-core container, so one worker: no parallel gain to show here; the
+  Ringworld, 1920×1080, 180 frames, PNG): 158 s before, 135 s after, the frames identical pixel for pixel. On a machine
+  with eight or more cores the frames ahead should run several times faster; the page's own drawing and the encoder
+  (about a fifth of a second a frame at 1080p) are what is left on one thread.
+- A building's face is read back (`pkFaceProof`) once per look and kept, not once per frame, and from a canvas the CPU
+  keeps (a GPU canvas read back stalls its pipeline): about a tenth off a Ringworld frame.
+
 ## 3 · Decisions for Ruby
 
 1. ~~A–D~~ — done.

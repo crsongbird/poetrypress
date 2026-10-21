@@ -728,8 +728,18 @@ const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8,
 // a building's face drawn small, off the page, and read back: its outline (how wide its walls stand, how high, the
 // steps of a setback tower, where a gable's eaves and ridge are) and its colours (the wall's, the commonest low on the
 // face; the roof's, high on it), so the box it is turned into in depth is its own shape and the same stuff as its face
-function pkFaceProof(face, c, R0, h, wdt, eave){ const out = {};
-  try { const N = 96, cv = document.createElement('canvas'); cv.width = N; cv.height = N; const q = cv.getContext('2d'), kx = (N - 6)/(wdt*2), ky = (N - 6)/(h*1.4);
+// (kept: a film draws the same buildings frame after frame, the camera turning or the hours passing; a proof is read
+//  back from a canvas the CPU keeps, never one the GPU must hand back)
+const PK_PROOFS = new Map();
+function pkFaceProof(face, c, R0, h, wdt, eave, id){
+  // (keyed by everything the face is drawn from but the clock, which only lights its windows: by the hour)
+  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+  if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
+  const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
+  if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
+  return out; }
+function pkFaceProofOf(face, c, R0, h, wdt, eave){ const out = {};
+  try { const N = 96, cv = document.createElement('canvas'); cv.width = N; cv.height = N; const q = cv.getContext('2d', { willReadFrequently: true }), kx = (N - 6)/(wdt*2), ky = (N - 6)/(h*1.4);
     q.save(); q.translate(N/2, N - 3); q.scale(kx, ky); face(q, { ...c, view: null, vdep: 1e-6, nocast: true }, R0); q.restore();
     const d = q.getImageData(0, 0, N, N).data, op = (i, j) => i >= 0 && i < N && j >= 0 && j < N && d[(j*N + i)*4 + 3] > 160;
     const J = fy => Math.round(N - 3 - fy*h*ky), I = fx => Math.round(N/2 + fx*wdt*kx), at = (fx, fy) => { const i = (J(fy)*N + I(fx))*4; return d[i + 3] > 200 ? [d[i], d[i + 1], d[i + 2]] : null; };
@@ -765,7 +775,7 @@ function pkFaceProof(face, c, R0, h, wdt, eave){ const out = {};
 function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   const { kind, dk, eave: eave0, roofM, at: crownAt = 1, rim = 0.035, face } = o, S = pkSpace(X, Y, 1, c.view), sd = c.sd, mpx = c.mpx || wdt/10;
   // (the same thing every way: its stream taken once, and its shape and colours read back from a small proof of its face)
-  const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0); R0 = R1;
+  const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0, o.id && o.id + '|' + v0 + '|' + Math.round(night*20) + '|' + px(100).toFixed(3)); R0 = R1;
   if(o.plain && !pr.a) return false; // (a small thing whose face can't be read: squeezed as before)
   const w2 = (pr.a || 0.5)*wdt, D = w2*2*dk, eave = eave0 ? ((!o.ends && pr.eave) || eave0) : 0, ridge = h*((!o.ends && pr.ridge) || 1), Hs = h*eave;
   const tiers = eave ? [{ z: eave, a: w2/wdt }] : (pr.tiers || [{ z: 0.97, a: w2/wdt }]);
@@ -835,7 +845,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
 export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null, turn: c.view }; // (round: the same from every side; turn kept for what isn't, a mill's sails)
   if(c.view && kind0 && PK_BOX3[kind0]){ const [dk, eave, roofM, at, rim] = PK_BOX3[kind0];
-    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
+    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, id: 'b|' + kind0 + '|' + style, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
   if(c.view && (kind0 === 'torii' || kind0 === 'arch')){ // (a gate is a frame in its own plane: edge on, a post and a beam's end)
     const k = Math.max(kind0 === 'arch' ? 0.28 : 0.1, Math.abs(c.view.cs)); x.save(); x.translate(X, 0); x.scale(k, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, { ...c, view: null }, style, night, R0, px, kind0); x.restore(); return; }
   if(c.view){ const sn = c.view.sn; if(sn < 0){ x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, pkFlip({ ...c, view: null }), style, night, R0, px, kind0); x.restore(); return; } c = { ...c, view: null }; }
@@ -1200,7 +1210,7 @@ function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
 export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(PK_SOLIDS.includes(kind)){ pkSolidProp(x, X, Y, h, c, kind, R0, px, night); return; }
   if(c.view && PK_PROP3[kind]){ const v0 = R0(), R1 = () => v0;
-    if(pkTurned(x, X, Y, h, h, c, R1, px, night, { kind, dk: PK_PROP3[kind], eave: 0, plain: true, back: PK_BACKED.includes(kind), ends: kind === 'vending', post: kind === 'mailbox',
+    if(pkTurned(x, X, Y, h, h, c, R1, px, night, { kind, id: 'p|' + kind, dk: PK_PROP3[kind], eave: 0, plain: true, back: PK_BACKED.includes(kind), ends: kind === 'vending', post: kind === 'mailbox',
       face: (q, cc, R) => pkProp(q, 0, 0, h, cc, kind, R, px, night) })) return; R0 = R1; }
   if(c.view){ const { cs, sn } = c.view, cc = { ...c, view: null };
     if(PK_SIDE_NATIVE.includes(kind)){ if(Math.abs(sn) < 0.38){ pkPropEnd(x, X, Y, h, cc, kind, R0, px, night, cs >= 0); return; }

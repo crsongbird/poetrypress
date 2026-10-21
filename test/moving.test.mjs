@@ -1,6 +1,7 @@
 /**
  * moving.test.mjs — the Moving Image's pure parts (moving.js): a look eased toward another (what eases, what stays
- * whole, the dials the short way round), and the three containers it writes (zip, MP4, WebM), read back.
+ * whole, the dials the short way round), and the three containers it writes (zip, MP4, WebM), read back; and, on the
+ * booted page, that the frames a film has made ahead are the ones its drawing asks for.
  */
 import { check, done } from './harness.mjs';
 import { blendLooks, crc32, filmHours, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
@@ -57,5 +58,17 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   const w = webmBytes({ width: 64, height: 36, fps: 30, codec: 'V_VP9', frames });
   const count = (id) => { let n = 0; for(let i = 0; i + id.length <= w.length; i++) if(id.every((x, k) => w[i + k] === x)) n++; return n; };
   check('the WebM: the EBML header, its doctype, a cluster from each key frame', dv(w).getUint32(0) === 0x1A45DFA3 && str(w, 0, w.length).includes('webm') && str(w, 0, w.length).includes('V_VP9') && count([0x1F, 0x43, 0xB6, 0x75]) === 2); }
+
+// ---- the frames ahead: what a film asks for ahead of a frame is what the frame's drawing then asks for ----
+{ const { installCanvasMock, makeMockContext, makeMockCanvas } = await import('./canvasMock.mjs'), { installDomMock } = await import('./domMock.mjs');
+  installCanvasMock(); const reg = installDomMock(makeMockContext, makeMockCanvas); await import('../appEvents.js');
+  const { render, surfaceRequests, setSceneTime } = await import('../canvasRenderer.js'), { texturesSettled } = await import('../textureService.js'), { textureKeyFor, peekTexture } = await import('../textureGenerators.js');
+  reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); const look = JSON.parse(reg['advancedJson'].value);
+  reg['advancedJson'].value = JSON.stringify({ ...look, texture: true, textureType: 'grain', textureLight: '120' }); reg['advancedLoadBtn'].dispatchEvent({ type: 'click' });
+  await new Promise(r => setTimeout(r, 60));
+  const cv = reg['poemCanvas'], asked = (setSceneTime(42, 1/30), surfaceRequests(cv.width, cv.height));
+  render(); await texturesSettled(); setSceneTime(0);
+  const keys = asked.map(r => textureKeyFor(r.type, r.w, r.h, r.opts));
+  check('a film\'s look ahead asks for the textures its frame then draws (the same keys, found waiting in the cache)', keys.length > 0 && keys.every(k => peekTexture(k))); }
 
 done();

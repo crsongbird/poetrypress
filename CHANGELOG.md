@@ -4,6 +4,25 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Thalassa (2026-10-21)
+
+- Films are made faster: while one frame is drawn and encoded, the frames to come are made side by side, one on each
+  spare core of the machine (up to eight; a phone keeps to its usual one or two). Each frame is drawn once, never first
+  with the last frame's surface, and a slow surface is no longer made first as a small draft nobody sees. The note says
+  how many frames are being drawn ahead.
+- The screen is kept awake while a film is made, and asked for again if the page is hidden and shown again.
+- Nothing stops a film by accident: closing the sheet, Escape or a tap outside it now says the film is still being made
+  and carries on; Stop asks first (tap it twice); leaving or closing the page asks first too.
+- A film keeps going in a tab in the background: it waits on the encoder's own signal, not on a timer the browser slows.
+
+### Under the hood
+- Housekeeping: reviewed the tests: nothing checked that a film's frames made ahead are the ones its drawing asks for
+  (if the two keys ever differ, every frame is made twice); moving.test.mjs now boots the page and checks it, and fails
+  when the look ahead's scale is off.
+- `surfaceRequests` (the textures the page would ask for, without drawing), `prefetchTexture`, `adoptPrefetched` and
+  `setFilmPool` (a worker per spare core while a film is made); PERFORMANCE-AUDIT.md has the measurements. A building's
+  face is read back once per look and kept (`pkFaceProof`), from a canvas the CPU keeps.
+
 ## Neptune–Naiad (2026-10-21)
 
 - Painted Landscape has a new country, a river: green hills opening into a valley, the river winding down it toward
@@ -315,48 +334,3 @@ prints it).
   (`RG_STREET_KINDS`, `RG_SINKS`) and the weather is chosen once for both parts (`rgWeatherOf`).
 - Housekeeping: reviewed the tests: no suite repeats another's check; the dial-guide check no longer names the retired
   3D Ringworld; a new check holds the Ringworld's widest lens.
-
-## Uranus–Rosalind (2026-10-20)
-
-- **The Painted Ringworld is now the Ringworld.**
-- **A less cartoony hand** for everything the Ringworld paints (and Ring in the Sky and Night City, which share the
-  kit): every wall is shaded from the sky down to its foot and throws its shadow on the ground; weather streaks down
-  concrete and rust down steel; things are made of their own materials (wood, stone, brick, rust, paint, galvanised
-  steel) lit by the scene's light instead of all one grey; windows hold the sky by day, with sills and lintels when
-  near, and are lit in clusters by night; tree crowns are clumps of leaves with ragged edges and gaps, not balls;
-  trunks flare into their roots; boulders are many-faceted, cracked and lichened, grass grown up round them. No faces
-  on anything.
-- **The old sprites brought up to the new**: the city's towers have lobbies, piers and crowns, shopfronts under
-  striped awnings, cornices, fire escapes, raised blocks on their columns, domes on colonnades behind porticos; the
-  cottages, barns, silos, windmills, terraces, castles, lighthouses, cathedrals, clock towers, factories and water
-  towers all gained their doors, frames, boards, slates and smoke; the wizard's tower its ivy and pennant; the onion
-  domes their gores and gilt.
-- **The row of five pale squares was a stone circle** drawn as slabs at the size of a skyscraper. Now it is one: rough,
-  leaning, lichened stones of two to seven metres round a ring, standing in the world, some gone, one fallen, some
-  joined by lintels; and now and then one near enough to walk to.
-- **Billboards**: the grinning moon is gone. In its place thirty-eight boards for brands that never were, beside the
-  roads and on the approaches to towns, each world its own and the jokey ones rare: Old Pale Dairy ("from cows who
-  never saw night"), Coriolis Cider ("pours a little to the left"), Edgeward Mutual ("fell off the edge? You're
-  covered."), Shadowsquare Blinds ("night, sold by the metre"), the Starless Cinema, Prior Tenants Relic Removal, a
-  builders' plaque ("back in 40,000 years"), Canned Daylight, Ring Bonds, a hand-painted survivors' sign; spin
-  advisories, a missing-robot poster, a faded political poster, a map that says you are here (and, eventually, here
-  too); and now and then a verse on five little boards along a country road. Each is a real thing: a timber board on
-  posts, a pasted poster on steel with its catwalk and lamps, neon tubes that light at night, a seamless slab, a
-  hanging shingle. Some are faded, peeling, torn through to an older board, or half-pasted with the crew still up there.
-- **A far wider library**: poles carrying wires along the roads; stone walls, hedgerows, gates; round bales, haystacks,
-  troughs, a windpump, a well, a scarecrow, beehives, cairns, milestones, a wayside shrine, a tractor, grain bins; bus
-  stops, a red phone box, vending machines, traffic lights, kiosks, food carts, parked cars and scooters; rubble,
-  broken columns, a toppled statue, rusted cars, shipping containers, tank traps; dishes, solar fields, beacons, pipes,
-  cargo and a surveyor's tripod; standing stones, dolmens, fairy rings, will-o'-the-wisps, giant flowers, toadstool
-  houses, a moon gate, a wishing well. People are drawn as people (seven and a half heads tall, coats and trousers).
-- **Villages build in one tradition each**, by their region and climate: thatched cottages and oast houses, prairie
-  barns and grain elevators, yurts on the steppe, rondavels on the savanna, trulli, granaries on stone pillars, adobe
-  pueblos, machiya and steep-thatched farmhouses, stilt huts in the tropics, stave churches in the north; and in town a
-  filling station, a motel with its arrow sign, a chapel, greenhouses, a radio mast.
-
-### Under the hood
-- The kit's finish (`pkShade`, `pkCast`, `pkStreaks`, `pkMat`, `pkFrame`, `pkIvy`), the boards (`pkBoard`, `PK_BOARDS`,
-  `PK_SERIALS`), the stones (`pkStone`, `pkLintel`, `rgHenge`), the wires (`pkWires`), the vernacular
-  (`PK_VERNACULAR`, `rgVernacular`); the small things placed by what they need (`propFits`) and the larger ones sown
-  further off (`PK_PROPS_BIG`); roads shared by the land and the store (`rgRoadsOf`). The research is in
-  docs/prior-art/ringworld-sprites.md.

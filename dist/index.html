@@ -6781,8 +6781,18 @@ const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8,
 
 
 
-function pkFaceProof(face, c, R0, h, wdt, eave){ const out = {};
-  try { const N = 96, cv = document.createElement('canvas'); cv.width = N; cv.height = N; const q = cv.getContext('2d'), kx = (N - 6)/(wdt*2), ky = (N - 6)/(h*1.4);
+
+
+const PK_PROOFS = new Map();
+function pkFaceProof(face, c, R0, h, wdt, eave, id){
+
+  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+  if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
+  const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
+  if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
+  return out; }
+function pkFaceProofOf(face, c, R0, h, wdt, eave){ const out = {};
+  try { const N = 96, cv = document.createElement('canvas'); cv.width = N; cv.height = N; const q = cv.getContext('2d', { willReadFrequently: true }), kx = (N - 6)/(wdt*2), ky = (N - 6)/(h*1.4);
     q.save(); q.translate(N/2, N - 3); q.scale(kx, ky); face(q, { ...c, view: null, vdep: 1e-6, nocast: true }, R0); q.restore();
     const d = q.getImageData(0, 0, N, N).data, op = (i, j) => i >= 0 && i < N && j >= 0 && j < N && d[(j*N + i)*4 + 3] > 160;
     const J = fy => Math.round(N - 3 - fy*h*ky), I = fx => Math.round(N/2 + fx*wdt*kx), at = (fx, fy) => { const i = (J(fy)*N + I(fx))*4; return d[i + 3] > 200 ? [d[i], d[i + 1], d[i + 2]] : null; };
@@ -6818,7 +6828,7 @@ function pkFaceProof(face, c, R0, h, wdt, eave){ const out = {};
 function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   const { kind, dk, eave: eave0, roofM, at: crownAt = 1, rim = 0.035, face } = o, S = pkSpace(X, Y, 1, c.view), sd = c.sd, mpx = c.mpx || wdt/10;
 
-  const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0); R0 = R1;
+  const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0, o.id && o.id + '|' + v0 + '|' + Math.round(night*20) + '|' + px(100).toFixed(3)); R0 = R1;
   if(o.plain && !pr.a) return false;
   const w2 = (pr.a || 0.5)*wdt, D = w2*2*dk, eave = eave0 ? ((!o.ends && pr.eave) || eave0) : 0, ridge = h*((!o.ends && pr.ridge) || 1), Hs = h*eave;
   const tiers = eave ? [{ z: eave, a: w2/wdt }] : (pr.tiers || [{ z: 0.97, a: w2/wdt }]);
@@ -6888,7 +6898,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
 function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null, turn: c.view };
   if(c.view && kind0 && PK_BOX3[kind0]){ const [dk, eave, roofM, at, rim] = PK_BOX3[kind0];
-    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
+    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, id: 'b|' + kind0 + '|' + style, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
   if(c.view && (kind0 === 'torii' || kind0 === 'arch')){
     const k = Math.max(kind0 === 'arch' ? 0.28 : 0.1, Math.abs(c.view.cs)); x.save(); x.translate(X, 0); x.scale(k, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, { ...c, view: null }, style, night, R0, px, kind0); x.restore(); return; }
   if(c.view){ const sn = c.view.sn; if(sn < 0){ x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, pkFlip({ ...c, view: null }), style, night, R0, px, kind0); x.restore(); return; } c = { ...c, view: null }; }
@@ -7253,7 +7263,7 @@ function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
 function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(PK_SOLIDS.includes(kind)){ pkSolidProp(x, X, Y, h, c, kind, R0, px, night); return; }
   if(c.view && PK_PROP3[kind]){ const v0 = R0(), R1 = () => v0;
-    if(pkTurned(x, X, Y, h, h, c, R1, px, night, { kind, dk: PK_PROP3[kind], eave: 0, plain: true, back: PK_BACKED.includes(kind), ends: kind === 'vending', post: kind === 'mailbox',
+    if(pkTurned(x, X, Y, h, h, c, R1, px, night, { kind, id: 'p|' + kind, dk: PK_PROP3[kind], eave: 0, plain: true, back: PK_BACKED.includes(kind), ends: kind === 'vending', post: kind === 'mailbox',
       face: (q, cc, R) => pkProp(q, 0, 0, h, cc, kind, R, px, night) })) return; R0 = R1; }
   if(c.view){ const { cs, sn } = c.view, cc = { ...c, view: null };
     if(PK_SIDE_NATIVE.includes(kind)){ if(Math.abs(sn) < 0.38){ pkPropEnd(x, X, Y, h, cc, kind, R0, px, night, cs >= 0); return; }
@@ -29781,7 +29791,10 @@ const MOVING = {
   before: 'The look before the last change',
   make: 'Make the film',
   stop: 'Stop',
+  stopSure: 'Stop? Tap again',
+  stillMaking: 'The film is still being made. Stop ends it (tap twice); nothing else does.',
   frame: 'Drawing frame {name}…',
+  frameAhead: 'Drawing frame {name}, with {count} more being drawn ahead…',
   finishing: 'Putting the film together…',
   made: 'Saved: {name}.',
   stopped: 'Stopped. Nothing was saved.',
@@ -32441,6 +32454,11 @@ const shownSeq = new Map();
 const DRAFT_OVER_MS = 250;
 const genMs = new Map();
 let drafting = false;
+
+
+
+const ahead = new Map();
+let filmPool = 0;
  
 function setDrafting(on){ if(drafting === on) return; drafting = on; if(!on) onReady(); }
 const pagePending = new Map();
@@ -32485,6 +32503,7 @@ function spawn(){
     crashes++;
     const f = entry.job; entry.job = null;
     try { w.terminate(); } catch(_){}
+    if(f && f.ahead){ aheadDone(f.key, null); if(pool){ const i = pool.indexOf(entry); if(i >= POOL_SIZE) pool.splice(i, 1); else if(i >= 0) pool[i] = spawn(); } setTimeout(pump, 200); return; }
     if(crashes > MAX_CRASHES){ broken = true; for(const x of pool || []) try { x.w.terminate(); } catch(_){} pool = null; flushOnPage(); return; }
     const i = pool ? pool.indexOf(entry) : -1;
     if(i >= 0) pool[i] = spawn();
@@ -32579,12 +32598,47 @@ function pump(){
     busy(true, job.type);
     worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts, softgl: SOFTGL });
   }
+
+  for(const a of ahead.values()){
+    if(a.running || a.tex !== undefined) continue;
+    const worker = pool.find(x => !x.job); if(!worker) break;
+    const id = nextId++; a.running = true;
+    worker.job = { id, ahead: true, key: a.key, type: a.type, worker, started: now() };
+    worker.w.postMessage({ id, type: a.type, w: a.w, h: a.h, opts: a.opts, softgl: SOFTGL });
+  }
+
+  if(!filmPool) for(let i = pool.length - 1; i >= POOL_SIZE; i--) if(!pool[i].job){ try { pool[i].w.terminate(); } catch(_){} pool.splice(i, 1); }
+}
+function aheadDone(key, tex){ const a = ahead.get(key); if(!a) return; a.running = false; a.tex = tex || null; a.resolve(a.tex); if(!filmPool) ahead.delete(key); }
+ 
+function prefetchTexture(type, w, h, opts){
+  if(PHONE_GRID_CAP) opts = { ...opts, gridCap: PHONE_GRID_CAP };
+  const key = textureKeyFor(type, w, h, opts), hit = peekTexture(key);
+  if(hit) return { key, promise: Promise.resolve(hit) };
+  let a = ahead.get(key);
+  if(!a){ let resolve; const promise = new Promise(r => { resolve = r; }); a = { key, type, w, h, opts, promise, resolve, running: false, tex: undefined }; ahead.set(key, a);
+    if(!boot() || ON_PAGE.has(type) || ((type === 'athanor' || type === 'athanorsteps') && opts && graphScattersGlyphs(opts.graph))){ ahead.delete(key); return { key, promise: Promise.resolve(null) }; }
+    pump(); }
+  return { key, promise: a.promise };
+}
+ 
+function adoptPrefetched(keys){ for(const k of keys){ const a = ahead.get(k); if(a && a.tex){ storeTexture(k, a.tex); } if(a && a.tex !== undefined) ahead.delete(k); } }
+
+
+function setFilmPool(on){
+  const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2, gb = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 8;
+  filmPool = on ? (FRUGAL || gb < 4 ? POOL_SIZE : Math.max(POOL_SIZE, Math.min(8, cores - 1, Math.floor(gb/1.5)))) : 0;
+  if(!on){ for(const [k, a] of ahead) if(!a.running){ a.resolve(null); ahead.delete(k); } }
+  if(on && boot()) while(pool.length < filmPool) pool.push(spawn());
+  pump();
+  return filmPool || POOL_SIZE;
 }
 
 function arrived(entry, e){
   const { id, bitmap, error } = e.data;
   const f = entry.job; entry.job = null;
   if(!f || f.id !== id){ pump(); return; }
+  if(f.ahead){ if(!bitmap && typeof console !== 'undefined') console.warn('texture worker (ahead):', error); aheadDone(f.key, bitmap || null); pump(); return; }
   const current = inflight.get(f.slot) === f;
   if(current) inflight.delete(f.slot);
   let tex = bitmap;
@@ -32612,6 +32666,8 @@ function flushOnPage(){
 function textureServiceInfo(){ return { worker: !!pool, workers: pool ? pool.length : 0, broken, inflight: inflight.size, waiting: wanted.size, crashes, shown: shownCount, lastShown, drafting, frugal: FRUGAL }; }
 
  
+const texturesBusy = () => inflight.size > 0 || wanted.size > 0 || pagePending.size > 0;
+ 
 function texturesSettled(){
   return (inflight.size === 0 && wanted.size === 0 && pagePending.size === 0) ? Promise.resolve() : new Promise(r => waiters.push(r));
 }
@@ -32635,7 +32691,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Neptune–Naiad';
+const RELEASE = 'Neptune–Thalassa';
 
 const RELEASE_DATE = '2026-10-21';
 
@@ -33545,7 +33601,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-21 · 0125786";
+const STAMP = "2026-10-21 · 6f17172";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -34980,6 +35036,24 @@ function athanorShape(graph){
   }
   return athanorShapeMemo;
 }
+
+let SURFACE_REQUEST = requestTexture;
+
+
+
+
+
+function surfaceRequests(w, h){
+  const asked = [], stub = { save(){}, restore(){}, drawImage(){}, canvas: { width: w, height: h } };
+  if(!($('textureToggle') && $('textureToggle').checked)) return asked;
+  const bgStopCount = parseInt(getActiveRadioValue('bgStopsGroup'), 10) || 2, bg1 = $('bgColor1Hex').value, env = () => pageEnvNow(bgStopCount, bg1);
+  const src = SURFACE_SOURCE ? SURFACE_SOURCE() : null, dom = surfaceFromDom();
+  const upper = !src || src.editing !== 'lower' ? dom : src.other, lower = src && src.lowerOn ? (src.editing === 'lower' ? dom : src.other) : null;
+  SURFACE_REQUEST = (slot, type, W, H, opts) => { asked.push({ type, w: W, h: H, opts }); return null; };
+  try { for(const [L, slot] of [[lower, 'base'], [upper, 'main']]) if(L && L.textureType) drawSurfaceLayer(stub, L, slot, { W: w, H: h, S: RENDER_SCALE, canvas: stub, clearing: 0, env }); }
+  finally { SURFACE_REQUEST = requestTexture; }
+  return asked;
+}
  
 function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const type = L.textureType, caps = capsFor(type), defs = paramsFor(type);
@@ -35028,12 +35102,12 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const strength = Math.max(0, Math.min(1, (isFinite(+L.textureShapeStrength) ? +L.textureShapeStrength : 100)/100));
   if(type === 'astral'){
 
-    layer(blend === 'lighten' ? 'overlay' : blend, requestTexture(name('fog'), 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
+    layer(blend === 'lighten' ? 'overlay' : blend, SURFACE_REQUEST(name('fog'), 'astral_fog', W, H, { seed, p1: p2, p3, tint1: tint2, scale: S }));
 
     const around = slot !== 'base' || !L.textureTextBlend ? (L.textureTextAware !== false && L.textureShapeAware ? strength : 0) : 0;
-    layer(blend, requestTexture(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S, ...(around ? { around, text: TEXT_LAYOUT } : {}) }));
+    layer(blend, SURFACE_REQUEST(name('stars'), 'astral_stars', W, H, { accent1, accent2, seed, p1, p3, tint1, tint5, scale: S, ...(around ? { around, text: TEXT_LAYOUT } : {}) }));
   } else if(type === 'embers' || type === 'magicparticles' || type === 'snow' || type === 'cards'){
-    layer(blend, requestTexture(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera }));
+    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { accent1, accent2, seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera }));
   } else {
 
     const graph = type === 'athanor' ? (L.forgeGraph || '') : undefined;
@@ -35050,7 +35124,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
 
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, requestTexture(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -44283,7 +44357,7 @@ function modalPrompt(opts){
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 
 const MOVING_FADE = [0.38, 0.62];
-const movingRun = { busy: false, stop: false };
+const movingRun = { busy: false, stop: false, sure: 0, wake: null };
 
 const movingNote = text => { const n = $('movingNote'); if(n) n.textContent = text || ''; };
  
@@ -44310,13 +44384,23 @@ function openMoving(){
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
   sheet.hidden = false;
 }
-function closeMoving(){ if(movingRun.busy){ movingRun.stop = true; return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+
+
+function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+ 
+const movingBusy = () => movingRun.busy;
+
+
+async function movingWake(){
+  if(!movingRun.busy || movingRun.wake || typeof navigator === 'undefined' || !navigator.wakeLock || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return;
+  try { movingRun.wake = await navigator.wakeLock.request('screen'); movingRun.wake.addEventListener('release', () => { movingRun.wake = null; }); } catch(e){ movingRun.wake = null; }
+}
  
 function paintMoving(){
   const m = ($('movingMove') || {}).value, looked = m === 'look' || m === 'lookback', timed = m === 'time', row = $('movingDetailRow');
   for(const [id, on] of [['movingLook', looked], ['movingLookLabel', looked], ['movingSpan', timed], ['movingSpanLabel', timed]]){ const el = $(id); if(el) el.hidden = !on; }
   if(row && row.classList) row.classList.toggle('moving-idle', !looked && !timed);
-  const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? MOVING.stop : MOVING.make;
+  const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
   for(const id of ['movingMove', 'movingLook', 'movingSpan', 'movingSize', 'movingLength', 'movingFps', 'movingFormat']){ const el = $(id); if(el) el.disabled = movingRun.busy; }
 }
  
@@ -44351,7 +44435,9 @@ function movingSink(fmt, cfg, w, h, fps){
       if(failed) throw failed;
       const vf = new VideoFrame(canvas, { timestamp: Math.round(i*1e6/fps), duration: Math.round(1e6/fps), alpha: 'discard' });
       encoder.encode(vf, { keyFrame: i % (fps*2) === 0 }); vf.close();
-      while(encoder.encodeQueueSize > 3) await new Promise(r => setTimeout(r, 4));
+
+      while(encoder.encodeQueueSize > 3) await new Promise(r => { let done = false; const go = () => { if(!done){ done = true; r(); } };
+        if(encoder.addEventListener) encoder.addEventListener('dequeue', go, { once: true }); setTimeout(go, 40); });
     },
     done: async () => {
       await encoder.flush(); encoder.close(); if(failed) throw failed;
@@ -44363,10 +44449,12 @@ function movingSink(fmt, cfg, w, h, fps){
     drop: () => { try { encoder.close(); } catch(e){   } } };
 }
 
-async function movingFrame(){ render(); await texturesSettled(); render(); }
+async function movingFrame(){ render(); if(texturesBusy()){ await texturesSettled(); render(); } }
  
 async function makeMoving(){
-  if(movingRun.busy){ movingRun.stop = true; return; }
+  if(movingRun.busy){
+    if(!movingRun.sure){ movingRun.sure = setTimeout(() => { movingRun.sure = 0; paintMoving(); }, 3500); paintMoving(); return; }
+    clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
   const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, fps = +($('movingFps') || {}).value || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;
   let [w, h] = MOVING_SIZES[$('movingSize').value] || [state.page.exportW || canvas.width, state.page.exportH || canvas.height];
   if(fmt !== 'png'){
@@ -44386,17 +44474,29 @@ async function makeMoving(){
   const clock = sun ? filmHours(sun, span/3600) : null;
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
-  movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving');
+
+
+
+  const place = i => {
+    if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
+    if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
+    else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
+    else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360); };
+
+
+
+  const workers = looked ? 0 : setFilmPool(true), aheadN = looked ? 0 : Math.max(0, Math.min(workers*2, Math.floor(6e8/(w*h*4)))), pending = new Map();
+  const queue = j => { if(j >= n || pending.has(j)) return; place(j); pending.set(j, surfaceRequests(w, h).map(r => prefetchTexture(r.type, r.w, r.h, r.opts))); };
+  movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving'); movingWake();
   if(document.body && document.body.classList) document.body.classList.add('saving');
   try {
     canvas.width = w; canvas.height = h; setDrafting(false); clearTimeout(draftTimer); setRenderScale(1, [w, h]);
     for(let i = 0; i < n && !movingRun.stop; i++){
-
-
-      if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
-      if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
-      else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
-      else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360);
+      if(aheadN){ for(let j = i; j < i + aheadN; j++) queue(j);
+        place(i); const got = pending.get(i);
+        if(got){ await Promise.all(got.map(g => g.promise)); adoptPrefetched(got.map(g => g.key)); pending.delete(i); }
+        if(movingRun.stop) break; }
+      if(!looked) place(i);
       else {
         const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
         if(mid){
@@ -44410,13 +44510,15 @@ async function makeMoving(){
         restoreSettings(blendLooks(start, end, t, t < 0.5 ? 0 : 1, snap));
       }
       await movingFrame(); await sink.add(canvas, i);
-      movingNote(fill(MOVING.frame, `${i + 1} / ${n}`));
+      movingNote(aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`));
     }
     if(!movingRun.stop){ movingNote(MOVING.finishing); made = await sink.done(); }
   } catch(err){
     sink.drop(); made = null; movingNote(err && err.message === 'too big' ? MOVING.tooBig : MOVING.failed);
     if(typeof console !== 'undefined') console.warn('Moving Image:', err && err.message);
   } finally {
+    setFilmPool(false); if(movingRun.wake){ try { movingRun.wake.release(); } catch(e){   } movingRun.wake = null; }
+    clearTimeout(movingRun.sure); movingRun.sure = 0;
     setSceneTime(0); if(looked) restoreSettings(start);
     else for(const [id, v] of [['cameraTurn', cam0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
     canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
@@ -44883,6 +44985,10 @@ $('downloadBtn').addEventListener('click', async ()=>{
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
     $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
   }
+
+
+  if(typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') movingWake(); });
+  if(typeof window !== 'undefined' && window.addEventListener) window.addEventListener('beforeunload', e => { if(movingBusy()){ e.preventDefault(); e.returnValue = ''; } });
 }
 
 

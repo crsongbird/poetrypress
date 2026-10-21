@@ -2,6 +2,51 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Rosalind (2026-10-20)
+
+- **The Painted Ringworld is now the Ringworld.**
+- **A less cartoony hand** for everything the Ringworld paints (and Ring in the Sky and Night City, which share the
+  kit): every wall is shaded from the sky down to its foot and throws its shadow on the ground; weather streaks down
+  concrete and rust down steel; things are made of their own materials (wood, stone, brick, rust, paint, galvanised
+  steel) lit by the scene's light instead of all one grey; windows hold the sky by day, with sills and lintels when
+  near, and are lit in clusters by night; tree crowns are clumps of leaves with ragged edges and gaps, not balls;
+  trunks flare into their roots; boulders are many-faceted, cracked and lichened, grass grown up round them. No faces
+  on anything.
+- **The old sprites brought up to the new**: the city's towers have lobbies, piers and crowns, shopfronts under
+  striped awnings, cornices, fire escapes, raised blocks on their columns, domes on colonnades behind porticos; the
+  cottages, barns, silos, windmills, terraces, castles, lighthouses, cathedrals, clock towers, factories and water
+  towers all gained their doors, frames, boards, slates and smoke; the wizard's tower its ivy and pennant; the onion
+  domes their gores and gilt.
+- **The row of five pale squares was a stone circle** drawn as slabs at the size of a skyscraper. Now it is one: rough,
+  leaning, lichened stones of two to seven metres round a ring, standing in the world, some gone, one fallen, some
+  joined by lintels; and now and then one near enough to walk to.
+- **Billboards**: the grinning moon is gone. In its place thirty-eight boards for brands that never were, beside the
+  roads and on the approaches to towns, each world its own and the jokey ones rare: Old Pale Dairy ("from cows who
+  never saw night"), Coriolis Cider ("pours a little to the left"), Edgeward Mutual ("fell off the edge? You're
+  covered."), Shadowsquare Blinds ("night, sold by the metre"), the Starless Cinema, Prior Tenants Relic Removal, a
+  builders' plaque ("back in 40,000 years"), Canned Daylight, Ring Bonds, a hand-painted survivors' sign; spin
+  advisories, a missing-robot poster, a faded political poster, a map that says you are here (and, eventually, here
+  too); and now and then a verse on five little boards along a country road. Each is a real thing: a timber board on
+  posts, a pasted poster on steel with its catwalk and lamps, neon tubes that light at night, a seamless slab, a
+  hanging shingle. Some are faded, peeling, torn through to an older board, or half-pasted with the crew still up there.
+- **A far wider library**: poles carrying wires along the roads; stone walls, hedgerows, gates; round bales, haystacks,
+  troughs, a windpump, a well, a scarecrow, beehives, cairns, milestones, a wayside shrine, a tractor, grain bins; bus
+  stops, a red phone box, vending machines, traffic lights, kiosks, food carts, parked cars and scooters; rubble,
+  broken columns, a toppled statue, rusted cars, shipping containers, tank traps; dishes, solar fields, beacons, pipes,
+  cargo and a surveyor's tripod; standing stones, dolmens, fairy rings, will-o'-the-wisps, giant flowers, toadstool
+  houses, a moon gate, a wishing well. People are drawn as people (seven and a half heads tall, coats and trousers).
+- **Villages build in one tradition each**, by their region and climate: thatched cottages and oast houses, prairie
+  barns and grain elevators, yurts on the steppe, rondavels on the savanna, trulli, granaries on stone pillars, adobe
+  pueblos, machiya and steep-thatched farmhouses, stilt huts in the tropics, stave churches in the north; and in town a
+  filling station, a motel with its arrow sign, a chapel, greenhouses, a radio mast.
+
+### Under the hood
+- The kit's finish (`pkShade`, `pkCast`, `pkStreaks`, `pkMat`, `pkFrame`, `pkIvy`), the boards (`pkBoard`, `PK_BOARDS`,
+  `PK_SERIALS`), the stones (`pkStone`, `pkLintel`, `rgHenge`), the wires (`pkWires`), the vernacular
+  (`PK_VERNACULAR`, `rgVernacular`); the small things placed by what they need (`propFits`) and the larger ones sown
+  further off (`PK_PROPS_BIG`); roads shared by the land and the store (`rgRoadsOf`). The research is in
+  docs/prior-art/ringworld-sprites.md.
+
 ## Uranus–Portia (2026-10-20)
 
 - **Things to find on the Painted Ringworld**, nods to two old ring-world and wasteland games in designs of its own,

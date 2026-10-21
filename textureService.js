@@ -54,6 +54,11 @@ const shownSeq = new Map();      // slot → the newest job whose texture has be
 const DRAFT_OVER_MS = 250;
 const genMs = new Map();         // type → how long its last generation took
 let drafting = false;
+// A FILM'S FRAMES AHEAD (the Moving Image; Ruby: the film used a twentieth of the machine): the frames to come made side
+// by side on more workers, one per spare core, while this one is drawn and encoded. Kept apart from the slots: they
+// never show early and never hold up texturesSettled; the film adopts each into the cache as its frame comes up.
+const ahead = new Map();         // key → { key, type, w, h, opts, promise, resolve, running }
+let filmPool = 0;                // the pool's size while a film is being made (0: none)
 /** On while a knob is being dragged; off sharpens the preview. */
 export function setDrafting(on){ if(drafting === on) return; drafting = on; if(!on) onReady(); }
 const pagePending = new Map();   // slot → a texture to be made on the page, after the next paint
@@ -98,6 +103,7 @@ function spawn(){
     crashes++;
     const f = entry.job; entry.job = null;
     try { w.terminate(); } catch(_){}
+    if(f && f.ahead){ aheadDone(f.key, null); if(pool){ const i = pool.indexOf(entry); if(i >= POOL_SIZE) pool.splice(i, 1); else if(i >= 0) pool[i] = spawn(); } setTimeout(pump, 200); return; }
     if(crashes > MAX_CRASHES){ broken = true; for(const x of pool || []) try { x.w.terminate(); } catch(_){} pool = null; flushOnPage(); return; }
     const i = pool ? pool.indexOf(entry) : -1;
     if(i >= 0) pool[i] = spawn();
@@ -192,12 +198,47 @@ function pump(){
     busy(true, job.type);
     worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts, softgl: SOFTGL });
   }
+  // (then the film's frames ahead, on whatever workers are left free, oldest frame first)
+  for(const a of ahead.values()){
+    if(a.running || a.tex !== undefined) continue;
+    const worker = pool.find(x => !x.job); if(!worker) break;
+    const id = nextId++; a.running = true;
+    worker.job = { id, ahead: true, key: a.key, type: a.type, worker, started: now() };
+    worker.w.postMessage({ id, type: a.type, w: a.w, h: a.h, opts: a.opts, softgl: SOFTGL });
+  }
+  // (a film over: the extra workers go as they come free)
+  if(!filmPool) for(let i = pool.length - 1; i >= POOL_SIZE; i--) if(!pool[i].job){ try { pool[i].w.terminate(); } catch(_){} pool.splice(i, 1); }
+}
+function aheadDone(key, tex){ const a = ahead.get(key); if(!a) return; a.running = false; a.tex = tex || null; a.resolve(a.tex); if(!filmPool) ahead.delete(key); }
+/** A texture for a frame to come: made on a free worker (or found cached), resolving to it (null if it failed). */
+export function prefetchTexture(type, w, h, opts){
+  if(PHONE_GRID_CAP) opts = { ...opts, gridCap: PHONE_GRID_CAP };   // (as requestTexture asks, so the keys agree)
+  const key = textureKeyFor(type, w, h, opts), hit = peekTexture(key);
+  if(hit) return { key, promise: Promise.resolve(hit) };
+  let a = ahead.get(key);
+  if(!a){ let resolve; const promise = new Promise(r => { resolve = r; }); a = { key, type, w, h, opts, promise, resolve, running: false, tex: undefined }; ahead.set(key, a);
+    if(!boot() || ON_PAGE.has(type) || ((type === 'athanor' || type === 'athanorsteps') && opts && graphScattersGlyphs(opts.graph))){ ahead.delete(key); return { key, promise: Promise.resolve(null) }; }
+    pump(); }
+  return { key, promise: a.promise };
+}
+/** A frame come up: its textures made ahead put in the cache, where its drawing finds them, and let go of here. */
+export function adoptPrefetched(keys){ for(const k of keys){ const a = ahead.get(k); if(a && a.tex){ storeTexture(k, a.tex); } if(a && a.tex !== undefined) ahead.delete(k); } }
+/** While a film is made, a worker per spare core (a phone, or a machine short of memory, keeps its usual pool); 0 when
+ *  it is done (the extra workers go as they come free, and frames no longer wanted are forgotten). */
+export function setFilmPool(on){
+  const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2, gb = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 8;
+  filmPool = on ? (FRUGAL || gb < 4 ? POOL_SIZE : Math.max(POOL_SIZE, Math.min(8, cores - 1, Math.floor(gb/1.5)))) : 0;
+  if(!on){ for(const [k, a] of ahead) if(!a.running){ a.resolve(null); ahead.delete(k); } }
+  if(on && boot()) while(pool.length < filmPool) pool.push(spawn());
+  pump();
+  return filmPool || POOL_SIZE;
 }
 
 function arrived(entry, e){
   const { id, bitmap, error } = e.data;
   const f = entry.job; entry.job = null;
   if(!f || f.id !== id){ pump(); return; }
+  if(f.ahead){ if(!bitmap && typeof console !== 'undefined') console.warn('texture worker (ahead):', error); aheadDone(f.key, bitmap || null); pump(); return; }
   const current = inflight.get(f.slot) === f;
   if(current) inflight.delete(f.slot);
   let tex = bitmap;
@@ -224,6 +265,8 @@ function flushOnPage(){
 /** For the debug hook: are the workers running, and what are they doing. */
 export function textureServiceInfo(){ return { worker: !!pool, workers: pool ? pool.length : 0, broken, inflight: inflight.size, waiting: wanted.size, crashes, shown: shownCount, lastShown, drafting, frugal: FRUGAL }; }
 
+/** Is a texture the page asked for still being made (the film draws a frame again only then). */
+export const texturesBusy = () => inflight.size > 0 || wanted.size > 0 || pagePending.size > 0;
 /** Resolves once every requested texture has arrived (Save image waits on this). */
 export function texturesSettled(){
   return (inflight.size === 0 && wanted.size === 0 && pagePending.size === 0) ? Promise.resolve() : new Promise(r => waiters.push(r));

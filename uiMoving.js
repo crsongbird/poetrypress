@@ -9,8 +9,8 @@
  */
 import { $ } from './appOptions.js';
 import { MOVING, fill } from './strings.js';
-import { render, setRenderScale, setSceneTime } from './canvasRenderer.js';
-import { texturesSettled, setDrafting } from './textureService.js';
+import { render, setRenderScale, setSceneTime, surfaceRequests } from './canvasRenderer.js';
+import { texturesSettled, texturesBusy, setDrafting, setFilmPool, prefetchTexture, adoptPrefetched } from './textureService.js';
 import { capsFor } from './textureGenerators.js';
 import { readStore, SPELL_KEY, stripToLook } from './vault.js';
 import { state } from './uiState.js';
@@ -23,7 +23,7 @@ import { blendLooks, crc32, filmHours, moveAt, mp4Parts, sunPath, webmBytes, who
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 // (where a look's kind changes, the film fades across this middle stretch of the move)
 const MOVING_FADE = [0.38, 0.62];
-const movingRun = { busy: false, stop: false };
+const movingRun = { busy: false, stop: false, sure: 0, wake: null };
 
 const movingNote = text => { const n = $('movingNote'); if(n) n.textContent = text || ''; };
 /** The other looks a film can move to: the spells kept in this browser, and the look before the last change. */
@@ -50,13 +50,23 @@ export function openMoving(){
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
   sheet.hidden = false;
 }
-export function closeMoving(){ if(movingRun.busy){ movingRun.stop = true; return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+// (while a film is being made, closing the sheet, Escape, a tap outside it: a soft no, the film goes on; only Stop, tapped
+//  twice, ends it. The page under the sheet stays as it is, since every frame is drawn from it)
+export function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+/** Is a film being made (the page asks before it is closed or left). */
+export const movingBusy = () => movingRun.busy;
+// KEEP THE SCREEN AWAKE while a film is made (the Screen Wake Lock: a sleeping device stops the page): asked for at the
+// start, asked for again when the page is shown again (the browser lets it go when the page is hidden), let go at the end
+export async function movingWake(){
+  if(!movingRun.busy || movingRun.wake || typeof navigator === 'undefined' || !navigator.wakeLock || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return;
+  try { movingRun.wake = await navigator.wakeLock.request('screen'); movingRun.wake.addEventListener('release', () => { movingRun.wake = null; }); } catch(e){ movingRun.wake = null; }
+}
 /** The rows the chosen move needs (the other look only for a move to one). */
 export function paintMoving(){
   const m = ($('movingMove') || {}).value, looked = m === 'look' || m === 'lookback', timed = m === 'time', row = $('movingDetailRow');
   for(const [id, on] of [['movingLook', looked], ['movingLookLabel', looked], ['movingSpan', timed], ['movingSpanLabel', timed]]){ const el = $(id); if(el) el.hidden = !on; }
   if(row && row.classList) row.classList.toggle('moving-idle', !looked && !timed);
-  const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? MOVING.stop : MOVING.make;
+  const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
   for(const id of ['movingMove', 'movingLook', 'movingSpan', 'movingSize', 'movingLength', 'movingFps', 'movingFormat']){ const el = $(id); if(el) el.disabled = movingRun.busy; }
 }
 /** The encoder's settings, the first this browser can make at this size: H.264 for an MP4, VP9 (or VP8) for a WebM. */
@@ -91,7 +101,9 @@ function movingSink(fmt, cfg, w, h, fps){
       if(failed) throw failed;
       const vf = new VideoFrame(canvas, { timestamp: Math.round(i*1e6/fps), duration: Math.round(1e6/fps), alpha: 'discard' });
       encoder.encode(vf, { keyFrame: i % (fps*2) === 0 }); vf.close();
-      while(encoder.encodeQueueSize > 3) await new Promise(r => setTimeout(r, 4));
+      // (the encoder says when it has taken a frame: waiting on that, not on a timer a hidden tab slows to a second)
+      while(encoder.encodeQueueSize > 3) await new Promise(r => { let done = false; const go = () => { if(!done){ done = true; r(); } };
+        if(encoder.addEventListener) encoder.addEventListener('dequeue', go, { once: true }); setTimeout(go, 40); });
     },
     done: async () => {
       await encoder.flush(); encoder.close(); if(failed) throw failed;
@@ -102,11 +114,13 @@ function movingSink(fmt, cfg, w, h, fps){
     },
     drop: () => { try { encoder.close(); } catch(e){ /* closed already */ } } };
 }
-// a frame: the page drawn, the textures it asks for made, and drawn again with them (as Save does)
-async function movingFrame(){ render(); await texturesSettled(); render(); }
-/** Make the film (or, while one is being made, stop it). */
+// a frame: the page drawn; if a texture it asked for wasn't ready, made and drawn again with it (as Save does)
+async function movingFrame(){ render(); if(texturesBusy()){ await texturesSettled(); render(); } }
+/** Make the film (or, while one is being made, stop it: a first tap asks, a second within a few seconds stops). */
 export async function makeMoving(){
-  if(movingRun.busy){ movingRun.stop = true; return; }
+  if(movingRun.busy){
+    if(!movingRun.sure){ movingRun.sure = setTimeout(() => { movingRun.sure = 0; paintMoving(); }, 3500); paintMoving(); return; }
+    clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
   const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, fps = +($('movingFps') || {}).value || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;   // (a minute at most)
   let [w, h] = MOVING_SIZES[$('movingSize').value] || [state.page.exportW || canvas.width, state.page.exportH || canvas.height];
   if(fmt !== 'png'){   // (a film's page held to 4K's area, past which the encoders' levels end; and even sides, as H.264 and VP9 take)
@@ -126,17 +140,29 @@ export async function makeMoving(){
   const clock = sun ? filmHours(sun, span/3600) : null;   // (dawn and dusk given more of the film)
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
-  movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving');
+  // FRAME i's dials and clock (the moves that turn a dial or run the clock; a move between looks is placed below)
+  // (a surface that keeps a clock runs it in every film: in real time, so the grass sways and the drones hover as
+  //  the camera turns; Time Passing runs it fast)
+  const place = i => {
+    if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
+    if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
+    else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
+    else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360); };
+  // FRAMES AHEAD (Ruby: the film kept a twentieth of the machine busy): the frames to come set up one by one, their
+  // textures asked for on a worker per spare core, while this one is drawn and encoded. As many ahead as the workers,
+  // and as memory allows at this size; none for a move between looks (each frame's look is a whole restore)
+  const workers = looked ? 0 : setFilmPool(true), aheadN = looked ? 0 : Math.max(0, Math.min(workers*2, Math.floor(6e8/(w*h*4)))), pending = new Map();
+  const queue = j => { if(j >= n || pending.has(j)) return; place(j); pending.set(j, surfaceRequests(w, h).map(r => prefetchTexture(r.type, r.w, r.h, r.opts))); };
+  movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving'); movingWake();
   if(document.body && document.body.classList) document.body.classList.add('saving');
   try {
     canvas.width = w; canvas.height = h; setDrafting(false); clearTimeout(draftTimer); setRenderScale(1, [w, h]);
     for(let i = 0; i < n && !movingRun.stop; i++){
-      // (a surface that keeps a clock runs it in every film: in real time, so the grass sways and the drones hover as
-      //  the camera turns; Time Passing runs it fast, below)
-      if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
-      if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
-      else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
-      else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360);
+      if(aheadN){ for(let j = i; j < i + aheadN; j++) queue(j);
+        place(i); const got = pending.get(i);
+        if(got){ await Promise.all(got.map(g => g.promise)); adoptPrefetched(got.map(g => g.key)); pending.delete(i); }
+        if(movingRun.stop) break; }
+      if(!looked) place(i);
       else {
         const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
         if(mid){   // both ways at once: the frame as it was, faded into the frame as it becomes
@@ -150,13 +176,15 @@ export async function makeMoving(){
         restoreSettings(blendLooks(start, end, t, t < 0.5 ? 0 : 1, snap));
       }
       await movingFrame(); await sink.add(canvas, i);
-      movingNote(fill(MOVING.frame, `${i + 1} / ${n}`));
+      movingNote(aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`));
     }
     if(!movingRun.stop){ movingNote(MOVING.finishing); made = await sink.done(); }
   } catch(err){
     sink.drop(); made = null; movingNote(err && err.message === 'too big' ? MOVING.tooBig : MOVING.failed);
     if(typeof console !== 'undefined') console.warn('Moving Image:', err && err.message);
   } finally {
+    setFilmPool(false); if(movingRun.wake){ try { movingRun.wake.release(); } catch(e){ /* let go already */ } movingRun.wake = null; }
+    clearTimeout(movingRun.sure); movingRun.sure = 0;
     setSceneTime(0); if(looked) restoreSettings(start);
     else for(const [id, v] of [['cameraTurn', cam0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
     canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
