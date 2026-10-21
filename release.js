@@ -2,16 +2,17 @@
  * release.js — which release this is, by name.
  *
  * Releases are named for moons, in order of their average distance from the
- * planet's barycentre (named moons only): Jupiter's, which ran out at Kore,
- * then Saturn's (build.mjs SATURN).
- * `node build.mjs --next` moves this file to the next moon.
+ * planet's barycentre (named moons only): Jupiter's, Saturn's, Uranus's and
+ * Neptune's; then for stars, cluster and member (`Pleiades–Maia`), the nearest
+ * clusters first and each one's members nearest first (build.mjs CLUSTERS).
+ * `node build.mjs --next` moves this file to the next name.
  *
  * Kept in a module of its own so the name shows even when the site is served
  * straight from the source files, without a build (§Build).
  */
-// planet and moon joined by an en dash: a slash would be read as a PML
+// planet and moon (or cluster and star) joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-export const RELEASE = 'Neptune–Thalassa';
+export const RELEASE = 'Neptune–Despina';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 export const RELEASE_DATE = '2026-10-21';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes

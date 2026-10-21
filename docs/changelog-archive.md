@@ -2,6 +2,32 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Cupid (2026-10-20)
+
+- **The Ringworld fills a wide view.** The land reaches the page's edges at any lens and any shape of page (it showed
+  flat bars of colour at the sides of a wide page, even at the usual lens); things at the frame's edge slide out of it
+  instead of vanishing when their middle crosses it; and the widest lens is held back before the world turns inside out.
+- **Clutter**, a new knob for the Ringworld: how much stands about the streets and roads (lamps, signs, billboards,
+  benches, bicycles, vending machines, parked cars, hay in the fields), apart from Works. At its middle there is less
+  than before.
+- **Streets.** Towns are laid out on streets now (lanes in the villages, broken streets in the ruins), and the
+  furniture stands along them instead of being scattered: lamps along every street, lighting it at night with pools on
+  the ground; cars parked at the kerb; a bench with a bicycle against it, a bus stop, a food cart; a signal, a sign, a
+  phone box or vending machines at the crossings; mailboxes along the village lanes; in the ruins, rusted cars sunk into
+  the verge and tank traps across the way. Buildings front the streets instead of standing in them, and the main roads
+  through town are lit.
+- **Nothing floats.** Things are set into the ground a little, and the ruins' wrecks, bikes and barrels are half buried.
+- **Weather**, by the seed: mostly clear (now and then high cirrus and low bands of cloud), often heaped cumulus lit
+  from the sun's side, sometimes fog in the valleys, rarely rain falling in veils (and a rainbow opposite a low sun),
+  a storm with lightning, or snow lying down to your feet. Rays fan from a low or clouded sun, and its glare lies over
+  the land when it is low.
+
+### Under the hood
+- The cuts follow the view's reach (`PHI`, `smax`, `angOf`, `cutOf`); the store lays the streets and their furniture
+  (`RG_STREET_KINDS`, `RG_SINKS`) and the weather is chosen once for both parts (`rgWeatherOf`).
+- Housekeeping: reviewed the tests: no suite repeats another's check; the dial-guide check no longer names the retired
+  3D Ringworld; a new check holds the Ringworld's widest lens.
+
 ## Uranus–Rosalind (2026-10-20)
 
 - **The Painted Ringworld is now the Ringworld.**

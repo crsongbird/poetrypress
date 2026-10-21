@@ -4,6 +4,16 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Despina (2026-10-21)
+
+- Nothing you'll see yet: after Neptune's last moon, releases will be named for stars, each cluster and one of its
+  members (`Pleiades–Maia`), the nearest clusters first and each one's members nearest first: Ursa Major, the Hyades,
+  Crux, the Pleiades, Lupus, Scorpius, Alpha Persei, the Beehive, Perseus and Orion's belt, forty-six names.
+
+### Under the hood
+- `CLUSTERS` in build.mjs, from docs/prior-art/star-cluster-names.md (every star's IAU name, its distance and its
+  membership, with the sources and the disputed members); the release notes' name now reads a name with a space in it.
+
 ## Neptune–Thalassa (2026-10-21)
 
 - Films are made faster: while one frame is drawn and encoded, the frames to come are made side by side, one on each
@@ -308,29 +318,3 @@ prints it).
 ### Under the hood
 - The store walks its ways (`RG_WAYMAT`, `RG_WAYHALF`, `RG_WAYCOL`, `RG_LIT_WAYS`) and the land paints them piece by
   piece with the ridges.
-
-## Uranus–Cupid (2026-10-20)
-
-- **The Ringworld fills a wide view.** The land reaches the page's edges at any lens and any shape of page (it showed
-  flat bars of colour at the sides of a wide page, even at the usual lens); things at the frame's edge slide out of it
-  instead of vanishing when their middle crosses it; and the widest lens is held back before the world turns inside out.
-- **Clutter**, a new knob for the Ringworld: how much stands about the streets and roads (lamps, signs, billboards,
-  benches, bicycles, vending machines, parked cars, hay in the fields), apart from Works. At its middle there is less
-  than before.
-- **Streets.** Towns are laid out on streets now (lanes in the villages, broken streets in the ruins), and the
-  furniture stands along them instead of being scattered: lamps along every street, lighting it at night with pools on
-  the ground; cars parked at the kerb; a bench with a bicycle against it, a bus stop, a food cart; a signal, a sign, a
-  phone box or vending machines at the crossings; mailboxes along the village lanes; in the ruins, rusted cars sunk into
-  the verge and tank traps across the way. Buildings front the streets instead of standing in them, and the main roads
-  through town are lit.
-- **Nothing floats.** Things are set into the ground a little, and the ruins' wrecks, bikes and barrels are half buried.
-- **Weather**, by the seed: mostly clear (now and then high cirrus and low bands of cloud), often heaped cumulus lit
-  from the sun's side, sometimes fog in the valleys, rarely rain falling in veils (and a rainbow opposite a low sun),
-  a storm with lightning, or snow lying down to your feet. Rays fan from a low or clouded sun, and its glare lies over
-  the land when it is low.
-
-### Under the hood
-- The cuts follow the view's reach (`PHI`, `smax`, `angOf`, `cutOf`); the store lays the streets and their furniture
-  (`RG_STREET_KINDS`, `RG_SINKS`) and the weather is chosen once for both parts (`rgWeatherOf`).
-- Housekeeping: reviewed the tests: no suite repeats another's check; the dial-guide check no longer names the retired
-  3D Ringworld; a new check holds the Ringworld's widest lens.

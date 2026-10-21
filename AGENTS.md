@@ -127,7 +127,7 @@ OPEN-ISSUES / this file → ship (§3).
 node build.mjs            # flatten every module into dist/index.html (+ the texture worker, sw.js, manifest)
 sh test.sh                # parse check + build + every test suite — must end "all N suites passed"
 sh check.sh file.js …     # syntax-check modules (really parses them; `node --check` passes broken modules here)
-node build.mjs --next     # advance release.js to the next moon — once per shipped release (and archive the changelog past twenty releases)
+node build.mjs --next     # advance release.js to the next name (moon, then star) — once per shipped release (and archive the changelog past twenty releases)
 node build.mjs --notes    # print the newest CHANGELOG section (the release's commit message)
 node build.mjs --zip      # archive the project into release/ (old archives deleted first)
 
@@ -164,10 +164,12 @@ file, or the app won't install or work offline.
 ## 3 · A pass, and shipping a release
 
 One pass of work ends in one release. Releases are named for moons
-(`release.js`): Jupiter's, in order of distance from the barycentre (they
-ran out at Kore), now Saturn's (`SATURN` in build.mjs). The name is written
-`Saturn–Pan` with an **en dash**, because a slash would split a PML
-segment.
+(`release.js`): Jupiter's, Saturn's, Uranus's and Neptune's, each in order of
+distance from the barycentre; after Neptune, for stars (Ruby: "star cluster →
+member, sorted by distance from earth"): `CLUSTERS` in build.mjs, the nearest
+cluster first and its members nearest first (docs/prior-art/star-cluster-names.md).
+The name is written `Saturn–Pan` or `Ursa Major–Merak` with an **en dash**,
+because a slash would split a PML segment.
 
 **Ship a release:**
 1. `sh test.sh` ends "all N suites passed".

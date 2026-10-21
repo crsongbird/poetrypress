@@ -50,18 +50,34 @@ const URANUS = ['Cordelia', 'Ophelia', 'Bianca', 'Cressida', 'Desdemona', 'Julie
   'Sycorax', 'Margaret', 'Prospero', 'Setebos', 'Ferdinand'];
 const NEPTUNE = ['Naiad', 'Thalassa', 'Despina', 'Galatea', 'Larissa', 'Hippocamp', 'Proteus', 'Triton', 'Nereid', 'Halimede',
   'Sao', 'Laomedeia', 'Psamathe', 'Neso'];
+// Then the stars (Ruby: "star cluster → member, sorted by distance from earth"): the nearest clusters and moving groups
+// first, and in each its members with IAU-approved names, nearest first (docs/prior-art/star-cluster-names.md, with
+// the sources and the disputed members). A Scorpius–Centaurus subgroup goes by its short name ("Upper Centaurus–Lupus"
+// already holds a dash); after Orion's belt, Ruby names what comes next.
+const CLUSTERS = [
+  ['Ursa Major', ['Merak', 'Megrez', 'Alcor', 'Alioth', 'Mizar', 'Phecda']],
+  ['Hyades', ['Lembu', 'Ain', 'Prima Hyadum', 'Secunda Hyadum', 'Chamukuy']],
+  ['Crux', ['Mimosa', 'Imai', 'Acrux', 'Hadar', 'Matza']],
+  ['Pleiades', ['Maia', 'Merope', 'Taygeta', 'Electra', 'Atlas', 'Alcyone', 'Pleione', 'Asterope', 'Celaeno']],
+  ['Lupus', ['Heng', 'Uridim', 'Pipirima', 'Xamidimura']],
+  ['Scorpius', ['Dschubba', 'Acrab', 'Iklil', 'Jabbah', 'Paikauhale', 'Antares', 'Alniyat', 'Fang']],
+  ['Alpha Persei', ['Mirfak', 'Sarvvis', 'Áldu']],
+  ['Beehive', ['Meleph']],
+  ['Perseus', ['Atik', 'Menkib']],
+  ['Orion', ['Mintaka', 'Alnilam', 'Alnitak']]];
 // node build.mjs --notes: print the newest section of CHANGELOG.md (the release's commit message)
 if(process.argv.includes('--notes')){
   const log = readFileSync('CHANGELOG.md', 'utf8'), at = log.indexOf('\n## '), next = log.indexOf('\n## ', at + 4);
   const sec = log.slice(at + 1, next < 0 ? undefined : next).trim();
-  console.log('PoetryPress-' + sec.split('\n')[0].replace(/^## (\S+).*/, '$1') + '\n\n' + sec.split('\n').slice(1).join('\n').trim());   // (the name from the heading's line alone: the whole section once rode on it, so every message held its notes twice)
+  console.log('PoetryPress-' + sec.split('\n')[0].replace(/^## (.+?) \(.*/, '$1') + '\n\n' + sec.split('\n').slice(1).join('\n').trim());   // (the name from the heading's line alone: the whole section once rode on it, so every message held its notes twice)
   process.exit(0);
 }
 if(process.argv.includes('--next')){
   const [planet, cur] = /RELEASE = '([^']+)'/.exec(readFileSync('release.js', 'utf8'))[1].split('–');
-  const order = [...JUPITER.map(m => ['Jupiter', m]), ...SATURN.map(m => ['Saturn', m]), ...URANUS.map(m => ['Uranus', m]), ...NEPTUNE.map(m => ['Neptune', m])];
+  const order = [...JUPITER.map(m => ['Jupiter', m]), ...SATURN.map(m => ['Saturn', m]), ...URANUS.map(m => ['Uranus', m]), ...NEPTUNE.map(m => ['Neptune', m]),
+    ...CLUSTERS.flatMap(([c, stars]) => stars.map(m => [c, m]))];
   const i = order.findIndex(([p, m]) => p === planet && m === cur);
-  if(i < 0 || i + 1 >= order.length){ console.error(`No moon after ${planet}–${cur} in the list: Ruby names what comes after Neptune (build.mjs).`); process.exit(1); }
+  if(i < 0 || i + 1 >= order.length){ console.error(`No name after ${planet}–${cur} in the list: Ruby names what comes after Orion's belt (build.mjs).`); process.exit(1); }
   const [np, nm] = order[i + 1];
   writeFileSync('release.js', readFileSync('release.js', 'utf8').replace(/RELEASE = '[^']+'/, `RELEASE = '${np}–${nm}'`)
     .replace(/RELEASE_DATE = '[^']*'/, `RELEASE_DATE = '${new Date().toISOString().slice(0, 10)}'`));
