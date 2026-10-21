@@ -39,6 +39,10 @@ Mistakes made once, so they aren't made twice. Moved from AGENTS.md §10; skim i
 - Grey-ground textures are neutral at 128. Colour-keyed ones inherit the
   accents unless a tint is given.
 - Blend modes can hide an inset box: Darken shows only a darker box.
+- **A film is not a still.** Lightning once lit the whole frame for one frame (a photosensitivity hazard, Ruby's
+  hardest correction), and a flicker or pulse written in real seconds blinks at random from frame to frame once a frame
+  spans minutes. Every lighting event eases over frames and stays local; every oscillation runs on a clock that
+  advances only a little each frame (AGENTS.md §11, Photosensitivity).
 
 **The canvas, the page, the phone**
 - **Never `close()` a cached ImageBitmap:** the texture service may still be

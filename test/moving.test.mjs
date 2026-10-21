@@ -1,7 +1,7 @@
 /**
  * moving.test.mjs — the Moving Image's pure parts (moving.js): a look eased toward another (what eases, what stays
  * whole, the dials the short way round), and the three containers it writes (zip, MP4, WebM), read back; and, on the
- * booted page, that the frames a film has made ahead are the ones its drawing asks for.
+ * booted page, that the frames a film has made ahead are the ones its drawing asks for; and that a film never flashes.
  */
 import { check, done } from './harness.mjs';
 import { blendLooks, crc32, filmHours, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
@@ -70,5 +70,21 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   render(); await texturesSettled(); setSceneTime(0);
   const keys = asked.map(r => textureKeyFor(r.type, r.w, r.h, r.opts));
   check('a film\'s look ahead asks for the textures its frame then draws (the same keys, found waiting in the cache)', keys.length > 0 && keys.every(k => peekTexture(k))); }
+
+// ---- a film never flashes (Ruby: photosensitivity) ----
+// a storm on the Ringworld, frame after frame of a time-lapse while lightning strikes: the bolt is drawn, but the scene as
+// a whole never brightens or darkens from one frame to the next (drawn on a real canvas when one is here)
+{ let NC = null; try { NC = await import('@napi-rs/canvas'); } catch(e){ console.log('(no @napi-rs/canvas here: the flash check is skipped)'); }
+  if(NC){ const doc = globalThis.document; globalThis.document = { createElement: () => NC.createCanvas(1, 1) };
+    const T = await import('../textureGenerators.js'), caps = T.TEXTURE_CAPS.ringpaint, defs = T.paramsFor('ringpaint'), W = 160, H = 90, t6 = caps.tintDefaults || [];
+    const frame = f => { const o = { seed: 24757, light: 150, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: W/3072, camera: { turn: 150, view: 100, zoom: 100, time: f*48, dt: 48 } };
+      defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); T.clearTextureCache(); const d = T.getTextureCanvas('ringpaint', W, H, o).getContext('2d').getImageData(0, 0, W, H).data, L = new Float32Array(W*H);
+      for(let i = 0; i < W*H; i++) L[i] = 0.2126*d[i*4] + 0.7152*d[i*4 + 1] + 0.0722*d[i*4 + 2]; return L; };
+    const F = []; for(let f = 76; f <= 88; f++) F.push(frame(f));
+    let worst = 0, area = 0, bolt = 0;
+    for(let k = 1; k < F.length; k++){ let sum = 0, big = 0; for(let i = 0; i < W*H; i++){ const dl = F[k][i] - F[k - 1][i]; sum += dl; if(Math.abs(dl) > 25) big++; bolt = Math.max(bolt, Math.abs(dl)); }
+      worst = Math.max(worst, Math.abs(sum/(W*H))); area = Math.max(area, big/(W*H)); }
+    check(`while lightning strikes, no frame flashes the scene (mean change ${worst.toFixed(2)} of 255, ${(area*100).toFixed(1)}% of the frame changing by a tenth; the bolt and the rain change only locally, up to ${bolt.toFixed(0)})`, worst < 1.5 && area < 0.02 && bolt > 40);
+    globalThis.document = doc; } }
 
 done();

@@ -354,7 +354,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     docs/prior-art/ringworld-time.md): the camera carries the scene's clock (`setSceneTime`, keyed with the camera, 0 in
     a still so a still is unchanged), read as `V.time` and `V.dt`. With it the wind carries the clouds, the stars and
     everything beyond the ring turn with its spin (`RG_SPIN`, `farAt`), meteors cross by night (a shower's from one
-    radiant, caught by each frame's shutter), lightning flashes now and then, rain and snow fall, the grass sways in
+    radiant, caught by each frame's shutter), lightning strikes now and then, rain and snow fall, the grass sways in
     travelling gusts, insects dance, the droids go about their rounds (`RG_MOVES`), lights flicker and go out and on
     through the night, glints move on the water, chimney smoke rises and leans downwind (`pkSmoke`), kites nod on their
     strings, and the windows (`pkLit`) are most of them lit as the evening begins, fewer as the night deepens, each
@@ -371,7 +371,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     a cauliflower's smaller billows on its outline as it nears; lit as one body (a gradient over the whole sheet,
     `source-atop`) and its edge broken into faint wisps; rain falls from a heap's base in a curtain of streaks (virga
     under some heaps in plain cloudy weather, never reaching the ground), lightning strikes from one down to the land
-    and lights the whole scene a moment. With the clock (Ruby: "clouds need to move slower, billow and gather … clean
+    (an event over some ten frames: the leader creeping down, the bolt, then dimming; the heap lit softly from within, eased; never the whole scene, Ruby: photosensitivity). With the clock (Ruby: "clouds need to move slower, billow and gather … clean
     transition states"; the Wind Waker's, docs/prior-art/ringworld-time.md §4) they drift on their own slow clock
     (`rgCloudTime`), their billows breathe and roll, and each heap lives in stages: it gathers from scattered wisps,
     stands, thins and is gone, and a new shape gathers only from nothing; a heap swelling past half the frame as it

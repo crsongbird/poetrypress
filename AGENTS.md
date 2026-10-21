@@ -919,6 +919,13 @@ touched.
 coping. The one exception is the busy shimmer (a texture being made, or a
 save), shown only after a moment and replaced by a fade for reduced motion.
 
+**Photosensitivity, in films and everywhere** (Ruby, 2026-10-21: "ALL OF YOUR EFFECTS should be mildly photosensitive
+safe … large regions cannot flash for brief periods"). No large region of a picture may brighten or darken suddenly
+and come back, not even for one frame: no full-frame flash, ever. Small lights may turn on and off (windows, lamps), but
+whatever flickers, pulses or swings runs on a gentle clock (the Ringworld's `rgSwayTime`), never blinking frame to
+frame. An event that lights things (lightning) is drawn artistically, eased over several frames: a creeping leader,
+the bolt, a slow dimming, the light it casts local and soft, at most one a second.
+
 **PML's purpose** is to override the page's globals per segment: that is
 what makes shaped poetry possible. Page-level settings (border, vignette,
 background) don't belong in it.

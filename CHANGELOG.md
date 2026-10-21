@@ -4,6 +4,22 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Larissa (2026-10-21)
+
+- Ringworld's films are kinder to the eyes. Lightning no longer lights the whole scene for a frame: a strike now plays
+  over some ten frames, its leader creeping down from the cloud, the bolt touching the land, then dimming away, the
+  cloud lit softly from within and a small glow where it lands, never more than one strike a second. It strikes from
+  a cloud you can see.
+- Nothing blinks from frame to frame any more: the lights on the rim walls pulse slowly instead of switching on and
+  off, fires and flickering lamps waver gently, the aurora ripples slowly, and the grass, the drones, the insects and
+  the snow sway on a gentle clock.
+
+### Under the hood
+- `rgSwayTime`, the clock for whatever swings, sways or flickers (at most a quarter second a frame); lightning as an
+  eased event on the small motions' clock. AGENTS.md §11 gains the photosensitivity rule; docs/pitfalls.md the lesson.
+- moving.test.mjs renders a storm frame by frame while lightning strikes and fails if any frame brightens or darkens
+  the scene as a whole.
+
 ## Neptune–Galatea (2026-10-21)
 
 - Ringworld's clouds are remade. Each heap's billows grow out of one another into one body, so none floats free as a
@@ -320,18 +336,3 @@ prints it).
 - A film at the page's own size is held to 4K's area; the PNG frames stop short of a zip's 4 GB. Prior art:
   docs/prior-art/moving-image.md.
 - Pruned the stylesheet: every declaration verified in use (none removed).
-
-## Uranus–Perdita (2026-10-20)
-
-- **Eight views.** Everything in the Ringworld now turns a way of its own (a house toward its street, a car along its
-  kerb, a bench to its path, a billboard to the road) and is drawn as the camera sees it: from the front, half turned,
-  side on, from behind. Houses narrow as they turn and show a side wall in sun or shade; round things (yurts, domes,
-  trulli, oast houses) look the same all round. A car met head on shows its headlamps, from behind its tail lights;
-  tractors, carts, bicycles and benches the same. A billboard from behind shows its bracing and the bare backs of its
-  sheets; a road sign its blank back; vending machines their vents. Anything turned the other way is mirrored, with its
-  light still on the sun's side, except what carries writing. Trees are mirrored by the seed, so a row of one kind
-  varies.
-
-### Under the hood
-- `viewOf` in the Ringworld's painter; `pkFlip`, `pkPropEnd`, `PK_SIDE_NATIVE`, `PK_WRITTEN`, `PK_BACKED`,
-  `PK_BOXLIKE` and `PK_ROUND` in the paint kit; buildings, the ways' furniture and the boards keep a `face`.
