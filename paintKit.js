@@ -696,7 +696,8 @@ const PK_BUILT = {
 // sine of the angle between the way a thing faces and the way to the eye. A building is then drawn as the eye sees it:
 // its face narrowed as it turns away (|cs|), its side shown on the side turned toward you, deeper as it turns (|sn|)
 // the round buildings, the same from any side
-const PK_ROUND = ['yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle'];
+const PK_ROUND = ['yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle', 'silo', 'lighthouse', 'watertower', 'geodome',
+  'observatory', 'wizard', 'pagoda', 'onion', 'mosque']; // (round, or square and alike on every side, as a pagoda or a domed mosque)
 // TURNED IN DEPTH (Ruby: "some of your object rotations are extremely cheap looking … think about them in
 // three-dimensional space even though they are two-dimensional"): a box-built building turned from the eye is a box, as
 // pkSpace sees it: its front (the building's own painted face, laid on the face's plane, foreshortened and sheared as the
@@ -1036,8 +1037,8 @@ function pkBox3(x, S, u0, u1, v0, v1, z0, z1, m, sd){
   for(const [nu, nv, [[ua, va], [ub, vb]]] of sides) if(S.faces(nu, nv)){ const k = S.light(nu, nv, sd), col = k > 0 ? pkMix(m.body, m.lit, k) : pkMix(m.body, m.dark, -k);
     pkPoly(x, [S.P(ua, va, z0), S.P(ub, vb, z0), S.P(ub, vb, z1), S.P(ua, va, z1)], pkCss(col)); }
   pkPoly(x, [S.P(u0, v0, z1), S.P(u1, v0, z1), S.P(u1, v1, z1), S.P(u0, v1, z1)], pkCss(pkMix(m.lit, PK_WHITE, 0.12))); }
-export const PK_SOLIDS = ['sheep', 'boat'];
-// the solid small things: a sheep on four legs, a boat on the water, each drawn in the round (pkSpace)
+export const PK_SOLIDS = ['sheep', 'boat', 'parked', 'hulk'];
+// the solid small things: a sheep on four legs, a boat on the water, a parked car, each drawn in the round (pkSpace)
 function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
   const sub = pkSub(R0), R = sub(1), sd = c.sd, S = pkSpace(X, Y, h, c.view), near = h > px(10);
   if(kind === 'sheep'){ // a sheep: its fleece a cloud over four thin dark legs, its head down to graze or up to look
@@ -1058,6 +1059,37 @@ function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
     else pkEll(x, cx + sd*rx*0.3, cy - ry*0.3, rx*0.4, ry*0.4, pkCss(wool.lit));
     for(const p of legs) if(S.depth(...p) >= 0) leg(p);
     if(front) head(); return; }
+  if(kind === 'parked' || kind === 'hulk'){ // a parked car (or, in the ruins, its rusted hulk: no glass, flat tyres, rust,
+    // sunk): its body and its glasshouse two prisms of its side's outline, each face lit by the side it turns to the sun,
+    // its four wheels discs turned with it, its lamps on its ends
+    const hulk = kind === 'hulk', m = hulk ? pkMat(c, PK_RUST, 0.7) : pkMat(c, [[180, 40, 40], [40, 60, 110], [210, 210, 214], [30, 32, 36], [120, 130, 100], [200, 170, 70]][Math.floor(R()*6)], 0.7);
+    const d = R() < 0.5 ? 1 : -1, T = pkSpace(X, Y + (hulk ? h*0.08 : 0), h, c.view || { cs: 0, sn: d }), steel = pkMat(c, PK_STEEL, 0.7), glass = hulk ? PK_BLACK : pkMix(c.air || m.lit, PK_BLACK, 0.35);
+    const body = [[-1.5, 0.15], [1.5, 0.15], [1.5, 0.48], [0.96, 0.56], [-0.9, 0.56], [-1.5, 0.5]], cabin = [[-0.9, 0.55], [0.96, 0.55], [0.6, 0.95], [-0.54, 0.95]];
+    const lit = (nu, nv, mm, up) => { const k = T.light(nu, nv, sd)*0.8 + (up || 0); return k > 0 ? pkMix(mm.body, mm.lit, Math.min(1, k)) : pkMix(mm.body, mm.dark, -k); };
+    // (a prism: the outline in the car's own length and height, run across its width; its faces toward the eye)
+    const prism = (pr, hw, mat, faceCol) => { for(let q = 0; q < pr.length; q++){ const [u0, z0] = pr[q], [u1, z1] = pr[(q + 1) % pr.length], nu = z1 - z0, nz = -(u1 - u0), nl = Math.hypot(nu, nz) || 1;
+        if(nz/nl < -0.3 || !(nz/nl > 0.3 || T.faces(nu, 0))) continue; const col = faceCol ? faceCol(q, nu/nl, nz/nl) : lit(nu/nl, 0, mat, nz/nl*0.35);
+        pkPoly(x, [T.P(u0, -hw, z0), T.P(u1, -hw, z1), T.P(u1, hw, z1), T.P(u0, hw, z0)], pkCss(col)); }
+      for(const s of [-1, 1]) if(T.faces(0, s)) pkPoly(x, pr.map(([u, z]) => T.P(u, s*hw, z)), pkCss(faceCol ? faceCol(-1, 0, 0, s) : lit(0, s, mat))); };
+    const wheelAt = (u, v) => { const r = 0.24, [wx, wy] = T.P(u, v, hulk ? 0.12 : r), rx = h*(r*Math.abs(T.sn) + 0.08*Math.abs(T.cs)), ry = h*r*(hulk ? 0.55 : 1);
+      pkEll(x, wx, wy, rx, ry, pkCss(pkMix(PK_IRON, PK_BLACK, 0.45))); if(!hulk && Math.abs(T.sn) > 0.3 && ry > px(1.5)) pkEll(x, wx + sd*rx*0.06, wy - ry*0.06, rx*0.45, ry*0.45, pkCss(steel.body)); };
+    pkEll(x, X - sd*h*0.25, Y, h*(1.5*Math.abs(T.sn) + 0.65*Math.abs(T.cs)), h*0.12, pkCss(PK_BLACK, 0.22));
+    const wheels = [[0.96, 0.62], [-0.96, 0.62], [0.96, -0.62], [-0.96, -0.62]].sort((p, q) => T.depth(...p) - T.depth(...q));
+    // (the far wheels behind the body, the near ones in front of it)
+    const toward = ([u, v]) => T.faces(0, Math.sign(v)) || Math.abs(T.sn) < 0.15 && T.faces(Math.sign(u), 0);
+    wheels.filter(w => !toward(w)).forEach(w => wheelAt(...w));
+    prism(body, 0.62, m);
+    prism(cabin, 0.54, m, (q, nu, nz, s) => q === 2 ? pkMix(m.lit, PK_WHITE, 0.08) : glass); // (its roof, and its glass all round)
+    // (the pillars between the windows, the shine on its flank, its rust, its lamps on whichever end you see)
+    if(Math.abs(T.sn) > 0.2){ const s = T.faces(0, 1) ? 1 : -1; x.strokeStyle = pkCss(m.body); x.lineWidth = Math.max(px(0.5), h*0.05); x.beginPath(); x.moveTo(...T.P(0.06, s*0.54, 0.56)); x.lineTo(...T.P(0.06, s*0.54, 0.95)); x.stroke();
+      if(!hulk){ x.strokeStyle = pkCss(m.lit, 0.7); x.lineWidth = Math.max(px(0.4), h*0.03); x.beginPath(); x.moveTo(...T.P(-1.5, s*0.625, 0.35)); x.lineTo(...T.P(1.5, s*0.625, 0.35)); x.stroke(); }
+      else if(h > px(10)) for(let k = 0; k < 5; k++){ const [rx, ry] = T.P((R() - 0.5)*2.4, s*0.625, 0.25 + 0.25*R()); pkEll(x, rx, ry, h*0.15*Math.abs(T.sn), h*0.08, pkCss(pkMix(m.dark, PK_BLACK, 0.2), 0.7)); } }
+    for(const e of [1, -1]) if(T.faces(e, 0) && Math.abs(T.cs) > 0.15){ const col = hulk ? PK_BLACK : e > 0 ? (night > 0.2 ? pkMix(c.glow, PK_WHITE, 0.7) : [230, 226, 200]) : [200, 40, 40];
+      for(const v of [-0.44, 0.44]){ pkPoly(x, [T.P(e*1.5, v - 0.12, 0.36), T.P(e*1.5, v + 0.12, 0.36), T.P(e*1.5, v + 0.12, 0.44), T.P(e*1.5, v - 0.12, 0.44)], pkCss(col));
+        if(e > 0 && !hulk && night > 0.2) pkGlow(x, ...T.P(e*1.55, v, 0.4), h*0.6, c.glow, 0.4*night); }
+      x.strokeStyle = pkCss(e > 0 ? steel.lit : m.dark); x.lineWidth = Math.max(px(0.5), h*0.06); x.beginPath(); x.moveTo(...T.P(e*1.52, -0.6, 0.22)); x.lineTo(...T.P(e*1.52, 0.6, 0.22)); x.stroke(); }
+    wheels.filter(toward).forEach(w => wheelAt(...w));
+    if(!hulk && night > 0.2 && R() < 0.3) pkGlow(x, ...T.P(1.5, 0, 0.4), h*0.5, [255, 230, 180], 0.4*night); return; }
   // a boat moored on the water: a hull of planks (a rowing boat, a fishing boat with its wheelhouse, or a small sailing
   // boat with its mast and furled sail), its gunwale an outline foreshortened as it turns, the inside of the hull showing
   // when seen from above, its reflection broken in the water below it

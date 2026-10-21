@@ -2,6 +2,31 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Alvaldi (2026-10-20)
+
+- **The page is half the size**: 2.7 MB instead of 5.6 MB (about 0.8 MB
+  instead of 1.7 MB as it travels), so it opens sooner, above all on a
+  phone. The surfaces' code used to come twice, once for the page and once
+  for the background worker that paints them; it now comes once and serves
+  both. The notes written in the code stay in the code and no longer travel
+  with the page. Nothing you see changes: every surface draws exactly as it
+  did.
+
+### Under the hood
+- Smaller and simpler (docs/SIMPLIFY.md), each step proved to change no
+  picture: the surfaces' dispatch is one table; each part's description is
+  written once (its wiki line); the chains take their sliders' names and
+  defaults from the slider list instead of repeating them, and a wire names
+  a setting by its key; the slider list is compact (its own file), with the
+  blend lists named; every Athanor part is one object, as the families'
+  parts already were; WebGL is opened one way, and the worker holds one
+  context for the lighting and the GPU passes instead of two.
+- Tests reviewed: they now run two at a time and each is timed (the full
+  run takes about 3 minutes); `sh test.sh --quick` leaves out the four slow
+  texture suites while working. The build proves the page without comments
+  is the same code, token for token and line break for line break.
+- Stylesheet pruned (tools/css-prune.py: nothing left to remove).
+
 ## Saturn–Skrymir (2026-10-19)
 
 - **The light selector says Main and Rim again**, and where the dial moves

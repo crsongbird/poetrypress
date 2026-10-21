@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Francisco (2026-10-21)
+
+- Parked cars and rusted hulks are solid: a body and a glasshouse with their roof, windscreen and boot each lit by the
+  side it turns to the sun, four wheels turned with the car, headlamps or tail lamps on whichever end you see. Half
+  turned, a car shows its length and its width, never a shortened side.
+- Silos, lighthouses, water towers, observatories, wizards' towers, pagodas, onion domes and domed mosques are the same
+  from every side instead of narrowing as the camera turns.
+
+### Under the hood
+- Housekeeping: reviewed the tests: the turned-in-depth drawing had no suite of its own; turned.test.mjs now checks it
+  on a real canvas (a block side on shows its depth, half turned its front and side; a side wall is its face's colour;
+  a chapel side on is its nave with its belfry standing; a granary keeps its stilts; a car half turned is not shrunk; a
+  vending machine's top shows), and each of those checks fails with the turning switched off. Texture fingerprints
+  updated for the solid cars and the round buildings.
+
 ## Uranus–Oberon (2026-10-21)
 
 - Vending machines, phone boxes, mailboxes, shipping containers and troughs turned from the camera are solid too: a
@@ -471,28 +486,3 @@ and every control behaving as it did.
 - The changelog keeps the newest twenty releases; the older ones are in
   docs/changelog-archive.md.
 - An unused helper (a moon glyph as a data URI) was found and removed.
-
-## Saturn–Alvaldi (2026-10-20)
-
-- **The page is half the size**: 2.7 MB instead of 5.6 MB (about 0.8 MB
-  instead of 1.7 MB as it travels), so it opens sooner, above all on a
-  phone. The surfaces' code used to come twice, once for the page and once
-  for the background worker that paints them; it now comes once and serves
-  both. The notes written in the code stay in the code and no longer travel
-  with the page. Nothing you see changes: every surface draws exactly as it
-  did.
-
-### Under the hood
-- Smaller and simpler (docs/SIMPLIFY.md), each step proved to change no
-  picture: the surfaces' dispatch is one table; each part's description is
-  written once (its wiki line); the chains take their sliders' names and
-  defaults from the slider list instead of repeating them, and a wire names
-  a setting by its key; the slider list is compact (its own file), with the
-  blend lists named; every Athanor part is one object, as the families'
-  parts already were; WebGL is opened one way, and the worker holds one
-  context for the lighting and the GPU passes instead of two.
-- Tests reviewed: they now run two at a time and each is timed (the full
-  run takes about 3 minutes); `sh test.sh --quick` leaves out the four slow
-  texture suites while working. The build proves the page without comments
-  is the same code, token for token and line break for line break.
-- Stylesheet pruned (tools/css-prune.py: nothing left to remove).

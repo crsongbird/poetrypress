@@ -393,8 +393,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Eight views** (Ruby: "at least eight… front, sides, back, and the half-turned states… mirrored the other direction,
     except for the ones that have text"): each thing in the store has a `face`, the way it turns (a house its street, a
     car along its kerb, a board the road), and `viewOf` gives how it is turned from the camera. A building is narrowed
-    as a box (above); the round ones (`PK_ROUND`) are the same from every side, and the rest (a temple, a windmill)
-    narrowed as they turn and mirrored. Cars, tractors, carts, bicycles and benches (`PK_SIDE_NATIVE`) are drawn end on when met
+    as a box (above); the round ones (`PK_ROUND`: a silo, a lighthouse, a water tower, a pagoda, a domed mosque) are the
+    same from every side, and the rest (a temple, a windmill, a castle) narrowed as they turn and mirrored. A parked car
+    or a rusted hulk is a solid (`PK_SOLIDS`): its body and glasshouse two prisms of its outline, its wheels discs turned
+    with it. Tractors, carts, bicycles and benches (`PK_SIDE_NATIVE`) are drawn end on when met
     head on or from behind (`pkPropEnd`), otherwise narrowed and mirrored. Boards, signs and milestones are never
     mirrored and show their bare backs from behind (`PK_BACKED`, `c.back`). Whatever is mirrored keeps its light on
     the sun's side (`pkFlip`). Trees are mirrored by the seed.
