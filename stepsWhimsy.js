@@ -239,6 +239,8 @@ export const LAND_BIOMES = {
   fields:   { bands:[4,6],  decay:0.22, sharp:false, amp:0.06, bump:0,   dab:'field', horizon:0.46, pal:[[150,170,70],[200,180,90],[110,140,60],[180,140,80],[130,160,90]] },
   // a volcano: one great cone on the skyline, its plume leaning on the wind
   volcano:  { bands:[3,5],  decay:0.24, sharp:false, amp:0.06, bump:0,   dab:'rock',  horizon:0.5,  cone:true, pal:[[80,70,72],[110,92,84],[60,58,64],[130,110,90]] },
+  // a river: green hills opening into a valley, the river winding down it toward you, widening as it comes
+  river:    { bands:[4,6],  decay:0.26, sharp:false, amp:0.075,bump:0,   dab:'grass', horizon:0.47, river:true, pal:[[96,134,64],[140,156,72],[74,112,70],[170,164,96]] },
 };
 // the time of day: the sky, the light's warmth, the shadows' coolness
 export const LAND_TIMES = {
@@ -257,6 +259,8 @@ export function landScene(seed, o = {}){
   const R = seedChoice(seed, 'landscape'), kinds = Object.keys(LAND_BIOMES), tkeys = Object.keys(LAND_TIMES);
   // (the first ten keep their old odds; the two newer countries are rarer)
   let kind = R() < 0.84 ? kinds[Math.floor(R()*10)] : kinds[10 + Math.floor(R()*2)];
+  // (the river country is grassland's own, drawn by its own stream so no other seed's country changes: two in five)
+  if(kind === 'grass' && seedChoice(seed, 'river')() < 0.4) kind = 'river';
   const hz = R(); let time = tkeys[Math.floor(R()*tkeys.length)]; const sx = R(), sy = R(), sr = R();
   if(o.country && LAND_BIOMES[o.country]) kind = o.country;
   if(o.time && LAND_TIMES[o.time]) time = o.time;
@@ -458,11 +462,17 @@ export function paintRidges(ctx, w, h, S, o){
   const cone = B.cone ? { x: w*(0.25 + Math.random()*0.5), hgt: unit*(0.22 + Math.random()*0.12)*zoom, half: unit*(0.32 + Math.random()*0.15)*zoom, band: Math.floor((bands - 1)*0.35) } : null;
   const coastAt = B.sea ? { x: w*(0.3 + Math.random()*0.35), side: Math.random() < 0.5 ? 1 : -1 } : null;
   const waterCol = mixC(TM.skyLow, [40, 90, 130], 0.55);
+  // THE WATER'S MOOD, by the seed, where there is water: still (a mirror, its reflections whole, a few strokes), ruffled
+  // (as it was), or choppy (short strokes crowding, white on their crests, the reflections broken)
+  const mood = B.sea || B.lake || B.river ? ['still', 'ruffled', 'choppy'][Math.floor(Math.random()*3)] : 'ruffled', calm = mood === 'still' ? 1 : 0, chop = mood === 'choppy' ? 1 : 0;
+  // THE RIVER: its middle wandering across the valley, swinging wider as it nears; narrow on the horizon, broad at your feet
+  const riv = B.river ? { x0: w*(0.3 + Math.random()*0.4), ph: Math.random()*6.28, k: 2 + Math.random()*2.5, swing: unit*(0.1 + Math.random()*0.14) } : null;
+  const rivX = t => riv.x0 + Math.sin(t*riv.k + riv.ph)*riv.swing*(0.2 + t), rivW = t => unit*(0.003 + 0.085*t*t)*zoom;
   // water: flat, lighter than the land, laid with short level strokes; it holds the reflection of the band behind it
   const water = (top, prof, tone, col) => {
     ctx.globalAlpha = 0.95; ctx.fillStyle = paint(150, waterCol); ctx.fillRect(0, top, w, h - top);
     if(prof){
-      ctx.globalAlpha = 0.32; ctx.fillStyle = paint(tone, col);
+      ctx.globalAlpha = 0.32 + 0.22*calm - 0.12*chop; ctx.fillStyle = paint(tone, col);
       ctx.beginPath(); ctx.moveTo(-20, top); prof.forEach(([x, y]) => ctx.lineTo(x, top + (top - Math.min(top, y))*0.9)); ctx.lineTo(w + 20, top); ctx.closePath(); ctx.fill();
     }
     // the sun's path on the water
@@ -471,12 +481,15 @@ export function paintRidges(ctx, w, h, S, o){
     // the knife's cuts: long thin lines of light across the water, where it meets the shore and beyond
     for(let k = 0; k < 7; k++){ const y = top + Math.pow(Math.random(), 1.4)*(h - top)*0.6, x = Math.random()*w*0.8, len = w*(0.1 + Math.random()*0.3);
       ctx.globalAlpha = 0.25 + Math.random()*0.2; ctx.fillStyle = paint(215, mixC([240, 244, 250], TM.light, 0.4)); ctx.fillRect(x, y, len, Math.max(0.6, unit*0.0018)); }
-    const n = Math.round(w/(unit*0.012));
+    const n = Math.round(w/(unit*0.012)*(1 - 0.6*calm + 1.2*chop));
     for(let k = 0; k < n; k++){
-      const y = top + Math.pow(Math.random(), 1.6)*(h - top), x = Math.random()*w, len = unit*(0.02 + Math.random()*0.05)*(0.5 + (y - top)/(h - top));
+      const y = top + Math.pow(Math.random(), 1.6)*(h - top), x = Math.random()*w, len = unit*(0.02 + Math.random()*0.05)*(0.5 + (y - top)/(h - top))*(1 + 0.8*calm - 0.45*chop);
       const tn = 150 + (Math.random() - 0.5)*60;
       ctx.globalAlpha = 0.35; ctx.strokeStyle = paint(tn, jitHue(waterCol, 0.25)); ctx.lineWidth = unit*0.002*(1 + (y - top)/(h - top)*2);
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y); ctx.stroke();
+      // (choppy: a white crest on the wave's lit edge)
+      if(chop && Math.random() < 0.45){ ctx.globalAlpha = 0.4; ctx.strokeStyle = paint(225, mixC([244, 246, 250], TM.light, 0.35)); ctx.lineWidth = unit*0.0012*(1 + (y - top)/(h - top)*2);
+        ctx.beginPath(); ctx.moveTo(x + len*0.2, y - unit*0.0015); ctx.lineTo(x + len*0.7, y - unit*0.0015); ctx.stroke(); }
     }
   };
   if(B.sea) water(horizon, null, 0);
@@ -501,6 +514,7 @@ export function paintRidges(ctx, w, h, S, o){
       if(cliff){ const d = (x - cliff.x)*cliff.side, k = Math.max(0, Math.min(1, d/cliff.fall)), e = k*k*(3 - 2*k);
         const ledge = k > 0 && k < 1 ? (Math.sin(k*9 + cliff.ph)*0.5 + Math.sin(k*23 + cliff.ph*2)*0.25)*unit*0.012*(1 - k) : 0;
         y += e*(wl - y) + ledge*(B.sea ? 0.5 : 1); }
+      if(riv){ const d = (x - rivX(t))/(rivW(t)*3 + unit*0.06); y += amp*0.9*Math.exp(-d*d); }   // (the hills open where the river runs)
       if(cone && i === cone.band){ const d = Math.abs(x - cone.x)/cone.half; if(d < 1){ const peak = base - cone.hgt*(1 - Math.pow(d, 0.85)); y = Math.min(y, d < 0.08 ? base - cone.hgt*0.93 : peak); } }
       prof.push([x, y]); }
     // lay the band in
@@ -572,6 +586,20 @@ export function paintRidges(ctx, w, h, S, o){
       ctx.beginPath(); ctx.moveTo(x + wide*0.2, y - wide*0.18); ctx.lineTo(ex - wide*0.4, ey - wide*0.18); ctx.stroke();
     }
     ctx.lineCap = 'round';
+    // the river's reach through this band: from where it comes out of the valley here, down to where the nearer band
+    // takes over (it paints over the rest): the sky in it, its banks dark, a few glints, and the near bank's own lip
+    if(riv){ const tn = Math.min(1.25, t + 1/Math.max(1, bands - 1)), j = prof.findIndex(([px]) => px >= rivX(t)), ytop = j >= 0 ? prof[j][1] : base, L = [], Rr = [];
+      // (it reaches the next band's foot of the valley as the depth it has there, then runs on under that band)
+      const nb = horizon + (h - horizon)*Math.pow(Math.min(1, tn), 1.35 + pitch*0.9)*0.92 + unit*B.amp*(0.35 + Math.min(1, tn)*0.9)*0.6, yb = Math.max(ytop + unit*0.01, Math.min(h, nb));
+      for(let q = 0; q <= 12; q++){ const sq = q/12, tt = t + (tn - t)*sq, yy = ytop + (yb - ytop)*sq; L.push([rivX(tt) - rivW(tt), yy]); Rr.push([rivX(tt) + rivW(tt), yy]); }
+      L.push([rivX(tn) - rivW(tn), h + 10]); Rr.push([rivX(tn) + rivW(tn), h + 10]);
+      const rc = mixC(waterCol, TM.skyLow, 0.35 + 0.3*(1 - t) + 0.15*calm);
+      ctx.globalAlpha = 0.95; ctx.fillStyle = paint(Math.min(240, 160 + (1 - t)*40), rc); ctx.beginPath(); L.forEach(([a, b], q) => q ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); for(let q = Rr.length - 1; q >= 0; q--) ctx.lineTo(...Rr[q]); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 0.45; ctx.strokeStyle = paint(Math.max(0, tone - 30), mixC(bandCol, TM.shadow, 0.45)); ctx.lineWidth = unit*(0.002 + 0.004*t);
+      for(const side of [L, Rr]){ ctx.beginPath(); side.forEach(([a, b], q) => q ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.stroke(); }
+      ctx.globalAlpha = 0.35 + 0.15*chop; ctx.fillStyle = paint(215, mixC([240, 244, 250], TM.light, 0.4));
+      for(let k = 0; k < Math.round(4 + 10*t*(1 + chop)); k++){ const sq = Math.random(), q = Math.min(12, Math.floor(sq*13)), xa = L[q][0], xb = Rr[q][0], yy = L[q][1];
+        ctx.fillRect(xa + (xb - xa)*(0.15 + Math.random()*0.5), yy, (xb - xa)*(0.1 + Math.random()*0.3)*(1 + calm), Math.max(0.6, unit*0.0016*(1 + t))); } }
     // a soft haze where each band meets the air behind it
     ctx.globalAlpha = 0.12*(1 - t); ctx.strokeStyle = paint(200, TM.skyLow); ctx.lineWidth = unit*0.01;
     ctx.beginPath(); prof.forEach(([x, y], j) => j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
@@ -587,6 +615,7 @@ export function paintRidges(ctx, w, h, S, o){
       const dark = mixC(mixC([30, 70, 50], TM.shadow, 0.25), TM.skyLow, (1 - t)*0.45), lit = mixC(mixC([120, 160, 70], TM.light, 0.35), TM.skyLow, (1 - t)*0.3);
       for(let k = 0; k < n; k++){
         const [x, y] = prof[Math.floor(Math.random()*prof.length)], th = unit*(0.02 + 0.06*t)*(0.6 + Math.random()*0.8)*zoom;
+        if(riv && Math.abs(x - rivX(t)) < rivW(t)*1.6 + th*0.3) continue;   // (none standing in the river)
         if(B.bump || Math.random() < (B.trees ? 0.25 : 0.4)) paintBush(ctx, x, y + th*0.1, th*0.35, dark, lit, sunSide, paint, tt);
         else paintEvergreen(ctx, x, y + th*0.08, th, dark, lit, sunSide, paint, tt, unit);
       }

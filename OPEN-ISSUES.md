@@ -35,8 +35,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 
 ## 3 · Found, not yet fixed
 - CONTOUR MAP at a quarter-size preview differs from its export more than
-  most (scale-audit 26%, was 31%: the hillshade's shadows at that grid). Not
-  new; worth a look when the Terrain is next touched.
+  most (scale-audit 17% at 768, "close"; 10% at 1024, "fine"). Not the
+  hillshade (the Hillshade knob doesn't move the score) and not the Terrain's
+  heights (its lines fall in the same places): the preview's lines carry about
+  7% less ink, more as the interval closes, though their width works out the
+  same on paper at both grids (768 at a quarter, 1536 at the export).
 
 ## 4 · Waiting on Ruby
 - Nothing.

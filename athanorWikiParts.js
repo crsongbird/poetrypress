@@ -912,7 +912,7 @@ export const WIKI_PARTS = {
   ridges: {
     line: 'Painted mountains and hills, band behind band, over a sky.',
     ins: { sky: 'The sky (Painted Sky).' }, outs: { image: 'The landscape.' },
-    set: { country: 'The kind of land.', time: 'Time of day.', bands: 'How many ridges.', distance: 'How far away.', tilt: 'Tilts the view.', colour: 'How colorful (0 = gray).' },
+    set: { country: 'The kind of land: desert, grass, jungle, plains, mountains, mesas, forest, tundra, a mountain lake, a coast, fields, a volcano, or a river winding down a valley toward you. Where there is water, the seed chooses its mood: still as a mirror, ruffled, or choppy with white on its crests.', time: 'Time of day.', bands: 'How many ridges.', distance: 'How far away.', tilt: 'Tilts the view.', colour: 'How colorful (0 = gray).' },
   },
   ringsky: {
     line: 'A ringworld seen from out in space, painted in flat blocks: a band round its star, its land on the inside facing the star, a rim wall at each edge, its hull across the near side.',

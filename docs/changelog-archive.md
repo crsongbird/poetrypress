@@ -2,6 +2,26 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Portia (2026-10-20)
+
+- **Things to find on the Painted Ringworld**, nods to two old ring-world and wasteland games in designs of its own,
+  each to its world and its place, rarer the louder it is (and never more than one loud one in a view):
+  - a pair of **lantern wardens**, lens-bodied drones trailing light, drifting where the builders worked;
+  - a **cog door** rolled aside in a hillside, its apron and striped bollards, far from any village;
+  - an **atomic diner** by the road, its boomerang roof and starburst sign, a finned car parked outside;
+  - **finned wrecks** along the roads, now and then grown through;
+  - a peeling **moon-grin billboard**, an older poster showing under it;
+  - **bottle caps** in the grass;
+  - rarer: a **keyless gate** in a cliff, a **drop pod** opened like a flower in a meadow, a kneeling **rust suit**
+    of armour gone to moss;
+  - rarest: a **pulse spire** on a crest sending its light up to the arch, and on a ruined world, far off and
+    barely there, a faint mushroom cloud.
+
+### Under the hood
+- The finds are painted by `pkEgg` from `PK_EGGS` (each kind's worlds, its chance and whether it is loud) and sown in
+  the ring's world store like everything else; the research and the line drawn between a nod and a copy are in
+  docs/prior-art/painted-ringworld-2.md.
+
 ## Uranus–Juliet (2026-10-20)
 
 - **The Painted Ringworld up close**: small things stand near you, each world its own: fences and mailboxes in the

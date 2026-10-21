@@ -244,6 +244,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - `landScene(seed, …)` is the shared scene.
   - Color keeps the grey painting's value and sets only its hue
     (`landPalette`). Color 0 is exactly the grey of before.
+  - Water has a mood by the seed (still, ruffled, choppy). The river country (in `LAND_BIOMES`) is two in five of
+    grassland's seeds, by its own stream so no other seed's country changes: the hills open into a valley where it
+    runs, and each band paints its reach of the river down to where the next band takes over.
 - **Drapery** (chain `drapery`, stepsCloth.js; Ruby: "replace those with node graphs and run a full cloth
   simulation"; docs/prior-art/cloth.md): Drape → Weave Maps (along its U and V) → a Gradient Map of the Tone
   (weft hue to warp hue) → Detail Normals (the threads over the folds' facing) → Light Engine (Relief 100, the
@@ -380,8 +383,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     laid as a deck); where the builders were, now and then a bridge of hard light across the water. By night a house
     too far to draw, a lamp, and the lights between the houses (`glim`) are points of light, coming on through the dusk.
   - **Things in three dimensions** (`pkSpace`, `pkBox3`): the newest things are built of solids in their own frame and
-    carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the harvester, the
-    vehicles below).
+    carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the vehicles below,
+    and the droids that walk or roll on tracks, `PK_BOTS3`).
   - **Buildings turned in depth** (`pkTurned`, `PK_BOX3`): a house, a barn, a chapel, a block or a tower turned from
     the eye is a box: its own painted face laid on its front plane and foreshortened, the side turned toward you with
     its windows, a gable roof running back to the ridge (both slopes seen end on from a little above) or a flat top,

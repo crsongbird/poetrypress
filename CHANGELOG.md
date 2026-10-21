@@ -4,6 +4,18 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Naiad (2026-10-21)
+
+- Painted Landscape has a new country, a river: green hills opening into a valley, the river winding down it toward
+  you and widening as it comes, glints on it and its banks dark. It is two in five of the grassland seeds (no other
+  seed's country changes), and the Country menu offers it.
+- The Painted Landscape's water has a mood by the seed: still as a mirror with its reflections whole, ruffled as it
+  was, or choppy, short strokes crowding with white on their crests.
+
+### Under the hood
+- Contour Map's preview gap narrowed down, not yet fixed (OPEN-ISSUES §3): not the hillshade, not the Terrain; the
+  preview's lines carry a little less ink. Texture fingerprints updated for the landscapes with water.
+
 ## Uranus–Ferdinand (2026-10-21)
 
 - The Ringworld's walkers, shepherd droids and tracked crawlers turn with the camera instead of only flipping: a
@@ -348,23 +360,3 @@ prints it).
   (`PK_VERNACULAR`, `rgVernacular`); the small things placed by what they need (`propFits`) and the larger ones sown
   further off (`PK_PROPS_BIG`); roads shared by the land and the store (`rgRoadsOf`). The research is in
   docs/prior-art/ringworld-sprites.md.
-
-## Uranus–Portia (2026-10-20)
-
-- **Things to find on the Painted Ringworld**, nods to two old ring-world and wasteland games in designs of its own,
-  each to its world and its place, rarer the louder it is (and never more than one loud one in a view):
-  - a pair of **lantern wardens**, lens-bodied drones trailing light, drifting where the builders worked;
-  - a **cog door** rolled aside in a hillside, its apron and striped bollards, far from any village;
-  - an **atomic diner** by the road, its boomerang roof and starburst sign, a finned car parked outside;
-  - **finned wrecks** along the roads, now and then grown through;
-  - a peeling **moon-grin billboard**, an older poster showing under it;
-  - **bottle caps** in the grass;
-  - rarer: a **keyless gate** in a cliff, a **drop pod** opened like a flower in a meadow, a kneeling **rust suit**
-    of armour gone to moss;
-  - rarest: a **pulse spire** on a crest sending its light up to the arch, and on a ruined world, far off and
-    barely there, a faint mushroom cloud.
-
-### Under the hood
-- The finds are painted by `pkEgg` from `PK_EGGS` (each kind's worlds, its chance and whether it is loud) and sown in
-  the ring's world store like everything else; the research and the line drawn between a nod and a copy are in
-  docs/prior-art/painted-ringworld-2.md.
