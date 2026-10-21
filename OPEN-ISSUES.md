@@ -12,6 +12,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   gone), billowing as one body; their shadows sweep the land; the small motions slowed a little; the droids wander
   long paths; nothing cut before it leaves the frame; the sky glows round the sun and at dusk (the Belt of Venus
   opposite), clouds lit from below at dusk, silver linings, curtains of rain, far showers. Does a film read right now?
+- SUNRISE SCROLL'S LANDS: by the seed (or the new Land knob) misty towers, a coast with a great curling wave, the snowy
+  north, a bamboo grove, a village with its gate and pagoda, a great tree over terraced fields, a cursed land; things
+  stand on the scroll's own ridges. Which land reads best, which needs more, and should the curse take the petals?
 - PAINTED LANDSCAPE'S RIVER, remade: one winding course in perspective (broad bends near, level slivers far), the sky
   in it by the angle you see it at, its banks' lines and reflections, trees along it. Does it read as water now?
 - TURNED THINGS IN DEPTH: what turns with the camera is drawn as a solid now: the buildings as boxes taking their
@@ -26,9 +29,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   interactions nobody asked for. The countryside is newly in (fields, terraces, flocks, boats, a town's lights by
   night): look at it in a wide view from a little height, and say what it needs.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
-- SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
-  seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a
-  village of roofs and gates, fields under a great tree, a cursed land under red miasma.
 - THE GPU (Ruby: "implement most of these things on the GPU to accelerate rendering as much as inhumanly possible"):
   only the Light Engine's shadow march, occlusion and shine run on the GPU; blur, focal blur, warp, blend, posterize,
   Scatter and the rest of a graph run on the CPU. Move them (PERFORMANCE-AUDIT, ROADMAP).

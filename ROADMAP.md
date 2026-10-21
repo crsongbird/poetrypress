@@ -295,7 +295,7 @@ Easter eggs).
     wobble) goes in a new **Video Games** group (its own Runology rune); what could live elsewhere hides in its natural
     group and only nods (the Meadow already reads as a famous green field).
   - **First: cel-shaded worlds** (Wind Waker, Okami, Breath of the Wild; docs/prior-art/cel-shaded.md). The sea and
-    sky is built (Windward Sea); the ink-painted land is built (Sunrise Scroll; next, the many lands of its game by the seed: OPEN-ISSUES §2). Next:
+    sky is built (Windward Sea); the ink-painted land is built (Sunrise Scroll, with its lands by the seed). Next:
     wind-swept toon grass and hills.
   - **Then:** painted 2D (Hollow Knight, Ori, Gris: layered parallax caverns and forests, glowing motes, watercolour);
     retro hardware (PS1 low-poly with affine wobble, dithering and fog; a handheld's greens; CRT arcade glow; 16-bit

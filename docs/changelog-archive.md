@@ -2,6 +2,40 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Miranda (2026-10-20)
+
+- **Time Passing**, a new move in the Moving Image (on the Ringworld): an hour, six hours, a day or two days go by in
+  the film. The sun keeps a real day's path, an arc up the sky and a long slow slide along the horizon, with days a
+  little longer than nights and dusks that linger. The wind carries the clouds across the sky, the stars and the giant
+  planet turn slowly overhead as the ring spins, meteors cross by night (on some rings a whole shower from one point),
+  lights flicker, and windows go out and on again through the night.
+- **Every Ringworld film has a little life in it:** the grass sways in gusts that travel across the field, insects
+  dance, drones hover and dip, droids go about their rounds (a harvester working its field, a shepherd droid circling
+  its flock, a beachcomber along the tideline), sheep take a few steps, rain and snow fall, glints move on the water,
+  and lightning flashes now and then.
+- **Frame rate:** 30, 48 or 60 a second; and films can run to **30 seconds**.
+- **Clouds in the world.** The heaps of cloud now stand over the land at their own distance and height, drawn among the
+  hills: a nearer hill hides one, a far range stands behind it, a high peak pokes through it, and from high up you look
+  down on them. They're soft-edged and see-through at their rims, hazier the further off, finer in their billows the
+  nearer they come. Rain falls from a cloud's base to the ground beneath it, and lightning strikes down to the land.
+- **Gas giants.** The giant the ring orbits may be Saturn (now with Titan), Jupiter with its four great moons and the
+  Great Red Spot, Neptune with its dark spot and white streaks, or pale Uranus lying on its side with its thin rings.
+  The Arch's setting for it is now called **Gas Giant**.
+- **An aurora** now and then by night where there is magic or the builders' fields.
+- **The rim walls:** the builders' script is a band of runes between ruled lines; graffiti at a wall's foot is runes
+  too, thrown up in outline in the towns and scrawled in the ruins, paint running down. Near, the walls show their
+  seams, weathering, hatches, and lights along their tops.
+- **Close up**, large painted surfaces show a faint grain of their material; the lit band under a gentle hill's crest
+  runs on without steps; magic worlds farm fewer moonflowers, in a quieter silver.
+
+### Under the hood
+- The camera carries the scene's clock (`setSceneTime`; keyed only when set, so stills are as they were); turns and
+  tilts are kept to a hundredth of a degree so a film's camera and sun move smoothly. moving.js's `sunPath`;
+  stepsRing.js's `farAt`, `paintHeap`, `rgGiant`, `rgRune`; paintKit's `pkGrain`.
+- Reviewed the tests: the Moving Image's suite gained the sun's day (it comes round, longer than the night, an arc
+  without jumps, a lingering dusk); the persistence suite's seven Moving Image exemptions became one list; the
+  remaining "it is retired" checks were read and kept, as invariants for old looks, stitches and names.
+
 ## Uranus–Mab (2026-10-20)
 
 - **The Ringworld's countryside.** Round every village and town the land is farmed now: a patchwork of fields laid

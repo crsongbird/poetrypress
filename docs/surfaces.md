@@ -59,6 +59,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   ink-wash mountains band behind band. A ridge is a 1D noise (a Curve's noise through a Profile Gradient), never a 2D
   noise cut by a gradient (that makes blobs, not profiles); far ridges folded into crags. A Number's value is 0–100
   (num(50) is a half): a multiply by num(0.9) is nearly nothing.
+  - **Its lands** (Ruby: "the game had a wide variety of lands, so the seed should paint them with more depth";
+    docs/prior-art/scroll-lands.md): one process part, `scrolllands` (stepsScroll.js), takes the five band masks
+    (far to near: nodes 49, 102, 146, 186, 226), reads each crest and stands the land's things on them, each hidden by
+    the nearer bands; its six maps are laid after the near ridge's ink and before the petals, one Blend each, in the
+    hues by role. Knob 9, Land: 0 the seed's (`scrollLandOf`; Peaks, the scroll as it was, most often, the curse the
+    rarest), then each land along its range. Depth by the five grades of ink (`grade`), and a walker or a boat for the
+    scale. Only original lands in the tradition: no game's places, creatures or marks.
 - **Windward Sea** (chain `windsea`, `v: 5`; one process part, `streamers`, stepsStreamers.js; prior art
   docs/prior-art/cel-shaded.md): the first love letter to a video game, cel-shaded. Light in bands: the Light
   Engine's light (or Streamers' Facing) through a Posterize (Toon Bands) into a three-stop Gradient Map. The

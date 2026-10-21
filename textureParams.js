@@ -161,7 +161,9 @@ export const TEXTURE_PARAMS = {
                   sliderOf('clouds', 'Clouds', 45),
                   sliderOf('blossoms', 'Blossoms', 35),
                   sliderOf('age', 'Age', 40),
-                  sliderOf('bands', 'Toon Bands', 30)],
+                  sliderOf('bands', 'Toon Bands', 30),
+                  // the land the scroll shows: the seed's, or one of its lands (Scroll Lands, stepsScroll.js)
+                  sliderOf('land', 'Land', 0, { ticks:[0,12.5,25,37.5,50,62.5,75,87.5,100], names:['By the Seed','Peaks','Misty Peaks','Coast','Snowy North','Bamboo','Village','Great Tree','Cursed'] })],
   dappled:        [sliderOf('size', 'Leaf Size', 50),
                   sliderOf('amount', 'Leaves', 50),
                   sliderOf('softness', 'Softness', 50)],

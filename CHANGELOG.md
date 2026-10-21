@@ -4,6 +4,26 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Triton (2026-10-21)
+
+- Sunrise Scroll paints many lands now, by the seed or by its new Land knob: the scroll as it was (Peaks), Misty
+  Peaks (towers standing out of the mist, washed darkest at their tops and gone to paper at their feet, pines on top),
+  a Coast (the sea in rows of arcs, a great wave curling in from one side with its claws of foam, a small wave behind,
+  boats), the Snowy North (snow left bare under every crest, the sky dark down to the hills, flakes, laden pines), a
+  Bamboo grove (three depths, jointed stalks, leaves in twos, threes and fives), a Village (houses on a hillside, a
+  gate, now and then a pagoda, a cloud band across it), a Great Tree over terraced fields (its rope and paper
+  streamers, a crown of blossom or evergreen) and, rarely, a Cursed land under a miasma rising from the ground. The
+  land's things stand on the scroll's own ridges, paler the farther they stand and hidden by the ridges in front of
+  them, with one tiny walker or boat for the scale. Their colours are the scroll's own hues. Its readings: Indigo
+  Print now shows the coast and its wave, Bare Ink a bamboo grove; Vermilion Dusk and Spring Scroll keep the seed's land.
+
+### Under the hood
+- `scrolllands` (stepsScroll.js, `SCROLL_STEPS`), one process part: the five band masks in, each band's crest read off
+  them; ink, wash, water, paper, accent and bloom maps out, laid by six Blends between the near ridge's ink and the
+  petals. Knob 9, Land (`scrollLandOf`). The research is in docs/prior-art/scroll-lands.md; scrollLands.test.mjs
+  checks the odds, the setting, each land's maps and that a far band's things are hidden. Fingerprints: Sunrise
+  Scroll's only.
+
 ## Neptune–Proteus (2026-10-21)
 
 - Loading a look or a preset puts everything back to that look's own: a third or fourth gradient stop it doesn't use
@@ -286,37 +306,3 @@ prints it).
 ### Under the hood
 - moving.js's `filmHours` (the film's clock through a day, slowest near the horizon); the Moving Image suite checks it
   runs forward from start to end and gives dawn and dusk their share.
-
-## Uranus–Miranda (2026-10-20)
-
-- **Time Passing**, a new move in the Moving Image (on the Ringworld): an hour, six hours, a day or two days go by in
-  the film. The sun keeps a real day's path, an arc up the sky and a long slow slide along the horizon, with days a
-  little longer than nights and dusks that linger. The wind carries the clouds across the sky, the stars and the giant
-  planet turn slowly overhead as the ring spins, meteors cross by night (on some rings a whole shower from one point),
-  lights flicker, and windows go out and on again through the night.
-- **Every Ringworld film has a little life in it:** the grass sways in gusts that travel across the field, insects
-  dance, drones hover and dip, droids go about their rounds (a harvester working its field, a shepherd droid circling
-  its flock, a beachcomber along the tideline), sheep take a few steps, rain and snow fall, glints move on the water,
-  and lightning flashes now and then.
-- **Frame rate:** 30, 48 or 60 a second; and films can run to **30 seconds**.
-- **Clouds in the world.** The heaps of cloud now stand over the land at their own distance and height, drawn among the
-  hills: a nearer hill hides one, a far range stands behind it, a high peak pokes through it, and from high up you look
-  down on them. They're soft-edged and see-through at their rims, hazier the further off, finer in their billows the
-  nearer they come. Rain falls from a cloud's base to the ground beneath it, and lightning strikes down to the land.
-- **Gas giants.** The giant the ring orbits may be Saturn (now with Titan), Jupiter with its four great moons and the
-  Great Red Spot, Neptune with its dark spot and white streaks, or pale Uranus lying on its side with its thin rings.
-  The Arch's setting for it is now called **Gas Giant**.
-- **An aurora** now and then by night where there is magic or the builders' fields.
-- **The rim walls:** the builders' script is a band of runes between ruled lines; graffiti at a wall's foot is runes
-  too, thrown up in outline in the towns and scrawled in the ruins, paint running down. Near, the walls show their
-  seams, weathering, hatches, and lights along their tops.
-- **Close up**, large painted surfaces show a faint grain of their material; the lit band under a gentle hill's crest
-  runs on without steps; magic worlds farm fewer moonflowers, in a quieter silver.
-
-### Under the hood
-- The camera carries the scene's clock (`setSceneTime`; keyed only when set, so stills are as they were); turns and
-  tilts are kept to a hundredth of a degree so a film's camera and sun move smoothly. moving.js's `sunPath`;
-  stepsRing.js's `farAt`, `paintHeap`, `rgGiant`, `rgRune`; paintKit's `pkGrain`.
-- Reviewed the tests: the Moving Image's suite gained the sun's day (it comes round, longer than the night, an arc
-  without jumps, a lingering dusk); the persistence suite's seven Moving Image exemptions became one list; the
-  remaining "it is retired" checks were read and kept, as invariants for old looks, stitches and names.
