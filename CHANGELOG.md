@@ -4,6 +4,19 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Oberon (2026-10-21)
+
+- Vending machines, phone boxes, mailboxes, shipping containers and troughs turned from the camera are solid too: a
+  pair of vending machines shows each machine's own colour down its side and their plain backs from behind, a mailbox
+  stands on its one post, a container shows its end and its long side in depth.
+- A building on stilts (a kubo, a granary) has its walls painted the colour of its walls, not of the ground between
+  its posts.
+
+### Under the hood
+- The turned box is general now: `pkTurned` takes the thing's own face to draw, and buildings and the boxlike props
+  (`PK_PROP3`) both go through it; a prop whose face can't be read is squeezed as before. Texture fingerprints updated
+  for the turned props.
+
 ## Uranus–Titania (2026-10-21)
 
 - Buildings turned from the camera are solid now, not a picture squeezed thin: a cottage, a barn, a chapel, a terrace,
@@ -483,14 +496,3 @@ and every control behaving as it did.
   texture suites while working. The build proves the page without comments
   is the same code, token for token and line break for line break.
 - Stylesheet pruned (tools/css-prune.py: nothing left to remove).
-
-## Saturn–Skrymir (2026-10-19)
-
-- **The light selector says Main and Rim again**, and where the dial moves
-  something other than the light, Main says what, in one word: Pos on the
-  Black Hole, Wind on First Snow, Rain on Harsh Rain, and so on.
-- **Panning the Scrying Pool is steady.** Its waves, stones, fish, weed and
-  leaves now stay where they are in the pool as the camera turns, tips or
-  zooms (they used to be thrown afresh across whatever the camera saw), and
-  the quick draft while you drag shows the same pool as the finished
-  picture.

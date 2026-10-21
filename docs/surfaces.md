@@ -380,14 +380,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Things in three dimensions** (`pkSpace`, `pkBox3`): the newest things are built of solids in their own frame and
     carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the harvester); the
     way the eight views will go for the rest (OPEN-ISSUES).
-  - **Buildings turned in depth** (`pkBuilding3`, `PK_BOX3`): a house, a barn, a chapel, a block or a tower turned from
+  - **Buildings turned in depth** (`pkTurned`, `PK_BOX3`): a house, a barn, a chapel, a block or a tower turned from
     the eye is a box: its own painted face laid on its front plane and foreshortened, the side turned toward you with
     its windows, a gable roof running back to the ridge (both slopes seen end on from a little above) or a flat top,
     and from behind its plain back wall and gable. Its shape is read off a small proof of its own face
     (`pkFaceProof`): how wide its walls stand, the steps of a setback tower (a box for each), where its eaves and ridge
     are, a granary's stilts; its walls and roof are the colours its face was painted in (a terrace's sides each the end
     house's own). What stands above the roof (a spire, a belfry, a water tank, chimneys and their smoke) is upright and
-    never narrowed to nothing edge on; a glasshouse's sides are glass.
+    never narrowed to nothing edge on; a glasshouse's sides are glass. The boxlike things go the same way (`PK_PROP3`):
+    a pair of vending machines, each side its own machine's colour and their plain backs from behind; a phone box; a
+    mailbox up on its one post; a container; a trough.
   - **Eight views** (Ruby: "at least eight… front, sides, back, and the half-turned states… mirrored the other direction,
     except for the ones that have text"): each thing in the store has a `face`, the way it turns (a house its street, a
     car along its kerb, a board the road), and `viewOf` gives how it is turned from the camera. A building is narrowed

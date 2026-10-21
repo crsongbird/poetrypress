@@ -2,6 +2,17 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Skrymir (2026-10-19)
+
+- **The light selector says Main and Rim again**, and where the dial moves
+  something other than the light, Main says what, in one word: Pos on the
+  Black Hole, Wind on First Snow, Rain on Harsh Rain, and so on.
+- **Panning the Scrying Pool is steady.** Its waves, stones, fish, weed and
+  leaves now stay where they are in the pool as the camera turns, tips or
+  zooms (they used to be thrown afresh across whatever the camera saw), and
+  the quick draft while you drag shows the same pool as the finished
+  picture.
+
 ## Saturn–Gunnlod (2026-10-19)
 
 - **New surface: Sunrise Scroll**, the second love letter to a video game:
