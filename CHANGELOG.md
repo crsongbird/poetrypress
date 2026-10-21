@@ -4,6 +4,20 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Stephano (2026-10-21)
+
+- A castle turned from the camera keeps its battlements along every wall, not only along its front.
+- Now and then on a fair, windy day someone flies a kite in the fields or a city's green: high and downwind by the
+  ring's own wind, nodding on its string, its tail of bows waving as time passes. Kites are put away by dusk and in
+  rain, fog or snow.
+- Chimney smoke leans with the ring's wind (blown nearly flat in a strong one) and, as time passes, rises from the pot
+  and thins away; a factory's saw-tooth roof no longer leaves its teeth floating beside it when seen from the side.
+
+### Under the hood
+- `pkSmoke` draws the chimneys' smoke from the wind and the clock the Ringworld passes down; `PK_BOX3` takes a fifth
+  entry, how far above a flat top what stands on it begins. Texture fingerprints updated for the smoke, the castles,
+  the factories and the kites.
+
 ## Uranus–Caliban (2026-10-21)
 
 - Tractors, food carts, crates, wayside shrines and the builders' cargo are solid when the camera turns: a tractor's
@@ -458,15 +472,3 @@ prints it).
   media and ornamental borders (docs/prior-art/floral-imprints.md,
   docs/prior-art/ornamental-borders.md); and real-time painterly rendering
   on phones, for the game someday (docs/prior-art/realtime-game.md).
-
-## Saturn–Thiazzi (2026-10-20)
-
-- **The surface's sliders sit under one heading, Controls**, that folds
-  shut and stays the way you left it; Opacity stays outside it, always in
-  reach.
-- **A little room on the right to scroll with** on a phone: the panel keeps
-  a slightly wider margin, and every slider stops a few pixels short of the
-  edge.
-
-### Under the hood
-- After Saturn's moons, the releases take Uranus's names, then Neptune's.

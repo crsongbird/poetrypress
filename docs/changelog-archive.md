@@ -2,6 +2,18 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Saturn–Thiazzi (2026-10-20)
+
+- **The surface's sliders sit under one heading, Controls**, that folds
+  shut and stays the way you left it; Opacity stays outside it, always in
+  reach.
+- **A little room on the right to scroll with** on a phone: the panel keeps
+  a slightly wider margin, and every slider stops a few pixels short of the
+  edge.
+
+### Under the hood
+- After Saturn's moons, the releases take Uranus's names, then Neptune's.
+
 ## Saturn–Geirrod (2026-10-20)
 
 Nothing you see changes in this release: it is the rest of the work to make

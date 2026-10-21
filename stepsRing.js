@@ -545,6 +545,24 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
       for(let t = 1; t <= 3; t++) dot(fx - dx*t, fy + dx*0.15*t*t*Math.sign(dx), h*0.025*(1 - t*0.22), 1 - t*0.2, rsCss(c.glow, 0.32/t));
       dot(fx, fy, h*0.04, 2.2, rsCss(rsMix(c.glow, [255, 255, 255], 0.6), 0.85)); }
     return; }
+  if(kind === 'kite'){ // someone flying a kite on a fair day with a wind: the kite high and downwind, nodding and swinging
+    // on its string (with the clock), its tail of bows streaming and waving; put away by dusk and in rain or snow
+    if((c.night || 0) > 0.4 || /rain|storm|snow|fog/.test(c.weather || '')) return;
+    const [wa, ws] = c.wind || [0, 5], dir = Math.cos(wa) < 0 ? -1 : 1, lift = Math.min(1, ws/8), ph = X*0.017;
+    const hx = X + dir*h*0.12, hy = Y - h*0.48, bobX = t ? Math.sin(t*0.6 + ph)*h*0.5 : 0, bobY = t ? Math.sin(t*1.1 + ph*1.7)*h*0.3 : 0;
+    const kx = X + dir*h*rnd(2.2, 3.6)*(0.6 + 0.4*lift) + bobX, ky = Y - h*rnd(3, 4.6)*(0.5 + 0.5*lift) + bobY, ks = h*rnd(0.22, 0.32), tilt = (t ? Math.sin(t*1.7 + ph)*0.25 : 0) + dir*0.3;
+    // (the flyer: a small dark figure, an arm up to the string)
+    x.strokeStyle = rsCss(c.dark, 0.9); x.lineWidth = Math.max(rgPx(1), h*0.07); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.42); x.moveTo(X, Y - h*0.38); x.lineTo(hx, hy); x.stroke();
+    dot(X, Y - h*0.5, h*0.07, 1.2, rsCss(c.dark, 0.9));
+    // (the string sagging a little between, the kite's own weight against the wind)
+    x.strokeStyle = rsCss(c.dark, 0.45); x.lineWidth = Math.max(rgPx(0.5), h*0.012); x.beginPath(); x.moveTo(hx, hy); x.quadraticCurveTo((hx + kx)/2, (hy + ky)/2 + h*(1.2 - lift*0.6), kx, ky + ks*0.6); x.stroke();
+    const col = c.flowers[Math.floor(R()*c.flowers.length)], cs = Math.cos(tilt), sn = Math.sin(tilt), P = (u, v) => [kx + u*cs - v*sn, ky + u*sn + v*cs];
+    x.fillStyle = rsCss(col, 0.95); x.beginPath(); [[0, -ks], [ks*0.6, 0], [0, ks*0.9], [-ks*0.6, 0]].forEach(([u, v], i) => i ? x.lineTo(...P(u, v)) : x.moveTo(...P(u, v))); x.closePath(); x.fill();
+    x.strokeStyle = rsCss(c.dark, 0.35); x.lineWidth = Math.max(rgPx(0.4), ks*0.06); x.beginPath(); x.moveTo(...P(0, -ks)); x.lineTo(...P(0, ks*0.9)); x.moveTo(...P(-ks*0.6, 0)); x.lineTo(...P(ks*0.6, 0)); x.stroke();
+    // (the tail: from its foot, downwind and down, waving)
+    const tail = [P(0, ks*0.9)]; for(let q = 1; q <= 6; q++){ const [tx, ty] = tail[q - 1]; tail.push([tx + dir*ks*0.35 + (t ? Math.sin(t*3 + q*0.9 + ph)*ks*0.25 : 0), ty + ks*0.45]); }
+    x.strokeStyle = rsCss(c.dark, 0.4); x.beginPath(); tail.forEach(([u, v], i) => i ? x.lineTo(u, v) : x.moveTo(u, v)); x.stroke();
+    tail.forEach(([u, v], q) => { if(q && q % 2 === 0) dot(u, v, ks*0.09, 0.6, rsCss(c.flowers[(q/2) % c.flowers.length], 0.9)); }); return; }
   if(kind === 'flowers'){ // a patch of small blossoms in the page's colours
     const n = 4 + Math.floor(R()*6);
     for(let q = 0; q < n; q++) dot(X + (R() - 0.5)*Math.max(rgPx(24), h*1.6), Y - h*rnd(0.02, 0.18), h*rnd(0.04, 0.07), 2.4, rsCss(c.flowers[Math.floor(R()*c.flowers.length)], 0.8));
@@ -819,11 +837,12 @@ function rgStore(V){
   sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope))) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
   // GRASS AND FLOWERS near you
   sow(4, W*0.0012, W*0.004, W*0.05, 3, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > RG_PROF[w].gr*V.life*1.4) return null; return { c: 'grass', w, kind: 'grass', hM: pkMetres('grass', R()) }; });
-  // SMALL LIFE lives on some rings, not all: insects, fairies, flowers and slime, each world its own mix
+  // SMALL LIFE lives on some rings, not all: insects, fairies, flowers, slime and kites flown on a windy day, each world
+  // its own mix
   { const beMax = Math.max(...V.world.list.map(w => RG_PROF[w].be)), lively = mnHash(s, 41, 9) < 0.25 + 0.6*V.life*beMax;
-    const MIX = { magic: [1, 3, 1, 1], wilds: [3, 1, 3, 1], ruins: [2, 0.5, 1, 3], neon: [1, 2, 0.5, 1], cities: [2, 0.5, 2, 0.5], builders: [2, 1, 2, 1] }, KINDS = ['insects', 'fairies', 'flowers', 'slime'];
+    const MIX = { magic: [1, 3, 1, 1, 0.4], wilds: [3, 1, 3, 1, 0.8], ruins: [2, 0.5, 1, 3, 0], neon: [1, 2, 0.5, 1, 0], cities: [2, 0.5, 2, 0.5, 1], builders: [2, 1, 2, 1, 0.2] }, KINDS = ['insects', 'fairies', 'flowers', 'slime', 'kite'];
     if(lively) sow(5, W*0.003, W*0.01, W*0.12, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.12*V.life*(0.3 + 0.7*RG_PROF[w].be)) return null;
-      const mix = MIX[w] || [2, 1, 2, 1], tot = mix.reduce((p, q) => p + q, 0); let pick = R()*tot, ki = 0; while(ki < 3 && pick > mix[ki]){ pick -= mix[ki]; ki++; }
+      const mix = MIX[w] || [2, 1, 2, 1, 0], tot = mix.reduce((p, q) => p + q, 0); let pick = R()*tot, ki = 0; while(ki < KINDS.length - 1 && pick > mix[ki]){ pick -= mix[ki]; ki++; }
       return { c: 'life', w, kind: KINDS[ki] }; }); }
   // ROBOTS AND DROIDS, as life, where they belong (Ruby: "cute robots and threatening ones, in appropriate biomes
   // only"): the builders' helpers and drones, the neon's sentries and walkers, the ruins' scavengers, and now and then
@@ -1039,6 +1058,7 @@ function rgPaintLand(x, mk, dk, V){
   const moved = o => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, ph = (o.rs % 1000)/1000*Math.PI*2, w = Math.PI*2/mv[1], f0 = o.face ?? (o.rs % 62832)/10000;
     if(mv[2]){ const an = V.time*w + ph; return { ...o, a: o.a + Math.cos(an)*mv[0]*M1, z: o.z + Math.sin(an)*mv[0]*M1, face: an + Math.PI/2 }; }
     const u = Math.sin(V.time*w + ph), back = Math.cos(V.time*w + ph) < 0; return { ...o, a: o.a + Math.cos(f0)*u*mv[0]*M1, z: o.z + Math.sin(f0)*u*mv[0]*M1, face: back ? f0 + Math.PI : f0 }; };
+  const smokeWind = (([wa, ws]) => Math.cos(wa)*Math.min(1, ws/9))(rgWind(V)); // (chimney smoke leans with the ring's wind)
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs);
@@ -1051,7 +1071,7 @@ function rgPaintLand(x, mk, dk, V){
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > wh*0.75) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd, X + wd, Y - h*1.3, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: viewOf(o), mpx: f[2] }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: viewOf(o), mpx: f[2], t: V.time, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
       // CLOSE BY, its foot (the building's base detailed, Ruby: "close-up versions with details for their base"): a door
       // two metres tall with its step, a lamp beside it lit at night, a planter
       const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -1104,7 +1124,7 @@ function rgPaintLand(x, mk, dk, V){
     const glow = colsOf(o.w, wday, haze).glow;
     const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], wday, haze, AIR), lit: rgLit(V, [236, 240, 246], wday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
-      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR) };
+      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR), weather: V.weather, wind: rgWind(V) };
     rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, V.time);
   };
   // THE WORKS, standing in the world: spires, monoliths, domes, circles, pillars, craters, wrecks, towers, crystals

@@ -353,7 +353,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     everything beyond the ring turn with its spin (`RG_SPIN`, `farAt`), meteors cross by night (a shower's from one
     radiant, caught by each frame's shutter), lightning flashes now and then, rain and snow fall, the grass sways in
     travelling gusts, insects dance, the droids go about their rounds (`RG_MOVES`), lights flicker and go out and on
-    through the night, glints move on the water. The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
+    through the night, glints move on the water, chimney smoke rises and leans downwind (`pkSmoke`), kites nod on their
+    strings. The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
     early summer, days of fourteen hours, long dusks.
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
     objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
@@ -378,14 +379,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     laid as a deck); where the builders were, now and then a bridge of hard light across the water. By night a house
     too far to draw, a lamp, and the lights between the houses (`glim`) are points of light, coming on through the dusk.
   - **Things in three dimensions** (`pkSpace`, `pkBox3`): the newest things are built of solids in their own frame and
-    carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the harvester); the
-    way the eight views will go for the rest (OPEN-ISSUES).
+    carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the harvester, the
+    vehicles below).
   - **Buildings turned in depth** (`pkTurned`, `PK_BOX3`): a house, a barn, a chapel, a block or a tower turned from
     the eye is a box: its own painted face laid on its front plane and foreshortened, the side turned toward you with
     its windows, a gable roof running back to the ridge (both slopes seen end on from a little above) or a flat top,
     and from behind its plain back wall and gable. Its shape is read off a small proof of its own face
     (`pkFaceProof`): how wide its walls stand, the steps of a setback tower (a box for each), where its eaves and ridge
-    are, a granary's stilts; its walls and roof are the colours its face was painted in (a terrace's sides each the end
+    are, a granary's stilts, a castle's battlements along every top edge; its walls and roof are the colours its face was painted in (a terrace's sides each the end
     house's own). What stands above the roof (a spire, a belfry, a water tank, chimneys and their smoke) is upright and
     never narrowed to nothing edge on; a glasshouse's sides are glass. The boxlike things go the same way (`PK_PROP3`):
     a pair of vending machines, each side its own machine's colour and their plain backs from behind; a phone box; a
@@ -433,7 +434,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     sown in the world as everything else is (more with Life), and drawn in their
     place in the order, so a nearer ridge or thing covers them as it would
     anything; never where nearer land hides them. The kind is by the world (fairies in
-    magic, slime in ruins); every mark has a floor in canonical pixels.
+    magic, slime in ruins); every mark has a floor in canonical pixels. Now and
+    then someone flies a kite in the fields or a city's green: high and downwind by
+    the ring's wind (`rgWind`), nodding on its string and its tail of bows waving with
+    the clock, put away by dusk and in rain, fog or snow.
 - **Particles** (First Snow, Burning Mana, Euphoria Dust) draw under
   `withSeed(ctx.seed + Scatter·7919)`. This keeps them pixel-identical;
   Euphoria is a perfect preset.

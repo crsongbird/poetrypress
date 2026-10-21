@@ -419,7 +419,7 @@ const PK_BUILT = {
     if(o.detail){ x.strokeStyle = pkCss(th.dark, 0.45); x.lineWidth = Math.max(o.px(0.4), wd*0.008); x.beginPath(); for(let k = 0; k < 16; k++){ const u = k/15 - 0.5; x.moveTo(X + u*wd*0.9, Y - h*(0.96 - Math.abs(u)*0.5)); x.lineTo(X + u*wd*1.12, ye + h*0.03); } x.stroke();
       pkBar(x, X - w2*1.12, ye + h*0.02, wd*1.24, h*0.025, th.dark, o.px, 0.7); }
     const ch = pkMat(c, PK_BRICK, 0.6), cx = X - c.sd*w2*0.55; pkShade(x, [[cx, Y - h*0.75], [cx, Y - h*1.08], [cx + wd*0.1, Y - h*1.08], [cx + wd*0.1, Y - h*0.75]], ch.body, Y - h*1.08, Y - h*0.75); pkBar(x, cx - wd*0.01, Y - h*1.1, wd*0.12, h*0.03, ch.dark, o.px);
-    if(o.detail && o.R() < 0.45) for(let k = 0; k < 4; k++) pkDisc(x, cx + wd*0.05 + k*wd*0.06*c.sd*-1, Y - h*(1.18 + k*0.12), wd*(0.04 + k*0.025), pkCss(pkMix(c.lit, c.air || c.lit, 0.4), 0.35 - k*0.07));
+    if(o.detail && o.R() < 0.45) pkSmoke(x, cx + wd*0.05, Y - h*1.1, wd, h*0.12, c, 4, 0.35);
     if(o.detail){ const door = pkMat(c, [[90, 60, 40], [60, 80, 70], [120, 50, 44]][Math.floor(o.R()*3)], 0.7), dx = X - w2*0.3, dh = (Y - ye)*0.72, dw = dh*0.45;
       pkShade(x, [[dx - dw/2, Y], [dx - dw/2, Y - dh], [dx + dw/2, Y - dh], [dx + dw/2, Y]], door.body, Y - dh, Y); pkPoly(x, [[dx - dw*0.75, Y - dh], [dx, Y - dh*1.2], [dx + dw*0.75, Y - dh]], pkCss(th.dark));
       for(const ux of [0.18, 0.62]) pkFrame(x, X - w2 + wd*ux, Y - (Y - ye)*0.72, wd*0.14, (Y - ye)*0.38, c, night, o);
@@ -561,7 +561,7 @@ const PK_BUILT = {
     for(let q = 0; q < n; q++){ const x0 = X - w2 + wd*q/n, x1 = x0 + wd/n; pkPoly(x, [[x0, st], [x1, st - h*0.12], [x1, st]], pkCss(roof.body)); pkPoly(x, [[x1 - wd/n*0.14, st - h*0.105], [x1, st - h*0.12], [x1, st], [x1 - wd/n*0.14, st]], pkCss(night > 0.2 ? pkMix(c.glow, PK_WHITE, 0.2) : pkMix(c.air || lit, c.dark, 0.3), night > 0.2 ? 0.8 : 0.9)); }
     const nc = 1 + Math.floor(o.R()*3); for(let q = 0; q < nc; q++){ const cx = X - w2*0.6 + q*wd*0.25, cw = Math.max(o.px(0.6), wd*0.04); pkShade(x, [[cx - cw, st], [cx - cw*0.7, Y - h], [cx + cw*0.7, Y - h], [cx + cw, st]], br.body, Y - h, st);
       if(o.detail){ x.fillStyle = pkCss(PK_WHITE, 0.45); x.fillRect(cx - cw*0.75, Y - h*0.92, cw*1.5, h*0.02); x.fillStyle = pkCss(br.dark); x.fillRect(cx - cw*0.8, Y - h*1.01, cw*1.6, h*0.02);
-        if(q === 0) for(let k = 0; k < 5; k++) pkDisc(x, cx + c.sd*-1*k*wd*0.05, Y - h*(1.06 + k*0.06), wd*(0.03 + k*0.02), pkCss(pkMix(c.lit, c.air || c.lit, 0.5), 0.4 - k*0.06)); } } },
+        if(q === 0) pkSmoke(x, cx, Y - h*1.0, wd*0.85, h*0.06, c, 5, 0.4); } } },
   watertower(x, X, Y, h, wd, c, night, lit, o){ // four legs braced in X's, a tank of staves bound in hoops, a cone roof, its ladder
     const w2 = wd/2, tb = Y - h*0.62, st = pkMat(c, PK_STEEL, 0.5), wood = pkMat(c, PK_GREYWOOD, 0.6); x.strokeStyle = pkCss(st.dark); x.lineWidth = Math.max(o.px(0.5), wd*0.04); x.beginPath(); for(const s of [-1, -0.35, 0.35, 1]){ x.moveTo(X + s*w2*0.7, Y); x.lineTo(X + s*w2*0.45, tb); } x.stroke();
     if(o.detail){ x.lineWidth = Math.max(o.px(0.4), wd*0.012); x.beginPath(); for(const [y0, y1] of [[Y, Y - h*0.3], [Y - h*0.3, tb]]){ const k0 = 0.7 - 0.25*(Y - y0)/(Y - tb), k1 = 0.7 - 0.25*(Y - y1)/(Y - tb); x.moveTo(X - w2*k0, y0); x.lineTo(X + w2*k1, y1); x.moveTo(X + w2*k0, y0); x.lineTo(X - w2*k1, y1); x.moveTo(X - w2*k1, y1); x.lineTo(X + w2*k1, y1); } x.stroke(); }
@@ -700,6 +700,12 @@ const PK_BUILT = {
 // sine of the angle between the way a thing faces and the way to the eye. A building is then drawn as the eye sees it:
 // its face narrowed as it turns away (|cs|), its side shown on the side turned toward you, deeper as it turns (|sn|)
 // the round buildings, the same from any side
+// a chimney's smoke from (X, Y): puffs rising and growing, leaning with the wind (c.windX, -1 to 1: blown flat in a
+// strong one) or, with no wind given, away from the light; with the clock (c.t) they rise from the pot and thin away
+function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, run = c.t ? (c.t*0.22) % 1 : 0, col = pkCss(pkMix(c.lit, c.air || c.lit, 0.45));
+  for(let k = 0; k < n; k++){ const f = k + run, a = a0*(1 - f/n); if(a <= 0.01) continue; x.globalAlpha = a;
+    pkDisc(x, X + f*wd*0.07*wx*1.4, Y - f*step*(1 - 0.55*Math.abs(wx)), wd*(0.04 + f*0.024), col); }
+  x.globalAlpha = 1; }
 const PK_ROUND = ['windmill', 'yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle', 'silo', 'lighthouse', 'watertower', 'geodome',
   'observatory', 'wizard', 'pagoda', 'onion', 'mosque']; // (round, or square and alike on every side, as a pagoda or a domed mosque)
 // TURNED IN DEPTH (Ruby: "some of your object rotations are extremely cheap looking … think about them in
@@ -709,9 +715,9 @@ const PK_ROUND = ['windmill', 'yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dov
 // its plain back wall and gable; each face lit by the side it turns to the light. Its width, height, setbacks, eaves,
 // ridge and stilts are read off its own face (pkFaceProof). [depth as a share of the width, the eaves' height as a share
 // of the whole if the face can't be read (0 for a flat top), the roof's material, where what stands above the roof
-// stands (1 on its face, 0 amidships)] by kind; any other building (a tower, a dome, a temple) stands facing you,
-// mirrored when it turns the other way
-const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8, 0], factory: [1, 0], capsule: [0.8, 0], megablock: [0.6, 0], gasstation: [0.5, 0], motel: [0.4, 0],
+// stands (1 on its face, 0 amidships), how far above a flat top that begins (a sawtooth's teeth are the roof's own)]
+// by kind; any other building (a temple) stands facing you, mirrored when it turns the other way
+const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8, 0], factory: [1, 0, null, 1, 0.12], capsule: [0.8, 0], megablock: [0.6, 0], gasstation: [0.5, 0], motel: [0.4, 0],
   pueblo: [0.8, 0], kubo: [0.9, 0.5, PK_THATCH], clock: [1, 0], cottage: [0.85, 0.55, PK_THATCH], barn: [1.4, 0.55, [140, 52, 42], 0], stave: [1.2, 0.45, [70, 52, 38], 0], row: [0.45, 0.7, PK_SLATE],
   chapel: [1.8, 0.6, PK_SLATE], aframe: [1.2, 0.04, PK_SLATE], machiya: [1.6, 0.65, [74, 78, 86]], gassho: [1.3, 0.25, PK_THATCH], horreo: [0.9, 0.6, PK_TERRA], greenhouse: [2.2, 0.6, [200, 216, 214]], cathedral: [2.4, 0.5, PK_SLATE], castle: [1, 0] };
 // a building's face drawn small, off the page, and read back: its outline (how wide its walls stand, how high, the
@@ -751,7 +757,7 @@ function pkFaceProof(face, c, R0, h, wdt, eave){ const out = {};
 // the thing's own face at a context's origin), back (it has a back of its own to draw), ends (its sides each the colour
 // of its own end), plain (no windows, no cast shadow: a small thing) }
 function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
-  const { kind, dk, eave: eave0, roofM, at: crownAt = 1, face } = o, S = pkSpace(X, Y, 1, c.view), sd = c.sd, mpx = c.mpx || wdt/10;
+  const { kind, dk, eave: eave0, roofM, at: crownAt = 1, rim = 0.035, face } = o, S = pkSpace(X, Y, 1, c.view), sd = c.sd, mpx = c.mpx || wdt/10;
   // (the same thing every way: its stream taken once, and its shape and colours read back from a small proof of its face)
   const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0); R0 = R1;
   if(o.plain && !pr.a) return false; // (a small thing whose face can't be read: squeezed as before)
@@ -779,7 +785,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   const glassy = kind === 'greenhouse'; // (its sides and roof glass: the light and the green inside seen through)
   // what stands above the roof (a spire, a belfry, a crown, chimneys) is near enough round: seen from any side, never
   // narrowed to nothing edge-on; it stands on the face's own plane, behind the roof when the building is turned away
-  const zTop = eave ? ridge : h*(tiers[tiers.length - 1].z + 0.035), uTop = D*tiers[tiers.length - 1].a*wdt/w2/2*crownAt;
+  const zTop = eave ? ridge : h*(tiers[tiers.length - 1].z + rim), uTop = D*tiers[tiers.length - 1].a*wdt/w2/2*crownAt;
   const crown = () => { const [fx, fy] = S.P(uTop, 0, 0), sx = (S.cs >= 0 ? 1 : -1)*Math.max(Math.abs(S.cs), 0.55); x.save(); x.translate(fx, fy); x.transform(sx, 0, 0, 1, 0, 0);
     // (upright, and only what stands within the roof's own width: a cornice or a parapet's run belongs to the face)
     const aw = wdt*tiers[tiers.length - 1].a*0.9; x.beginPath(); x.rect(-aw, -h*3, aw*2, h*3 - zTop + px(0.3)); x.clip();
@@ -796,6 +802,11 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
         x.strokeStyle = pkCss(rm.dark, 0.5); x.lineWidth = Math.max(px(0.4), h*0.006); x.beginPath(); x.moveTo(...S.P(-Dt/2 - o, 0, ridge)); x.lineTo(...S.P(Dt/2 + o, 0, ridge)); x.stroke(); }
       else { // a flat top, seen from a little above: the roof's own plane, its parapet's lit edge
         pkPoly(x, [S.P(-Dt/2, -a, zt), S.P(Dt/2, -a, zt), S.P(Dt/2, a, zt), S.P(-Dt/2, a, zt)], pkCss(pkMix(pkMix(c.body, c.lit, 0.55), PK_CONCRETE, 0.25), glassy ? 0.6 : 1)); }
+      if(!eave && o.battlements && last){ // (a castle's battlements: merlons along every top edge toward the eye)
+        const run = (ua, va, ub, vb, nu, nv) => { const len = Math.hypot(ub - ua, vb - va), n = Math.max(3, Math.round(len/(wdt*0.09))), mh = h*0.045, col = shadeOf(nu, nv);
+          for(let k = 0; k < n; k += 2){ const t0 = k/n, t1 = (k + 1)/n, P0 = [ua + (ub - ua)*t0, va + (vb - va)*t0], P1 = [ua + (ub - ua)*t1, va + (vb - va)*t1];
+            pkPoly(x, [S.P(...P0, zt), S.P(...P1, zt), S.P(...P1, zt + mh), S.P(...P0, zt + mh)], pkCss(col)); } };
+        run(-Dt/2, -sv, Dt/2, -sv, 0, -sideN); run(-fu, a, -fu, -a, front ? -1 : 1, 0); if(side) run(-Dt/2, sv, Dt/2, sv, 0, sideN); if(!front) run(fu, a, fu, -a, -1, 0); }
       if(!eave && side){ x.strokeStyle = pkCss(pkMix(c.lit, PK_WHITE, 0.2), 0.7); x.lineWidth = Math.max(px(0.4), h*0.006); x.beginPath(); x.moveTo(...S.P(-Dt/2, sv, zt)); x.lineTo(...S.P(Dt/2, sv, zt)); x.stroke(); } }
     if(!front && o.back){ // from behind, a thing with a back of its own (a vending machine's): that, on the back plane
       const [fx, fy] = S.P(fu, 0, 0); x.save(); x.translate(fx, fy); x.transform(S.cs, -S.sn*PK_TILT, 0, 1, 0, 0); face(x, { ...c, view: null, back: true, vdep: 1e-6, nocast: true }, R0); x.restore(); }
@@ -813,8 +824,8 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
 }
 export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null, turn: c.view }; // (round: the same from every side; turn kept for what isn't, a mill's sails)
-  if(c.view && kind0 && PK_BOX3[kind0]){ const [dk, eave, roofM, at] = PK_BOX3[kind0];
-    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, dk, eave, roofM, at, ends: kind0 === 'row', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
+  if(c.view && kind0 && PK_BOX3[kind0]){ const [dk, eave, roofM, at, rim] = PK_BOX3[kind0];
+    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
   if(c.view && (kind0 === 'torii' || kind0 === 'arch')){ // (a gate is a frame in its own plane: edge on, a post and a beam's end)
     const k = Math.max(kind0 === 'arch' ? 0.28 : 0.1, Math.abs(c.view.cs)); x.save(); x.translate(X, 0); x.scale(k, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, { ...c, view: null }, style, night, R0, px, kind0); x.restore(); return; }
   if(c.view){ const sn = c.view.sn; if(sn < 0){ x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, pkFlip({ ...c, view: null }), style, night, R0, px, kind0); x.restore(); return; } c = { ...c, view: null }; }

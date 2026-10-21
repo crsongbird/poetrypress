@@ -10,6 +10,10 @@ Recommendations".
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
 - TIME ON THE RINGWORLD: the Moving Image's Time Passing (an hour to two days), the clouds now standing among the hills,
   the gas giants, the moving droids and the swaying grass. Is the pace right, and what else should move?
+- TURNED THINGS IN DEPTH: what turns with the camera is drawn as a solid now: the buildings as boxes taking their
+  shape and colours from their own fronts (setbacks, stilts, gables, battlements), the boxlike props, cars, tractors,
+  carts, crates, shrines and cargo, windmills' sails, gates narrowing edge on; the round ones the same from every side.
+  Does it read as depth in the style of the rest, and what still looks cheap turned?
 - MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
   grid. Does it hold?
 
@@ -17,12 +21,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
   interactions nobody asked for. The countryside is newly in (fields, terraces, flocks, boats, a town's lights by
   night): look at it in a wide view from a little height, and say what it needs.
-- TURNED THINGS IN DEPTH (Ruby, 2026-10-20, for later): some of the eight views look cheap (a sprite squeezed flat).
-  Each turned thing should be drawn as a solid in three-dimensional space, though painted flat: its sides, top and
-  ends foreshortened and lit as the rest of the flat objects are, matching their style. The box-built buildings are
-  boxes now, and so are the vending machines, phone boxes, mailboxes, containers and troughs; cars, tractors, food
-  carts, crates, shrines and the builders' cargo are solids, and a windmill's sails turn with it. Cathedrals and
-  castles are boxes; gates narrow edge on. Still to go: the temples, and a castle's battlements seen from the side.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a
