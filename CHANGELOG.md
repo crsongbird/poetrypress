@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Halimede (2026-10-21)
+
+- Painted Ringworld's countryside, seen from a little height, reads as farmland now. Fields no longer lie over one
+  another, across a road or over a yard; each is laid only where it fits, and a smaller one fills a corner left
+  between others. Out in the country the houses gather into farmsteads some 600 to 900 m apart (a house with its
+  barns and sheds round one yard in the region's own tradition, laid out in a row, round a courtyard or as a loose
+  cluster) and hamlets round a green with a well, each with a lane out to the road; villages stand round a town's
+  heart, closest there and thinning to their edges. By night only they show lights, the farmland between them dark.
+  In windy country a farmstead has a windbreak on its windward sides, tall trees inside and shrubs outside.
+- Terraces only where the country terraces and the slope is steep, and flooded paddies only where it is warm and wet,
+  so the hills no longer look glazed. Rocks are cleared out of the fields and lie in low heaps at their edges.
+- New in the fields: orchards on their grids (apples or plums on some, cherries in blossom), modern orchards in
+  rows, olive groves; and now and then a field half ploughed, the tractor on the line between ploughed and stubble,
+  the gulls waiting level with it and a few in the air. The same gulls follow a harvester. Near, a furrow's ridge
+  catches the light.
+- Looked down on, the land's ridges are painted thinner along their lit bands, with facets only where the land itself
+  is steep, so they no longer hang across the country like panes of glass. At the usual height little changes.
+- Painted Landscape: the foam lines on a lake lie side by side along the one wind, as they do.
+
+### Under the hood
+- `rgStore` (stepsRing.js): `seatOf` and `RG_FARM` for the farmsteads and hamlets, their lanes walked with the ways;
+  `fieldClash` tests fields' rectangles on all four axes; fields keep off yards and windbreaks. New things in
+  paintKit.js: the `stonepile` prop, `fruit` and `olive` trees; `gulls` in the small life. The research is in
+  docs/prior-art/ringworld-countryside.md §12–17. A large ring takes about a tenth longer. Fingerprints: Painted
+  Ringworld's only.
+
 ## Neptune–Nereid (2026-10-21)
 
 - Painted Landscape's countries each have their own marks now, sized by how near the ground under them is, so the near
@@ -305,14 +331,3 @@ prints it).
 - `pkBuilding3` draws a box-built building in `pkSpace`, its kinds and depths in `PK_BOX3`; `pkFaceProof` reads the
   front's outline and colours back from a small proof drawn off the page. Texture fingerprints updated for the turned
   buildings on the Ringworld and its kin.
-
-## Uranus–Umbriel (2026-10-20)
-
-- **Slower, truer clouds.** The wind is a fair-weather breeze now (three to seven metres a second, faster under a storm),
-  and in a film of hours the clouds move as a time-lapse moves them, at most two seconds of wind from one frame to the
-  next, so they drift instead of racing. Each cloud lives a quarter of an hour or so of that: it thins and is gone, and
-  another builds in its place.
-- **Films up to a minute** (45 seconds and a minute added to Length).
-
-### Under the hood
-- stepsRing.js's `rgWind` and `rgCloudTime`; each heap's life cycle keyed to the clouds' clock, so a still is unchanged.

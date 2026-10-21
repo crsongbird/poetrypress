@@ -643,7 +643,8 @@ function waterMarks(ctx, o){
   if(bft >= 1 && bft <= 3) for(let k = 0, nk = 1 + Math.floor(R()*3); k < nk; k++){ const y = top + (h - top)*rnd(0.08, 0.75), d = dep(y), rx = unit*(0.06 + 0.3*d)*rnd(0.7, 1.3), ry = rx*(0.05 + 0.2*d), x = w*R();
     landSoft(ctx, x, y, rx, ry*0.8, rgba, 104, dark, 0.42); landSoft(ctx, x - wind.s*rx*0.35, y, rx*0.5, ry*0.6, rgba, 96, dark, 0.3); }
   if(bft >= 1 && bft <= 2 && R() < 0.65){ ctx.save(); ctx.beginPath(); ctx.rect(-20, top + rh*0.7, w + 40, h); ctx.clip();
-    for(let k = 0, nk = 2 + Math.floor(R()*2); k < nk; k++){ const xb = vx + (R() - 0.5)*w*2.5, X = y => vx + (xb - vx)*(y - horizon)/Math.max(1, h - horizon);
+    // (lines of one wind lie side by side, running back together to its point of the horizon)
+    for(let k = 0, nk = 3 + Math.floor(R()*3), xb0 = vx + (R() - 0.5)*w*2, gap = w*rnd(0.07, 0.14); k < nk; k++){ const xb = xb0 + (k - nk/2 + (R() - 0.5)*0.4)*gap, X = y => vx + (xb - vx)*(y - horizon)/Math.max(1, h - horizon);
       for(let y = Math.max(top, horizon + 1); y < h;){ const dy = unit*0.004*(1 + 8*dep(y)); if(R() < 0.6){ ctx.globalAlpha = 0.42; ctx.strokeStyle = paint(224, light); ctx.lineWidth = hair(y)*1.3; ctx.beginPath(); ctx.moveTo(X(y), y); ctx.lineTo(X(y + dy*0.7), y + dy*0.7); ctx.stroke(); } y += dy; } }
     ctx.restore(); }
   if(bft >= 3){ const lens = (x, y, L, th, tl) => { ctx.beginPath(); ctx.moveTo(x - L/2, y - tl*L/2); ctx.quadraticCurveTo(x, y - th, x + L/2, y + tl*L/2); ctx.quadraticCurveTo(x, y + th*0.35, x - L/2, y - tl*L/2); ctx.closePath(); };

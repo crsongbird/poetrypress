@@ -80,7 +80,7 @@ const PK_WOOD = [124, 92, 64], PK_GREYWOOD = [138, 130, 118], PK_IRON = [58, 62,
 // the view is culled by the caller, never shrunk.
 export const PK_SIZE = {
   spruce: [18, 35], fir: [20, 45], stonepine: [12, 22], cedar: [20, 30], cypress: [12, 25], palm: [15, 28], baobab: [10, 22], acacia: [6, 14], saguaro: [5, 14],
-  joshua: [5, 9], bamboo: [8, 20], fern: [3, 7], mushroom: [4, 20], crystal: [6, 20], cherry: [8, 12], bush: [1, 3], broadleaf: [12, 22], pine: [12, 20], poplar: [15, 25], birch: [10, 22], willow: [9, 15], dead: [8, 18], glow: [8, 18],
+  joshua: [5, 9], bamboo: [8, 20], fern: [3, 7], mushroom: [4, 20], crystal: [6, 20], cherry: [8, 12], fruit: [4, 6.5], olive: [3.5, 6], bush: [1, 3], broadleaf: [12, 22], pine: [12, 20], poplar: [15, 25], birch: [10, 22], willow: [9, 15], dead: [8, 18], glow: [8, 18],
   brick: [9, 32, 12, 26], glass: [45, 220, 20, 45], deco: [70, 300, 30, 60], slab: [18, 55, 22, 45], dome: [16, 45, 18, 40], needle: [150, 450, 18, 30],
   pylon: [60, 400, 10, 30], arch: [30, 120, 30, 70], wizard: [22, 60, 8, 14], onion: [18, 50, 14, 30],
   cottage: [5, 8, 7, 12], aframe: [6, 10, 6, 10], barn: [9, 13, 8, 14], silo: [10, 25, 4, 8], windmill: [15, 25, 6, 9], stave: [10, 15, 7, 10], row: [7, 14, 15, 30],
@@ -92,7 +92,7 @@ export const PK_SIZE = {
   kubo: [4, 6, 4, 6], elevator: [24, 32, 8, 12],
   helper: [1.0, 1.5], drone: [0.5, 1.0], crawler: [0.6, 1.0], sentry: [1.8, 2.8], walker: [2.5, 4.5], derelict: [10, 22],
   fence: [0.9, 1.2], lamp: [3, 4.6], bench: [0.8, 0.9], mailbox: [1.1, 1.2], barrel: [0.9, 1.0], crate: [0.5, 1.1], sign: [2.2, 2.8], bicycle: [0.95, 1.05], hydrant: [0.6, 0.8],
-  wall: [1.1, 1.5], hedge: [1.5, 2.6], gate: [1.2, 1.3], haybale: [1.2, 1.5], haystack: [3, 5], trough: [0.5, 0.6], pole: [10, 13], milestone: [0.6, 1], cairn: [0.6, 2], scarecrow: [1.7, 1.9],
+  wall: [1.1, 1.5], hedge: [1.5, 2.6], gate: [1.2, 1.3], haybale: [1.2, 1.5], haystack: [3, 5], trough: [0.5, 0.6], pole: [10, 13], milestone: [0.6, 1], cairn: [0.6, 2], stonepile: [0.4, 0.7], gulls: [1, 1], scarecrow: [1.7, 1.9],
   beehives: [0.6, 1.0], well: [2.3, 2.7], wishing: [2.3, 2.7], windpump: [9, 11], tractor: [2.5, 3], grainbin: [6, 10], shrine: [2, 3], busstop: [2.5, 2.7], phonebox: [2.4, 2.5], vending: [1.8, 1.9],
   signal: [3, 3.4], kiosk: [2.6, 3], cart: [2.1, 2.4], parked: [1.4, 1.6], hulk: [1.3, 1.4], scooter: [1.0, 1.2], rubble: [0.6, 2.4], column: [1.5, 4], statue: [1.6, 2.4], container: [2.59, 2.6], traps: [1.2, 1.4],
   cargo: [1.2, 2.4], solar: [2, 2.6], dish: [6, 12], beacon: [5, 10], pipes: [1.5, 2.5], tripod: [1.4, 1.6], menhir: [1.8, 4.5], dolmen: [1.8, 2.6], fairyring: [0.12, 0.16], wisp: [0.3, 0.4], flower: [3, 5],
@@ -312,6 +312,18 @@ export function pkTree(x, X, Y, h, c, kind, R0, px){
       pkPoly(x, [[X - nx, Y - ny], [ex - nx, ey - ny], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + nx, ey + ny], [X + nx, Y + ny]], pkCss(pkMix(glass, PK_BLACK, 0.35), 0.85));
       pkPoly(x, [[X, Y], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + sd*nx, ey + sd*ny], [X + sd*nx, Y + sd*ny]], pkCss(glass, 0.85));
       pkGlow(x, ex, ey, wd*4, c.glow, 0.35); }
+    return; }
+  if(kind === 'fruit' || kind === 'olive'){
+    // AN ORCHARD'S TREE (Ruby: "keep widening the library … in a less cartoony hand"): a short trunk (an olive's thick,
+    // twisted and split), a low crown pruned open and wider than it is tall, an olive's silver-grey; near, its fruit
+    const ol = kind === 'olive', th = h*(ol ? 0.36 : 0.42); trunk(th, h*(ol ? 0.11 : 0.07), ol ? rnd(-0.1, 0.1)*h : 0);
+    if(ol && !small){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.35)); x.lineWidth = Math.max(px(0.5), h*0.016); x.beginPath(); x.moveTo(X - h*0.02, Y); x.quadraticCurveTo(X + h*0.035, Y - th*0.5, X - h*0.01, Y - th*0.95); x.stroke(); }
+    const cx = X, cy = Y - h*0.64, rr = h*0.4, n = small ? 3 : 5 + Math.floor(R()*3), lobes = [];
+    for(let q = 0; q < n; q++){ const u = q/(n - 1) - 0.5; lobes.push([cx + u*rr*1.55, cy + rr*0.2*Math.abs(u)*2 + rnd(-0.06, 0.06)*rr, rr*rnd(0.36, 0.5)]); }
+    lobes.push([cx + rnd(-0.1, 0.1)*rr, cy - rr*0.22, rr*0.42]);
+    pkLobes(x, lobes, c, RL, cx, cy, rr, px);
+    if(!ol && !small && c.fruit){ const RB = sub(4); for(let q = 0, nb = h > px(30) ? 40 : 14; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.85;
+      pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*0.07), pkCss(c.fruit, 0.9)); } }
     return; }
   if(kind === 'bush'){
     // a bush: three to five low lobes, wider than tall
@@ -1292,6 +1304,14 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     pkType(x, txt, X + dir*-w*0.08, by + bh*0.68, bh*0.42, w*0.65, pkMix(PK_WHITE, m.body, 0.1), px); ln([[X + dir*w*0.3, by + bh*0.5], [X + dir*w*0.42, by + bh*0.5]], pkCss(PK_WHITE, 0.85), bh*0.1); return; }
   case 'milestone': { const m = pkMat(c, [222, 218, 206], 0.7); pkShade(x, [[X - h*0.22, Y], [X - h*0.22, Y - h*0.75], [X, Y - h], [X + h*0.22, Y - h*0.75], [X + h*0.22, Y]], m.body, Y - h, Y, 0.2);
     if(!c.back) pkType(x, String(1 + Math.floor(R()*99)), X, Y - h*0.45, h*0.28, h*0.4, PK_BLACK, px); return; }
+  case 'stonepile': { // the stones cleared off a field, heaped at its edge: a low broad mound of them, 2 to 4 m across and
+    // half a metre high, rounded, the top ones
+    // catching the light, grass grown up round its foot (docs/prior-art/ringworld-countryside.md)
+    const w = h*(4 + 2*R()); pkShade(x, [[X - w/2, Y], [X - w*0.42, Y - h*0.45], [X - w*0.2, Y - h*0.85], [X + w*0.05, Y - h], [X + w*0.3, Y - h*0.75], [X + w*0.48, Y - h*0.3], [X + w/2, Y]], stone.dark, Y - h, Y, 0.25);
+    for(let k = 0, n = Math.min(26, 6 + Math.floor(w/px(2))); k < n; k++){ const u = R()*2 - 1, top = 1 - u*u, sy = Y - h*top*(0.15 + 0.8*R()), r = h*(0.11 + 0.12*R())*(1 - 0.3*top);
+      pkEll(x, X + u*w*0.44, sy, r*1.25, r*0.8, pkCss(pkMix(stone.dark, stone.body, R()))); pkEll(x, X + u*w*0.44 + sd*r*0.25, sy - r*0.3, r*0.6, r*0.32, pkCss(stone.lit, 0.65)); }
+    if(h > px(8)) for(let k = 0; k < 7; k++){ const gx = X + (R() - 0.5)*w*1.05, gh = h*(0.15 + 0.2*R()); x.strokeStyle = pkCss(pkMix([70, 110, 60], stone.dark, 0.3), 0.8); x.lineWidth = Math.max(px(0.4), h*0.02); x.beginPath(); x.moveTo(gx, Y); x.lineTo(gx + (R() - 0.5)*gh*0.5, Y - gh); x.stroke(); }
+    return; }
   case 'cairn': { // stones stacked, smaller upward
     // (each stone its own rough block, set a little off the one below, its top catching the light)
     let cy = Y, ox = 0; for(let k = 0, n = 4 + Math.floor(R()*4); k < n; k++){ const u = k/n, w = h*0.5*(1 - u*0.65)*(0.8 + 0.4*R()), th = h/n*(0.9 + 0.3*R()); ox += (R() - 0.5)*w*0.3; const cx = X + ox, j = () => (R() - 0.5)*w*0.12;

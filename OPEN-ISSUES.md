@@ -17,6 +17,16 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   stand on the scroll's own ridges. Which land reads best, which needs more, and should the curse take the petals?
 - PAINTED LANDSCAPE'S RIVER, remade: one winding course in perspective (broad bends near, level slivers far), the sky
   in it by the angle you see it at, its banks' lines and reflections, trees along it. Does it read as water now?
+- THE COUNTRYSIDE FROM A HEIGHT (asked: look at it from a little height and say what it needs). What it needed, and
+  now has: fields laid over each other (now none crosses another, a way or a yard); houses standing alone all over
+  the fields (now farmsteads, laid out linear, courtyard or clustered, and hamlets, with lanes to the road and
+  windbreaks in windy country; villages only round a town's heart; lights only there by night); rocks in the fields
+  (now cleared, heaped at the edges); every slope terraced and flooded (now only where the country terraces); the
+  ridges' lit bands and facets hanging like panes when looked down on (now thinner, facets only where the land is
+  steep). New: orchards and olive groves, a field half ploughed with gulls waiting by the tractor. Still to look at:
+  the spiky conifers read cartoony from above; plain green is left between farms (rough grazing) where a fuller
+  patchwork might be wanted; the research's next ones (dew ponds, gates with cattle watching, tramlines, field
+  margins). Does it read as farmland now?
 - PAINTED LANDSCAPE'S LAND AND WATER: every country has its own marks now (fields as a patchwork with hedges, dune
   crests and slip faces, honami and flower drifts, canopy masses, mesa beds, tundra polygons, a volcano's gullies and
   lava), one wind per seed turning them, and the water's mood as a Beaufort number (puffs, foam lines, a mirror strip,
@@ -31,8 +41,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 
 ## 2 · Ruby's notes to act on
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
-  interactions nobody asked for. The countryside is newly in (fields, terraces, flocks, boats, a town's lights by
-  night): look at it in a wide view from a little height, and say what it needs.
+  interactions nobody asked for.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - THE GPU (Ruby: "implement most of these things on the GPU to accelerate rendering as much as inhumanly possible"):
   only the Light Engine's shadow march, occlusion and shine run on the GPU; blur, focal blur, warp, blend, posterize,

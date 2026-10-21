@@ -2,6 +2,17 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Umbriel (2026-10-20)
+
+- **Slower, truer clouds.** The wind is a fair-weather breeze now (three to seven metres a second, faster under a storm),
+  and in a film of hours the clouds move as a time-lapse moves them, at most two seconds of wind from one frame to the
+  next, so they drift instead of racing. Each cloud lives a quarter of an hour or so of that: it thins and is gone, and
+  another builds in its place.
+- **Films up to a minute** (45 seconds and a minute added to Length).
+
+### Under the hood
+- stepsRing.js's `rgWind` and `rgCloudTime`; each heap's life cycle keyed to the clouds' clock, so a still is unchanged.
+
 ## Uranus–Ariel (2026-10-20)
 
 - **Dawn and dusk linger in a film.** Time Passing and the Ringworld's day give the hours near sunrise and sunset about

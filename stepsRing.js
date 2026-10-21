@@ -596,6 +596,18 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
       if((c.night || 0) > 0.35){ const ph = ((t || 0)/5.5 + q*0.37 + (X*0.013 % 1)) % 1, on = !t || ph < 0.14; if(on) rgGlow(x, ix, iy, Math.max(rgPx(5), h*0.16), [200, 255, 120], 0.6*c.night); }
       if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
     return; }
+  if(kind === 'gulls'){ // GULLS FOLLOWING THE PLOUGH (Ruby: "more interactions nobody asked for"): a loose flock behind the
+    // tractor, some wheeling low over the fresh furrow, some down in it; white with grey backs, their wings beating slowly
+    if((c.night || 0) > 0.5) return;
+    const n = 8 + Math.floor(R()*12), body = rsMix(c.lit, [255, 255, 255], 0.2), back = rsMix(c.lit, [120, 128, 140], 0.45);
+    // (most wait on the ground, a few in the air at any moment, two to six metres up; §16)
+    for(let q = 0; q < n; q++){ const air = R() < 0.22, gx = X + (R() - 0.5)*h*6 + (t && air ? Math.sin(t*0.5 + q*1.9)*h*0.8 : 0), gy = air ? Y - h*rnd(0.7, 2.1) + (t ? Math.sin(t*0.8 + q)*h*0.15 : 0) : Y - h*0.05 + (R() - 0.5)*h*0.3, s2 = h*rnd(0.1, 0.14);
+      if(air){ const flap = t ? Math.sin(t*3 + q*2.3)*0.45 : (R() - 0.5)*0.6; x.strokeStyle = rsCss(body, 0.95); x.lineWidth = Math.max(rgPx(0.8), s2*0.28); x.lineCap = 'round'; x.beginPath();
+        x.moveTo(gx - s2*1.8, gy - s2*flap*1.6); x.quadraticCurveTo(gx - s2*0.7, gy - s2*(0.5 + flap), gx, gy); x.quadraticCurveTo(gx + s2*0.7, gy - s2*(0.5 + flap), gx + s2*1.8, gy - s2*flap*1.6); x.stroke();
+        dot(gx - s2*1.7, gy - s2*flap*1.6, s2*0.18, 0.4, rsCss(c.dark, 0.8)); dot(gx + s2*1.7, gy - s2*flap*1.6, s2*0.18, 0.4, rsCss(c.dark, 0.8)); }
+      else { x.fillStyle = rsCss(body, 0.95); x.beginPath(); x.ellipse(gx, gy - s2*0.5, s2*0.9, s2*0.45, 0, 0, Math.PI*2); x.fill(); x.fillStyle = rsCss(back, 0.95); x.beginPath(); x.ellipse(gx + s2*0.15, gy - s2*0.6, s2*0.6, s2*0.25, 0, 0, Math.PI*2); x.fill();
+        dot(gx - s2*0.85, gy - s2*0.75, s2*0.28, 0.5, rsCss(body, 0.95)); } }
+    return; }
   if(kind === 'fairies'){ // a few points of light drifting low, each with a faint trail behind it
     const n = 1 + Math.floor(R()*3);
     for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2 + (t ? Math.sin(t*0.45 + q*2.1)*h*0.6 : 0), fy = Y - h*rnd(0.4, 1.4) + (t ? Math.sin(t*0.7 + q)*h*0.2 : 0), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);   // (drifting, with the clock)
@@ -646,8 +658,14 @@ const RG_KEPT_STORES = new Map();
 // edge, among fields; cathedrals, mosques and clock towers at its heart; geodomes and landing pads on the flat. Kinds not
 // named stand wherever their world builds (ground: rgStore's `ground`; ci: how much of a city stands here, 0 to 1)
 const RG_PLACE = { lighthouse: { coast: true }, windmill: { rise: 0.4 }, turbine: { rise: 0.6 }, castle: { rise: 0.3 }, observatory: { rise: 0.6 },
-  barn: { edge: 0.35 }, silo: { edge: 0.35 }, cathedral: { heart: 0.7 }, mosque: { heart: 0.7 }, clock: { heart: 0.6 }, geodome: { flat: 0.25 }, pagoda: { rise: 0 },
+  barn: { edge: 0.35 }, silo: { edge: 0.35 }, watertower: { heart: 0.25 }, cathedral: { heart: 0.7 }, mosque: { heart: 0.7 }, clock: { heart: 0.6 }, geodome: { flat: 0.25 }, pagoda: { rise: 0 },
   radiomast: { rise: 0.5 }, gasstation: { edge: 0.4, flat: 0.3 }, motel: { edge: 0.45 }, elevator: { edge: 0.5 }, greenhouse: { flat: 0.25 }, chapel: { rise: 0 } };
+// what a farmstead builds, by its region's tradition: its house, then its barns and sheds (a hamlet builds the whole
+// tradition, PK_VERNACULAR; docs/prior-art/ringworld-countryside.md)
+const RG_FARM = { shire: { house: ['cottage'], out: ['barn', 'barn', 'oast', 'dovecote', 'greenhouse'] }, prairie: { house: ['cottage'], out: ['barn', 'barn', 'silo', 'silo', 'turbine'] },
+  steppe: { house: ['yurt'], out: ['yurt'] }, savanna: { house: ['rondavel'], out: ['rondavel'] }, apulia: { house: ['trullo'], out: ['trullo', 'trullo', 'cottage'] },
+  galicia: { house: ['cottage'], out: ['horreo', 'horreo', 'barn'] }, mesa: { house: ['pueblo'], out: ['pueblo', 'windmill'] }, kyo: { house: ['gassho', 'machiya'], out: ['gassho'] },
+  tropic: { house: ['kubo'], out: ['kubo'] }, north: { house: ['stave', 'cottage', 'aframe'], out: ['barn', 'stave'] } };
 function rgFits(kind, g, ci){ const P = RG_PLACE[kind]; if(!P) return true;
   if(P.coast && !g.coast) return false; if(P.rise != null && g.rise < P.rise) return false; if(P.edge != null && ci > P.edge) return false;
   if(P.heart != null && ci < P.heart) return false; if(P.flat != null && g.slope > P.flat) return false; return true; }
@@ -660,7 +678,7 @@ function rgRoadsOf(V){ const s = V.seed | 0, W = V.W, roads = [];
   if(mnHash(s, 35, 7) < RG_ROADS[w2][1]*(0.15 + 0.45*V.works)) roads.push({ along: false, at: ar, w: w2, kind: RG_ROADS[w2][0] });
   return roads; }
 // the small things wider than they are tall, kept back from the very front of the view so a gate or a wall never fills it
-const RG_WIDE = ['gate', 'wall', 'hedge', 'fence', 'container', 'solar', 'pipes', 'traps', 'haybale', 'bench', 'parked', 'hulk', 'rubble', 'statue', 'dolmen'];
+const RG_WIDE = ['gate', 'wall', 'hedge', 'fence', 'container', 'solar', 'pipes', 'traps', 'haybale', 'bench', 'parked', 'hulk', 'rubble', 'statue', 'dolmen', 'stonepile'];
 // which tradition the wilds build in here: the cold north's, the dry country's, the jungle's, else the temperate land's,
 // each region its own by the seed
 function rgVernacular(V, a, z){ const W = V.W, s = V.seed | 0, dr = V.dryAt(a, z), e = V.T.true(a, z, W*0.01), r = mnValue(a/(W*0.35) + 5.5, z/(W*0.35) - 1.3, s + 51);
@@ -693,7 +711,7 @@ const RG_CROPS = { wheat: { c: [214, 184, 100] }, barley: { c: [200, 190, 128] }
   hay: { c: [150, 170, 90], stripe: [10, [178, 192, 112]] }, pasture: { c: [104, 146, 72] }, ploughed: { c: [124, 94, 66], row: [1.6, [92, 68, 48]] },
   rapeseed: { c: [234, 210, 52] }, maize: { c: [88, 128, 56], row: [1.5, [66, 98, 44]] }, lavender: { c: [126, 106, 168], row: [1.2, [176, 156, 118]] },
   vines: { c: [150, 128, 96], row: [2.6, [80, 110, 58]] }, rice: { c: [118, 156, 112], water: true, row: [0.7, [96, 150, 70]] }, tea: { c: [74, 110, 62], row: [1.6, [52, 88, 48]] },
-  garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, moonflower: { c: [150, 166, 186], row: [2, [128, 140, 176]], glow: true }, fallow: { c: [146, 136, 94] } };
+  garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, orchard: { c: [112, 150, 74] }, olives: { c: [176, 160, 118] }, 'orchard rows': { c: [126, 150, 86], row: [3.4, [50, 90, 46]] }, 'olive rows': { c: [176, 160, 118], row: [4, [100, 118, 92]] }, moonflower: { c: [150, 166, 186], row: [2, [128, 140, 176]], glow: true }, fallow: { c: [146, 136, 94] } };
 const RG_STREET_KINDS = ['lamp', 'hydrant', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'scooter'];
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
@@ -778,9 +796,24 @@ function rgStore(V){
   out.ways = ways;
   // BUILDINGS: where the cities are (and in the wilds, a few villages and farms); each archetype chosen first, then sized
   // in metres (tall ones where the city is densest, as a downtown rises), so a house is a house and a tower a tower
+  // FARMSTEADS AND HAMLETS (Ruby, seen from a height: houses stood alone all over the fields): out in the country the
+  // buildings gather, a house and its barns and sheds round one yard, a few hundred metres from the next farmstead, and
+  // now and then a hamlet of a dozen houses round a green; between them, the fields. A seat in one cell of the grid in
+  // two or so (more where the country is more settled), so farmsteads stand some 600 to 900 m apart and never closer
+  // than about 200 (closer makes a hamlet); a farmstead's buildings within 45 to 70 m of its middle, round a yard 30
+  // to 60 m across; a hamlet's within 90 to 140 m
+  const SEAT = 560*M, seatOf = (a, z, ci) => { const i0 = Math.floor(a/SEAT), j0 = Math.floor(z/SEAT); let best = null;
+    for(let i = i0 - 1; i <= i0 + 1; i++) for(let j = j0 - 1; j <= j0 + 1; j++){ if(mnHash(i, j, s + 91) > 0.3 + 0.45*ci) continue;
+      const hamlet = mnHash(i, j, s + 95) < 0.18, sa = (i + 0.2 + 0.6*mnHash(i, j, s + 92))*SEAT, sz = (j + 0.2 + 0.6*mnHash(i, j, s + 93))*SEAT, rr = (hamlet ? 90 + 50*mnHash(i, j, s + 94) : 45 + 25*mnHash(i, j, s + 94))*M, d = Math.hypot(a - sa, z - sz);
+      if(d < rr && (!best || d < best.d)) best = { a: sa, z: sz, rr, d, hamlet, key: i + ',' + j }; }
+    return best; }, seats = new Map();
   sow(2, W*0.009, W*0.03, W*3, 2, (a, z, r, R) => {
     const w = V.worldAt(a, z), P = RG_PROF[w], ci = w === 'wilds' ? 0.7*V.cityAt(a, z, 0.12*(0.3 + 0.9*V.works)) : V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works));
-    if(ci < 0.05 || R() > ci*(0.08 + 0.92*rsSmooth(W*0.012, W*0.07, r))) return null;
+    // (in the country a village stands only round a town's heart, its houses close; the rest of the country's buildings
+    //  are built by their seats, below)
+    //  (closest at its heart and thinning to its edge, as a village does)
+    let vk = 1; if(w === 'wilds' || w === 'magic'){ vk = 0; for(const [ha, hz, hw, ht] of hubs) if(hw === w) vk = Math.max(vk, 1 - Math.pow(Math.hypot(a - ha, z - hz)/((90 + 180*ht)*M), 1.5)); if(vk <= 0) return null; }
+    if(ci < 0.05 || R() > ci*vk*(0.08 + 0.92*rsSmooth(W*0.012, W*0.07, r))) return null;
     // (what stands where: each kind on the ground it belongs on, RG_PLACE; a kind whose ground this isn't gives way to
     //  another of the style's, up to three tries, else nothing is built here)
     const g = ground(a, z); if(g.wet || g.slope > 0.9) return null;
@@ -792,10 +825,64 @@ function rgStore(V){
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
     if(!offWay(a, z, wM*M*0.5 + 2*M)) return null; // (a building fronts its way; it never stands in it)
     return { c: 'bldg', w, kind, hM, wM, face: faceOf(a, z, R()) }; });
+  // (each seat built: a farmstead's house first, then its barns and sheds round the yard, each facing its middle; a
+  //  hamlet's houses in a ring round its green, a well on the green; near you fewer, as everywhere, and far off only
+  //  the house of a farmstead and half a hamlet. Its kinds are its region's tradition, PK_VERNACULAR; a farmstead keeps
+  //  to what a farm builds, RG_FARM)
+  { const span = W*2.2, i0 = Math.floor(-span/SEAT), i1 = Math.ceil(span/SEAT), j0 = Math.floor((L.z0 - span)/SEAT), j1 = Math.ceil((L.z0 + span)/SEAT);
+    for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
+      const sa = (i + 0.2 + 0.6*mnHash(i, j, s + 92))*SEAT, sz = (j + 0.2 + 0.6*mnHash(i, j, s + 93))*SEAT; if(Math.abs(sz) > W*0.45) continue;
+      const rs0 = Math.hypot(sa, sz - L.z0); if(rs0 > span) continue; const w = V.worldAt(sa, sz); if(w !== 'wilds' && w !== 'magic') continue;
+      const ci = w === 'wilds' ? 0.7*V.cityAt(sa, sz, 0.12*(0.3 + 0.9*V.works)) : V.cityAt(sa, sz, RG_PROF[w].cv*(0.3 + 0.9*V.works));
+      if(ci < 0.05 || mnHash(i, j, s + 91) > 0.3 + 0.45*ci) continue;
+      const g0 = ground(sa, sz); if(g0.wet || g0.slope > 0.8) continue;
+      const seat = seatOf(sa, sz, ci); if(!seat || seat.key !== i + ',' + j) continue;
+      const R = rgRand(s, 1420, i*4099 + j), fam = w === 'wilds' ? rgVernacular(V, sa, sz) : null, farm = fam ? RG_FARM[fam] || RG_FARM.shire : null, th0 = R()*Math.PI*2;
+      let n = seat.hamlet ? 5 + Math.floor(R()*9) : 2 + Math.floor(R()*4); if(rs0 > W*0.7) n = seat.hamlet ? Math.ceil(n/2) : 1;
+      // (a farmstead's plan, as the Peak District's farmsteads share them: four in ten a LINEAR range, house and barn and
+      //  sheds in one row along the yard; nearly as many a COURTYARD, buildings on two to four sides of a yard; the rest
+      //  a loose cluster. Each building faces the yard; docs/prior-art/ringworld-countryside.md §12)
+      const plan = seat.hamlet ? 'ring' : (u => u < 0.4 ? 'linear' : u < 0.77 ? 'court' : 'cluster')(R()), yd = seat.rr*(0.4 + 0.15*R()), cs0 = Math.cos(th0), sn0 = Math.sin(th0);
+      const spot = k => { if(plan === 'linear'){ const t2 = (k - (n - 1)/2)*(14 + 6*R())*M; return [sa + cs0*t2 - sn0*yd*0.6, sz + sn0*t2 + cs0*yd*0.6, Math.atan2(-cs0, sn0)]; }
+        if(plan === 'court'){ const side = k % 4, ang = th0 + side*Math.PI/2, along = (Math.floor(k/4) - 0.5 + (R() - 0.5)*0.5)*yd*0.7, ca = Math.cos(ang), sa2 = Math.sin(ang); return [sa + ca*yd - sa2*along, sz + sa2*yd + ca*along, ang + Math.PI]; }
+        const an = seat.hamlet ? th0 + k/n*Math.PI*2 + (R() - 0.5)*0.4 : th0 + k*(1.1 + 0.5*R()), dd = seat.rr*(seat.hamlet ? 0.55 + 0.4*R() : k ? 0.45 + 0.45*R() : 0.5 + 0.2*R());
+        return [sa + Math.cos(an)*dd, sz + Math.sin(an)*dd, null]; };
+      const placed = [];
+      for(let k = 0; k < n; k++){
+        const [a, z, fc] = spot(k), r = Math.hypot(a, z - L.z0); if(R() > 0.08 + 0.92*rsSmooth(W*0.012, W*0.07, r)) continue;
+        const g = ground(a, z); if(g.wet || g.slope > 0.9) continue;
+        let kind = null; for(let t = 0; t < 3 && !kind; t++){ const u = R(), k2 = !fam ? pkArchOf(PK_STYLE[w], u) : seat.hamlet ? pkVernacularOf(fam, u) : (k ? farm.out : farm.house)[Math.floor(u*(k ? farm.out : farm.house).length)];
+          if(rgFits(k2, g, seat.hamlet ? 0.3 : 0.1)) kind = k2; } if(!kind) continue;
+        const hM = pkMetres(kind, Math.pow(R(), 1.5)), wM = pkMetres(kind, R(), 1);
+        if(!offWay(a, z, wM*M*0.5 + 2*M) || placed.some(([pa, pz, pw]) => Math.hypot(a - pa, z - pz) < (pw + wM)*M*0.55 + 3*M)) continue;
+        placed.push([a, z, wM]); out.push({ c: 'bldg', w, kind, hM, wM, face: fc ?? Math.atan2(sz - z, sa - a), a, z, r, rs: (R()*4294967296) >>> 0 }); }
+      // (a cold country's yard keeps one tree in its middle, as Norway's do)
+      if(!seat.hamlet && (fam === 'north' || fam === 'galicia') && placed.length && R() < 0.6){ const kind = fam === 'north' ? 'birch' : 'broadleaf'; out.push({ c: 'tree', w, kind, hM: pkMetres(kind, R()), a: sa, z: sz, r: rs0, rs: (R()*4294967296) >>> 0 }); }
+      if(!placed.length) continue;
+      seats.set(seat.key, { ...seat, w, n: placed.length, fam });
+      // (a windbreak on a farmstead's windward sides, in open and windy country: rows of trees in an L round the yard,
+      //  a little way out from it, longer than the yard is wide; near enough to be seen as trees)
+      if(!seat.hamlet && rs0 < W*0.25 && (['prairie', 'steppe', 'north', 'shire'].includes(fam) || V.dryAt(sa, sz) > 0.45) && R() < 0.55){
+        // (its inside row 15 to 30 m off the yard, each arm running on 30 to 60 m past the last building; three rows,
+        //  outward from the tallest: conifers (or poplars), smaller trees, shrubs; close enough to read as one dark mass)
+        const th = mnHash(s, 71, 3)*Math.PI*2, Dw = seat.rr*0.55 + (15 + 15*R())*M, run = seat.rr*0.55 + (30 + 30*R())*M, rowM = (4 + 2*R())*M, tall = fam === 'north' || fam === 'prairie' || fam === 'steppe' ? 'spruce' : 'poplar';
+        for(const arm of [th, th + Math.PI/2]){ const ca = Math.cos(arm), sn = Math.sin(arm);
+          for(const [rw, kind, sp, hk] of [[0, tall, 4.5, 0.85], [1, 'broadleaf', 4, 0.45], [2, 'bush', 3, 1]]) for(let t2 = -run; t2 <= run; t2 += sp*M){ const a = sa + ca*(Dw + rw*rowM) - sn*t2, z = sz + sn*(Dw + rw*rowM) + ca*t2;
+            if(Math.abs(z) > W*0.47 || R() < 0.06 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M)) continue;
+            out.push({ c: 'tree', w, kind, hM: pkMetres(kind, R())*hk, a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0 }); } }
+        seats.get(seat.key).rf = Dw + 3*rowM + 4*M; }
+      if(seat.hamlet && rs0 < W*0.5 && R() < 0.7) out.push({ c: 'prop', w, kind: 'well', hM: pkMetres('well', R()), a: sa, z: sz, r: rs0, rs: (R()*4294967296) >>> 0, face: R()*Math.PI*2 }); } }
+  // (a lane from each farmstead and hamlet out to the nearest way, as a farm's track runs to the road: walked over the
+  //  land like any way, earth or gravel, never more than half a kilometre)
+  for(const st of seats.values()){ const gap = wayGap(st.a, st.z); if(!(gap < 500*M) || gap < st.rr || !wayAt) continue; const R = rgRand(s, 1430, Math.round(st.a/M)*7 + Math.round(st.z/M)), goal = wayAt.slice();
+    addWay(walk(st.a, st.z, Math.atan2(goal[1] - st.z, goal[0] - st.a), gap*1.6, 10*M, goal, R), R() < 0.7 ? 'earth' : 'gravel', st.w, false, R); }
   // (a town's lights by night, between its houses: streets, yards, windows too small to be houses, out to the far
   //  side of the land; few in the ruins, a fire here and there)
   sow(14, W*0.005, W*0.03, W*2.5, 2, (a, z, r, R) => { const w = V.worldAt(a, z), ci = w === 'wilds' ? V.cityAt(a, z, 0.12) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
-    if(ci < 0.1 || R() > ci*(w === 'ruins' ? 0.12 : 0.9) || T.true(a, z, W*0.004) <= TR.sea) return null; return { c: 'glim', w, big: R() < 0.15 ? 1.5 : 1 }; });
+    if(ci < 0.1 || R() > ci*(w === 'ruins' ? 0.12 : 0.9) || T.true(a, z, W*0.004) <= TR.sea) return null;
+    // (in the country, only where its farmsteads and hamlets stand: the farmland between them dark, as it is at night)
+    if(w === 'wilds' || w === 'magic'){ const st = seats.get((seatOf(a, z, 1) || {}).key); if(!st || Math.hypot(a - st.a, z - st.z) > st.rr*1.2) return null; }
+    return { c: 'glim', w, big: R() < 0.15 ? 1.5 : 1 }; });
   // WHAT THE HOUSES HOLD ROUND THEM (Ruby: "more placing rules … trees kept back from a house"): each building's
   // footprint, so a tree keeps a few metres back from its walls and a field from its yard
   const BB = W*0.004, bbins = new Map();
@@ -814,11 +901,29 @@ function rgStore(V){
   const cropOf = (w, a, z, e, R) => { const dr = V.dryAt(a, z), cold = e > TR.snow*0.32, u = R();
     if(w === 'ruins') return u < 0.75 ? 'fallow' : 'wheat'; if(w === 'builders') return u < 0.6 ? 'garden' : 'pasture'; if(w === 'magic') return u < 0.2 ? 'moonflower' : u < 0.55 ? 'wheat' : u < 0.7 ? 'hay' : 'pasture';
     if(cold) return u < 0.5 ? 'pasture' : u < 0.8 ? 'hay' : 'ploughed';
-    if(dr > 0.62) return u < 0.3 ? 'lavender' : u < 0.6 ? 'vines' : u < 0.85 ? 'wheat' : 'stubble';
+    if(dr > 0.62) return u < 0.25 ? 'lavender' : u < 0.5 ? 'vines' : u < 0.62 ? 'olives' : u < 0.68 ? 'olive rows' : u < 0.87 ? 'wheat' : 'stubble';
     if(dr < 0.38 && mnValue(a/(W*0.3) + 2.2, z/(W*0.3) - 6.1, s + 81) > 0.58) return u < 0.85 ? 'rice' : 'pasture';
-    return ['wheat', 'wheat', 'barley', 'stubble', 'hay', 'pasture', 'pasture', 'ploughed', 'rapeseed', 'maize'][Math.floor(u*10)]; };
+    return ['wheat', 'wheat', 'barley', 'stubble', 'hay', 'pasture', 'pasture', 'ploughed', 'rapeseed', 'maize', 'orchard', 'orchard rows'][Math.floor(u*12)]; };
   const inField = (a, z, room = 0) => { const L2 = fbins.get(Math.floor(a/FBIN) + ',' + Math.floor(z/FBIN)); if(!L2) return null;
     for(const f of L2){ const da = a - f.a, dz = z - f.z, u = da*f.ux + dz*f.uz, v = -da*f.uz + dz*f.ux; if(Math.abs(u) < f.hl + room && Math.abs(v) < f.hw + room) return f; } return null; };
+  // (two fields' rectangles overlap unless one of the four axes they're turned on parts them)
+  const fieldClash = (f, room) => { const ext = Math.hypot(f.hl, f.hw), seen = new Set();
+    for(let bi = Math.floor((f.a - ext)/FBIN); bi <= Math.floor((f.a + ext)/FBIN); bi++) for(let bj = Math.floor((f.z - ext)/FBIN); bj <= Math.floor((f.z + ext)/FBIN); bj++){ const L2 = fbins.get(bi + ',' + bj); if(!L2) continue;
+      for(const g of L2){ if(seen.has(g)) continue; seen.add(g); const da = g.a - f.a, dz = g.z - f.z; let apart = false;
+        for(const [nx, nz] of [[f.ux, f.uz], [-f.uz, f.ux], [g.ux, g.uz], [-g.uz, g.ux]]){ const rf = f.hl*Math.abs(f.ux*nx + f.uz*nz) + f.hw*Math.abs(-f.uz*nx + f.ux*nz), rg = g.hl*Math.abs(g.ux*nx + g.uz*nz) + g.hw*Math.abs(-g.uz*nx + g.ux*nz);
+          if(Math.abs(da*nx + dz*nz) > rf + rg + room){ apart = true; break; } }
+        if(!apart) return true; } }
+    return false; };
+  // (a building, its yard round it, standing in the field's rectangle)
+  const bldgIn = (f, yard) => { const ext = Math.hypot(f.hl, f.hw) + yard + 20*M;
+    for(let bi = Math.floor((f.a - ext)/BB); bi <= Math.floor((f.a + ext)/BB); bi++) for(let bj = Math.floor((f.z - ext)/BB); bj <= Math.floor((f.z + ext)/BB); bj++){ const L2 = bbins.get(bi + ',' + bj); if(!L2) continue;
+      for(const o of L2){ const da = o.a - f.a, dz = o.z - f.z, u = da*f.ux + dz*f.uz, v = -da*f.uz + dz*f.ux, m = o.wM*M*0.6 + yard; if(Math.abs(u) < f.hl + m && Math.abs(v) < f.hw + m) return true; } }
+    return false; };
+  // (nor over a farmstead's yard or a hamlet's green)
+  const yardIn = f => { for(const st of seats.values()){ const rr = st.rf || st.rr, da = st.a - f.a, dz = st.z - f.z; if(Math.abs(da) > f.hl + f.hw + rr || Math.abs(dz) > f.hl + f.hw + rr) continue;
+    const u = da*f.ux + dz*f.uz, v = -da*f.uz + dz*f.ux; if(Math.abs(u) < f.hl + rr && Math.abs(v) < f.hw + rr) return true; } return false; };
+  // (no way runs through it: its middle, corners and the middles of its sides all clear of every way)
+  const wayClear = f => { for(const p of [-1, -0.5, 0, 0.5, 1]) for(const q of [-1, 0, 1]){ const a = f.a + p*f.hl*f.ux - q*f.hw*f.uz, z = f.z + p*f.hl*f.uz + q*f.hw*f.ux; if(!offWay(a, z, (p || q ? 1 : Math.min(f.hl, f.hw)*0.9/M)*M)) return false; } return true; };
   farms.forEach(([a0, z0, w, t], hi) => { if(w === 'neon') return;
     const R = rgRand(s, 1400, hi), th = R()*Math.PI, ux = Math.cos(th), uz = Math.sin(th), strips = R() < 0.35;
     const cu = (strips ? 160 + 80*R() : 90 + 70*R())*M, cv = strips ? cu*(0.22 + 0.12*R()) : cu*(0.6 + 0.5*R()), Rf = (350 + 550*R())*M*(0.6 + t), nu = Math.ceil(Rf/cu), nv = Math.ceil(Rf/cv);
@@ -826,18 +931,28 @@ function rgStore(V){
       const lu = (i + (j & 1)*0.5*(strips ? 0 : 1))*cu, lv = j*cv, dist = Math.hypot(lu, lv); if(dist > Rf || R() > 1.1 - Math.pow(dist/Rf, 2)) continue;
       const a = a0 + lu*ux - lv*uz, z = z0 + lu*uz + lv*ux; if(Math.abs(z) > W*0.47) continue;
       const g = ground(a, z); if(g.wet || g.coast || (w !== 'wilds' && w !== 'magic' && villageAt(w, a, z) > 0.4) || V.forestAt(a, z) > 0.55) continue;   // (a village's fields come up to its houses; a town's begin past its streets)
-      const hl = cu*(0.4 + 0.08*R()), hw = cv*(0.36 + 0.1*R()); if(nearBldg(a, z, Math.min(hl, hw)*0.9) || !offWay(a, z, Math.min(hl, hw)*0.9)) continue;
-      // (one farm's fields never lie over its neighbour's)
-      if([[0, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([p, q]) => inField(a + p*hl*ux - q*hw*uz, z + p*hl*uz + q*hw*ux, 2*M))) continue;
+      const hl = cu*(0.4 + 0.08*R()), hw = cv*(0.36 + 0.1*R());
       let f;
       if(g.slope < 0.28) f = { a, z, ux, uz, hl, hw, w, crop: cropOf(w, a, z, g.e, R), step: 0 };
-      else if(g.slope < 1.1 && w !== 'builders' && w !== 'ruins'){   // (too steep to plough: terraced along the contour)
-        const d = W*0.003, ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d), gl = Math.hypot(ex, ez) || 1, dr = V.dryAt(a, z);
-        f = { a, z, ux: -ez/gl, uz: ex/gl, hl: hl*0.8, hw: hw*0.8, w, crop: dr < 0.42 ? 'rice' : dr > 0.6 ? 'vines' : 'tea', step: (3 + 3*R())*M/Math.max(0.6, g.slope) }; }
+      // (too steep to plough: terraced along the contour, but only where the country terraces (Ruby, from a height: every
+      //  slope was terraced and flooded, and the hills looked glazed); a flooded paddy only where it is warm and wet,
+      //  else tea or vines; elsewhere the steep is left to grazing)
+      else if(g.slope < 1.1 && g.slope > 0.4 && w !== 'builders' && w !== 'ruins' && mnValue(a/(W*0.4) + 3.3, z/(W*0.4) - 7.7, s + 87) > 0.45){
+        const d = W*0.003, ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d), gl = Math.hypot(ex, ez) || 1, dr = V.dryAt(a, z), warm = mnValue(a/(W*0.5) + 9.1, z/(W*0.5) + 1.7, s + 31) > 0.5;
+        f = { a, z, ux: -ez/gl, uz: ex/gl, hl: hl*0.8, hw: hw*0.8, w, crop: dr < 0.38 && warm ? 'rice' : dr > 0.55 ? 'vines' : 'tea', step: (3 + 3*R())*M/Math.max(0.6, g.slope) }; }
       else continue;
+      // (Ruby, seen from a height: fields lay over each other. Now one never crosses another, whatever way each is
+      //  turned (their rectangles tested on all four axes), nor a way, nor a house and its yard)
+      // (a field that won't fit is tried once more a third smaller, as a smaller field fills the corner left between others)
+      const fits = () => !(fieldClash(f, 2*M) || bldgIn(f, 6*M) || yardIn(f) || !wayClear(f)); if(!fits()){ f.hl *= 0.66; f.hw *= 0.66; if(!fits()) continue; }
       f.edge = f.step ? (f.crop === 'rice' ? 'bund' : 'wall') : f.crop === 'rice' ? 'bund' : w === 'builders' ? 'none' : V.dryAt(a, z) > 0.5 || g.slope > 0.15 ? 'wall' : 'hedge';
       f.i = fields.length; fields.push(f);
-      const ext = Math.max(f.hl, f.hw); for(let bi = Math.floor((a - ext)/FBIN); bi <= Math.floor((a + ext)/FBIN); bi++) for(let bj = Math.floor((z - ext)/FBIN); bj <= Math.floor((z + ext)/FBIN); bj++){ const k = bi + ',' + bj; if(!fbins.has(k)) fbins.set(k, []); fbins.get(k).push(f); } } });
+      // (now and then a field is being ploughed: its ploughed part and the stubble still to plough, side by side with no
+      //  hedge between, the line between them where the tractor is; see what each field holds, below)
+      if(f.crop === 'ploughed' && !f.step && w !== 'ruins' && rgRand(s, 1440, f.i)() < 0.35*(0.3 + 0.7*Math.min(1, CL))){ const Rp = rgRand(s, 1441, f.i), cut = (Rp()*1.2 - 0.6)*f.hw, at2 = v => [f.a - v*f.uz, f.z + v*f.ux];
+        const g2 = { ...f, crop: 'stubble', hw: (f.hw - cut)/2, openV: -1, rest: true }, va = (-f.hw + cut)/2, vb = (cut + f.hw)/2; [g2.a, g2.z] = at2(vb); const hwA = (cut + f.hw)/2; [f.a, f.z] = at2(va); f.hw = hwA; f.openV = 1; f.plough = Rp() < 0.5 ? 1 : -1;
+        g2.i = fields.length; fields.push(g2); const e2 = Math.hypot(g2.hl, g2.hw); for(let bi = Math.floor((g2.a - e2)/FBIN); bi <= Math.floor((g2.a + e2)/FBIN); bi++) for(let bj = Math.floor((g2.z - e2)/FBIN); bj <= Math.floor((g2.z + e2)/FBIN); bj++){ const k = bi + ',' + bj; if(!fbins.has(k)) fbins.set(k, []); fbins.get(k).push(g2); } }
+      const ext = Math.hypot(f.hl, f.hw); for(let bi = Math.floor((f.a - ext)/FBIN); bi <= Math.floor((f.a + ext)/FBIN); bi++) for(let bj = Math.floor((f.z - ext)/FBIN); bj <= Math.floor((f.z + ext)/FBIN); bj++){ const k = bi + ',' + bj; if(!fbins.has(k)) fbins.set(k, []); fbins.get(k).push(f); } } });
   out.fields = fields;
   // THE SHORE (Ruby: "more interactions nobody asked for"): where a town comes down to the water, a boat or two moored
   // off it, each at the end of a wooden jetty run out from the bank; along the tideline now and then a beachcomber
@@ -870,13 +985,32 @@ function rgStore(V){
     for(const f of fields){ const R = rgRand(s, 1410, f.i), at2 = (u, v) => [f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux];
       const put = (kind, u, v, extra = {}) => { const [a, z] = at2(u, v); if(Math.abs(z) > W*0.485) return; out.push({ c: kind === 'shepherd' || kind === 'harvester' ? 'bot' : 'prop', w: f.w, kind, hM: pkMetres(kind, R()), a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(f.uz, f.ux) + (R() < 0.5 ? 0 : Math.PI), ...extra }); };
       if(f.step) continue;
+      // (an orchard's trees in their rows, a few metres apart, an olive grove's further; an orchard's apples or plums on
+      //  half of them; the grass under them; they keep a row's width in from its edge)
+      // (a traditional orchard: apples on a 9 m grid, cherries on 20, olives on 10 to 12; the grid turned a little off
+      //  the field's, each tree a little off its place, one place in six or so empty, now and then a young tree at half
+      //  size; docs/prior-art/ringworld-countryside.md §14. A modern orchard or hedgerow grove is rows, painted as a crop)
+      if(f.crop === 'orchard' || f.crop === 'olives'){ const ol = f.crop === 'olives', kind = ol ? 'olive' : R() < 0.25 ? 'cherry' : 'fruit', sp0 = (ol ? 10 + 2*R() : kind === 'cherry' ? 18 + 4*R() : 8.5 + 1.5*R())*M, sp = Math.max(sp0, Math.sqrt(f.hl*f.hw*4/260)), fruit = !ol && R() < 0.5;
+        const tw = (R() - 0.5)*0.35, ct = Math.cos(tw), st = Math.sin(tw);
+        for(let i2 = -Math.ceil(f.hl/sp) - 1; i2 <= Math.ceil(f.hl/sp) + 1; i2++) for(let j2 = -Math.ceil(f.hw/sp) - 1; j2 <= Math.ceil(f.hw/sp) + 1; j2++){
+          const gu = i2*sp + (R() - 0.5)*1.5*M, gv = j2*sp + (R() - 0.5)*1.5*M, u = gu*ct - gv*st, v = gu*st + gv*ct; if(Math.abs(u) > f.hl - sp*0.45 || Math.abs(v) > f.hw - sp*0.45 || R() < 0.15) continue;
+          put(kind, u, v, { fruit }); const o2 = out[out.length - 1]; o2.c = 'tree'; if(kind === 'cherry') o2.hM *= 0.6; if(R() < 0.08) o2.hM *= 0.5; }
+        continue; }
+      // (the stones a farmer cleared off a ploughed or mown field, heaped at a corner or along its edge)
+      if(['ploughed', 'wheat', 'barley', 'stubble', 'maize', 'hay', 'pasture'].includes(f.crop) && !f.rest && R() < 0.2*CLF*(0.4 + V.forms)){ const cu = R() < 0.5 ? -1 : 1, cv = R() < 0.5 ? -1 : 1; put('stonepile', cu*(f.hl - 3*M)*(R() < 0.6 ? 1 : R()), cv*(f.hw + 2.5*M)); }
+      // (a field being ploughed: the tractor on the line between ploughed and not, turned along the furrows, and the gulls
+      //  that follow a plough, wheeling over the fresh furrow behind it and down in it)
+      if(f.plough){ const ut = (R()*1.6 - 0.8)*f.hl; put('tractor', ut, f.hw - 2*M, { face: Math.atan2(f.uz, f.ux) + (f.plough < 0 ? Math.PI : 0) });
+        if(R() < 0.85){ put('gulls', ut + f.plough*(3 + 6*R())*M, f.hw - 1*M); out[out.length - 1].c = 'life'; } }
+      if(f.rest) continue;
       if(f.crop === 'stubble' && R() < 0.8*CLF){ const n = 4 + Math.floor(R()*10), rows = 1 + Math.floor(R()*3); for(let k = 0; k < n; k++) put('haybale', (R()*2 - 1)*f.hl*0.85, ((k % rows) + 0.5)/rows*f.hw*1.6 - f.hw*0.8 + (R() - 0.5)*f.hw*0.1); }
       if(f.crop === 'hay' && R() < 0.6*CLF){ const n = 1 + Math.floor(R()*3); for(let k = 0; k < n; k++) put('haystack', (R()*2 - 1)*f.hl*0.7, (R()*2 - 1)*f.hw*0.6); }
       if(f.crop === 'pasture' && R() < 0.55*CLF){ const cu = (R()*2 - 1)*f.hl*0.6, cv = (R()*2 - 1)*f.hw*0.5, n = 3 + Math.floor(R()*10);
         for(let k = 0; k < n; k++){ const an = R()*Math.PI*2, rd = (2 + 14*Math.sqrt(R()))*M; put('sheep', cu + Math.cos(an)*rd, cv + Math.sin(an)*rd*0.7, { face: R()*Math.PI*2 }); }
         if(R() < 0.25) put('shepherd', cu + 18*M, cv); }
       if((f.crop === 'wheat' || f.crop === 'maize' || f.crop === 'barley') && R() < 0.12*CLF) put('scarecrow', (R()*2 - 1)*f.hl*0.5, (R()*2 - 1)*f.hw*0.5);
-      if((f.crop === 'wheat' || f.crop === 'barley') && f.w !== 'ruins' && R() < 0.06) put('harvester', (R()*2 - 1)*f.hl*0.6, (R()*2 - 1)*f.hw*0.5, { face: Math.atan2(f.uz, f.ux) });
+      if((f.crop === 'wheat' || f.crop === 'barley') && f.w !== 'ruins' && R() < 0.06){ const hu = (R()*2 - 1)*f.hl*0.6, hv = (R()*2 - 1)*f.hw*0.5; put('harvester', hu, hv, { face: Math.atan2(f.uz, f.ux) });
+        if(R() < 0.6){ put('gulls', hu, hv + 6*M); out[out.length - 1].c = 'life'; } }   // (the same wave of gulls follows the harvester as it cuts)
       if((f.crop === 'lavender' || f.crop === 'rapeseed' || f.crop === 'moonflower') && R() < 0.3*CLF) put('beehives', f.hl + 2*M, (R()*2 - 1)*f.hw*0.8);
       if(f.crop === 'stubble' && f.w !== 'ruins' && R() < 0.04*CLF) put('tractor', f.hl - 6*M, (R()*2 - 1)*f.hw*0.7);
       if(f.edge === 'hedge') for(let k = 0, n = Math.floor(f.hl*2/(25*M)); k < n; k++) if(R() < 0.18*V.life*2){ const side = R() < 0.5 ? -1 : 1, kind = ['broadleaf', 'broadleaf', 'poplar', 'birch'][Math.floor(R()*4)];
@@ -892,7 +1026,8 @@ function rgStore(V){
     return { c: 'tree', w, kind, hM }; });
   // ROCKS: boulders where the land is rough
   // (boulders gather where the land is steep, as scree under a slope)
-  sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope))) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
+  // (never in a field: a farmer clears the stones off it, and they lie in heaps at its edge, below)
+  sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope)) || inField(a, z, 3*M)) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
   // GRASS AND FLOWERS near you
   sow(4, W*0.0012, W*0.004, W*0.05, 3, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > RG_PROF[w].gr*V.life*1.4) return null; return { c: 'grass', w, kind: 'grass', hM: pkMetres('grass', R()) }; });
   // SMALL LIFE lives on some rings, not all: insects, fairies, flowers, slime and kites flown on a windy day, each world
@@ -1144,9 +1279,9 @@ function rgPaintLand(x, mk, dk, V){
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));   // (its colours by the sun that reaches it, under a cloud's shadow or not; its nights by the hour)
     if(o.c === 'tree'){ const h = o.hM*f[2]; if(h < px(1.6) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || h < px(4) ? null : [X - h*0.13, X + h*0.13, Y - h*0.8, Y - h*0.4])) return;
-      const green = rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, cday, haze);
+      const green = o.kind === 'olive' ? [118, 134, 106] : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, cday, haze);
       const tc = { trunk: rgLit(V, [70, 52, 40], cday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), cday, haze, AIR), body: rgLit(V, green, cday, haze, AIR),
-        lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), cday, haze, AIR), glow: c.glow, sd: c.sd, L: LT };
+        lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), cday, haze, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], cday, haze, AIR) : null };
       // (a tree has no front: half of them are drawn mirrored, their light kept where it is)
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
@@ -1308,10 +1443,12 @@ function rgPaintLand(x, mk, dk, V){
         if(f.step){ const wdt = Math.max(px(0.6), step*ppm/M1*0.22); x.strokeStyle = rsCss(lit(rsMix(base, [0, 0, 0], 0.35)), 0.8); x.lineWidth = wdt; x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
           x.strokeStyle = rsCss(lit(rsMix(base, [255, 248, 230], 0.25)), 0.7); x.lineWidth = Math.max(px(0.4), wdt*0.35); x.beginPath(); x.moveTo(A[0], A[1] - wdt*0.6); x.lineTo(B[0], B[1] - wdt*0.6); x.stroke(); continue; }
         const rc = C.row ? C.row[1] : C.stripe[1]; if(C.stripe && k % 2) continue;
-        x.strokeStyle = rsCss(lit(rc), C.stripe ? 0.55 : 0.75); x.lineWidth = Math.max(px(0.4), step*ppm/M1*(C.stripe ? 0.5 : 0.35)); x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke(); } }
+        x.strokeStyle = rsCss(lit(rc), C.stripe ? 0.55 : 0.75); x.lineWidth = Math.max(px(0.4), step*ppm/M1*(C.stripe ? 0.5 : 0.35)); x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
+        // (near, a furrow's turned ridge catches the light along its top, so it reads as soil turned, not a pipe laid)
+        if(f.crop === 'ploughed' && step*ppm/M1 > px(5)){ const wr = step*ppm/M1*0.35; x.strokeStyle = rsCss(lit(rsMix(C.c, [255, 240, 214], 0.28)), 0.6); x.lineWidth = wr*0.3; x.beginPath(); x.moveTo(A[0], A[1] - wr*0.45); x.lineTo(B[0], B[1] - wr*0.45); x.stroke(); } } }
     if(C.glow){ const nt = 1 - rsSmooth(0.3, 0.7, day); if(nt > 0.2){ const [cx, cy] = [(q[0][0] + q[2][0])/2, (q[0][1] + q[2][1])/2]; rgGlow(x, cx, cy, Math.hypot(q[2][0] - q[0][0], q[2][1] - q[0][1])*0.6, colsOf(f.w, day, haze).glow, 0.25*nt); } }
     // (its hedge or wall, along whichever of the field's own edges this piece lies on, standing up from the ground)
-    const edges = []; if(v0 <= -f.hw + 1e-9) edges.push([u0, v0, u1, v0]); if(v1 >= f.hw - 1e-9) edges.push([u0, v1, u1, v1]); if(u0 <= -f.hl + 1e-9) edges.push([u0, v0, u0, v1]); if(u1 >= f.hl - 1e-9) edges.push([u1, v0, u1, v1]);
+    const edges = []; if(v0 <= -f.hw + 1e-9 && f.openV !== -1) edges.push([u0, v0, u1, v0]); if(v1 >= f.hw - 1e-9 && f.openV !== 1) edges.push([u0, v1, u1, v1]); if(u0 <= -f.hl + 1e-9) edges.push([u0, v0, u0, v1]); if(u1 >= f.hl - 1e-9) edges.push([u1, v0, u1, v1]);
     if(f.edge === 'none' || !edges.length) return;
     const H = f.edge === 'hedge' ? 1.6*M1 : f.edge === 'wall' ? 1.1*M1 : 0.3*M1, col = f.edge === 'hedge' ? rsMix([62, 102, 56], V.land, 0.3) : f.edge === 'wall' ? [150, 144, 132] : rsMix(C.c, [120, 104, 80], 0.6);
     for(const [ua, va, ub, vb] of edges){ const A = P(ua, va), B = P(ub, vb), A2 = P(ua, va, H), B2 = P(ub, vb, H); if(!A || !B || !A2 || !B2) continue;
@@ -1513,6 +1650,10 @@ function rgPaintLand(x, mk, dk, V){
     const { k, d, pts } = l, haze = hazeOf(d), mid = pts[pts.length >> 1], day = ringDay(L, mid.a), yC = mid.Y;
     const depth = Math.max(px(6), prevY == null ? wh : Math.abs(yC - prevY)*1.4 + px(4)); prevY = yC;
     const gm = rgGround(V, mid.a, mid.z, mid.ec), base = rgLit(V, gm, day, haze, AIR), sil = [...pts.map(p => [p.X, p.Y]), [pts[pts.length - 1].X, wh + 4], [pts[0].X, wh + 4]];
+    // (Ruby, seen from a height: the ridges' lit bands and steep facets hung across the land like panes of glass. A ridge
+    //  is a painter's silhouette against the land behind; looked down on from above, the land is its face, not its
+    //  edge, so the more steeply you look down on a ridge the thinner its band and facets are painted)
+    const seam = 1 - 0.7*rsSmooth(0.06, 0.35, Math.max(0, (1 - mid.ec) - L.Px)/Math.max(1e-9, d));
     // the ridge in one wash: lit along its crest, deepening below it (as a painter blocks a ridge), then its facets where
     // it is steep (mountains, cliffs), a bright rim on its crest, water flat with a glint
     { const yTop = Math.min(...pts.map(p => p.Y)), g = x.createLinearGradient(0, yTop, 0, yTop + depth*1.6 + px(4)), litC = rgLit(V, rsMix(gm, [255, 244, 222], 0.22), day, haze, AIR), darkC = rgLit(V, rsMix(gm, BLACK, 0.3), day, haze, AIR);
@@ -1527,12 +1668,14 @@ function rgPaintLand(x, mk, dk, V){
       if(p0.sea && p1.sea){ rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + depth*0.5], [p0.X, p0.Y + depth*0.5]], rsCss(cl));
         // (with the clock the glints move on the water)
         if((V.time ? wn(am + V.time*W*0.000002, zm, l.ws, 1) : n1) < 0.5){ x.fillStyle = rsCss(rsMix(cl, [255, 255, 255], 0.3*day + 0.05)); x.fillRect(p0.X, p0.Y + depth*n2*0.25, (p1.X - p0.X)*(0.3 + 0.6*n3), Math.max(rgPx(1), depth*0.03)); } continue; }
-      const face = rsFace(dark, lit, p1.Y - p0.Y, p0.X - p1.X, LT), slope = Math.abs(p1.Y - p0.Y)/Math.max(1, Math.abs(p1.X - p0.X));
-      if(slope > 0.32){ const q0 = [p0.X + (p1.X - p0.X)*(n1 - 0.5)*0.3, p0.Y + depth*(0.35 + 0.45*n2)], q1 = [p1.X, p1.Y + depth*(0.35 + 0.45*n3)];
+      // (a facet only where the land itself is steep along the crest, not wherever the crest looks steep on the page, as
+      //  a gentle ridge running away from you does when you look down on it)
+      const face = rsFace(dark, lit, p1.Y - p0.Y, p0.X - p1.X, LT), slope = Math.abs(p1.Y - p0.Y)/Math.max(1, Math.abs(p1.X - p0.X)), gsl = Math.abs(p1.ec - p0.ec)/Math.max(1e-9, Math.hypot(p1.a - p0.a, p1.z - p0.z));
+      if(slope > 0.32 && gsl > 0.2){ const q0 = [p0.X + (p1.X - p0.X)*(n1 - 0.5)*0.3, p0.Y + depth*seam*(0.35 + 0.45*n2)], q1 = [p1.X, p1.Y + depth*seam*(0.35 + 0.45*n3)];
         rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03, n4))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03, n1))); }
       // (the lit band under a gentle crest: its lower edge by the land's own noise at each point, so it runs on from
       //  facet to facet without a step)
-      else { const bdOf = p => depth*(0.1 + 0.14*wn(p.a, p.z, l.ws, 2)), bd = bdOf(p1); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bdOf(p0)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02, n4)));
+      else { const bdOf = p => depth*seam*(0.1 + 0.14*wn(p.a, p.z, l.ws, 2)), bd = bdOf(p1); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bdOf(p0)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02, n4)));
         // FIELDS (Ruby: "more detail in the distance … in the ground"): where people farm (open, low, not forest, not
         // town), the land below a crest is a mosaic of fields, each its crop's colour by where it lies (ripe, green,
         // fallow, now and then in flower), hedged with a dark line; far off, at the scale a painter shows them
@@ -1543,7 +1686,7 @@ function rgPaintLand(x, mk, dk, V){
             if(hv < 0.25) continue; const crop = CROPS[Math.min(4, Math.floor(hv*hv*5.6))], fc = rgLit(V, rsMix(gc, crop, 0.45), day, haze, AIR);
             const A = [p0.X, p0.Y + depth*v0], B = [p1.X, p1.Y + depth*v0], C2 = [p1.X, p1.Y + depth*v1], D = [p0.X, p0.Y + depth*v1];
             rsPoly(x, [A, B, C2, D], rsCss(fc, 0.75)); x.strokeStyle = hedge; x.lineWidth = Math.max(px(0.6), depth*0.012); x.beginPath(); x.moveTo(D[0], D[1]); x.lineTo(C2[0], C2[1]); x.stroke(); } } }
-      x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
+      x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), (0.7*day + 0.1)*(0.4 + 0.6*seam)); x.lineWidth = Math.max(px(1.2), depth*0.025*seam); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
     // then the roads and the things between this ridge and the next nearer one, far to near
     const dn = li + 1 < lay.length ? lay[li + 1].d : 0; drawFields(dn, d); drawWays(dn, d);
     if(SHC){ x.save(); x.beginPath(); sil.forEach(([p0, p1], q) => q ? x.lineTo(p0, p1) : x.moveTo(p0, p1)); x.closePath(); x.clip(); x.imageSmoothingEnabled = true; x.drawImage(SHC, 0, 0, ww, wh); x.restore(); }

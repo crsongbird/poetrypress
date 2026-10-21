@@ -428,6 +428,23 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     a house's walls and out of the fields, except along a hedge. On a town's shore, boats moored at their jetties (ways
     laid as a deck); where the builders were, now and then a bridge of hard light across the water. By night a house
     too far to draw, a lamp, and the lights between the houses (`glim`) are points of light, coming on through the dusk.
+  - **The countryside from a height** (Ruby: "look at it in a wide view from a little height, and say what it needs";
+    docs/prior-art/ringworld-countryside.md §12–17): out in the country (the wilds and magic) a village stands only
+    round a town's heart, closest there and thinning to its edge; the rest of the buildings gather at seats
+    (`seatOf`), some 600 to 900 m apart: a farmstead's house and its barns and sheds round one yard (`RG_FARM`, by its
+    region's tradition), laid out as the Peak District's are (four in ten a linear range, nearly as many a courtyard,
+    the rest a loose cluster; a cold country's yard keeps one tree), or a hamlet round a green with its well; each
+    has a lane walked out to the nearest way, and by night only they show lights. In windy country a farmstead has a
+    windbreak on its two windward sides, an L of three rows from the tallest trees inside to shrubs outside. A field
+    is tested against every other on all four axes they are turned on (`fieldClash`), against buildings, yards and
+    windbreaks and against the ways, and tried a third smaller before it gives up a place. Terraces only where the
+    country terraces and the slope is steep, a flooded paddy only where it is warm and wet. Rocks keep out of the
+    fields; the stones cleared off them lie in low heaps at their edges (`stonepile`). Traditional orchards and olive
+    groves stand on their grids (`fruit`, `olive` trees, apples 9 m apart, cherries 20, olives 10 to 12), modern ones
+    and hedgerow groves are rows painted as a crop. Now and then a field is half ploughed, the tractor on the line
+    between, the gulls (`gulls`) waiting level with it, a few in the air; the same gulls follow a harvester. Looked down
+    on, a ridge's lit band and its facets are painted thinner, and facets only where the land itself is steep, so
+    they no longer hang like panes.
   - **Things in three dimensions** (`pkSpace`, `pkBox3`): the newest things are built of solids in their own frame and
     carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the vehicles below,
     and the droids that walk or roll on tracks, `PK_BOTS3`).
