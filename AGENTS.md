@@ -109,9 +109,9 @@ into an image people stop to read.
     Beyond what it can see: **retire things whole** (the code, its strings,
     CSS, tests, docs and wiki go together), **merge what repeats** (one
     list, one table, one source for a number), and keep the tests to
-    behavior and invariants (§8 Add a test). Every few releases, prune the
-    stylesheet and review the tests (§3 step 6); the hygiene test checks
-    the changelog says it happened.
+    behavior and invariants (§8 Add a test). Every few releases, review the
+    tests (§3 step 6); the hygiene test checks the changelog says it
+    happened.
 
 **Every pass:** read the parts of this file you'll touch → read ROADMAP.md
 if it's Athanor work → do the work → `sh test.sh` green → look at it →

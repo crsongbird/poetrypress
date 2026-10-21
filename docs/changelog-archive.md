@@ -2,6 +2,20 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Bianca (2026-10-20)
+
+- **The tab bar lines up**: the five tabs were already the same width, but
+  their glyphs were drawn at different sizes (the Inscription knot small,
+  the Rituals pentagram and the Materia diamond large) and the Thoughtforms
+  glyph sat low; each glyph now fills the same box at the same centre, with
+  the same weight of line, and a faint line parts the tabs, as the app's
+  other buttons are parted.
+- **The editor is called Inscription Editor (PML).**
+- **Controls is plainly a drawer**: a bar across the panel with room above
+  it, saying how many sliders it holds and with a chevron at its right,
+  shut or open.
+- **Opacity stops short of the edge**, as every other slider now does.
+
 ## Uranus–Ophelia (2026-10-20)
 
 - **An eye on the Incantation Editor** takes the poem off the page and puts

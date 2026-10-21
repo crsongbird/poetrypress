@@ -4,6 +4,19 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Margaret (2026-10-21)
+
+- Fixed: on some Ringworld seeds a rune of wall graffiti hung in the sky, as big as a moon. Graffiti, the builders'
+  glowing script and the city screens painted on a far wall seen almost edge on spilled off it; now whatever is
+  painted on a wall stays inside that wall, and a word of graffiti slants as a hand would write it.
+
+### Under the hood
+- Housekeeping: reviewed the tests: the Ringworld's walls had no check that their art stays on them; chains.test.mjs
+  now renders the reported seed and finds no mark bigger than a star standing free in its sky (it fails on the old
+  code, 366 pixels). The hygiene suite's stylesheet window went with that step; no suite still tests the retired end-on
+  drawings of cars, tractors and carts. AGENTS.md's rule 12 no longer lists pruning the stylesheet.
+- Texture fingerprints updated for the Ringworld's walls.
+
 ## Uranus–Sycorax (2026-10-21)
 
 - Nothing you'll see: a housekeeping release.
@@ -446,17 +459,3 @@ prints it).
   - the list naming each surface's slider count became one rule (two to eight sliders);
   - the rack's rule has a suite of its own;
   - nothing else had outlived what it tests.
-
-## Uranus–Bianca (2026-10-20)
-
-- **The tab bar lines up**: the five tabs were already the same width, but
-  their glyphs were drawn at different sizes (the Inscription knot small,
-  the Rituals pentagram and the Materia diamond large) and the Thoughtforms
-  glyph sat low; each glyph now fills the same box at the same centre, with
-  the same weight of line, and a faint line parts the tabs, as the app's
-  other buttons are parted.
-- **The editor is called Inscription Editor (PML).**
-- **Controls is plainly a drawer**: a bar across the panel with room above
-  it, saying how many sliders it holds and with a chevron at its right,
-  shut or open.
-- **Opacity stops short of the edge**, as every other slider now does.
