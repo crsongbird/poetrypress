@@ -2,6 +2,31 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Mab (2026-10-20)
+
+- **The Ringworld's countryside.** Round every village and town the land is farmed now: a patchwork of fields laid
+  out on each farm's own lines, thinning toward the wild, in the crops its climate grows (wheat, barley, hay with its
+  mowing stripes, pasture, the plough's furrows, rapeseed, maize; lavender and vines in dry country; rice in the warm
+  and wet; the builders' gardens, the magic world's moonflowers glowing at night, the ruins gone to fallow). Fields are
+  hedged in wet country and walled in dry, and on the steep near a town the land is terraced along its contours.
+- **What the fields hold:** round bales on the stubble, ricks in the hay, a flock grazing on the pasture (now and then
+  with its shepherd droid), a scarecrow in the corn, hives beside the flowers, a harvester droid at work, a tractor at
+  the field's end. A tree is left standing in a hedge here and there; elsewhere trees keep out of the fields and back
+  from a house's walls.
+- **The shore:** where a town comes down to the water, boats moored off it at the end of wooden jetties, and a
+  beachcomber droid along the tideline. Where the builders were, now and then a bridge of hard light crosses the water.
+- **A town's lights at night.** Far off, every house too small to draw is a lit window, every street lamp a point on its
+  string, and the lights between the houses come on one by one through the dusk. A lamplighter droid makes its round at
+  dusk.
+- **Drawn in the round.** The sheep, the boats and the harvester are built as solids and drawn as the eye sees them
+  turned, a little from above, the way the turned things will go next.
+
+### Under the hood
+- The store lays `out.fields` (`RG_CROPS`), the jetties and bridges as ways laid at a deck's height, and the town's
+  `glim` lights; the land paints fields piece by piece with the ridges, as it paints the ways. paintKit's `pkSpace` and
+  `pkBox3` draw a thing's solids in its own frame; `pkSolidProp` draws the sheep and the boats; four new robots in
+  `pkRobot`.
+
 ## Uranus–Puck (2026-10-20)
 
 - **Moving Image.** Hold Save image (or right-click it) for a small sheet that makes the page into a short film, drawn

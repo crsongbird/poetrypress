@@ -97,8 +97,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   Athanor's surface has no Light/Dark remap of its own yet.
 - The Athanor's GPU passes (blur, warp inside a graph).
 - Dream Bloom's convolution on the GPU (PERFORMANCE-AUDIT "Next on the GPU").
-- THE NEXT TEST REVIEW (left by Saturn–Tarqeq's and Saturn–Mundilfari's, larger rewrites): persistenceCoverage slices
-  appEvents' functions out of its source (rewrite on audit.test's save-and-load harness, every control in index.html);
-  poem.test's renderer checks (the layout record, Text Clearing) as behavior; mobileCss's phone invariants into
-  invariants.test (§7 Phones) and the rest as behavior in mobileLayout.
+- THE NEXT TEST REVIEW: mobileCss.test reads the stylesheet rule by rule; its phone invariants belong in
+  invariants.test (§7 Phones) and the rest as behavior (mobileLayout, or the built page on a phone in Playwright).
 

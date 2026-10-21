@@ -376,8 +376,8 @@ export function restoreSettings(s){
   $('bgGradientToggle').checked = !!s.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!s.bgGradient);
   if(s.bg2) setColorField('bgColor2Hex', s.bg2);
-  if(s.bg3) setColorField('bgColor3Hex', s.bg3);
-  if(s.bg4) setColorField('bgColor4Hex', s.bg4);
+  setColorField('bgColor3Hex', s.bg3 || $('bgColor3Hex').defaultValue);   // (a stop the look doesn't set: the page's own, never the last look's)
+  setColorField('bgColor4Hex', s.bg4 || $('bgColor4Hex').defaultValue);
   state.page.bgStops = s.bg4 ? 4 : (s.bg3 ? 3 : 2);
   syncStopFields(state.page.bgStops, 'bgColor3Field', 'bgColor4Field');
   setActiveRadioValue('bgStopsGroup', state.page.bgStops);
@@ -387,8 +387,8 @@ export function restoreSettings(s){
   $('textGradientToggle').checked = !!s.textGradient;
   $('gradientBlock').classList.toggle('open', !!s.textGradient);
   if(s.text2) setColorField('textColor2Hex', s.text2);
-  if(s.text3) setColorField('textColor3Hex', s.text3);
-  if(s.text4) setColorField('textColor4Hex', s.text4);
+  setColorField('textColor3Hex', s.text3 || $('textColor3Hex').defaultValue);
+  setColorField('textColor4Hex', s.text4 || $('textColor4Hex').defaultValue);
   state.page.textStops = s.text4 ? 4 : (s.text3 ? 3 : 2);
   syncStopFields(state.page.textStops, 'textColor3Field', 'textColor4Field');
   setActiveRadioValue('textStopsGroup', state.page.textStops);
@@ -493,10 +493,10 @@ function restoreSurfaceDetails(s){
     putCamera(s.cameraTurn !== undefined ? s.cameraTurn : d.turn, s.cameraView !== undefined ? s.cameraView : d.view, s.cameraZoom !== undefined ? s.cameraZoom : d.zoom); }
   if(s.textureTint1) setColorField('textureTint1Hex', s.textureTint1);
   if(s.textureTint2) setColorField('textureTint2Hex', s.textureTint2);
-  if(s.textureTint9) setColorField('textureTint9Hex', s.textureTint9);
-  if(s.textureTint10) setColorField('textureTint10Hex', s.textureTint10);
-  if(s.textureTint11) setColorField('textureTint11Hex', s.textureTint11);
-  if(s.textureTint12) setColorField('textureTint12Hex', s.textureTint12);
+  // (the third to sixth hues: the look's own, or, where it has none, its surface's defaults, never the last look's)
+  { const defs = capsFor(s.textureType || $('textureType').value).tintDefaults || [];
+    for(let i = 2; i < 6; i++){ const k = SURFACE_HUE_KEYS[i], d = defs[i];
+      setColorField(k + 'Hex', s[k] || (d === 'accent1' ? $('accent1ColorHex').value : d === 'accent2' ? $('accent2ColorHex').value : d === 'own' ? '' : d || $(k + 'Hex').defaultValue)); } }
   // material hues: white (none) unless the look carries them
   setColorField('textureTint3Hex', s.textureTint3 || '#FFFFFF');
   setColorField('textureTint4Hex', s.textureTint4 || '#FFFFFF');
@@ -739,8 +739,8 @@ export function applyPreset(p){
   $('bgGradientToggle').checked = !!p.bgGradient;
   $('bgGradientBlock').classList.toggle('open', !!p.bgGradient);
   if(p.bg2) setColorField('bgColor2Hex', p.bg2);
-  if(p.bg3) setColorField('bgColor3Hex', p.bg3);
-  if(p.bg4) setColorField('bgColor4Hex', p.bg4);
+  setColorField('bgColor3Hex', p.bg3 || $('bgColor3Hex').defaultValue);   // (a stop the look doesn't set: the page's own, never the last look's)
+  setColorField('bgColor4Hex', p.bg4 || $('bgColor4Hex').defaultValue);
   state.page.bgStops = p.bg4 ? 4 : (p.bg3 ? 3 : 2);
   syncStopFields(state.page.bgStops, 'bgColor3Field', 'bgColor4Field');
   setActiveRadioValue('bgStopsGroup', state.page.bgStops);
@@ -750,8 +750,8 @@ export function applyPreset(p){
   $('textGradientToggle').checked = !!p.textGradient;
   $('gradientBlock').classList.toggle('open', !!p.textGradient);
   if(p.text2) setColorField('textColor2Hex', p.text2);
-  if(p.text3) setColorField('textColor3Hex', p.text3);
-  if(p.text4) setColorField('textColor4Hex', p.text4);
+  setColorField('textColor3Hex', p.text3 || $('textColor3Hex').defaultValue);
+  setColorField('textColor4Hex', p.text4 || $('textColor4Hex').defaultValue);
   state.page.textStops = p.text4 ? 4 : (p.text3 ? 3 : 2);
   syncStopFields(state.page.textStops, 'textColor3Field', 'textColor4Field');
   setActiveRadioValue('textStopsGroup', state.page.textStops);

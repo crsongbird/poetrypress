@@ -406,6 +406,7 @@ function makeFakeElement(id, defaults = {}){
     id,
     tagName: (defaults.tag || 'div').toUpperCase(),
     value: defaults.value ?? '',
+    defaultValue: defaults.value ?? '',   // (as a real input's: its value attribute in the page)
     checked: defaults.checked ?? false,
     disabled: false,
     innerHTML: '',

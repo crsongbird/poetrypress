@@ -5,7 +5,8 @@
  * gradients, rhyme markers, glass, cut, blends, arcs and waves, named styles,
  * fonts by name); a tracked segment takes the room it is drawn in (a measure
  * once blind to /track drew the next words on top of it); the text's caches
- * follow the poem and the typeface; and the shaped lines' geometry.
+ * follow the poem and the typeface; the shaped lines' geometry; the layout the page records for its surfaces (a run per
+ * line, the punctuation after them); and Text Clearing's mask taken out of a surface.
  * Pixels are the eye's to judge (see canvasMock.mjs); what is checked is what
  * render() draws, and where.
  *
@@ -17,8 +18,10 @@ import { check, done } from './harness.mjs';
 
 // every 2D context the page makes, watched: each run of text it draws, where, and in which font
 const drawn = [];
+const pasted = [];   // (every picture laid with drawImage: under which blend, and how wide the picture was)
 const watch = c => { if(c._watched) return c; c._watched = true;
   const f = c.fillText; c.fillText = function(t, x, y){ drawn.push({ t: String(t), x, y, font: c.font }); return f.apply(c, arguments); };
+  const d = c.drawImage; c.drawImage = function(img){ pasted.push({ op: c.globalCompositeOperation, w: img && img.width }); return d.apply(c, arguments); };
   return c; };
 const watchedCanvas = () => { const cv = makeMockCanvas(), g = cv.getContext.bind(cv); cv.getContext = (...a) => watch(g(...a)); return cv; };
 installCanvasMock();
@@ -127,5 +130,22 @@ check('a font by its name, any case', fontIndexByName('cinzel') >= 0 && fontInde
   check('the page records the poem\'s punctuation: a comma then a full stop, inside the first line\'s run, in reading order',
     marks.length === 2 && marks[0][2] === 2 && marks[1][2] === 1 && marks[0][0] < marks[1][0] && marks.every(([x, y]) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]));
   check('…and the runs read as they did (the marks are three numbers: passed over by every reader of the runs)', runs.length === 2 && lay.split(';').length === 4); }
+
+// THE LAYOUT RECORD: where the words landed, as fractions of the page, one run per line (left, top, right, bottom, line,
+// stanza, rhyme), so the surfaces of the next frame can read it; a new line is a new run
+{ const { textLayoutNow } = await import('../canvasRenderer.js'), { poemRuns } = await import('../steps.js');
+  registry['poemText'].value = 'one line\ntwo lines\n\nthree, a new stanza'; render(); const a = textLayoutNow(), ra = poemRuns(a);
+  registry['poemText'].value = 'one line\ntwo lines\n\nthree, a new stanza\nand four'; render(); const rb = poemRuns(textLayoutNow());
+  check('the page records each line as a run in fractions of the page (inside it, left of right, top over bottom), its stanza counted',
+    ra.length === 3 && ra.every(r => r.length >= 6 && r.slice(0, 4).every(v => v >= 0 && v <= 1) && r[0] < r[2] && r[1] < r[3]) && ra[2][5] > ra[0][5]);
+  check('…and a new line is a new run, the record changed', rb.length === 4 && textLayoutNow() !== a); }
+
+// TEXT CLEARING: a soft mask of the words, made small (192 across, in page fractions, so the preview and the export
+// agree), taken out of the surface (destination-out); at 0 nothing is taken out
+{ const { clearedSurface } = await import('../canvasRenderer.js'), W = 300, H = 400, surf = makeMockCanvas(); surf.width = W; surf.height = H;
+  registry['poemText'].value = 'a line of words\nand another'; render();
+  pasted.length = 0; const kept = clearedSurface(surf, W, H, 0.6), out = pasted.filter(p => p.op === 'destination-out');
+  check('Text Clearing takes a small mask of the words out of the surface (destination-out, 192 across), on a layer of its own; at 0 it hands the surface back untouched',
+    kept !== surf && kept.width === W && out.length === 1 && out[0].w === 192 && clearedSurface(surf, W, H, 0) === surf); }
 
 done();

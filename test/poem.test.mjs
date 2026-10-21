@@ -2,19 +2,17 @@
  * poem.test.mjs — surfaces that know where the poem is.
  *
  * From the future-directions doc Ruby shared: "Treat readability as part of
- * the shader, not a final warning." The page records where its words sit
- * (canvasRenderer TEXT_LAYOUT); Text Clearing quiets any surface behind
- * them; the Athanor's The Poem part hands the same layout to a graph.
+ * the shader, not a final warning." The Athanor's The Poem part hands the
+ * page's layout to a graph (the page's own record of it, and Text Clearing,
+ * are drawn through the real render() in textRender.test.mjs).
  *
  * Run: node test/poem.test.mjs
  */
-import { readFileSync } from 'fs';
 import { check, done } from './harness.mjs';
 globalThis.document = { createElement: () => ({ getContext: () => null }) };
 const { STEPS, poemRuns, stepDistance } = await import('../steps.js'), { WIKI_PARTS } = await import('../athanorWikiParts.js');
 const { evalAthanor, athanorStarter } = await import('../athanor.js');
 const { textureKeyFor } = await import('../textureGenerators.js');
-const cr = readFileSync(new URL('../canvasRenderer.js', import.meta.url), 'utf8');
 
 // the exact distance transform
 { const w = 9, h = 7, m = new Float32Array(w*h); m[3*w + 4] = 1;
@@ -90,11 +88,7 @@ check('the Ripples from the Words starter teaches with The Poem', /"name":"poem"
   const k = (graph, ink) => textureKeyFor('athanor', 300, 400, { graph, ink }), plain = JSON.stringify(athanorStarter('ripples'));
   check('an ink graph\'s cache key follows the ink; any other graph\'s never does', k(inkGraph, '#111111') !== k(inkGraph, '#EEEEEE') && k(plain, '#111111') === k(plain, '#EEEEEE')); }
 
-// the page's side
-check('the renderer records each run as fractions of the page, and asks one more frame when the layout changes',
-  /let TEXT_LAYOUT = '';/.test(cr) && /textRuns\.push\(\[x0\/W, top\/H, x1\/W, \(top \+ h\)\/H, lineNo, stanza, rhyme\]/.test(cr) && /if\(lay !== TEXT_LAYOUT\)\{ TEXT_LAYOUT = lay;/.test(cr));
-check('Text Clearing takes a soft mask of the words out of each surface layer (destination-out), the mask made small in page fractions',
-  /c\.globalCompositeOperation = 'destination-out'; c\.globalAlpha = Math\.min\(1, amount\);/.test(cr) && /const mw = 192, mh = Math\.max\(8, Math\.round\(192\*H\/W\)\)/.test(cr));
+// the page's side (the layout record and Text Clearing: drawn through the real render() in textRender.test.mjs)
 { const { chainReadsPoem } = await import('../textureGenerators.js');
   check('Circuit Board, Broken Glass and Dewy Webs always read it; Halftone, Flow-Field Ink, Contour Map and Silverpoint Hatch only under Shape Aware; Clouds never',
     ['circuit', 'brokenglass', 'dewwebs'].every(t => chainReadsPoem(t, false)) && ['halftone', 'flowfield', 'contour', 'hatch'].every(t => !chainReadsPoem(t, false) && chainReadsPoem(t, true)) && !chainReadsPoem('clouds', true)); }

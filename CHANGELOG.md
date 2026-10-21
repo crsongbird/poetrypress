@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Proteus (2026-10-21)
+
+- Loading a look or a preset puts everything back to that look's own: a third or fourth gradient stop it doesn't use
+  goes back to the page's own colour, and a surface's third to sixth hues to that surface's defaults, never the last
+  look's colours left behind (you'd have met them on adding a stop, or on an older look whose surface has more hues).
+
+### Under the hood
+- Housekeeping: reviewed the tests. persistenceCoverage.test no longer slices the app's functions out of its source:
+  on the booted page it changes every control in index.html as a person would, saves the look, loads another, loads
+  the saved one, and reads the control back; it also checks that loading a look never leaves the last look's value
+  behind (which found the stops and hues above) and never moves the page's shape. poem.test's two checks that read
+  the renderer's source are now behaviour in textRender.test: the layout the page records (a run per line, in
+  fractions of the page) and Text Clearing's mask taken out of a surface (`clearedSurface`, exported for it). The DOM
+  mock's inputs carry their `defaultValue`, as a browser's do.
+
 ## Neptune–Hippocamp (2026-10-21)
 
 - Painted Landscape's river is remade. It is one river winding down its valley, seen in perspective: broad bends
@@ -305,28 +320,3 @@ prints it).
 - Reviewed the tests: the Moving Image's suite gained the sun's day (it comes round, longer than the night, an arc
   without jumps, a lingering dusk); the persistence suite's seven Moving Image exemptions became one list; the
   remaining "it is retired" checks were read and kept, as invariants for old looks, stitches and names.
-
-## Uranus–Mab (2026-10-20)
-
-- **The Ringworld's countryside.** Round every village and town the land is farmed now: a patchwork of fields laid
-  out on each farm's own lines, thinning toward the wild, in the crops its climate grows (wheat, barley, hay with its
-  mowing stripes, pasture, the plough's furrows, rapeseed, maize; lavender and vines in dry country; rice in the warm
-  and wet; the builders' gardens, the magic world's moonflowers glowing at night, the ruins gone to fallow). Fields are
-  hedged in wet country and walled in dry, and on the steep near a town the land is terraced along its contours.
-- **What the fields hold:** round bales on the stubble, ricks in the hay, a flock grazing on the pasture (now and then
-  with its shepherd droid), a scarecrow in the corn, hives beside the flowers, a harvester droid at work, a tractor at
-  the field's end. A tree is left standing in a hedge here and there; elsewhere trees keep out of the fields and back
-  from a house's walls.
-- **The shore:** where a town comes down to the water, boats moored off it at the end of wooden jetties, and a
-  beachcomber droid along the tideline. Where the builders were, now and then a bridge of hard light crosses the water.
-- **A town's lights at night.** Far off, every house too small to draw is a lit window, every street lamp a point on its
-  string, and the lights between the houses come on one by one through the dusk. A lamplighter droid makes its round at
-  dusk.
-- **Drawn in the round.** The sheep, the boats and the harvester are built as solids and drawn as the eye sees them
-  turned, a little from above, the way the turned things will go next.
-
-### Under the hood
-- The store lays `out.fields` (`RG_CROPS`), the jetties and bridges as ways laid at a deck's height, and the town's
-  `glim` lights; the land paints fields piece by piece with the ridges, as it paints the ways. paintKit's `pkSpace` and
-  `pkBox3` draw a thing's solids in its own frame; `pkSolidProp` draws the sheep and the boats; four new robots in
-  `pkRobot`.

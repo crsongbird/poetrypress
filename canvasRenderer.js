@@ -307,7 +307,7 @@ export function measureTextGround(){
   return got && got.result && got.result.lines.length ? got.result : null;
 }
 /** A surface with the words' clearing taken out of it (destination-out), on a layer kept between frames. */
-function clearedSurface(t, W, H, amount){
+export function clearedSurface(t, W, H, amount){   // test hook: exported so textRender.test can clear a surface as render() does
   if(!TEXT_LAYOUT || amount <= 0) return t;
   if(!CLEAR_LAYER) CLEAR_LAYER = document.createElement('canvas');
   if(CLEAR_LAYER.width !== W || CLEAR_LAYER.height !== H){ CLEAR_LAYER.width = W; CLEAR_LAYER.height = H; }

@@ -1,22 +1,26 @@
 /**
- * persistenceCoverage.test.mjs — every control a person can fiddle with is
- * part of a look: saved, restored, and so carried by everything built on
- * those two functions (the Workbench JSON, the Grimoire and shared spells in
- * local storage, undo/redo).
+ * persistenceCoverage.test.mjs — every control a person can fiddle with is part of a look: saved, restored, and so
+ * carried by everything built on those two (the Workbench JSON, the Grimoire and shared spells, undo and redo).
  *
- * Ruby's standing rule: ANY new field, slider, colour or toggle must be
- * captured by the JSON report, save/load/share and local storage. This suite
- * finds every <input>, <select> and <textarea> on the page by itself, so a new
- * control that isn't saved fails here — unless it is in EXEMPT below, with
- * the reason it is not part of a look.
- *
- * (test/audit.test.mjs goes the other way: every saved key round-trips.)
+ * Ruby's standing rule: ANY new field, slider, colour or toggle must be captured by the look. This suite finds every
+ * <input>, <select> and <textarea> in index.html by itself and, on the booted page, for each one: changes it as a
+ * person would (a value it can take, its input and change events), saves the look, loads another look (which must put
+ * the control back, never leave the last look's value behind), loads the saved look, and reads the control back. A
+ * new control that isn't saved and restored fails here, unless it is in EXEMPT below with the reason it is not part
+ * of a look. (audit.test.mjs goes the other way: every saved key round-trips.)
  */
 import { readFileSync } from 'fs';
-import { check, done, UI_FILES } from './harness.mjs';
+import { installCanvasMock, makeMockContext, makeMockCanvas } from './canvasMock.mjs';
+import { installDomMock } from './domMock.mjs';
+import { check, done } from './harness.mjs';
 
-const src = f => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-const html = src('index.html'), ev = UI_FILES.map(src).join('\n'), renderer = src('canvasRenderer.js');
+installCanvasMock();
+const reg = installDomMock(makeMockContext, makeMockCanvas);
+await import('../appEvents.js');
+const { athanorStarter } = await import('../athanor.js');
+const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const save = () => { reg['advancedRefreshBtn'].dispatchEvent({ type: 'click' }); return reg['advancedJson'].value; };
+const load = text => { reg['advancedJson'].value = text; reg['advancedLoadBtn'].dispatchEvent({ type: 'click' }); };
 
 // controls that are deliberately NOT part of a look — each with its reason
 const EXEMPT = {
@@ -46,50 +50,52 @@ const EXEMPT = {
   forgeOpenSelect: 'the Athanor\'s Open drawer: picking one opens that graph on the bench; the bench is kept by itself, not as a control',
   textureSeedWords: 'the seed shown as its phrase: a view of textureSeedValue, which is saved and restored (seedWords.js turns each into the other exactly)',
 };
+// the page's shape is the person's (AGENTS.md §5.4): a look loaded from outside never changes it, and it comes back
+// with the draft (draft.test.mjs), so it is checked to stay put, not to round-trip through a look
+const SHAPE = new Set(['customSizeToggle', 'customW', 'customH']);
+// what a control needs first to be part of the look at all (a third or fourth stop is saved only while in use)
+const radio = (group, val) => { const b = reg[group].children.find(c => c.dataset.val === val); b.dispatchEvent({ type: 'click', target: b }); };
+const CONTEXT = { bgColor3Hex: () => radio('bgStopsGroup', '4'), bgColor4Hex: () => radio('bgStopsGroup', '4'), textColor3Hex: () => radio('textStopsGroup', '4'), textColor4Hex: () => radio('textStopsGroup', '4') };
 
-const ids = [...html.matchAll(/<(input|select|textarea)\b[^>]*\bid="([^"]+)"[^>]*>/g)].map(m => m[2]);
-const bodyIn = (text, name) => { const a = text.search(new RegExp('function ' + name + '\\(')); const b = text.indexOf('\nfunction ', a + 10); return a < 0 ? '' : text.slice(a, b < 0 ? undefined : b); };
-const body = name => bodyIn(ev, name);
-const persisted = ev.slice(ev.indexOf('const PERSISTED = ['), ev.indexOf('];', ev.indexOf('const PERSISTED = [')));
-const persistedIds = new Set([...persisted.matchAll(/\[\s*'[^']+',\s*'([^']+)'/g)].map(m => m[1]));
-// a control may be reached through an alias: const fontSelect = $('fontFamily');
-const aliases = {};
-for(const m of ev.matchAll(/^(?:export )?const (\w+) = \$\('([\w-]+)'\);/gm)) (aliases[m[2]] ||= []).push(m[1]);
-// the surface's own controls are read and written per layer (the upper's or the lower's): the save reads them
-// through surfaceFromDom (canvasRenderer.js), the restore writes them through restoreSurface…() (and the page's
-// shape through restoreShape, which a draft uses too)
-const helpers = (text, prefix) => [...new Set([...text.matchAll(new RegExp(`\\b(${prefix}\\w*)\\(`, 'g'))].map(m => m[1]))];
-const ser = body('serializeCurrentSettings') + helpers(body('serializeCurrentSettings'), 'surfaceFromDom').map(n => bodyIn(renderer, n)).join('\n');
-const res0 = body('restoreSettings') + [...helpers(body('restoreSettings'), 'restoreSurface'), ...helpers(body('restoreSettings'), 'restoreShape')].map(body).join('\n');
-// (the camera's three fields are put back through putCamera, which a preset and a reading use too; the rim light's two
-//  through putRim, which a preset uses too)
-const res = res0 + [...helpers(res0, 'putCamera'), ...helpers(res0, 'putRim')].map(body).join('\n');
-const named = (text, id, quoted) => text.includes(quoted ? `'${id}'` : `$('${id}')`) || (aliases[id] || []).some(a => new RegExp(`\\b${a}\\b`).test(text));
+// every control in the page, with what it is: its type, its range, its options
+const controls = [];
+for(const m of html.matchAll(/<(input|select|textarea)\b([^>]*)>/g)){ const at = m[2], id = (at.match(/\bid="([^"]+)"/) || [])[1]; if(!id) continue;
+  const num = k => { const v = at.match(new RegExp('\\b' + k + '="([^"]+)"')); return v ? +v[1] : undefined; };
+  const opts = m[1] === 'select' ? [...html.slice(m.index, html.indexOf('</select>', m.index)).matchAll(/<option\b[^>]*value="([^"]*)"/g)].map(o => o[1]) : null;
+  controls.push({ id, type: m[1] === 'input' ? ((at.match(/\btype="([^"]+)"/) || [])[1] || 'text') : m[1], min: num('min'), max: num('max'), step: num('step'), opts }); }
+// a different value each kind of control can take
+const another = (c, el) => { const cur = el.value;
+  if(c.type === 'checkbox') return !el.checked;
+  if(c.type === 'range' || c.type === 'number'){ const st = c.step || 1, v = +cur; return String(+(v + st*3 <= (c.max ?? 100) ? v + st*3 : v - st*3).toFixed(6)); }
+  if(c.opts) return c.opts.find(o => o !== cur && o !== '') ?? null;
+  if(c.id === 'forgeGraph') return JSON.stringify(athanorStarter('grain'));
+  if(c.type === 'color' || /^#[0-9a-f]{3,8}$/i.test(cur) || /Hex$|Color$/.test(c.id)) return cur.toUpperCase() === '#123456' ? '#654321' : '#123456';
+  if(cur !== '' && !isNaN(+cur)) return String(+cur < 90 ? +cur + 7 : +cur - 7);
+  return cur === 'a poem' ? 'another poem' : 'a poem'; };
+const read = (c, el) => c.type === 'checkbox' ? el.checked : el.value;
+const same = (c, a, b) => c.id === 'forgeGraph' ? JSON.stringify(JSON.parse(a || 'null')) === JSON.stringify(JSON.parse(b || 'null')) : String(a).toLowerCase() === String(b).toLowerCase();
 
-check('the page has controls to check (the scan works)', ids.length > 80);
-check('the save and restore functions were found', ser.length > 200 && res.length > 200 && persistedIds.size > 20);
-const notSaved = [], notRestored = [];
-for(const id of ids){
-  if(EXEMPT[id]) continue;
-  if(!(persistedIds.has(id) || named(ser, id, false) || named(ser, id, true))) notSaved.push(id);
-  if(!(persistedIds.has(id) || named(res, id, true) || named(res, id, false))) notRestored.push(id);
-}
-check('every control on the page is SAVED with a look (or exempt, with a reason)', notSaved.length === 0);
-if(notSaved.length) console.log('   not saved:', notSaved.join(', '), '— add it to PERSISTED in appEvents.js (or to EXEMPT here, with the reason)');
-check('every control on the page is RESTORED from a look (or exempt, with a reason)', notRestored.length === 0);
-if(notRestored.length) console.log('   not restored:', notRestored.join(', '));
-check('no exemption names a control that no longer exists', Object.keys(EXEMPT).every(id => ids.includes(id)));
-// the PERSISTED table: one row per key, and no control saved both by the table and by hand (it would be restored twice)
-const tableKeys = [...persisted.matchAll(/\[\s*'(\w+)',/g)].map(m => m[1]);
-const handWritten = [...body('serializeCurrentSettings').matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]);
-check('no key appears twice in the PERSISTED table', tableKeys.length > 20 && new Set(tableKeys).size === tableKeys.length);
-check('no control is saved both by the table and by hand', !tableKeys.some(k => handWritten.includes(k)));
-
-// everything built on save/restore uses them — so covering them covers all of it
-check('the Workbench JSON shows serializeCurrentSettings() and loads with restoreSettings()',
-  /\$\('advancedJson'\)\.value = JSON\.stringify\(serializeCurrentSettings\(\), null, 2\);/.test(ev) && /safeRestore\(obj, 'This JSON'\);/.test(ev) && /try \{ restoreSettings\(look\); \}/.test(ev));
-// (the Grimoire and shared spells save and apply through serializeCurrentSettings, restoreSettings and the look
-// filter, which drops only the poem, locks, highlighting and credit: audit.test.mjs, "a saved spell carries the look")
-check('undo and redo step through restoreSettings()', /restoreSettings\(JSON\.parse\(h\.stack\[to\]\)\);/.test(ev));
+check('the page has controls to check, and the app reaches every one not exempt (the scan works)', controls.length > 80 && controls.every(c => EXEMPT[c.id] || reg[c.id]));
+const base = save(), wontTake = [], leaks = [], notKept = [], shapeMoved = []; let tried = 0;
+for(const c of controls){ if(EXEMPT[c.id]) continue; const el = reg[c.id];
+  load(base); if(CONTEXT[c.id]) CONTEXT[c.id]();
+  const nv = another(c, el); if(nv === null) continue;
+  if(c.type === 'checkbox') el.checked = nv; else el.value = nv;
+  el.dispatchEvent({ type: 'input', target: el }); el.dispatchEvent({ type: 'change', target: el });
+  if(!same(c, read(c, el), nv)){ wontTake.push(c.id); continue; }
+  const saved = save(); tried++;
+  load(base);
+  if(SHAPE.has(c.id)){ if(!same(c, read(c, el), nv)) shapeMoved.push(c.id); continue; }
+  if(same(c, read(c, el), nv)) leaks.push(c.id);
+  load(saved);
+  if(!same(c, read(c, el), nv)) notKept.push(c.id); }
+check(`every control takes a value a person could give it (${tried} tried)`, wontTake.length === 0 && tried > 80);
+if(wontTake.length) console.log('   would not take a value:', wontTake.join(', '));
+check('every control on the page is SAVED with a look and RESTORED from it (or exempt, with a reason)', notKept.length === 0);
+if(notKept.length) console.log('   not saved and restored:', notKept.join(', '), '— add it to PERSISTED in appEvents.js (or to EXEMPT here, with the reason)');
+check('loading a look puts every control back to that look\'s value, never the last look\'s (a value never leaks)', leaks.length === 0);
+if(leaks.length) console.log('   left as the last look had it:', leaks.join(', '));
+check('loading a look never changes the page\'s shape (it is the person\'s)', shapeMoved.length === 0);
+check('no exemption names a control that no longer exists', Object.keys(EXEMPT).every(id => controls.some(c => c.id === id)));
 
 done();
