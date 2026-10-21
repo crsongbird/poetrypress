@@ -19,7 +19,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   night): look at it in a wide view from a little height, and say what it needs.
 - TURNED THINGS IN DEPTH (Ruby, 2026-10-20, for later): some of the eight views look cheap (a sprite squeezed flat).
   Each turned thing should be drawn as a solid in three-dimensional space, though painted flat: its sides, top and
-  ends foreshortened and lit as the rest of the flat objects are, matching their style.
+  ends foreshortened and lit as the rest of the flat objects are, matching their style. The box-built buildings are
+  boxes now; still squeezed: the boxlike props (a vending machine, a phone box, a kiosk, a shed), the temples and
+  windmills, and the cars seen half turned.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - SUNRISE SCROLL: Ruby loves the nod to the game's box art; the game had a wide variety of lands, so the
   seed should paint them with more depth: misty peaks, a coast with curling waves, the snowy north, a bamboo forest, a

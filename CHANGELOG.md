@@ -4,6 +4,23 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Titania (2026-10-21)
+
+- Buildings turned from the camera are solid now, not a picture squeezed thin: a cottage, a barn, a chapel, a terrace,
+  a brick block or a tower shows its painted front foreshortened, the side turned toward you with its own windows, a
+  gable roof running back to the ridge or a flat roof seen from a little above, and its plain back and gable from
+  behind, every face lit by the sun's side.
+- Each box takes its shape and colours from the building's own front: as wide and as tall as its walls, a setback
+  tower stepping back in boxes, a granary up on its pillars, the roof and walls the same thatch, slate, brick or paint
+  as the front (a terrace's ends each the end house's colour), a glasshouse's long sides glass.
+- Spires, belfries, water tanks, chimneys and their smoke stand upright from every side instead of vanishing edge on;
+  a stave church's spire now rises from its roof turret instead of floating above it.
+
+### Under the hood
+- `pkBuilding3` draws a box-built building in `pkSpace`, its kinds and depths in `PK_BOX3`; `pkFaceProof` reads the
+  front's outline and colours back from a small proof drawn off the page. Texture fingerprints updated for the turned
+  buildings on the Ringworld and its kin.
+
 ## Uranus–Umbriel (2026-10-20)
 
 - **Slower, truer clouds.** The wind is a fair-weather breeze now (three to seven metres a second, faster under a storm),
@@ -477,36 +494,3 @@ and every control behaving as it did.
   zooms (they used to be thrown afresh across whatever the camera saw), and
   the quick draft while you drag shows the same pool as the finished
   picture.
-
-## Saturn–Gunnlod (2026-10-19)
-
-- **New surface: Sunrise Scroll**, the second love letter to a video game:
-  a land painted in ink on old paper, in Places & Scenes. Mountains stand
-  band behind band, washes of ink lit in flat bands, the far ones craggy,
-  their ridges brushed thick and thin with dry-brush breaks, their feet
-  fading into mist; a woodblock print's graded sky, a red sun the light
-  dial sets behind the peaks, long rounded bands of mist, cherry petals,
-  and paper darkened at its edges with age. Readings: Spring Scroll,
-  Vermilion Dusk, Indigo Print and Bare Ink.
-- **The camera dial and the light selector always show**, faded when a
-  surface doesn't use them, so the Materia panel keeps its shape from
-  surface to surface; the surface's colours sit in two columns beneath
-  them. The light selector's buttons say what they move: Main Light and
-  Rim Light.
-- **Positioning is the camera dial's**: the Transmutation Circle is placed
-  with the camera dial (its turn the way from the middle, its view how far),
-  with a guide on the page; Rain on Water's View and the Painted
-  Landscape's Tilt are the camera dial's View. Saved looks keep their
-  pictures.
-- **Opening the page with a saved surface**: Materia's controls match it
-  at once (on a phone, Firefox could put old values back after the page
-  had loaded; the controls are read again then, when the page comes back
-  into view, and each time Materia opens).
-- **The instrument panel** no longer spells out every rune's name beside
-  the spell.
-- **Under the hood:** reviewed the tests. The generator smoke test takes
-  its surfaces from the registry (every one, at a tiny size, with fixed
-  seeds; it had a hand list that still named a retired surface) and draws
-  the two production sizes for three surfaces instead of sixty renders:
-  about 9 seconds. A proposal for a smaller, simpler app, its tests and
-  its protocol is written up (docs/SIMPLIFY.md, ROADMAP S).
