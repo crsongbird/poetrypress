@@ -394,9 +394,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     except for the ones that have text"): each thing in the store has a `face`, the way it turns (a house its street, a
     car along its kerb, a board the road), and `viewOf` gives how it is turned from the camera. A building is narrowed
     as a box (above); the round ones (`PK_ROUND`: a silo, a lighthouse, a water tower, a pagoda, a domed mosque) are the
-    same from every side, and the rest (a temple, a windmill, a castle) narrowed as they turn and mirrored. A parked car
-    or a rusted hulk is a solid (`PK_SOLIDS`): its body and glasshouse two prisms of its outline, its wheels discs turned
-    with it. Tractors, carts, bicycles and benches (`PK_SIDE_NATIVE`) are drawn end on when met
+    same from every side; a gate (a torii, an arch) narrows to its post's or its pier's thickness edge on; the rest
+    (a temple) mirrored as they turn. A windmill's
+    tower is round, its cap and sails turned with it: the sails a cross in their own plane, narrowed edge on, behind the
+    tower when it faces away. A parked car or a rusted hulk, a tractor, a food cart, a stack of crates, a wayside shrine and the builders' cargo are solids
+    (`PK_SOLIDS`): their bodies and cabs prisms of their outlines
+    (`pkPrism`), their wheels discs turned with them (`pkWheel3`). Bicycles, scooters and benches (`PK_SIDE_NATIVE`) are
+    drawn end on when met
     head on or from behind (`pkPropEnd`), otherwise narrowed and mirrored. Boards, signs and milestones are never
     mirrored and show their bare backs from behind (`PK_BACKED`, `c.back`). Whatever is mirrored keeps its light on
     the sun's side (`pkFlip`). Trees are mirrored by the seed.
