@@ -4,6 +4,16 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Ferdinand (2026-10-21)
+
+- The Ringworld's walkers, shepherd droids and tracked crawlers turn with the camera instead of only flipping: a
+  walker coming toward you is its head between four legs, the far legs behind its body and the near ones before it;
+  a shepherd's head is turned as it goes; a crawler shows both tracks and its wheels from the side, its arm over it.
+
+### Under the hood
+- `PK_BOTS3` names the droids drawn in the round (with the harvester); the Ringworld passes them their view and its
+  eye. Texture fingerprints updated for scenes with these droids.
+
 ## Uranus–Setebos (2026-10-21)
 
 - Windows keep the hours: as the evening begins most of a town's windows are lit, and as the night deepens toward its
@@ -358,15 +368,3 @@ prints it).
 - The finds are painted by `pkEgg` from `PK_EGGS` (each kind's worlds, its chance and whether it is loud) and sown in
   the ring's world store like everything else; the research and the line drawn between a nod and a copy are in
   docs/prior-art/painted-ringworld-2.md.
-
-## Uranus–Juliet (2026-10-20)
-
-- **The Painted Ringworld up close**: small things stand near you, each world its own: fences and mailboxes in the
-  wilds; lamps, benches, hydrants and bicycles in town; barrels and crates in the ruins; signs; now and then a
-  person, for scale. A building near enough shows its door, its step, a lamp lit at night and a planter.
-- **Fields in the distance**: where people farm, the land below each crest is a patchwork of crops (ripe, green,
-  fallow, now and then in flower), hedged with dark lines.
-- **Drapery's crumpled sheet** folds as cloth does, every which way, not along the lines of its grid.
-
-### Under the hood
-- The ring's small things are in its world store with everything else (`pkProp`, `PK_PROPS`).

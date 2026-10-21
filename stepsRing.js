@@ -13,7 +13,7 @@
 import { mulberry32, kitCanvas, kitPicture, seedChoice } from './texCore.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
-import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
+import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
@@ -1123,7 +1123,7 @@ function rgPaintLand(x, mk, dk, V){
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
       const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;   // (out only about dusk, on its round)
-      if(o.kind === 'harvester'){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
+      if(PK_BOTS3.includes(o.kind)){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
       const bob = V.time && o.kind === 'drone' ? Math.sin(V.time*1.3 + (o.rs & 63))*h*0.12 : 0;   // (a drone hovering, rising and dipping a little)
       if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     // small life: found rather than seen

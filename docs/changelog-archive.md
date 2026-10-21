@@ -2,6 +2,18 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Juliet (2026-10-20)
+
+- **The Painted Ringworld up close**: small things stand near you, each world its own: fences and mailboxes in the
+  wilds; lamps, benches, hydrants and bicycles in town; barrels and crates in the ruins; signs; now and then a
+  person, for scale. A building near enough shows its door, its step, a lamp lit at night and a planter.
+- **Fields in the distance**: where people farm, the land below each crest is a patchwork of crops (ripe, green,
+  fallow, now and then in flower), hedged with dark lines.
+- **Drapery's crumpled sheet** folds as cloth does, every which way, not along the lines of its grid.
+
+### Under the hood
+- The ring's small things are in its world store with everything else (`pkProp`, `PK_PROPS`).
+
 ## Uranus–Desdemona (2026-10-20)
 
 - **Nothing shakes while a control is used.** Dragging a fader whose value is a name (Species, say) once resized its

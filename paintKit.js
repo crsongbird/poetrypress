@@ -1752,6 +1752,8 @@ export function pkBoard(x, X, Y, m, c, id, R0, px, night = 0, aged = 0){
 // above its spot), in the caller's lit colours; c.eye its eye's light (the world's), night how dark it is.
 export const PK_BOTS = { builders: ['helper', 'drone', 'crawler', 'walker'], cities: ['helper', 'drone', 'drone'], neon: ['drone', 'sentry', 'walker', 'helper'],
   ruins: ['sentry', 'crawler', 'derelict', 'sentry'], wilds: ['helper', 'derelict'], magic: ['drone'] };
+// the droids built in the round (pkSpace), turned with the camera; the rest the same from every side, or mirrored
+export const PK_BOTS3 = ['harvester', 'walker', 'shepherd', 'crawler'];
 export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
   const sub = pkSub(R0), R = sub(1), sd = c.sd, eye = c.eye || c.glow, threat = kind === 'sentry' || kind === 'walker';
   const eyeCol = threat ? pkMix([255, 60, 50], eye, 0.2) : eye, glowA = 0.5 + 0.5*night;
@@ -1774,13 +1776,14 @@ export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
     pkDisc(x, X, cy, r, pkCss(c.body)); pkDisc(x, X + sd*r*0.3, cy - r*0.3, r*0.5, pkCss(c.lit)); dot(X, cy + r*0.1, Math.max(px(0.5), r*0.25));
     if(r > px(5)){ x.strokeStyle = pkCss(c.dark, 0.6); x.lineWidth = Math.max(px(0.3), r*0.05); x.beginPath(); x.ellipse(X, cy, r, r*0.25, 0, 0, Math.PI); x.stroke(); for(const s of [-1, 1]){ pkEll(x, X + s*r*1.5, cy - r*0.15, r*0.5, r*0.1, pkCss(c.dark, 0.5)); } }
     return; }
-  if(kind === 'crawler'){ // a low tracked tender, an arm folded over it, a lamp at its end
-    const w = h*1.4; pkPoly(x, [[X - w/2, Y], [X - w/2 + h*0.1, Y - h*0.35], [X + w/2 - h*0.1, Y - h*0.35], [X + w/2, Y]], pkCss(c.dark));
-    pkPoly(x, [[X - w*0.4, Y - h*0.3], [X - w*0.3, Y - h*0.6], [X + w*0.25, Y - h*0.6], [X + w*0.35, Y - h*0.3]], pkCss(c.body));
-    x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.08); x.lineCap = 'round'; x.beginPath(); x.moveTo(X + w*0.2, Y - h*0.6); x.lineTo(X + w*0.1, Y - h*1.0); x.lineTo(X - w*0.3, Y - h*0.85); x.stroke();
-    dot(X - w*0.3, Y - h*0.85, Math.max(px(0.5), h*0.07));
-    if(h > px(10)){ for(let k = 0; k < 4; k++) pkDisc(x, X - w*0.36 + k*w*0.24, Y - h*0.16, h*0.12, pkCss(pkMix(c.dark, PK_BLACK, 0.3))); for(let k = 0; k < 4; k++) pkDisc(x, X - w*0.36 + k*w*0.24, Y - h*0.16, h*0.05, pkCss(c.body)); x.fillStyle = pkCss(c.dark, 0.5); x.fillRect(X - w*0.05, Y - h*0.58, Math.max(px(0.3), w*0.015), h*0.26); }
-    return; }
+  if(kind === 'crawler'){ // a low tracked tender, an arm folded over it, a lamp at its end; in the round (pkSpace): two
+    // tracks with their wheels, the body between, the arm over it in the way it goes
+    const S = pkSpace(X, Y, h, c.view || { cs: 0, sn: 1 }), dk = { body: c.dark, lit: pkMix(c.dark, c.body, 0.4), dark: pkMix(c.dark, PK_BLACK, 0.3) }, tracks = [-0.36, 0.36].sort((p, q) => S.depth(0, p) - S.depth(0, q));
+    const track = vo => { const T = pkSpace(...S.P(0, vo, 0), h, c.view || { cs: 0, sn: 1 }); pkPrism(x, T, [[-0.7, 0], [0.7, 0], [0.6, 0.35], [-0.6, 0.35]], 0.11, dk, sd);
+      if(h > px(10) && T.faces(0, Math.sign(vo)) && Math.abs(S.sn) > 0.25) for(let k = 0; k < 4; k++){ const [wx, wy] = T.P(-0.5 + k/3, Math.sign(vo)*0.111, 0.16), r = h*0.12; pkEll(x, wx, wy, r*Math.abs(S.sn), r, pkCss(pkMix(c.dark, PK_BLACK, 0.3))); pkEll(x, wx, wy, r*0.42*Math.abs(S.sn), r*0.42, pkCss(c.body)); } };
+    track(tracks[0]); pkBox3(x, S, -0.42, 0.35, -0.25, 0.25, 0.3, 0.6, c, sd);
+    const a0 = S.P(0.28, 0, 0.6), a1 = S.P(0.14, 0, 1.0), a2 = S.P(-0.42, 0, 0.85); x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.08); x.lineCap = 'round';
+    x.beginPath(); x.moveTo(...a0); x.lineTo(...a1); x.lineTo(...a2); x.stroke(); dot(...a2, Math.max(px(0.5), h*0.07)); track(tracks[1]); return; }
   if(kind === 'sentry'){ // a turret on three legs: a wedge of a head, a slit of red eye, spikes along its back
     x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.05); x.beginPath(); for(const s of [-1, 0, 1]){ x.moveTo(X, Y - h*0.45); x.lineTo(X + s*h*0.35, Y); } x.stroke();
     pkPoly(x, [[X - h*0.45, Y - h*0.5], [X - h*0.2, Y - h*0.95], [X + h*0.5, Y - h*0.7], [X + h*0.25, Y - h*0.45]], pkCss(pkMix(c.dark, c.body, 0.3)));
@@ -1789,14 +1792,15 @@ export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
     x.fillStyle = pkCss(eyeCol, 0.95); x.fillRect(X + h*0.15, Y - h*0.72, h*0.25, Math.max(px(0.6), h*0.04)); pkGlow(x, X + h*0.28, Y - h*0.7, h*0.5, eyeCol, 0.4*glowA);
     if(h > px(12)){ pkDisc(x, X, Y - h*0.45, h*0.07, pkCss(pkMix(c.dark, PK_BLACK, 0.3))); for(const s of [-1, 0, 1]) pkDisc(x, X + s*h*0.35, Y, h*0.04, pkCss(c.dark)); x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.4), h*0.03); x.beginPath(); x.moveTo(X + h*0.4, Y - h*0.62); x.lineTo(X + h*0.62, Y - h*0.58); x.stroke(); }
     return; }
-  if(kind === 'walker'){ // four jointed legs, a long low body, a head held forward: it hunts
-    const bw = h*0.9, by = Y - h*0.62; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.05); x.lineCap = 'round'; x.beginPath();
-    for(const [lx, f] of [[-0.4, -1], [-0.15, 1], [0.15, -1], [0.4, 1]]){ const kx = X + lx*bw + f*h*0.12; x.moveTo(X + lx*bw*0.8, by); x.lineTo(kx, by - h*0.15); x.lineTo(X + lx*bw*1.1, Y); } x.stroke();
-    pkPoly(x, [[X - bw/2, by + h*0.06], [X - bw*0.4, by - h*0.12], [X + bw*0.4, by - h*0.14], [X + bw/2, by + h*0.04]], pkCss(c.body));
-    pkPoly(x, [[X + sd*bw*0.45, by - h*0.06], [X + sd*bw*0.75, by - h*0.12], [X + sd*bw*0.8, by + h*0.02], [X + sd*bw*0.5, by + h*0.05]], pkCss(pkMix(c.dark, c.body, 0.4)));
-    dot(X + sd*bw*0.72, by - h*0.05, Math.max(px(0.5), h*0.035));
-    if(h > px(12)){ for(const [lx, f] of [[-0.4, -1], [-0.15, 1], [0.15, -1], [0.4, 1]]) pkDisc(x, X + lx*bw + f*h*0.12, by - h*0.15, h*0.035, pkCss(pkMix(c.dark, PK_BLACK, 0.3))); x.strokeStyle = pkCss(c.dark, 0.6); x.lineWidth = Math.max(px(0.3), h*0.008); x.beginPath(); for(const u of [-0.2, 0.05, 0.25]){ x.moveTo(X + u*bw, by - h*0.12); x.lineTo(X + u*bw, by + h*0.05); } x.stroke(); }
-    return; }
+  if(kind === 'walker'){ // four jointed legs, a long low body, a head held forward: it hunts. In the round (pkSpace): its
+    // far legs behind its body, its near ones before it, its head turned with it
+    const S = pkSpace(X, Y, h, c.view || { cs: 0, sn: 1 }), legs = [[-0.36, 0.15, -1], [-0.12, -0.15, 1], [0.12, 0.15, -1], [0.36, -0.15, 1]].sort((p, q) => S.depth(p[0], p[1]) - S.depth(q[0], q[1]));
+    const leg = ([u, v, f]) => { const hip = S.P(u*0.8, v, 0.6), knee = S.P(u + f*0.12, v*1.5, 0.77), foot = S.P(u*1.1, v*1.8, 0); x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.05); x.lineCap = 'round';
+      x.beginPath(); x.moveTo(...hip); x.lineTo(...knee); x.lineTo(...foot); x.stroke(); if(h > px(12)) pkDisc(x, ...knee, h*0.035, pkCss(pkMix(c.dark, PK_BLACK, 0.3))); };
+    const head = () => { pkBox3(x, S, 0.4, 0.68, -0.08, 0.08, 0.52, 0.66, { body: pkMix(c.dark, c.body, 0.4), lit: c.body, dark: c.dark }, sd); if(S.faces(1, 0) || Math.abs(S.sn) > 0.4) dot(...S.P(0.66, 0, 0.6), Math.max(px(0.5), h*0.035)); };
+    const ahead = S.depth(1, 0) > 0; legs.filter(l => S.depth(l[0], l[1]) < 0).forEach(leg); if(!ahead) head();
+    pkBox3(x, S, -0.42, 0.42, -0.13, 0.13, 0.5, 0.66, c, sd); if(h > px(12)){ x.strokeStyle = pkCss(c.dark, 0.6); x.lineWidth = Math.max(px(0.3), h*0.008); x.beginPath(); for(const u of [-0.2, 0.05, 0.25]){ const s = S.faces(0, 1) ? 0.131 : -0.131; x.moveTo(...S.P(u, s, 0.66)); x.lineTo(...S.P(u, s, 0.5)); } x.stroke(); }
+    legs.filter(l => S.depth(l[0], l[1]) >= 0).forEach(leg); if(ahead) head(); return; }
   if(kind === 'harvester'){ // a harvester droid at work in the corn: a long body on tracks, its reel turning at the front, a chute over the side,
     // a pale eye in its cab; drawn in the round (pkSpace), the reel across the way it goes
     const S = pkSpace(X, Y, h, c.view), body = pkMat({ ...c, mat: c.mat }, [[210, 170, 60], [200, 70, 50], [120, 150, 90]][Math.floor(R()*3)], 0.7), dk = pkMat(c, PK_IRON, 0.8), L = 1.6, B = 0.7;
@@ -1808,14 +1812,18 @@ export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
     if(S.depth(L*0.1, 0) > -0.2) dot(...S.P(L*0.2, 0, 0.88), Math.max(px(0.5), h*0.05));
     if(night > 0.3){ const [lx, ly] = S.P(L*0.55, 0, 0.3); pkGlow(x, lx, ly, h*0.8, pkMix(c.glow, PK_WHITE, 0.6), 0.35*night); }
     return; }
-  if(kind === 'shepherd'){ // a shepherd droid, the flock's: a low four-legged body like a dog's, a round head held high, one ear-aerial, its eye kind
-    const bw = h*1.0, by = Y - h*0.55; x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.07); x.lineCap = 'round'; x.beginPath();
-    for(const lx of [-0.38, -0.22, 0.22, 0.38]){ x.moveTo(X + lx*bw, by); x.lineTo(X + lx*bw*1.05, Y); } x.stroke();
-    pkEll(x, X, by, bw*0.45, h*0.18, pkCss(c.body)); pkEll(x, X + sd*bw*0.1, by - h*0.06, bw*0.32, h*0.09, pkCss(c.lit));
-    const hx = X + bw*0.5, hy = Y - h*0.95; x.strokeStyle = pkCss(c.body); x.lineWidth = Math.max(px(0.6), h*0.14); x.beginPath(); x.moveTo(X + bw*0.35, by - h*0.05); x.lineTo(hx, hy + h*0.1); x.stroke();
-    pkDisc(x, hx, hy, h*0.2, pkCss(c.body)); pkDisc(x, hx + sd*h*0.05, hy - h*0.05, h*0.12, pkCss(c.lit)); dot(hx + h*0.08, hy, Math.max(px(0.5), h*0.05));
-    x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.4), h*0.03); x.beginPath(); x.moveTo(hx - h*0.08, hy - h*0.16); x.lineTo(hx - h*0.2, hy - h*0.45); x.stroke(); pkDisc(x, hx - h*0.2, hy - h*0.45, h*0.04, pkCss(eyeCol));
-    x.beginPath(); x.moveTo(X - bw*0.45, by - h*0.05); x.lineTo(X - bw*0.62, by - h*0.3); x.stroke(); return; }
+  if(kind === 'shepherd'){ // a shepherd droid, the flock's: a low four-legged body like a dog's, a round head held high, one
+    // ear-aerial, its eye kind. In the round (pkSpace), as the sheep it keeps: far legs, body, near legs, head turned with it
+    const S = pkSpace(X, Y, h, c.view || { cs: 0, sn: 1 }), legs = [[-0.32, 0.12], [-0.32, -0.12], [0.3, 0.12], [0.3, -0.12]].sort((p, q) => S.depth(...p) - S.depth(...q));
+    const leg = ([u, v]) => { x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), h*0.07); x.lineCap = 'round'; x.beginPath(); x.moveTo(...S.P(u, v, 0.55)); x.lineTo(...S.P(u*1.05, v, 0)); x.stroke(); };
+    const head = () => { const [nx, ny] = S.P(0.35, 0, 0.5), [hx, hy] = S.P(0.5, 0, 0.95), [ax, ay] = S.P(0.42, 0, 1.4), [tx, ty] = S.P(-0.62, 0, 0.8);
+      x.strokeStyle = pkCss(c.body); x.lineWidth = Math.max(px(0.6), h*0.14); x.beginPath(); x.moveTo(nx, ny); x.lineTo(hx, hy + h*0.1); x.stroke();
+      pkDisc(x, hx, hy, h*0.2, pkCss(c.body)); pkDisc(x, hx + sd*h*0.05, hy - h*0.05, h*0.12, pkCss(c.lit)); if(S.depth(1, 0) > -0.5) dot(...S.P(0.62, 0, 0.96), Math.max(px(0.5), h*0.05));
+      x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.4), h*0.03); x.beginPath(); x.moveTo(hx, hy - h*0.16); x.lineTo(ax, ay); x.stroke(); pkDisc(x, ax, ay, h*0.04, pkCss(eyeCol));
+      x.beginPath(); x.moveTo(...S.P(-0.45, 0, 0.5)); x.lineTo(tx, ty); x.stroke(); };
+    const ahead = S.depth(1, 0) > 0; legs.filter(l => S.depth(...l) < 0).forEach(leg); if(!ahead) head();
+    const [bx, by] = S.P(0, 0, 0.55), rx = h*(0.45*Math.abs(S.sn) + 0.18*Math.abs(S.cs)); pkEll(x, bx, by, rx, h*0.18, pkCss(c.body)); pkEll(x, bx + sd*rx*0.2, by - h*0.06, rx*0.7, h*0.09, pkCss(c.lit));
+    legs.filter(l => S.depth(...l) >= 0).forEach(leg); if(ahead) head(); return; }
   if(kind === 'lamplighter'){ // the lamplighter, out at dusk: a tall thin droid on a single wheel, a long pole in its hand with a little flame at its end
     const m = pkMat({ ...c }, [120, 110, 96], 0.6); pkDisc(x, X, Y - h*0.06, h*0.06, pkCss(c.dark));
     pkPoly(x, [[X - h*0.08, Y - h*0.1], [X - h*0.1, Y - h*0.7], [X + h*0.1, Y - h*0.7], [X + h*0.08, Y - h*0.1]], pkCss(m.body)); pkPoly(x, [[X + sd*h*0.01, Y - h*0.12], [X + sd*h*0.02, Y - h*0.68], [X + sd*h*0.1, Y - h*0.68], [X + sd*h*0.08, Y - h*0.12]], pkCss(m.lit));
