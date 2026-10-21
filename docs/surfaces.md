@@ -388,7 +388,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     (`pkFaceProof`): how wide its walls stand, the steps of a setback tower (a box for each), where its eaves and ridge
     are, a granary's stilts, a castle's battlements along every top edge; its walls and roof are the colours its face was painted in (a terrace's sides each the end
     house's own). What stands above the roof (a spire, a belfry, a water tank, chimneys and their smoke) is upright and
-    never narrowed to nothing edge on; a glasshouse's sides are glass. The boxlike things go the same way (`PK_PROP3`):
+    never narrowed to nothing edge on; a glasshouse's sides are glass. A thing is seen from above only so far as
+    the eye is above it (`seen`, the view's `eyePx`): what stands at the eye's height is edge on and higher is seen
+    from below, so a factory beside the camera never shows its roof; the painter's eye stands up to three times
+    higher for what is far off, the town over there seen a little from above. The boxlike things go the same way (`PK_PROP3`):
     a pair of vending machines, each side its own machine's colour and their plain backs from behind; a phone box; a
     mailbox up on its one post; a container; a trough.
   - **Eight views** (Ruby: "at least eight… front, sides, back, and the half-turned states… mirrored the other direction,

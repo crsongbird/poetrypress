@@ -1042,6 +1042,10 @@ function rgPaintLand(x, mk, dk, V){
   // each thing faces a way of its own in the world (a house its street, a lamp the way, a board the traffic; the rest
   // by their own draw), and is drawn as seen from where the eye is: the angle between its facing and the way to the eye
   const viewOf = o => { const face = o.face ?? (o.rs % 62832)/10000, rel = face - Math.atan2(L.z0 - o.z, -o.a); return { cs: Math.cos(rel), sn: Math.sin(rel) }; };
+  // (and how high the eye stands over a thing's foot, in pixels there: a thing turned is seen from above only so far
+  //  as the eye is above it. Near, the camera's own eye: a factory beside you never shows you its roof. Far, the
+  //  painter's, standing up to three times higher, the town over there seen a little from above as the painting likes)
+  const seen = (o, f) => ({ ...viewOf(o), eyePx: (1 + 2*rsSmooth(40, 400, F/f[2]))*((1 - f[3]) - L.Px)*f[2]/(W*0.00025) });
   const mirrored = (X, draw) => { x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); draw(); x.restore(); };
   // A SETTLEMENT'S LIGHTS (Ruby: "a settlement's lights at night"): a house too far off to draw is a window's light at
   // night, a street lamp a point on its string of them; they come on one by one through the dusk (each its own moment,
@@ -1075,7 +1079,7 @@ function rgPaintLand(x, mk, dk, V){
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > wh*0.75) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd, X + wd, Y - h*1.3, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: viewOf(o), mpx: f[2], t: V.time, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
       // CLOSE BY, its foot (the building's base detailed, Ruby: "close-up versions with details for their base"): a door
       // two metres tall with its step, a lamp beside it lit at night, a planter
       const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -1110,7 +1114,7 @@ function rgPaintLand(x, mk, dk, V){
     if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > wh*(RG_WIDE.includes(o.kind) ? 0.12 : 0.35)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
       // (set into the ground a little, always; the ruins' wrecks and bikes half buried, clipped where the ground meets them)
-      const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : viewOf(o) };
+      const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(o, f) };
       if(o.sink){ x.save(); x.beginPath(); x.rect(X - h*6, Y - h*6, h*12, h*6 + h*0.02); x.clip(); pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); x.restore(); }
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
       // (a road's pole wired to the next one along, the wires sagging between)
@@ -1119,7 +1123,7 @@ function rgPaintLand(x, mk, dk, V){
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
       const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;   // (out only about dusk, on its round)
-      if(o.kind === 'harvester'){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: viewOf(o) }, o.kind, R, rgPx, nt); return; }
+      if(o.kind === 'harvester'){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
       const bob = V.time && o.kind === 'drone' ? Math.sin(V.time*1.3 + (o.rs & 63))*h*0.12 : 0;   // (a drone hovering, rising and dipping a little)
       if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     // small life: found rather than seen

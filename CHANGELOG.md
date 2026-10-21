@@ -4,6 +4,20 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Prospero (2026-10-21)
+
+- Fixed: standing right beside a factory on the Ringworld could fill the bottom of the picture with a vast flat roof.
+  Turned buildings and things are now seen from above only as far as the eye is above them: a roof at your own
+  height is seen edge on, a taller one from below, and a building's front leans in as a tall wall does when you stand
+  near it. Far off, the town is still seen a little from above, as the painting likes it.
+- A terrace of houses keeps its roof when turned (its row of gables had been read as a flat top).
+
+### Under the hood
+- `pkSpace` takes the eye's height over a thing's foot (the view's `eyePx`): its tilt runs from seen-from-above at
+  the ground to edge on at the eye and seen-from-below over it, and `pkTurned` lays a face in strips when that changes
+  across it. The Ringworld passes the camera's own eye near and a higher painter's eye far (`seen`). Found by rendering
+  forty seeds from random cameras and looking at them. Texture fingerprints updated for the Ringworld's buildings.
+
 ## Uranus–Margaret (2026-10-21)
 
 - Fixed: on some Ringworld seeds a rune of wall graffiti hung in the sky, as big as a moon. Graffiti, the builders'
@@ -408,54 +422,3 @@ prints it).
   (docs/prior-art/painted-ringworld.md); cloth simulation, folds and woven sheen (docs/prior-art/cloth.md).
 - Work happens on main now, without feature branches.
 - Housekeeping: pruned the stylesheet.
-
-## Uranus–Cressida (2026-10-20)
-
-- **The surface's controls are a rack.** Its sliders are drawn as the light and camera dials are:
-  - three or fewer sliders stay sliders;
-  - four sit as knobs in a row;
-  - with more, knobs cluster at the left and faders two rows tall at the right (the sliders with named marks), with
-    any others as sliders underneath.
-
-  Each control has a display line with its name, its value and − / + buttons, a ⊹ to reset it, and on a phone a
-  haptic tick at each mark. Shape Strength shows only while Shape Aware is on, and a slider no longer keeps the
-  previous surface's marks.
-- **Floral Imprints, remade.** Whole plants of each species, laid as a herbarium sheet shows them, root down on the
-  page: their habit, their leaves by outline, margin, division and arrangement, roots or bulb, buds and seed. They
-  are developed in fifteen media, cyanotype to risograph, on the page's own colours.
-- **Macro Bloom no longer crashes a phone.** It used far less memory, and a phone now works it on a smaller grid. A
-  flower seen from the side sits on its stem with a calyx, and grows its own species' leaves, prickles and hairs.
-- **Crystal Leaf's inclusions lie inside the stone.** The needles and bubbles are seen through the faces, bent where
-  each face tilts and tinted by the stone. Bubbles are drawn as quartz holds them.
-- **The Windward Sea's wind is about a third calmer**, with fewer and shorter gusts.
-- **The interface evens out:**
-  - the search fields wear every field's skin and no longer look disabled;
-  - menus and text fields stand the same height;
-  - Share, Sound, Haptics and Hints read as their neighbours do;
-  - the preset buttons (Summon Variation, Mutate Gently, Freeze This Seed) speak in the buttons' small capitals;
-  - the preset groups lose their counts;
-  - the surface menu's group names sit flush under its search.
-- **Sliders that pick a kind are marked**, Species and Chladni's Mode among them. Feathers' Markings are named Light
-  and Bold Bars.
-- **An old Instrument Panel loses its rune names** wherever it was saved: in the Grimoire and in the draft.
-
-### Under the hood
-- New parts:
-  - **Grass Blades**: toon grass blade by blade, for any surface with grass in it.
-  - **Specimen**: whole plants.
-  - **floraKit.js**: what Bloom and Specimen share.
-- Phone memory:
-  - a canvas read back by the Athanor is let go at once;
-  - outputs that no part reads are dropped;
-  - every phone works graphs on a capped grid.
-- Plans: every surface brought onto the new renderer (docs/renderer-pass.md), and new scenes to build
-  (docs/scene-ideas.md). Both sit in the roadmap before the presets.
-- New research, every claim with its source:
-  - botanical specimens;
-  - interface sound;
-  - cel-shaded wind and grass;
-  - painted worlds and camera-stable placement.
-- Housekeeping: reviewed the tests:
-  - the list naming each surface's slider count became one rule (two to eight sliders);
-  - the rack's rule has a suite of its own;
-  - nothing else had outlived what it tests.

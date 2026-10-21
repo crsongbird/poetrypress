@@ -6791,6 +6791,7 @@ function pkFaceProof(face, c, R0, h, wdt, eave){ const out = {};
     const a = Math.min(half(L + 0.05), half(L + 0.12), half(L + 0.2)); if(a > 0.15 && a < 1.2) out.a = a;
     const A = out.a || 0.5, both = u => Math.min(topAt(-u*A), topAt(u*A));
     if(eave){
+
       const t5 = both(0.5), t8 = both(0.82), sl = (t5 - t8)/0.32, ridge = t5 + 0.5*sl, ev = t8 - 0.18*sl;
       if(sl > 0 && ev > 0.02 && ev < 0.95 && ridge > ev && ridge < 1.3) Object.assign(out, { eave: ev, ridge }); }
     else {
@@ -6814,7 +6815,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
 
   const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0); R0 = R1;
   if(o.plain && !pr.a) return false;
-  const w2 = (pr.a || 0.5)*wdt, D = w2*2*dk, eave = eave0 ? (pr.eave || eave0) : 0, ridge = h*(pr.ridge || 1), Hs = h*eave;
+  const w2 = (pr.a || 0.5)*wdt, D = w2*2*dk, eave = eave0 ? ((!o.ends && pr.eave) || eave0) : 0, ridge = h*((!o.ends && pr.ridge) || 1), Hs = h*eave;
   const tiers = eave ? [{ z: eave, a: w2/wdt }] : (pr.tiers || [{ z: 0.97, a: w2/wdt }]);
   if(pr.wall) c = { ...c, body: pr.wall, lit: pkMix(pr.wall, PK_WHITE, 0.25), dark: pkMix(pr.wall, PK_BLACK, 0.4) };
   const shadeOf = (nu, nv, m = c) => { const k = S.light(nu, nv, sd); return k > 0 ? pkMix(m.body, m.lit, k*0.85) : pkMix(m.body, m.dark, -k*0.85); };
@@ -6839,7 +6840,13 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
 
 
   const zTop = eave ? ridge : h*(tiers[tiers.length - 1].z + rim), uTop = D*tiers[tiers.length - 1].a*wdt/w2/2*crownAt;
-  const crown = () => { const [fx, fy] = S.P(uTop, 0, 0), sx = (S.cs >= 0 ? 1 : -1)*Math.max(Math.abs(S.cs), 0.55); x.save(); x.translate(fx, fy); x.transform(sx, 0, 0, 1, 0, 0);
+
+
+  const faceOn = (fu, za, zb, a, cc) => { const lo = Math.max(za, 0), vary = Math.abs(S.tilt(lo) - S.tilt(zb))*a*Math.abs(S.sn), n = zb > lo ? Math.max(1, Math.min(6, Math.ceil(vary/1.2))) : 1, ox = S.P(fu, 0, 0)[0];
+    for(let k = 0; k < n; k++){ const s0 = lo + (zb - lo)*k/n, s1 = lo + (zb - lo)*(k + 1)/n, y0 = S.P(fu, 0, s0)[1], y1 = S.P(fu, 0, s1)[1], kz = s1 > s0 ? (y1 - y0)/(s1 - s0) : -1;
+      const c0 = k ? s0 : za, c1 = s1 + (k < n - 1 ? px(0.25) : 0); x.save(); x.translate(ox, y0 - kz*s0); x.transform(S.cs, -S.sn*S.tilt((s0 + s1)/2), 0, -kz, 0, 0);
+      x.beginPath(); x.rect(-wdt*3, -c1, wdt*6, c1 - c0); x.clip(); face(x, cc, R0); x.restore(); } };
+  const crown = () => { const fx = S.P(uTop, 0, 0)[0], fy = S.P(uTop, 0, zTop)[1] + zTop, sx = (S.cs >= 0 ? 1 : -1)*Math.max(Math.abs(S.cs), 0.55); x.save(); x.translate(fx, fy); x.transform(sx, 0, 0, 1, 0, 0);
 
     const aw = wdt*tiers[tiers.length - 1].a*0.9; x.beginPath(); x.rect(-aw, -h*3, aw*2, h*3 - zTop + px(0.3)); x.clip();
     face(x, { ...c, view: null, vside: sideN === 1 ? -1 : 1, vdep: 1e-6, nocast: true }, R0); x.restore(); };
@@ -6853,7 +6860,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
         for(const sg of [-sideN, sideN]){ const up = S.light(0, sg, sd)*0.5 + 0.25, sv2 = sg*a;
           pkPoly(x, [S.P(-Dt/2 - o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, 0, ridge), S.P(-Dt/2 - o, 0, ridge)], pkCss(up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45))); }
         x.strokeStyle = pkCss(rm.dark, 0.5); x.lineWidth = Math.max(px(0.4), h*0.006); x.beginPath(); x.moveTo(...S.P(-Dt/2 - o, 0, ridge)); x.lineTo(...S.P(Dt/2 + o, 0, ridge)); x.stroke(); }
-      else {
+      else if(S.tilt(zt) > 0){
         pkPoly(x, [S.P(-Dt/2, -a, zt), S.P(Dt/2, -a, zt), S.P(Dt/2, a, zt), S.P(-Dt/2, a, zt)], pkCss(pkMix(pkMix(c.body, c.lit, 0.55), PK_CONCRETE, 0.25), glassy ? 0.6 : 1)); }
       if(!eave && o.battlements && last){
         const run = (ua, va, ub, vb, nu, nv) => { const len = Math.hypot(ub - ua, vb - va), n = Math.max(3, Math.round(len/(wdt*0.09))), mh = h*0.045, col = shadeOf(nu, nv);
@@ -6862,15 +6869,13 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
         run(-Dt/2, -sv, Dt/2, -sv, 0, -sideN); run(-fu, a, -fu, -a, front ? -1 : 1, 0); if(side) run(-Dt/2, sv, Dt/2, sv, 0, sideN); if(!front) run(fu, a, fu, -a, -1, 0); }
       if(!eave && side){ x.strokeStyle = pkCss(pkMix(c.lit, PK_WHITE, 0.2), 0.7); x.lineWidth = Math.max(px(0.4), h*0.006); x.beginPath(); x.moveTo(...S.P(-Dt/2, sv, zt)); x.lineTo(...S.P(Dt/2, sv, zt)); x.stroke(); } }
     if(!front && o.back){
-      const [fx, fy] = S.P(fu, 0, 0); x.save(); x.translate(fx, fy); x.transform(S.cs, -S.sn*PK_TILT, 0, 1, 0, 0); face(x, { ...c, view: null, back: true, vdep: 1e-6, nocast: true }, R0); x.restore(); }
+      faceOn(fu, i ? z0 : -h, last ? zTop : zt, a, { ...c, view: null, back: true, vdep: 1e-6, nocast: true }); }
     else if(!front){
       if(glassy) x.globalAlpha = 0.6; wall([[fu, a, z0], [fu, -a, z0], [fu, -a, zt], [fu, a, zt]], -1, 0); if(eave) pkPoly(x, [S.P(fu, a, Hs), S.P(fu, -a, Hs), S.P(fu, 0, ridge)], pkCss(shadeOf(-1, 0)));
       windows(fu, a*0.85, fu, -a*0.85, z0 + (zt - z0)*0.08, zt*0.95, Rw); x.globalAlpha = 1; }
     else { x.globalAlpha = 1;
 
-      const [fx, fy] = S.P(fu, 0, 0); x.save(); x.translate(fx, fy); x.transform(S.cs, -S.sn*PK_TILT, 0, 1, 0, 0);
-      const zb = last ? zTop : zt; x.beginPath(); x.rect(-wdt*3, -zb, wdt*6, zb - (i ? z0 : -h)); x.clip();
-      face(x, { ...c, view: null, vside: sideN === 1 ? -1 : 1, vdep: 1e-6, nocast: true }, R0); x.restore(); }
+      faceOn(fu, i ? z0 : -h, last ? zTop : zt, a, { ...c, view: null, vside: sideN === 1 ? -1 : 1, vdep: 1e-6, nocast: true }); }
     z0 = zt; });
   if(front) crown();
   return true;
@@ -7083,9 +7088,13 @@ const PK_PROP3 = { vending: 0.4, phonebox: 1, mailbox: 1.7, container: 0.42, tro
 
 
 
+
+
+
 const PK_TILT = 0.26;
-const pkSpace = (X, Y, s, view) => { const cs = view ? view.cs : 0, sn = view ? view.sn : 1;
-  return { cs, sn, P: (u, v, z) => [X + (u*sn + v*cs)*s, Y + (u*cs - v*sn)*s*PK_TILT - z*s], depth: (u, v) => u*cs - v*sn,
+const pkSpace = (X, Y, s, view) => { const cs = view ? view.cs : 0, sn = view ? view.sn : 1, eye = view && view.eyePx != null ? view.eyePx/s : null;
+  const tilt = z => eye === null ? PK_TILT : eye <= 1e-6 ? -PK_TILT : PK_TILT*Math.max(-1, Math.min(1, (eye - z)/eye));
+  return { cs, sn, tilt, P: (u, v, z) => [X + (u*sn + v*cs)*s, Y + (u*cs - v*sn)*s*tilt(z) - z*s], depth: (u, v) => u*cs - v*sn,
 
     faces: (nu, nv) => nu*cs - nv*sn > 0.02, light: (nu, nv, sd) => Math.max(-1, Math.min(1, (nu*sn + nv*cs)*sd)) }; };
 
@@ -19318,6 +19327,10 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const viewOf = o => { const face = o.face ?? (o.rs % 62832)/10000, rel = face - Math.atan2(L.z0 - o.z, -o.a); return { cs: Math.cos(rel), sn: Math.sin(rel) }; };
+
+
+
+  const seen = (o, f) => ({ ...viewOf(o), eyePx: (1 + 2*rsSmooth(40, 400, F/f[2]))*((1 - f[3]) - L.Px)*f[2]/(W*0.00025) });
   const mirrored = (X, draw) => { x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); draw(); x.restore(); };
 
 
@@ -19351,7 +19364,7 @@ function rgPaintLand(x, mk, dk, V){
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > wh*0.75) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd, X + wd, Y - h*1.3, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: viewOf(o), mpx: f[2], t: V.time, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
 
 
       const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -19386,7 +19399,7 @@ function rgPaintLand(x, mk, dk, V){
     if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > wh*(RG_WIDE.includes(o.kind) ? 0.12 : 0.35)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
 
-      const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : viewOf(o) };
+      const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(o, f) };
       if(o.sink){ x.save(); x.beginPath(); x.rect(X - h*6, Y - h*6, h*12, h*6 + h*0.02); x.clip(); pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); x.restore(); }
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
 
@@ -19395,7 +19408,7 @@ function rgPaintLand(x, mk, dk, V){
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
       const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;
-      if(o.kind === 'harvester'){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: viewOf(o) }, o.kind, R, rgPx, nt); return; }
+      if(o.kind === 'harvester'){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
       const bob = V.time && o.kind === 'drone' ? Math.sin(V.time*1.3 + (o.rs & 63))*h*0.12 : 0;
       if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
 
@@ -32580,11 +32593,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Margaret';
+const RELEASE = 'Uranus–Prospero';
 
 const RELEASE_DATE = '2026-10-21';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"umiIxjNA","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"1W47xT-k","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -33490,7 +33503,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-21 · e784116";
+const STAMP = "2026-10-21 · f3675c7";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
