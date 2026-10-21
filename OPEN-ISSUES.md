@@ -12,6 +12,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   gone), billowing as one body; their shadows sweep the land; the small motions slowed a little; the droids wander
   long paths; nothing cut before it leaves the frame; the sky glows round the sun and at dusk (the Belt of Venus
   opposite), clouds lit from below at dusk, silver linings, curtains of rain, far showers. Does a film read right now?
+- PAINTED LANDSCAPE'S RIVER, remade: one winding course in perspective (broad bends near, level slivers far), the sky
+  in it by the angle you see it at, its banks' lines and reflections, trees along it. Does it read as water now?
 - TURNED THINGS IN DEPTH: what turns with the camera is drawn as a solid now: the buildings as boxes taking their
   shape and colours from their own fronts (setbacks, stilts, gables, battlements), the boxlike props, cars, tractors,
   carts, crates, shrines and cargo, windmills' sails, gates narrowing edge on; the round ones the same from every side.
@@ -33,7 +35,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - CARTOMANCY (beyond the branch above): the table's objects still painted lit, to bring onto the Light Engine.
   Scramble everything more: layouts, objects, light. More variety of wear. More writing: score sheets, notes,
   marks — all fictional, as if through a window onto a world like ours but with its own lore and rules.
-- PAINTED LANDSCAPE: more variety in the water and land textures; the river (Ruby: "needs work, but it's all right").
+- PAINTED LANDSCAPE: more variety in the water and land textures.
 
 ## 3 · Found, not yet fixed
 - CONTOUR MAP at a quarter-size preview differs from its export more than

@@ -16683,8 +16683,25 @@ function paintRidges(ctx, w, h, S, o){
 
   const mood = B.sea || B.lake || B.river ? ['still', 'ruffled', 'choppy'][Math.floor(Math.random()*3)] : 'ruffled', calm = mood === 'still' ? 1 : 0, chop = mood === 'choppy' ? 1 : 0;
 
-  const riv = B.river ? { x0: w*(0.3 + Math.random()*0.4), ph: Math.random()*6.28, k: 2 + Math.random()*2.5, swing: unit*(0.1 + Math.random()*0.14) } : null;
-  const rivX = t => riv.x0 + Math.sin(t*riv.k + riv.ph)*riv.swing*(0.2 + t), rivW = t => unit*(0.003 + 0.085*t*t)*zoom;
+
+
+
+
+
+
+  const riv = B.river ? (() => { const EX = 1.35 + pitch*0.9, K = (h - horizon)*0.92, f = K*4.2, vp0 = w*(0.25 + Math.random()*0.5);
+    const vp = Math.abs(vp0 - sunX) < w*0.1 ? vp0 + (vp0 < sunX ? -1 : 1)*w*0.13 : vp0, near = w*(0.36 + Math.random()*0.28), wN = unit*0.2*zoom, Wz = wN/f;
+    const lam = (13 + Math.random()*5)*Wz, om = 0.7 + Math.random()*0.3, ph = Math.random()*6.28, Dmax = 1/Math.pow(0.05, EX), Ds = [], Ls = [];
+
+    for(let sA = 0, D = 0.6, l = (near - vp)/f; D < Dmax*1.05; sA += Wz*0.25){ Ds.push(D); Ls.push(l); const th = om*Math.sin(2*Math.PI*sA/lam + ph); D += Math.cos(th)*Wz*0.25*Math.max(1, D/12); l += Math.sin(th)*Wz*0.25*Math.max(1, D/12); }
+    return { EX, K, f, vp, wN, Wz, Dmax, Ds, Ls }; })() : null;
+
+  const rvLat = D => { const A = riv.Ds; let lo = 0, hi = A.length - 1; if(D <= A[0]) return riv.Ls[0]; if(D >= A[hi]) return riv.Ls[hi];
+    while(hi - lo > 1){ const m = (lo + hi) >> 1; if(A[m] <= D) lo = m; else hi = m; } const u = (D - A[lo])/(A[hi] - A[lo]); return riv.Ls[lo] + (riv.Ls[hi] - riv.Ls[lo])*u; };
+
+  const rvAt = (D, side = 0) => { const e = Math.max(1e-3, D*0.002), g = (rvLat(D + e) - rvLat(D - e))/(2*e), n = Math.sqrt(1 + g*g), hw = riv.Wz/2;
+    const l = rvLat(D) + side*hw/n, Db = Math.max(0.05, D - side*hw*g/n); return [riv.vp + riv.f*l/Db, horizon + riv.K/Db]; };
+  const rvD = t => 1/Math.max(1/riv.Dmax, Math.pow(t, riv.EX)), rivX = t => rvAt(rvD(t))[0], rivW = t => riv.wN/2/rvD(t);
 
   const water = (top, prof, tone, col) => {
     ctx.globalAlpha = 0.95; ctx.fillStyle = paint(150, waterCol); ctx.fillRect(0, top, w, h - top);
@@ -16805,18 +16822,50 @@ function paintRidges(ctx, w, h, S, o){
     ctx.lineCap = 'round';
 
 
-    if(riv){ const tn = Math.min(1.25, t + 1/Math.max(1, bands - 1)), j = prof.findIndex(([px]) => px >= rivX(t)), ytop = j >= 0 ? prof[j][1] : base, L = [], Rr = [];
 
-      const nb = horizon + (h - horizon)*Math.pow(Math.min(1, tn), 1.35 + pitch*0.9)*0.92 + unit*B.amp*(0.35 + Math.min(1, tn)*0.9)*0.6, yb = Math.max(ytop + unit*0.01, Math.min(h, nb));
-      for(let q = 0; q <= 12; q++){ const sq = q/12, tt = t + (tn - t)*sq, yy = ytop + (yb - ytop)*sq; L.push([rivX(tt) - rivW(tt), yy]); Rr.push([rivX(tt) + rivW(tt), yy]); }
-      L.push([rivX(tn) - rivW(tn), h + 10]); Rr.push([rivX(tn) + rivW(tn), h + 10]);
-      const rc = mixC(waterCol, TM.skyLow, 0.35 + 0.3*(1 - t) + 0.15*calm);
-      ctx.globalAlpha = 0.95; ctx.fillStyle = paint(Math.min(240, 160 + (1 - t)*40), rc); ctx.beginPath(); L.forEach(([a, b], q) => q ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); for(let q = Rr.length - 1; q >= 0; q--) ctx.lineTo(...Rr[q]); ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 0.45; ctx.strokeStyle = paint(Math.max(0, tone - 30), mixC(bandCol, TM.shadow, 0.45)); ctx.lineWidth = unit*(0.002 + 0.004*t);
-      for(const side of [L, Rr]){ ctx.beginPath(); side.forEach(([a, b], q) => q ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.stroke(); }
-      ctx.globalAlpha = 0.35 + 0.15*chop; ctx.fillStyle = paint(215, mixC([240, 244, 250], TM.light, 0.4));
-      for(let k = 0; k < Math.round(4 + 10*t*(1 + chop)); k++){ const sq = Math.random(), q = Math.min(12, Math.floor(sq*13)), xa = L[q][0], xb = Rr[q][0], yy = L[q][1];
-        ctx.fillRect(xa + (xb - xa)*(0.15 + Math.random()*0.5), yy, (xb - xa)*(0.1 + Math.random()*0.3)*(1 + calm), Math.max(0.6, unit*0.0016*(1 + t))); } }
+
+
+
+
+    if(riv){ const Dn = i + 1 < bands ? rvD((i + 1)/(bands - 1)) : 0.7, Df = i ? rvD(t) : riv.Dmax, Ds = [];
+      for(let D = Df; D > Dn*0.85; D -= Math.min(riv.Wz*1.5, Math.max(riv.Wz*0.25, D*D*0.5/riv.K))) Ds.push(D); Ds.push(Dn*0.85);
+      const Lb = Ds.map(D => rvAt(D, -1)), Rb = Ds.map(D => rvAt(D, 1)), outline = () => { ctx.beginPath(); Lb.forEach(([a, b], q) => q ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); for(let q = Rb.length - 1; q >= 0; q--) ctx.lineTo(...Rb[q]); ctx.closePath(); };
+      const Rf = D => { const sa = Math.sin(Math.atan(riv.K/riv.f/Math.max(0.05, D))); return 0.02 + 0.98*Math.pow(1 - sa, 5); };
+      const bodyT = 48, skyT = 206 + 8*calm, tone0 = D => Math.round(bodyT + (skyT - bodyT)*Rf(D)), body = mixC(mixC([34, 58, 54], TM.shadow, 0.3), bandCol, 0.25), col0 = D => mixC(body, mixC(TM.skyLow, TM.skyTop, Math.min(1, riv.K/Math.max(0.05, D)/Math.max(1, horizon))), Rf(D));
+      const yT = Math.min(...Lb.map(p => p[1]), ...Rb.map(p => p[1])), yB = Math.max(...Lb.map(p => p[1]), ...Rb.map(p => p[1])), Dm = Math.sqrt(Math.min(Df, riv.Dmax)*Dn);
+      if(yB > yT + 0.5 && yT < h){
+        ctx.save(); ctx.beginPath(); ctx.moveTo(-20, h + 40); prof.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(w + 20, h + 40); ctx.closePath(); ctx.clip();
+        outline(); ctx.clip();
+        const gw = ctx.createLinearGradient(0, yT, 0, Math.max(yT + 1, Math.min(yB, h))); for(let q = 0; q <= 4; q++){ const yy = yT + (Math.min(yB, h) - yT)*q/4, D = riv.K/Math.max(1e-3, yy - horizon); gw.addColorStop(q/4, paint(tone0(D), col0(D))); }
+
+        const refl = unit*0.03*zoom/Math.max(0.8, Dm)*(1 + 0.5*calm - 0.45*chop);
+        ctx.globalAlpha = 0.95; ctx.fillStyle = paint(Math.max(0, tone - 25), mixC(bandCol, TM.shadow, 0.3)); ctx.fillRect(-20, yT - 2, w + 40, yB - yT + 4);
+        ctx.save(); ctx.translate(0, refl); outline(); ctx.restore(); ctx.fillStyle = gw; ctx.fill();
+
+        if(!calm){ ctx.globalAlpha = 0.5; ctx.fillStyle = gw; for(let k = 0; k < Math.round(6 + 30*t*(1 + chop)); k++){ const q = Math.floor(Math.random()*Lb.length), xa = Lb[q][0], xb = Rb[q][0], y = Math.min(Lb[q][1], Rb[q][1]) + refl*(0.2 + 0.7*Math.random());
+          ctx.fillRect(Math.min(xa, xb) + Math.random()*Math.abs(xb - xa)*0.7, y, Math.abs(xb - xa)*(0.1 + Math.random()*0.3), Math.max(0.6, refl*0.12)); } }
+
+        const nr = Math.round((6 + 26*t)*(1 + chop - 0.5*calm));
+        for(let k = 0; k < nr; k++){ const q = Math.floor(Math.random()*Lb.length), sq = Math.random(), x = Lb[q][0] + (Rb[q][0] - Lb[q][0])*sq, y = Lb[q][1] + (Rb[q][1] - Lb[q][1])*sq + refl*(0.5 + Math.random()), wd = Math.abs(Rb[q][0] - Lb[q][0]) + Math.abs(Rb[q][1] - Lb[q][1]), tq = tone0(Ds[q]);
+          ctx.globalAlpha = 0.3 + Math.random()*0.25; ctx.fillStyle = tq < 150 ? paint(Math.min(250, tq + 45), mixC([240, 244, 250], TM.skyLow, 0.5)) : paint(Math.max(0, tq - 30), mixC(body, TM.skyLow, 0.5));
+          ctx.fillRect(x - wd*0.08, y, wd*(0.06 + Math.random()*0.18)*(1 + calm), Math.max(0.6, unit*0.0016*(1 + t))); }
+        if(sunY < horizon + unit*0.02){ ctx.fillStyle = paint(240, mixC([255, 250, 236], TM.sun, 0.5));
+          for(let k = 0; k < Math.round(10 + 30*t); k++){ const y = yT + Math.random()*(Math.min(yB, h) - yT), x = sunX + (Math.random() - 0.5)*unit*(0.02 + 0.08*(y - horizon)/(h - horizon));
+            ctx.globalAlpha = 0.35 + 0.35*Math.random(); ctx.fillRect(x, y, unit*(0.004 + Math.random()*0.02), Math.max(0.6, unit*0.0018)); } }
+        ctx.restore(); ctx.save(); ctx.beginPath(); ctx.moveTo(-20, h + 40); prof.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(w + 20, h + 40); ctx.closePath(); ctx.clip();
+
+
+        const hair = Math.max(0.6, unit*0.0012*(1 + 2*t)), lightC = paint(Math.min(250, tone0(Dm) + 40), mixC([240, 244, 250], TM.light, 0.4)), darkC = paint(Math.max(0, tone - 40), mixC(bandCol, TM.shadow, 0.5));
+        for(let q = 0; q + 1 < Lb.length; q++){ const lUp = Lb[q][1] + Lb[q + 1][1] < Rb[q][1] + Rb[q + 1][1];
+          for(const [S, up] of [[Lb, lUp], [Rb, !lUp]]){ ctx.globalAlpha = up ? 0.45 + 0.2*calm : 0.5; ctx.strokeStyle = up ? lightC : darkC; ctx.lineWidth = up ? hair : hair*2;
+            ctx.beginPath(); ctx.moveTo(S[q][0], S[q][1]); ctx.lineTo(S[q + 1][0], S[q + 1][1]); ctx.stroke(); } }
+        ctx.restore(); }
+
+
+      const step = prof.length > 1 ? prof[1][0] - prof[0][0] : 1, dk = mixC(mixC([30, 70, 50], TM.shadow, 0.25), TM.skyLow, (1 - t)*0.45), lt = mixC(mixC([120, 160, 70], TM.light, 0.35), TM.skyLow, (1 - t)*0.3);
+      for(let q = 0; q < Ds.length; q += 2){ if(Math.random() > 0.3) continue; const side = Math.random() < 0.5 ? -1 : 1, [x, y] = rvAt(Ds[q], side*(1.4 + 1.6*Math.random())), th = unit*0.07*zoom/Math.max(0.6, Ds[q])*(0.6 + 0.6*Math.random());
+        const j = Math.round((x + 20)/step); if(th < 1.5 || x < -th || x > w + th || y > h + th || !prof[j] || y < prof[j][1] + th*0.05) continue;
+        if(Math.random() < 0.6) paintBush(ctx, x, y + th*0.1, th*0.35, dk, lt, sunSide, paint, Math.max(0, tone - 25)); else paintEvergreen(ctx, x, y + th*0.08, th, dk, lt, sunSide, paint, Math.max(0, tone - 25), unit); } }
 
     ctx.globalAlpha = 0.12*(1 - t); ctx.strokeStyle = paint(200, TM.skyLow); ctx.lineWidth = unit*0.01;
     ctx.beginPath(); prof.forEach(([x, y], j) => j ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
@@ -32889,7 +32938,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Neptune–Larissa';
+const RELEASE = 'Neptune–Hippocamp';
 
 const RELEASE_DATE = '2026-10-21';
 
@@ -33799,7 +33848,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-21 · c46fa02";
+const STAMP = "2026-10-21 · 730df48";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

@@ -246,7 +246,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     (`landPalette`). Color 0 is exactly the grey of before.
   - Water has a mood by the seed (still, ruffled, choppy). The river country (in `LAND_BIOMES`) is two in five of
     grassland's seeds, by its own stream so no other seed's country changes: the hills open into a valley where it
-    runs, and each band paints its reach of the river down to where the next band takes over.
+    runs, and each band paints its reach of the river down to where the next band takes over. The river (Ruby: "needs
+    work"; docs/prior-art/painted-rivers.md) is one course on the valley floor seen in perspective (`rvAt`): its
+    direction a sine of the distance along it, a bend every 13–18 widths, so it winds broad and diagonal at your feet
+    and its far bends flatten into level slivers; each band paints the part of it at its own depths, clipped to itself,
+    so the reaches meet exactly. Its value is the sky's by Schlick's Fresnel at the angle down to it (light far, dark
+    near), its colour the sky's at the height it mirrors; a dark strip under the far bank, a light water line there and
+    a dark lip under the near bank; level ripples; glitter only in the sun's column; trees and bushes along its banks.
 - **Drapery** (chain `drapery`, stepsCloth.js; Ruby: "replace those with node graphs and run a full cloth
   simulation"; docs/prior-art/cloth.md): Drape → Weave Maps (along its U and V) → a Gradient Map of the Tone
   (weft hue to warp hue) → Detail Normals (the threads over the folds' facing) → Light Engine (Relief 100, the

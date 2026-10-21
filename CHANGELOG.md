@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Hippocamp (2026-10-21)
+
+- Painted Landscape's river is remade. It is one river winding down its valley, seen in perspective: broad bends
+  near you, its far bends flattening into thin level slivers that step back toward the horizon, hidden here and there
+  behind the hills, and it no longer starts right under the sun. It holds the sky the way water does, light far off
+  and darker at your feet where you look down into it, with the sky's own colour at the height it mirrors. A dark
+  strip lies under the far bank (the bank reflected), with a light water line along the far shore and a dark lip
+  under the near bank; level ripples, a glitter only where it crosses under the sun, and trees and bushes along its
+  banks. River seeds paint differently from before; no other country changes.
+
+### Under the hood
+- `rvAt`, the river's course walked up the valley (its direction a sine of the distance along it) and projected;
+  each band paints the reach at its own depths, clipped to itself. The research is in
+  docs/prior-art/painted-rivers.md.
+
 ## Neptune–Larissa (2026-10-21)
 
 - Ringworld's films are kinder to the eyes. Lightning no longer lights the whole scene for a frame: a strike now plays
@@ -315,24 +330,3 @@ prints it).
   `glim` lights; the land paints fields piece by piece with the ridges, as it paints the ways. paintKit's `pkSpace` and
   `pkBox3` draw a thing's solids in its own frame; `pkSolidProp` draws the sheep and the boats; four new robots in
   `pkRobot`.
-
-## Uranus–Puck (2026-10-20)
-
-- **Moving Image.** Hold Save image (or right-click it) for a small sheet that makes the page into a short film, drawn
-  frame by frame at full quality: the poem when it is shown, the credit line always. Moves: **Camera round** (a
-  seamless turn of the camera, for a surface that has one), **Light round** (on the Ringworld, **a day passing**: the
-  sun up over noon, down to dusk, through the night and back to dawn), and **To another look**, or **there and back**,
-  easing every control from this look to one of your spells or to the look before your last change, and fading across
-  where the surface itself changes. Wide (1920 × 1080), tall (1080 × 1920), square or the page's own size; 6, 12 or 24
-  seconds at 30 frames a second; an MP4, a WebM, or the PNG frames in a zip. Every loop ends where it began, so it
-  repeats without a seam. Nothing is downloaded to make it: the browser's own video encoder does the work, and a
-  browser without one still makes the PNG frames.
-
-### Under the hood
-- moving.js: `blendLooks`, `wholeChanges` and `moveAt`, and the containers written byte by byte (`mp4Parts`, with its
-  index before the frames; `webmBytes`; `zipParts`, stored, with `crc32`). uiMoving.js: the sheet and `makeMoving`,
-  the frames drawn offline at the film's size and given to WebCodecs' encoder. A click in the sheet is not a step of
-  history. A new suite, test/moving.test.mjs, reads each container back.
-- A film at the page's own size is held to 4K's area; the PNG frames stop short of a zip's 4 GB. Prior art:
-  docs/prior-art/moving-image.md.
-- Pruned the stylesheet: every declaration verified in use (none removed).
