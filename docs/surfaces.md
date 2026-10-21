@@ -354,7 +354,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     radiant, caught by each frame's shutter), lightning flashes now and then, rain and snow fall, the grass sways in
     travelling gusts, insects dance, the droids go about their rounds (`RG_MOVES`), lights flicker and go out and on
     through the night, glints move on the water, chimney smoke rises and leans downwind (`pkSmoke`), kites nod on their
-    strings. The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
+    strings, and the windows (`pkLit`) are most of them lit as the evening begins, fewer as the night deepens, each
+    going on and off in its own time, hours apart. The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
     early summer, days of fourteen hours, long dusks.
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
     objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance

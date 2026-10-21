@@ -6413,12 +6413,17 @@ function pkVernacularOf(fam, v){ const arch = PK_VERNACULAR[fam] || PK_VERNACULA
 
 
 
+
+
+
+const pkLit = (c, night, r, base) => { if(night <= 0.2) return false; const t = Math.max(0, Math.min(1, (night - 0.6)/0.4)), share = base*(1 - 0.6*t*t*(3 - 2*t));
+  if(!c.t) return r < share; const period = 3600*(1.5 + 4*((r*31.7) % 1)); return ((r*97.13 + c.t/period) % 1) < share; };
 function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
   const pitch = Math.max(px(3), wd*0.11), cols = Math.max(1, Math.floor(wd/pitch) - 1), rows = Math.min(90, Math.max(1, Math.floor(ht/pitch) - 1)), cw = wd/(cols + 1), rh = ht/(rows + 1);
   if(ht < px(10)) return;
   const sky = pkMix(c.air || lit, PK_WHITE, 0.12), pane = pkMix(c.dark, PK_BLACK, 0.3), big = cw > px(5), lamp = k => k < 0.1 ? pkMix(c.glow2 || c.glow, [150, 180, 240], 0.6) : pkMix(c.glow, PK_WHITE, k*0.35);
   if(kind === 'ribbon'){
-    for(let r = 1; r <= rows; r++){ const on = night > 0.2 && R() < 0.55, y = top + r*rh, bh = rh*0.4;
+    for(let r = 1; r <= rows; r++){ const on = pkLit(c, night, R(), 0.55), y = top + r*rh, bh = rh*0.4;
       x.fillStyle = on ? pkCss(lamp(R()), 0.8*night) : pkCss(pkMix(pane, sky, 0.2 + 0.25*R()), 0.85); x.fillRect(x0 + cw*0.4, y, wd - cw*0.8, bh);
       if(big){ x.fillStyle = pkCss(c.lit, 0.55); x.fillRect(x0 + cw*0.4, y + bh, wd - cw*0.8, Math.max(px(0.4), bh*0.12)); x.fillStyle = pkCss(c.dark, 0.5); for(let k = 1; k <= cols; k++) x.fillRect(x0 + k*cw, y, Math.max(px(0.4), cw*0.06), bh); } } return; }
   if(kind === 'mullion'){
@@ -6427,7 +6432,7 @@ function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
     x.fillStyle = pkCss(c.dark, 0.32); for(let r = 1; r <= rows; r++) x.fillRect(x0, top + r*rh - rh*0.12, wd, Math.max(px(0.4), rh*0.14));
     x.strokeStyle = pkCss(c.dark, 0.45); x.lineWidth = Math.max(px(0.4), cw*0.08); x.beginPath(); for(let k = 1; k <= cols; k++){ x.moveTo(x0 + k*cw, top); x.lineTo(x0 + k*cw, top + ht); } x.stroke(); }
   if(night > 0.2 || kind === 'neon'){ const nk = Math.max(night, kind === 'neon' ? 0.5 : 0);
-    for(let r = 1; r <= rows; r++){ const floorLit = R() < 0.6; for(let k = 1; k <= cols; k++){ const on = R() < (floorLit ? 0.5 : 0.12), v = R();
+    for(let r = 1; r <= rows; r++){ const floorLit = R() < 0.6; for(let k = 1; k <= cols; k++){ const on = pkLit(c, nk, R(), floorLit ? 0.5 : 0.12), v = R();
       if(on){ x.fillStyle = pkCss(lamp(v), 0.85*nk); x.fillRect(x0 + k*cw - cw*0.25, top + r*rh, cw*0.5, rh*0.45); if(big && v > 0.7){ x.fillStyle = pkCss(PK_BLACK, 0.25*nk); x.fillRect(x0 + k*cw - cw*0.25, top + r*rh, cw*0.5, rh*0.45*(0.2 + 0.5*R())); } }
       else if(kind !== 'mullion' && kind !== 'neon'){ x.fillStyle = pkCss(pane, 0.6); x.fillRect(x0 + k*cw - cw*0.22, top + r*rh, cw*0.44, rh*0.42); } } } }
   else if(kind !== 'mullion'){ const ww = cw*0.44, wh = rh*0.42;
@@ -6456,7 +6461,7 @@ const pkGable = (x, x0, x1, ye, yr, c, over = 0.08) => { const w = x1 - x0, m = 
 const pkBar = (x, x0, y0, w, t, col, px, a = 1) => { x.fillStyle = pkCss(col, a); x.fillRect(x0, y0, w, Math.max(px(0.4), t)); };
 
 
-const pkFrame = (x, wx, wy, ww, wh, c, night, o, door = false) => { const px = o.px, fr = Math.max(px(0.4), ww*0.1), on = night > 0.2 && o.RW() < 0.7;
+const pkFrame = (x, wx, wy, ww, wh, c, night, o, door = false) => { const px = o.px, fr = Math.max(px(0.4), ww*0.1), on = pkLit(c, night, o.RW(), 0.7);
   x.fillStyle = pkCss(pkMix(c.lit, PK_WHITE, 0.25), 0.9); x.fillRect(wx - fr, wy - fr, ww + fr*2, wh + fr*(door ? 1 : 2));
   if(on){ x.fillStyle = pkCss(pkMix(c.glow, PK_WHITE, 0.2*o.RW()), 0.9); x.fillRect(wx, wy, ww, wh); }
   else { const g = x.createLinearGradient(0, wy, 0, wy + wh); g.addColorStop(0, pkCss(pkMix(c.air || c.lit, PK_WHITE, 0.1), 0.85)); g.addColorStop(0.45, pkCss(pkMix(c.dark, PK_BLACK, 0.3), 0.9)); g.addColorStop(1, pkCss(pkMix(c.dark, PK_BLACK, 0.4), 0.95)); x.fillStyle = g; x.fillRect(wx, wy, ww, wh); }
@@ -6624,7 +6629,7 @@ const PK_BUILT = {
   capsule(x, X, Y, h, wd, c, night, lit, o){
     const w2 = wd/2, cs = Math.max(wd*0.22, h*0.07); for(const s of [-0.25, 0.25]) pkPoly(x, [[X + s*wd - wd*0.06, Y], [X + s*wd - wd*0.06, Y - h], [X + s*wd + wd*0.06, Y - h], [X + s*wd + wd*0.06, Y]], pkCss(c.dark));
     for(let yy = Y - cs; yy > Y - h; yy -= cs*1.05) for(const s of [-1, 1]) if(o.R() < 0.8){ const cx = X + s*(w2*0.55 + o.R()*cs*0.3); pkPoly(x, [[cx - cs/2, yy + cs], [cx - cs/2, yy], [cx + cs/2, yy], [cx + cs/2, yy + cs]], pkCss(o.R() < 0.5 ? c.body : c.lit));
-      if(o.detail) pkDisc(x, cx, yy + cs/2, cs*0.22, pkCss(night > 0.2 && o.RW() < 0.6 ? c.glow : pkMix(c.dark, PK_BLACK, 0.3))); } },
+      if(o.detail) pkDisc(x, cx, yy + cs/2, cs*0.22, pkCss(pkLit(c, night, o.RW(), 0.6) ? c.glow : pkMix(c.dark, PK_BLACK, 0.3))); } },
   megablock(x, X, Y, h, wd, c, night, lit, o){
     const w2 = wd/2, n = 5 + Math.floor(o.R()*4); for(let q = 0; q < n; q++){ const x0 = X - w2 + wd*q/n, hh = h*(0.85 + 0.15*o.R()); pkPoly(x, [[x0, Y], [x0, Y - hh], [x0 + wd/n + 0.5, Y - hh], [x0 + wd/n + 0.5, Y]], pkCss(q % 2 ? c.body : pkMix(c.body, c.dark, 0.25)));
       if(o.detail){ for(let r = 0; r < 14; r++) for(let k = 0; k < 3; k++) if(o.RW() < (night > 0.2 ? 0.45 : 0.25)) x.fillStyle = night > 0.2 ? pkCss(o.RW() < 0.3 ? c.glow2 || c.glow : c.glow, 0.85) : pkCss(c.dark, 0.5), x.fillRect(x0 + wd/n*(0.15 + k*0.28), Y - hh + hh*(0.04 + r*0.068), wd/n*0.16, hh*0.03); }
@@ -6825,7 +6830,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   const windows = (ua, va, ub, vb, z0, z1, Rw) => { if(o.plain) return; const len = Math.hypot(ub - ua, vb - va), cols = Math.max(1, Math.floor(len/(3*mpx))), rows = Math.max(1, Math.floor((z1 - z0)/(3.2*mpx)));
     if(len < px(10) || z1 - z0 < px(8) || cols*rows > 400) return; const ww = Math.min(1.2*mpx, len/cols*0.5), wh = Math.min(1.5*mpx, (z1 - z0)/rows*0.5);
     for(let r = 0; r < rows; r++) for(let q = 0; q < cols; q++){ const t = (q + 0.5)/cols, uc = ua + (ub - ua)*t, vc = va + (vb - va)*t, du = (ub - ua)/len*ww/2, dv = (vb - va)/len*ww/2, zc = z0 + (z1 - z0)*(r + 0.55)/rows;
-      const on = night > 0.2 && Rw() < 0.45, col = on ? pkMix(c.glow, PK_WHITE, 0.3) : pkMix(c.dark, c.air || PK_BLACK, 0.25);
+      const on = pkLit(c, night, Rw(), 0.45), col = on ? pkMix(c.glow, PK_WHITE, 0.3) : pkMix(c.dark, c.air || PK_BLACK, 0.25);
       pkPoly(x, [S.P(uc - du, vc - dv, zc - wh/2), S.P(uc + du, vc + dv, zc - wh/2), S.P(uc + du, vc + dv, zc + wh/2), S.P(uc - du, vc - dv, zc + wh/2)], pkCss(col, 0.9)); } };
   const Rw = pkSub(R0)(9), sideN = S.sn >= 0 ? -1 : 1, front = S.cs >= 0, side = Math.abs(S.sn) > 0.03;
   if(!o.plain) pkCast(x, X - w2, X + w2, Y, Math.min(h, wdt*1.6), c);
@@ -32593,7 +32598,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Uranus–Prospero';
+const RELEASE = 'Uranus–Setebos';
 
 const RELEASE_DATE = '2026-10-21';
 
@@ -33503,7 +33508,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-21 · f3675c7";
+const STAMP = "2026-10-21 · 18ff168";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

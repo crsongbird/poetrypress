@@ -4,6 +4,16 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Setebos (2026-10-21)
+
+- Windows keep the hours: as the evening begins most of a town's windows are lit, and as the night deepens toward its
+  middle fewer stay on. In a Time Passing film each window goes on and off in its own time, hours apart: an evening's
+  comings and goings, a light left burning, a kitchen before dawn.
+
+### Under the hood
+- `pkLit` decides every window (the blocks' grids and ribbons, the houses' framed windows, the turned buildings'
+  sides) from the night's depth and the scene's clock. Texture fingerprints updated for night scenes with buildings.
+
 ## Uranus–Prospero (2026-10-21)
 
 - Fixed: standing right beside a factory on the Ringworld could fill the bottom of the picture with a vast flat roof.
@@ -360,65 +370,3 @@ prints it).
 
 ### Under the hood
 - The ring's small things are in its world store with everything else (`pkProp`, `PK_PROPS`).
-
-## Uranus–Desdemona (2026-10-20)
-
-- **Nothing shakes while a control is used.** Dragging a fader whose value is a name (Species, say) once resized its
-  column, and every knob beside it moved; the columns are now a fixed width. The display line keeps its room and only
-  fades in and out. A value is said once: on the display line while the control moves, at the fader's foot otherwise.
-  The Controls heading counts its sliders only while it is closed.
-- **Sliders that pick a kind** (a species, a world, a fabric) hold to their marks from the start (⊹ frees them), a
-  fader is easier to take hold of, and nothing draws a box round a control your finger is on.
-- **Knobs turn as a thumb moves round them**, in an arc: the angle swept about a knob's middle turns it by as much
-  (near the middle, up and down still works).
-- **Up to ten sliders a surface**, where the rack uses the room well; an Athanor graph's Knob has slots 1–10.
-- **A locked control looks held**: it fades, its ring breaks into dashes, its reset with it.
-- **Haptics on a phone**: a light tick as a tab changes or a drawer opens, and a good buzz when a long save is done.
-- **The Painted Ringworld, reworked.** Straight ridges again, and the spans and bridges of light as they were.
-  Everything stands in the world: trees, buildings, rocks, grass and the small things to find are sown in places of
-  their own, so the camera sweeps and the world stays. It is painted as a game engine draws: what nearer hills and
-  things hide is found first and never drawn, the rest painted back to front, each standing on ground that shows.
-  Everything has a size in metres, so a cottage, a spruce and a tower stand in true proportion (no more buildings the
-  size of shrubs), and a city rises away from you into a skyline. Works turned well down.
-- **A far bigger painted kit**, shared by the Painted Ringworld, Ring in the Sky and Night City: 23 kinds of tree,
-  chosen by the land's climate (dry country, warm, jungle, the cold heights, a magic world's fey places with giant
-  mushrooms and crystal trees), and 31 of building, from cottages, barns, windmills and stave churches to pagodas,
-  torii, castles, lighthouses, cathedrals, mosques, clock towers, factories, capsule towers, megablocks, geodomes,
-  observatories and wind turbines. The wilds have villages and farms. Each stands where it belongs: lighthouses on
-  the coast, windmills, turbines, castles and observatories on rises, barns and silos at a town's edge, cathedrals and
-  clock towers at its heart; trees thin out round towns, and boulders gather under slopes.
-- **The ring's walls and its unfinished stretches**: the rim walls are plated, and carry their builders' glowing
-  script, the cities' and neon's screens, and graffiti at the foot; on some rings a stretch of the far floor was never
-  laid, its bare frame showing, scaffolding along its edges and cranes leaning over it.
-- **Robots and droids**, as life where they belong: helpers on one wheel and humming drones in the builders' and
-  cities' worlds, sentries and stalking walkers in the neon, scavengers in the ruins, and now and then a giant fallen
-  long ago, kneeling in the grass.
-- **Drapery, a new surface**: a sheet of cloth simulated as it hangs or falls (from a rod in gathers, from two
-  corners, from one, twisted, or seen from above over a hidden form, crumpled, laid flat) in nine fabrics, silk to
-  velvet. Its weave follows every fold, and the Light Engine lights it from its maps: satin shines, burlap doesn't,
-  light comes through the gaps. New parts for any graph: Drape, Weave Maps and Detail Normals.
-- **Linen Tooth, remade on the cloth parts and the Light Engine**: cloth laid flat with the creases of having been
-  folded and the soft rises of cloth set down, its threads woven as each of nine fabrics weaves them (silk to velvet),
-  lit from its maps. Weave is now Fabric, and Details gives way to Creases; older looks keep their nearest fabric.
-- **The sun can slip behind Saturn.** Turn the light dial until the sun meets it: Saturn turns its night side to you,
-  ringed with lit air, its rings backlit and shining, a bead of light where the sun slips out.
-- **The 3D Ringworld is retired**: it led to the Painted Ringworld, which takes its place. Looks made with it open as
-  the Painted Ringworld, keeping their band, landforms, altitude, builders, camera and day.
-- **Cartomancy on the Light Engine**: the table always blended over the page's own backdrop, the cards and coins lit
-  from height and gloss maps, so their shadows, rims and shine follow the light dial.
-- **Crystal Leaf, remade on the Light Engine**: a druse seen through its faces, the inclusions inside the stone, each
-  face turning to the light on its own, the clear stone translucent, its fire a light of its own. The Light Engine
-  takes a Normal Map.
-- **Fairies**: now and then a small fairy light drifts over the Idyllic Meadow's grass or the Windward Sea, and one
-  Macro Bloom visitor in 66 is a fairy. Fairy Light, a part for any graph.
-- **Sounds, retuned**: home raised to D4, where a phone's speaker carries it; a knob's marks rise with its value, its
-  ends knock, a reset falls a fifth; locks a latch, dice a tumble; bursts sound twice, then rest; nothing while the
-  page is hidden, and the person's own music keeps playing where the browser allows.
-
-### Under the hood
-- `tools/still.mjs` sweeps every slider of every surface on a phone and names anything on the page that moves.
-- paintKit.js: the painted things the three skylines share, each with a size in metres (`PK_SIZE`). Research: real
-  sizes for 33 trees, 62 buildings, rocks and small things, and how games build big kits from few parts
-  (docs/prior-art/painted-ringworld.md); cloth simulation, folds and woven sheen (docs/prior-art/cloth.md).
-- Work happens on main now, without feature branches.
-- Housekeeping: pruned the stylesheet.
