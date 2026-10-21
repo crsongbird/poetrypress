@@ -95,7 +95,7 @@ Mistakes made once, so they aren't made twice. Moved from AGENTS.md §10; skim i
   commit` commits on a failure (a release once shipped with a red suite).
   Check the words: `sh test.sh > out; grep -q "suites passed" out && …`.
 - **`css-prune.py --write` outlasts a 10-minute command:** run it in the
-  background and read its log; don't build while it runs.
+  background and read its log; don't build while it runs (it is no longer part of the release routine).
 - **Never `git stash` to compare with HEAD.** A long test inside a stash
   that times out leaves the work stashed. Use a worktree:
   `git worktree add <scratch>/wt HEAD`.

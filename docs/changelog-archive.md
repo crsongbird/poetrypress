@@ -2,6 +2,16 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Ophelia (2026-10-20)
+
+- **An eye on the Incantation Editor** takes the poem off the page and puts
+  it back; its words stay in the editor, and a saved look remembers it.
+- **Script Highlighting is an eye**, and every other checkbox is now a
+  switch: an eye wherever something is shown or hidden, a switch wherever a
+  feature is turned on (Text Aware, Shape Aware, Cut Out by Text, Blend with
+  Text, Custom Resolution, Points Outward, Rounded Corners, Shape Linked to
+  Border, Full-Size Preview). The Athanor's Steps is an eye too.
+
 ## Uranus–Cordelia (2026-10-20)
 
 - **The camera's Zoom is a slider above its dial**, where the light's Main

@@ -4,6 +4,14 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Sycorax (2026-10-21)
+
+- Nothing you'll see: a housekeeping release.
+
+### Under the hood
+- The stylesheet prune is no longer a standing step of every ten releases: AGENTS.md and the hygiene test ask only
+  that the tests be reviewed within every five. tools/css-prune.py stays for when the stylesheet is touched.
+
 ## Uranus–Trinculo (2026-10-21)
 
 - Nothing you'll see: a housekeeping release.
@@ -452,13 +460,3 @@ prints it).
   it, saying how many sliders it holds and with a chevron at its right,
   shut or open.
 - **Opacity stops short of the edge**, as every other slider now does.
-
-## Uranus–Ophelia (2026-10-20)
-
-- **An eye on the Incantation Editor** takes the poem off the page and puts
-  it back; its words stay in the editor, and a saved look remembers it.
-- **Script Highlighting is an eye**, and every other checkbox is now a
-  switch: an eye wherever something is shown or hidden, a switch wherever a
-  feature is turned on (Text Aware, Shape Aware, Cut Out by Text, Blend with
-  Text, Custom Resolution, Points Outward, Rounded Corners, Shape Linked to
-  Border, Full-Size Preview). The Athanor's Steps is an eye too.

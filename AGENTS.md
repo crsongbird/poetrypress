@@ -189,11 +189,9 @@ segment.
    Check the help is current (§1 rule 11): for each CHANGELOG line, the
    wiki page, tooltip or guide that explains it says what the app now does.
    **Housekeeping** (§1 rule 12), said in that release's notes under **Under
-   the hood** (the hygiene test looks): the stylesheet at least once in every
-   ten releases (Ruby: the prune is slow), the tests once in every five.
-   - *pruned the stylesheet*: `node build.mjs && python3 tools/css-prune.py
-     --write` (it removes only declarations that never win, and proves no
-     drawn element changes in any state), then look at the page;
+   the hood** (the hygiene test looks): the tests at least once in every five
+   releases. (The stylesheet prune is no longer a standing step; run
+   `tools/css-prune.py` when the stylesheet is touched.)
    - *reviewed the tests*: read the suites against §8 Add a test; delete
      what tests a retired thing or an implementation, merge what repeats,
      move a check to the suite of its concern.
