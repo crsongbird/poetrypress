@@ -6099,8 +6099,10 @@ function pkGrain(x, pts, col){
   const w = x1 - x0, h = y1 - y0; if(w < 24 || h < 24) return;
   const R = mulberry32((Math.round(x0*7.13) ^ Math.imul(Math.round(y0*3.7), 2654435761) ^ Math.round(w*11)) >>> 0), n = Math.min(90, Math.floor(w*h/1400));
   x.save(); x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
-  for(let q = 0; q < n; q++){ const cx = x0 + R()*w, cy = y0 + R()*h, r = Math.max(2, Math.min(w, h)*(0.03 + 0.08*R())), lt = R() < 0.5;
-    x.fillStyle = pkCss(pkMix(col, lt ? PK_WHITE : PK_BLACK, 0.06 + 0.06*R()), 0.5); x.beginPath(); x.ellipse(cx, cy, r*(1 + R()), r*(0.5 + 0.4*R()), 0, 0, Math.PI*2); x.fill(); }
+
+
+  for(let q = 0; q < n; q++){ const cx = x0 + R()*w, cy = y0 + R()*h, r = Math.max(2, Math.min(w, h)*(0.015 + 0.035*R())), lt = R() < 0.5;
+    x.fillStyle = pkCss(pkMix(col, lt ? PK_WHITE : PK_BLACK, 0.05 + 0.05*R()), 0.4); x.beginPath(); x.ellipse(cx, cy, r*(1 + R()), r*(0.5 + 0.4*R()), 0, 0, Math.PI*2); x.fill(); }
   x.strokeStyle = pkCss(pkMix(col, PK_BLACK, 0.12), 0.18); x.lineWidth = h*0.004; x.beginPath();
   for(let q = 0, m = Math.min(24, Math.floor(h/18)); q < m; q++){ const yy = y0 + R()*h, xa = x0 + R()*w*0.6; x.moveTo(xa, yy); x.lineTo(xa + w*(0.1 + 0.3*R()), yy + (R() - 0.5)*2); } x.stroke();
   x.restore(); }
@@ -6760,7 +6762,8 @@ const PK_BUILT = {
 
 
 
-function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, run = c.t ? (c.t*0.22) % 1 : 0, col = pkCss(pkMix(c.lit, c.air || c.lit, 0.45));
+
+function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, tm = c.mt ?? c.t, run = tm ? (tm*0.12) % 1 : 0, col = pkCss(pkMix(c.lit, c.air || c.lit, 0.45));
   for(let k = 0; k < n; k++){ const f = k + run, a = a0*(1 - f/n); if(a <= 0.01) continue; x.globalAlpha = a;
     pkDisc(x, X + f*wd*0.07*wx*1.4, Y - f*step*(1 - 0.55*Math.abs(wx)), wd*(0.04 + f*0.024), col); }
   x.globalAlpha = 1; }
@@ -6786,7 +6789,7 @@ const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8,
 const PK_PROOFS = new Map();
 function pkFaceProof(face, c, R0, h, wdt, eave, id){
 
-  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
   const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
   if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
@@ -18465,7 +18468,13 @@ const RG_SPIN = Math.PI*2/(225*3600);
 
 
 
-const rgCloudTime = V => V.dt > 2 ? V.time/V.dt*2 : V.time;
+
+
+
+
+
+const rgCloudTime = V => V.dt > 0.7 ? V.time/V.dt*0.7 : V.time;
+const rgMotionTime = V => V.dt > 2.5 ? V.time/V.dt*2.5 : V.time;
 
 
 const rgWind = V => { const WD = seedChoice(V.seed, 'wind'), ang = WD()*Math.PI*2; return [ang, 3 + 4*WD() + (V.weather === 'storm' ? 5 : 0)]; };
@@ -18724,7 +18733,7 @@ function rgPaintArch(x, mk, V){
         if(hp > px(40) && wp > px(20) && R() < 0.3 && ww2 !== 'magic'){ const u0 = 0.2 + 0.5*R(), A = inQ(q, u0, 0), B = inQ(q, u0 + 0.08, 0), C2 = inQ(q, u0 + 0.08, 0.07), D = inQ(q, u0, 0.07);
           rsPoly(x, [A, B, C2, D], rsCss(rsMix(c, [0, 0, 0], 0.5))); line([A, D, C2, B], rsCss(rsMix(c, [255, 255, 255], 0.3), 0.8), Math.max(px(0.4), hp*0.004));
           if(night > 0.3) rsPoly(x, [inQ(q, u0 + 0.01, 0.005), inQ(q, u0 + 0.07, 0.005), inQ(q, u0 + 0.07, 0.06), inQ(q, u0 + 0.01, 0.06)], rsCss(glowC, 0.4*night)); }
-        if(night > 0.4 && ww2 !== 'ruins' && (R() < 0.5)){ const [X, Y] = inQ(q, 0.5, 0.985), on = !V.time || Math.sin(V.time*Math.PI*0.75 + (X*0.05)) > 0.4; if(on) rgGlow(x, X, Y, Math.max(px(3), hp*0.02), [255, 70, 60], 0.7*night); }
+        if(night > 0.4 && ww2 !== 'ruins' && (R() < 0.5)){ const [X, Y] = inQ(q, 0.5, 0.985), on = !V.time || Math.sin(rgMotionTime(V)*Math.PI*0.75 + (X*0.05)) > 0.4; if(on) rgGlow(x, X, Y, Math.max(px(3), hp*0.02), [255, 70, 60], 0.7*night); }
 
 
         x.save(); x.beginPath(); q.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
@@ -18768,6 +18777,39 @@ function rgPaintArch(x, mk, V){
   if(yh != null && yh2 != null && yh - yh2 > 1){ const g = x.createLinearGradient(0, yh, 0, yh2); g.addColorStop(0, rsCss(AIR, 0.7*V.air)); g.addColorStop(1, rsCss(AIR, 0)); x.fillStyle = g; x.fillRect(0, yh2, ww, wh - yh2); }
 
 
+
+
+
+  { const D = V.sun.D, sEl = D ? Math.asin(Math.max(-1, Math.min(1, -D[0]))) : -1, sAz = D ? Math.atan2(D[2], D[1]) : 0;
+    const glowK = rsSmooth(-0.22, 0.02, sEl), low = rsSmooth(0.6, 0.0, sEl), warm = rsMix([255, 236, 204], rsMix([255, 132, 84], [236, 84, 72], rsSmooth(0.02, -0.15, sEl)), low);
+    x.save(); x.globalCompositeOperation = 'screen';
+
+
+    if(sp && sEl > -0.05){ const r = F*0.8*(1 + 0.3*low), a = 0.32*(0.5 + 0.5*kday), g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(warm, a)); g.addColorStop(0.22, rsCss(warm, a*0.49)); g.addColorStop(0.44, rsCss(warm, a*0.16)); g.addColorStop(0.75, rsCss(warm, a*0.04)); g.addColorStop(1, rsCss(warm, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); }
+    const H0 = skyAt(sAz, 0), H1 = skyAt(sAz, 0.12);
+    if(glowK > 0.01 && H0 && H1){ const ry = Math.max(px(4), Math.abs(H0[1] - H1[1])*(1.2 + 1.6*low)), rx = F*(0.9 + 0.8*low); x.save(); x.translate(H0[0], H0[1]); x.scale(1, ry/rx);
+      const g = x.createRadialGradient(0, 0, 0, 0, 0, rx), a = glowK*(0.16 + 0.34*low); g.addColorStop(0, rsCss(warm, a)); g.addColorStop(0.4, rsCss(rsMix(warm, [236, 120, 140], 0.4*low), a*0.4)); g.addColorStop(1, rsCss(warm, 0)); x.fillStyle = g; x.fillRect(-rx, -rx, rx*2, rx*2); x.restore(); }
+
+
+    const tw = rsSmooth(0.09, 0.0, sEl)*rsSmooth(-0.11, -0.04, sEl), sh = 0.06 + 0.6*Math.max(0, -sEl), A0 = skyAt(sAz + Math.PI, 0), A1 = skyAt(sAz + Math.PI, sh), A2 = skyAt(sAz + Math.PI, sh + 0.2);
+    const band = (P, ry, col, a, op) => { const rx = F*2.2; x.globalCompositeOperation = op; x.save(); x.translate(P[0], P[1]); x.scale(1, Math.max(px(2), ry)/rx);
+      const g = x.createRadialGradient(0, 0, 0, 0, 0, rx); g.addColorStop(0, rsCss(col, a)); g.addColorStop(0.5, rsCss(col, a*0.5)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(-rx, -rx, rx*2, rx*2); x.restore(); };
+    if(tw > 0.01 && A0 && A1 && A2){ band(A0, Math.abs(A0[1] - A1[1])*1.1, rsMix([52, 62, 106], S, 0.2), 0.32*tw, 'source-over'); band([(A1[0] + A2[0])/2, (A1[1] + A2[1])/2], Math.abs(A1[1] - A2[1])*0.6, [236, 158, 176], 0.36*tw, 'screen'); }
+
+
+    const pl = rsSmooth(-0.03, -0.07, sEl)*rsSmooth(-0.115, -0.075, sEl), P0 = skyAt(sAz, 0.2 + 1.2*(sEl + 0.07)), P1 = skyAt(sAz, 0.32 + 1.2*(sEl + 0.07));
+    if(pl > 0.01 && P0 && P1) band(P0, Math.abs(P0[1] - P1[1]), rsMix([206, 128, 196], g1, 0.15), 0.3*pl, 'screen');
+
+
+
+    const aw = sp && (V.weather === 'clouds' || V.weather === 'rain') ? rsSmooth(0.45, 0.12, sEl)*rsSmooth(-0.02, 0.04, sEl) : 0, AP = skyAt(sAz + Math.PI, -Math.max(0.02, sEl)), AT = skyAt(sAz + Math.PI, 0.6);
+    if(aw > 0.01 && AP && AT){ const R = rgRand(s, 818), Lr = Math.hypot(AT[0] - AP[0], AT[1] - AP[1])*1.1, up = Math.atan2(AT[1] - AP[1], AT[0] - AP[0]), col = rsMix([255, 226, 200], [236, 160, 176], dusk*0.5);
+      x.globalCompositeOperation = 'screen'; for(let k = 0, n = 5 + Math.floor(R()*4); k < n; k++){ const an = up + (k/(n - 1) - 0.5)*1.1 + (R() - 0.5)*0.12, wa = 0.012 + 0.03*R(), g = x.createRadialGradient(AP[0], AP[1], 0, AP[0], AP[1], Lr);
+        g.addColorStop(0, rsCss(col, 0)); g.addColorStop(0.25, rsCss(col, 0.05*aw)); g.addColorStop(0.7, rsCss(col, 0.03*aw)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
+        x.beginPath(); x.moveTo(AP[0], AP[1]); x.arc(AP[0], AP[1], Lr, an - wa, an + wa); x.closePath(); x.fill(); } }
+    x.restore(); }
+
+
   { const R = rgRand(s, 815); if(V.world.list.includes('ruins') && R() < 0.08){ const P0 = skyAt(R()*Math.PI*2, 1.5*Math.PI/180), sz = F*(0.05 + 0.04*R());
     if(P0){ const [X, Y] = P0, c = rsMix(rsMix(AIR, [200, 170, 150], 0.35), [255, 255, 255], 0.1);
       rsPoly(x, [[X - sz*0.12, Y], [X - sz*0.08, Y - sz*1.1], [X + sz*0.08, Y - sz*1.1], [X + sz*0.12, Y]], rsCss(c, 0.22));
@@ -18796,8 +18838,13 @@ function rgPaintArch(x, mk, V){
     rsPoly(x, [...pts, [X + wd/2, Y + ht*0.25], [X - wd/2, Y + ht*0.25]], rsCss(cWhite, 0.8)); }
   if(wx === 'clear' || wx === 'clouds') if(R0() < 0.5) for(let k = 0, n = 5 + Math.floor(R0()*8); k < n; k++){
     const R = rgRand(s, 812, k), rnd = (a, b) => a + (b - a)*R(), [caz, ce] = drift(R()*Math.PI*2, rnd(18, 50)*Math.PI/180, 9000, 2.5), P0 = skyAt(caz, ce); if(!P0) continue; const len = F*rnd(0.2, 0.7), ang = rnd(-0.25, 0.25), th = F*rnd(0.004, 0.012);
-    x.save(); x.translate(P0[0], P0[1]); x.rotate(ang); const g = x.createLinearGradient(-len/2, 0, len/2, 0); g.addColorStop(0, rsCss(cWhite, 0)); g.addColorStop(0.5, rsCss(cWhite, 0.35*(0.4 + 0.6*kday))); g.addColorStop(1, rsCss(cWhite, 0)); x.fillStyle = g;
-    for(let q = 0; q < 3; q++){ x.beginPath(); x.ellipse(rnd(-0.1, 0.1)*len, (q - 1)*th*2.2, len/2*rnd(0.6, 1), th, 0, 0, Math.PI*2); x.fill(); } x.restore(); }
+
+
+    x.save(); x.translate(P0[0], P0[1]); x.rotate(ang); const g = x.createLinearGradient(-len/2, 0, len/2, 0), cc = rsMix(cWhite, [255, 176, 150], dusk*0.35); g.addColorStop(0, rsCss(cc, 0)); g.addColorStop(0.45, rsCss(cc, 0.3*(0.4 + 0.6*kday))); g.addColorStop(1, rsCss(cc, 0));
+    x.strokeStyle = g; x.lineCap = 'round';
+    for(let q = 0, m = 5 + Math.floor(R()*6); q < m; q++){ const y0 = (q - m/2)*th*1.5 + rnd(-1, 1)*th, l0 = len*rnd(0.45, 1), x0 = rnd(-0.15, 0.15)*len, bend = rnd(-1, 1)*th*3, hook = R() < 0.35;
+      x.lineWidth = Math.max(px(0.5), th*rnd(0.35, 1)); x.beginPath(); x.moveTo(x0 - l0/2, y0); x.quadraticCurveTo(x0, y0 + bend, x0 + l0/2, y0 + (hook ? th*5 : bend*0.3)); x.stroke(); }
+    x.restore(); }
 
 
 
@@ -18810,7 +18857,12 @@ function rgPaintArch(x, mk, V){
 
   if((wx === 'rain' || (wx === 'clouds' && R0() < 0.15)) && V.sun.D && -V.sun.D[0] < 0.6 && -V.sun.D[0] > -0.05){ const D = V.sun.D, A = proj(L.Px - D[0], -D[1], L.z0 - D[2]);
     if(A){ const r0 = 2*F*Math.tan(21*Math.PI/180), BOW = [[220, 60, 60], [240, 150, 50], [240, 230, 80], [80, 200, 90], [70, 120, 230], [140, 80, 200]]; x.save(); x.globalCompositeOperation = 'screen'; x.lineWidth = r0*0.018;
-      BOW.forEach((cb, k) => { x.strokeStyle = rsCss(cb, 0.16*(0.4 + 0.6*kday)); x.beginPath(); x.arc(A[0], A[1], r0*(1.0 - k*0.018), Math.PI, 0); x.stroke(); }); x.restore(); } }
+      BOW.forEach((cb, k) => { x.strokeStyle = rsCss(cb, 0.16*(0.4 + 0.6*kday)); x.beginPath(); x.arc(A[0], A[1], r0*(1.0 - k*0.018), Math.PI, 0); x.stroke(); });
+
+
+      const k0 = 0.4 + 0.6*kday, g = x.createRadialGradient(A[0], A[1], 0, A[0], A[1], r0*0.9); g.addColorStop(0, rsCss(cWhite, 0)); g.addColorStop(0.7, rsCss(cWhite, 0.03*k0)); g.addColorStop(1, rsCss(cWhite, 0.07*k0)); x.fillStyle = g; x.beginPath(); x.arc(A[0], A[1], r0*0.9, Math.PI, 0); x.fill();
+      const r2 = 2*F*Math.tan(25.5*Math.PI/180); x.lineWidth = r2*0.022; BOW.forEach((cb, k) => { x.strokeStyle = rsCss(cb, 0.07*k0); x.beginPath(); x.arc(A[0], A[1], r2*(1.0 - (5 - k)*0.02), Math.PI, 0); x.stroke(); });
+      x.globalCompositeOperation = 'source-over'; x.lineWidth = r2 - r0*1.02; x.strokeStyle = rsCss(rsMix(cGrey, [20, 24, 40], 0.3), 0.06*k0); x.beginPath(); x.arc(A[0], A[1], (r0*1.02 + r2*0.88)/2, Math.PI, 0); x.stroke(); x.restore(); } }
 
   if(wx === 'fog' || wx === 'snow'){ const yH = yAt(0); if(yH != null){ const g = x.createLinearGradient(0, yH - F*0.5, 0, yH + F*0.05); g.addColorStop(0, rsCss(cWhite, 0)); g.addColorStop(1, rsCss(cWhite, wx === 'fog' ? 0.6 : 0.4)); x.fillStyle = g; x.fillRect(0, yH - F*0.5, ww, F*0.55); } }
 }
@@ -19355,6 +19407,15 @@ function rgPaintLand(x, mk, dk, V){
 
   const things = [];
 
+
+
+
+
+  let flashed = false;
+  const shades = [], CSH = { clouds: 0.42, rain: 0.5, storm: 0.55, snow: 0.3 }[V.weather] || 0;
+  const cloudShadeAt = (a, z) => { if(!shades.length) return 0; let v = 1; for(const h of shades){ const dx = a - h.a, dz = z - h.z, q = (dx*dx + dz*dz)/(h.r*h.r); if(q > 1.9) continue;
+    const th = Math.atan2(dz, dx), rr = 1 + 0.16*Math.sin(3*th + h.ph) + 0.09*Math.sin(5*th + 2*h.ph); v *= 1 - h.k*rsSmooth(1.08, 0.8, Math.sqrt(q)/rr); } return CSH*(1 - v); };
+
   const keep = (a, z, w0 = 0) => { const r = Math.hypot(a, z - L.z0), ph = angOf(a, z), dd = r*smax(Math.cos(ph)); if(dd <= 0 || dd > dWall*1.02) return null;
     if(Math.abs(ph) > PHI + Math.atan2(w0 + W*0.0005, Math.max(r, 1e-9))) return null; return dd; };
   const colsOf = (w, day, haze) => { const lights = V.lightsOf(w), g = lights[0], g2 = lights[1];
@@ -19371,9 +19432,11 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const store = rgStore(V); let loudDrawn = 0;
-  const marginOf = o => o.c === 'bldg' || o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : W*0.0004;
+  const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : W*0.0004;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
-  const nearCut = wh*0.6;
+
+
+  const nearCut = wh*3;
 
 
 
@@ -19391,7 +19454,7 @@ function rgPaintLand(x, mk, dk, V){
 
   const nightDot = (o, f, l, wday, haze, big = 1) => { const nt = 1 - rsSmooth(0.3, 0.7, wday); if(nt < 0.15 || (o.rs % 997)/997 > nt*1.4 - 0.15) return;
     if(V.time && mnHash(o.rs & 4095, Math.floor(V.time/1800 + (o.rs % 97)/97), s + 840) < 0.15) return;
-    const fl = V.time && (o.w === 'ruins' || (o.rs & 15) === 5) ? 0.55 + 0.45*Math.abs(Math.sin(V.time*(7 + (o.rs & 7)) + (o.rs & 255))) : 1;
+    const fl = V.time && (o.w === 'ruins' || (o.rs & 15) === 5) ? 0.55 + 0.45*Math.abs(Math.sin(MT*(7 + (o.rs & 7)) + (o.rs & 255))) : 1;
     const X = f[0], Y = stand(l, X, f[1]) - px(0.6)*big; if(!vis(l, X - px(1), X + px(1), Y - px(2), Y + px(1))) return;
     const lights = V.lightsOf(o.w), col = rsMix(o.rs & 2 ? lights[0] : lights[1] || lights[0], AIR, haze*0.5), r = px(0.55 + 0.5*((o.rs >> 3) % 3)/2)*big;
     x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.35), Math.min(1, nt*1.3)*fl); x.fillRect(X - r, Y - r, r*2, r*2);
@@ -19399,24 +19462,32 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const RG_MOVES = { helper: [8, 70], drone: [3, 22, 1], crawler: [4, 120], walker: [15, 90], harvester: [30, 300], shepherd: [10, 45, 1], crab: [3, 40], lamplighter: [10, 60], sheep: [0.8, 50] };
-  const moved = o => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, ph = (o.rs % 1000)/1000*Math.PI*2, w = Math.PI*2/mv[1], f0 = o.face ?? (o.rs % 62832)/10000;
-    if(mv[2]){ const an = V.time*w + ph; return { ...o, a: o.a + Math.cos(an)*mv[0]*M1, z: o.z + Math.sin(an)*mv[0]*M1, face: an + Math.PI/2 }; }
-    const u = Math.sin(V.time*w + ph), back = Math.cos(V.time*w + ph) < 0; return { ...o, a: o.a + Math.cos(f0)*u*mv[0]*M1, z: o.z + Math.sin(f0)*u*mv[0]*M1, face: back ? f0 + Math.PI : f0 }; };
+
+
+  const MT = rgMotionTime(V);
+  const RG_MOVES = { helper: [14, 260], drone: [6, 120, 1], crawler: [8, 420], walker: [24, 300], harvester: [40, 900], shepherd: [16, 200, 1], crab: [5, 160], lamplighter: [16, 240], sheep: [1.5, 180] };
+  const moved = o => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, R = mulberry32(o.rs ^ 0x6d6f7665), w = Math.PI*2/mv[1], f0 = o.face ?? (o.rs % 62832)/10000;
+    const p1 = R()*6.283, p2 = R()*6.283, p3 = R()*6.283, k2 = 1.618 + 0.4*R(), A = mv[0]*M1, ca = Math.cos(f0), sa = Math.sin(f0);
+
+
+    const at = t => { const u = 0.7*Math.sin(t*w + p1) + 0.3*Math.sin(t*w/k2 + p2), v = (mv[2] ? 0.7 : 0.3)*Math.sin(t*w*(mv[2] ? 1 : 0.77) + p3 + (mv[2] ? Math.PI/2 : 0));
+      return [o.a + (ca*u - sa*v)*A, o.z + (sa*u + ca*v)*A]; };
+    const [a1, z1] = at(MT), [a2, z2] = at(MT + mv[1]*0.01);
+    return { ...o, a: a1, z: z1, face: Math.atan2(z2 - z1, a2 - a1) }; };
   const smokeWind = (([wa, ws]) => Math.cos(wa)*Math.min(1, ws/9))(rgWind(V));
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
-    const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs);
+    const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));
     if(o.c === 'tree'){ const h = o.hM*f[2]; if(h < px(1.6) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || h < px(4) ? null : [X - h*0.13, X + h*0.13, Y - h*0.8, Y - h*0.4])) return;
-      const green = rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, wday, haze);
-      const tc = { trunk: rgLit(V, [70, 52, 40], wday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), wday, haze, AIR), body: rgLit(V, green, wday, haze, AIR),
-        lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), wday, haze, AIR), glow: c.glow, sd: c.sd, L: LT };
+      const green = rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, cday, haze);
+      const tc = { trunk: rgLit(V, [70, 52, 40], cday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), cday, haze, AIR), body: rgLit(V, green, cday, haze, AIR),
+        lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), cday, haze, AIR), glow: c.glow, sd: c.sd, L: LT };
 
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
-    if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > wh*0.75) return;
-      const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd, X + wd, Y - h*1.3, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      const cb = colsOf(o.w, wday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+    if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
+      const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd*1.7, X + wd*1.7, Y - h*1.4, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
+      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
 
 
       const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -19425,52 +19496,52 @@ function rgPaintLand(x, mk, dk, V){
         if(night > 0.2){ x.fillStyle = rsCss(cb.glow, 0.5*night); x.fillRect(dx - dw/2 + dw*0.15, Y - dh*0.9, dw*0.7, dh*0.35); }
         x.fillStyle = rsCss(cb.lit); x.fillRect(dx - dw*0.75, Y - m*0.15, dw*1.5, m*0.15);
         pkProp(x, dx + dw*1.3, Y, 3.2*m, cb, 'lamp', mulberry32(o.rs ^ 0x1a3b), rgPx, night);
-        if(Rb() < 0.6){ x.fillStyle = rsCss(cb.dark); x.fillRect(dx - dw*1.9, Y - m*0.5, dw*0.7, m*0.5); for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(rgLit(V, [60, 110, 60], wday, haze, AIR)); x.beginPath(); x.arc(dx - dw*1.55 + (q - 1)*dw*0.2, Y - m*0.6, m*0.22, 0, Math.PI*2); x.fill(); } } }
+        if(Rb() < 0.6){ x.fillStyle = rsCss(cb.dark); x.fillRect(dx - dw*1.9, Y - m*0.5, dw*0.7, m*0.5); for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(rgLit(V, [60, 110, 60], cday, haze, AIR)); x.beginPath(); x.arc(dx - dw*1.55 + (q - 1)*dw*0.2, Y - m*0.6, m*0.22, 0, Math.PI*2); x.fill(); } } }
       return; }
-    if(o.c === 'rock'){ const rr = o.hM*f[2]; if(rr < px(2) || rr > wh*0.3) return;
+    if(o.c === 'rock'){ const rr = o.hM*f[2]; if(rr < px(2) || rr > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - rr, X + rr, Y - rr, Y, [X - rr*0.5, X + rr*0.5, Y - rr*0.4, Y])) return;
-      pkRock(x, X, Y, rr, rgLit(V, [128, 122, 114], wday, haze, AIR), LT, R, rgPx); return; }
-    if(o.c === 'grass'){ const gH = o.hM*f[2]; if(gH < px(2.5) || gH > wh*0.12) return;
+      pkRock(x, X, Y, rr, rgLit(V, [128, 122, 114], cday, haze, AIR), LT, R, rgPx); return; }
+    if(o.c === 'grass'){ const gH = o.hM*f[2]; if(gH < px(2.5) || gH > wh*0.4) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - gH, X + gH, Y - gH*1.4, Y)) return;
-      const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), wday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
+      const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), cday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
 
-      const sway = V.time ? gH*(0.16*Math.sin(V.time*1.7 - o.a/(W*0.002) + (o.rs & 7)) + 0.08*Math.sin(V.time*4.3 + (o.rs & 31))) : 0;
+      const sway = V.time ? gH*(0.16*Math.sin(MT*1.7 - o.a/(W*0.002) + (o.rs & 7)) + 0.08*Math.sin(MT*4.3 + (o.rs & 31))) : 0;
       for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4 + sway*(1 + 0.15*b), Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
       if(R() < 0.25*RG_PROF[o.w].gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
-    if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h < px(o.kind === 'caps' ? 1.2 : 3) || h > wh*0.6) return;
+    if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h < px(o.kind === 'caps' ? 1.2 : 3) || h > nearCut) return;
       if(E.loud && loudDrawn >= 1) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*(o.kind === 'warden' ? 4.2 : o.kind === 'spire' ? 1.1 : 1.8), Y)) return;
       if(E.loud) loudDrawn++;
-      const c = colsOf(o.w, wday, haze), vw = viewOf(o); if(vw.sn < 0 && o.kind !== 'diner') mirrored(X, () => pkEgg(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
-    if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, wday, haze); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
-    if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h < px(3) || h > wh*0.6) return;
+      const c = colsOf(o.w, cday, haze), vw = viewOf(o); if(vw.sn < 0 && o.kind !== 'diner') mirrored(X, () => pkEgg(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+    if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, cday, haze); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
+    if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h < px(3) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - bw/2, X + bw/2, Y - h, Y)) return;
-      pkBoard(x, X, Y, m, { ...colsOf(o.w, wday, haze), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
+      pkBoard(x, X, Y, m, { ...colsOf(o.w, cday, haze), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
     if(o.c === 'glim'){ nightDot(o, f, l, wday, haze, o.big); return; }
-    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > wh*(RG_WIDE.includes(o.kind) ? 0.12 : 0.35)) return;
+    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > (RG_WIDE.includes(o.kind) ? wh*0.6 : nearCut)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
 
-      const c = colsOf(o.w, wday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(o, f) };
+      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(o, f) };
       if(o.sink){ x.save(); x.beginPath(); x.rect(X - h*6, Y - h*6, h*12, h*6 + h*0.02); x.clip(); pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); x.restore(); }
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
 
       if(o.next){ const f2 = foot(o.next[0], o.next[1]); if(f2) pkWires(x, [X, Y - h*0.95], [f2[0], f2[1] - o.hM*f2[2]*0.95], h, c, rgPx); } return; }
-    if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > wh*0.5) return;
+    if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
-      const c = { ...colsOf(o.w, wday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
+      const c = { ...colsOf(o.w, cday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;
       if(PK_BOTS3.includes(o.kind)){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
-      const bob = V.time && o.kind === 'drone' ? Math.sin(V.time*1.3 + (o.rs & 63))*h*0.12 : 0;
+      const bob = V.time && o.kind === 'drone' ? Math.sin(MT*1.3 + (o.rs & 63))*h*0.12 : 0;
       if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
 
-    const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.2) return;
-    const X = f[0], Y = stand(l, X, f[1]); if(Y < px(4) || Y > wh*0.95 || !vis(l, X - hh, X + hh, Y - hh*1.4, Y)) return;
-    const glow = colsOf(o.w, wday, haze).glow;
-    const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], wday, haze, AIR), lit: rgLit(V, [236, 240, 246], wday, haze, AIR), glow,
+    const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.6) return;
+    const X = f[0], Y = stand(l, X, f[1]); if(Y > wh + hh*0.2 || !vis(l, X - hh*4, X + hh*4, Y - hh*(o.kind === 'kite' ? 5 : 1.4), Y)) return;
+    const glow = colsOf(o.w, cday, haze).glow;
+    const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], cday, haze, AIR), lit: rgLit(V, [236, 240, 246], cday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
       slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR), weather: V.weather, wind: rgWind(V) };
-    rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, V.time);
+    rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, MT);
   };
 
 
@@ -19592,26 +19663,67 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
+  if(V.weather === 'clear' && seedChoice(V.seed, 'devils')() < 0.55){ const RD = rgRand(s, 870), [wA, wS] = rgWind(V), tc = rgCloudTime(V); let nd = 0;
+    for(let k = 0; k < 40; k++){ const R = rgRand(s, 871, k), a0 = (R()*2 - 1)*W*0.4, z0 = (R() - 0.5)*W*0.8, hM = 80 + 260*R()*R(), life0 = 260 + 400*R(), ph = R()*6.283;
+      if(V.dryAt(a0, z0) < 0.6 || RD() > 0.5) continue;
+      const lp = V.time ? (tc/life0 + R()) % 1 : 0.5, life = rsSmooth(0, 0.2, lp)*rsSmooth(1, 0.75, lp), wan = V.time ? tc*0.6 : 0;
+      const a = a0 + (Math.cos(wA)*wS*0.4*wan + Math.sin(wan*0.013 + ph)*60)*W*0.00025, z = z0 + (Math.sin(wA)*wS*0.4*wan + Math.cos(wan*0.011 + ph)*60)*W*0.00025;
+      if(life < 0.03 || ringDay(L, a) < 0.45) continue; const dd = keep(a, z, hM*W*0.00025); if(dd == null || ++nd > 4) continue;
+      things.push({ dd, draw: l => { const f = foot(a, z); if(!f || f[3] <= TR.sea) return; const h = hM*f[2]; if(h < px(6) || h > nearCut) return;
+        const X = f[0], Y = stand(l, X, f[1]), lean = Math.cos(wA)*0.25, wb = h*0.05, wt = h*0.32; if(!vis(l, X - wt*1.4 + Math.min(0, lean*h), X + wt*1.4 + Math.max(0, lean*h), Y - h, Y)) return;
+        const day = ringDay(L, a), dc = rgLit(V, rsMix(rgGround(V, a, z, f[3]), [214, 190, 146], 0.45), day, hazeOf(dd), AIR), al = life*rsSmooth(0.45, 0.65, day), tw = V.time ? MT*0.02 : 0;
+        const sk = x.createRadialGradient(X, Y, 0, X, Y, wb*5); sk.addColorStop(0, rsCss(dc, 0.3*al)); sk.addColorStop(1, rsCss(dc, 0)); x.save(); x.translate(X, Y); x.scale(1, 0.3); x.translate(-X, -Y); x.fillStyle = sk; x.beginPath(); x.arc(X, Y, wb*5, 0, Math.PI*2); x.fill(); x.restore();
+
+        const dl = rsMix(dc, [255, 244, 222], 0.3), cs = V.sun.sd || 1, ring = t => { const w = wb + (wt - wb)*Math.pow(t, 1.6); return [X + lean*h*t + Math.sin(t*5 + ph + tw)*w*0.3, Y - h*t, w]; };
+        for(let q = 0, n = Math.max(8, Math.min(40, Math.round(h/px(3)))); q < n; q++){ const t = q/(n - 1), [xx, yy, w] = ring(t);
+          const g = x.createRadialGradient(xx + cs*w*0.3, yy, 0, xx, yy, w); g.addColorStop(0, rsCss(dl, 0.3*(1 - 0.7*t)*al)); g.addColorStop(0.6, rsCss(dc, 0.16*(1 - 0.7*t)*al)); g.addColorStop(1, rsCss(dc, 0));
+          x.save(); x.translate(xx, yy); x.scale(1, 0.32); x.translate(-xx, -yy); x.fillStyle = g; x.beginPath(); x.arc(xx, yy, w, 0, Math.PI*2); x.fill(); x.restore(); }
+        x.strokeStyle = rsCss(rsMix(dc, BLACK, 0.12), 0.22*al); x.lineWidth = Math.max(px(0.5), h*0.006); x.lineCap = 'round';
+        for(let k2 = 0; k2 < 3; k2++){ x.beginPath(); for(let q = 0; q <= 24; q++){ const t = q/24, [xx, yy, w] = ring(t), an = t*14 + k2*2.1 + tw*3; if(Math.cos(an) < 0){ x.moveTo(xx + Math.sin(an)*w*0.8, yy); continue; } q ? x.lineTo(xx + Math.sin(an)*w*0.8, yy) : x.moveTo(xx + Math.sin(an)*w*0.8, yy); } x.stroke(); } } }); } }
+
+
+
+
+  if((V.weather === 'clear' || V.weather === 'clouds') && seedChoice(V.seed, 'flock')() < 0.3 && V.world.list.some(w => w === 'wilds' || w === 'cities' || w === 'builders')){
+    const RF = rgRand(s, 880), az = RF()*Math.PI*2, r0 = W*(0.04 + 0.2*RF()), a0 = Math.cos(az)*r0, z0 = Math.max(-W*0.42, Math.min(W*0.42, L.z0 + Math.sin(az)*r0)), hF = 90 + 160*RF(), SF = 160 + 260*RF(), NB = 600 + Math.floor(900*RF()), ph = RF()*50;
+    const dd = keep(a0, z0, SF*W*0.00025); if(dd != null) things.push({ dd, draw: l => { const day = ringDay(L, a0), dk = rgClamp(1 - Math.abs(day - 0.5)*3.2); if(dk < 0.15) return;
+      const e = Math.max(TR.sea, T(a0, z0, W*0.003)), B = at(a0, z0, e + hF*W*0.00025); if(!B) return; const k = W*0.00025*F/B[2], S2 = SF*k*0.5, X = B[0], Y = B[1]; if(S2 < px(5) || S2 > wh*1.5) return;
+      if(!vis(l, X - S2*2.4, X + S2*2.4, Y - S2*1.6, Y + S2*1.6)) return;
+      const T0 = (V.time ? MT*0.004 : 0) + ph, sx = 1.6 + 0.7*Math.sin(T0*0.7), sy = 0.45 + 0.25*Math.sin(T0*0.9 + 1), th = T0*0.3, ct = Math.cos(th), st = Math.sin(th), Rb = mulberry32(s ^ 0xb1d5);
+      x.fillStyle = rsCss(rgLit(V, [34, 30, 40], 0.4, hazeOf(dd)*0.7, AIR), 0.85*rsSmooth(0.15, 0.4, dk)); x.beginPath(); const rd = Math.max(px(0.5), Math.min(px(1.4), S2*0.008));
+      for(let q = 0; q < NB; q++){ let u = Rb()*2 - 1, v = Rb()*2 - 1, w = Rb()*2 - 1; const m = Math.cbrt(Rb())/(Math.hypot(u, v, w) || 1); u *= m; v *= m; w *= m;
+        let px0 = (u*ct - w*st)*sx, py0 = v*sy; px0 += 0.45*Math.sin(2.1*py0/sy + T0); py0 += 0.3*Math.sin(1.6*px0 - T0*0.8);
+        const BX = X + px0*S2, BY = Y - py0*S2; x.moveTo(BX + rd, BY); x.arc(BX, BY, rd, 0, Math.PI*2); }
+      x.fill(); } }); }
+
+
+
+
 
 
 
 
 
   { const wx = V.weather, cloudy = wx === 'clouds' || wx === 'rain' || wx === 'storm' || wx === 'snow';
-    if(cloudy){ const R0 = rgRand(s, 850), n = wx === 'clouds' ? 12 + Math.floor(R0()*8) : 18 + Math.floor(R0()*10), M1 = W*0.00025, A = W*1.6, Zh = W*0.44, storm = wx === 'storm';
+    if(cloudy){ const R0 = rgRand(s, 850), n = wx === 'clouds' ? 16 + Math.floor(R0()*10) : 20 + Math.floor(R0()*10), M1 = W*0.00025, A = W*1.6, Zh = W*0.44, storm = wx === 'storm';
       const [wAng, wSp] = rgWind(V), wrap = (v, h) => ((v + h) % (2*h) + 2*h) % (2*h) - h;
       const lxC = V.sun.screen[0] > 0 ? 1 : -1, strike = storm && (!V.time || mnHash(Math.floor(V.time/Math.max(0.25, Math.min(4, V.dt || 0.25))), 3, s + 818) < 0.12) ? Math.floor(R0()*n) : -1;
       for(let k = 0; k < n; k++){ const R = rgRand(s, 851, k), rnd = (a, b) => a + (b - a)*R();
-        const tc = rgCloudTime(V), a = wrap((R()*2 - 1)*A + Math.cos(wAng)*wSp*M1*tc, A), z = wrap((R()*2 - 1)*Zh + Math.sin(wAng)*wSp*M1*tc*0.3, Zh);
+        const tc = rgCloudTime(V), u0 = R()*2 - 1, a = wrap(Math.sign(u0)*Math.pow(Math.abs(u0), 1.35)*A + Math.cos(wAng)*wSp*M1*tc, A), z = wrap((R()*2 - 1)*Zh + Math.sin(wAng)*wSp*M1*tc*0.3, Zh);
         const eb = Math.max(TR.sea, TR.snow*rnd(0.7, 1.05)), wd0 = rnd(250, 900)*M1*(storm ? 1.4 : 1), ht0 = wd0*rnd(0.35, storm ? 1.3 : 0.7), seed0 = (R()*4294967296) >>> 0, rain = (wx === 'rain' || storm) && R() < 0.6;
 
 
-        const lifeT = (900 + 1500*R())*(storm ? 2 : 1), cyc = V.time ? Math.floor(tc/lifeT) : 0, lp = V.time ? (tc/lifeT) % 1 : 0;
-        const life = rsSmooth(0.75, 0.55, lp) + rsSmooth(0.8, 1, lp), wd = wd0*(0.35 + 0.65*life), ht = ht0*(0.25 + 0.75*life), seed = (seed0 ^ Math.imul(cyc, 0x9E3779B1)) >>> 0;
-        if(life < 0.04) continue; const dd = keep(a, z, wd); if(dd == null) continue;
-        things.push({ dd, draw: l => paintHeap({ a, z, eb, wd, ht, seed, rain, life, bolt: k === strike }, l, dd) }); }
-      const paintHeap = (h, l, dd) => { const B = at(h.a, h.z, h.eb); if(!B) return; const kpx = F/B[2], W0 = h.wd*kpx, H0 = h.ht*kpx; if(W0 < px(2) || W0 > ww*3) return;
-        const X = B[0], Y = B[1]; if(!vis(l, X - W0*0.8, X + W0*0.8, Y - H0*1.2, Y)) return;
+
+
+        const lifeT = (900 + 1500*R())*(storm ? 2 : 1), ph0 = 0.45, cyc = V.time ? Math.floor(tc/lifeT + ph0) : 0, lp = V.time ? (tc/lifeT + ph0) % 1 : ph0;
+        const grow = rsSmooth(0, 0.3, lp), fade = rsSmooth(0.86, 0.62, lp), life = grow*fade;
+        const wd = wd0*(0.6 + 0.4*grow)*(1 + 0.25*(1 - fade)), ht = ht0*(0.35 + 0.65*grow)*(0.75 + 0.25*fade), seed = (seed0 ^ Math.imul(cyc, 0x9E3779B1)) >>> 0;
+        if(life < 0.03) continue;
+        { const D = V.sun.D, up = Math.max(0.3, -D[0]), hg = Math.max(0, eb - TR.sea); shades.push({ a: a + hg*D[1]/up, z: z + hg*D[2]/up, r: wd*0.5, k: life*Math.min(1, ht/wd + 0.4), ph: (seed0 % 628)/100 }); }
+        const dd = keep(a, z, wd); if(dd == null) continue;
+        things.push({ dd, draw: l => paintHeap({ a, z, eb, wd, ht, seed, rain, life, grow, tc, bolt: k === strike }, l, dd) }); }
+      const paintHeap = (h, l, dd) => { const B = at(h.a, h.z, h.eb); if(!B) return; const kpx = F/B[2], W0 = h.wd*kpx, H0 = h.ht*kpx; if(W0 < px(2) || W0 > ww*1.2) return;
+        const X = B[0], Y = B[1]; if(!vis(l, X - W0*1.2, X + W0*1.2, Y - H0*1.3, Y + H0*0.1)) return;
         const day = ringDay(L, h.a), haze = hazeOf(dd), dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), R = mulberry32(h.seed), rnd = (a, b) => a + (b - a)*R();
         const white = rsMix(rgLit(V, [244, 244, 250], day, 0, AIR), [255, 170, 140], dusk*0.4), grey = rsMix(white, [70, 74, 86], storm ? 0.6 : wx === 'rain' ? 0.38 : wx === 'snow' ? 0.15 : 0.05);
         const base = rsMix(rsMix(grey, [40, 44, 60], 0.25), AIR, haze*0.85), lit = rsMix(rsMix(grey, [255, 248, 236], 0.35*rsSmooth(0.3, 0.75, day) + 0.1), AIR, haze*0.85);
@@ -19620,30 +19732,94 @@ function rgPaintLand(x, mk, dk, V){
         const S0 = Math.sqrt(W0*Math.max(H0, W0*0.35)), pr0 = S0*0.11, np = Math.max(10, Math.min(64, Math.round(W0*H0/(pr0*pr0)*0.55), Math.round(W0/px(4))));
         const pad = W0*0.25 + pr0*1.5, cw = Math.ceil(W0*1.5 + pad*2), ch = Math.ceil(H0*1.3 + pad*2), ox = X - cw/2, oy = Y - H0*1.15 - pad;
         if(cw*ch > 4.2e6) return; const [cc, cx] = kitCanvas(cw, ch), L0 = (px0, py) => [px0 - ox, py - oy], puffs = [];
-        for(let q = 0; q < np; q++){ const v = Math.pow(R(), 0.8), half = 0.5*Math.pow(1 - v, 0.5)*(0.75 + 0.25*R()) + 0.08, u = 0.5 + (R()*2 - 1)*half;
-          puffs.push([X - W0/2 + W0*u, Y - H0*v*0.92 - pr0*0.4, pr0*rnd(0.7, 1.35)*(0.75 + 0.5*(1 - Math.abs(u - 0.5)*2))]); }
+
+
+
+
+
+
+
+        const tm = V.time ? h.tc : 0, grow = h.grow ?? 1, spread = 1 + 0.9*(1 - grow), Hn = H0*0.92, ru = pr0/W0, rv = pr0/Hn;
+        const env = v => 0.5*Math.sqrt(Math.max(0, 1 - v)) + 0.06, nb = Math.max(3, Math.round(np*0.3)), sk = [];
+        for(let q = 0; q < np; q++){ const rr = rnd(0.7, 1.3); let u = -1, v = 0;
+          if(q < nb){ u = 0.5 + (((q + 0.5)/nb)*2 - 1)*env(0)*0.85 + (R() - 0.5)*ru; v = R()*rv*0.4; }
+          else for(let t = 0; t < 6 && u < 0; t++){ const p = sk[Math.floor(R()*sk.length)], th = (R()*2 - 1)*1.25, d = (p[2] + rr)*0.5, u1 = p[0] + Math.sin(th)*d*ru, v1 = p[1] + Math.cos(th)*d*rv;
+            if(v1 <= 1 && Math.abs(u1 - 0.5) <= env(v1)){ u = u1; v = v1; } }
+          if(u >= 0) sk.push([u, v, rr*(1 - 0.2*v)*(0.8 + 0.4*(1 - Math.abs(u - 0.5)*2))]); }
+        sk.forEach(([u0, v0, r0], q) => { const ph = q*2.399 + (h.seed % 628)/100, breathe = tm ? 1 + 0.08*Math.sin(tm*0.021 + ph) : 1, roll = tm ? Math.sin(tm*0.013 + ph*1.7)*0.06*v0 : 0;
+          puffs.push([X - W0/2 + W0*(0.5 + (u0 - 0.5)*spread), Y - Hn*(v0*(0.45 + 0.55*grow) + roll) - pr0*0.4, pr0*r0*breathe*(0.6 + 0.4*grow), 1]); });
+
+        { const det = rsSmooth(px(90), px(220), W0), Rd = mulberry32(h.seed ^ 0x5eed5eed), n0 = puffs.length;
+          if(det > 0) for(let q = 0; q < n0; q++){ const [p0, p1, r] = puffs[q]; for(let c = 0; c < 3; c++){ const th = (Rd()*2 - 1)*1.7, cr = r*(0.3 + 0.2*Rd()), k0 = p0 + Math.sin(th)*r*0.8, k1 = p1 - Math.cos(th)*r*0.8;
+            if(k1 < Y - pr0*0.3 && !puffs.some(([s0, s1, sr], j) => j !== q && j < n0 && Math.hypot(k0 - s0, k1 - s1) < sr*0.85)) puffs.push([k0, k1, cr, det]); } } }
 
 
 
         for(let q = 0; q < 6; q++){ const [qx, qy] = L0(X - W0*0.42 + W0*0.84*q/5, Y - pr0*0.2), g = cx.createRadialGradient(qx, qy, 0, qx, qy, W0*0.16); g.addColorStop(0, rsCss(base, 0.8)); g.addColorStop(1, rsCss(base, 0));
           cx.save(); cx.translate(qx, qy); cx.scale(1, 0.32); cx.translate(-qx, -qy); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, W0*0.16, 0, Math.PI*2); cx.fill(); cx.restore(); }
-        for(const [p0, p1, r] of puffs){ const [qx, qy] = L0(p0, p1), g = cx.createRadialGradient(qx, qy, r*0.55, qx, qy, r*1.3); g.addColorStop(0, rsCss(base, 0.95)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r*1.3, 0, Math.PI*2); cx.fill(); }
+        for(const [p0, p1, r, pa] of puffs){ const [qx, qy] = L0(p0, p1), g = cx.createRadialGradient(qx, qy, r*0.55, qx, qy, r*1.3); g.addColorStop(0, rsCss(base, 0.95*pa)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r*1.3, 0, Math.PI*2); cx.fill(); }
         puffs.sort((p, q) => q[1] - p[1]);
-        for(const [p0, p1, r] of puffs){ const [qx, qy] = L0(p0, p1), up = rsSmooth(Y, Y - H0, p1), body = rsMix(base, lit, 0.35 + 0.4*up), g = cx.createRadialGradient(qx + lxC*r*0.3, qy - r*0.35, 0, qx, qy, r);
-          g.addColorStop(0, rsCss(rsMix(body, lit, 0.5))); g.addColorStop(0.7, rsCss(body)); g.addColorStop(1, rsCss(rsMix(body, base, 0.6), 0.6)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r, 0, Math.PI*2); cx.fill(); }
-        for(const [p0, p1, r] of puffs) if(p1 < Y - H0*0.45){ const [qx, qy] = L0(p0 + lxC*r*0.3, p1 - r*0.35), g = cx.createRadialGradient(qx, qy, 0, qx, qy, r*0.6); g.addColorStop(0, rsCss(lit, 0.75)); g.addColorStop(1, rsCss(lit, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r*0.6, 0, Math.PI*2); cx.fill(); }
+        for(const [p0, p1, r, pa] of puffs){ const [qx, qy] = L0(p0, p1), up = rsSmooth(Y, Y - H0, p1), body = rsMix(base, lit, 0.35 + 0.4*up), g = cx.createRadialGradient(qx + lxC*r*0.3, qy - r*0.35, 0, qx, qy, r);
+          g.addColorStop(0, rsCss(rsMix(body, lit, 0.22), pa)); g.addColorStop(0.72, rsCss(body, pa)); g.addColorStop(1, rsCss(body, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, r, 0, Math.PI*2); cx.fill(); }
 
-        if(h.rain){ const G = at(h.a, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ const ln = G[1] - Y, sl = Math.cos(wAng)*W0*0.12, g = x.createLinearGradient(0, Y, 0, G[1]);
-          g.addColorStop(0, rsCss(base, 0.3)); g.addColorStop(1, rsCss(base, 0.04)); x.fillStyle = g;
-          for(let q = 0; q < 7; q++){ const u0 = -0.4 + 0.7*R(), w0 = W0*rnd(0.03, 0.1); x.beginPath(); x.moveTo(X + u0*W0, Y); x.lineTo(X + u0*W0 + w0, Y); x.lineTo(X + u0*W0 + w0 + sl, G[1]); x.lineTo(X + u0*W0 + sl, G[1]); x.fill(); } } }
-        x.save(); x.globalAlpha = (0.93 - 0.25*haze)*Math.min(1, (h.life ?? 1)*1.3); x.drawImage(cc, ox, oy); x.restore(); cc.width = 0;
+
+
+
+
+
+        const sEl = V.sun.D ? Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))) : 1, lowK = rsSmooth(0.5, 0.08, sEl)*rsSmooth(-0.12, 0.02, sEl);
+        const sp2 = V.sun.at, back = sp2 && sEl > -0.05 ? rsSmooth(W0*1.6, W0*0.35, Math.hypot(sp2[0] - X, sp2[1] - (Y - H0*0.5))) : 0;
+        cx.save(); cx.globalCompositeOperation = 'source-atop';
+        { const [ax, ay] = L0(X + lxC*W0*0.35, Y - H0*1.05), [bx, by] = L0(X - lxC*W0*0.3, Y), g = cx.createLinearGradient(ax, ay, bx, by), k = 1 - lowK;
+          g.addColorStop(0, rsCss(lit, 0.55*k)); g.addColorStop(0.45, rsCss(lit, 0.08*k)); g.addColorStop(0.75, rsCss(base, 0.12*k)); g.addColorStop(1, rsCss(rsMix(base, [20, 24, 40], 0.3), 0.45*k)); cx.fillStyle = g; cx.fillRect(0, 0, cw, ch); }
+        if(lowK > 0.01){ const warm = rsMix(rsMix([255, 150, 104], [255, 196, 150], rsSmooth(0.05, 0.4, sEl)), lit, 0.2), cool = rsMix(base, [74, 62, 112], 0.35), [ax, ay] = L0(X + lxC*W0*0.45, Y), [bx, by] = L0(X - lxC*W0*0.15, Y - H0*1.1), g = cx.createLinearGradient(ax, ay, bx, by);
+          g.addColorStop(0, rsCss(warm, 0.62*lowK)); g.addColorStop(0.35, rsCss(warm, 0.22*lowK)); g.addColorStop(0.7, rsCss(cool, 0.2*lowK)); g.addColorStop(1, rsCss(cool, 0.5*lowK)); cx.fillStyle = g; cx.fillRect(0, 0, cw, ch); }
+        if(back > 0.01){ const [qx, qy] = L0(X, Y - H0*0.5), g = cx.createRadialGradient(qx, qy, 0, qx, qy, Math.max(W0, H0)*0.6); g.addColorStop(0, rsCss(rsMix(base, [16, 18, 30], 0.4), 0.45*back)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.fillRect(0, 0, cw, ch); }
+        cx.restore();
+        { const nf = Math.min(160, puffs.length*3), fr = pr0*0.32, rimC = rsMix([255, 250, 238], lit, 0.3); for(let q = 0; q < nf; q++){ const [p0, p1, r] = puffs[(q*7) % puffs.length], an = q*2.399 + (h.seed % 97), fx = p0 + Math.cos(an)*r*1.05, fy = p1 + Math.sin(an)*r*0.9;
+          if(fy > Y - pr0*0.2 || puffs.some(([s0, s1, sr]) => Math.hypot(fx - s0, fy - s1) < sr*0.92)) continue;
+          const [qx, qy] = L0(fx, fy), rim = back*(sp2 ? rsSmooth(W0*1.4, W0*0.2, Math.hypot(sp2[0] - fx, sp2[1] - fy)) : 0);
+          const g = cx.createRadialGradient(qx, qy, 0, qx, qy, fr*(1 + 0.6*rim)); g.addColorStop(0, rsCss(rim > 0.05 ? rsMix(Math.sin(an) < 0 ? lit : base, rimC, rim) : Math.sin(an) < 0 ? lit : base, 0.32 + 0.55*rim)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, fr*(1 + 0.6*rim), 0, Math.PI*2); cx.fill(); } }
+
+
+
+
+
+
+        const shower = !h.rain && wx === 'clouds' && (h.seed % 9) === 0 && dd > W*0.6 && h.ht > h.wd*0.4, virga = !h.rain && !shower && (wx === 'clouds' || wx === 'snow') && (h.seed % 7) < 2 && h.ht > h.wd*0.45;
+        if(h.rain || shower || virga){ const G = at(h.a, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ const ln = G[1] - Y, Rr = mulberry32(h.seed ^ 0x7a17), sway = tm ? Math.sin(tm*0.004 + (h.seed % 97))*0.05 : 0, sl = (Math.cos(wAng)*0.12 + sway)*W0;
+          const n = Math.max(14, Math.min(70, Math.round(W0/px(2.5)))), col = rsMix(base, AIR, 0.25), a0 = (storm ? 0.16 : 0.11)*(virga ? 0.7 : 1);
+          for(let q = 0; q < n; q++){ const u0 = (Rr() + Rr() + Rr())/3*0.84 - 0.42, w0 = Math.max(px(0.6), W0*(0.006 + 0.03*Rr()*Rr())), reach = virga ? 0.2 + 0.4*Rr() : 0.75 + 0.25*Rr(), Y1 = Y + ln*reach;
+            const g = x.createLinearGradient(0, Y, 0, Y1); g.addColorStop(0, rsCss(col, a0*(0.5 + Rr()))); g.addColorStop(0.6, rsCss(col, a0*0.45)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
+            const X0 = X + u0*W0; x.beginPath(); x.moveTo(X0, Y); x.lineTo(X0 + w0, Y); x.lineTo(X0 + w0 + sl*reach, Y1); x.lineTo(X0 + sl*reach, Y1); x.fill(); } } }
+
+
+        const overhead = rsSmooth(ww*1.2, ww*0.55, W0);
+        x.save(); x.globalAlpha = (0.93 - 0.25*haze)*Math.min(1, (h.life ?? 1)*1.3)*overhead; x.drawImage(cc, ox, oy); x.restore(); cc.width = 0;
 
         if(h.bolt){ const G = at(h.a + W0/kpx*0.1, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ let bx = X + (R() - 0.5)*W0*0.3, by = Y; const pts = [[bx, by]], steps = 10;
           for(let q = 0; q < steps; q++){ bx += (G[0] - bx)/(steps - q) + (R() - 0.5)*W0*0.08; by += (G[1] - by)/(steps - q); pts.push([bx, by]); }
           x.save(); x.globalCompositeOperation = 'screen'; x.strokeStyle = rsCss([226, 226, 255], 0.95); x.lineWidth = Math.max(px(1), W0*0.006); x.lineJoin = 'round'; x.beginPath(); pts.forEach(([p0, p1], q) => q ? x.lineTo(p0, p1) : x.moveTo(p0, p1));
           const fk = pts[4]; x.moveTo(fk[0], fk[1]); x.lineTo(fk[0] + W0*0.08, fk[1] + (G[1] - Y)*0.2); x.lineTo(fk[0] + W0*0.05, fk[1] + (G[1] - Y)*0.35); x.stroke();
-          rgGlow(x, pts[0][0], pts[0][1], W0*0.9, [200, 200, 255], 0.45); rgGlow(x, G[0], G[1], W0*0.25, [220, 220, 255], 0.5); x.restore(); } } }; } }
+          rgGlow(x, pts[0][0], pts[0][1], W0*0.9, [200, 200, 255], 0.45); rgGlow(x, G[0], G[1], W0*0.25, [220, 220, 255], 0.5); x.restore(); flashed = true; } } }; } }
 
+
+
+
+
+  let SHC = null;
+  if(shades.length && lay.length){ const SW = 256, SH = Math.max(1, Math.round(SW*wh/ww)), cx0 = ww/SW, cy0 = wh/SH;
+    const cut = lay.map(l => { const P = l.pts, Yc = new Float32Array(SW).fill(Infinity), Ac = new Float32Array(SW), Zc = new Float32Array(SW); let j = 0;
+      for(let c = 0; c < SW; c++){ const X = (c + 0.5)*cx0; while(j + 2 < P.length && P[j + 1].X < X) j++; const A = P[j], B = P[j + 1]; if(!B || X < A.X || X > B.X) continue;
+        const t = (X - A.X)/((B.X - A.X) || 1); Yc[c] = A.Y + (B.Y - A.Y)*t; Ac[c] = A.a + (B.a - A.a)*t; Zc[c] = A.z + (B.z - A.z)*t; } return { Yc, Ac, Zc }; });
+    const [sc, sx] = kitCanvas(SW, SH), im = sx.createImageData(SW, SH), D8 = im.data; let any = false;
+    for(let c = 0; c < SW; c++) for(let r = 0, li = lay.length - 1; r < SH; r++){ const Y = (r + 0.5)*cy0;
+      li = lay.length - 1; while(li >= 0 && !(cut[li].Yc[c] <= Y)) li--; if(li < 0) continue;
+      const C = cut[li], dF = lay[li].d, near = li + 1 < lay.length, Yn = near && cut[li + 1].Yc[c] < Infinity ? cut[li + 1].Yc[c] : wh, dN = near ? lay[li + 1].d : dF*0.2;
+      const t = rgClamp((Y - C.Yc[c])/Math.max(1e-6, Yn - C.Yc[c])), dep = 1/((1 - t)/dF + t/dN), k = dep/dF, a = C.Ac[c]*k, z = L.z0 + (C.Zc[c] - L.z0)*k;
+      const v = cloudShadeAt(a, z)*rsSmooth(0.3, 0.7, ringDay(L, a))*(1 - 0.85*hazeOf(dep)); if(v < 0.004) continue;
+      const i = (r*SW + c)*4; D8[i] = 10; D8[i + 1] = 14; D8[i + 2] = 34; D8[i + 3] = Math.round(255*v); any = true; }
+    if(any){ sx.putImageData(im, 0, 0); SHC = sc; } }
 
   const bySlot = lay.map(() => []);
   for(const t of things){ const j = slot(t.dd); if(j >= 0){ t.l = lay[j]; bySlot[j].push(t); } }
@@ -19689,6 +19865,7 @@ function rgPaintLand(x, mk, dk, V){
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), 0.7*day + 0.1); x.lineWidth = Math.max(px(1.2), depth*0.025); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
 
     const dn = li + 1 < lay.length ? lay[li + 1].d : 0; drawFields(dn, d); drawWays(dn, d);
+    if(SHC){ x.save(); x.beginPath(); sil.forEach(([p0, p1], q) => q ? x.lineTo(p0, p1) : x.moveTo(p0, p1)); x.closePath(); x.clip(); x.imageSmoothingEnabled = true; x.drawImage(SHC, 0, 0, ww, wh); x.restore(); }
     bySlot[li].sort((p, q) => q.dd - p.dd); for(const t of bySlot[li]){ if(t.o) drawWork(t.o, l); else if(t.ok){ cur = t; t.draw(l); } }
 
     if(MIST && li < lay.length - 2){ x.fillStyle = rsCss(MISTC, MIST); x.fillRect(0, 0, ww, wh); }
@@ -19700,12 +19877,13 @@ function rgPaintLand(x, mk, dk, V){
 
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(col, 0.22)); g.addColorStop(0.4, rsCss(col, 0.07)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
+  if(flashed){ x.save(); x.globalCompositeOperation = 'screen'; x.fillStyle = rsCss([170, 176, 236], 0.14); x.fillRect(0, 0, ww, wh); x.restore(); }
   if(V.weather === 'rain' || V.weather === 'storm'){ const R = rgRand(s, 820), n = Math.round(ww*wh/(px(26)*px(26))), sl = 0.18; x.strokeStyle = rsCss(rsMix(AIR, [230, 236, 246], 0.5), V.weather === 'storm' ? 0.24 : 0.18); x.lineWidth = Math.max(px(0.5), px(0.9)); x.beginPath();
 
-    const fall = V.time*wh*1.6; for(let k = 0; k < Math.min(n, 4000); k++){ const ln = px(10 + 30*R()), X0 = R()*ww, Y = ((R()*wh + fall) % (wh + ln)) - ln, X = ((X0 + fall*sl) % ww); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
+    const fall = MT*wh*1.6; for(let k = 0; k < Math.min(n, 4000); k++){ const ln = px(10 + 30*R()), X0 = R()*ww, Y = ((R()*wh + fall) % (wh + ln)) - ln, X = ((X0 + fall*sl) % ww); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
     if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); } }
   if(V.weather === 'snow'){ const R = rgRand(s, 821), n = Math.min(3000, Math.round(ww*wh/(px(34)*px(34)))); x.fillStyle = rsCss([250, 252, 255], 0.85); x.beginPath();
-    for(let k = 0; k < n; k++){ const X0 = R()*ww, Y0 = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)), sp2 = wh*(0.05 + 0.04*r/px(3.4)), Y = (Y0 + V.time*sp2) % wh, X = ((X0 + Math.sin(V.time*0.8 + k)*px(6)*(V.time ? 1 : 0)) % ww + ww) % ww;
+    for(let k = 0; k < n; k++){ const X0 = R()*ww, Y0 = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)), sp2 = wh*(0.05 + 0.04*r/px(3.4)), Y = (Y0 + MT*sp2) % wh, X = ((X0 + Math.sin(V.time*0.8 + k)*px(6)*(V.time ? 1 : 0)) % ww + ww) % ww;
       x.moveTo(X + r, Y); x.arc(X, Y, r, 0, Math.PI*2); } x.fill(); }
 }
 
@@ -27539,7 +27717,7 @@ const TEXTURE_CHAINS = {
       [5, 1, 13, 'centre'], [6, 1, 14, 'amount'], [7, 1, 14, 'brush'],
       [8, 1, 13, 2], [9, 1, 13, 'turn'], [9, 2, 13, 'tilt'], [9, 3, 13, 'size'],
       [10, 1, 13, 3], [11, 1, 13, 4], [12, 1, 13, 1], [13, 1, 14, 1], [14, 1, 15, 1], [14, 2, 15, 2], [15, 1, 16, 1]] },
-  ringpaint: { label: 'Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+  ringpaint: { label: 'Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills, their shadows lying on the land under them; by day over dry country a dust devil may whirl, and at dusk a murmuration of starlings wheels over the fields. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog; the sky glows round the sun, burning low at dusk, with the pink Belt of Venus opposite. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 120],
       ['knob', { slot: '3' }, 40, 200],
@@ -32691,11 +32869,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Neptune–Despina';
+const RELEASE = 'Neptune–Galatea';
 
 const RELEASE_DATE = '2026-10-21';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"1W47xT-k","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"g3b5w8of","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"r6wnhJ89","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"M0_52ya8","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -33601,7 +33779,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-21 · a61ed19";
+const STAMP = "2026-10-21 · e29b7b6";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

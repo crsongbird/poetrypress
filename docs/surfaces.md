@@ -358,14 +358,28 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     travelling gusts, insects dance, the droids go about their rounds (`RG_MOVES`), lights flicker and go out and on
     through the night, glints move on the water, chimney smoke rises and leans downwind (`pkSmoke`), kites nod on their
     strings, and the windows (`pkLit`) are most of them lit as the evening begins, fewer as the night deepens, each
-    going on and off in its own time, hours apart. The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
+    going on and off in its own time, hours apart. Two slower clocks keep a film from looking sped up (Ruby: "slower time
+    lapse animation in general … just a lil"): clouds on `rgCloudTime`, the small motions (grass, droids, rain and snow,
+    flicker, smoke) on `rgMotionTime`; the droids and walkers wander long smooth paths (`RG_MOVES`: two slow sines
+    whose periods never line up), never quick shuttles. Nothing is cut until it is wholly out of the frame (`nearCut`,
+    the visibility boxes as wide as each thing can reach). The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
     early summer, days of fourteen hours, long dusks.
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
     objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
     (`paintHeap`), each on its own sheet laid at once so its billows never darken each other, every billow a gradient
-    so its edges are soft; more and smaller billows the nearer the cloud; rain falls from a heap's base to the ground
-    below it, lightning strikes from one down to the land. High and far, the cirrus and the clear sky's low bands stay
-    in the sky.
+    so its edges are soft; its billows grown each from one already there inside the heap's dome, so none floats free;
+    a cauliflower's smaller billows on its outline as it nears; lit as one body (a gradient over the whole sheet,
+    `source-atop`) and its edge broken into faint wisps; rain falls from a heap's base in a curtain of streaks (virga
+    under some heaps in plain cloudy weather, never reaching the ground), lightning strikes from one down to the land
+    and lights the whole scene a moment. With the clock (Ruby: "clouds need to move slower, billow and gather … clean
+    transition states"; the Wind Waker's, docs/prior-art/ringworld-time.md §4) they drift on their own slow clock
+    (`rgCloudTime`), their billows breathe and roll, and each heap lives in stages: it gathers from scattered wisps,
+    stands, thins and is gone, and a new shape gathers only from nothing; a heap swelling past half the frame as it
+    nears fades. Each heap's shadow lies on the land under it (`cloudShadeAt`): a soft sheet over each ridge's face,
+    laid before what stands on it, and the things themselves lit by the sun that reaches them (`cday`). The light on a
+    heap follows the sun's height: from above by day, from below at dawn and dusk (warm undersides, violet tops), and
+    with the sun behind it a dark heart and a shining edge. High and far, the cirrus and the clear sky's low bands
+    stay in the sky.
   - **Gas giants** (`rgGiant`, `RG_GIANTS`): The Arch's Gas Giant setting hangs Saturn (with Titan), Jupiter, Neptune or
     Uranus in the sky, by the seed, with their moons along their equators.
   - **Runes on the walls** (`rgRune`): the builders' script on the rim walls is a band of runes between ruled lines;
@@ -414,7 +428,12 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     the sun's side (`pkFlip`). Trees are mirrored by the seed.
   - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow; heaps of
     cloud lit from the sun's side, rain in veils, lightning, a rainbow opposite a low sun, rays from a low or clouded
-    sun, the sun's glare low over the land, mist thickening between the ridges, rain and snow falling over it all.
+    sun, the sun's glare low over the land, mist thickening between the ridges, rain and snow falling over it all. The
+    air round the sun (docs/prior-art/ringworld-sky.md): the sky brightens toward the sun and the horizon under it glows,
+    burning orange and red at dusk and lingering after the sun has gone; opposite it at dusk and dawn, the Belt of
+    Venus over the blue-grey of the world's shadow. Cirrus combed into fine strands, some hooked (mares' tails). By day in clear weather
+    over dry country, now and then a dust devil (a tapering column of dust, lit on the sun's side, its strands winding
+    up it) wanders and dies away; at dusk on some rings a murmuration of starlings folds over open country.
   - **Works** (Ruby: "works needs to be turned down significantly"): 35 by
     default, and fewer of each at any setting; the spans and bridges of light
     across the band as they were (Ruby: "the bridges and the spans were fine").

@@ -2,6 +2,21 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Belinda (2026-10-20)
+
+- **Ways, not a grid.** The Ringworld's streets were a grid laid over every town; now they are ways, and fewer: the
+  main roads, and from the heart of each town (as many as Works builds) a few ways out and one on to the next town,
+  each walked across the land curving toward the level and away from the steep, so it follows the contours. Each is
+  made of something of its world's: asphalt, cobbles, brick, gravel, packed earth with its ruts, flagstones, stepping
+  stones in moss, the builders' pale paths and paths of light. They wear: cracked, potholed, weeds at the edges, and in
+  the ruins broken right through. The lamps, cars, benches and signs stand along them and face them; poles carry the
+  wires along the main roads out of town; buildings and trees keep off them.
+- **Cumulus** clouds sit on flatter, softer bases.
+
+### Under the hood
+- The store walks its ways (`RG_WAYMAT`, `RG_WAYHALF`, `RG_WAYCOL`, `RG_LIT_WAYS`) and the land paints them piece by
+  piece with the ridges.
+
 ## Uranus–Cupid (2026-10-20)
 
 - **The Ringworld fills a wide view.** The land reaches the page's edges at any lens and any shape of page (it showed

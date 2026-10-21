@@ -174,6 +174,9 @@ if(canvasOK){
 { const M = await import('./canvasMock.mjs'), doc = globalThis.document; M.installCanvasMock();   // (the DOM mock's canvases go uncounted)
   const drawn = (saturn, seed) => { const g = A.athanorStarter('ringpaint');
     for(const n of Object.values(A.athanorNodes(g))) if(n.name === 'ringarch') n.data = { ...n.data, saturn };
+    // (drawn twice and the second counted: the kit keeps what it can (a building's face read back once), so a first
+    //  drawing makes canvases a second never does; compared warm, two drawings differ only by what they draw)
+    A.evalAthanor(g, 160, 160, { seed, knobs: [], tints: [], canvas: true }, {});
     M.resetCreatedCanvases(); A.evalAthanor(g, 160, 160, { seed, knobs: [], tints: [], canvas: true }, {});
     return JSON.stringify(M.createdCanvases.map(c => c.getContext('2d')._stats)); };
   const seeds = Array.from({ length: 24 }, (_, i) => i + 1), saturnine = seeds.filter(s => drawn('by the seed', s) !== drawn('never', s));

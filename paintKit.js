@@ -46,8 +46,10 @@ function pkGrain(x, pts, col){
   const w = x1 - x0, h = y1 - y0; if(w < 24 || h < 24) return;
   const R = mulberry32((Math.round(x0*7.13) ^ Math.imul(Math.round(y0*3.7), 2654435761) ^ Math.round(w*11)) >>> 0), n = Math.min(90, Math.floor(w*h/1400));
   x.save(); x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
-  for(let q = 0; q < n; q++){ const cx = x0 + R()*w, cy = y0 + R()*h, r = Math.max(2, Math.min(w, h)*(0.03 + 0.08*R())), lt = R() < 0.5;
-    x.fillStyle = pkCss(pkMix(col, lt ? PK_WHITE : PK_BLACK, 0.06 + 0.06*R()), 0.5); x.beginPath(); x.ellipse(cx, cy, r*(1 + R()), r*(0.5 + 0.4*R()), 0, 0, Math.PI*2); x.fill(); }
+  // (small and faint beside the face, however near: a wall filling the frame shows a fine mottle, never soft grey
+  //  blots that read as clouds on it)
+  for(let q = 0; q < n; q++){ const cx = x0 + R()*w, cy = y0 + R()*h, r = Math.max(2, Math.min(w, h)*(0.015 + 0.035*R())), lt = R() < 0.5;
+    x.fillStyle = pkCss(pkMix(col, lt ? PK_WHITE : PK_BLACK, 0.05 + 0.05*R()), 0.4); x.beginPath(); x.ellipse(cx, cy, r*(1 + R()), r*(0.5 + 0.4*R()), 0, 0, Math.PI*2); x.fill(); }
   x.strokeStyle = pkCss(pkMix(col, PK_BLACK, 0.12), 0.18); x.lineWidth = h*0.004; x.beginPath();
   for(let q = 0, m = Math.min(24, Math.floor(h/18)); q < m; q++){ const yy = y0 + R()*h, xa = x0 + R()*w*0.6; x.moveTo(xa, yy); x.lineTo(xa + w*(0.1 + 0.3*R()), yy + (R() - 0.5)*2); } x.stroke();
   x.restore(); }
@@ -706,8 +708,9 @@ const PK_BUILT = {
 // its face narrowed as it turns away (|cs|), its side shown on the side turned toward you, deeper as it turns (|sn|)
 // the round buildings, the same from any side
 // a chimney's smoke from (X, Y): puffs rising and growing, leaning with the wind (c.windX, -1 to 1: blown flat in a
-// strong one) or, with no wind given, away from the light; with the clock (c.t) they rise from the pot and thin away
-function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, run = c.t ? (c.t*0.22) % 1 : 0, col = pkCss(pkMix(c.lit, c.air || c.lit, 0.45));
+// strong one) or, with no wind given, away from the light; with the clock (c.mt, the scene's small motions, else c.t)
+// they rise from the pot and thin away
+function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, tm = c.mt ?? c.t, run = tm ? (tm*0.12) % 1 : 0, col = pkCss(pkMix(c.lit, c.air || c.lit, 0.45));
   for(let k = 0; k < n; k++){ const f = k + run, a = a0*(1 - f/n); if(a <= 0.01) continue; x.globalAlpha = a;
     pkDisc(x, X + f*wd*0.07*wx*1.4, Y - f*step*(1 - 0.55*Math.abs(wx)), wd*(0.04 + f*0.024), col); }
   x.globalAlpha = 1; }
@@ -733,7 +736,7 @@ const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8,
 const PK_PROOFS = new Map();
 function pkFaceProof(face, c, R0, h, wdt, eave, id){
   // (keyed by everything the face is drawn from but the clock, which only lights its windows: by the hour)
-  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
   const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
   if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
