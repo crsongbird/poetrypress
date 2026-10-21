@@ -107,7 +107,7 @@ async function movingFrame(){ render(); await texturesSettled(); render(); }
 /** Make the film (or, while one is being made, stop it). */
 export async function makeMoving(){
   if(movingRun.busy){ movingRun.stop = true; return; }
-  const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, fps = +($('movingFps') || {}).value || 30, n = Math.min(30, +$('movingLength').value || 12)*fps;
+  const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, fps = +($('movingFps') || {}).value || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;   // (a minute at most)
   let [w, h] = MOVING_SIZES[$('movingSize').value] || [state.page.exportW || canvas.width, state.page.exportH || canvas.height];
   if(fmt !== 'png'){   // (a film's page held to 4K's area, past which the encoders' levels end; and even sides, as H.264 and VP9 take)
     const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }

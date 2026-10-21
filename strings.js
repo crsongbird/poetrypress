@@ -359,6 +359,8 @@ export const UI_STRINGS = {
   'moving.fps48':                          "48 a second",
   'moving.fps60':                          "60 a second",
   'moving.s30':                            "30 seconds",
+  'moving.s45':                            "45 seconds",
+  'moving.s60':                            "A minute",
   'moving.other':                          "The other look",
   'moving.size':                           "Size",
   'moving.page':                           "The page",

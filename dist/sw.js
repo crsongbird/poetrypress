@@ -9,7 +9,7 @@
  * VERSION is stamped by build.mjs from the page's contents, so a new build
  * gets a new cache and the old one is cleared out.
  */
-const VERSION = 'bf7a74033c27';
+const VERSION = '1bee99e851de';
 const CACHE = 'vellum-' + VERSION;
 const SHELL = ['./', './index.html', './manifest.webmanifest',
                './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];

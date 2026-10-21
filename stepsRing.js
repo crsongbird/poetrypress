@@ -125,9 +125,13 @@ function rgView(E, n, ww, wh){
 // THE RING'S SPIN under the stars (docs/prior-art/ringworld-time.md: Niven's ring turns once in seven and a half of its
 // thirty-hour days, 225 hours): radians a second of the film's clock turns the sky, a degree and a half an hour
 const RG_SPIN = Math.PI*2/(225*3600);
-// THE CLOUDS' CLOCK: when a film's frames are far apart in time (a day in seconds), the clouds would leap a kilometre
-// from frame to frame; they are carried as though each frame were twenty seconds on, so they drift rather than jump
-const rgCloudTime = V => V.dt > 20 ? V.time/V.dt*20 : V.time;
+// THE CLOUDS' CLOCK (Ruby: "slower and more physically accurate cloud movement"): when a film's frames are far apart in
+// time (a day in seconds), the clouds would leap from frame to frame; they are carried as a time-lapse carries them, at
+// most two seconds of wind a frame (some sixty times their true pace at thirty frames a second), so they drift
+const rgCloudTime = V => V.dt > 2 ? V.time/V.dt*2 : V.time;
+// the wind, by the seed (docs/prior-art/ringworld-time.md: fair-weather cumulus drift at three to seven metres a second,
+// faster under a storm): its way and its speed
+const rgWind = V => { const WD = seedChoice(V.seed, 'wind'), ang = WD()*Math.PI*2; return [ang, 3 + 4*WD() + (V.weather === 'storm' ? 5 : 0)]; };
 // the ground's own colour at a point (before light, night and haze): the Land Hue as each world lays it, dry land,
 // forest, city, rock high up, snow on the tallest; the sea below its level
 function rgGround(V, a, z, e, coarse = 1){
@@ -439,7 +443,7 @@ function rgPaintArch(x, mk, V){
   // runs, each cloud rides on its own layer (the heaps low, the cirrus high and faster) a plane over the land, and the
   // plane carries it: across the sky, growing as it nears and shrinking down to the horizon, gone past it and coming
   // round again from the far side (a still: every cloud where it always was)
-  const WD = seedChoice(V.seed, 'wind'), wAng = WD()*Math.PI*2, wSp = 4 + 10*WD();
+  const [wAng, wSp] = rgWind(V);
   // (each cloud keeps to its own circle of the plane, as far out as it began: it crosses the sky along a chord of it with
   //  the wind, and past the horizon comes in again on the far side, so the sky keeps the clouds it began with)
   const drift = (az, e, hc, k = 1) => { if(!V.time) return [az, e, 1]; const d = hc/Math.tan(e), ux = Math.cos(wAng), uy = Math.sin(wAng), x0 = d*Math.cos(az), y0 = d*Math.sin(az);
@@ -1230,13 +1234,17 @@ function rgPaintLand(x, mk, dk, V){
   // the ground below them, and lightning strikes from one of them down to the land
   { const wx = V.weather, cloudy = wx === 'clouds' || wx === 'rain' || wx === 'storm' || wx === 'snow';
     if(cloudy){ const R0 = rgRand(s, 850), n = wx === 'clouds' ? 12 + Math.floor(R0()*8) : 18 + Math.floor(R0()*10), M1 = W*0.00025, A = W*1.6, Zh = W*0.44, storm = wx === 'storm';
-      const WDc = seedChoice(V.seed, 'wind'), wAng = WDc()*Math.PI*2, wSp = 4 + 10*WDc(), wrap = (v, h) => ((v + h) % (2*h) + 2*h) % (2*h) - h;
+      const [wAng, wSp] = rgWind(V), wrap = (v, h) => ((v + h) % (2*h) + 2*h) % (2*h) - h;
       const lxC = V.sun.screen[0] > 0 ? 1 : -1, strike = storm && (!V.time || mnHash(Math.floor(V.time/Math.max(0.25, Math.min(4, V.dt || 0.25))), 3, s + 818) < 0.12) ? Math.floor(R0()*n) : -1;
       for(let k = 0; k < n; k++){ const R = rgRand(s, 851, k), rnd = (a, b) => a + (b - a)*R();
         const tc = rgCloudTime(V), a = wrap((R()*2 - 1)*A + Math.cos(wAng)*wSp*M1*tc, A), z = wrap((R()*2 - 1)*Zh + Math.sin(wAng)*wSp*M1*tc*0.3, Zh);
-        const eb = Math.max(TR.sea, TR.snow*rnd(0.7, 1.05)), wd = rnd(250, 900)*M1*(storm ? 1.4 : 1), ht = wd*rnd(0.35, storm ? 1.3 : 0.7), seed = (R()*4294967296) >>> 0, rain = (wx === 'rain' || storm) && R() < 0.6;
-        const dd = keep(a, z, wd); if(dd == null) continue;
-        things.push({ dd, draw: l => paintHeap({ a, z, eb, wd, ht, seed, rain, bolt: k === strike }, l, dd) }); }
+        const eb = Math.max(TR.sea, TR.snow*rnd(0.7, 1.05)), wd0 = rnd(250, 900)*M1*(storm ? 1.4 : 1), ht0 = wd0*rnd(0.35, storm ? 1.3 : 0.7), seed0 = (R()*4294967296) >>> 0, rain = (wx === 'rain' || storm) && R() < 0.6;
+        // (a cumulus lives a quarter of an hour or so: with the clock each grows old, thins and is gone, and another builds
+        //  in its place, of its own shape; at the film's start each is at its fullest, as a still shows it)
+        const lifeT = (900 + 1500*R())*(storm ? 2 : 1), cyc = V.time ? Math.floor(tc/lifeT) : 0, lp = V.time ? (tc/lifeT) % 1 : 0;
+        const life = rsSmooth(0.75, 0.55, lp) + rsSmooth(0.8, 1, lp), wd = wd0*(0.35 + 0.65*life), ht = ht0*(0.25 + 0.75*life), seed = (seed0 ^ Math.imul(cyc, 0x9E3779B1)) >>> 0;
+        if(life < 0.04) continue; const dd = keep(a, z, wd); if(dd == null) continue;
+        things.push({ dd, draw: l => paintHeap({ a, z, eb, wd, ht, seed, rain, life, bolt: k === strike }, l, dd) }); }
       const paintHeap = (h, l, dd) => { const B = at(h.a, h.z, h.eb); if(!B) return; const kpx = F/B[2], W0 = h.wd*kpx, H0 = h.ht*kpx; if(W0 < px(2) || W0 > ww*3) return;
         const X = B[0], Y = B[1]; if(!vis(l, X - W0*0.8, X + W0*0.8, Y - H0*1.2, Y)) return;
         const day = ringDay(L, h.a), haze = hazeOf(dd), dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), R = mulberry32(h.seed), rnd = (a, b) => a + (b - a)*R();
@@ -1263,7 +1271,7 @@ function rgPaintLand(x, mk, dk, V){
         if(h.rain){ const G = at(h.a, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ const ln = G[1] - Y, sl = Math.cos(wAng)*W0*0.12, g = x.createLinearGradient(0, Y, 0, G[1]);
           g.addColorStop(0, rsCss(base, 0.3)); g.addColorStop(1, rsCss(base, 0.04)); x.fillStyle = g;
           for(let q = 0; q < 7; q++){ const u0 = -0.4 + 0.7*R(), w0 = W0*rnd(0.03, 0.1); x.beginPath(); x.moveTo(X + u0*W0, Y); x.lineTo(X + u0*W0 + w0, Y); x.lineTo(X + u0*W0 + w0 + sl, G[1]); x.lineTo(X + u0*W0 + sl, G[1]); x.fill(); } } }
-        x.save(); x.globalAlpha = 0.93 - 0.25*haze; x.drawImage(cc, ox, oy); x.restore(); cc.width = 0;
+        x.save(); x.globalAlpha = (0.93 - 0.25*haze)*Math.min(1, (h.life ?? 1)*1.3); x.drawImage(cc, ox, oy); x.restore(); cc.width = 0;
         // a bolt of lightning from its base down to the land (with the clock, now and then)
         if(h.bolt){ const G = at(h.a + W0/kpx*0.1, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ let bx = X + (R() - 0.5)*W0*0.3, by = Y; const pts = [[bx, by]], steps = 10;
           for(let q = 0; q < steps; q++){ bx += (G[0] - bx)/(steps - q) + (R() - 0.5)*W0*0.08; by += (G[1] - by)/(steps - q); pts.push([bx, by]); }
