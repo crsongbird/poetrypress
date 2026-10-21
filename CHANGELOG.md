@@ -4,6 +4,16 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Uranus–Trinculo (2026-10-21)
+
+- Nothing you'll see: a housekeeping release.
+
+### Under the hood
+- Housekeeping: pruned the stylesheet: tools/css-prune.py audited all 2,530 lines and found 323 declarations that
+  looked overridden in every state, but each, taken out, changed some drawn element somewhere (a drawer's rows, a
+  sheet's width, a dial's turning point), so all went back. Nothing was removed; the stylesheet carries no dead weight
+  the audit can find.
+
 ## Uranus–Stephano (2026-10-21)
 
 - A castle turned from the camera keeps its battlements along every wall, not only along its front.
@@ -452,23 +462,3 @@ prints it).
   feature is turned on (Text Aware, Shape Aware, Cut Out by Text, Blend with
   Text, Custom Resolution, Points Outward, Rounded Corners, Shape Linked to
   Border, Full-Size Preview). The Athanor's Steps is an eye too.
-
-## Uranus–Cordelia (2026-10-20)
-
-- **The camera's Zoom is a slider above its dial**, where the light's Main
-  and Rim sit, so the two dials stand level and take the same room; the
-  Zoom box beneath is gone (the slider, a wheel or a pinch on the dial
-  zoom as before).
-- The first release named for a moon of Uranus.
-
-### Under the hood
-- Four checks kept in the repo instead of rebuilt each time: shipping a
-  release (tools/ship.sh), the registry as data for before-and-after
-  (tools/snapshot.mjs), the GPU's results before and after
-  (tools/gpu-ab.mjs) and the page on a phone (tools/phone-shot.mjs).
-- New research, every claim with its source: synth and image-synth control
-  panels, touch knobs, faders and haptics on the web
-  (docs/prior-art/synth-controls.md); photographic floral imprints in many
-  media and ornamental borders (docs/prior-art/floral-imprints.md,
-  docs/prior-art/ornamental-borders.md); and real-time painterly rendering
-  on phones, for the game someday (docs/prior-art/realtime-game.md).
