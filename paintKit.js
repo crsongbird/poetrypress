@@ -873,7 +873,40 @@ function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, 
     pkDisc(x, X + f*wd*0.07*wx*1.4, Y - f*step*(1 - 0.55*Math.abs(wx)), wd*(0.04 + f*0.024), col); }
   x.globalAlpha = 1; }
 const PK_ROUND = ['windmill', 'yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle', 'silo', 'lighthouse', 'watertower', 'geodome',
-  'observatory', 'wizard', 'pagoda', 'onion', 'mosque']; // (round, or square and alike on every side, as a pagoda or a domed mosque)
+  'observatory', 'wizard', 'onion']; // (round: the same from every side)
+// SQUARE AND ALIKE ON FOUR SIDES (Ruby: "definitely up to 16 points of rotation for buildings"): a pagoda and a mosque
+// were drawn the same from every side, so as the camera went round they turned with it. Each is built now in the round
+// (pkSpace) and seen as the eye sees it turned, through every angle: the pagoda's tiers square boxes under square roofs
+// whose four slopes curl up at the corners, the mosque's hall a box under its domes with a minaret at each corner, the
+// far ones behind it and the near ones before it (docs/prior-art/ringworld-life-and-views.md §5)
+function pkPagoda3(x, X, Y, h, wd, c, night, R0, px){
+  const S = pkSpace(X, Y, 1, c.view), sd = c.sd, R = pkSub(R0)(7), n = 3 + Math.floor(R()*3), w2 = wd/2, th = h*0.82/n;
+  const wall = pkMat(c, [190, 70, 50], 0.45), roof = pkMat(c, pkMix(c.dark, [60, 50, 50], 0.3), 0.8), lit = (nu, nv, up) => { const k = S.light(nu, nv, sd)*0.7 + up; return k > 0 ? pkMix(roof.body, roof.lit, Math.min(1, k)) : pkMix(roof.body, roof.dark, Math.min(1, -k)); };
+  pkCast(x, X - w2*0.9, X + w2*0.9, Y, Math.min(h, wd*1.6), c);
+  for(let q = 0; q < n; q++){ const u = q/n, zb = h*0.82*u, w = w2*(1 - u*0.55), hw = w*0.55, E = w*1.15, T = w*0.4, ze = zb + 0.62*th, zc = ze + 0.15*th, zr = zb + 0.95*th;
+    pkBox3(x, S, -hw, hw, -hw, hw, zb, zb + 0.65*th, wall, sd);
+    // (the roof's four slopes, the far first: from the eaves, raised at the corners, up to the next tier's foot)
+    const slopes = [[1, 0], [0, 1], [-1, 0], [0, -1]].sort((p, q2) => S.depth(p[0], p[1]) - S.depth(q2[0], q2[1]));
+    for(const [nu, nv] of slopes){ const tu = -nv, tv = nu, P = (a, b, z) => S.P(nu*a + tu*b, nv*a + tv*b, z);
+      pkPoly(x, [P(E, -E, zc), P(E*0.7, 0, ze), P(E, E, zc), P(T, T, zr), P(T, -T, zr)], pkCss(lit(nu, nv, 0.15))); }
+    if(night > 0.2 && px(1) && w > px(4)) pkGlow(x, X, Y - zb - th*0.3, w*0.6, c.glow, 0.3*night); }
+  x.fillStyle = pkCss(roof.dark); x.fillRect(X - wd*0.02, Y - h, wd*0.04, h*0.2); }
+function pkMosque3(x, X, Y, h, wd, c, night, R0, px){
+  const S = pkSpace(X, Y, 1, c.view), sd = c.sd, w2 = wd/2, hb = h*0.3, d = w2*0.8, dr = wd*0.24, a = w2*0.86, mw = Math.max(px(0.6), wd*0.03);
+  pkCast(x, X - w2, X + w2, Y, Math.min(h, wd*1.2), c);
+  // (a minaret: a slender shaft tapering to its cap, two balconies; lit on the side toward the light)
+  const minaret = (u, v) => { const [mx, my] = S.P(u, v, 0), top = my - h*0.88, side = Math.sign(u*S.sn + v*S.cs) || 1;
+    pkPoly(x, [[mx - mw, my], [mx - mw*0.7, top], [mx + mw*0.7, top], [mx + mw, my]], pkCss(c.body)); pkPoly(x, [[mx + sd*mw*0.1, my], [mx + sd*mw*0.1, top], [mx + sd*mw*0.7, top], [mx + sd*mw, my]], pkCss(c.lit));
+    pkPoly(x, [[mx - mw*0.8, top], [mx, my - h], [mx + mw*0.8, top]], pkCss(c.dark)); for(const b of [0.55, 0.75]){ x.fillStyle = pkCss(c.dark); x.fillRect(mx - mw*1.6, my - h*b, mw*3.2, Math.max(px(0.5), h*0.012)); } return side; };
+  const corners = [[a, a], [a, -a], [-a, a], [-a, -a]].sort((p, q) => S.depth(...p) - S.depth(...q)), far = corners.slice(0, 2), near = corners.slice(2);
+  for(const [u, v] of far) minaret(u, v);
+  pkBox3(x, S, -d, d, -d, d, 0, hb, c, sd);
+  // (the half-domes on its four sides and the great dome on its drum, round from any side: the far half-domes first)
+  const domeAt = (u, v, z, r, col) => { const [ex, ey] = S.P(u, v, z); x.fillStyle = pkCss(col); x.beginPath(); x.arc(ex, ey, r, Math.PI, 0); x.fill(); };
+  for(const [u, v] of [[dr*1.1, 0], [-dr*1.1, 0], [0, dr*1.1], [0, -dr*1.1]].sort((p, q) => S.depth(...p) - S.depth(...q))) domeAt(u, v, hb, dr*0.55, c.body);
+  const [cx0, cy0] = S.P(0, 0, hb), db = cy0 - (h*0.42 - hb); x.fillStyle = pkCss(c.body); x.fillRect(cx0 - dr, db, dr*2, cy0 - db);
+  x.beginPath(); x.arc(cx0, db, dr, Math.PI, 0); x.fill(); x.fillStyle = pkCss(c.lit); x.beginPath(); x.arc(cx0 + sd*dr*0.25, db, dr*0.7, Math.PI, 0); x.fill(); x.fillRect(cx0 - wd*0.006, db - dr - h*0.08, wd*0.012, h*0.08);
+  for(const [u, v] of near) minaret(u, v); }
 // TURNED IN DEPTH (Ruby: "some of your object rotations are extremely cheap looking … think about them in
 // three-dimensional space even though they are two-dimensional"): a box-built building turned from the eye is a box, as
 // pkSpace sees it: its front (the building's own painted face, laid on the face's plane, foreshortened and sheared as the
@@ -1004,6 +1037,11 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   return true;
 }
 export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
+  // (on a slope (c.plinth, its height in pixels): first the stone plinth it stands on, its footprint's own box, from its
+  //  floor at Y down into the ground at its lowest corner)
+  if(c.plinth > px(0.6)){ const dk = (PK_BOX3[kind0] || [0.8])[0], hv = wdt*0.47, S = pkSpace(X, Y, 1, c.view || { cs: 1, sn: 0 }); pkBox3(x, S, -hv*dk, hv*dk, -hv, hv, -c.plinth, 0, pkMat(c, PK_STONE, 0.65), c.sd); c = { ...c, plinth: 0 }; }
+  if(c.view && kind0 === 'pagoda'){ pkPagoda3(x, X, Y, h, wdt, c, night, R0, px); return; }
+  if(c.view && kind0 === 'mosque'){ pkMosque3(x, X, Y, h, wdt, { ...c, ...pkMat(c, [226, 214, 196], 0.4) }, night, R0, px); return; }
   if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null, turn: c.view }; // (round: the same from every side; turn kept for what isn't, a mill's sails)
   if(c.view && kind0 && PK_BOX3[kind0]){ const [dk, eave, roofM, at, rim] = PK_BOX3[kind0];
     pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, id: 'b|' + kind0 + '|' + style, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
@@ -1388,19 +1426,20 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(near && !['wisp', 'fairyring', 'pole', 'beacon', 'flower'].includes(kind)) pkCast(x, X - h*0.3, X + h*0.3, Y, h*0.6, c, 0.16);
   switch(kind){
   case 'fence': { // a run of pickets on two rails, painted or bare, a few leaning, one gone
-    const n = 5 + Math.floor(R()*5), sp = h*0.45, x0 = X - n*sp/2, lean = (R() - 0.5)*h*0.1, m = R() < 0.5 ? pkMat(c, [226, 222, 210], 0.6) : grey;
+    // (a piece of a run (c.runW, its width on the page): as many pickets as fill it)
+    const n0 = 5 + Math.floor(R()*5), sp = h*0.45, n = c.runW ? Math.max(1, Math.round(c.runW/sp)) : n0, x0 = X - n*sp/2, lean = (R() - 0.5)*h*0.1, m = R() < 0.5 ? pkMat(c, [226, 222, 210], 0.6) : grey;
     ln([[x0, Y - h*0.35], [x0 + n*sp, Y - h*0.38 + lean]], pkCss(m.dark), h*0.07); ln([[x0, Y - h*0.75], [x0 + n*sp, Y - h*0.78 + lean]], pkCss(m.dark), h*0.07);
     for(let k = 0; k <= n; k++){ if(R() < 0.07) continue; const p0 = x0 + k*sp, tl = (R() - 0.5)*h*0.08, pw = h*0.05; pkShade(x, [[p0 - pw, Y], [p0 - pw + tl, Y - h*0.9], [p0 + tl, Y - h], [p0 + pw + tl, Y - h*0.9], [p0 + pw, Y]], m.body, Y - h, Y, 0.2);
       if(near) pkPoly(x, [[p0 + sd*pw*0.1, Y], [p0 + sd*pw*0.1 + tl, Y - h*0.95], [p0 + sd*pw + tl, Y - h*0.9], [p0 + sd*pw, Y]], pkCss(m.lit, 0.7)); } return; }
   case 'wall': { // a dry stone wall: a low band of fitted stones, its coping set on edge along the top
-    const w = h*rnd(5, 9), x0 = X - w/2, top = (u) => Y - h*(0.85 + 0.1*Math.sin(u*5 + R()))*(1 - 0.03*u);
+    const w0 = h*rnd(5, 9), w = c.runW || w0, x0 = X - w/2, top = (u) => Y - h*(0.85 + 0.1*Math.sin(u*5 + R()))*(1 - 0.03*u);
     pkShade(x, [[x0, Y], [x0 + w*0.01, top(0)], ...Array.from({ length: 9 }, (_, k) => [x0 + w*(k + 1)/10, top((k + 1)/10)]), [x0 + w, Y]], stone.body, Y - h, Y, 0.25);
     if(near){ for(let k = 0; k < Math.min(60, w/(h*0.22)*3); k++){ const sx = x0 + w*R(), sy = Y - h*0.75*R(), sw = h*rnd(0.15, 0.3); pkEll(x, sx, sy, sw, sw*0.45, pkCss(R() < 0.5 ? stone.dark : stone.lit, 0.45)); }
       for(let k = 0; k < Math.floor(w/(h*0.14)); k++){ const sx = x0 + k*h*0.14, ty = top(k*h*0.14/w); pkPoly(x, [[sx, ty + h*0.05], [sx + h*0.02, ty - h*0.12], [sx + h*0.12, ty - h*0.1], [sx + h*0.13, ty + h*0.05]], pkCss(k % 2 ? stone.body : stone.lit)); } } return; }
   case 'hedge': { // a hedgerow: a long lumpy band of dark green, now and then a tree grown out of it
-    const w = h*rnd(4, 8), g = pkMat(c, [44, 82, 46], 0.8), lobes = []; for(let k = 0; k < 9; k++){ const u = k/8 - 0.5; lobes.push([X + u*w, Y - h*rnd(0.35, 0.55), h*rnd(0.4, 0.6)]); }
+    const w0 = h*rnd(4, 8), w = c.runW || w0, g = pkMat(c, [44, 82, 46], 0.8), lobes = []; for(let k = 0, nl = c.runW ? Math.max(2, Math.min(9, Math.round(w/(h*0.7)))) : 9; k < nl; k++){ const u = k/(nl - 1) - 0.5; lobes.push([X + u*w, Y - h*rnd(0.35, 0.55), h*rnd(0.4, 0.6)]); }
     pkPoly(x, [[X - w/2 - h*0.3, Y], [X - w/2 - h*0.3, Y - h*0.4], [X + w/2 + h*0.3, Y - h*0.4], [X + w/2 + h*0.3, Y]], pkCss(g.dark)); pkLobes(x, lobes, { ...c, ...g }, RD, X, Y - h*0.5, w*0.5, px);
-    if(R() < 0.3) pkTree(x, X + (R() - 0.5)*w*0.6, Y - h*0.2, h*rnd(3, 5), { ...c, ...g, trunk: wood.body }, 'broadleaf', mulberry32((R()*4294967296) >>> 0), px); return; }
+    if(R() < (c.runW ? 0.08 : 0.3)) pkTree(x, X + (R() - 0.5)*w*0.6, Y - h*0.2, h*rnd(3, 5), { ...c, ...g, trunk: wood.body }, 'broadleaf', mulberry32((R()*4294967296) >>> 0), px); return; }
   case 'gate': { // a five-bar gate between two thick posts, its diagonal brace
     const w = h*2.8, x0 = X - w/2; for(const s of [0, 1]) box(x0 + s*w - h*0.08, Y - h*1.1, h*0.16, h*1.1, grey, 0.2);
     for(let k = 0; k < 5; k++) ln([[x0 + h*0.1, Y - h*(0.15 + k*0.2)], [x0 + w - h*0.1, Y - h*(0.15 + k*0.2)]], pkCss(k % 2 ? grey.body : grey.lit), h*0.07);

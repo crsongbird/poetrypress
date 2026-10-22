@@ -690,6 +690,8 @@ function rgRoadsOf(V){ const s = V.seed | 0, W = V.W, roads = [];
   if(mnHash(s, 35, 7) < RG_ROADS[w2][1]*(0.15 + 0.45*V.works)) roads.push({ along: false, at: ar, w: w2, kind: RG_ROADS[w2][0] });
   return roads; }
 // the small things wider than they are tall, kept back from the very front of the view so a gate or a wall never fills it
+// (what stands on legs or posts, or is a gate or a mast, needs no plinth: its feet go into the ground)
+const RG_LIGHTFOOT = ['arch', 'torii', 'pylon', 'turbine', 'radiomast', 'needle', 'watertower', 'windmill', 'elevator'];
 const RG_WIDE = ['gate', 'wall', 'hedge', 'fence', 'container', 'solar', 'pipes', 'traps', 'haybale', 'bench', 'parked', 'hulk', 'rubble', 'statue', 'dolmen', 'stonepile'];
 // which tradition the wilds build in here: the cold north's, the dry country's, the jungle's, else the temperate land's,
 // each region its own by the seed
@@ -801,6 +803,14 @@ function rgStore(V){
   // which way a thing at (a, z) faces: toward the nearest way, if one is near; else its own way, by its draw u
   const faceOf = (a, z, u) => { const g = wayGap(a, z); return g < 60*M && wayAt ? Math.atan2(wayAt[1] - z, wayAt[0] - a) : u*Math.PI*2; };
   const offWay = (a, z, room) => wayGap(a, z) > room;
+  // A BUILDING'S GROUND (Ruby: "make sure buildings are never floating in the air or on water"; docs/prior-art/
+  // ringworld-life-and-views.md §6, §7): its footprint's four corners and middle sampled, two metres out all round; never
+  // on the water or within a step of it, never where its ground falls more than seven tenths of its width (some 35°).
+  // Kept: how far its uphill corner stands above its middle and its downhill corner below, in metres, so it stands level
+  // on a stone plinth that reaches down to the ground at its lowest corner
+  const footing = (a, z, wM, face) => { const hw = (wM*0.5 + 2)*M, ca = Math.cos(face), sa = Math.sin(face), e0 = T.true(a, z, W*0.002); let lo = e0, hi = e0;
+    for(const [u, v] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]){ const e = T.true(a + (ca*u - sa*v)*hw, z + (sa*u + ca*v)*hw, W*0.002); if(e <= TR.sea + 0.3*M) return null; lo = Math.min(lo, e); hi = Math.max(hi, e); }
+    if(e0 <= TR.sea + 0.3*M || (hi - lo)/M > wM*0.7) return null; return { up: (hi - e0)/M, down: (e0 - lo)/M }; };
   // a walk along a way: every so far, a point on it, the way's normal there, how far along, and how worn
   const along = (wy, step, fn, start = step/2) => { const P = wy.pts; let next = start, i = 0;
     while(i + 1 < P.length){ const p = P[i], q = P[i + 1], du = (q.u - p.u) || 1; if(q.u < next){ i++; continue; } const t = (next - p.u)/du;
@@ -836,7 +846,8 @@ function rgStore(V){
     // (a city rises away from you: near, only what stands low; its towers further off, where they make a skyline)
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
     if(!offWay(a, z, wM*M*0.5 + 2*M)) return null; // (a building fronts its way; it never stands in it)
-    return { c: 'bldg', w, kind, hM, wM, face: faceOf(a, z, R()) }; });
+    const face = faceOf(a, z, R()), ft = footing(a, z, wM, face); if(!ft) return null;
+    return { c: 'bldg', w, kind, hM, wM, face, ...ft }; });
   // (each seat built: a farmstead's house first, then its barns and sheds round the yard, each facing its middle; a
   //  hamlet's houses in a ring round its green, a well on the green; near you fewer, as everywhere, and far off only
   //  the house of a farmstead and half a hamlet. Its kinds are its region's tradition, PK_VERNACULAR; a farmstead keeps
@@ -867,7 +878,8 @@ function rgStore(V){
           if(rgFits(k2, g, seat.hamlet ? 0.3 : 0.1)) kind = k2; } if(!kind) continue;
         const hM = pkMetres(kind, Math.pow(R(), 1.5)), wM = pkMetres(kind, R(), 1);
         if(!offWay(a, z, wM*M*0.5 + 2*M) || placed.some(([pa, pz, pw]) => Math.hypot(a - pa, z - pz) < (pw + wM)*M*0.55 + 3*M)) continue;
-        placed.push([a, z, wM]); out.push({ c: 'bldg', w, kind, hM, wM, face: fc ?? Math.atan2(sz - z, sa - a), a, z, r, rs: (R()*4294967296) >>> 0 }); }
+        const face = fc ?? Math.atan2(sz - z, sa - a), ft = footing(a, z, wM, face); if(!ft) continue;
+        placed.push([a, z, wM]); out.push({ c: 'bldg', w, kind, hM, wM, face, a, z, r, rs: (R()*4294967296) >>> 0, ...ft }); }
       // (a cold country's yard keeps one tree in its middle, as Norway's do)
       if(!seat.hamlet && (fam === 'north' || fam === 'galicia') && placed.length && R() < 0.6){ const kind = fam === 'north' ? 'birch' : 'broadleaf'; out.push({ c: 'tree', w, kind, hM: pkMetres(kind, R()), a: sa, z: sz, r: rs0, rs: (R()*4294967296) >>> 0 }); }
       if(!placed.length) continue;
@@ -1139,6 +1151,18 @@ function rgStore(V){
   sow(13, W*0.03, W*0.06, W*0.25, 1, (a, z, r, R) => { const w = V.worldAt(a, z), p = { wilds: 0.07, magic: 0.12, ruins: 0.035 }[w] || 0; if(R() > p*(0.4 + V.works)) return null;
     const g = ground(a, z); if(g.wet || g.slope > 0.3 || V.forestAt(a, z) > 0.5 || V.cityAt(a, z, 0.12) > 0.05) return null;
     return { c: 'henge', w, n: 9 + Math.floor(R()*14), rr: W*0.00025*(7 + 20*R()), hm: 2.5 + 4.5*R(), wM: 60 }; });
+  // LONG THINGS ARE MANY THINGS (Ruby: "overly wide objects rotate with the camera, so … broken up into smaller objects
+  // and positioned individually (hedgerows etc) and sorted by the camera"; docs/prior-art/ringworld-life-and-views.md §5):
+  // a wall, a hedgerow, a fence was one picture pinned at its middle, always square to you; each is now a run of short
+  // pieces laid along its own line in the world, each standing where it stands and sorted by its own distance, so the
+  // run recedes and turns as the camera goes round it
+  { const RUN = { wall: [7, 2], hedge: [6, 2.5], fence: [3.4, 2.2] }, pieces = [];
+    for(let i = out.length - 1; i >= 0; i--){ const o = out[i], rn = o.c === 'prop' && RUN[o.kind]; if(!rn || o.piece) continue;
+      const len = o.hM*rn[0], n = Math.max(1, Math.round(len/rn[1])), pl = len/n, ax = o.face ?? (o.rs % 62832)/10000, ca = Math.cos(ax), sa = Math.sin(ax);
+      for(let k = 0; k < n; k++){ const t = (k + 0.5 - n/2)*pl*M, a = o.a + ca*t, z = o.z + sa*t;
+        pieces.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), piece: pl, axis: ax, rs: (Math.imul(o.rs, 31) + k*0x9E3779B1) >>> 0 }); }
+      out.splice(i, 1); }
+    out.push(...pieces); }
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
@@ -1306,7 +1330,10 @@ function rgPaintLand(x, mk, dk, V){
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd*1.7, X + wd*1.7, Y - h*1.4, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      // (on a slope, level: its floor at its uphill corner's ground, on a stone plinth down to the ground at its lowest
+      //  corner and a little into it, so no corner of it hangs in the air)
+      const fall = (o.up || 0) + (o.down || 0), pl = fall > 0.25 ? (fall + 0.3)*f[2] : 0, onPl = pl > px(0.6) && !RG_LIGHTFOOT.includes(o.kind);
+      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind, plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
       // CLOSE BY, its foot (the building's base detailed, Ruby: "close-up versions with details for their base"): a door
       // two metres tall with its step, a lamp beside it lit at night, a planter
       const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -1353,6 +1380,11 @@ function rgPaintLand(x, mk, dk, V){
         // (fading: drawn whole on its own sheet and laid down see-through, so its coat never shows its legs through it)
         const bw = Math.ceil(h*1.8), bh = Math.ceil(h*1.5), [fcv, fx] = kitCanvas(bw, bh); pkProp(fx, bw/2, h*1.3, h, fc, 'figure', R, rgPx, nt);
         x.globalAlpha = al; x.drawImage(fcv, X - bw/2, Y + sink - h*1.3); x.globalAlpha = 1; return; }
+      // (a piece of a run: as wide on the page as its own length is from here, its two ends projected, a little more so
+      //  the pieces meet; never turned or mirrored, as the run itself carries the turn)
+      if(o.piece){ const ca = Math.cos(o.axis), sa = Math.sin(o.axis), hp = o.piece*0.5*W*0.00025, e0 = foot(o.a - ca*hp, o.z - sa*hp), e1 = foot(o.a + ca*hp, o.z + sa*hp); if(!e0 || !e1) return;
+        const pw = Math.abs(e1[0] - e0[0]) + h*0.25; if(h > wh*0.3 || pw > ww*0.45) return;   // (a piece right at your feet is let go, as a whole one was)
+        pkProp(x, (e0[0] + e1[0])/2, Y + sink, h, { ...cc, view: null, runW: pw }, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
       if(o.sink){ x.save(); x.beginPath(); x.rect(X - h*6, Y - h*6, h*12, h*6 + h*0.02); x.clip(); pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); x.restore(); }
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
       // (a road's pole wired to the next one along, the wires sagging between)

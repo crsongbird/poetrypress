@@ -32,6 +32,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   lava), one wind per seed turning them, and the water's mood as a Beaufort number (puffs, foam lines, a mirror strip,
   white horses). Under the default Impasto the oil strokes soften the finer marks; with Impasto at 0 they show whole.
   Is that balance right, and which country still looks plain?
+- BUILDINGS ON THE LAND: never on or at the edge of the water, level on a stone plinth on a slope; the pagoda and the
+  mosque turn through every angle; walls, hedgerows and fences in placed pieces. The truly round ones (towers, silos,
+  domes, the observatory, the oast's kiln) stay alike from every side. Does anything still float or turn with you?
 - LIFE IN A FILM: people walk their streets and go in by the hour (fading where they stand: going in at a door is
   still to come), movers keep timetables instead of circles, the clouds' clock runs evenly, the sea's glints drift
   and a faint swell comes in. Do the people and the clouds read right in a film of a day?
@@ -51,8 +54,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
   interactions nobody asked for.
-- BUILDINGS (Ruby): up to 16 views for the buildings drawn the same from every side; never floating in the air or
-  standing on water; wide things (hedgerows, walls) broken into pieces placed and sorted one by one.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - THE GPU (Ruby: "implement most of these things on the GPU to accelerate rendering as much as inhumanly possible"):
   only the Light Engine's shadow march, occlusion and shine run on the GPU; blur, focal blur, warp, blend, posterize,

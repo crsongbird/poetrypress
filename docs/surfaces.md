@@ -526,6 +526,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     own heights on their own limbs, a cedar flat shelves, a stone pine and an
     acacia one squashed dome on limbs that reach it. Palms and tree ferns carry
     feathered fronds (`pkFrond`: leaflets that hang, or spread flat).
+  - **Standing on the land** (Ruby: "make sure buildings are never floating in the air or on water … up to 16 points
+    of rotation for buildings … overly wide objects … broken up into smaller objects and positioned individually";
+    docs/prior-art/ringworld-life-and-views.md §5, §6): a building's footprint is sampled at its four corners and middle,
+    two metres out all round; none stands on the water or within a step of it, nor where its ground falls more than
+    seven tenths of its width, and on a slope it stands level on a stone plinth (`pkBuilding`'s `plinth`) reaching down
+    to the ground at its lowest corner. A pagoda and a mosque are built in the round (`pkPagoda3`, `pkMosque3`), so
+    they turn with the eye through every angle like the boxes do. A wall, a hedgerow or a fence is a run of short pieces
+    laid along its own line, each standing and sorted where it stands (`runW`), so the run recedes and turns.
   - **Saturn** (Ruby: "Ringworld should sometimes be orbiting Saturn"): by the
     seed (one ring in four) or The Arch's Saturn setting, the ring orbits it as
     the old games' rings orbit their gas giants, and Saturn hangs huge in the

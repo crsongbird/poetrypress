@@ -6936,7 +6936,40 @@ function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, 
     pkDisc(x, X + f*wd*0.07*wx*1.4, Y - f*step*(1 - 0.55*Math.abs(wx)), wd*(0.04 + f*0.024), col); }
   x.globalAlpha = 1; }
 const PK_ROUND = ['windmill', 'yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle', 'silo', 'lighthouse', 'watertower', 'geodome',
-  'observatory', 'wizard', 'pagoda', 'onion', 'mosque'];
+  'observatory', 'wizard', 'onion'];
+
+
+
+
+
+function pkPagoda3(x, X, Y, h, wd, c, night, R0, px){
+  const S = pkSpace(X, Y, 1, c.view), sd = c.sd, R = pkSub(R0)(7), n = 3 + Math.floor(R()*3), w2 = wd/2, th = h*0.82/n;
+  const wall = pkMat(c, [190, 70, 50], 0.45), roof = pkMat(c, pkMix(c.dark, [60, 50, 50], 0.3), 0.8), lit = (nu, nv, up) => { const k = S.light(nu, nv, sd)*0.7 + up; return k > 0 ? pkMix(roof.body, roof.lit, Math.min(1, k)) : pkMix(roof.body, roof.dark, Math.min(1, -k)); };
+  pkCast(x, X - w2*0.9, X + w2*0.9, Y, Math.min(h, wd*1.6), c);
+  for(let q = 0; q < n; q++){ const u = q/n, zb = h*0.82*u, w = w2*(1 - u*0.55), hw = w*0.55, E = w*1.15, T = w*0.4, ze = zb + 0.62*th, zc = ze + 0.15*th, zr = zb + 0.95*th;
+    pkBox3(x, S, -hw, hw, -hw, hw, zb, zb + 0.65*th, wall, sd);
+
+    const slopes = [[1, 0], [0, 1], [-1, 0], [0, -1]].sort((p, q2) => S.depth(p[0], p[1]) - S.depth(q2[0], q2[1]));
+    for(const [nu, nv] of slopes){ const tu = -nv, tv = nu, P = (a, b, z) => S.P(nu*a + tu*b, nv*a + tv*b, z);
+      pkPoly(x, [P(E, -E, zc), P(E*0.7, 0, ze), P(E, E, zc), P(T, T, zr), P(T, -T, zr)], pkCss(lit(nu, nv, 0.15))); }
+    if(night > 0.2 && px(1) && w > px(4)) pkGlow(x, X, Y - zb - th*0.3, w*0.6, c.glow, 0.3*night); }
+  x.fillStyle = pkCss(roof.dark); x.fillRect(X - wd*0.02, Y - h, wd*0.04, h*0.2); }
+function pkMosque3(x, X, Y, h, wd, c, night, R0, px){
+  const S = pkSpace(X, Y, 1, c.view), sd = c.sd, w2 = wd/2, hb = h*0.3, d = w2*0.8, dr = wd*0.24, a = w2*0.86, mw = Math.max(px(0.6), wd*0.03);
+  pkCast(x, X - w2, X + w2, Y, Math.min(h, wd*1.2), c);
+
+  const minaret = (u, v) => { const [mx, my] = S.P(u, v, 0), top = my - h*0.88, side = Math.sign(u*S.sn + v*S.cs) || 1;
+    pkPoly(x, [[mx - mw, my], [mx - mw*0.7, top], [mx + mw*0.7, top], [mx + mw, my]], pkCss(c.body)); pkPoly(x, [[mx + sd*mw*0.1, my], [mx + sd*mw*0.1, top], [mx + sd*mw*0.7, top], [mx + sd*mw, my]], pkCss(c.lit));
+    pkPoly(x, [[mx - mw*0.8, top], [mx, my - h], [mx + mw*0.8, top]], pkCss(c.dark)); for(const b of [0.55, 0.75]){ x.fillStyle = pkCss(c.dark); x.fillRect(mx - mw*1.6, my - h*b, mw*3.2, Math.max(px(0.5), h*0.012)); } return side; };
+  const corners = [[a, a], [a, -a], [-a, a], [-a, -a]].sort((p, q) => S.depth(...p) - S.depth(...q)), far = corners.slice(0, 2), near = corners.slice(2);
+  for(const [u, v] of far) minaret(u, v);
+  pkBox3(x, S, -d, d, -d, d, 0, hb, c, sd);
+
+  const domeAt = (u, v, z, r, col) => { const [ex, ey] = S.P(u, v, z); x.fillStyle = pkCss(col); x.beginPath(); x.arc(ex, ey, r, Math.PI, 0); x.fill(); };
+  for(const [u, v] of [[dr*1.1, 0], [-dr*1.1, 0], [0, dr*1.1], [0, -dr*1.1]].sort((p, q) => S.depth(...p) - S.depth(...q))) domeAt(u, v, hb, dr*0.55, c.body);
+  const [cx0, cy0] = S.P(0, 0, hb), db = cy0 - (h*0.42 - hb); x.fillStyle = pkCss(c.body); x.fillRect(cx0 - dr, db, dr*2, cy0 - db);
+  x.beginPath(); x.arc(cx0, db, dr, Math.PI, 0); x.fill(); x.fillStyle = pkCss(c.lit); x.beginPath(); x.arc(cx0 + sd*dr*0.25, db, dr*0.7, Math.PI, 0); x.fill(); x.fillRect(cx0 - wd*0.006, db - dr - h*0.08, wd*0.012, h*0.08);
+  for(const [u, v] of near) minaret(u, v); }
 
 
 
@@ -7067,6 +7100,11 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   return true;
 }
 function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
+
+
+  if(c.plinth > px(0.6)){ const dk = (PK_BOX3[kind0] || [0.8])[0], hv = wdt*0.47, S = pkSpace(X, Y, 1, c.view || { cs: 1, sn: 0 }); pkBox3(x, S, -hv*dk, hv*dk, -hv, hv, -c.plinth, 0, pkMat(c, PK_STONE, 0.65), c.sd); c = { ...c, plinth: 0 }; }
+  if(c.view && kind0 === 'pagoda'){ pkPagoda3(x, X, Y, h, wdt, c, night, R0, px); return; }
+  if(c.view && kind0 === 'mosque'){ pkMosque3(x, X, Y, h, wdt, { ...c, ...pkMat(c, [226, 214, 196], 0.4) }, night, R0, px); return; }
   if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null, turn: c.view };
   if(c.view && kind0 && PK_BOX3[kind0]){ const [dk, eave, roofM, at, rim] = PK_BOX3[kind0];
     pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, id: 'b|' + kind0 + '|' + style, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
@@ -7451,19 +7489,20 @@ function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(near && !['wisp', 'fairyring', 'pole', 'beacon', 'flower'].includes(kind)) pkCast(x, X - h*0.3, X + h*0.3, Y, h*0.6, c, 0.16);
   switch(kind){
   case 'fence': {
-    const n = 5 + Math.floor(R()*5), sp = h*0.45, x0 = X - n*sp/2, lean = (R() - 0.5)*h*0.1, m = R() < 0.5 ? pkMat(c, [226, 222, 210], 0.6) : grey;
+
+    const n0 = 5 + Math.floor(R()*5), sp = h*0.45, n = c.runW ? Math.max(1, Math.round(c.runW/sp)) : n0, x0 = X - n*sp/2, lean = (R() - 0.5)*h*0.1, m = R() < 0.5 ? pkMat(c, [226, 222, 210], 0.6) : grey;
     ln([[x0, Y - h*0.35], [x0 + n*sp, Y - h*0.38 + lean]], pkCss(m.dark), h*0.07); ln([[x0, Y - h*0.75], [x0 + n*sp, Y - h*0.78 + lean]], pkCss(m.dark), h*0.07);
     for(let k = 0; k <= n; k++){ if(R() < 0.07) continue; const p0 = x0 + k*sp, tl = (R() - 0.5)*h*0.08, pw = h*0.05; pkShade(x, [[p0 - pw, Y], [p0 - pw + tl, Y - h*0.9], [p0 + tl, Y - h], [p0 + pw + tl, Y - h*0.9], [p0 + pw, Y]], m.body, Y - h, Y, 0.2);
       if(near) pkPoly(x, [[p0 + sd*pw*0.1, Y], [p0 + sd*pw*0.1 + tl, Y - h*0.95], [p0 + sd*pw + tl, Y - h*0.9], [p0 + sd*pw, Y]], pkCss(m.lit, 0.7)); } return; }
   case 'wall': {
-    const w = h*rnd(5, 9), x0 = X - w/2, top = (u) => Y - h*(0.85 + 0.1*Math.sin(u*5 + R()))*(1 - 0.03*u);
+    const w0 = h*rnd(5, 9), w = c.runW || w0, x0 = X - w/2, top = (u) => Y - h*(0.85 + 0.1*Math.sin(u*5 + R()))*(1 - 0.03*u);
     pkShade(x, [[x0, Y], [x0 + w*0.01, top(0)], ...Array.from({ length: 9 }, (_, k) => [x0 + w*(k + 1)/10, top((k + 1)/10)]), [x0 + w, Y]], stone.body, Y - h, Y, 0.25);
     if(near){ for(let k = 0; k < Math.min(60, w/(h*0.22)*3); k++){ const sx = x0 + w*R(), sy = Y - h*0.75*R(), sw = h*rnd(0.15, 0.3); pkEll(x, sx, sy, sw, sw*0.45, pkCss(R() < 0.5 ? stone.dark : stone.lit, 0.45)); }
       for(let k = 0; k < Math.floor(w/(h*0.14)); k++){ const sx = x0 + k*h*0.14, ty = top(k*h*0.14/w); pkPoly(x, [[sx, ty + h*0.05], [sx + h*0.02, ty - h*0.12], [sx + h*0.12, ty - h*0.1], [sx + h*0.13, ty + h*0.05]], pkCss(k % 2 ? stone.body : stone.lit)); } } return; }
   case 'hedge': {
-    const w = h*rnd(4, 8), g = pkMat(c, [44, 82, 46], 0.8), lobes = []; for(let k = 0; k < 9; k++){ const u = k/8 - 0.5; lobes.push([X + u*w, Y - h*rnd(0.35, 0.55), h*rnd(0.4, 0.6)]); }
+    const w0 = h*rnd(4, 8), w = c.runW || w0, g = pkMat(c, [44, 82, 46], 0.8), lobes = []; for(let k = 0, nl = c.runW ? Math.max(2, Math.min(9, Math.round(w/(h*0.7)))) : 9; k < nl; k++){ const u = k/(nl - 1) - 0.5; lobes.push([X + u*w, Y - h*rnd(0.35, 0.55), h*rnd(0.4, 0.6)]); }
     pkPoly(x, [[X - w/2 - h*0.3, Y], [X - w/2 - h*0.3, Y - h*0.4], [X + w/2 + h*0.3, Y - h*0.4], [X + w/2 + h*0.3, Y]], pkCss(g.dark)); pkLobes(x, lobes, { ...c, ...g }, RD, X, Y - h*0.5, w*0.5, px);
-    if(R() < 0.3) pkTree(x, X + (R() - 0.5)*w*0.6, Y - h*0.2, h*rnd(3, 5), { ...c, ...g, trunk: wood.body }, 'broadleaf', mulberry32((R()*4294967296) >>> 0), px); return; }
+    if(R() < (c.runW ? 0.08 : 0.3)) pkTree(x, X + (R() - 0.5)*w*0.6, Y - h*0.2, h*rnd(3, 5), { ...c, ...g, trunk: wood.body }, 'broadleaf', mulberry32((R()*4294967296) >>> 0), px); return; }
   case 'gate': {
     const w = h*2.8, x0 = X - w/2; for(const s of [0, 1]) box(x0 + s*w - h*0.08, Y - h*1.1, h*0.16, h*1.1, grey, 0.2);
     for(let k = 0; k < 5; k++) ln([[x0 + h*0.1, Y - h*(0.15 + k*0.2)], [x0 + w - h*0.1, Y - h*(0.15 + k*0.2)]], pkCss(k % 2 ? grey.body : grey.lit), h*0.07);
@@ -19496,6 +19535,8 @@ function rgRoadsOf(V){ const s = V.seed | 0, W = V.W, roads = [];
   if(mnHash(s, 35, 7) < RG_ROADS[w2][1]*(0.15 + 0.45*V.works)) roads.push({ along: false, at: ar, w: w2, kind: RG_ROADS[w2][0] });
   return roads; }
 
+
+const RG_LIGHTFOOT = ['arch', 'torii', 'pylon', 'turbine', 'radiomast', 'needle', 'watertower', 'windmill', 'elevator'];
 const RG_WIDE = ['gate', 'wall', 'hedge', 'fence', 'container', 'solar', 'pipes', 'traps', 'haybale', 'bench', 'parked', 'hulk', 'rubble', 'statue', 'dolmen', 'stonepile'];
 
 
@@ -19608,6 +19649,14 @@ function rgStore(V){
   const faceOf = (a, z, u) => { const g = wayGap(a, z); return g < 60*M && wayAt ? Math.atan2(wayAt[1] - z, wayAt[0] - a) : u*Math.PI*2; };
   const offWay = (a, z, room) => wayGap(a, z) > room;
 
+
+
+
+
+  const footing = (a, z, wM, face) => { const hw = (wM*0.5 + 2)*M, ca = Math.cos(face), sa = Math.sin(face), e0 = T.true(a, z, W*0.002); let lo = e0, hi = e0;
+    for(const [u, v] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]){ const e = T.true(a + (ca*u - sa*v)*hw, z + (sa*u + ca*v)*hw, W*0.002); if(e <= TR.sea + 0.3*M) return null; lo = Math.min(lo, e); hi = Math.max(hi, e); }
+    if(e0 <= TR.sea + 0.3*M || (hi - lo)/M > wM*0.7) return null; return { up: (hi - e0)/M, down: (e0 - lo)/M }; };
+
   const along = (wy, step, fn, start = step/2) => { const P = wy.pts; let next = start, i = 0;
     while(i + 1 < P.length){ const p = P[i], q = P[i + 1], du = (q.u - p.u) || 1; if(q.u < next){ i++; continue; } const t = (next - p.u)/du;
       fn(p.a + (q.a - p.a)*t, p.z + (q.z - p.z)*t, -(q.z - p.z)/du, (q.a - p.a)/du, next, p.dec); next += step; } };
@@ -19642,7 +19691,8 @@ function rgStore(V){
 
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
     if(!offWay(a, z, wM*M*0.5 + 2*M)) return null;
-    return { c: 'bldg', w, kind, hM, wM, face: faceOf(a, z, R()) }; });
+    const face = faceOf(a, z, R()), ft = footing(a, z, wM, face); if(!ft) return null;
+    return { c: 'bldg', w, kind, hM, wM, face, ...ft }; });
 
 
 
@@ -19673,7 +19723,8 @@ function rgStore(V){
           if(rgFits(k2, g, seat.hamlet ? 0.3 : 0.1)) kind = k2; } if(!kind) continue;
         const hM = pkMetres(kind, Math.pow(R(), 1.5)), wM = pkMetres(kind, R(), 1);
         if(!offWay(a, z, wM*M*0.5 + 2*M) || placed.some(([pa, pz, pw]) => Math.hypot(a - pa, z - pz) < (pw + wM)*M*0.55 + 3*M)) continue;
-        placed.push([a, z, wM]); out.push({ c: 'bldg', w, kind, hM, wM, face: fc ?? Math.atan2(sz - z, sa - a), a, z, r, rs: (R()*4294967296) >>> 0 }); }
+        const face = fc ?? Math.atan2(sz - z, sa - a), ft = footing(a, z, wM, face); if(!ft) continue;
+        placed.push([a, z, wM]); out.push({ c: 'bldg', w, kind, hM, wM, face, a, z, r, rs: (R()*4294967296) >>> 0, ...ft }); }
 
       if(!seat.hamlet && (fam === 'north' || fam === 'galicia') && placed.length && R() < 0.6){ const kind = fam === 'north' ? 'birch' : 'broadleaf'; out.push({ c: 'tree', w, kind, hM: pkMetres(kind, R()), a: sa, z: sz, r: rs0, rs: (R()*4294967296) >>> 0 }); }
       if(!placed.length) continue;
@@ -19945,6 +19996,18 @@ function rgStore(V){
   sow(13, W*0.03, W*0.06, W*0.25, 1, (a, z, r, R) => { const w = V.worldAt(a, z), p = { wilds: 0.07, magic: 0.12, ruins: 0.035 }[w] || 0; if(R() > p*(0.4 + V.works)) return null;
     const g = ground(a, z); if(g.wet || g.slope > 0.3 || V.forestAt(a, z) > 0.5 || V.cityAt(a, z, 0.12) > 0.05) return null;
     return { c: 'henge', w, n: 9 + Math.floor(R()*14), rr: W*0.00025*(7 + 20*R()), hm: 2.5 + 4.5*R(), wM: 60 }; });
+
+
+
+
+
+  { const RUN = { wall: [7, 2], hedge: [6, 2.5], fence: [3.4, 2.2] }, pieces = [];
+    for(let i = out.length - 1; i >= 0; i--){ const o = out[i], rn = o.c === 'prop' && RUN[o.kind]; if(!rn || o.piece) continue;
+      const len = o.hM*rn[0], n = Math.max(1, Math.round(len/rn[1])), pl = len/n, ax = o.face ?? (o.rs % 62832)/10000, ca = Math.cos(ax), sa = Math.sin(ax);
+      for(let k = 0; k < n; k++){ const t = (k + 0.5 - n/2)*pl*M, a = o.a + ca*t, z = o.z + sa*t;
+        pieces.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), piece: pl, axis: ax, rs: (Math.imul(o.rs, 31) + k*0x9E3779B1) >>> 0 }); }
+      out.splice(i, 1); }
+    out.push(...pieces); }
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
@@ -20112,7 +20175,10 @@ function rgPaintLand(x, mk, dk, V){
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd*1.7, X + wd*1.7, Y - h*1.4, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
-      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+
+
+      const fall = (o.up || 0) + (o.down || 0), pl = fall > 0.25 ? (fall + 0.3)*f[2] : 0, onPl = pl > px(0.6) && !RG_LIGHTFOOT.includes(o.kind);
+      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind, plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
 
 
       const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -20159,6 +20225,11 @@ function rgPaintLand(x, mk, dk, V){
 
         const bw = Math.ceil(h*1.8), bh = Math.ceil(h*1.5), [fcv, fx] = kitCanvas(bw, bh); pkProp(fx, bw/2, h*1.3, h, fc, 'figure', R, rgPx, nt);
         x.globalAlpha = al; x.drawImage(fcv, X - bw/2, Y + sink - h*1.3); x.globalAlpha = 1; return; }
+
+
+      if(o.piece){ const ca = Math.cos(o.axis), sa = Math.sin(o.axis), hp = o.piece*0.5*W*0.00025, e0 = foot(o.a - ca*hp, o.z - sa*hp), e1 = foot(o.a + ca*hp, o.z + sa*hp); if(!e0 || !e1) return;
+        const pw = Math.abs(e1[0] - e0[0]) + h*0.25; if(h > wh*0.3 || pw > ww*0.45) return;
+        pkProp(x, (e0[0] + e1[0])/2, Y + sink, h, { ...cc, view: null, runW: pw }, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
       if(o.sink){ x.save(); x.beginPath(); x.rect(X - h*6, Y - h*6, h*12, h*6 + h*0.02); x.clip(); pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); x.restore(); }
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
 
@@ -33821,11 +33892,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Neptune–Psamathe';
+const RELEASE = 'Neptune–Neso';
 
 const RELEASE_DATE = '2026-10-22';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"v3lKzXkr","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"SJSl_7jF","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"v3lKzXkr","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"tuXXKWOW","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -34737,7 +34808,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-22 · ee7726b";
+const STAMP = "2026-10-22 · fee38ee";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

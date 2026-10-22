@@ -2,6 +2,20 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Caliban (2026-10-21)
+
+- Tractors, food carts, crates, wayside shrines and the builders' cargo are solid when the camera turns: a tractor's
+  bonnet and glazed cab with its great wheels outside it, a cart's box on its wheels under its round umbrella, crates
+  braced on every face and stacked a little askew, a shrine's niche on the side toward the road under a hipped roof.
+- A windmill's tower is the same from every side, and its sails turn with it: narrowed edge on, behind the tower when
+  the mill faces away.
+- Cathedrals and castles turn as boxes; a torii or an arch narrows to its post or its pier edge on.
+- A terrace of houses is as shallow as a terrace is, not as deep as it is long.
+
+### Under the hood
+- `pkPrism`, `pkWheel3` and `pkWheelsSplit` build the vehicles; the end-on drawings they replace are gone. Texture
+  fingerprints updated for the new solids, the windmills and the gates.
+
 ## Uranus–Francisco (2026-10-21)
 
 - Parked cars and rusted hulks are solid: a body and a glasshouse with their roof, windscreen and boot each lit by the

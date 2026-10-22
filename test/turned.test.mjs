@@ -26,6 +26,12 @@ if(NC){
     return { ink, col, span, top }; };
   const bldg = (kind, deg, style = 'village') => shot(x => K.pkBuilding(x, W/2, GY, 90, 70, look(turn(deg)), style, 0, mulberry32(11), px, kind));
 
+  // (Ruby: "definitely up to 16 points of rotation for buildings": a pagoda and a mosque turn with the eye, a corner on
+  //  wider than face on, as a square in plan is; and a building on a slope stands on its plinth, nothing under it open)
+  for(const kind of ['pagoda', 'mosque']){ const on = bldg(kind, 0, 'magic'), corner = bldg(kind, 45, 'magic'), j = GY - 12;
+    check(`a ${kind} seen on its corner is wider than seen face on (it turns, as a square in plan does)`, corner.span(j) > on.span(j)*1.15); }
+  { const plinth = shot(x => K.pkBuilding(x, W/2, GY - 30, 90, 70, { ...look(turn(30)), plinth: 30 }, 'village', 0, mulberry32(11), px, 'cottage'));
+    check('a building on a slope stands on a plinth reaching down to the ground beneath it', plinth.ink(W/2, GY - 4) && plinth.ink(W/2 - 15, GY - 10)); }
   { const still = bldg('brick', null), side = bldg('brick', 90), half = bldg('brick', 45), j = GY - 30;
     check('a block turned side on shows its depth, not a sliver (at least half its front\'s width)', side.span(j) > still.span(j)*0.5);
     check('half turned, it shows front and side: wider than side on', half.span(j) > side.span(j)); }

@@ -4,6 +4,27 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Neso (2026-10-22)
+
+- Painted Ringworld's buildings stand on the land. None is built on the water or at its very edge (each keeps two
+  metres back from a shore), and none where the ground falls too steeply across it. On a slope a building stands
+  level on a stone plinth that reaches down to the ground at its lowest corner, so no corner hangs in the air.
+- The pagoda and the mosque turn with the camera now, through every angle, as the other buildings do: a pagoda's
+  square tiers and the four slopes of each roof, a mosque's hall under its domes with a minaret at each corner, the
+  far ones behind it and the near ones before it. Before, they were drawn the same from every side, so they seemed to
+  turn with you.
+- Walls, hedgerows and fences are runs of short pieces laid along their own line, each standing where it stands, so
+  a long wall recedes into the distance and turns as the camera goes round it, instead of always facing you.
+
+### Under the hood
+- stepsRing.js: `footing` samples a building's footprint (its corners two metres out and its middle) and keeps how far
+  its ground rises and falls across it; the painter lifts it to its uphill corner on a plinth. Runs are split into
+  pieces at the end of `rgStore`, each with its own place, axis and length. paintKit.js: `pkPagoda3`, `pkMosque3`
+  (built with `pkSpace` and `pkBox3`), `pkBuilding`'s `plinth`, `pkProp`'s `runW` for a piece of a wall, hedge or
+  fence. About a tenth fewer buildings stand on steep or shore ground. turned.test.mjs checks that a pagoda and a
+  mosque are wider on their corner than face on, and that a plinth reaches the ground. Fingerprints: Painted
+  Ringworld (buildings off the shores and steeps, on plinths; the runs in pieces).
+
 ## Neptune–Psamathe (2026-10-22)
 
 - Painted Ringworld's people walk now: up and down the street or lane beside them, at their own pace, stopping now and
@@ -343,17 +364,3 @@ prints it).
 - `pkSmoke` draws the chimneys' smoke from the wind and the clock the Ringworld passes down; `PK_BOX3` takes a fifth
   entry, how far above a flat top what stands on it begins. Texture fingerprints updated for the smoke, the castles,
   the factories and the kites.
-
-## Uranus–Caliban (2026-10-21)
-
-- Tractors, food carts, crates, wayside shrines and the builders' cargo are solid when the camera turns: a tractor's
-  bonnet and glazed cab with its great wheels outside it, a cart's box on its wheels under its round umbrella, crates
-  braced on every face and stacked a little askew, a shrine's niche on the side toward the road under a hipped roof.
-- A windmill's tower is the same from every side, and its sails turn with it: narrowed edge on, behind the tower when
-  the mill faces away.
-- Cathedrals and castles turn as boxes; a torii or an arch narrows to its post or its pier edge on.
-- A terrace of houses is as shallow as a terrace is, not as deep as it is long.
-
-### Under the hood
-- `pkPrism`, `pkWheel3` and `pkWheelsSplit` build the vehicles; the end-on drawings they replace are gone. Texture
-  fingerprints updated for the new solids, the windmills and the gates.
