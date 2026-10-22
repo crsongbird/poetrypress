@@ -395,7 +395,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     flicker, smoke) on `rgMotionTime`; the droids and walkers wander long smooth paths (`RG_MOVES`: two slow sines
     whose periods never line up), never quick shuttles. Nothing is cut until it is wholly out of the frame (`nearCut`,
     the visibility boxes as wide as each thing can reach). The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
-    early summer, days of fourteen hours, long dusks.
+    early summer, days of fourteen hours (`SUN_DAY`), long dusks. Time passes in a Camera Round too (Ruby: "time
+    should pass during the camera pan"), as much as the sheet says, from the light as it is or from dawn, midday, dusk
+    or night.
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
     objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
     (`paintHeap`), each on its own sheet laid at once so its billows never darken each other, every billow a gradient

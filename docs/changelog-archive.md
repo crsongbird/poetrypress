@@ -2,6 +2,19 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Oberon (2026-10-21)
+
+- Vending machines, phone boxes, mailboxes, shipping containers and troughs turned from the camera are solid too: a
+  pair of vending machines shows each machine's own colour down its side and their plain backs from behind, a mailbox
+  stands on its one post, a container shows its end and its long side in depth.
+- A building on stilts (a kubo, a granary) has its walls painted the colour of its walls, not of the ground between
+  its posts.
+
+### Under the hood
+- The turned box is general now: `pkTurned` takes the thing's own face to draw, and buildings and the boxlike props
+  (`PK_PROP3`) both go through it; a prop whose face can't be read is squeezed as before. Texture fingerprints updated
+  for the turned props.
+
 ## Uranus–Titania (2026-10-21)
 
 - Buildings turned from the camera are solid now, not a picture squeezed thin: a cottage, a barn, a chapel, a terrace,

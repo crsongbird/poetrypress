@@ -229,7 +229,7 @@ default.
 | `strings.js` · `tunables.js` | every user-facing string · hand-editable numbers |
 | `spell.js` · `vault.js` | glyph spells · saving, sharing, the Grimoire |
 | `altText.js` · `jpegMeta.js` | the saved image's alt text (the poem, then the look in words, ≤1500) · written into the JPEG as XMP |
-| `moving.js` · `uiMoving.js` | the Moving Image (a long press or a right-click on Save image opens its sheet): a look eased toward another (`blendLooks`), and the MP4, WebM and zip written byte by byte (`mp4Parts`, `webmBytes`, `zipParts`) · the sheet, and the frames drawn offline and encoded by the browser (WebCodecs) in `makeMoving`. Its listeners are in appEvents.js |
+| `moving.js` · `uiMoving.js` | the Moving Image (a long press or a right-click on Save image opens its sheet): a look eased toward another (`blendLooks`), and the MP4, WebM and zip written byte by byte (`mp4Parts`, `webmBytes`, `zipParts`) · how far along its move a frame is (`moveAlong`: evenly or eased, once through or there and back) · the sheet (four groups of radios: move, length, size, output; the rows a move doesn't use dimmed in place), and the frames drawn offline and encoded by the browser (WebCodecs) in `makeMoving`. Its listeners are in appEvents.js |
 | `glyphs.js` `moon.js` `fonts.js` `palette.js` `theme.js` `pwa.js` `editor.js` | inline glyphs, moon phases, lazy fonts, theme palettes, installability, the PML editor |
 | `murmur.js` | soft interface sounds (off until turned on) |
 | `runology.js` · `symbolLore.js` · `seedWords.js` | Ruby's Runes of Power · Symbology's glyphs and names · seeds as phrases |

@@ -32,6 +32,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   lava), one wind per seed turning them, and the water's mood as a Beaufort number (puffs, foam lines, a mirror strip,
   white horses). Under the default Impasto the oil strokes soften the finer marks; with Impasto at 0 they show whole.
   Is that balance right, and which country still looks plain?
+- THE FILM SHEET: four groups (Move, Length, Size, Output), every choice a row of buttons, a summary line; time passes
+  during a Camera Round (an hour by default on the Ringworld), from a time of day if chosen; a quarter, half or full
+  turn; even or eased; once through or there and back. Is the order right, and is an hour the right default?
 - THE TREES: every kind remade (its own form within its kind, crowns grown so nothing floats, limbs into the crown,
   shading near and far, leaves near, the glow of a backlit crown, feathered palms and tree ferns). Do they match
   the style now, and which kind still looks off?
@@ -49,8 +52,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   out instead of jumping; a little motion on water and the sea.
 - BUILDINGS (Ruby): up to 16 views for the buildings drawn the same from every side; never floating in the air or
   standing on water; wide things (hedgerows, walls) broken into pieces placed and sorted one by one.
-- THE FILM (Ruby): time passes during a camera pan; a better film dialog (frame rates as radio buttons written as
-  "30 fps", better order, more animation options, how much time passes during the sweep).
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.
 - THE GPU (Ruby: "implement most of these things on the GPU to accelerate rendering as much as inhumanly possible"):
   only the Light Engine's shadow march, occlusion and shine run on the GPU; blur, focal blur, warp, blend, posterize,

@@ -3,8 +3,9 @@
  * whole, the dials the short way round), and the three containers it writes (zip, MP4, WebM), read back; and, on the
  * booted page, that the frames a film has made ahead are the ones its drawing asks for; and that a film never flashes.
  */
+import { readFileSync } from 'fs';
 import { check, done } from './harness.mjs';
-import { blendLooks, crc32, filmHours, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
+import { blendLooks, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
 
 const cat = parts => { const n = parts.reduce((s, p) => s + p.length, 0), o = new Uint8Array(n); let at = 0; for(const p of parts){ o.set(p, at); at += p.length; } return o; };
 const dv = b => new DataView(b.buffer, b.byteOffset, b.byteLength), str = (b, at, n) => String.fromCharCode(...b.subarray(at, at + n));
@@ -21,13 +22,15 @@ check('the lower layer eases too', m.baseLayer.texP1 === 20);
 check('a key only one look has keeps it', m.only === 1);
 check('a key named as not between is whole', blendLooks(a, b, 0.5, 0, k => k === 'maxSize').maxSize === '40');
 check('the whole changes are found (where the film fades)', JSON.stringify(wholeChanges(a, b).sort()) === JSON.stringify(['texture', 'textureSeedValue', 'textureType']));
-check('there and back loops (0 → 1 → 0), one way ends at the other look', moveAt(0, 180, true) === 0 && Math.abs(moveAt(90, 180, true) - 1) < 1e-9 && moveAt(179, 180, false) === 1 && moveAt(1, 180, true) > 0);
+check('there and back loops (0 → 1 → 0), one way ends at the other look', moveAlong(0, 180, { back: true, ends: true, eased: true }) === 0 && Math.abs(moveAlong(90, 180, { back: true, ends: true, eased: true }) - 1) < 1e-9 && moveAlong(179, 180, { back: false, ends: true, eased: true }) === 1 && moveAlong(1, 180, { back: true, ends: true, eased: true }) > 0);
 
 // ---- the sun through a day ----
 { const f = sunPath(315, 40), day = Array.from({ length: 24*12 }, (_, i) => f(i/12)), up = day.filter(([, t]) => t < 100).length/day.length;
   check('the sun begins where the dial stands', Math.abs(f(0)[0] - 315) < 1e-6 && Math.abs(f(0)[1] - 40) < 0.01);
   check('a day comes round in twenty-four hours', Math.abs(f(24)[0] - 315) < 1e-6 && Math.abs(f(24)[1] - 40) < 0.01);
   check('the day is longer than the night (about fourteen hours of the twenty-four)', up > 0.55 && up < 0.65);
+  // (a film that begins at a time of day counts its hours from sunrise: the sun at the horizon then and SUN_DAY later)
+  { const r = sunPath(90, 100); check('SUN_DAY is the day from sunrise to sunset', SUN_DAY > 13.5 && SUN_DAY < 15 && Math.abs(r(SUN_DAY)[1] - 100) < 0.05 && r(SUN_DAY/2)[1] < 40 && r(SUN_DAY + 1)[1] > 100); }
   check('its path is an arc, never a jump: the dial moves a little from one five minutes to the next', day.every(([a, t], i) => !i || (Math.abs(((a - day[i - 1][0] + 540) % 360) - 180) < 12 && Math.abs(t - day[i - 1][1]) < 4)));
   { const c = filmHours(f, 24), hs = Array.from({ length: 101 }, (_, i) => c(i/100)), near = h => Math.abs(f(h)[1] - 100) < 8;
     const share = hs.slice(1).filter((h, i) => near((h + hs[i])/2)).length/100, real = day.filter(([, t]) => Math.abs(t - 100) < 8).length/day.length;
@@ -87,4 +90,20 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
     check(`while lightning strikes, no frame flashes the scene (mean change ${worst.toFixed(2)} of 255, ${(area*100).toFixed(1)}% of the frame changing by a tenth; the bolt and the rain change only locally, up to ${bolt.toFixed(0)})`, worst < 1.5 && area < 0.02 && bolt > 40);
     globalThis.document = doc; } }
 
+// ---- the film's moves (the sheet's Turn, Easing and Playback) ----
+{ const n = 120, at = o => Array.from({ length: n }, (_, i) => moveAlong(i, n, o));
+  const full = at({}), part = at({ ends: true }), back = at({ back: true }), eased = at({ ends: true, eased: true });
+  check('a full round goes evenly and stops a frame short, so the film loops with no frame twice', full[0] === 0 && Math.abs(full[n - 1] - (n - 1)/n) < 1e-9 && full.every((v, i) => !i || Math.abs(v - full[i - 1] - 1/n) < 1e-9));
+  check('a part turn ends where it goes, on its last frame', part[0] === 0 && part[n - 1] === 1);
+  check('there and back goes there by the middle and comes back, so it loops', back[0] === 0 && back[n/2] === 1 && back[n - 1] < 0.02 && back.every((v, i) => !i || Math.abs(v - back[i - 1]) < 2.01/n));
+  check('eased, it leaves and arrives slowly (its first and last steps the smallest)', eased[1] - eased[0] < (eased[n/2 + 1] - eased[n/2])/10 && eased[n - 1] - eased[n - 2] < (eased[n/2 + 1] - eased[n/2])/10);
+}
+// ---- the sheet's markup: each choice a radio group with one chosen by default, each group under a legend ----
+{ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8'), sheet = html.slice(html.indexOf('id="movingSheet"'), html.indexOf('id="movingMake"'));
+  const names = ['movingMove', 'movingTurn', 'movingSpan', 'movingBegin', 'movingEase', 'movingPlay', 'movingFps', 'movingSize', 'movingFormat'];
+  const checkedOf = nm => [...sheet.matchAll(new RegExp(`name="${nm}" value="[^"]+"( checked)?`, 'g'))];
+  check('every choice on the film sheet is a radio group with exactly one chosen by default', names.every(nm => { const r = checkedOf(nm); return r.length >= 2 && r.filter(m => m[1]).length === 1; }));
+  check('the frame rates read "24 fps" and so on, in order', /24 fps[\s\S]*30 fps[\s\S]*48 fps[\s\S]*60 fps/.test(sheet) && !/a second<\/option>/.test(sheet));
+  check('the sheet is four groups, each under its legend', (sheet.match(/<fieldset class="film-group"><legend /g) || []).length === 4);
+  check('the sheet reads every group it offers', names.every(nm => new RegExp(`'${nm}'`).test(readFileSync(new URL('../uiMoving.js', import.meta.url), 'utf8')))); }
 done();

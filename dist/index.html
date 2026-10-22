@@ -165,7 +165,7 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
   border:1px solid var(--line); border-radius:2px;
   font-size:12.5px; color:var(--text-dim); cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
-.radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
+.radio-btn.active, .film-pick input:checked + .radio-btn{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
 /* SURFACE LAYERS: Two Surfaces, and which one the controls below change (shown once there are two) */
 .layer-bar{ display:flex; flex-direction:column; gap:6px; padding-bottom:8px; border-bottom:1px solid var(--line); }
 .layer-seg{ display:none; }
@@ -1809,11 +1809,29 @@ body.is-mobile .shortcut-btn{ display:none; }
 .sheet{ background:var(--bg-panel, #17141c); color:var(--text-main, #eee); border:1px solid var(--accent); border-radius:0; padding:16px 20px; max-width:min(560px, 92vw); max-height:calc(var(--vvh, 100vh) * 0.86); overflow:auto; box-shadow:0 18px 50px -20px rgba(0,0,0,0.8); }
 .sheet-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:18px; letter-spacing:0.04em; margin-bottom:10px; color:var(--accent); }
 /* the Moving Image sheet: a label and its choice to a row */
-.moving-sheet{ width:min(420px, 92vw); }
-.moving-row{ display:grid; grid-template-columns:7.5em 1fr; align-items:center; gap:10px; margin:8px 0; }
-.moving-row.moving-idle{ visibility:hidden; }   /* (the row keeps its room: nothing moves when the move changes) */
-.moving-row [hidden]{ display:none; }
-.moving-row select{ width:100%; min-width:0; }
+.moving-sheet{ width:min(460px, 94vw); }
+/* THE FILM'S GROUPS (docs/prior-art/film-export.md §5): each a fieldset under a thin rule, its legend small; a row's label
+   left, its choice right; native radios drawn as the app's segments (a choice's caption small beneath it) */
+.film-group{ border:0; border-top:1px solid var(--line); margin:10px 0 0; padding:6px 0 0; min-width:0; }
+.film-group > legend{ padding:0 8px 0 0; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-dim); }
+.film-sub{ display:grid; grid-template-columns:6.6em 1fr; align-items:center; gap:8px; margin:6px 0; transition:opacity .15s ease; }
+.film-sub.off{ opacity:.35; }   /* (a row the move doesn't use keeps its room: nothing moves when the move changes) */
+.film-k{ font-family:var(--ui-sans); font-size:12.5px; letter-spacing:0.02em; color:var(--text-dim); }
+/* (on a phone, each row's label above its choice, so five choices have the sheet's whole width) */
+@media (max-width:560px){ .film-sub{ grid-template-columns:1fr; gap:4px; margin:8px 0; } }
+.film-sub select{ width:100%; min-width:0; }
+.film-seg{ display:flex; gap:4px; min-width:0; }
+.film-moves, .film-cards{ display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:4px 0 8px; }
+.film-pick label{ position:relative; flex:1 1 0; min-width:0; display:flex; }
+.film-pick input{ position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }
+.film-pick .radio-btn{ flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:34px; padding:4px 3px; line-height:1.15; }
+.film-pick .radio-btn b{ font-weight:400; }
+.film-pick .radio-btn small{ font-size:10px; opacity:.72; letter-spacing:0.03em; margin-top:2px; }
+.film-cards .radio-btn{ min-height:44px; }
+.film-pick input:focus-visible + .radio-btn{ outline:1px solid var(--accent); outline-offset:2px; }
+.film-pick input:disabled + .radio-btn{ opacity:.4; cursor:default; }
+body.is-mobile .film-pick .radio-btn{ min-height:40px; }
+.film-summary{ margin:12px 0 0; font-variant-numeric:lining-nums tabular-nums; }
 .moving-note{ min-height:1.4em; }
 .keys{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:13px; }
 .keys dt{ white-space:nowrap; opacity:0.9; }
@@ -4054,50 +4072,42 @@ but bear with me, dear}]/jitter:200
     <div class="sheet moving-sheet" role="dialog" aria-labelledby="movingTitle">
       <div class="sheet-title" id="movingTitle" data-str="moving.title">Moving Image</div>
       <p class="hint" data-str="moving.hint">The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.</p>
-      <div class="moving-row"><label for="movingMove" data-str="moving.move">Move</label>
-        <select id="movingMove">
-          <option value="camera" data-str="moving.camera">Camera round</option>
-          <option value="light" data-str="moving.light_round">Light round</option>
-          <option value="look" data-str="moving.look">To another look</option>
-          <option value="lookback" data-str="moving.lookback">To another look and back</option>
-          <option value="time" data-str="moving.time">Time passing</option>
-        </select></div>
-      <!-- (the move's own choice, in one row that always keeps its room: the other look, or how much time passes) -->
-      <div class="moving-row" id="movingDetailRow"><label for="movingLook" id="movingLookLabel" data-str="moving.other">The other look</label><select id="movingLook"></select>
-        <label for="movingSpan" id="movingSpanLabel" data-str="moving.span" hidden>Time to pass</label><select id="movingSpan" hidden>
-          <option value="3600" data-str="moving.hour">An hour</option>
-          <option value="21600" data-str="moving.hours6">Six hours</option>
-          <option value="86400" selected data-str="moving.day1">A day</option>
-          <option value="172800" data-str="moving.days2">Two days</option>
-        </select></div>
-      <div class="moving-row"><label for="movingSize" data-str="moving.size">Size</label>
-        <select id="movingSize">
-          <option value="page" data-str="moving.page">The page</option>
-          <option value="wide" data-str="moving.wide">Wide, 1920 × 1080</option>
-          <option value="tall" data-str="moving.tall">Tall, 1080 × 1920</option>
-          <option value="square" data-str="moving.square">Square, 1080 × 1080</option>
-        </select></div>
-      <div class="moving-row"><label for="movingLength" data-str="moving.length">Length</label>
+      <!-- (FOUR GROUPS, picture first: what moves, how long, how big, what file; docs/prior-art/film-export.md §5. Rows
+           that do not apply to the chosen move stay where they are, dimmed, so nothing moves under the hand) -->
+      <fieldset class="film-group"><legend data-str="moving.g_move">Move</legend>
+        <div class="film-moves film-pick"><label><input type="radio" name="movingMove" value="camera" checked><span class="radio-btn"><b data-str="moving.camera">Camera round</b></span></label><label><input type="radio" name="movingMove" value="light"><span class="radio-btn"><b id="movingLightName" data-str="moving.light_round">Light round</b></span></label><label><input type="radio" name="movingMove" value="time"><span class="radio-btn"><b data-str="moving.time">Time passing</b></span></label><label><input type="radio" name="movingMove" value="look"><span class="radio-btn"><b data-str="moving.look">To another look</b></span></label></div>
+      <div class="film-sub" id="movingLookRow"><label class="film-k" for="movingLook" data-str="moving.other">The other look</label><select id="movingLook"></select></div>
+      <div class="film-sub" id="movingTurnRow"><span class="film-k" id="movingTurnRowLabel" data-str="moving.turn">Turn</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingTurnRowLabel"><label><input type="radio" name="movingTurn" value="90"><span class="radio-btn"><b data-str="moving.turn90">Quarter</b></span></label><label><input type="radio" name="movingTurn" value="180"><span class="radio-btn"><b data-str="moving.turn180">Half</b></span></label><label><input type="radio" name="movingTurn" value="360" checked><span class="radio-btn"><b data-str="moving.turn360">Full round</b></span></label></div></div>
+      <div class="film-sub" id="movingSpanRow"><span class="film-k" id="movingSpanRowLabel" data-str="moving.span">Time passes</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingSpanRowLabel"><label><input type="radio" name="movingSpan" value="0"><span class="radio-btn"><b data-str="moving.real">Real time</b></span></label><label><input type="radio" name="movingSpan" value="3600" checked><span class="radio-btn"><b data-str="moving.hour">1 hour</b></span></label><label><input type="radio" name="movingSpan" value="21600"><span class="radio-btn"><b data-str="moving.hours6">6 hours</b></span></label><label><input type="radio" name="movingSpan" value="86400"><span class="radio-btn"><b data-str="moving.day1">1 day</b></span></label><label><input type="radio" name="movingSpan" value="172800"><span class="radio-btn"><b data-str="moving.days2">2 days</b></span></label></div></div>
+      <div class="film-sub" id="movingBeginRow"><span class="film-k" id="movingBeginRowLabel" data-str="moving.begin">Begins at</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingBeginRowLabel"><label><input type="radio" name="movingBegin" value="lit" checked><span class="radio-btn"><b data-str="moving.b_lit">As lit</b></span></label><label><input type="radio" name="movingBegin" value="dawn"><span class="radio-btn"><b data-str="moving.b_dawn">Dawn</b></span></label><label><input type="radio" name="movingBegin" value="noon"><span class="radio-btn"><b data-str="moving.b_noon">Midday</b></span></label><label><input type="radio" name="movingBegin" value="dusk"><span class="radio-btn"><b data-str="moving.b_dusk">Dusk</b></span></label><label><input type="radio" name="movingBegin" value="night"><span class="radio-btn"><b data-str="moving.b_night">Night</b></span></label></div></div>
+      <div class="film-sub" id="movingEaseRow"><span class="film-k" id="movingEaseRowLabel" data-str="moving.ease">Easing</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingEaseRowLabel"><label><input type="radio" name="movingEase" value="even" checked><span class="radio-btn"><b data-str="moving.even">Even</b></span></label><label><input type="radio" name="movingEase" value="ease"><span class="radio-btn"><b data-str="moving.eased">Ease in and out</b></span></label></div></div>
+      <div class="film-sub" id="movingPlayRow"><span class="film-k" id="movingPlayRowLabel" data-str="moving.play">Playback</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingPlayRowLabel"><label><input type="radio" name="movingPlay" value="once" checked><span class="radio-btn"><b data-str="moving.once">Once through</b></span></label><label><input type="radio" name="movingPlay" value="back"><span class="radio-btn"><b data-str="moving.back">There and back</b></span></label></div></div>
+      </fieldset>
+      <fieldset class="film-group"><legend data-str="moving.g_length">Length</legend>
+      <div class="film-sub"><label class="film-k" for="movingLength" data-str="moving.length">Length</label>
         <select id="movingLength">
           <option value="6" data-str="moving.s6">6 seconds</option>
           <option value="12" selected data-str="moving.s12">12 seconds</option>
           <option value="24" data-str="moving.s24">24 seconds</option>
           <option value="30" data-str="moving.s30">30 seconds</option>
           <option value="45" data-str="moving.s45">45 seconds</option>
-          <option value="60" data-str="moving.s60">A minute</option>
+          <option value="60" data-str="moving.s60">1 minute</option>
         </select></div>
-      <div class="moving-row"><label for="movingFps" data-str="moving.fps">Frame rate</label>
-        <select id="movingFps">
-          <option value="30" selected data-str="moving.fps30">30 a second</option>
-          <option value="48" data-str="moving.fps48">48 a second</option>
-          <option value="60" data-str="moving.fps60">60 a second</option>
-        </select></div>
-      <div class="moving-row"><label for="movingFormat" data-str="moving.format">Format</label>
-        <select id="movingFormat">
-          <option value="mp4" data-str="moving.mp4">MP4 video</option>
-          <option value="webm" data-str="moving.webm">WebM video</option>
-          <option value="png" data-str="moving.png">PNG frames, zipped</option>
-        </select></div>
+      <div class="film-sub" id="movingFpsRow"><span class="film-k" id="movingFpsRowLabel" data-str="moving.fps">Frame rate</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingFpsRowLabel"><label><input type="radio" name="movingFps" value="24"><span class="radio-btn"><b data-str="moving.fps24">24 fps</b><small data-str="moving.c24">film</small></span></label><label><input type="radio" name="movingFps" value="30" checked><span class="radio-btn"><b data-str="moving.fps30">30 fps</b><small data-str="moving.c30">web</small></span></label><label><input type="radio" name="movingFps" value="48"><span class="radio-btn"><b data-str="moving.fps48">48 fps</b><small data-str="moving.c48">high rate</small></span></label><label><input type="radio" name="movingFps" value="60"><span class="radio-btn"><b data-str="moving.fps60">60 fps</b><small data-str="moving.c60">smoothest</small></span></label></div></div>
+      </fieldset>
+      <fieldset class="film-group"><legend data-str="moving.g_size">Size</legend>
+        <div class="film-cards film-pick"><label><input type="radio" name="movingSize" value="page" checked><span class="radio-btn"><b data-str="moving.page">The page</b><small id="movingPagePx">&nbsp;</small></span></label><label><input type="radio" name="movingSize" value="tall"><span class="radio-btn"><b data-str="moving.tall">Tall</b><small data-str="moving.tall_c">9:16 · 1080 × 1920</small></span></label><label><input type="radio" name="movingSize" value="square"><span class="radio-btn"><b data-str="moving.square">Square</b><small data-str="moving.square_c">1:1 · 1080 × 1080</small></span></label><label><input type="radio" name="movingSize" value="wide"><span class="radio-btn"><b data-str="moving.wide">Wide</b><small data-str="moving.wide_c">16:9 · 1920 × 1080</small></span></label></div>
+      </fieldset>
+      <fieldset class="film-group"><legend data-str="moving.g_output">Output</legend>
+        <div class="film-seg film-pick"><label><input type="radio" name="movingFormat" value="mp4" checked><span class="radio-btn"><b data-str="moving.mp4">MP4</b><small data-str="moving.mp4_c">H.264</small></span></label><label><input type="radio" name="movingFormat" value="webm"><span class="radio-btn"><b data-str="moving.webm">WebM</b><small data-str="moving.webm_c">VP9</small></span></label><label><input type="radio" name="movingFormat" value="png"><span class="radio-btn"><b data-str="moving.png">PNG frames</b><small data-str="moving.png_c">zip</small></span></label></div>
+      </fieldset>
+      <p class="hint film-summary" id="movingSummary" aria-live="polite"></p>
       <p class="hint moving-note" id="movingNote" aria-live="polite"></p>
       <div class="btn-row">
         <button class="btn-major" id="movingMake" type="button" data-str="moving.make">Make the film</button>
@@ -30637,38 +30647,66 @@ const UI_STRINGS = {
 
   'moving.title':                          "Moving Image",
   'moving.hint':                           "The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.",
-  'moving.move':                           "Move",
-  'moving.camera':                         "Camera round",
-  'moving.light_round':                    "Light round",
-  'moving.look':                           "To another look",
-  'moving.lookback':                       "To another look and back",
-  'moving.time':                           "Time passing",
-  'moving.span':                           "Time to pass",
-  'moving.hour':                           "An hour",
-  'moving.hours6':                         "Six hours",
-  'moving.day1':                           "A day",
-  'moving.days2':                          "Two days",
-  'moving.fps':                            "Frame rate",
-  'moving.fps30':                          "30 a second",
-  'moving.fps48':                          "48 a second",
-  'moving.fps60':                          "60 a second",
-  'moving.s30':                            "30 seconds",
-  'moving.s45':                            "45 seconds",
-  'moving.s60':                            "A minute",
-  'moving.other':                          "The other look",
-  'moving.size':                           "Size",
-  'moving.page':                           "The page",
-  'moving.wide':                           "Wide, 1920 × 1080",
-  'moving.tall':                           "Tall, 1080 × 1920",
-  'moving.square':                         "Square, 1080 × 1080",
-  'moving.length':                         "Length",
-  'moving.s6':                             "6 seconds",
-  'moving.s12':                            "12 seconds",
-  'moving.s24':                            "24 seconds",
-  'moving.format':                         "Format",
-  'moving.mp4':                            "MP4 video",
-  'moving.webm':                           "WebM video",
-  'moving.png':                            "PNG frames, zipped",
+  'moving.g_move':                        "Move",
+  'moving.camera':                        "Camera round",
+  'moving.light_round':                   "Light round",
+  'moving.time':                          "Time passing",
+  'moving.look':                          "To another look",
+  'moving.other':                         "The other look",
+  'moving.turn':                          "Turn",
+  'moving.turn90':                        "Quarter",
+  'moving.turn180':                       "Half",
+  'moving.turn360':                       "Full round",
+  'moving.span':                          "Time passes",
+  'moving.real':                          "Real time",
+  'moving.hour':                          "1 hour",
+  'moving.hours6':                        "6 hours",
+  'moving.day1':                          "1 day",
+  'moving.days2':                         "2 days",
+  'moving.begin':                         "Begins at",
+  'moving.b_lit':                         "As lit",
+  'moving.b_dawn':                        "Dawn",
+  'moving.b_noon':                        "Midday",
+  'moving.b_dusk':                        "Dusk",
+  'moving.b_night':                       "Night",
+  'moving.ease':                          "Easing",
+  'moving.even':                          "Even",
+  'moving.eased':                         "Ease in and out",
+  'moving.play':                          "Playback",
+  'moving.once':                          "Once through",
+  'moving.back':                          "There and back",
+  'moving.g_length':                      "Length",
+  'moving.length':                        "Length",
+  'moving.s6':                            "6 seconds",
+  'moving.s12':                           "12 seconds",
+  'moving.s24':                           "24 seconds",
+  'moving.s30':                           "30 seconds",
+  'moving.s45':                           "45 seconds",
+  'moving.s60':                           "1 minute",
+  'moving.fps':                           "Frame rate",
+  'moving.fps24':                         "24 fps",
+  'moving.c24':                           "film",
+  'moving.fps30':                         "30 fps",
+  'moving.c30':                           "web",
+  'moving.fps48':                         "48 fps",
+  'moving.c48':                           "high rate",
+  'moving.fps60':                         "60 fps",
+  'moving.c60':                           "smoothest",
+  'moving.g_size':                        "Size",
+  'moving.page':                          "The page",
+  'moving.tall':                          "Tall",
+  'moving.tall_c':                        "9:16 · 1080 × 1920",
+  'moving.square':                        "Square",
+  'moving.square_c':                      "1:1 · 1080 × 1080",
+  'moving.wide':                          "Wide",
+  'moving.wide_c':                        "16:9 · 1920 × 1080",
+  'moving.g_output':                      "Output",
+  'moving.mp4':                           "MP4",
+  'moving.mp4_c':                         "H.264",
+  'moving.webm':                          "WebM",
+  'moving.webm_c':                        "VP9",
+  'moving.png':                           "PNG frames",
+  'moving.png_c':                         "zip",
   'moving.make':                           "Make the film",
   'moving.close':                          "Close",
 };
@@ -30829,7 +30867,13 @@ const EYE_OFF = {
  
 const MOVING = {
   light: 'Light round',
-  day: 'A day passing (the light round)',
+  day: 'Daylight round',
+  sum: '{len} s · {fps} fps · {frames} frames · {size} · {fmt}, about {mb}',
+  sumTime: '{span} at {rate} a second',
+  sumBack: 'the sun returns the way it came',
+  eta: 'about {name} to go',
+
+  uSeconds: '{name} seconds', uMinute: 'a minute', uMinutes: '{name} minutes', uHour: 'an hour', uHours: '{name} hours', uDay: 'a day', uDays: '{name} days',
   before: 'The look before the last change',
   make: 'Make the film',
   stop: 'Stop',
@@ -33733,7 +33777,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Neptune–Sao';
+const RELEASE = 'Neptune–Laomedeia';
 
 const RELEASE_DATE = '2026-10-22';
 
@@ -33985,10 +34029,14 @@ function wholeChanges(a, b, snap = () => false){
   walk(a || {}, b || {}, '');
   return out;
 }
- 
-function moveAt(i, n, back){
-  const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : Math.min(1, i/Math.max(1, n - 1));
-  return 0.5 - 0.5*Math.cos(Math.PI*s);
+
+
+
+
+
+function moveAlong(i, n, { back = false, ends = false, eased = false } = {}){
+  const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : ends ? Math.min(1, i/Math.max(1, n - 1)) : u;
+  return eased ? 0.5 - 0.5*Math.cos(Math.PI*s) : s;
 }
 
 
@@ -34005,6 +34053,8 @@ function moveAt(i, n, back){
 const SUN_LAT = 48*Math.PI/180, SUN_DEC = 15*Math.PI/180;
 const sunEl = H => Math.asin(Math.sin(SUN_LAT)*Math.sin(SUN_DEC) + Math.cos(SUN_LAT)*Math.cos(SUN_DEC)*Math.cos(H));
 const sunAz = H => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(SUN_LAT) - Math.tan(SUN_DEC)*Math.cos(SUN_LAT));
+
+const SUN_DAY = 2*Math.acos(-Math.tan(SUN_LAT)*Math.tan(SUN_DEC))*12/Math.PI;
 const sunTilt = el => el >= 0 ? 100*(1 - el/(Math.PI/2)) : 100 + 30*Math.min(1, -el/(18*Math.PI/180));
 function sunPath(deg0, tilt0){
   const el0 = tilt0 <= 100 ? (1 - tilt0/100)*Math.PI/2 : -Math.min(1, (tilt0 - 100)/30)*18*Math.PI/180;
@@ -34643,7 +34693,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-22 · 4a39d80";
+const STAMP = "2026-10-22 · 245985b";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -45408,9 +45458,43 @@ function modalPrompt(opts){
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 
 const MOVING_FADE = [0.38, 0.62];
-const movingRun = { busy: false, stop: false, sure: 0, wake: null };
+const movingRun = { busy: false, stop: false, sure: 0, wake: null, caps: {}, able: {}, eased: false };
+
+
+const MOVING_BEGIN = { dawn: -0.5, noon: SUN_DAY/2, dusk: SUN_DAY - 0.6, night: SUN_DAY + (24 - SUN_DAY)/2 };
 
 const movingNote = text => { const n = $('movingNote'); if(n) n.textContent = text || ''; };
+
+
+const movingRadios = name => typeof document !== 'undefined' && document.querySelectorAll ? [...document.querySelectorAll(`input[name="${name}"]`)] : [];
+const movingPick = (name, d) => { const r = movingRadios(name).find(q => q.checked); return r ? r.value : d; };
+const movingSet = (name, v) => { for(const r of movingRadios(name)) r.checked = r.value === v; };
+
+
+function movingDims(size, fmt){ const cv = $('poemCanvas') || {};
+  let [w, h] = MOVING_SIZES[size] || [state.page.exportW || cv.width || 1080, state.page.exportH || cv.height || 1350];
+  if(fmt !== 'png'){ const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }
+  return [w, h]; }
+const movingBitrate = (w, h, fps) => Math.round(Math.min(40e6, Math.max(4e6, w*h*fps*0.15)));
+
+function movingWords(sec){ const n = v => String(v < 10 ? Math.round(v*10)/10 : Math.round(v));
+  if(sec >= 86400*1.5) return fill(MOVING.uDays, n(sec/86400)); if(sec >= 86400) return MOVING.uDay;
+  if(sec >= 3600*1.5) return fill(MOVING.uHours, n(sec/3600)); if(sec >= 3600) return MOVING.uHour;
+  if(sec >= 90) return fill(MOVING.uMinutes, String(Math.round(sec/60))); if(sec >= 60) return MOVING.uMinute;
+  return fill(MOVING.uSeconds, String(Math.max(1, Math.round(sec)))); }
+ 
+function movingSummary(){
+  const el = $('movingSummary'); if(!el) return;
+  const fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, len = Math.min(60, +($('movingLength') || {}).value || 12), n = len*fps;
+  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), bytes = fmt === 'png' ? n*w*h*1.5 : movingBitrate(w, h, fps)*len/8;
+  let text = MOVING.sum.replace('{len}', String(len)).replace('{fps}', String(fps)).replace('{frames}', String(n)).replace('{size}', `${w} × ${h}`)
+    .replace('{fmt}', { mp4: 'MP4', webm: 'WebM', png: 'PNG' }[fmt] || fmt).replace('{mb}', bytes >= 1e9 ? (bytes/1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(bytes/1e6)) + ' MB');
+  const span = movingSpan(movingPick('movingMove', 'camera'));
+  if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
+  el.textContent = text; }
+
+function movingSpan(move){ const caps = movingRun.caps || {}, timeable = !!(caps.time || caps.dial === 'Daylight');
+  if(!timeable || (move !== 'camera' && move !== 'time')) return 0; const v = +movingPick('movingSpan', '0') || 0; return move === 'time' ? v || 86400 : v; }
  
 function movingLooks(){
   const out = [];
@@ -45422,16 +45506,14 @@ function movingLooks(){
 function openMoving(){
   const sheet = $('movingSheet'); if(!sheet) return;
   const type = ($('textureType') || {}).value, on = !!($('textureToggle') || {}).checked, caps = (on && capsFor(type)) || {};
-  const move = $('movingMove'), opt = v => move && [...move.options].find(o => o.value === v);
-  if(opt('camera')) opt('camera').disabled = !caps.camera;
-  if(opt('light')){ opt('light').disabled = !caps.light; opt('light').textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light; }
-  if(opt('time')) opt('time').disabled = !caps.time;
   const looks = movingLooks(), pick = $('movingLook');
   if(pick){ pick.innerHTML = ''; for(const l of looks){ const o = document.createElement('option'); o.value = l.value; o.textContent = l.label; pick.appendChild(o); } }
-  for(const v of ['look', 'lookback']) if(opt(v)) opt(v).disabled = !looks.length;
-  if(move && move.selectedOptions && move.selectedOptions[0] && move.selectedOptions[0].disabled){ const first = [...move.options].find(o => !o.disabled); if(first) move.value = first.value; }
-  const fmt = $('movingFormat'), coded = typeof VideoEncoder !== 'undefined';
-  if(fmt){ for(const o of fmt.options) if(o.value !== 'png') o.disabled = !coded; if(!coded) fmt.value = 'png'; }
+
+  movingRun.caps = caps; movingRun.able = { camera: !!caps.camera, light: !!caps.light, time: !!caps.time, look: looks.length > 0 };
+  const ln = $('movingLightName'); if(ln) ln.textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light;
+  if(!movingRun.able[movingPick('movingMove', 'camera')]){ const first = movingRadios('movingMove').find(r => movingRun.able[r.value]); if(first) movingSet('movingMove', first.value); }
+  const coded = typeof VideoEncoder !== 'undefined'; if(!coded) movingSet('movingFormat', 'png');
+  const pp = $('movingPagePx'), cv = $('poemCanvas') || {}; if(pp) pp.textContent = `${state.page.exportW || cv.width} × ${state.page.exportH || cv.height}`;
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
   sheet.hidden = false;
 }
@@ -45447,17 +45529,29 @@ async function movingWake(){
   try { movingRun.wake = await navigator.wakeLock.request('screen'); movingRun.wake.addEventListener('release', () => { movingRun.wake = null; }); } catch(e){ movingRun.wake = null; }
 }
  
-function paintMoving(){
-  const m = ($('movingMove') || {}).value, looked = m === 'look' || m === 'lookback', timed = m === 'time', row = $('movingDetailRow');
-  for(const [id, on] of [['movingLook', looked], ['movingLookLabel', looked], ['movingSpan', timed], ['movingSpanLabel', timed]]){ const el = $(id); if(el) el.hidden = !on; }
-  if(row && row.classList) row.classList.toggle('moving-idle', !looked && !timed);
-  const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
-  for(const id of ['movingMove', 'movingLook', 'movingSpan', 'movingSize', 'movingLength', 'movingFps', 'movingFormat']){ const el = $(id); if(el) el.disabled = movingRun.busy; }
+function paintMoving(e){
+  const t = e && e.target, busy = movingRun.busy, caps = movingRun.caps || {}, able = movingRun.able || {};
+  if(t && t.name === 'movingEase') movingRun.eased = true;
+  let m = movingPick('movingMove', 'camera');
+
+
+  if(m === 'time' && movingPick('movingSpan', '0') === '0') movingSet('movingSpan', '86400');
+  if(!movingRun.eased) movingSet('movingEase', m === 'look' || (m === 'camera' && movingPick('movingTurn', '360') !== '360') ? 'ease' : 'even');
+  const timeable = !!(caps.time || caps.dial === 'Daylight'), timed = movingSpan(m) > 0;
+  const on = { movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
+  for(const [id, ok] of Object.entries(on)){ const row = $(id); if(!row) continue; if(row.classList) row.classList.toggle('off', !ok);
+    for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok || (el.name === 'movingSpan' && el.value === '0' && m === 'time'); }
+  for(const r of movingRadios('movingMove')) r.disabled = busy || !able[r.value];
+  for(const r of movingRadios('movingFormat')) r.disabled = busy || (r.value !== 'png' && typeof VideoEncoder === 'undefined');
+  for(const n of ['movingSize', 'movingFps']) for(const r of movingRadios(n)) r.disabled = busy;
+  if($('movingLength')) $('movingLength').disabled = busy;
+  const b = $('movingMake'); if(b) b.textContent = busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
+  movingSummary();
 }
  
 async function movingCodec(fmt, w, h, fps){
   if(typeof VideoEncoder === 'undefined') return null;
-  const bitrate = Math.round(Math.min(40e6, Math.max(4e6, w*h*fps*0.15)));
+  const bitrate = movingBitrate(w, h, fps);
   const tries = fmt === 'mp4' ? ['avc1.640028', 'avc1.640033', 'avc1.640034', 'avc1.4d0028', 'avc1.4d0033', 'avc1.420028'] : ['vp09.00.40.08', 'vp09.00.50.08', 'vp09.00.51.08', 'vp8'];
   for(const codec of tries){
     const cfg = { codec, width: w, height: h, bitrate, framerate: fps, ...(fmt === 'mp4' ? { avc: { format: 'avc' } } : {}) };
@@ -45506,11 +45600,10 @@ async function makeMoving(){
   if(movingRun.busy){
     if(!movingRun.sure){ movingRun.sure = setTimeout(() => { movingRun.sure = 0; paintMoving(); }, 3500); paintMoving(); return; }
     clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
-  const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, fps = +($('movingFps') || {}).value || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;
-  let [w, h] = MOVING_SIZES[$('movingSize').value] || [state.page.exportW || canvas.width, state.page.exportH || canvas.height];
-  if(fmt !== 'png'){
-    const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }
-  const start = serializeCurrentSettings(), looked = move === 'look' || move === 'lookback';
+  const canvas = $('poemCanvas'), move = movingPick('movingMove', 'camera'), fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;
+  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), back = movingPick('movingPlay', 'once') === 'back', eased = movingPick('movingEase', 'even') === 'ease';
+  const turn = +movingPick('movingTurn', '360') || 360, spanS = movingSpan(move), timed = spanS > 0, begin = movingPick('movingBegin', 'lit');
+  const start = serializeCurrentSettings(), looked = move === 'look';
   const other = looked ? movingLooks().find(l => l.value === ($('movingLook') || {}).value) : null;
   if(looked && !other){ movingNote(MOVING.noLook); return; }
   const cfg = fmt === 'png' ? null : await movingCodec(fmt, w, h, fps);
@@ -45520,19 +45613,26 @@ async function makeMoving(){
   const pw = canvas.width, ph = canvas.height, num = id => parseFloat(($(id) || {}).value) || 0, cam0 = num('cameraTurn'), light0 = num('textureLight'), tilt0 = num('textureLightTilt');
 
 
-  const sun = (move === 'light' && (capsFor(($('textureType') || {}).value) || {}).dial === 'Daylight') || move === 'time' ? sunPath(light0, tilt0) : null;
-  const span = move === 'time' ? (+($('movingSpan') || {}).value || 86400) : 86400, clocked = !!(capsFor(($('textureType') || {}).value) || {}).time;
-  const clock = sun ? filmHours(sun, span/3600) : null;
+
+
+  const caps = capsFor(($('textureType') || {}).value) || {}, clocked = !!caps.time, sunDay = move === 'light' && caps.dial === 'Daylight';
+  const off = timed && MOVING_BEGIN[begin] !== undefined ? MOVING_BEGIN[begin] : null, base = timed || sunDay ? (off === null ? sunPath(light0, tilt0) : sunPath(light0, 100)) : null;
+  const sun = base && off ? hrs => base(hrs + off) : base;
+  const clock = sun ? filmHours(sun, (timed ? spanS : 86400)/3600) : null;
+
+
+  const tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: looked || (move === 'camera' && turn < 360), eased });
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
 
 
 
-  const place = i => {
-    if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
-    if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
-    else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
-    else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360); };
+  const sunAt = hrs => { const [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); };
+  const place = i => { const u = along(i);
+    if(timed){ const at = j => clock(back ? tri(j/n) : j/n), hrs = at(i); sunAt(hrs); if(clocked) setSceneTime(hrs*3600, Math.max(1, Math.abs(at(i + 1) - hrs)*3600)); }
+    else if(clocked) setSceneTime(i/fps, 1/fps);
+    if(move === 'camera') $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
+    else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); } };
 
 
 
@@ -45542,6 +45642,8 @@ async function makeMoving(){
   if(document.body && document.body.classList) document.body.classList.add('saving');
   try {
     canvas.width = w; canvas.height = h; setDrafting(false); clearTimeout(draftTimer); setRenderScale(1, [w, h]);
+
+    const t0 = Date.now(), eta = i => i < 2 ? '' : ' ' + fill(MOVING.eta, movingWords((Date.now() - t0)/1000/(i + 1)*(n - i - 1)));
     for(let i = 0; i < n && !movingRun.stop; i++){
       if(aheadN){ for(let j = i; j < i + aheadN; j++) queue(j);
         place(i); const got = pending.get(i);
@@ -45549,19 +45651,19 @@ async function makeMoving(){
         if(movingRun.stop) break; }
       if(!looked) place(i);
       else {
-        const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
+        const t = along(i), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
         if(mid){
           restoreSettings(blendLooks(start, end, t, 0, snap)); await movingFrame();
           spare = spare || document.createElement('canvas'); spare.width = w; spare.height = h; spare.getContext('2d').drawImage(canvas, 0, 0);
           restoreSettings(blendLooks(start, end, t, 1, snap)); await movingFrame();
           const u = (t - MOVING_FADE[0])/(MOVING_FADE[1] - MOVING_FADE[0]), x = canvas.getContext('2d');
           x.save(); x.globalAlpha = 1 - u*u*(3 - 2*u); x.drawImage(spare, 0, 0); x.restore();
-          await sink.add(canvas, i); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`)); continue;
+          await sink.add(canvas, i); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`) + eta(i)); continue;
         }
         restoreSettings(blendLooks(start, end, t, t < 0.5 ? 0 : 1, snap));
       }
       await movingFrame(); await sink.add(canvas, i);
-      movingNote(aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`));
+      movingNote((aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`)) + eta(i));
     }
     if(!movingRun.stop){ movingNote(MOVING.finishing); made = await sink.done(); }
   } catch(err){
@@ -46029,10 +46131,10 @@ $('downloadBtn').addEventListener('click', async ()=>{
     for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) save.addEventListener(ev, () => clearTimeout(timer));
     save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave) openMoving(); });
   }
-  if($('movingMove') && $('movingMove').addEventListener) $('movingMove').addEventListener('change', paintMoving);
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
   if($('movingSheet') && $('movingSheet').addEventListener){
+    $('movingSheet').addEventListener('change', paintMoving);
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
     $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
   }

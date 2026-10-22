@@ -515,10 +515,10 @@ $('downloadBtn').addEventListener('click', async ()=>{
     for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) save.addEventListener(ev, () => clearTimeout(timer));
     save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave) openMoving(); });
   }
-  if($('movingMove') && $('movingMove').addEventListener) $('movingMove').addEventListener('change', paintMoving);
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
   if($('movingSheet') && $('movingSheet').addEventListener){
+    $('movingSheet').addEventListener('change', paintMoving);   // (any choice on the sheet: its rows and its summary line)
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
     $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
   }

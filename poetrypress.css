@@ -132,7 +132,7 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
   border:1px solid var(--line); border-radius:2px;
   font-size:12.5px; color:var(--text-dim); cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
-.radio-btn.active{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
+.radio-btn.active, .film-pick input:checked + .radio-btn{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
 /* SURFACE LAYERS: Two Surfaces, and which one the controls below change (shown once there are two) */
 .layer-bar{ display:flex; flex-direction:column; gap:6px; padding-bottom:8px; border-bottom:1px solid var(--line); }
 .layer-seg{ display:none; }
@@ -1776,11 +1776,29 @@ body.is-mobile .shortcut-btn{ display:none; }
 .sheet{ background:var(--bg-panel, #17141c); color:var(--text-main, #eee); border:1px solid var(--accent); border-radius:0; padding:16px 20px; max-width:min(560px, 92vw); max-height:calc(var(--vvh, 100vh) * 0.86); overflow:auto; box-shadow:0 18px 50px -20px rgba(0,0,0,0.8); }
 .sheet-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:18px; letter-spacing:0.04em; margin-bottom:10px; color:var(--accent); }
 /* the Moving Image sheet: a label and its choice to a row */
-.moving-sheet{ width:min(420px, 92vw); }
-.moving-row{ display:grid; grid-template-columns:7.5em 1fr; align-items:center; gap:10px; margin:8px 0; }
-.moving-row.moving-idle{ visibility:hidden; }   /* (the row keeps its room: nothing moves when the move changes) */
-.moving-row [hidden]{ display:none; }
-.moving-row select{ width:100%; min-width:0; }
+.moving-sheet{ width:min(460px, 94vw); }
+/* THE FILM'S GROUPS (docs/prior-art/film-export.md §5): each a fieldset under a thin rule, its legend small; a row's label
+   left, its choice right; native radios drawn as the app's segments (a choice's caption small beneath it) */
+.film-group{ border:0; border-top:1px solid var(--line); margin:10px 0 0; padding:6px 0 0; min-width:0; }
+.film-group > legend{ padding:0 8px 0 0; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-dim); }
+.film-sub{ display:grid; grid-template-columns:6.6em 1fr; align-items:center; gap:8px; margin:6px 0; transition:opacity .15s ease; }
+.film-sub.off{ opacity:.35; }   /* (a row the move doesn't use keeps its room: nothing moves when the move changes) */
+.film-k{ font-family:var(--ui-sans); font-size:12.5px; letter-spacing:0.02em; color:var(--text-dim); }
+/* (on a phone, each row's label above its choice, so five choices have the sheet's whole width) */
+@media (max-width:560px){ .film-sub{ grid-template-columns:1fr; gap:4px; margin:8px 0; } }
+.film-sub select{ width:100%; min-width:0; }
+.film-seg{ display:flex; gap:4px; min-width:0; }
+.film-moves, .film-cards{ display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:4px 0 8px; }
+.film-pick label{ position:relative; flex:1 1 0; min-width:0; display:flex; }
+.film-pick input{ position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }
+.film-pick .radio-btn{ flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:34px; padding:4px 3px; line-height:1.15; }
+.film-pick .radio-btn b{ font-weight:400; }
+.film-pick .radio-btn small{ font-size:10px; opacity:.72; letter-spacing:0.03em; margin-top:2px; }
+.film-cards .radio-btn{ min-height:44px; }
+.film-pick input:focus-visible + .radio-btn{ outline:1px solid var(--accent); outline-offset:2px; }
+.film-pick input:disabled + .radio-btn{ opacity:.4; cursor:default; }
+body.is-mobile .film-pick .radio-btn{ min-height:40px; }
+.film-summary{ margin:12px 0 0; font-variant-numeric:lining-nums tabular-nums; }
 .moving-note{ min-height:1.4em; }
 .keys{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:13px; }
 .keys dt{ white-space:nowrap; opacity:0.9; }

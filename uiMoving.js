@@ -18,14 +18,48 @@ import { setWorking } from './uiWorking.js';
 import { draftTimer } from './uiSurface.js';
 import { generateFilenameBase } from './uiLayout.js';
 import { restoreSettings, serializeCurrentSettings } from './uiLook.js';
-import { blendLooks, crc32, filmHours, moveAt, mp4Parts, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
+import { blendLooks, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
 
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 // (where a look's kind changes, the film fades across this middle stretch of the move)
 const MOVING_FADE = [0.38, 0.62];
-const movingRun = { busy: false, stop: false, sure: 0, wake: null };
+const movingRun = { busy: false, stop: false, sure: 0, wake: null, caps: {}, able: {}, eased: false };
+// (where a film that begins at a time of day starts, in hours after sunrise: a little before it, at noon, a little
+//  before sunset, at midnight)
+const MOVING_BEGIN = { dawn: -0.5, noon: SUN_DAY/2, dusk: SUN_DAY - 0.6, night: SUN_DAY + (24 - SUN_DAY)/2 };
 
 const movingNote = text => { const n = $('movingNote'); if(n) n.textContent = text || ''; };
+// THE SHEET'S CHOICES are radio groups (docs/prior-art/film-export.md §5: native radios, so Tab reaches the chosen one and
+// the arrow keys move it): the checked one of a name, else d
+const movingRadios = name => typeof document !== 'undefined' && document.querySelectorAll ? [...document.querySelectorAll(`input[name="${name}"]`)] : [];
+const movingPick = (name, d) => { const r = movingRadios(name).find(q => q.checked); return r ? r.value : d; };
+const movingSet = (name, v) => { for(const r of movingRadios(name)) r.checked = r.value === v; };
+// (a film's size in pixels: a chosen frame, or the page's own; a video's held to 4K's area, past which the encoders'
+//  levels end, and its sides even, as H.264 and VP9 take)
+function movingDims(size, fmt){ const cv = $('poemCanvas') || {};
+  let [w, h] = MOVING_SIZES[size] || [state.page.exportW || cv.width || 1080, state.page.exportH || cv.height || 1350];
+  if(fmt !== 'png'){ const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }
+  return [w, h]; }
+const movingBitrate = (w, h, fps) => Math.round(Math.min(40e6, Math.max(4e6, w*h*fps*0.15)));
+// (a span of seconds in words: "a day", "6 hours", "2 hours", "5 minutes", "40 seconds")
+function movingWords(sec){ const n = v => String(v < 10 ? Math.round(v*10)/10 : Math.round(v));
+  if(sec >= 86400*1.5) return fill(MOVING.uDays, n(sec/86400)); if(sec >= 86400) return MOVING.uDay;
+  if(sec >= 3600*1.5) return fill(MOVING.uHours, n(sec/3600)); if(sec >= 3600) return MOVING.uHour;
+  if(sec >= 90) return fill(MOVING.uMinutes, String(Math.round(sec/60))); if(sec >= 60) return MOVING.uMinute;
+  return fill(MOVING.uSeconds, String(Math.max(1, Math.round(sec)))); }
+/** The film as chosen, in one line: its length, rate, frames, size and file, about how big; how fast time runs in it. */
+function movingSummary(){
+  const el = $('movingSummary'); if(!el) return;
+  const fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, len = Math.min(60, +($('movingLength') || {}).value || 12), n = len*fps;
+  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), bytes = fmt === 'png' ? n*w*h*1.5 : movingBitrate(w, h, fps)*len/8;
+  let text = MOVING.sum.replace('{len}', String(len)).replace('{fps}', String(fps)).replace('{frames}', String(n)).replace('{size}', `${w} × ${h}`)
+    .replace('{fmt}', { mp4: 'MP4', webm: 'WebM', png: 'PNG' }[fmt] || fmt).replace('{mb}', bytes >= 1e9 ? (bytes/1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(bytes/1e6)) + ' MB');
+  const span = movingSpan(movingPick('movingMove', 'camera'));
+  if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
+  el.textContent = text; }
+// (how much time passes in the film, in seconds: none in real time; Time Passing always some)
+function movingSpan(move){ const caps = movingRun.caps || {}, timeable = !!(caps.time || caps.dial === 'Daylight');
+  if(!timeable || (move !== 'camera' && move !== 'time')) return 0; const v = +movingPick('movingSpan', '0') || 0; return move === 'time' ? v || 86400 : v; }
 /** The other looks a film can move to: the spells kept in this browser, and the look before the last change. */
 function movingLooks(){
   const out = [];
@@ -37,16 +71,14 @@ function movingLooks(){
 export function openMoving(){
   const sheet = $('movingSheet'); if(!sheet) return;
   const type = ($('textureType') || {}).value, on = !!($('textureToggle') || {}).checked, caps = (on && capsFor(type)) || {};
-  const move = $('movingMove'), opt = v => move && [...move.options].find(o => o.value === v);
-  if(opt('camera')) opt('camera').disabled = !caps.camera;
-  if(opt('light')){ opt('light').disabled = !caps.light; opt('light').textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light; }
-  if(opt('time')) opt('time').disabled = !caps.time;   // (a surface that keeps a clock: the Ringworld)
   const looks = movingLooks(), pick = $('movingLook');
   if(pick){ pick.innerHTML = ''; for(const l of looks){ const o = document.createElement('option'); o.value = l.value; o.textContent = l.label; pick.appendChild(o); } }
-  for(const v of ['look', 'lookback']) if(opt(v)) opt(v).disabled = !looks.length;
-  if(move && move.selectedOptions && move.selectedOptions[0] && move.selectedOptions[0].disabled){ const first = [...move.options].find(o => !o.disabled); if(first) move.value = first.value; }
-  const fmt = $('movingFormat'), coded = typeof VideoEncoder !== 'undefined';
-  if(fmt){ for(const o of fmt.options) if(o.value !== 'png') o.disabled = !coded; if(!coded) fmt.value = 'png'; }
+  // (the moves this surface allows: no camera, no Camera round; Time Passing where it keeps a clock, the Ringworld)
+  movingRun.caps = caps; movingRun.able = { camera: !!caps.camera, light: !!caps.light, time: !!caps.time, look: looks.length > 0 };
+  const ln = $('movingLightName'); if(ln) ln.textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light;
+  if(!movingRun.able[movingPick('movingMove', 'camera')]){ const first = movingRadios('movingMove').find(r => movingRun.able[r.value]); if(first) movingSet('movingMove', first.value); }
+  const coded = typeof VideoEncoder !== 'undefined'; if(!coded) movingSet('movingFormat', 'png');
+  const pp = $('movingPagePx'), cv = $('poemCanvas') || {}; if(pp) pp.textContent = `${state.page.exportW || cv.width} × ${state.page.exportH || cv.height}`;
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
   sheet.hidden = false;
 }
@@ -61,18 +93,30 @@ export async function movingWake(){
   if(!movingRun.busy || movingRun.wake || typeof navigator === 'undefined' || !navigator.wakeLock || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) return;
   try { movingRun.wake = await navigator.wakeLock.request('screen'); movingRun.wake.addEventListener('release', () => { movingRun.wake = null; }); } catch(e){ movingRun.wake = null; }
 }
-/** The rows the chosen move needs (the other look only for a move to one). */
-export function paintMoving(){
-  const m = ($('movingMove') || {}).value, looked = m === 'look' || m === 'lookback', timed = m === 'time', row = $('movingDetailRow');
-  for(const [id, on] of [['movingLook', looked], ['movingLookLabel', looked], ['movingSpan', timed], ['movingSpanLabel', timed]]){ const el = $(id); if(el) el.hidden = !on; }
-  if(row && row.classList) row.classList.toggle('moving-idle', !looked && !timed);
-  const b = $('movingMake'); if(b) b.textContent = movingRun.busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
-  for(const id of ['movingMove', 'movingLook', 'movingSpan', 'movingSize', 'movingLength', 'movingFps', 'movingFormat']){ const el = $(id); if(el) el.disabled = movingRun.busy; }
+/** The rows the chosen move uses, the rest dimmed where they stand (nothing moves when the move changes); the line. */
+export function paintMoving(e){
+  const t = e && e.target, busy = movingRun.busy, caps = movingRun.caps || {}, able = movingRun.able || {};
+  if(t && t.name === 'movingEase') movingRun.eased = true;   // (chosen by hand: kept)
+  let m = movingPick('movingMove', 'camera');
+  // (Time Passing never runs in real time; and, until easing is chosen by hand, a full round or a light round goes
+  //  evenly, so it loops, and a part turn or a move to a look eases in and out)
+  if(m === 'time' && movingPick('movingSpan', '0') === '0') movingSet('movingSpan', '86400');
+  if(!movingRun.eased) movingSet('movingEase', m === 'look' || (m === 'camera' && movingPick('movingTurn', '360') !== '360') ? 'ease' : 'even');
+  const timeable = !!(caps.time || caps.dial === 'Daylight'), timed = movingSpan(m) > 0;
+  const on = { movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
+  for(const [id, ok] of Object.entries(on)){ const row = $(id); if(!row) continue; if(row.classList) row.classList.toggle('off', !ok);
+    for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok || (el.name === 'movingSpan' && el.value === '0' && m === 'time'); }
+  for(const r of movingRadios('movingMove')) r.disabled = busy || !able[r.value];
+  for(const r of movingRadios('movingFormat')) r.disabled = busy || (r.value !== 'png' && typeof VideoEncoder === 'undefined');
+  for(const n of ['movingSize', 'movingFps']) for(const r of movingRadios(n)) r.disabled = busy;
+  if($('movingLength')) $('movingLength').disabled = busy;
+  const b = $('movingMake'); if(b) b.textContent = busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
+  movingSummary();
 }
 /** The encoder's settings, the first this browser can make at this size: H.264 for an MP4, VP9 (or VP8) for a WebM. */
 async function movingCodec(fmt, w, h, fps){
   if(typeof VideoEncoder === 'undefined') return null;
-  const bitrate = Math.round(Math.min(40e6, Math.max(4e6, w*h*fps*0.15)));
+  const bitrate = movingBitrate(w, h, fps);
   const tries = fmt === 'mp4' ? ['avc1.640028', 'avc1.640033', 'avc1.640034', 'avc1.4d0028', 'avc1.4d0033', 'avc1.420028'] : ['vp09.00.40.08', 'vp09.00.50.08', 'vp09.00.51.08', 'vp8'];
   for(const codec of tries){
     const cfg = { codec, width: w, height: h, bitrate, framerate: fps, ...(fmt === 'mp4' ? { avc: { format: 'avc' } } : {}) };
@@ -121,11 +165,10 @@ export async function makeMoving(){
   if(movingRun.busy){
     if(!movingRun.sure){ movingRun.sure = setTimeout(() => { movingRun.sure = 0; paintMoving(); }, 3500); paintMoving(); return; }
     clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
-  const canvas = $('poemCanvas'), move = $('movingMove').value, fmt = $('movingFormat').value, fps = +($('movingFps') || {}).value || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;   // (a minute at most)
-  let [w, h] = MOVING_SIZES[$('movingSize').value] || [state.page.exportW || canvas.width, state.page.exportH || canvas.height];
-  if(fmt !== 'png'){   // (a film's page held to 4K's area, past which the encoders' levels end; and even sides, as H.264 and VP9 take)
-    const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }
-  const start = serializeCurrentSettings(), looked = move === 'look' || move === 'lookback';
+  const canvas = $('poemCanvas'), move = movingPick('movingMove', 'camera'), fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;   // (a minute at most)
+  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), back = movingPick('movingPlay', 'once') === 'back', eased = movingPick('movingEase', 'even') === 'ease';
+  const turn = +movingPick('movingTurn', '360') || 360, spanS = movingSpan(move), timed = spanS > 0, begin = movingPick('movingBegin', 'lit');
+  const start = serializeCurrentSettings(), looked = move === 'look';
   const other = looked ? movingLooks().find(l => l.value === ($('movingLook') || {}).value) : null;
   if(looked && !other){ movingNote(MOVING.noLook); return; }
   const cfg = fmt === 'png' ? null : await movingCodec(fmt, w, h, fps);
@@ -133,21 +176,28 @@ export async function makeMoving(){
   const end = other ? other.look() : null, snap = k => { const el = $(k) || $(k + 'Hex'); return !!(el && el.tagName === 'SELECT'); };
   const fades = end ? wholeChanges(start, end, snap).filter(k => k !== 'lookName' && k !== 'spell') : [];
   const pw = canvas.width, ph = canvas.height, num = id => parseFloat(($(id) || {}).value) || 0, cam0 = num('cameraTurn'), light0 = num('textureLight'), tilt0 = num('textureLightTilt');
-  // (on the Ringworld the light dial is the sun: a Light Round is one day of it; Time Passing as long as was chosen, the
-  //  scene's clock running with it, so its clouds drift, its stars wheel and its lights flicker as the hours go)
-  const sun = (move === 'light' && (capsFor(($('textureType') || {}).value) || {}).dial === 'Daylight') || move === 'time' ? sunPath(light0, tilt0) : null;
-  const span = move === 'time' ? (+($('movingSpan') || {}).value || 86400) : 86400, clocked = !!(capsFor(($('textureType') || {}).value) || {}).time;
-  const clock = sun ? filmHours(sun, span/3600) : null;   // (dawn and dusk given more of the film)
+  // (on the Ringworld the light dial is the sun: a Daylight Round is one day of it; Time Passing, or the camera turning
+  //  while time passes (Ruby: "time should pass during the camera pan"), as long as was chosen, the scene's clock running
+  //  with it, so its clouds drift, its stars wheel and its lights flicker as the hours go; from the light as it is, or
+  //  from a time of day, the sun then rising where the dial points)
+  const caps = capsFor(($('textureType') || {}).value) || {}, clocked = !!caps.time, sunDay = move === 'light' && caps.dial === 'Daylight';
+  const off = timed && MOVING_BEGIN[begin] !== undefined ? MOVING_BEGIN[begin] : null, base = timed || sunDay ? (off === null ? sunPath(light0, tilt0) : sunPath(light0, 100)) : null;
+  const sun = base && off ? hrs => base(hrs + off) : base;
+  const clock = sun ? filmHours(sun, (timed ? spanS : 86400)/3600) : null;   // (dawn and dusk given more of the film)
+  // (how far along the move frame i is: a full round, or there and back, comes round to where it began so the film
+  //  loops; a part turn and a move to a look end where they go; evenly, or eased in and out)
+  const tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: looked || (move === 'camera' && turn < 360), eased });
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
   // FRAME i's dials and clock (the moves that turn a dial or run the clock; a move between looks is placed below)
   // (a surface that keeps a clock runs it in every film: in real time, so the grass sways and the drones hover as
   //  the camera turns; Time Passing runs it fast)
-  const place = i => {
-    if(clocked && move !== 'time') setSceneTime(i/fps, 1/fps);
-    if(move === 'camera') $('cameraTurn').value = String((cam0 + 360*i/n) % 360);
-    else if(sun){ const hrs = clock(i/n), [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); if(move === 'time') setSceneTime(hrs*3600, Math.max(1, (clock((i + 1)/n) - hrs)*3600)); }
-    else if(move === 'light') $('textureLight').value = String((light0 + 360*i/n) % 360); };
+  const sunAt = hrs => { const [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); };
+  const place = i => { const u = along(i);
+    if(timed){ const at = j => clock(back ? tri(j/n) : j/n), hrs = at(i); sunAt(hrs); if(clocked) setSceneTime(hrs*3600, Math.max(1, Math.abs(at(i + 1) - hrs)*3600)); }
+    else if(clocked) setSceneTime(i/fps, 1/fps);
+    if(move === 'camera') $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
+    else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); } };
   // FRAMES AHEAD (Ruby: the film kept a twentieth of the machine busy): the frames to come set up one by one, their
   // textures asked for on a worker per spare core, while this one is drawn and encoded. As many ahead as the workers,
   // and as memory allows at this size; none for a move between looks (each frame's look is a whole restore)
@@ -157,6 +207,8 @@ export async function makeMoving(){
   if(document.body && document.body.classList) document.body.classList.add('saving');
   try {
     canvas.width = w; canvas.height = h; setDrafting(false); clearTimeout(draftTimer); setRenderScale(1, [w, h]);
+    // (how long is left, from how long the frames so far took, once there are a few)
+    const t0 = Date.now(), eta = i => i < 2 ? '' : ' ' + fill(MOVING.eta, movingWords((Date.now() - t0)/1000/(i + 1)*(n - i - 1)));
     for(let i = 0; i < n && !movingRun.stop; i++){
       if(aheadN){ for(let j = i; j < i + aheadN; j++) queue(j);
         place(i); const got = pending.get(i);
@@ -164,19 +216,19 @@ export async function makeMoving(){
         if(movingRun.stop) break; }
       if(!looked) place(i);
       else {
-        const t = moveAt(i, n, move === 'lookback'), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
+        const t = along(i), mid = fades.length && t > MOVING_FADE[0] && t < MOVING_FADE[1];
         if(mid){   // both ways at once: the frame as it was, faded into the frame as it becomes
           restoreSettings(blendLooks(start, end, t, 0, snap)); await movingFrame();
           spare = spare || document.createElement('canvas'); spare.width = w; spare.height = h; spare.getContext('2d').drawImage(canvas, 0, 0);
           restoreSettings(blendLooks(start, end, t, 1, snap)); await movingFrame();
           const u = (t - MOVING_FADE[0])/(MOVING_FADE[1] - MOVING_FADE[0]), x = canvas.getContext('2d');
           x.save(); x.globalAlpha = 1 - u*u*(3 - 2*u); x.drawImage(spare, 0, 0); x.restore();
-          await sink.add(canvas, i); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`)); continue;
+          await sink.add(canvas, i); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`) + eta(i)); continue;
         }
         restoreSettings(blendLooks(start, end, t, t < 0.5 ? 0 : 1, snap));
       }
       await movingFrame(); await sink.add(canvas, i);
-      movingNote(aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`));
+      movingNote((aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`)) + eta(i));
     }
     if(!movingRun.stop){ movingNote(MOVING.finishing); made = await sink.done(); }
   } catch(err){

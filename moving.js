@@ -53,10 +53,14 @@ export function wholeChanges(a, b, snap = () => false){
   walk(a || {}, b || {}, '');
   return out;
 }
-/** How far along the move a frame is: eased in and out; "and back" goes there and returns, so the film loops. */
-export function moveAt(i, n, back){
-  const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : Math.min(1, i/Math.max(1, n - 1));
-  return 0.5 - 0.5*Math.cos(Math.PI*s);
+/**
+ * How far along its move frame i of n is, 0 to 1: a move that ends (a part turn, a move to a look) reaches 1 on its last
+ * frame; one that comes round (a full round, a light round) stops a frame short, so the film loops without a doubled
+ * frame; "there and back" goes there by the middle and returns, so it loops too. Evenly, or eased in and out.
+ */
+export function moveAlong(i, n, { back = false, ends = false, eased = false } = {}){
+  const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : ends ? Math.min(1, i/Math.max(1, n - 1)) : u;
+  return eased ? 0.5 - 0.5*Math.cos(Math.PI*s) : s;
 }
 
 // ---------- the sun through a day ----------
@@ -73,6 +77,8 @@ export function moveAt(i, n, back){
 const SUN_LAT = 48*Math.PI/180, SUN_DEC = 15*Math.PI/180;
 const sunEl = H => Math.asin(Math.sin(SUN_LAT)*Math.sin(SUN_DEC) + Math.cos(SUN_LAT)*Math.cos(SUN_DEC)*Math.cos(H));
 const sunAz = H => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(SUN_LAT) - Math.tan(SUN_DEC)*Math.cos(SUN_LAT));
+// (how long that sun is up: its day from sunrise to sunset, in hours, some fourteen and a quarter)
+export const SUN_DAY = 2*Math.acos(-Math.tan(SUN_LAT)*Math.tan(SUN_DEC))*12/Math.PI;
 const sunTilt = el => el >= 0 ? 100*(1 - el/(Math.PI/2)) : 100 + 30*Math.min(1, -el/(18*Math.PI/180));
 export function sunPath(deg0, tilt0){
   const el0 = tilt0 <= 100 ? (1 - tilt0/100)*Math.PI/2 : -Math.min(1, (tilt0 - 100)/30)*18*Math.PI/180;
