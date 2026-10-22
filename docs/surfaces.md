@@ -498,6 +498,26 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     style its own mix (`pkArchOf`); rocks in three facets; spires, monoliths,
     domes, crystals. Each thing takes ONE number from its caller's stream and
     keys its features to streams of its own (`pkSub`).
+  - **The trees** (Ruby: "make sure all the trees match the current art style
+    and none have disconnected pieces … variations in size and form within
+    species … shading on all trees … texture when close … leaf translucency …
+    subsurface scattering"): each tree draws its own form from its stream
+    (`pkTreeForm`: how wide, how tall, its lean, the side it grew toward, how
+    open, how old, a touch of its own green), so no two of a kind match. A
+    crown is grown, not scattered (`pkGrow`: each lobe set against one already
+    there, inside an envelope), so nothing floats; limbs (`pkLimb`, one smooth
+    tapering shape) leave the trunk below its top and end inside the lobes
+    they hold. Every crown is shaded the same way (`pkLobes`): far, lobes in
+    shadow with a lit cap; near, ragged clusters, the lower inside darkest,
+    sky through it, and close by small leaves of the tree's own shape. With the
+    sun behind a tree (the sun's `back`, from how far the camera looks toward
+    it) its shade lifts toward yellow-green and the crown's true outline glows
+    (`pkBacklit`: only arcs that face open air). Conifers (`pkConifer`) are
+    tiers drawn bottom-up, each side its own width, a skirt in shade, a lit
+    band on the sun's side and needles near; a mature pine is clumps at their
+    own heights on their own limbs, a cedar flat shelves, a stone pine and an
+    acacia one squashed dome on limbs that reach it. Palms and tree ferns carry
+    feathered fronds (`pkFrond`: leaflets that hang, or spread flat).
   - **Saturn** (Ruby: "Ringworld should sometimes be orbiting Saturn"): by the
     seed (one ring in four) or The Arch's Saturn setting, the ring orbits it as
     the old games' rings orbit their gas giants, and Saturn hangs huge in the

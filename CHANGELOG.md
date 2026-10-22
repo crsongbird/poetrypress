@@ -4,6 +4,29 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Sao (2026-10-22)
+
+- The trees, remade in the style of the rest. No two of a kind are alike now: each grows its own crown, wide or narrow
+  for its height, leaning, fuller on one side, open or dense, young and pointed or old and broad, with a touch of its
+  own green. A crown is grown lobe on lobe, so no piece of a tree floats, and its limbs leave the trunk and end
+  inside the clumps they hold.
+- Every tree is shaded: its lower inside darkest, the sky through it here and there, and close by, small leaves of its
+  own shape. With the sun behind a tree, its leaves glow: the shade lifts toward yellow-green and the crown's outline
+  is lit from behind.
+- The conifers: a spruce's drooping tiers and a fir's narrow spire, each side of each tier its own width, the lower
+  boughs dead on an old one. A young pine is a rough cone; a mature pine is a tall trunk with clumps of needles at
+  their own heights on their own limbs. A cedar's shelves sit on limbs that reach them.
+- Palms and tree ferns have feathered fronds, the palm's leaflets hanging and the fern's spread flat; a palm keeps a
+  dead frond or two and its coconuts. A baobab's branches are thick and stubby with leaves at their ends; an acacia
+  forks low into limbs that hold its flat crown; an olive is silver-grey and open.
+
+### Under the hood
+- paintKit.js: `pkTreeForm` (a tree's own form from its stream), `pkTreeTint`, `pkGrow` (crowns grown, not
+  scattered), `pkLobes` near and far, `pkBacklit` (only the arcs of the crown's true outline), `pkLimb` as one
+  tapering shape, `pkConifer`, `pkFrond`. stepsRing.js gives the trees the sun's `back` (how far the camera looks
+  toward it). Research for the next passes (people, water, clouds, turning and grounding things) is in
+  docs/prior-art/ringworld-life-and-views.md. No fingerprint changed.
+
 ## Neptune–Halimede (2026-10-21)
 
 - Painted Ringworld's countryside, seen from a little height, reads as farmland now. Fields no longer lie over one
@@ -314,20 +337,3 @@ prints it).
 - The turned box is general now: `pkTurned` takes the thing's own face to draw, and buildings and the boxlike props
   (`PK_PROP3`) both go through it; a prop whose face can't be read is squeezed as before. Texture fingerprints updated
   for the turned props.
-
-## Uranus–Titania (2026-10-21)
-
-- Buildings turned from the camera are solid now, not a picture squeezed thin: a cottage, a barn, a chapel, a terrace,
-  a brick block or a tower shows its painted front foreshortened, the side turned toward you with its own windows, a
-  gable roof running back to the ridge or a flat roof seen from a little above, and its plain back and gable from
-  behind, every face lit by the sun's side.
-- Each box takes its shape and colours from the building's own front: as wide and as tall as its walls, a setback
-  tower stepping back in boxes, a granary up on its pillars, the roof and walls the same thatch, slate, brick or paint
-  as the front (a terrace's ends each the end house's colour), a glasshouse's long sides glass.
-- Spires, belfries, water tanks, chimneys and their smoke stand upright from every side instead of vanishing edge on;
-  a stave church's spire now rises from its roof turret instead of floating above it.
-
-### Under the hood
-- `pkBuilding3` draws a box-built building in `pkSpace`, its kinds and depths in `PK_BOX3`; `pkFaceProof` reads the
-  front's outline and colours back from a small proof drawn off the page. Texture fingerprints updated for the turned
-  buildings on the Ringworld and its kin.

@@ -2,6 +2,23 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Titania (2026-10-21)
+
+- Buildings turned from the camera are solid now, not a picture squeezed thin: a cottage, a barn, a chapel, a terrace,
+  a brick block or a tower shows its painted front foreshortened, the side turned toward you with its own windows, a
+  gable roof running back to the ridge or a flat roof seen from a little above, and its plain back and gable from
+  behind, every face lit by the sun's side.
+- Each box takes its shape and colours from the building's own front: as wide and as tall as its walls, a setback
+  tower stepping back in boxes, a granary up on its pillars, the roof and walls the same thatch, slate, brick or paint
+  as the front (a terrace's ends each the end house's colour), a glasshouse's long sides glass.
+- Spires, belfries, water tanks, chimneys and their smoke stand upright from every side instead of vanishing edge on;
+  a stave church's spire now rises from its roof turret instead of floating above it.
+
+### Under the hood
+- `pkBuilding3` draws a box-built building in `pkSpace`, its kinds and depths in `PK_BOX3`; `pkFaceProof` reads the
+  front's outline and colours back from a small proof drawn off the page. Texture fingerprints updated for the turned
+  buildings on the Ringworld and its kin.
+
 ## Uranus–Umbriel (2026-10-20)
 
 - **Slower, truer clouds.** The wind is a fair-weather breeze now (three to seven metres a second, faster under a storm),
