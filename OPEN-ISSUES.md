@@ -32,6 +32,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   lava), one wind per seed turning them, and the water's mood as a Beaufort number (puffs, foam lines, a mirror strip,
   white horses). Under the default Impasto the oil strokes soften the finer marks; with Impasto at 0 they show whole.
   Is that balance right, and which country still looks plain?
+- LIFE IN A FILM: people walk their streets and go in by the hour (fading where they stand: going in at a door is
+  still to come), movers keep timetables instead of circles, the clouds' clock runs evenly, the sea's glints drift
+  and a faint swell comes in. Do the people and the clouds read right in a film of a day?
 - THE FILM SHEET: four groups (Move, Length, Size, Output), every choice a row of buttons, a summary line; time passes
   during a Camera Round (an hour by default on the Ringworld), from a time of day if chosen; a quarter, half or full
   turn; even or eased; once through or there and back. Is the order right, and is an hour the right default?
@@ -48,8 +51,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
   interactions nobody asked for.
-- LIFE (Ruby, 2026-10-22): people walk, and mostly go inside at night; nothing moves in circles; clouds fade in and
-  out instead of jumping; a little motion on water and the sea.
 - BUILDINGS (Ruby): up to 16 views for the buildings drawn the same from every side; never floating in the air or
   standing on water; wide things (hedgerows, walls) broken into pieces placed and sorted one by one.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.

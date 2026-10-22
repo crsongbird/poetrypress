@@ -4,6 +4,30 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Neptune–Psamathe (2026-10-22)
+
+- Painted Ringworld's people walk now: up and down the street or lane beside them, at their own pace, stopping now and
+  then, their legs moving as they go. By the hour they go in: by day nearly everyone is out, at night about one in
+  twelve, the night watch carrying a lantern. Each goes in at their own point of the dusk and comes out at their own
+  of the dawn, fading over many frames. A neon city's people stay out at all hours.
+- Nothing moves in circles any more. Every moving thing keeps a timetable of stops round its home, each chosen afresh,
+  so its path never closes into a loop: a drone flies short straight legs between hovers, a harvester goes up and down
+  its rows, a sheep takes a step or two as it grazes.
+- The clouds no longer jump about in a film of time passing. The scene's clocks ran unevenly, now and then backward,
+  when a film gave dawn and dusk more frames than noon; they now run evenly from frame to frame. And in a film where
+  the sun's bearing passed straight ahead or behind, the whole land's day and night flipped between two frames; the
+  Ringworld now keeps its dusk coming the same way round for the whole film.
+- The sea moves a little: its glints drift with the wind and rise and fade as they come and go instead of blinking,
+  and near you a faint line of swell comes in every eight to eleven seconds.
+
+### Under the hood
+- stepsRing.js: `rgClock` (each clock from the frame times the film's mean step, held to its cap), `rgWaterTime`;
+  `RG_MOVES` as timetables of stops (no sines); people by the hour in the prop painter; `setSceneTime` takes the
+  frame, the mean step and the dusk's side, keyed with the camera. paintKit.js: a person's stride (`stride`) and
+  lantern (`lantern`). Research: docs/prior-art/ringworld-life-and-views.md. moving.test.mjs checks that the clouds'
+  clock steps evenly forward through a day whose hours are spread unevenly, which the old one did not.
+  Fingerprints: Painted Ringworld (people in by night, the water's glints fading rather than cut off).
+
 ## Neptune–Laomedeia (2026-10-22)
 
 - The Moving Image's sheet, rewritten. Four groups in order: Move, Length, Size, Output. Every choice is a row of
@@ -333,18 +357,3 @@ prints it).
 ### Under the hood
 - `pkPrism`, `pkWheel3` and `pkWheelsSplit` build the vehicles; the end-on drawings they replace are gone. Texture
   fingerprints updated for the new solids, the windmills and the gates.
-
-## Uranus–Francisco (2026-10-21)
-
-- Parked cars and rusted hulks are solid: a body and a glasshouse with their roof, windscreen and boot each lit by the
-  side it turns to the sun, four wheels turned with the car, headlamps or tail lamps on whichever end you see. Half
-  turned, a car shows its length and its width, never a shortened side.
-- Silos, lighthouses, water towers, observatories, wizards' towers, pagodas, onion domes and domed mosques are the same
-  from every side instead of narrowing as the camera turns.
-
-### Under the hood
-- Housekeeping: reviewed the tests: the turned-in-depth drawing had no suite of its own; turned.test.mjs now checks it
-  on a real canvas (a block side on shows its depth, half turned its front and side; a side wall is its face's colour;
-  a chapel side on is its nave with its belfry standing; a granary keeps its stilts; a car half turned is not shrunk; a
-  vending machine's top shows), and each of those checks fails with the turning switched off. Texture fingerprints
-  updated for the solid cars and the round buildings.

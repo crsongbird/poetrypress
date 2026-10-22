@@ -193,9 +193,12 @@ export async function makeMoving(){
   // (a surface that keeps a clock runs it in every film: in real time, so the grass sways and the drones hover as
   //  the camera turns; Time Passing runs it fast)
   const sunAt = hrs => { const [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); };
+  // (the Ringworld's dusk comes round the way the first frame's light says, the whole film long)
+  const side = Math.sin((sun ? sun(clock(0))[0] : light0)*Math.PI/180) < 0 ? -1 : 1;
   const place = i => { const u = along(i);
-    if(timed){ const at = j => clock(back ? tri(j/n) : j/n), hrs = at(i); sunAt(hrs); if(clocked) setSceneTime(hrs*3600, Math.max(1, Math.abs(at(i + 1) - hrs)*3600)); }
-    else if(clocked) setSceneTime(i/fps, 1/fps);
+    // (the scene told its frame and the film's mean step too, so its own clocks run evenly from frame to frame)
+    if(timed){ const at = j => clock(back ? tri(j/n) : j/n), hrs = at(i); sunAt(hrs); if(clocked) setSceneTime(hrs*3600, Math.max(1, Math.abs(at(i + 1) - hrs)*3600), i, spanS/n, side); }
+    else if(clocked) setSceneTime(i/fps, 1/fps, i, 1/fps, side);
     if(move === 'camera') $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); } };
   // FRAMES AHEAD (Ruby: the film kept a twentieth of the machine busy): the frames to come set up one by one, their

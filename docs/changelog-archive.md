@@ -2,6 +2,21 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Francisco (2026-10-21)
+
+- Parked cars and rusted hulks are solid: a body and a glasshouse with their roof, windscreen and boot each lit by the
+  side it turns to the sun, four wheels turned with the car, headlamps or tail lamps on whichever end you see. Half
+  turned, a car shows its length and its width, never a shortened side.
+- Silos, lighthouses, water towers, observatories, wizards' towers, pagodas, onion domes and domed mosques are the same
+  from every side instead of narrowing as the camera turns.
+
+### Under the hood
+- Housekeeping: reviewed the tests: the turned-in-depth drawing had no suite of its own; turned.test.mjs now checks it
+  on a real canvas (a block side on shows its depth, half turned its front and side; a side wall is its face's colour;
+  a chapel side on is its nave with its belfry standing; a granary keeps its stilts; a car half turned is not shrunk; a
+  vending machine's top shows), and each of those checks fails with the turning switched off. Texture fingerprints
+  updated for the solid cars and the round buildings.
+
 ## Uranus–Oberon (2026-10-21)
 
 - Vending machines, phone boxes, mailboxes, shipping containers and troughs turned from the camera are solid too: a

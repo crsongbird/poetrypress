@@ -106,4 +106,11 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   check('the frame rates read "24 fps" and so on, in order', /24 fps[\s\S]*30 fps[\s\S]*48 fps[\s\S]*60 fps/.test(sheet) && !/a second<\/option>/.test(sheet));
   check('the sheet is four groups, each under its legend', (sheet.match(/<fieldset class="film-group"><legend /g) || []).length === 4);
   check('the sheet reads every group it offers', names.every(nm => new RegExp(`'${nm}'`).test(readFileSync(new URL('../uiMoving.js', import.meta.url), 'utf8')))); }
+// ---- the scene's own clocks in a film run evenly and only forward (Ruby: "clouds should fade instead of jumping") ----
+{ const { rgClock } = await import('../stepsRing.js'), f = sunPath(154, 100), c = filmHours(f, 24), n = 360;
+  const V = i => ({ time: c(i/n)*3600, dt: Math.max(1, (c((i + 1)/n) - c(i/n))*3600), frame: i, step: 86400/n }), cl = Array.from({ length: n }, (_, i) => rgClock(V(i), 0.7));
+  const old = Array.from({ length: n }, (_, i) => { const v = V(i); return rgClock({ time: v.time, dt: v.dt }, 0.7); });
+  check('a day in a film: the clouds\' clock steps evenly forward from frame to frame, though the hours are spread unevenly (dawn and dusk slower)', cl.every((t, i) => !i || Math.abs(t - cl[i - 1] - 0.7) < 1e-9));
+  check('(as it did not, made from the hours and the time between frames: it ran back now and then)', old.some((t, i) => i && t < old[i - 1]));
+  check('in real time the clocks are the scene\'s own time', rgClock({ time: 2, dt: 1/30, frame: 60, step: 1/30 }, 0.7) === 2 && rgClock({ time: 0, dt: 0, frame: null, step: 0 }, 0.7) === 0); }
 done();

@@ -525,8 +525,10 @@ function cameraOf(type, opts){
   const num = (v, dv) => { const x = +v; return isFinite(x) ? x : dv; };
   // (to a hundredth of a degree, so a film's camera turns smoothly; and the scene's clock, in seconds, for a film of time
   //  passing: none at rest, so every still keys and draws as it always did)
-  const r2 = v => Math.round(v*100)/100, time = num(c.time, 0) > 0 ? r2(num(c.time, 0)) : 0, dt = time ? r2(Math.max(0, num(c.dt, 0))) : 0;
-  return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))), ...(time ? { time, dt } : {}) };
+  //  passing: none at rest, so every still keys and draws as it always did; in a film, its frame and mean step too)
+  const r2 = v => Math.round(v*100)/100, film = c.frame !== undefined && c.frame !== null && isFinite(+c.frame), time = num(c.time, 0) > 0 ? r2(num(c.time, 0)) : 0, dt = time || film ? r2(Math.max(0, num(c.dt, 0))) : 0;
+  return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))),
+    ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}) } : {}) } : {}) };
 }
 // THE PAGE'S TRUE SHAPE (Ruby: the saved image's board was not the preview's): the parts that grow by chance on
 // their grid (texCore `pageGrid`) are given the export's own size, and grow on its grid at every size. A request
@@ -628,7 +630,7 @@ function describeRequest(type, w, h, opts){
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
             // (whether it is Text Aware, and whether it fills the letters, only for a surface that reads the poem)
             + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' + Math.round(+opts.fill*100) : '') + (opts.around ? '_R' + Math.round(+opts.around*100) : '') + (opts.aware === false ? '_A0' : '') : '')
-            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time ? `_T${cam.time}x${cam.dt}` : '') : '')(cameraOf(type, opts)))
+            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time || cam.frame !== undefined ? `_T${cam.time}x${cam.dt}` + (cam.frame !== undefined ? `f${cam.frame}s${cam.step}` + (cam.side ? `d${cam.side}` : '') : '') : '') : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
   return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };

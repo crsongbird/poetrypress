@@ -1599,13 +1599,17 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   // a person, for scale: seven and a half heads tall, legs and arms, a coat or jacket in three values, a hat now and
   // then; no face (the eye reads its size, not who it is)
   const coat = pkMat(c, [[70, 80, 100], [120, 60, 50], [150, 140, 110], [60, 90, 70], [40, 40, 44], [190, 170, 140]][Math.floor(R()*6)], 0.75), legs = pkMat(c, [[50, 56, 70], [70, 60, 50], [40, 40, 44]][Math.floor(R()*3)], 0.75), skin = pkMat(c, [[220, 180, 150], [170, 120, 90], [110, 74, 54]][Math.floor(R()*3)], 0.7);
-  const hd = h/7.5, st = (R() - 0.5)*hd*0.6;
+  // (walking (c.stride, -1 to 1, a step's swing), its legs apart and together; standing, its own stance)
+  const hd = h/7.5, r0 = R(), st = c.stride !== undefined && c.stride !== null ? c.stride*hd*0.55 : (r0 - 0.5)*hd*0.6;
   pkPoly(x, [[X - hd*0.4, Y], [X - hd*0.45 - st*0.3, Y - h*0.47], [X - hd*0.05, Y - h*0.47], [X, Y - h*0.2], [X + hd*0.05, Y - h*0.47], [X + hd*0.45 + st*0.3, Y - h*0.47], [X + hd*0.4 + st, Y], [X + hd*0.12 + st, Y], [X, Y - h*0.3], [X - hd*0.12, Y]], pkCss(legs.body));
   pkShade(x, [[X - hd*0.55, Y - h*0.42], [X - hd*0.62, Y - h*0.78], [X - hd*0.3, Y - h*0.84], [X + hd*0.3, Y - h*0.84], [X + hd*0.62, Y - h*0.78], [X + hd*0.55, Y - h*0.42]], coat.body, Y - h*0.84, Y - h*0.42, 0.2);
   pkPoly(x, [[X + sd*hd*0.05, Y - h*0.44], [X + sd*hd*0.08, Y - h*0.8], [X + sd*hd*0.55, Y - h*0.78], [X + sd*hd*0.5, Y - h*0.44]], pkCss(coat.lit, 0.5));
   for(const s of [-1, 1]) pkPoly(x, [[X + s*hd*0.55, Y - h*0.8], [X + s*hd*0.75, Y - h*0.55], [X + s*hd*0.65, Y - h*0.47], [X + s*hd*0.5, Y - h*0.6]], pkCss(s === sd ? coat.body : coat.dark));
   pkEll(x, X, Y - h + hd*0.5, hd*0.4, hd*0.5, pkCss(skin.body)); pkEll(x, X - sd*hd*0.06, Y - h + hd*0.38, hd*0.42, hd*0.35, pkCss(pkMat(c, [[40, 32, 28], [120, 90, 60], [190, 170, 130], [30, 30, 34]][Math.floor(R()*4)], 0.7).body));
   if(R() < 0.25) pkPoly(x, [[X - hd*0.6, Y - h + hd*0.25], [X + hd*0.6, Y - h + hd*0.25], [X + hd*0.35, Y - h + hd*0.1], [X + hd*0.3, Y - h - hd*0.25], [X - hd*0.3, Y - h - hd*0.25], [X - hd*0.35, Y - h + hd*0.1]], pkCss(pkMix(coat.dark, PK_BLACK, 0.3)));
+  // (out at night (c.lantern, how dark): a lantern held low at the side, its light steady, never flickering)
+  if(c.lantern > 0){ const lx = X + sd*hd*0.85, ly = Y - h*0.4, warm = [255, 198, 124]; pkGlow(x, lx, ly, h*0.45, warm, 0.4*c.lantern);
+    pkDisc(x, lx, ly, Math.max(px(0.5), hd*0.2), pkCss(pkMix(warm, PK_WHITE, 0.5), 0.6 + 0.4*c.lantern)); }
 }
 
 // ---------------- NODS (Ruby: "a few Easter eggs … that nod to both of those games but without infringing") ----------

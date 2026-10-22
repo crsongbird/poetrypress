@@ -392,8 +392,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     strings, and the windows (`pkLit`) are most of them lit as the evening begins, fewer as the night deepens, each
     going on and off in its own time, hours apart. Two slower clocks keep a film from looking sped up (Ruby: "slower time
     lapse animation in general … just a lil"): clouds on `rgCloudTime`, the small motions (grass, droids, rain and snow,
-    flicker, smoke) on `rgMotionTime`; the droids and walkers wander long smooth paths (`RG_MOVES`: two slow sines
-    whose periods never line up), never quick shuttles. Nothing is cut until it is wholly out of the frame (`nearCut`,
+    flicker, smoke) on `rgMotionTime`, the water's glints and swell on `rgWaterTime`. In a film each clock runs from
+    the frame itself (`rgClock`: the frame times the film's mean step, held to its cap), so it runs evenly and only
+    forward however the hours are spread over the frames (Ruby: "clouds should fade instead of jumping around"), and
+    the Ringworld's dusk comes round the same way the whole film long. Movers keep timetables (`RG_MOVES`,
+    docs/prior-art/ringworld-life-and-views.md): stops drawn one by one round home, each independent of the last, so no path closes
+    into a circle; they walk a leg, arrive gently and wait. People walk up and down the street beside them, and by the
+    hour go in: by day nearly all are out, by night about one in twelve, the night watch with a lantern (a neon city's
+    stay out). Nothing is cut until it is wholly out of the frame (`nearCut`,
     the visibility boxes as wide as each thing can reach). The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
     early summer, days of fourteen hours (`SUN_DAY`), long dusks. Time passes in a Camera Round too (Ruby: "time
     should pass during the camera pan"), as much as the sheet says, from the light as it is or from dawn, midday, dusk
