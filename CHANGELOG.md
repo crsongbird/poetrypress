@@ -4,6 +4,18 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Crux–Mimosa (2026-10-24)
+
+- Rain on Glass seen through keeps its drops: each now has a faint body, its dark rim and its highlight over the bent
+  surface beneath, where before, seeing through, the drops all but vanished at the preview's size.
+
+### Under the hood
+- `genGlassRain` lays a seeing-through drop as a rim and a highlight over a faint body, composited by their own
+  coverage. No fingerprint moved.
+- Reviewed the tests the film and See Through lean on (test/moving.test.mjs, test/textureLayers.test.mjs,
+  test/persistenceCoverage.test.mjs, where the film sheet's mark controls are left out of the look as the sheet's other
+  controls are): nothing stale.
+
 ## Hyades–Chamukuy (2026-10-24)
 
 - Rain on Glass sees through: laid over another surface with See Through on, each raindrop is a little lens over what
@@ -410,19 +422,3 @@ prints it).
 - `rvAt`, the river's course walked up the valley (its direction a sine of the distance along it) and projected;
   each band paints the reach at its own depths, clipped to itself. The research is in
   docs/prior-art/painted-rivers.md.
-
-## Neptune–Larissa (2026-10-21)
-
-- Ringworld's films are kinder to the eyes. Lightning no longer lights the whole scene for a frame: a strike now plays
-  over some ten frames, its leader creeping down from the cloud, the bolt touching the land, then dimming away, the
-  cloud lit softly from within and a small glow where it lands, never more than one strike a second. It strikes from
-  a cloud you can see.
-- Nothing blinks from frame to frame any more: the lights on the rim walls pulse slowly instead of switching on and
-  off, fires and flickering lamps waver gently, the aurora ripples slowly, and the grass, the drones, the insects and
-  the snow sway on a gentle clock.
-
-### Under the hood
-- `rgSwayTime`, the clock for whatever swings, sways or flickers (at most a quarter second a frame); lightning as an
-  eased event on the small motions' clock. AGENTS.md §11 gains the photosensitivity rule; docs/pitfalls.md the lesson.
-- moving.test.mjs renders a storm frame by frame while lightning strikes and fails if any frame brightens or darkens
-  the scene as a whole.

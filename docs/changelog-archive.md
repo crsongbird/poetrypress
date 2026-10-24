@@ -2,6 +2,22 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Larissa (2026-10-21)
+
+- Ringworld's films are kinder to the eyes. Lightning no longer lights the whole scene for a frame: a strike now plays
+  over some ten frames, its leader creeping down from the cloud, the bolt touching the land, then dimming away, the
+  cloud lit softly from within and a small glow where it lands, never more than one strike a second. It strikes from
+  a cloud you can see.
+- Nothing blinks from frame to frame any more: the lights on the rim walls pulse slowly instead of switching on and
+  off, fires and flickering lamps waver gently, the aurora ripples slowly, and the grass, the drones, the insects and
+  the snow sway on a gentle clock.
+
+### Under the hood
+- `rgSwayTime`, the clock for whatever swings, sways or flickers (at most a quarter second a frame); lightning as an
+  eased event on the small motions' clock. AGENTS.md §11 gains the photosensitivity rule; docs/pitfalls.md the lesson.
+- moving.test.mjs renders a storm frame by frame while lightning strikes and fails if any frame brightens or darkens
+  the scene as a whole.
+
 ## Neptune–Galatea (2026-10-21)
 
 - Ringworld's clouds are remade. Each heap's billows grow out of one another into one body, so none floats free as a

@@ -567,14 +567,17 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env,see=false){
     const tilt=1-nz, rim=Math.min(1, Math.pow(tilt*2.2, 2))*size, fres=Math.min(1, Math.pow(tilt*2, 3))*0.45;
     const sp=L.spec[i]*255*1.2;
     const sky=[envAt(u,0.05,0), envAt(u,0.05,1), envAt(u,0.05,2)], ref=[rr,gg,bb];
+    // (seeing through: the drop's body shows what lies beneath, bent by its lens (the page does that), so here only a
+    //  faint body, its dark rim, and over them the sky in its edge and its highlight)
+    if(see){ const ra=Math.min(1, 0.22 + rim*0.85), ha=Math.min(1, sp/255*1.6 + fres*0.7), a=ra + ha*(1-ra), k=Math.min(1, hv/0.6);
+      for(let c=0;c<3;c++){ const hi=Math.min(255, sky[c]*0.6 + 255*0.4)*(M3 ? M3.hi[c] : 1), dk=26*(M3 ? 0.6 + 0.4*M3.sh[c] : 1), val=(dk*ra*(1-ha) + hi*ha)/Math.max(1e-3, a); d[q+c]=val<0?0:val>255?255:val; }
+      d[q+3]=Math.round(255*k*a); continue; }
     for(let c=0;c<3;c++){
       const sh=M3 ? M3.sh[c] : 1;
-      // (seeing through: the drop's body shows what lies beneath, bent by its lens (the page does that), so here only
-      //  its dark rim, the sky in its rim and its highlight)
-      let val=see ? 22*(1-sh*0.5) + (sky[c]*fres + sp*(M3 ? M3.hi[c] : 1))/Math.max(0.05, Math.min(1, rim*0.7 + fres + sp/255)) : ref[c]*(1-rim*0.6*(2-sh)) + sky[c]*fres + sp*(M3 ? M3.hi[c] : 1);
+      let val=ref[c]*(1-rim*0.6*(2-sh)) + sky[c]*fres + sp*(M3 ? M3.hi[c] : 1);
       d[q+c]=val<0?0:val>255?255:val;
     }
-    d[q+3]=Math.round(255*Math.min(1, hv/0.6)*(see ? Math.max(0.1, Math.min(1, rim*0.7 + fres + sp/255)) : 1));
+    d[q+3]=Math.round(255*Math.min(1, hv/0.6));
   }
   // runners clear the fog where they went: a wet, clear trail
   sctx.putImageData(img,0,0);
