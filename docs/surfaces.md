@@ -341,11 +341,20 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     air's tint.
   - **The camera sweeps; the world stays** (Ruby: "we should be able to sweep
     the camera and see it not really change much but get a different
-    perspective"). The land is 16 straight ridges across the view (arcs were
-    tried, and the land looked worse: Ruby), each the land's true height along
-    one cut; a facet's choices come from the world's own smooth noise where it
-    stands (`wn`), so a cut moving with the camera changes smoothly, never
-    jumps. Everything else stands in the WORLD: trees, buildings, rocks, grass
+    perspective"). The land is 16 ridges, each the land's true height along one cut. **Held still under a moving
+    camera** (Ruby, Ursa Major: "the ground distorts and transforms when you move the camera";
+    docs/prior-art/ringworld-stability.md): a turn, a tilt or a zoom moves the camera about one fixed eye, so the picture can be a
+    function of the world and the eye alone. Each cut is a circle about the eye (`RG_ROUND_CUTS`; straight cuts swung
+    through the hills as the camera turned, and on the tilted cameras the land uses a circle reads as straight); its
+    samples stand at bearings fixed in the world, a whole number round the eye (`NB`), so a facet, a field's crop and a
+    glint stay on their own piece of land; a facet grows out of the lit band by the land's slope instead of switching
+    on (`fw2`); a ridge's band, wash, day and seam are read smoothly round the middle of the view, never at one sample
+    (`vw`); the land's finest octave fades in by its size, so a zoom never adds one at once. Things are ordered by
+    their true distance, stand on the land as finely as the ridges show it, and choose their detail by their size at
+    their true distance (`lodOf`, handed to the kit as `lod`), so a turn never changes a tree's or a building's stage;
+    every feature drawn only at some sizes has a stream of its own, so a stage gained moves nothing else; the smallest
+    trees fade in; a wall's grain and a road's wear are keyed to the world, not the screen; the one loud nod, the four
+    dust devils and the bolt's cloud are chosen from the world. Everything else stands in the WORLD: trees, buildings, rocks, grass
     and finds are sown in cells keyed by where they are (`scatter`: a cell
     doubles in size with each doubling of distance, so the screen holds about
     as many at every depth), the works in their own cells, roads cut into world
@@ -376,8 +385,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     each world's own and the jokey ones rare (`PK_BOARDS`, a serial verse now and then, `PK_SERIALS`); the wilds'
     standing stones are a stone circle at true scale, in the world (`pkStone`, `pkLintel`).
   - **The view's reach** (Ruby: "make the drawing script aware of the view frustum"): each cut of the land runs as far
-    round as the page sees, its corners included (`PHI`), straight ahead and bending round the eye as a circle past 55°
-    (`smax`), so a wide lens never shows a cut's end; a thing is kept while any of it can be in view; the lens is held
+    round as the page sees, its corners included (`PHI`), so a wide lens never shows a cut's end (were the cuts straight,
+    they bend round the eye as a circle past 55°, `smax`); fields and ways are drawn with the ridge before their nearest
+    end, so no ridge they lie across paints over them; a thing is kept while any of it can be in view; the lens is held
     under 118° (`ringParams`).
   - **Ways and Clutter** (Ruby: streets "related to works … destroyed … fairly uncommon … different materials … curved
     … follow the contour of the land"): the main roads and, from the heart of each town Works raises, a few ways out and
@@ -405,7 +415,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     docs/prior-art/ringworld-life-and-views.md): stops drawn one by one round home, each independent of the last, so no path closes
     into a circle; they walk a leg, arrive gently and wait. People walk up and down the street beside them, and by the
     hour go in: by day nearly all are out, by night about one in twelve, the night watch with a lantern (a neon city's
-    stay out). Nothing is cut until it is wholly out of the frame (`nearCut`,
+    stay out). Each has a door (Ruby: "people need to go to doors"): the nearest house with one within a quarter of a
+    kilometre; at its own moment of the dusk it walks there and fades in at the door, and comes out again at its dawn
+    (`toDoor`, from how far the dusk has come where it stands, so nothing is remembered). Nothing is cut until it is wholly out of the frame (`nearCut`,
     the visibility boxes as wide as each thing can reach). The Moving Image's sun follows `sunPath`: a real day's arc at 48° in
     early summer, days of fourteen hours (`SUN_DAY`), long dusks. Time passes in a Camera Round too (Ruby: "time
     should pass during the camera pan"), as much as the sheet says, from the light as it is or from dawn, midday, dusk

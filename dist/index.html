@@ -6092,7 +6092,8 @@ const pkPoly = (x, pts, fill) => { x.fillStyle = fill; x.beginPath(); pts.forEac
 const pkDisc = (x, X, Y, r, fill) => { if(!(r > 0)) return; x.fillStyle = fill; x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); };
 const pkEll = (x, X, Y, rx, ry, fill) => { if(!(rx > 0 && ry > 0)) return; x.fillStyle = fill; x.beginPath(); x.ellipse(X, Y, rx, ry, 0, 0, Math.PI*2); x.fill(); };
 const PK_WHITE = [255, 248, 232], PK_BLACK = [0, 0, 0];
-const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; return f; };
+const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; pkNow = b; pkFace = 0; pkLodNow = 1; return f; };
+let pkNow = 0, pkFace = 0, pkLodNow = 1;
 function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
   g.addColorStop(0, pkCss(col, a)); g.addColorStop(1, pkCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
@@ -6104,17 +6105,19 @@ const pkFoot = (x, X, Y, r, c) => pkEll(x, X - c.sd*r*0.35, Y, r, r*0.22, pkCss(
 
 
 
-const pkShade = (x, pts, col, y0, y1, k = 0.14) => { if(!(y1 - y0 > 2)) return pkPoly(x, pts, pkCss(col));
+const pkShade = (x, pts, col, y0, y1, k = 0.14) => { const fi = ++pkFace; if(!(y1 - y0 > 2)) return pkPoly(x, pts, pkCss(col));
   const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, pkCss(pkMix(col, PK_WHITE, k*0.5))); g.addColorStop(0.62, pkCss(col)); g.addColorStop(1, pkCss(pkMix(col, PK_BLACK, k*1.2))); pkPoly(x, pts, g);
-  if(y1 - y0 > 70) pkGrain(x, pts, col); };
+  if((y1 - y0)*pkLodNow > 70) pkGrain(x, pts, col, fi); };
 
 
 
 
-function pkGrain(x, pts, col){
+function pkGrain(x, pts, col, fi){
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for(const [a, b] of pts){ x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); }
   const w = x1 - x0, h = y1 - y0; if(w < 24 || h < 24) return;
-  const R = mulberry32((Math.round(x0*7.13) ^ Math.imul(Math.round(y0*3.7), 2654435761) ^ Math.round(w*11)) >>> 0), n = Math.min(90, Math.floor(w*h/1400));
+
+
+  const R = mulberry32((pkNow ^ Math.imul(fi, 0x85EBCA77)) >>> 0), n = Math.min(90, Math.floor(w*h/1400));
   x.save(); x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
 
 
@@ -6126,8 +6129,8 @@ function pkGrain(x, pts, col){
 
 const pkCast = (x, X0, X1, Y, h, c, a = 0.22) => { const dx = -c.sd*h*0.42, dy = h*0.07; pkPoly(x, [[X0, Y], [X1, Y], [X1 + dx, Y + dy], [X0 + dx, Y + dy]], pkCss(pkMix(c.dark, PK_BLACK, 0.5), a)); };
 
-const pkStreaks = (x, x0, top, w, ht, c, R, px, a = 0.16) => { if(ht < px(28) || w < px(6)) return;
-  for(let k = 0, n = Math.min(14, 2 + Math.floor(w/px(9))); k < n; k++){ const sx = x0 + w*(0.04 + 0.92*R()), sy = top + ht*R()*0.7, len = ht*(0.06 + 0.22*R()), sw = Math.max(px(0.5), w*(0.005 + 0.012*R()));
+const pkStreaks = (x, x0, top, w, ht, c, R, px, a = 0.16) => { if(ht*(c.lod || 1) < px(28) || w*(c.lod || 1) < px(6)) return;
+  for(let k = 0, n = Math.min(14, 2 + Math.floor(w*(c.lod || 1)/px(9))); k < n; k++){ const sx = x0 + w*(0.04 + 0.92*R()), sy = top + ht*R()*0.7, len = ht*(0.06 + 0.22*R()), sw = Math.max(px(0.5), w*(0.005 + 0.012*R()));
 
     const g = x.createLinearGradient(0, sy, 0, sy + len); g.addColorStop(0, pkCss(c.dark, 0)); g.addColorStop(0.15, pkCss(c.dark, a*0.6)); g.addColorStop(1, pkCss(c.dark, 0)); x.fillStyle = g;
     x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + sw, sy); x.lineTo(sx + sw*0.75, sy + len); x.lineTo(sx + sw*0.25, sy + len); x.fill(); } };
@@ -6206,14 +6209,16 @@ function pkGrow(n, cx, cy, rx, ry, r0, R, F){ const lobes = [[cx, cy, r0]];
 
 
 function pkLobes(x, lobes, c, R, cx, cy, rr, px){
-  const lx = c.L[0], ly = c.L[1], big = px && rr > px(10);
+
+
+  const lx = c.L[0], ly = c.L[1], rd = rr*(c.lod || 1), big = px && rd > px(10), RLf = mulberry32((R()*4294967296) >>> 0), RBk = mulberry32((R()*4294967296) >>> 0);
 
   if(!big){
     for(const [X, Y, r] of lobes) pkDisc(x, X, Y, r, pkCss(c.dark));
     for(const [X, Y, r] of lobes) pkDisc(x, X + lx*r*0.22, Y + ly*r*0.22, r*0.78, pkCss(c.body));
     for(const [X, Y, r] of lobes){ const fx = (X - cx)/rr, fy = (Y - cy)/rr; if(fx*lx + fy*ly < 0.05) continue; pkDisc(x, X + lx*r*0.38, Y + ly*r*0.38, r*0.42, pkCss(c.lit)); }
-    if(rr > 6) for(let q = 0; q < 3; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = Math.atan2(ly, lx) + (R() - 0.5)*1.2; pkDisc(x, X + Math.cos(a)*r*0.6, Y + Math.sin(a)*r*0.6, r*0.14, pkCss(pkMix(c.lit, PK_WHITE, 0.35))); }
-    pkBacklit(x, lobes, c, R, false); return; }
+    if(px && rd > px(6)) for(let q = 0; q < 3; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = Math.atan2(ly, lx) + (R() - 0.5)*1.2; pkDisc(x, X + Math.cos(a)*r*0.6, Y + Math.sin(a)*r*0.6, r*0.14, pkCss(pkMix(c.lit, PK_WHITE, 0.35))); }
+    pkBacklit(x, lobes, c, RBk, false); return; }
 
 
 
@@ -6231,10 +6236,10 @@ function pkLobes(x, lobes, c, R, cx, cy, rr, px){
   if(c.air) for(let q = 0; q < 2; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = R()*Math.PI*2; pkDisc(x, X + Math.cos(a)*r*0.8, Y + Math.sin(a)*r*0.8, r*0.07, pkCss(c.air, 0.85)); }
 
 
-  if(rr > px(34)){ const n = Math.min(rr > px(90) ? 720 : 320, Math.round(rr*rr/(px(5)*px(5))*0.35)), s0 = Math.max(px(1.1), rr*0.028)*(c.leaf || 1);
+  if(rd > px(34)){ const n = Math.min(rd > px(90) ? 720 : 320, Math.round(rd*rd/(px(5)*px(5))*0.35)), s0 = Math.max(px(1.1), rr*0.028)*(c.leaf || 1), R = RLf;
     for(let q = 0; q < n; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = R()*Math.PI*2, d = r*Math.sqrt(R())*0.92, lxp = X + Math.cos(a)*d, lyp = Y + Math.sin(a)*d, f = ((lxp - cx)*lx + (lyp - cy)*ly)/rr + (R() - 0.5)*0.3;
       const col = f > 0.3 ? pkMix(c.lit, PK_WHITE, 0.08*R()) : f > -0.15 ? c.body : c.dark, s = s0*(0.7 + 0.6*R()); x.fillStyle = pkCss(col, 0.8); x.beginPath(); x.ellipse(lxp, lyp, s, s*(c.leafW || 0.45), R()*Math.PI, 0, Math.PI*2); x.fill(); } }
-  pkBacklit(x, lobes, c, R, true);
+  pkBacklit(x, lobes, c, RBk, true);
 }
 
 
@@ -6262,21 +6267,21 @@ function pkFrond(x, tx, ty, a, len, col, droop, lit, c, h, px, R, feather, sprea
   if(!feather){ const up = [], dn = []; for(let k = 0; k <= 10; k++){ const t = k/10, hl = hang(t), [, , , , ax, ay] = tip(t, -1, hl), [, , , , bx, by] = tip(t, 1, hl); up.push([ax, ay]); dn.push([bx, by]); }
     pkPoly(x, [...up, ...dn.reverse()], pkCss(col)); return; }
   x.strokeStyle = pkCss(col); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.5), h*0.006); x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(mx, my, ex, ey); x.stroke();
-  const m = Math.min(40, Math.round(len/px(2.2))), lw = Math.max(px(0.45), h*0.0035);
+  const m = Math.min(40, Math.round(len*(c.lod || 1)/px(2.2))), lw = Math.max(px(0.45), h*0.0035);
   for(const sdd of [-1, 1]) for(let k = 1; k <= m; k++){ const t = k/(m + 1), hl = hang(t)*(0.8 + 0.4*R()), [qx, qy, ux, uy, lx, ly] = tip(t, sdd, hl);
     x.strokeStyle = pkCss(lit && sdd < 0 && R() < 0.6 ? c.lit : col, 0.92); x.lineWidth = lw; x.beginPath(); x.moveTo(qx, qy); x.quadraticCurveTo(qx + ux*hl*0.3, qy + uy*hl*0.3 + (1 - spread)*hl*0.15, lx, ly); x.stroke();
     if(c.back > 0.05 && R() < 0.5){ x.strokeStyle = pkCss(c.trans, c.back*0.55); x.stroke(); } } }
 
 
-function pkLimb(x, x0, y0, x1, y1, w0, col, px, bend = 0.15){ const mx = (x0 + x1)/2 + (y1 - y0)*bend, my = (y0 + y1)/2 - (x1 - x0)*bend*0.4, w = Math.max(px(0.5), w0);
-  if(w < px(2)){ x.strokeStyle = pkCss(col); x.lineCap = 'round'; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(mx, my, x1, y1); x.stroke(); return; }
+function pkLimb(x, x0, y0, x1, y1, w0, col, px, bend = 0.15, lod = 1){ const mx = (x0 + x1)/2 + (y1 - y0)*bend, my = (y0 + y1)/2 - (x1 - x0)*bend*0.4, w = Math.max(px(0.5), w0);
+  if(w*lod < px(2)){ x.strokeStyle = pkCss(col); x.lineCap = 'round'; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(mx, my, x1, y1); x.stroke(); return; }
   const q = t => [(1 - t)*(1 - t)*x0 + 2*(1 - t)*t*mx + t*t*x1, (1 - t)*(1 - t)*y0 + 2*(1 - t)*t*my + t*t*y1], L = [], Rt = [];
   for(let k = 0; k <= 8; k++){ const t = k/8, [a, b] = q(t), [a1, b1] = q(Math.min(1, t + 0.02)), [a0, b0] = q(Math.max(0, t - 0.02)), d = Math.hypot(a1 - a0, b1 - b0) || 1, nx = -(b1 - b0)/d, ny = (a1 - a0)/d, hw = w*(1 - 0.55*t)/2;
     L.push([a + nx*hw, b + ny*hw]); Rt.push([a - nx*hw, b - ny*hw]); }
   pkPoly(x, [...L, ...Rt.reverse()], pkCss(col)); pkDisc(x, x0, y0, w/2, pkCss(col)); pkDisc(x, x1, y1, w*0.45/2, pkCss(col)); }
 
 
-function pkBark(x, X, Y, top, wd, lean, kind, c, R, px){ if(wd < px(5)) return; const w = wd/2, at = u => X + lean*u, dk = pkMix(c.trunk, PK_BLACK, 0.4), lt = pkMix(c.trunk, PK_WHITE, 0.22);
+function pkBark(x, X, Y, top, wd, lean, kind, c, R, px){ if(wd*(c.lod || 1) < px(5)) return; const w = wd/2, at = u => X + lean*u, dk = pkMix(c.trunk, PK_BLACK, 0.4), lt = pkMix(c.trunk, PK_WHITE, 0.22);
   if(kind === 'birch'){ for(let k = 0, n = Math.round(top/(w*0.9)); k < n; k++){ const u = 0.06 + 0.9*R(), y = Y - top*u, bx = at(u) + (R() - 0.5)*w*0.6, len = w*(0.3 + 0.6*R()); x.fillStyle = pkCss(PK_BLACK, 0.55); x.fillRect(bx - len/2, y, len, Math.max(px(0.5), w*0.08)); }
     x.fillStyle = pkCss(PK_BLACK, 0.5); x.beginPath(); x.moveTo(X - w*1.6, Y); x.lineTo(X - w*0.9, Y - top*0.08); x.lineTo(X + w*0.9, Y - top*0.1); x.lineTo(X + w*1.6, Y); x.fill(); return; }
   x.lineCap = 'round';
@@ -6290,15 +6295,15 @@ function pkBark(x, X, Y, top, wd, lean, kind, c, R, px){ if(wd < px(5)) return; 
 
 
 
-function pkConifer(x, X, Y, h, c, R, F, o, px, small){
-  const rnd = (a, b) => a + (b - a)*R(), sd = c.sd, lean = F.lean*h*0.3, bare = h*o.bare, top = Y - h, n = small ? Math.min(5, o.n) : o.n, axis = u => X + lean*u;
+function pkConifer(x, X, Y, h, c, R, F, o, px, small, sub){
+  const hd = h*(c.lod || 1), rnd = (a, b) => a + (b - a)*R(), sd = c.sd, lean = F.lean*h*0.3, bare = h*o.bare, top = Y - h, n = small ? Math.min(5, o.n) : o.n, axis = u => X + lean*u;
 
   const tw = h*0.035*(0.8 + 0.4*F.age); if(tw < px(1.2)){ x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.6), tw); x.beginPath(); x.moveTo(X, Y); x.lineTo(axis(0.7), Y - h*0.7); x.stroke(); }
   else { pkPoly(x, [[X - tw*(small ? 0.5 : 1.5), Y + tw*0.2], [X - tw*0.5, Y - bare*0.6], [axis(0.85) - tw*0.08, Y - h*0.85], [axis(0.85) + tw*0.08, Y - h*0.85], [X + tw*0.5, Y - bare*0.6], [X + tw*(small ? 0.5 : 1.5), Y + tw*0.2]], pkCss(c.trunk));
     pkPoly(x, [[X + sd*tw*0.1, Y], [axis(0.85), Y - h*0.85], [X + sd*tw*0.5, Y - bare*0.6], [X + sd*tw*1.2, Y]], pkCss(pkMix(c.trunk, PK_WHITE, 0.15))); }
-  if(!small && h > px(60)) pkBark(x, X, Y, bare + h*0.08, tw*1.3, lean*(bare/h), o.bark || 'spruce', c, R, px);
+  if(!small && hd > px(60)) pkBark(x, X, Y, bare + h*0.08, tw*1.3, lean*(bare/h), o.bark || 'spruce', c, sub(6), px);
 
-  if(!small && F.age > 0.6){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.25), 0.8); x.lineWidth = Math.max(px(0.4), h*0.006); for(let k = 0; k < 4; k++){ const u = rnd(0.25, 1)*bare/h, s = R() < 0.5 ? -1 : 1, yy = Y - h*u, len = h*o.bw*rnd(0.3, 0.7);
+  if(!small && F.age > 0.6){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.25), 0.8); x.lineWidth = Math.max(px(0.4), h*0.006); for(let k = 0; k < 4; k++){ const u = rnd(0.25, 1)*bare/h, s = R() < 0.5 ? -1 : 1, yy = Y - h*u, len = h*o.bw*rnd(0.3, 0.7);
     x.beginPath(); x.moveTo(axis(u), yy); x.lineTo(axis(u) + s*len, yy + len*0.25*o.droop); x.stroke(); } }
   const span = h*(1 - o.spire) - bare, th = span/n*1.5;
   for(let t = 0; t < n; t++){ const u = t/n, yt = Y - bare - span*u - th*0.15, env = h*o.bw*F.wide*Math.pow(1 - u*0.92, 0.95 + 0.3*F.age)*(o.round ? 1 - Math.pow(u, 3)*0.4 : 1);
@@ -6317,10 +6322,10 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small){
       if(lit && !small) pkPoly(x, [...P.slice(1, -1), ...P.slice(1, -1).reverse().map(([a, b], k, A) => [a, b + th*(0.1 + 0.3*(A.length - k)/A.length)])], pkCss(c.lit, 0.85));
       else if(!small) pkPoly(x, [...P.slice(3, -1), ...P.slice(3, -1).reverse().map(([a, b]) => [a, b + th*0.07])], pkCss(pkMix(c.body, c.lit, 0.35), 0.8));
 
-      if(!small && h > px(80)){ x.lineCap = 'round'; x.lineWidth = Math.max(px(0.4), h*0.0035);
-        for(let k = 0, m = Math.round(wd/px(3)); k < m; k++){ const v = 0.15 + 0.85*R(), bx = ax + s*wd*v, by = yt + th*0.35*(1 - v) + dr*Math.pow(v, 1.3) + th*0.1, len = th*rnd(0.15, 0.35);
+      if(!small && hd > px(80)){ const R = sub(16 + t*2 + (s > 0 ? 1 : 0)), rnd = (a, b) => a + (b - a)*R(), wdd = wd*(c.lod || 1); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.4), h*0.0035);
+        for(let k = 0, m = Math.round(wdd/px(3)); k < m; k++){ const v = 0.15 + 0.85*R(), bx = ax + s*wd*v, by = yt + th*0.35*(1 - v) + dr*Math.pow(v, 1.3) + th*0.1, len = th*rnd(0.15, 0.35);
           x.strokeStyle = pkCss(R() < 0.6 ? pkMix(c.dark, PK_BLACK, 0.2) : c.body, 0.8); x.beginPath(); x.moveTo(bx, by - len*0.3); x.lineTo(bx + s*len*0.2, by + len*0.7); x.stroke(); }
-        for(let k = 0, m = Math.round(wd/px(5)); k < m; k++){ const v = 0.2 + 0.8*R(), [bx, by] = P[Math.min(P.length - 2, Math.round(v*5))], len = th*rnd(0.12, 0.25);
+        for(let k = 0, m = Math.round(wdd/px(5)); k < m; k++){ const v = 0.2 + 0.8*R(), [bx, by] = P[Math.min(P.length - 2, Math.round(v*5))], len = th*rnd(0.12, 0.25);
           x.strokeStyle = pkCss(lit ? (R() < 0.5 ? c.lit : pkMix(c.lit, PK_WHITE, 0.15)) : c.body, 0.85); x.beginPath(); x.moveTo(bx, by + th*0.08); x.lineTo(bx + s*len*0.6, by - len*0.4); x.stroke(); } }
 
       if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, Math.min(0.8, c.back*0.8)); x.lineWidth = Math.max(px(0.6), th*0.1); x.beginPath(); P.slice(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); } } }
@@ -6331,41 +6336,44 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small){
 
 const pkTreeFoot = (x, X, Y, h, c) => pkEll(x, X - c.sd*h*0.12, Y, h*0.26, h*0.055, pkCss(c.dark, 0.3));
 function pkTree(x, X, Y, h, c0, kind, R0, px){
-  const sub = pkSub(R0), R = sub(1), RL = sub(2), F = pkTreeForm(sub(5)), c = pkTreeTint(c0, F), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), small = h < px(7);
-  h *= F.tall;
-  const trunk = (top, wd, lean = 0, bark = kind) => { if(wd < px(2.5)){ x.strokeStyle = pkCss(c.trunk); x.lineWidth = Math.max(px(0.6), wd); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + lean, Y - top); x.stroke(); return; }
+
+
+
+  const sub = pkSub(R0), R = sub(1), RL = sub(2), F = pkTreeForm(sub(5)), c = pkTreeTint(c0, F), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), small = h*(c0.lod || 1) < px(7);
+  h *= F.tall; const hd = h*(c0.lod || 1), nR = R();
+  const trunk = (top, wd, lean = 0, bark = kind) => { if(wd*(c0.lod || 1) < px(2.5)){ x.strokeStyle = pkCss(c.trunk); x.lineWidth = Math.max(px(0.6), wd); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + lean, Y - top); x.stroke(); return; }
 
     const w = wd/2, tk = c.trunk, dk = pkMix(tk, PK_BLACK, 0.35), lt = pkMix(tk, PK_WHITE, 0.18);
     pkPoly(x, [[X - w*2, Y + w*0.2], [X - w, Y - w*1.6], [X + lean - w*0.75, Y - top], [X + lean + w*0.75, Y - top], [X + w, Y - w*1.6], [X + w*2, Y + w*0.2]], pkCss(dk));
     pkPoly(x, [[X + sd*w*0.1, Y + w*0.2], [X + sd*w*0.2 + lean*0.05, Y - w*1.6], [X + lean + sd*w*0.15, Y - top], [X + lean + sd*w*0.75, Y - top], [X + sd*w, Y - w*1.6], [X + sd*w*1.8, Y + w*0.2]], pkCss(lt));
-    pkDisc(x, X + lean, Y - top, w*0.75, pkCss(dk)); pkBark(x, X, Y, top, wd, lean, bark, c, R, px); };
+    pkDisc(x, X + lean, Y - top, w*0.75, pkCss(dk)); pkBark(x, X, Y, top, wd, lean, bark, c, sub(6), px); };
   if(!small) pkTreeFoot(x, X, Y, h*F.wide, c);
 
-  if(kind === 'spruce'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.3), n: 8 + Math.floor(R()*5), droop: 0.55, lift: 0.22, spire: 0.07, bare: rnd(0.03, 0.08) + F.age*0.06, bark: 'spruce' }, px, small); return; }
-  if(kind === 'fir'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.1, 0.15), n: 11 + Math.floor(R()*6), droop: 0.18, lift: 0.08, spire: 0.08, bare: rnd(0.02, 0.06), round: F.age > 0.7, bark: 'fir' }, px, small); return; }
+  if(kind === 'spruce'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.3), n: 8 + Math.floor(R()*5), droop: 0.55, lift: 0.22, spire: 0.07, bare: rnd(0.03, 0.08) + F.age*0.06, bark: 'spruce' }, px, small, sub); return; }
+  if(kind === 'fir'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.1, 0.15), n: 11 + Math.floor(R()*6), droop: 0.18, lift: 0.08, spire: 0.08, bare: rnd(0.02, 0.06), round: F.age > 0.7, bark: 'fir' }, px, small, sub); return; }
   if(kind === 'pine' && F.age < 0.35){
-    pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.28), n: 5 + Math.floor(R()*3), droop: 0.1, lift: 0.25, spire: 0.1, bare: rnd(0.08, 0.15), bark: 'pine' }, px, small); return; }
+    pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.28), n: 5 + Math.floor(R()*3), droop: 0.1, lift: 0.25, spire: 0.1, bare: rnd(0.08, 0.15), bark: 'pine' }, px, small, sub); return; }
   if(kind === 'pine'){
 
 
     const lean = h*F.lean*0.9, top = h*rnd(0.84, 0.9); trunk(top, h*0.045, lean, 'pine');
-    if(!small && h > px(40)){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.2), 0.8); x.lineWidth = Math.max(px(0.4), h*0.008); for(let k = 0; k < 3; k++){ const u = rnd(0.25, 0.8), s = R() < 0.5 ? -1 : 1, yy = Y - top*u; x.beginPath(); x.moveTo(X + lean*u, yy); x.lineTo(X + lean*u + s*h*rnd(0.03, 0.07), yy - h*0.01); x.stroke(); } }
+    if(!small && hd > px(40)){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.2), 0.8); x.lineWidth = Math.max(px(0.4), h*0.008); for(let k = 0; k < 3; k++){ const u = rnd(0.25, 0.8), s = R() < 0.5 ? -1 : 1, yy = Y - top*u; x.beginPath(); x.moveTo(X + lean*u, yy); x.lineTo(X + lean*u + s*h*rnd(0.03, 0.07), yy - h*0.01); x.stroke(); } }
 
 
-    const cw = h*0.26*F.wide, nc = small ? 2 : 3 + Math.floor(R()*3), clumps = []; let s0 = R() < 0.5 ? -1 : 1;
+    const cw = h*0.26*F.wide, nc = small ? 2 : 3 + Math.floor(nR*3), clumps = []; let s0 = R() < 0.5 ? -1 : 1;
     for(let q = 0; q < nc; q++){ const u = q/(nc - 1 || 1), last = q === nc - 1, ty = Y - h*(0.64 + 0.27*u + rnd(-0.02, 0.02)), at = Math.min(top, Y - ty + h*rnd(0.02, 0.06)), ax = X + lean*at/top;
       const out = last ? rnd(-0.1, 0.1)*cw : s0*cw*(0.6 - 0.3*u)*rnd(0.7, 1.15) + F.side*cw*0.3, w = cw*(0.95 - 0.35*u)*rnd(0.85, 1.15); s0 = -s0; clumps.push([ax + out, ty, w, ax, Y - at]); }
-    for(const [tx, ty, w, ax, ay] of clumps){ if(!small) pkLimb(x, ax, ay, tx, ty + h*0.012, h*0.026, c.trunk, px, (tx - ax)/(Math.abs(tx - ax) + 1e-6)*0.12);
+    for(const [tx, ty, w, ax, ay] of clumps){ if(!small) pkLimb(x, ax, ay, tx, ty + h*0.012, h*0.026, c.trunk, px, (tx - ax)/(Math.abs(tx - ax) + 1e-6)*0.12, c.lod);
       const lobes = pkGrow(small ? 2 : 6 + Math.floor(R()*3), tx, ty, w, h*0.07, w*0.34, R, F); x.save(); x.translate(0, ty); x.scale(1, 0.62 - F.age*0.12); x.translate(0, -ty);
       pkLobes(x, lobes, { ...c, leaf: 0.8, leafW: 0.22 }, RL, tx, ty, w, px); x.restore(); }
     return; }
   if(kind === 'cedar'){
 
 
-    trunk(h*0.85, h*0.05, 0, 'cedar'); const n = small ? 2 : 3 + Math.floor(R()*4);
+    trunk(h*0.85, h*0.05, 0, 'cedar'); const n = small ? 2 : 3 + Math.floor(nR*4);
     for(let q = 0; q < n; q++){ const u = q/(n - 1 || 1), yy = Y - h*(0.28 + 0.62*u), wd = h*(0.5 - 0.27*u)*F.wide*rnd(0.8, 1.2), ox = rnd(-1, 1)*h*0.08 + F.side*wd*0.3, th = h*0.07;
-      const lobes = h > px(30) ? pkGrow(7, X + ox, yy, wd, th*1.4, wd*0.24, R, F) : null;
-      if(!small) for(const s of [-1, 1]){ const ends = lobes ? lobes.filter(l => (l[0] - X)*s > 0) : []; if(lobes && !ends.length) continue; const ex = ends.length ? ends.reduce((m, l) => Math.abs(l[0] - X) > Math.abs(m - X) ? l[0] : m, X) : X + ox + s*wd*0.5; pkLimb(x, X, yy + th*0.6, X + (ex - X)*0.8, yy + th*0.1, h*0.022, c.trunk, px, 0.05); }
+      const lobes = hd > px(30) ? pkGrow(7, X + ox, yy, wd, th*1.4, wd*0.24, sub(40 + q), F) : null;
+      if(!small) for(const s of [-1, 1]){ const ends = lobes ? lobes.filter(l => (l[0] - X)*s > 0) : []; if(lobes && !ends.length) continue; const ex = ends.length ? ends.reduce((m, l) => Math.abs(l[0] - X) > Math.abs(m - X) ? l[0] : m, X) : X + ox + s*wd*0.5; pkLimb(x, X, yy + th*0.6, X + (ex - X)*0.8, yy + th*0.1, h*0.022, c.trunk, px, 0.05, c.lod); }
       if(lobes){ x.save(); x.translate(0, yy); x.scale(1, 0.5); x.translate(0, -yy); pkLobes(x, lobes, { ...c, leaf: 0.8, leafW: 0.3 }, RL, X + ox, yy, wd, px); x.restore(); continue; }
       pkPoly(x, [[X + ox - wd, yy], [X + ox - wd*0.8, yy - th], [X + ox + wd*0.8, yy - th*1.1], [X + ox + wd, yy], [X + ox + wd*0.6, yy + th*0.5], [X + ox - wd*0.6, yy + th*0.5]], pkCss(c.dark));
       pkPoly(x, [[X + ox - wd*0.85, yy - th*0.2], [X + ox - wd*0.7, yy - th], [X + ox + wd*0.75, yy - th*1.05], [X + ox + wd*0.9, yy - th*0.2]], pkCss(c.body));
@@ -6379,7 +6387,7 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
     const Rp = pts(1), Lp = pts(-1); pkPoly(x, [...Lp, ...Rp.reverse()], pkCss(c.dark));
     pkPoly(x, [[X, Y - h*0.04], ...pts(sd*0.85), [X + lean, Y - h]], pkCss(c.body));
     if(!small) pkPoly(x, [[X + sd*wd*0.15, Y - h*0.2], ...pts(sd*0.5).slice(3, 12), [X + lean + sd*wd*0.1, Y - h*0.8]], pkCss(c.lit, 0.8));
-    if(h > px(80)) for(let q = 0, m = Math.round(h*wd/(px(6)*px(6))*0.6); q < Math.min(260, m); q++){ const u = 0.05 + 0.9*R(), w = wd*Math.sin(Math.PI*Math.pow(u, 0.62)), ox = (R()*2 - 1)*w*0.9, lit = ox*sd > w*0.2;
+    if(hd > px(80)) for(let q = 0, m = Math.round(hd*wd*(c0.lod || 1)/(px(6)*px(6))*0.6); q < Math.min(260, m); q++){ const u = 0.05 + 0.9*R(), w = wd*Math.sin(Math.PI*Math.pow(u, 0.62)), ox = (R()*2 - 1)*w*0.9, lit = ox*sd > w*0.2;
       pkEll(x, X + lean*u + ox, Y - h*0.04 - h*0.96*u, wd*0.12, wd*0.07, pkCss(lit ? c.lit : R() < 0.5 ? c.dark : c.body, 0.8)); }
     if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, c.back*0.7); x.lineWidth = Math.max(px(0.6), wd*0.12); x.beginPath(); Lp.forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); x.beginPath(); pts(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); }
     return; }
@@ -6387,7 +6395,7 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
   if(kind === 'poplar'){
 
     const lean = F.lean*h*0.2; trunk(h*0.22, h*0.04, lean*0.2, 'poplar');
-    if(!small) for(let k = 0; k < 3; k++) pkLimb(x, X + lean*0.2, Y - h*0.2, X + lean*0.6 + rnd(-1, 1)*h*0.04, Y - h*rnd(0.45, 0.75), h*0.02, c.trunk, px, 0.02);
+    if(!small){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); for(let k = 0; k < 3; k++) pkLimb(x, X + lean*0.2, Y - h*0.2, X + lean*0.6 + rnd(-1, 1)*h*0.04, Y - h*rnd(0.45, 0.75), h*0.02, c.trunk, px, 0.02, c.lod); }
     const cx = X + lean*0.6, cy = Y - h*0.58, lobes = [];
 
     for(let q = 0, m = small ? 4 : 10, yq = Y - h*0.24; q < m; q++){ const u = q/(m - 1), r = h*(0.1 - 0.055*u)*Math.min(1.15, F.wide), yy = Y - h*(0.24 + 0.68*u);
@@ -6398,19 +6406,19 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
 
     const lean = F.lean*h*0.5, tw = h*0.032, tp = h*0.68, pale = pkMix(c.lit, PK_WHITE, 0.55);
     x.strokeStyle = pkCss(pale); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.6), tw); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + lean*0.2 + rnd(-1, 1)*h*0.02, Y - tp*0.5, X + lean, Y - tp); x.stroke();
-    if(!small) pkBark(x, X, Y, tp*0.8, tw, lean*0.8, 'birch', c, R, px);
+    if(!small) pkBark(x, X, Y, tp*0.8, tw, lean*0.8, 'birch', c, sub(6), px);
     const cx = X + lean, cy = Y - h*0.58, lobes = pkGrow(small ? 3 : 12, cx, cy, h*0.18*F.wide, h*0.33, h*0.085, R, F);
-    if(!small) for(const [lx2, ly2] of lobes.slice(1, 5)) pkLimb(x, X + lean*0.6, Y - h*0.55, lx2, ly2, h*0.012, pale, px, 0.2);
+    if(!small) for(const [lx2, ly2] of lobes.slice(1, 5)) pkLimb(x, X + lean*0.6, Y - h*0.55, lx2, ly2, h*0.012, pale, px, 0.2, c.lod);
     pkLobes(x, lobes, { ...c, leaf: 0.7, air: c.air || pkMix(c.lit, PK_WHITE, 0.3) }, RL, cx, cy, h*0.25, px);
-    if(h > px(60)){ x.strokeStyle = pkCss(c.body, 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 0; k < 14; k++){ const [lx2, ly2, r2] = lobes[Math.floor(R()*lobes.length)], ex = lx2 + rnd(-1, 1)*r2, ey = ly2 + r2*0.6; x.beginPath(); x.moveTo(ex, ey); x.quadraticCurveTo(ex + rnd(-1, 1)*r2*0.2, ey + r2*0.4, ex + rnd(-1, 1)*r2*0.3, ey + r2*rnd(0.5, 0.9)); x.stroke(); } }
+    if(hd > px(60)){ const R = sub(9), rnd = (a, b) => a + (b - a)*R(); x.strokeStyle = pkCss(c.body, 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 0; k < 14; k++){ const [lx2, ly2, r2] = lobes[Math.floor(R()*lobes.length)], ex = lx2 + rnd(-1, 1)*r2, ey = ly2 + r2*0.6; x.beginPath(); x.moveTo(ex, ey); x.quadraticCurveTo(ex + rnd(-1, 1)*r2*0.2, ey + r2*0.4, ex + rnd(-1, 1)*r2*0.3, ey + r2*rnd(0.5, 0.9)); x.stroke(); } }
     return; }
   if(kind === 'willow'){
 
     const lean = F.lean*h*0.4; trunk(h*0.4, h*0.06, lean*0.5, 'broadleaf'); const cx = X + lean, cy = Y - h*0.62, lobes = [], rw = h*0.3*F.wide;
     for(let q = 0; q < 6; q++){ const a = Math.PI + q/5*Math.PI; lobes.push([cx + Math.cos(a)*rw, cy + Math.sin(a)*h*0.18, h*0.15*rnd(0.85, 1.15)]); }
-    if(!small) for(const [lx2, ly2] of [lobes[1], lobes[4]]) pkLimb(x, X + lean*0.5, Y - h*0.38, lx2, ly2, h*0.03, c.trunk, px, 0.2);
+    if(!small) for(const [lx2, ly2] of [lobes[1], lobes[4]]) pkLimb(x, X + lean*0.5, Y - h*0.38, lx2, ly2, h*0.03, c.trunk, px, 0.2, c.lod);
     pkLobes(x, lobes, { ...c, leaf: 1.2, leafW: 0.25 }, RL, cx, cy, h*0.35, px);
-    if(!small){ const n = h > px(30) ? 34 : 9; x.lineCap = 'round';
+    if(!small){ const n = hd > px(30) ? 34 : 9; x.lineCap = 'round';
 
       for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const u = q/(n - 1) - 0.5, sx = cx + u*rw*2.4 + rnd(-1, 1)*h*0.01, len = h*rnd(0.28, 0.55)*(1 - Math.abs(u)*0.5), sw = rnd(-1, 1)*h*0.03, lit = u*sd > 0.05;
         if(pass === 0 ? lit : !lit) continue; x.strokeStyle = pkCss(lit ? (R() < 0.4 ? c.lit : c.body) : (R() < 0.5 ? c.dark : c.body)); x.lineWidth = Math.max(px(0.5), h*(n > 9 ? 0.016 : 0.025));
@@ -6429,42 +6437,42 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
     const lobes = pkGrow(small ? 4 : 13, X + F.side*rx*0.2, cy - ry*0.5, rx, ry*1.4, rx*0.24, R, F).map(([a, b, r]) => [a, Math.min(b, cy + ry*0.05), r]);
 
     if(!small){ const by = l => -l[1] - l[2], lo = [...lobes].sort((p, q) => by(q) - by(p)), L0 = lo.filter(l => l[0] < tx)[0], L1 = lo.filter(l => l[0] >= tx)[0];
-      for(const L of [L0, L1, lo[0]]) if(L){ const ly = cy + (L[1] - cy)*0.62; pkLimb(x, tx, Y - h*0.52, tx + (L[0] - tx)*0.9, ly + (Y - h*0.52 - ly)*0.08, h*0.03, c.trunk, px, 0.1); } }
+      for(const L of [L0, L1, lo[0]]) if(L){ const ly = cy + (L[1] - cy)*0.62; pkLimb(x, tx, Y - h*0.52, tx + (L[0] - tx)*0.9, ly + (Y - h*0.52 - ly)*0.08, h*0.03, c.trunk, px, 0.1, c.lod); } }
     x.save(); x.translate(0, cy); x.scale(1, 0.62); x.translate(0, -cy); pkLobes(x, lobes, { ...c, leaf: 0.8, leafW: 0.25 }, RL, X, cy - ry, rx, px); x.restore(); return; }
   if(kind === 'palm'){
 
 
     const lean = h*rnd(0.06, 0.22)*(R() < 0.5 ? -1 : 1)*(0.6 + F.wide*0.6), tx = X + lean, ty = Y - h*0.9, cw = rnd(0.85, 1.2);
     x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.6), h*0.035); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + lean*0.1, Y - h*0.5, tx, ty); x.stroke();
-    if(h > px(60)){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.35), 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 1; k < 20; k++){ const u = k/20, bx = X + lean*0.1*2*u*(1 - u) + lean*u*u, by = Y - h*0.9*u; x.beginPath(); x.moveTo(bx - h*0.017, by); x.lineTo(bx + h*0.017, by - h*0.004); x.stroke(); } }
-    const n = small ? 5 : 8 + Math.floor(R()*5), feather = h > px(70), frond = (a, len, col, droop, lit) => pkFrond(x, tx, ty, a, len, col, droop, lit, c, h, px, R, feather, 0);
+    if(hd > px(60)){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.35), 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 1; k < 20; k++){ const u = k/20, bx = X + lean*0.1*2*u*(1 - u) + lean*u*u, by = Y - h*0.9*u; x.beginPath(); x.moveTo(bx - h*0.017, by); x.lineTo(bx + h*0.017, by - h*0.004); x.stroke(); } }
+    const n = small ? 5 : 8 + Math.floor(nR*5), feather = hd > px(70), frond = (a, len, col, droop, lit, k) => pkFrond(x, tx, ty, a, len, col, droop, lit, c, h, px, sub(k), feather, 0);
 
-    if(!small) for(let q = 0; q < 1 + Math.floor(R()*2); q++) frond(Math.PI*0.5 + rnd(-0.35, 0.35)*(q ? -1 : 1), h*0.2, pkMix(c.trunk, [170, 140, 84], 0.6), 0.75, false);
+    if(!small){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); for(let q = 0; q < 1 + Math.floor(R()*2); q++) frond(Math.PI*0.5 + rnd(-0.35, 0.35)*(q ? -1 : 1), h*0.2, pkMix(c.trunk, [170, 140, 84], 0.6), 0.75, false, 30 + q); }
 
     for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const a = Math.PI*(1 + q/(n - 1)) + rnd(-0.12, 0.12), len = h*rnd(0.3, 0.42)*cw, lit = Math.cos(a)*sd > 0.2; if(pass === 0 ? lit : !lit) continue;
-      const up = Math.sin(a) < -0.85; frond(a, len*(up ? 0.75 : 1), lit ? c.body : c.dark, up ? 0.05 : rnd(0.25, 0.45), lit); }
-    if(!small && h > px(40)){ const RC = sub(5); for(let q = 0, nc = 2 + Math.floor(RC()*4); q < nc; q++) pkDisc(x, tx + (RC() - 0.5)*h*0.05, ty + h*(0.02 + RC()*0.025), h*0.014, pkCss(pkMix(c.trunk, [120, 110, 50], 0.4))); }
+      const up = Math.sin(a) < -0.85; frond(a, len*(up ? 0.75 : 1), lit ? c.body : c.dark, up ? 0.05 : rnd(0.25, 0.45), lit, 20 + q); }
+    if(!small && hd > px(40)){ const RC = sub(10); for(let q = 0, nc = 2 + Math.floor(RC()*4); q < nc; q++) pkDisc(x, tx + (RC() - 0.5)*h*0.05, ty + h*(0.02 + RC()*0.025), h*0.014, pkCss(pkMix(c.trunk, [120, 110, 50], 0.4))); }
     if(!small) pkDisc(x, tx, ty + h*0.02, h*0.03, pkCss(pkMix(c.trunk, PK_BLACK, 0.3)));
     return; }
   if(kind === 'baobab'){
 
     const bw = h*rnd(0.16, 0.22)*F.wide, top = Y - h*rnd(0.56, 0.66); x.fillStyle = pkCss(c.trunk); x.beginPath(); x.moveTo(X - bw, Y); x.bezierCurveTo(X - bw*1.1, Y - h*0.35, X - bw*0.5, top + h*0.05, X - bw*0.45, top); x.lineTo(X + bw*0.45, top); x.bezierCurveTo(X + bw*0.5, top + h*0.05, X + bw*1.1, Y - h*0.35, X + bw, Y); x.fill();
     x.fillStyle = pkCss(pkMix(c.trunk, PK_WHITE, 0.25)); x.beginPath(); x.moveTo(X + sd*bw*0.1, Y); x.bezierCurveTo(X + sd*bw*0.3, Y - h*0.35, X + sd*bw*0.35, top + h*0.05, X + sd*bw*0.35, top); x.lineTo(X + sd*bw*0.45, top); x.bezierCurveTo(X + sd*bw*0.5, top + h*0.05, X + sd*bw*1.1, Y - h*0.35, X + sd*bw, Y); x.fill();
-    if(h > px(50)) pkBark(x, X, Y - h*0.05, Y - top - h*0.1, bw*1.2, 0, 'beech', c, R, px);
-    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const pads = [], nb = small ? 3 : 4 + Math.floor(R()*4);
+    if(hd > px(50)) pkBark(x, X, Y - h*0.05, Y - top - h*0.1, bw*1.2, 0, 'beech', c, sub(6), px);
+    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const pads = [], nb = small ? 3 : 4 + Math.floor(nR*4);
     for(let q = 0; q < nb; q++){ const v = q/(nb - 1) - 0.5, sx = X + v*bw*0.8, ex = sx + v*h*0.36*F.wide + rnd(-1, 1)*h*0.03, ey = top - h*rnd(0.1, 0.22)*(1 - Math.abs(v)*0.6);
       if(small){ x.lineWidth = Math.max(px(0.5), h*0.04); x.beginPath(); x.moveTo(sx, top + h*0.02); x.quadraticCurveTo((sx + ex)/2, top - h*0.02, ex, ey); x.stroke(); }
-      else pkLimb(x, sx, top + h*0.03, ex, ey, h*0.07, c.trunk, px, -v*0.5); pads.push(...pkGrow(3, ex, ey - h*0.02, h*0.08, h*0.05, h*rnd(0.035, 0.055), R, F)); }
+      else pkLimb(x, sx, top + h*0.03, ex, ey, h*0.07, c.trunk, px, -v*0.5, c.lod); pads.push(...pkGrow(3, ex, ey - h*0.02, h*0.08, h*0.05, h*rnd(0.035, 0.055), R, F)); }
     if(!small) pkLobes(x, pads, c, RL, X, top - h*0.2, h*0.3, px);
     return; }
   if(kind === 'acacia'){
 
     x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const cy = Y - h*rnd(0.76, 0.86), cw = h*rnd(0.5, 0.72)*F.wide, fk = h*rnd(0.18, 0.34), lean = F.lean*h*0.5;
-    if(h > px(30)){
+    if(hd > px(30)){
 
       const lobes = pkGrow(10 + Math.floor(R()*4), X + lean + F.side*cw*0.2, cy, cw, h*0.06, cw*0.2, R, F), sq = 0.5; trunk(fk, h*0.06, lean*0.3, 'broadleaf');
       const fx = X + lean*0.3, fy = Y - fk, near = tx => lobes.reduce((m, l) => Math.abs(l[0] - tx) + (l[1] - cy)*-0.3 < Math.abs(m[0] - tx) + (m[1] - cy)*-0.3 ? l : m), pick = [...new Set([-0.5, 0.5, -0.15, 0.2].slice(0, 2 + Math.floor(R()*3)).map(u => near(fx + u*cw)))];
-      for(const L of pick){ const ty = cy + (L[1] - cy)*sq; pkLimb(x, fx, fy, fx + (L[0] - fx)*0.88, ty + (fy - ty)*0.05, h*0.045, c.trunk, px, (L[0] < fx ? -1 : 1)*-0.12); }
+      for(const L of pick){ const ty = cy + (L[1] - cy)*sq; pkLimb(x, fx, fy, fx + (L[0] - fx)*0.88, ty + (fy - ty)*0.05, h*0.045, c.trunk, px, (L[0] < fx ? -1 : 1)*-0.12, c.lod); }
       x.save(); x.translate(0, cy); x.scale(1, sq); x.translate(0, -cy); pkLobes(x, lobes, { ...c, leaf: 0.6 }, RL, X + lean, cy, cw, px); x.restore(); return; }
     for(const [ex, wd] of [[-0.35, 0.05], [0.3, 0.045], [0.05, 0.035]].slice(0, small ? 2 : 3)){ x.lineWidth = Math.max(px(0.5), h*wd); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + ex*cw*0.2, Y - h*0.45, X + ex*cw, cy + h*0.04); x.stroke(); }
     pkPoly(x, [[X - cw, cy + h*0.02], [X - cw*0.8, cy - h*0.1], [X + cw*0.85, cy - h*0.11], [X + cw, cy + h*0.02], [X + cw*0.4, cy + h*0.07], [X - cw*0.45, cy + h*0.07]], pkCss(c.dark));
@@ -6474,16 +6482,16 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
   if(kind === 'saguaro'){
 
 
-    const wd = h*rnd(0.075, 0.1)*(0.85 + F.wide*0.2), arms = small || h < px(14) ? 0 : Math.round(F.age*4.5 + R()*0.6), body = (x0, y0, x1, y1, w) => {
+    const wd = h*rnd(0.075, 0.1)*(0.85 + F.wide*0.2), arms = small || hd < px(14) ? 0 : Math.round(F.age*4.5 + nR*0.6), body = (x0, y0, x1, y1, w) => {
       x.lineCap = 'round'; x.strokeStyle = pkCss(c.dark); x.lineWidth = w*2; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
       x.strokeStyle = pkCss(c.body); x.lineWidth = w*1.3; x.beginPath(); x.moveTo(x0 + sd*w*0.25, y0); x.lineTo(x1 + sd*w*0.25, y1); x.stroke();
       x.strokeStyle = pkCss(c.lit, 0.8); x.lineWidth = Math.max(px(0.4), w*0.35); x.beginPath(); x.moveTo(x0 + sd*w*0.55, y0); x.lineTo(x1 + sd*w*0.55, y1 + w*0.4); x.stroke();
-      if(w > px(4)){ x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3), 0.55); x.lineWidth = Math.max(px(0.3), w*0.06); for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } } };
+      if(w*(c0.lod || 1) > px(4)){ x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3), 0.55); x.lineWidth = Math.max(px(0.3), w*0.06); for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } } };
     for(let q = 0; q < arms; q++){ const s = q % 2 ? 1 : -1, at = rnd(0.35, 0.65), out = h*rnd(0.07, 0.14), up = h*rnd(0.12, 0.3)*(1 - at*0.5), aw = wd*rnd(0.6, 0.8), ax = X + s*(wd + out), ay = Y - h*at;
       x.lineCap = 'round'; x.strokeStyle = pkCss(c.dark); x.lineWidth = aw*2; x.beginPath(); x.moveTo(X, ay); x.quadraticCurveTo(ax, ay, ax, ay - up*0.35); x.lineTo(ax, ay - up); x.stroke();
       x.strokeStyle = pkCss(s === sd ? c.body : pkMix(c.body, c.dark, 0.4)); x.lineWidth = aw*1.2; x.beginPath(); x.moveTo(X + s*wd*0.5, ay - aw*0.2); x.quadraticCurveTo(ax + sd*aw*0.2, ay - aw*0.2, ax + sd*aw*0.2, ay - up*0.35); x.lineTo(ax + sd*aw*0.2, ay - up); x.stroke(); }
     body(X, Y, X + F.lean*h*0.1, Y - h + wd, wd);
-    if(!small && h > px(50)){ x.fillStyle = pkCss([236, 226, 196], 0.85); for(let k = 0; k < 5; k++) pkDisc(x, X + F.lean*h*0.1 + rnd(-0.6, 0.6)*wd, Y - h + wd*0.4 + rnd(0, 0.5)*wd, wd*0.12, pkCss([240, 232, 206], 0.8)); }
+    if(!small && hd > px(50)){ const R = sub(9), rnd = (a, b) => a + (b - a)*R(); x.fillStyle = pkCss([236, 226, 196], 0.85); for(let k = 0; k < 5; k++) pkDisc(x, X + F.lean*h*0.1 + rnd(-0.6, 0.6)*wd, Y - h + wd*0.4 + rnd(0, 0.5)*wd, wd*0.12, pkCss([240, 232, 206], 0.8)); }
     return; }
   if(kind === 'joshua'){
 
@@ -6495,7 +6503,7 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
     return; }
   if(kind === 'bamboo'){
 
-    const n = small ? 4 : 7 + Math.floor(R()*8), spread = h*0.3*F.wide;
+    const n = small ? 4 : 7 + Math.floor(nR*8), spread = h*0.3*F.wide;
     for(let q = 0; q < n; q++){ const bx = X + (q/(n - 1) - 0.5)*spread + rnd(-1, 1)*h*0.02, hh = h*rnd(0.7, 1), lean = (rnd(-0.08, 0.08) + F.lean)*h, lit = q/(n - 1) - 0.5 > 0 === sd > 0;
       x.strokeStyle = pkCss(lit ? pkMix(c.body, c.lit, 0.4) : c.body); x.lineWidth = Math.max(px(0.5), h*0.012); x.beginPath(); x.moveTo(bx, Y); x.quadraticCurveTo(bx + lean*0.3, Y - hh*0.5, bx + lean, Y - hh); x.stroke();
       if(!small){ x.fillStyle = pkCss(c.dark); for(let k = 1; k < 6; k++){ const u = k/6; x.fillRect(bx + lean*u*u - h*0.008, Y - hh*u, h*0.016, Math.max(px(0.4), h*0.004)); }
@@ -6503,11 +6511,11 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
     return; }
   if(kind === 'fern'){
 
-    trunk(h*0.6, h*0.06, F.lean*h*0.3); const tx = X + F.lean*h*0.3, ty = Y - h*0.6, n = small ? 5 : 9 + Math.floor(R()*3);
+    trunk(h*0.6, h*0.06, F.lean*h*0.3); const tx = X + F.lean*h*0.3, ty = Y - h*0.6, n = small ? 5 : 9 + Math.floor(nR*3);
 
-    if(!small) for(let q = 0; q < 3; q++) pkFrond(x, tx, ty + h*0.03, Math.PI*(0.3 + 0.4*R()), h*0.18, pkMix(c.trunk, [150, 120, 70], 0.5), 0.7, false, c, h, px, R, h > px(70), 0.3);
+    if(!small){ const R = sub(7); for(let q = 0; q < 3; q++) pkFrond(x, tx, ty + h*0.03, Math.PI*(0.3 + 0.4*R()), h*0.18, pkMix(c.trunk, [150, 120, 70], 0.5), 0.7, false, c, h, px, sub(30 + q), hd > px(70), 0.3); }
     for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const a = Math.PI*(1.05 + 0.9*q/(n - 1)) + rnd(-0.08, 0.08), len = h*rnd(0.35, 0.45)*F.wide, lit = Math.cos(a)*sd > 0.1; if(pass === 0 ? lit : !lit) continue;
-      pkFrond(x, tx, ty, a, len, lit ? c.body : c.dark, rnd(0.15, 0.3), lit, c, h, px, R, h > px(70), 0.85); }
+      pkFrond(x, tx, ty, a, len, lit ? c.body : c.dark, rnd(0.15, 0.3), lit, c, h, px, sub(20 + q), hd > px(70), 0.85); }
     return; }
   if(kind === 'mushroom'){
 
@@ -6522,7 +6530,7 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
     return; }
   if(kind === 'crystal'){
 
-    const n = small ? 3 : 5 + Math.floor(R()*4), glass = pkMix(c.glow, c.lit, 0.4);
+    const n = small ? 3 : 5 + Math.floor(nR*4), glass = pkMix(c.glow, c.lit, 0.4);
     for(let q = 0; q < n; q++){ const a = (q/(n - 1) - 0.5)*1.1*F.wide + rnd(-0.1, 0.1), len = h*(q === Math.floor(n/2) ? 1 : rnd(0.45, 0.8)), wd = h*rnd(0.04, 0.07), ex = X + Math.sin(a)*len, ey = Y - Math.cos(a)*len, nx = Math.cos(a)*wd, ny = Math.sin(a)*wd;
       pkPoly(x, [[X - nx, Y - ny], [ex - nx, ey - ny], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + nx, ey + ny], [X + nx, Y + ny]], pkCss(pkMix(glass, PK_BLACK, 0.35), 0.85));
       pkPoly(x, [[X, Y], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + sd*nx, ey + sd*ny], [X + sd*nx, Y + sd*ny]], pkCss(glass, 0.85));
@@ -6533,28 +6541,28 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
 
     const ol = kind === 'olive', th = h*(ol ? 0.36 : 0.42), lean = ol ? rnd(-0.1, 0.1)*h : F.lean*h*0.3; trunk(th, h*(ol ? 0.11 : 0.07), lean, ol ? 'olive' : 'broadleaf');
     if(ol && !small){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.35)); x.lineWidth = Math.max(px(0.5), h*0.016); x.beginPath(); x.moveTo(X - h*0.02, Y); x.quadraticCurveTo(X + h*0.035, Y - th*0.5, X - h*0.01, Y - th*0.95); x.stroke(); }
-    const cx = X + lean, cy = Y - h*0.64, rr = h*0.4*F.wide, lobes = pkGrow(small ? 3 : ol ? 11 + Math.floor(R()*4) : 7 + Math.floor(R()*3), cx, cy, rr, h*0.28, rr*(ol ? 0.34 : 0.42), R, F);
+    const cx = X + lean, cy = Y - h*0.64, rr = h*0.4*F.wide, lobes = pkGrow(small ? 3 : ol ? 11 + Math.floor(nR*4) : 7 + Math.floor(nR*3), cx, cy, rr, h*0.28, rr*(ol ? 0.34 : 0.42), R, F);
 
-    if(!small) for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 3)) pkLimb(x, X + lean*0.9, Y - th*0.88, lx2 + (X + lean - lx2)*0.15, ly2 + (Y - th - ly2)*0.15, h*(ol ? 0.06 : 0.045), c.trunk, px, (R() - 0.5)*0.3);
+    if(!small){ const R = sub(7); for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 3)) pkLimb(x, X + lean*0.9, Y - th*0.88, lx2 + (X + lean - lx2)*0.15, ly2 + (Y - th - ly2)*0.15, h*(ol ? 0.06 : 0.045), c.trunk, px, (R() - 0.5)*0.3, c.lod); }
 
     const co = ol ? { ...c, dark: pkMix(c.dark, PK_BLACK, 0.25), lit: pkMix(c.lit, [226, 232, 220], 0.4), air: c.air || pkMix(c.lit, PK_WHITE, 0.45) } : c;
     pkLobes(x, lobes, { ...co, leaf: ol ? 0.7 : 1, leafW: ol ? 0.25 : 0.45 }, RL, cx, cy, rr, px);
-    if(!ol && !small && c.fruit){ const RB = sub(4); for(let q = 0, nb = h > px(30) ? 40 : 14; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.85;
+    if(!ol && !small && c.fruit){ const RB = sub(4); for(let q = 0, nb = hd > px(30) ? 40 : 14; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.85;
       pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*0.07), pkCss(c.fruit, 0.9)); } }
     return; }
   if(kind === 'bush'){
 
-    const lobes = pkGrow(small ? 3 : 4 + Math.floor(R()*4), X + F.side*h*0.2, Y - h*0.42, h*0.75*F.wide, h*0.4, h*0.36, R, F).map(([a, b, r]) => [a, Math.min(b, Y - r*0.7), r]);
+    const lobes = pkGrow(small ? 3 : 4 + Math.floor(nR*4), X + F.side*h*0.2, Y - h*0.42, h*0.75*F.wide, h*0.4, h*0.36, R, F).map(([a, b, r]) => [a, Math.min(b, Y - r*0.7), r]);
     pkLobes(x, lobes, c, RL, X, Y - h*0.4, h*0.6, px); return; }
 
 
   const lean = F.lean*h*0.4, fork = h*rnd(0.36, 0.5); trunk(fork, h*0.06*(0.8 + 0.4*F.age), lean, kind === 'glow' ? 'beech' : 'broadleaf');
-  const cx = X + lean + F.side*h*0.06, cy = Y - h*0.6, rr = h*0.34*F.wide, n = small ? 3 : 8 + Math.floor(R()*5), RG = sub(3);
+  const cx = X + lean + F.side*h*0.06, cy = Y - h*0.6, rr = h*0.34*F.wide, n = small ? 3 : 8 + Math.floor(nR*5), RG = sub(3);
   const lobes = pkGrow(n, cx, cy, rr*1.05, h*0.32, rr*0.46, R, F); if(!small) for(const s of [-1, 1]) lobes.push(...pkGrow(2, cx + s*rr*0.5, cy + h*0.12, rr*0.5, h*0.1, rr*0.36, R, F));
-  if(!small) for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 2 + Math.floor(R()*2))) pkLimb(x, X + lean, Y - fork, lx2, ly2, h*0.045, c.trunk, px, (R() - 0.5)*0.4);
+  if(!small){ const R = sub(7); for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 2 + Math.floor(R()*2))) pkLimb(x, X + lean, Y - fork, lx2, ly2, h*0.045, c.trunk, px, (R() - 0.5)*0.4, c.lod); }
   pkLobes(x, lobes, c, RL, cx, cy, rr, px);
-  if(kind === 'cherry' && !small){ const RB = sub(4); for(let q = 0, nb = h > px(30) ? 90 : 26; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.9;
-      pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*(h > px(30) ? 0.08 : 0.14)), pkCss(pkMix([248, 214, 226], c.lit, 0.25), 0.9)); } }
+  if(kind === 'cherry' && !small){ const RB = sub(4); for(let q = 0, nb = hd > px(30) ? 90 : 26; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.9;
+      pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*(hd > px(30) ? 0.08 : 0.14)), pkCss(pkMix([248, 214, 226], c.lit, 0.25), 0.9)); } }
   if(kind === 'glow'){ pkGlow(x, cx, cy, rr*2.2, c.glow, 0.4);
     for(let q = 0; q < (small ? 2 : 7); q++) pkDisc(x, cx + (RG()*1.6 - 0.8)*rr, cy + (RG()*1.3 - 0.6)*rr, Math.max(px(0.6), h*0.014), pkCss(pkMix(c.glow, PK_WHITE, 0.4), 0.95)); }
 }
@@ -6596,9 +6604,11 @@ function pkVernacularOf(fam, v){ const arch = PK_VERNACULAR[fam] || PK_VERNACULA
 const pkLit = (c, night, r, base) => { if(night <= 0.2) return false; const t = Math.max(0, Math.min(1, (night - 0.6)/0.4)), share = base*(1 - 0.6*t*t*(3 - 2*t));
   if(!c.t) return r < share; const period = 3600*(1.5 + 4*((r*31.7) % 1)); return ((r*97.13 + c.t/period) % 1) < share; };
 function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
-  const pitch = Math.max(px(3), wd*0.11), cols = Math.max(1, Math.floor(wd/pitch) - 1), rows = Math.min(90, Math.max(1, Math.floor(ht/pitch) - 1)), cw = wd/(cols + 1), rh = ht/(rows + 1);
-  if(ht < px(10)) return;
-  const sky = pkMix(c.air || lit, PK_WHITE, 0.12), pane = pkMix(c.dark, PK_BLACK, 0.3), big = cw > px(5), lamp = k => k < 0.1 ? pkMix(c.glow2 || c.glow, [150, 180, 240], 0.6) : pkMix(c.glow, PK_WHITE, k*0.35);
+
+
+  const lod = c.lod || 1, pitch = Math.max(px(3)/lod, wd*0.11), cols = Math.max(1, Math.floor(wd/pitch) - 1), rows = Math.min(90, Math.max(1, Math.floor(ht/pitch) - 1)), cw = wd/(cols + 1), rh = ht/(rows + 1);
+  if(ht*lod < px(10)) return;
+  const sky = pkMix(c.air || lit, PK_WHITE, 0.12), pane = pkMix(c.dark, PK_BLACK, 0.3), big = cw*lod > px(5), lamp = k => k < 0.1 ? pkMix(c.glow2 || c.glow, [150, 180, 240], 0.6) : pkMix(c.glow, PK_WHITE, k*0.35);
   if(kind === 'ribbon'){
     for(let r = 1; r <= rows; r++){ const on = pkLit(c, night, R(), 0.55), y = top + r*rh, bh = rh*0.4;
       x.fillStyle = on ? pkCss(lamp(R()), 0.8*night) : pkCss(pkMix(pane, sky, 0.2 + 0.25*R()), 0.85); x.fillRect(x0 + cw*0.4, y, wd - cw*0.8, bh);
@@ -7120,16 +7130,17 @@ function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   if(c.view && (kind0 === 'torii' || kind0 === 'arch')){
     const k = Math.max(kind0 === 'arch' ? 0.28 : 0.1, Math.abs(c.view.cs)); x.save(); x.translate(X, 0); x.scale(k, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, { ...c, view: null }, style, night, R0, px, kind0); x.restore(); return; }
   if(c.view){ const sn = c.view.sn; if(sn < 0){ x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, pkFlip({ ...c, view: null }), style, night, R0, px, kind0); x.restore(); return; } c = { ...c, view: null }; }
-  const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5), RD = sub(6);
+  const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5), RD = sub(6); pkLodNow = c.lod || 1;
   const kind = (k => kind0 || k)(pkArchOf(style, R()));
 
 
   { const M = PK_MATS[style] || PK_MATS.city, m = M[Math.floor(R()*M.length)], k = 0.55*(1 - (c.haze || 0));
     if(m) c = { ...c, body: pkMix(c.body, pkMix(m, c.body, 0.3), k), lit: pkMix(c.lit, pkMix(m, PK_WHITE, 0.35), k), dark: pkMix(c.dark, pkMix(m, PK_BLACK, 0.45), k) }; }
-  const neon = style === 'neon', ruin = style === 'ruins' && h > px(6), w2 = wdt/2, top = Y - h, dep = wdt*0.32, detail = h > px(14), fine = h > px(48), lit = pkMix(c.lit, PK_WHITE, 0.2);
+
+  const hd = h*(c.lod || 1), neon = style === 'neon', ruin = style === 'ruins' && hd > px(6), w2 = wdt/2, top = Y - h, dep = wdt*0.32, detail = hd > px(14), fine = hd > px(48), lit = pkMix(c.lit, PK_WHITE, 0.2);
   const ink = pkMix(c.dark, PK_BLACK, 0.35), bar = (x0, y0, w, t, col, a = 1) => { x.fillStyle = pkCss(col, a); x.fillRect(x0, y0, w, Math.max(px(0.4), t)); };
 
-  if(h > px(4) && !c.nocast && kind !== 'arch' && kind !== 'torii' && kind !== 'turbine') pkCast(x, X - wdt*0.5, X + wdt*0.5, Y, Math.min(h, wdt*1.6), c);
+  if(hd > px(4) && !c.nocast && kind !== 'arch' && kind !== 'torii' && kind !== 'turbine') pkCast(x, X - wdt*0.5, X + wdt*0.5, Y, Math.min(h, wdt*1.6), c);
 
   let bk = 0;
   if(ruin){ bk = top + h*(0.08 + 0.3*RU()); const jag = [[X + wdt*2, Y + h], [X - wdt*2, Y + h]];
@@ -7170,8 +7181,8 @@ function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
         x.fillStyle = pkCss(night > 0.2 ? pkMix(c.glow, PK_WHITE, 0.25) : pkMix(ink, c.air || lit, 0.35), night > 0.2 ? 0.85 : 0.9); x.fillRect(sx, Y - sh*0.8, sw, sh*0.8);
         const a = pkMat(c, aw, 0.75); pkPoly(x, [[sx - sw*0.04, Y - sh*0.82], [sx - sw*0.04, Y - sh], [sx + sw*1.04, Y - sh], [sx + sw*1.04, Y - sh*0.82], [sx + sw*0.98, Y - sh*0.72], [sx + sw*0.02, Y - sh*0.72]], pkCss(a.body));
         if(fine) for(let q = 0; q < 6; q += 2) x.fillStyle = pkCss(PK_WHITE, 0.4), x.fillRect(sx + sw*q/6, Y - sh, sw/6, sh*0.18); }
-      if(fine && RT() < 0.55){
-        const fx = X - ww*(0.1 + 0.25*RT()), fw = ww*0.22, fl = Math.min(8, Math.floor((hh - sh)/(wdt*0.18))); x.strokeStyle = pkCss(PK_IRON, 0.9); x.lineWidth = Math.max(px(0.4), wdt*0.01); x.beginPath();
+      const fe = RT() < 0.55, fe1 = RT(); if(fine && fe){
+        const fx = X - ww*(0.1 + 0.25*fe1), fw = ww*0.22, fl = Math.min(8, Math.floor((hh - sh)/(wdt*0.18))); x.strokeStyle = pkCss(PK_IRON, 0.9); x.lineWidth = Math.max(px(0.4), wdt*0.01); x.beginPath();
         for(let k = 0; k < fl; k++){ const yy = Y - sh - (hh - sh)*(k + 0.5)/fl; x.moveTo(fx, yy); x.lineTo(fx + fw, yy); x.moveTo(fx, yy - (hh - sh)*0.04/fl*4); x.lineTo(fx + fw, yy - (hh - sh)*0.04/fl*4);
           if(k) { x.moveTo(fx + (k % 2 ? 0.1 : 0.7)*fw, yy); x.lineTo(fx + (k % 2 ? 0.4 : 1)*fw, yy + (hh - sh)/fl); } } x.stroke(); }
       if(RT() < 0.45 && !ruin){ const tx = X + wdt*(RT() - 0.5)*0.6, tw = wdt*0.22, th = tw*1.1, wood = pkMat(c, PK_GREYWOOD, 0.6); x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), tw*0.08); x.beginPath(); x.moveTo(tx - tw*0.4, t2); x.lineTo(tx - tw*0.3, t2 - th*0.5); x.moveTo(tx + tw*0.4, t2); x.lineTo(tx + tw*0.3, t2 - th*0.5); x.stroke();
@@ -7253,7 +7264,7 @@ function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
       if(fine && !sl){ pkBox(x, X + wdt*(RT() - 0.5)*0.3, top, top - h*0.03, wdt*0.4, { ...c, body: pkMix(c.body, c.dark, 0.3) }, dep*0.3); } }
     if(R() < 0.35){ x.fillStyle = pkCss(c.dark); x.fillRect(X - Math.max(px(0.4), wdt*0.02), top - h*0.14, Math.max(px(0.8), wdt*0.04), h*0.14); if(night > 0.2) pkDisc(x, X, top - h*0.14, Math.max(px(0.8), wdt*0.03), pkCss([255, 80, 70], 0.9)); } }
 
-  if(neon && h > px(8) && kind !== 'needle'){ const R = RN; x.strokeStyle = pkCss(c.glow2, 0.85); x.lineWidth = Math.max(px(0.6), wdt*0.03); if(kind === 'glass'){ x.beginPath(); x.moveTo(X - w2, Y); x.lineTo(X - w2, top); x.lineTo(X + w2, top); x.lineTo(X + w2, Y); x.stroke(); }
+  if(neon && hd > px(8) && kind !== 'needle'){ const R = RN; x.strokeStyle = pkCss(c.glow2, 0.85); x.lineWidth = Math.max(px(0.6), wdt*0.03); if(kind === 'glass'){ x.beginPath(); x.moveTo(X - w2, Y); x.lineTo(X - w2, top); x.lineTo(X + w2, top); x.lineTo(X + w2, Y); x.stroke(); }
     if(R() < 0.65){ const sh = h*0.14, sy = top + h*(0.12 + 0.45*R()), vert = R() < 0.5, col = R() < 0.5 ? c.glow : c.glow2;
       x.fillStyle = pkCss(col, 0.92); if(vert) x.fillRect(X - w2 - wdt*0.12, sy, wdt*0.14, sh*1.6); else x.fillRect(X - w2*0.8, sy, wdt*0.8, sh*0.45);
       pkGlow(x, X, sy, wdt*1.3, col, 0.35); } }
@@ -18926,10 +18937,12 @@ function rgWorldOf(seed, v){
 function rgTerrain(W, Hw, seed, forms, world){
   const s = seed | 0, flat = world.list.includes('cities') || world.list.includes('neon') ? 0.55 : 1, terrace = world.list.includes('builders') ? W*0.004 : 0;
   const sea = -W*0.004*(0.4 + 1.6*mnHash(s, 3, 77))*(0.3 + forms), snow = W*0.03*(0.7 + 0.6*mnHash(s, 4, 77));
-  const raw = (a, z, fine) => { let v = 0;
-    for(let k = 0; k < 11; k++){ const wl = W*Math.pow(0.5, k); if(wl < fine) break;
+
+
+  const raw = (a, z, fine, sm) => { let v = 0;
+    for(let k = 0; k < 11; k++){ const wl = W*Math.pow(0.5, k); if(wl < (sm ? fine*0.85 : fine)) break; const ow = !sm || wl >= fine*1.15 ? 1 : rsSmooth(fine*0.85, fine*1.15, wl);
       const n = mnValue(a/wl + k*17.31, z/wl - k*9.17 + 40, s + k*101), r = 1 - Math.abs(2*n - 1);
-      v += k < 3 ? (r*r - 0.33)*wl*0.13*forms*flat : (n - 0.5)*wl*(k < 6 ? 0.16 : 0.12)*(0.4 + forms); }
+      v += ow*(k < 3 ? (r*r - 0.33)*wl*0.13*forms*flat : (n - 0.5)*wl*(k < 6 ? 0.16 : 0.12)*(0.4 + forms)); }
     v += Hw*0.4*forms*rsSmooth(0.55, 1, Math.abs(z)*2/W)*(0.3 + 0.7*mnValue(a/(W*0.18), 2.7, s + 5));
     if(terrace && v > 0){ const q = v/terrace, f = q - Math.floor(q); v = (Math.floor(q) + rsSmooth(0.7, 1, f))*terrace; }
     return v; };
@@ -18959,9 +18972,9 @@ function rgView(E, n, ww, wh){
   const v0 = TR.raw(0, L.z0, W*0.001); TR.sea = Math.min(TR.sea, v0 - W*0.0015); TR.snow = Math.max(TR.snow, v0 + W*0.02);
 
   const wx = rgWeatherOf(seed, E.P(n, 'weather', 'by the seed'), world); if(wx === 'snow') TR.snow = v0 - W*0.004;
-  const T = (a, z, fine) => { const v = TR.raw(a, z, fine), d = Math.hypot(a, z - L.z0); return v0 + (v - v0)*(0.25 + 0.75*rsSmooth(0, W*0.03, d) + 2.2*rsSmooth(W*0.05, W*2, d)); };
+  const T = (a, z, fine, sm) => { const v = TR.raw(a, z, fine, sm), d = Math.hypot(a, z - L.z0); return v0 + (v - v0)*(0.25 + 0.75*rsSmooth(0, W*0.03, d) + 2.2*rsSmooth(W*0.05, W*2, d)); };
 
-  T.true = (a, z, fine) => { const v = TR.raw(a, z, fine), d = Math.hypot(a, z - L.z0); return v0 + (v - v0)*(0.25 + 0.75*rsSmooth(0, W*0.03, d)); };
+  T.true = (a, z, fine, sm) => { const v = TR.raw(a, z, fine, sm), d = Math.hypot(a, z - L.z0); return v0 + (v - v0)*(0.25 + 0.75*rsSmooth(0, W*0.03, d)); };
   L.Px = 1 - L.hc - v0;
   const unit = Math.min(ww, wh), F = L.f*unit, cx = ww/2, cy = wh/2;
 
@@ -19597,6 +19610,7 @@ const RG_CROPS = { wheat: { c: [214, 184, 100] }, barley: { c: [200, 190, 128] }
   vines: { c: [150, 128, 96], row: [2.6, [80, 110, 58]] }, rice: { c: [118, 156, 112], water: true, row: [0.7, [96, 150, 70]] }, tea: { c: [74, 110, 62], row: [1.6, [52, 88, 48]] },
   garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, orchard: { c: [112, 150, 74] }, olives: { c: [176, 160, 118] }, 'orchard rows': { c: [126, 150, 86], row: [3.4, [50, 90, 46]] }, 'olive rows': { c: [176, 160, 118], row: [4, [100, 118, 92]] }, moonflower: { c: [150, 166, 186], row: [2, [128, 140, 176]], glow: true }, fallow: { c: [146, 136, 94] } };
 const RG_STREET_KINDS = ['lamp', 'hydrant', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'scooter'];
+const RG_DOORLESS = ['arch', 'needle', 'pylon', 'torii', 'turbine', 'radiomast', 'watertower', 'windmill', 'silo', 'elevator'];
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
@@ -19700,7 +19714,7 @@ function rgStore(V){
       const hamlet = mnHash(i, j, s + 95) < 0.18, sa = (i + 0.2 + 0.6*mnHash(i, j, s + 92))*SEAT, sz = (j + 0.2 + 0.6*mnHash(i, j, s + 93))*SEAT, rr = (hamlet ? 90 + 50*mnHash(i, j, s + 94) : 45 + 25*mnHash(i, j, s + 94))*M, d = Math.hypot(a - sa, z - sz);
       if(d < rr && (!best || d < best.d)) best = { a: sa, z: sz, rr, d, hamlet, key: i + ',' + j }; }
     return best; }, seats = new Map();
-  sow(2, W*0.009, W*0.03, W*3, 2, (a, z, r, R) => {
+  sow(2, W*0.009, W*0.03, W*3.6, 2, (a, z, r, R) => {
     const w = V.worldAt(a, z), P = RG_PROF[w], ci = w === 'wilds' ? 0.7*V.cityAt(a, z, 0.12*(0.3 + 0.9*V.works)) : V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works));
 
 
@@ -19913,7 +19927,7 @@ function rgStore(V){
       if(f.crop === 'stubble' && f.w !== 'ruins' && R() < 0.04*CLF) put('tractor', f.hl - 6*M, (R()*2 - 1)*f.hw*0.7);
       if(f.edge === 'hedge') for(let k = 0, n = Math.floor(f.hl*2/(25*M)); k < n; k++) if(R() < 0.18*V.life*2){ const side = R() < 0.5 ? -1 : 1, kind = ['broadleaf', 'broadleaf', 'poplar', 'birch'][Math.floor(R()*4)];
         put(kind, -f.hl + (k + 0.5)*f.hl*2/n, side*(f.hw + 1.2*M), {}); out[out.length - 1].c = 'tree'; } } }
-  sow(1, W*0.0036, W*0.02, W*2.5, 4, (a, z, r, R) => {
+  sow(1, W*0.0036, W*0.02, W*3.2, 4, (a, z, r, R) => {
     const w = V.worldAt(a, z), P = RG_PROF[w], tot = P.tr + P.de + P.gt; if(!tot) return null;
 
     const town = V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works)); if(T.true(a, z, W*0.004) <= TR.sea || !offWay(a, z, 2*M) || inField(a, z, -2*M)) return null;
@@ -19925,7 +19939,7 @@ function rgStore(V){
 
 
 
-  sow(3, W*0.006, W*0.02, W*0.8, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope)) || inField(a, z, 3*M)) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
+  sow(3, W*0.006, W*0.02, W*1.0, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope)) || inField(a, z, 3*M)) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
 
   sow(4, W*0.0012, W*0.004, W*0.05, 3, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > RG_PROF[w].gr*V.life*1.4) return null; return { c: 'grass', w, kind: 'grass', hM: pkMetres('grass', R()) }; });
 
@@ -20037,11 +20051,23 @@ function rgStore(V){
         pieces.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), piece: pl, axis: ax, rs: (Math.imul(o.rs, 31) + k*0x9E3779B1) >>> 0 }); }
       out.splice(i, 1); }
     out.push(...pieces); }
+
+
+
+  { const doors = out.filter(o => o.c === 'bldg' && !RG_DOORLESS.includes(o.kind));
+    for(const o of out){ if(o.c !== 'prop' || o.kind !== 'figure' || o.w === 'neon') continue; let best = null, bd = 250*M;
+      for(const b of doors){ const d = Math.abs(b.a - o.a) + Math.abs(b.z - o.z); if(d < bd*1.42 && Math.hypot(b.a - o.a, b.z - o.z) < bd){ bd = Math.hypot(b.a - o.a, b.z - o.z); best = b; } }
+      if(best){ const ex = -best.a, ez = L.z0 - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } } }
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
 
 
+
+const RG_NARROW_TREES = ['spruce', 'fir', 'cypress', 'poplar', 'pine', 'bamboo', 'saguaro'];
+
+
+const RG_ROUND_CUTS = true;
 
 
 
@@ -20065,7 +20091,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const half = Math.hypot(ww/2, wh/2)/unit/L.f, PHI = Math.min(2.55, 2*Math.atan(half/2)*1.06 + 0.06), C0 = Math.cos(55*Math.PI/180);
-  const smax = c => 0.5*(c + C0 + Math.sqrt((c - C0)*(c - C0) + 0.01)), Sof = d => d*Math.max(Math.tan(Math.min(PHI, 1.1)), PHI)*1.1 + W*0.002;
+  const smax = RG_ROUND_CUTS ? () => 1 : c => 0.5*(c + C0 + Math.sqrt((c - C0)*(c - C0) + 0.01)), Sof = d => d*Math.max(Math.tan(Math.min(PHI, 1.1)), PHI)*1.1 + W*0.002;
 
   const angOf = (a, z) => Math.atan2(-a*hz + (z - L.z0)*hx, a*hx + (z - L.z0)*hz), cutOf = (a, z) => Math.hypot(a, z - L.z0)*smax(Math.cos(angOf(a, z)));
 
@@ -20077,15 +20103,21 @@ function rgPaintLand(x, mk, dk, V){
   const wn = (a, z, ws, salt) => mnValue(a/ws + salt*3.17, z/ws - salt*1.93, s + 900 + salt);
 
 
+
+
+
+
+  const psi = Math.atan2(hz, hx), NB = 298*Math.pow(2, Math.max(0, Math.floor(Math.log2(1.468/PHI)))), Dl = 2*Math.PI/NB, MS = 96 + 44*rsSmooth(1.1, 1.3, PHI);
+  const vw = ph => Math.exp(-(ph/0.5)*(ph/0.5));
   const lay = [];
   for(let k = K - 1; k >= 0; k--){
-    let d = dOf(k); if(d > dWall*1.02){ if(k === 0 || dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
-    const Sd = Sof(d), M = PHI > 1.2 ? 140 : 96, pts = [], fine = 2*Sd/M*1.3;
-    for(let i = 0; i < M; i++){ const ph = -PHI + 2*PHI*i/(M - 1), r = d/smax(Math.cos(ph)), fw = r*Math.cos(ph), sl = r*Math.sin(ph), a = fw*hx - sl*hz, z = Math.max(-W*0.497, Math.min(W*0.497, L.z0 + fw*hz + sl*hx)), er = T(a, z, fine), e = Math.max(er, TR.sea), p = at(a, z, e);
-      if(p) pts.push({ X: p[0], Y: p[1], zc: p[2], a, z, e, ec: er <= TR.sea ? TR.sea : Math.max(TR.sea + 1e-9, T.true(a, z, fine)), sea: er <= TR.sea }); }
+    let d = dOf(k); if(!RG_ROUND_CUTS && d > dWall*1.02){ if(k === 0 || dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
+    const Sd = Sof(d), pts = [], fine = 2*Sd/MS*1.3, i0 = Math.floor((psi - PHI)/Dl), i1 = Math.ceil((psi + PHI)/Dl);
+    for(let i = i0; i <= i1; i++){ const ph = i*Dl - psi, r = d/smax(Math.cos(ph)), fw = r*Math.cos(ph), sl = r*Math.sin(ph), a = fw*hx - sl*hz, z0 = L.z0 + fw*hz + sl*hx, z = Math.max(-W*0.497, Math.min(W*0.497, z0)), er = T(a, z, fine, true), e = Math.max(er, TR.sea), p = at(a, z, e);
+      if(p) pts.push({ X: p[0], Y: p[1], zc: p[2], a, z, e, i, ph, wall: z !== z0, ec: er <= TR.sea ? TR.sea : Math.max(TR.sea + 1e-9, T.true(a, z, fine, true)), sea: er <= TR.sea }); }
     if(pts.length < 2) continue;
     if(pts[0].X > pts[pts.length - 1].X) pts.reverse();
-    lay.push({ k, d, Sd, pts, ws: 4*Sd/M });
+    lay.push({ k, d, Sd, pts, ws: 4*Sd/MS, fine });
   }
 
   const CW = Math.max(1, ww/320), NC = Math.ceil(ww/CW) + 1;
@@ -20106,7 +20138,7 @@ function rgPaintLand(x, mk, dk, V){
   const covT = new Float32Array(NC).fill(Infinity), covB = new Float32Array(NC).fill(-Infinity); let painting = false, cur = null;
   const vis = (l, X0, X1, Yt, Yb, oc) => { if(painting) return cur.ok;
     let ok = false; if(!(X1 < 0 || X0 > ww || Yb < 0 || Yt > wh)){ const n = l ? l.near : null;
-      for(let ci = col(Math.max(0, X0)), c1 = col(Math.min(ww, X1)); ci <= c1; ci++) if(!((n && n[ci] <= Yt) || (covT[ci] <= Yt && covB[ci] >= Yb))){ ok = true; break; } }
+      for(let ci = Math.max(0, col(Math.max(0, X0)) - 1), c1 = Math.min(NC - 1, col(Math.min(ww, X1)) + 1); ci <= c1; ci++) if(!((n && n[ci] <= Yt) || (covT[ci] <= Yt && covB[ci] >= Yb))){ ok = true; break; } }
     cur.ok = ok;
     if(ok && oc) for(let ci = col(Math.max(0, oc[0])), c1 = col(Math.min(ww, oc[1])); ci <= c1; ci++){
       if(covT[ci] === Infinity || (oc[2] <= covB[ci] && oc[3] >= covT[ci])){ covT[ci] = Math.min(covT[ci], oc[2]); covB[ci] = Math.max(covB[ci], oc[3]); }
@@ -20135,13 +20167,21 @@ function rgPaintLand(x, mk, dk, V){
     const mat = m => ({ body: rgLit(V, m, day, haze, AIR), lit: rgLit(V, rsMix(m, [255, 246, 226], 0.28), day, haze, AIR), dark: rgLit(V, rsMix(m, BLACK, 0.42), day, haze, AIR) });
     return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat }; };
 
-  const foot = (a, z) => { const e = Math.max(TR.sea, T(a, z, W*0.0015)), p = at(a, z, e); if(!p) return null; return [p[0], p[1], W*0.00025*F/p[2], e]; };
+
+  const foot = (a, z) => { const e = Math.max(TR.sea, T(a, z, 2*Sof(Math.hypot(a, z - L.z0))/MS*1.3, true)), p = at(a, z, e); if(!p) return null; return [p[0], p[1], W*0.00025*F/p[2], e]; };
+
+
+
+  const lodOf = (o, f) => Math.min(1, W*0.00025*F/Math.max(1e-9, Math.hypot((1 - f[3])*Math.cos(o.a) - L.Px, (1 - f[3])*Math.sin(o.a), o.z - L.z0))/f[2]);
 
 
 
 
 
-  const store = rgStore(V); let loudDrawn = 0;
+
+
+  const store = rgStore(V); let loudOne = null, loudR = Infinity;
+  for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
   const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : W*0.0004;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
 
@@ -20155,7 +20195,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const seen = (o, f) => ({ ...viewOf(o), eyePx: (1 + 2*rsSmooth(40, 400, F/f[2]))*((1 - f[3]) - L.Px)*f[2]/(W*0.00025) });
+  const seen = (o, f) => ({ ...viewOf(o), eyePx: (1 + 2*rsSmooth(40, 400, F/(f[2]*lodOf(o, f))))*((1 - f[3]) - L.Px)*f[2]/(W*0.00025) });
   const mirrored = (X, draw) => { x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); draw(); x.restore(); };
 
 
@@ -20180,7 +20220,13 @@ function rgPaintLand(x, mk, dk, V){
   const MT = rgMotionTime(V), ST = rgSwayTime(V);
   const RG_MOVES = { helper: [14, 14, 1.0], drone: [12, 12, 4], crawler: [8, 8, 0.4], walker: [24, 24, 1.5], harvester: [40, 5, 1.6], shepherd: [16, 16, 1.0], crab: [5, 5, 0.3],
     lamplighter: [16, 3, 1.0], sheep: [2, 2, 0.15], figure: [18, 1.5, 1.25] };
-  const moved = o => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, R = mulberry32(o.rs ^ 0x6d6f7665), ax = o.walk ?? o.face ?? (o.rs % 62832)/10000;
+
+
+  const toDoor = (o, p) => { const q = ((o.rs >>> 10) % 1000)/1000; if(!o.door || q < 0.1) return p;
+    const out = 0.08 + 0.92*rsSmooth(0.15, 0.65, ringDay(L, o.a)), k = rsSmooth(q + 0.14, q + 0.03, out); if(k <= 0) return p;
+    const da = o.door.a - p.a, dz = o.door.z - p.z; return { ...p, a: p.a + da*k, z: p.z + dz*k, ...(k < 1 && Math.hypot(da, dz) > W*0.0001 ? { face: Math.atan2(dz, da), walking: 1 } : { walking: 0 }) }; };
+  const moved = o => o.door ? toDoor(o, movedRound(o)) : movedRound(o);
+  const movedRound = o => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, R = mulberry32(o.rs ^ 0x6d6f7665), ax = o.walk ?? o.face ?? (o.rs % 62832)/10000;
     const ca = Math.cos(ax), sa = Math.sin(ax), pace = mv[2]*(0.8 + 0.35*R()), T = 2*Math.hypot(mv[0], mv[1])/pace/0.95 + 2 + 8*R(), t = MT + R()*T*40;
 
 
@@ -20193,24 +20239,27 @@ function rgPaintLand(x, mk, dk, V){
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));
-    if(o.c === 'tree'){ const h = o.hM*f[2]; if(h < px(1.6) || h > nearCut) return;
-      const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || h < px(4) ? null : [X - h*0.13, X + h*0.13, Y - h*0.8, Y - h*0.4])) return;
+    if(o.c === 'tree'){ const h = o.hM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1) || h > nearCut) return;
+
+      const hw = RG_NARROW_TREES.includes(o.kind) ? 0.045 : 0.13, X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || hl < px(4) ? null : [X - h*hw, X + h*hw, Y - h*0.8, Y - h*0.4])) return;
+
+      const fadeIn = rgClamp((hl - px(1))/px(0.9)); if(fadeIn < 1) x.globalAlpha = fadeIn;
       const green = o.kind === 'olive' ? [118, 134, 106] : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, cday, haze);
-      const tc = { trunk: rgLit(V, [70, 52, 40], cday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), cday, haze, AIR), body: rgLit(V, green, cday, haze, AIR),
+      const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], cday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), cday, haze, AIR), body: rgLit(V, green, cday, haze, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), cday, haze, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], cday, haze, AIR) : null,
 
         back: V.sun.back*rsSmooth(0.35, 0.7, cday)*(1 - haze), sun: rgLit(V, [255, 236, 196], cday, haze, AIR) };
 
-      if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return; }
-    if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2]; if(h < px(1.2)){ nightDot(o, f, l, wday, haze, h > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
+      if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); x.globalAlpha = 1; return; }
+    if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1.2)){ nightDot(o, f, l, wday, haze, hl > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd*1.7, X + wd*1.7, Y - h*1.4, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
 
 
       const fall = (o.up || 0) + (o.down || 0), pl = fall > 0.25 ? (fall + 0.3)*f[2] : 0, onPl = pl > px(0.6) && !RG_LIGHTFOOT.includes(o.kind);
-      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind, plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind, plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
 
 
-      const m = f[2]; if(m*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
+      const m = f[2]; if(m*lo*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
         const Rb = mulberry32(o.rs ^ 0x5eed), dx = X + (Rb() - 0.5)*wd*0.5, dw = 1.0*m, dh = 2.1*m;
         x.fillStyle = rsCss(rsMix(cb.dark, BLACK, 0.35)); x.fillRect(dx - dw/2, Y - dh, dw, dh);
         if(night > 0.2){ x.fillStyle = rsCss(cb.glow, 0.5*night); x.fillRect(dx - dw/2 + dw*0.15, Y - dh*0.9, dw*0.7, dh*0.35); }
@@ -20218,7 +20267,7 @@ function rgPaintLand(x, mk, dk, V){
         pkProp(x, dx + dw*1.3, Y, 3.2*m, cb, 'lamp', mulberry32(o.rs ^ 0x1a3b), rgPx, night);
         if(Rb() < 0.6){ x.fillStyle = rsCss(cb.dark); x.fillRect(dx - dw*1.9, Y - m*0.5, dw*0.7, m*0.5); for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(rgLit(V, [60, 110, 60], cday, haze, AIR)); x.beginPath(); x.arc(dx - dw*1.55 + (q - 1)*dw*0.2, Y - m*0.6, m*0.22, 0, Math.PI*2); x.fill(); } } }
       return; }
-    if(o.c === 'rock'){ const rr = o.hM*f[2]; if(rr < px(2) || rr > nearCut) return;
+    if(o.c === 'rock'){ const rr = o.hM*f[2]; if(rr*lodOf(o, f) < px(2) || rr > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - rr, X + rr, Y - rr, Y, [X - rr*0.5, X + rr*0.5, Y - rr*0.4, Y])) return;
       pkRock(x, X, Y, rr, rgLit(V, [128, 122, 114], cday, haze, AIR), LT, R, rgPx); return; }
     if(o.c === 'grass'){ const gH = o.hM*f[2]; if(gH < px(2.5) || gH > wh*0.4) return;
@@ -20229,17 +20278,16 @@ function rgPaintLand(x, mk, dk, V){
       for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4 + sway*(1 + 0.15*b), Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
       if(R() < 0.25*RG_PROF[o.w].gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
-    if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h < px(o.kind === 'caps' ? 1.2 : 3) || h > nearCut) return;
-      if(E.loud && loudDrawn >= 1) return;
+    if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h*lodOf(o, f) < px(o.kind === 'caps' ? 1.2 : 3) || h > nearCut) return;
+      if(E.loud && o0 !== loudOne) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*(o.kind === 'warden' ? 4.2 : o.kind === 'spire' ? 1.1 : 1.8), Y)) return;
-      if(E.loud) loudDrawn++;
       const c = colsOf(o.w, cday, haze), vw = viewOf(o); if(vw.sn < 0 && o.kind !== 'diner') mirrored(X, () => pkEgg(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
     if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, cday, haze); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
-    if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h < px(3) || h > nearCut) return;
+    if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h*lodOf(o, f) < px(3) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - bw/2, X + bw/2, Y - h, Y)) return;
       pkBoard(x, X, Y, m, { ...colsOf(o.w, cday, haze), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
     if(o.c === 'glim'){ nightDot(o, f, l, wday, haze, o.big); return; }
-    if(o.c === 'prop'){ const h = o.hM*f[2]; if(h < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > (RG_WIDE.includes(o.kind) ? wh*0.6 : nearCut)) return;
+    if(o.c === 'prop'){ const h = o.hM*f[2], hl = h*lodOf(o, f); if(hl < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > (RG_WIDE.includes(o.kind) ? wh*0.6 : nearCut)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
 
       const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(o, f) };
@@ -20248,7 +20296,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-      if(o.kind === 'figure'){ const nt = 1 - rsSmooth(0.3, 0.7, wday), q = ((o.rs >>> 10) % 1000)/1000, out = o.w === 'neon' ? 0.75 : 0.08 + 0.92*rsSmooth(0.15, 0.65, wday), al = rsSmooth(q - 0.1, q + 0.04, out);
+      if(o.kind === 'figure'){ const nt = 1 - rsSmooth(0.3, 0.7, wday), q = ((o.rs >>> 10) % 1000)/1000, out = o.w === 'neon' ? 0.75 : 0.08 + 0.92*rsSmooth(0.15, 0.65, wday), al = o.door && q >= 0.1 ? rsSmooth(q - 0.02, q + 0.03, out) : rsSmooth(q - 0.1, q + 0.04, out);
         if(al < 0.02) return; const fc = { ...cc, stride: o.walking ? Math.sin(ST*5.5 + (o.rs & 63))*o.walking : 0, lantern: nt > 0.25 && q < 0.12 ? nt : 0 };
         if(al > 0.98){ pkProp(x, X, Y + sink, h, fc, 'figure', R, rgPx, nt); return; }
 
@@ -20263,7 +20311,7 @@ function rgPaintLand(x, mk, dk, V){
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
 
       if(o.next){ const f2 = foot(o.next[0], o.next[1]); if(f2) pkWires(x, [X, Y - h*0.95], [f2[0], f2[1] - o.hM*f2[2]*0.95], h, c, rgPx); } return; }
-    if(o.c === 'bot'){ const h = o.hM*f[2]; if(h < px(3) || h > nearCut) return;
+    if(o.c === 'bot'){ const h = o.hM*f[2]; if(h*lodOf(o, f) < px(3) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
       const c = { ...colsOf(o.w, cday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;
@@ -20311,30 +20359,30 @@ function rgPaintLand(x, mk, dk, V){
     for(let i = 0; i + 1 < wy.pts.length; i++){ const p = wy.pts[i], q = wy.pts[i + 1], len = Math.hypot(q.a - p.a, q.z - p.z) || 1e-9, nx = -(q.z - p.z)/len, nz = (q.a - p.a)/len;
       const dist = Math.hypot((p.a + q.a)/2, (p.z + q.z)/2 - L.z0), n = Math.max(1, Math.min(8, Math.ceil(len/Math.max(W*0.0005, dist*0.06))));
       for(let k = 0; k < n; k++){ const t0 = k/n, t1 = (k + 1)/n, P0 = { a: p.a + (q.a - p.a)*t0, z: p.z + (q.z - p.z)*t0, dec: p.dec + (q.dec - p.dec)*t0 }, P1 = { a: p.a + (q.a - p.a)*t1, z: p.z + (q.z - p.z)*t1, dec: p.dec + (q.dec - p.dec)*t1 };
-        out2.push({ p: P0, q: P1, nx, nz, dd: cutOf((P0.a + P1.a)/2, (P0.z + P1.z)/2) }); } }
+        out2.push({ p: P0, q: P1, nx, nz, dd: Math.min(cutOf(P0.a, P0.z), cutOf(P1.a, P1.z)) }); } }
     return out2; });
-  const drawWays = (dn, df) => store.ways.forEach((wy, wi) => { let run = [], decs = [];
-    const flush = () => { if(run.length >= 2) paintWay(wy, run, decs); run = []; decs = []; };
+  const drawWays = (dn, df) => store.ways.forEach((wy, wi) => { let run = [], decs = [], keys = [];
+    const flush = () => { if(run.length >= 2) paintWay(wy, run, decs, keys); run = []; decs = []; keys = []; };
     for(const pc of wayPieces[wi]){ if(!(pc.dd > dn && pc.dd <= df) || pc.p.dec > 0.8){ flush(); continue; }
       for(const P of run.length ? [pc.q] : [pc.p, pc.q]){ const e = wy.deck ?? Math.max(TR.sea, T(P.a, P.z, W*0.002)) + W*0.00003, A = at(P.a - pc.nx*wy.half, P.z - pc.nz*wy.half, e), B = at(P.a + pc.nx*wy.half, P.z + pc.nz*wy.half, e);
-        if(!A || !B){ flush(); continue; } run.push([A, B]); decs.push(P.dec); } }
+        if(!A || !B){ flush(); continue; } run.push([A, B]); decs.push(P.dec); keys.push(Math.imul(Math.round(P.a/W*20000), 73856093) ^ Math.imul(Math.round(P.z/W*20000), 19349663)); } }
     flush(); });
 
 
 
-  const paintWay = (wy, run, decs) => { const L2 = run.map(q => q[0]), R2 = run.map(q => q[1]);
+  const paintWay = (wy, run, decs, keys) => { const L2 = run.map(q => q[0]), R2 = run.map(q => q[1]);
     const mid = L2[L2.length >> 1], day = ringDay(L, 0), haze = hazeOf(mid[2]), c = colsOf(wy.w, day, haze), poly = [...L2, ...R2.slice().reverse()], lit = col => rgLit(V, col, day, haze, AIR);
     const line = (pts, cl, wdt, dash) => { x.strokeStyle = cl; x.lineWidth = wdt; if(dash && x.setLineDash) x.setLineDash(dash); x.beginPath(); pts.forEach(([X, Y], q) => q ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.stroke(); if(dash && x.setLineDash) x.setLineDash([]); };
     const ctr = L2.map((p, q) => [(p[0] + R2[q][0])/2, (p[1] + R2[q][1])/2]), wid = q => Math.hypot(L2[q][0] - R2[q][0], L2[q][1] - R2[q][1]), wpx = Math.min(px(3.5), Math.max(px(0.8), wid(0)*0.06)), mix = (q, t) => [L2[q][0] + (R2[q][0] - L2[q][0])*t, L2[q][1] + (R2[q][1] - L2[q][1])*t];
-    const base = RG_WAYCOL[wy.mat] && (wy.mat === 'asphalt' && wy.w === 'neon' ? [34, 32, 44] : RG_WAYCOL[wy.mat]), Rm = mulberry32((wy.i*7919 + Math.round(mid[0]*13 + mid[1]*7)) >>> 0);
+    const base = RG_WAYCOL[wy.mat] && (wy.mat === 'asphalt' && wy.w === 'neon' ? [34, 32, 44] : RG_WAYCOL[wy.mat]), Rq = (q, salt) => mulberry32((Math.imul(wy.i + 1, 7919) ^ keys[q] ^ salt) >>> 0);
     if(base){ rsPoly(x, poly, rsCss(lit(base), wy.mat === 'earth' || wy.mat === 'moss' ? 0.82 : 1)); line(L2, rsCss(lit(rsMix(base, [0, 0, 0], 0.25)), 0.5), wpx); line(R2, rsCss(lit(rsMix(base, [0, 0, 0], 0.25)), 0.5), wpx); }
     const near = q => wid(q) > px(10);
     for(let q = 0; q < run.length; q++){ if(!near(q)) continue; const wq = wid(q);
       if(wy.mat === 'cobble' || wy.mat === 'brick'){ const n = Math.min(14, Math.floor(wq/px(4))); for(let k = 0; k < n; k++){ const [X, Y] = mix(q, (k + 0.5)/n); x.fillStyle = rsCss(lit(rsMix(base, k % 2 ? [255, 250, 240] : [0, 0, 0], 0.15)), 0.8);
           if(wy.mat === 'cobble'){ x.beginPath(); x.ellipse(X, Y, wq/n*0.38, wq/n*0.2, 0, 0, Math.PI*2); x.fill(); } else x.fillRect(X - wq/n*0.42, Y - wq/n*0.12, wq/n*0.84, wq/n*0.24); } }
-      else if(wy.mat === 'gravel'){ for(let k = 0; k < 6; k++){ const [X, Y] = mix(q, Rm()); x.fillStyle = rsCss(lit(Rm() < 0.5 ? [120, 112, 100] : [220, 212, 196]), 0.7); x.fillRect(X, Y, px(1), px(1)); } }
+      else if(wy.mat === 'gravel'){ const Rm = Rq(q, 1); for(let k = 0; k < 6; k++){ const [X, Y] = mix(q, Rm()); x.fillStyle = rsCss(lit(Rm() < 0.5 ? [120, 112, 100] : [220, 212, 196]), 0.7); x.fillRect(X, Y, px(1), px(1)); } }
       else if(wy.mat === 'flag' && q % 2 === 0){ line([mix(q, 0), mix(q, 1)], rsCss(lit([100, 96, 88]), 0.5), Math.max(px(0.4), wpx*0.4)); }
-      else if(wy.mat === 'moss'){ const [X, Y] = mix(q, 0.3 + 0.4*Rm()); x.fillStyle = rsCss(lit([168, 164, 152])); x.beginPath(); x.ellipse(X, Y, wq*0.18, wq*0.08, 0, 0, Math.PI*2); x.fill(); } }
+      else if(wy.mat === 'moss'){ const Rm = Rq(q, 2), [X, Y] = mix(q, 0.3 + 0.4*Rm()); x.fillStyle = rsCss(lit([168, 164, 152])); x.beginPath(); x.ellipse(X, Y, wq*0.18, wq*0.08, 0, 0, Math.PI*2); x.fill(); } }
     if(wy.mat === 'earth'){ for(const t of [0.3, 0.7]) line(run.map((_, q) => mix(q, t)), rsCss(lit([110, 88, 64]), 0.6), Math.max(px(0.5), wpx*0.8)); line(ctr, rsCss(lit([96, 126, 70]), 0.5), Math.max(px(0.5), wpx*0.9)); }
     else if(wy.mat === 'asphalt' && wy.main) line(ctr, rsCss([236, 230, 200], 0.75), wpx, [wpx*4, wpx*4]);
     else if(wy.mat === 'light' || wy.mat === 'ley'){ x.save(); x.globalCompositeOperation = 'screen'; if(wy.mat === 'light'){ line(L2, rsCss(c.glow, 0.5), wpx*1.2); line(R2, rsCss(c.glow, 0.5), wpx*1.2); } else { line(ctr, rsCss(c.glow, 0.22), wpx*4); line(ctr, rsCss(c.glow, 0.7), wpx*1.1); } x.restore(); }
@@ -20347,7 +20395,7 @@ function rgPaintLand(x, mk, dk, V){
       for(let q = 1; q < run.length - 1; q += 2){ if(wid(q) < px(6)) continue; const A = mix(q, 0.2), B = mix(q, 0.8), Cn = mix(Math.min(run.length - 1, q + 1), 0.5); line([A, Cn, B], rsCss(hl, 0.35), Math.max(px(0.5), wpx*0.6)); } x.restore(); }
     if(wy.w === 'neon' && wy.mat === 'asphalt'){ x.save(); x.globalCompositeOperation = 'screen'; line(L2, rsCss(c.glow2, 0.35), wpx*1.6); line(R2, rsCss(c.glow, 0.35), wpx*1.6); x.restore(); }
 
-    for(let q = 0; q < run.length; q++){ const dc = decs[q]; if(dc < 0.4) continue; const wq = wid(q);
+    for(let q = 0; q < run.length; q++){ const dc = decs[q]; if(dc < 0.4) continue; const wq = wid(q), Rm = Rq(q, 3);
       if(Rm() < dc){ const A = mix(q, 0.1 + 0.3*Rm()), B = mix(Math.min(run.length - 1, q + 1), 0.5 + 0.4*Rm()); line([A, [(A[0] + B[0])/2 + (Rm() - 0.5)*wq*0.2, (A[1] + B[1])/2], B], rsCss(lit([30, 28, 26]), 0.6), Math.max(px(0.4), wpx*0.6)); }
       if(dc > 0.55 && Rm() < 0.5 && wq > px(6)){ const [X, Y] = mix(q, 0.2 + 0.6*Rm()); x.fillStyle = rsCss(lit([40, 36, 32]), 0.7); x.beginPath(); x.ellipse(X, Y, wq*0.12, wq*0.05, 0, 0, Math.PI*2); x.fill(); }
       if(wq > px(5)) for(const t of [0.02, 0.98]) if(Rm() < dc){ const [X, Y] = mix(q, t), gh = Math.min(px(6), wq*0.12); x.fillStyle = rsCss(lit([70, 104, 58]), 0.85); x.beginPath(); x.moveTo(X - gh*0.5, Y); x.lineTo(X, Y - gh); x.lineTo(X + gh*0.5, Y); x.fill(); } } };
@@ -20360,7 +20408,9 @@ function rgPaintLand(x, mk, dk, V){
   const fieldPieces = []; for(const f of store.fields){ const dist = Math.hypot(f.a, f.z - L.z0), ext = Math.max(f.hl, f.hw); if(keep(f.a, f.z, ext) == null || dist > W*0.8) continue;
     const sz = Math.max(W*0.0005, dist*0.06), nu = Math.max(1, Math.min(10, Math.ceil(f.hl*2/sz))), nv = Math.max(1, Math.min(10, Math.ceil(f.hw*2/sz)));
     for(let i = 0; i < nu; i++) for(let j = 0; j < nv; j++){ const u0 = -f.hl + 2*f.hl*i/nu, u1 = -f.hl + 2*f.hl*(i + 1)/nu, v0 = -f.hw + 2*f.hw*j/nv, v1 = -f.hw + 2*f.hw*(j + 1)/nv, um = (u0 + u1)/2, vm = (v0 + v1)/2;
-      fieldPieces.push({ f, u0, u1, v0, v1, dd: cutOf(f.a + um*f.ux - vm*f.uz, f.z + um*f.uz + vm*f.ux) }); } }
+
+      const cw = (u, v) => cutOf(f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux);
+      fieldPieces.push({ f, u0, u1, v0, v1, dd: Math.min(cw(u0, v0), cw(u1, v0), cw(u0, v1), cw(u1, v1), cw(um, vm)) }); } }
   const drawFields = (dn, df) => { for(const pc of fieldPieces) if(pc.dd > dn && pc.dd <= df) paintFieldPiece(pc); };
   const paintFieldPiece = ({ f, u0, u1, v0, v1 }) => {
     const wa = (u, v) => [f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux], M1 = W*0.00025, lift = W*0.00002;
@@ -20406,7 +20456,7 @@ function rgPaintLand(x, mk, dk, V){
       if(V.dryAt(a0, z0) < 0.6 || RD() > 0.5) continue;
       const lp = V.time ? (tc/life0 + R()) % 1 : 0.5, life = rsSmooth(0, 0.2, lp)*rsSmooth(1, 0.75, lp), wan = V.time ? tc*0.6 : 0;
       const a = a0 + (Math.cos(wA)*wS*0.4*wan + Math.sin(wan*0.013 + ph)*60)*W*0.00025, z = z0 + (Math.sin(wA)*wS*0.4*wan + Math.cos(wan*0.011 + ph)*60)*W*0.00025;
-      if(life < 0.03 || ringDay(L, a) < 0.45) continue; const dd = keep(a, z, hM*W*0.00025); if(dd == null || ++nd > 4) continue;
+      if(life < 0.03 || ringDay(L, a) < 0.45) continue; if(++nd > 4) break; const dd = keep(a, z, hM*W*0.00025); if(dd == null) continue;
       things.push({ dd, draw: l => { const f = foot(a, z); if(!f || f[3] <= TR.sea) return; const h = hM*f[2]; if(h < px(6) || h > nearCut) return;
         const X = f[0], Y = stand(l, X, f[1]), lean = Math.cos(wA)*0.25, wb = h*0.05, wt = h*0.32; if(!vis(l, X - wt*1.4 + Math.min(0, lean*h), X + wt*1.4 + Math.max(0, lean*h), Y - h, Y)) return;
         const day = ringDay(L, a), dc = rgLit(V, rsMix(rgGround(V, a, z, f[3]), [214, 190, 146], 0.45), day, hazeOf(dd), AIR), al = life*rsSmooth(0.45, 0.65, day), tw = V.time ? MT*0.02 : 0;
@@ -20451,8 +20501,8 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-      let strike = -1, sph = 0.45, sev = 0; const inView = [];
-      if(storm){ if(!V.time) strike = R0();
+      let strike = -1, sph = 0.45, sev = 0; const inView = [], allHeaps = [];
+      if(storm){ if(!V.time && V.frame == null) strike = R0();
         else { const mpf = Math.min(2.5, V.step || V.dt || 2.5), P = 24*mpf, Ln = 10.5*mpf, k0 = Math.floor(MT/P);
           for(const k of [k0 - 1, k0]){ const Rk = rgRand(s, 818, k); if(Rk() < 0.5){ const ph = (MT - (k + Rk()*0.5)*P)/Ln; if(ph >= 0 && ph < 1){ strike = Rk(); sph = ph; sev = k; } } } } }
       for(let k = 0; k < n; k++){ const R = rgRand(s, 851, k), rnd = (a, b) => a + (b - a)*R();
@@ -20467,9 +20517,12 @@ function rgPaintLand(x, mk, dk, V){
         const wd = wd0*(0.6 + 0.4*grow)*(1 + 0.25*(1 - fade)), ht = ht0*(0.35 + 0.65*grow)*(0.75 + 0.25*fade), seed = (seed0 ^ Math.imul(cyc, 0x9E3779B1)) >>> 0;
         if(life < 0.03) continue;
         { const D = V.sun.D, up = Math.max(0.3, -D[0]), hg = Math.max(0, eb - TR.sea); shades.push({ a: a + hg*D[1]/up, z: z + hg*D[2]/up, r: wd*0.5, k: life*Math.min(1, ht/wd + 0.4), ph: (seed0 % 628)/100 }); }
+        const hp = { a, z, eb, wd, ht, seed, rain, life, grow, tc, bolt: null }; allHeaps.push(hp);
         const dd = keep(a, z, wd); if(dd == null) continue;
-        const hp = { a, z, eb, wd, ht, seed, rain, life, grow, tc, bolt: null }, P0 = at(a, z, eb); if(P0 && P0[0] > ww*0.08 && P0[0] < ww*0.92 && P0[1] > 0 && P0[1] < wh) inView.push(hp); things.push({ dd, draw: l => paintHeap(hp, l, dd) }); }
-      if(strike >= 0 && inView.length) inView[Math.floor(strike*inView.length)].bolt = { ph: sph, ev: sev };
+        const P0 = at(a, z, eb); if(P0 && P0[0] > ww*0.08 && P0[0] < ww*0.92 && P0[1] > 0 && P0[1] < wh) inView.push(hp); things.push({ dd, draw: l => paintHeap(hp, l, dd) }); }
+
+
+      const pool = V.time ? allHeaps : inView; if(strike >= 0 && pool.length) pool[Math.floor(strike*pool.length)].bolt = { ph: sph, ev: sev };
       const paintHeap = (h, l, dd) => { const B = at(h.a, h.z, h.eb); if(!B) return; const kpx = F/B[2], W0 = h.wd*kpx, H0 = h.ht*kpx; if(W0 < px(2) || W0 > ww*1.2) return;
         const X = B[0], Y = B[1]; if(!vis(l, X - W0*1.2, X + W0*1.2, Y - H0*1.3, Y + H0*0.1)) return;
         const day = ringDay(L, h.a), haze = hazeOf(dd), dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), R = mulberry32(h.seed), rnd = (a, b) => a + (b - a)*R();
@@ -20477,7 +20530,9 @@ function rgPaintLand(x, mk, dk, V){
         const base = rsMix(rsMix(grey, [40, 44, 60], 0.25), AIR, haze*0.85), lit = rsMix(rsMix(grey, [255, 248, 236], 0.35*rsSmooth(0.3, 0.75, day) + 0.1), AIR, haze*0.85);
 
 
-        const S0 = Math.sqrt(W0*Math.max(H0, W0*0.35)), pr0 = S0*0.11, np = Math.max(10, Math.min(64, Math.round(W0*H0/(pr0*pr0)*0.55), Math.round(W0/px(4))));
+
+        const Wt = h.wd*F/Math.max(1e-9, Math.hypot((1 - h.eb)*Math.cos(h.a) - L.Px, (1 - h.eb)*Math.sin(h.a), h.z - L.z0));
+        const S0 = Math.sqrt(W0*Math.max(H0, W0*0.35)), pr0 = S0*0.11, np = Math.max(10, Math.min(64, Math.round(W0*H0/(pr0*pr0)*0.55), Math.round(Wt/px(4))));
         const pad = W0*0.25 + pr0*1.5, cw = Math.ceil(W0*1.5 + pad*2), ch = Math.ceil(H0*1.3 + pad*2), ox = X - cw/2, oy = Y - H0*1.15 - pad;
         if(cw*ch > 4.2e6) return; const [cc, cx] = kitCanvas(cw, ch), L0 = (px0, py) => [px0 - ox, py - oy], puffs = [];
 
@@ -20585,19 +20640,29 @@ function rgPaintLand(x, mk, dk, V){
   const LOWMIST = (V.weather === 'clear' || V.weather === 'clouds') && seedChoice(V.seed, 'mist')() < 0.6 ? 0.22*rgClamp(1 - Math.abs(V.dayHere - 0.5)*3.5) : 0;
   const WT = rgWaterTime(V), WA = rgWind(V)[0];
   lay.forEach((l, li) => {
-    const { k, d, pts } = l, haze = hazeOf(d), mid = pts[pts.length >> 1], day = ringDay(L, mid.a), yC = mid.Y;
+    const { k, d, pts } = l, haze = hazeOf(d);
+
+
+
+    let sw = 0, sa = 0, se = 0, sE = 0; const gs = [0, 0, 0];
+    for(let q = 0; q < pts.length; q++){ const p = pts[q], w = vw(p.ph); if(w < 0.02) continue; sw += w; sa += w*p.a; se += w*p.ec; sE += w*p.e;
+      if(q % 3 === 0){ const g = rgGround(V, p.a, p.z, p.ec); gs[0] += w*g[0]; gs[1] += w*g[1]; gs[2] += w*g[2]; gs.w = (gs.w || 0) + w; } }
+    const mid = pts[pts.length >> 1]; if(!sw){ sw = 1; sa = mid.a; se = mid.ec; sE = mid.e; }
+    const day = ringDay(L, sa/sw), ecM = se/sw, eM = sE/sw, yP = at(d*hx, Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*hz)), eM), yC = yP ? yP[1] : mid.Y;
     const depth = Math.max(px(6), prevY == null ? wh : Math.abs(yC - prevY)*1.4 + px(4)); prevY = yC;
-    const gm = rgGround(V, mid.a, mid.z, mid.ec), base = rgLit(V, gm, day, haze, AIR), sil = [...pts.map(p => [p.X, p.Y]), [pts[pts.length - 1].X, wh + 4], [pts[0].X, wh + 4]];
+    const gm = gs.w ? gs.slice(0, 3).map(v => v/gs.w) : rgGround(V, mid.a, mid.z, mid.ec), base = rgLit(V, gm, day, haze, AIR), sil = [...pts.map(p => [p.X, p.Y]), [pts[pts.length - 1].X, wh + 4], [pts[0].X, wh + 4]];
 
 
 
-    const seam = 1 - 0.7*rsSmooth(0.06, 0.35, Math.max(0, (1 - mid.ec) - L.Px)/Math.max(1e-9, d));
+    const seam = 1 - 0.7*rsSmooth(0.06, 0.35, Math.max(0, (1 - ecM) - L.Px)/Math.max(1e-9, d));
 
 
     { const yTop = Math.min(...pts.map(p => p.Y)), g = x.createLinearGradient(0, yTop, 0, yTop + depth*1.6 + px(4)), litC = rgLit(V, rsMix(gm, [255, 244, 222], 0.22), day, haze, AIR), darkC = rgLit(V, rsMix(gm, BLACK, 0.3), day, haze, AIR);
       g.addColorStop(0, rsCss(rsMix(base, litC, 0.6))); g.addColorStop(1, rsCss(rsMix(base, darkC, 0.6))); rsPoly(x, sil, g); }
     rsPoly(mk, sil, '#fff'); { const g = Math.round(255*k/(K - 1)); rsPoly(dk, sil, `rgb(${g},${g},${g})`); }
-    for(let q = 0; q + 1 < pts.length; q += 2){ const p0 = pts[q], p1 = pts[Math.min(pts.length - 1, q + 2)], am = (p0.a + p1.a)/2, zm = (p0.z + p1.z)/2;
+
+    for(let q = pts.findIndex(p => (p.i & 1) === 0); q >= 0 && q + 1 < pts.length; q += 2){ const p0 = pts[q], p1 = pts[Math.min(pts.length - 1, q + 2)], am = (p0.a + p1.a)/2, zm = (p0.z + p1.z)/2;
+      if(p0.wall && p1.wall) continue;
 
       const n1 = wn(am, zm, l.ws, 1), n2 = wn(am, zm, l.ws, 2), n3 = wn(am, zm, l.ws, 3), n4 = wn(am, zm, l.ws, 4);
       const jit = (c2, k2, nv) => { const v = (nv - 0.5)*2*k2; return v > 0 ? rsMix(c2, [255, 255, 255], v) : rsMix(c2, BLACK, -v); };
@@ -20617,21 +20682,24 @@ function rgPaintLand(x, mk, dk, V){
 
 
       const face = rsFace(dark, lit, p1.Y - p0.Y, p0.X - p1.X, LT), slope = Math.abs(p1.Y - p0.Y)/Math.max(1, Math.abs(p1.X - p0.X)), gsl = Math.abs(p1.ec - p0.ec)/Math.max(1e-9, Math.hypot(p1.a - p0.a, p1.z - p0.z));
-      if(slope > 0.32 && gsl > 0.2){ const q0 = [p0.X + (p1.X - p0.X)*(n1 - 0.5)*0.3, p0.Y + depth*seam*(0.35 + 0.45*n2)], q1 = [p1.X, p1.Y + depth*seam*(0.35 + 0.45*n3)];
-        rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(jit(face, 0.03, n4))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(jit(rsMix(face, dark, 0.2), 0.03, n1))); }
 
 
-      else { const bdOf = p => depth*seam*(0.1 + 0.14*wn(p.a, p.z, l.ws, 2)), bd = bdOf(p1); rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + bd], [p0.X, p0.Y + bdOf(p0)]], rsCss(jit(rsMix(face, lit, 0.35), 0.02, n4)));
+
+      const fw2 = rsSmooth(0.26, 0.38, slope)*rsSmooth(0.17, 0.23, gsl), bdOf = p => depth*seam*(0.1 + 0.14*wn(p.a, p.z, l.ws, 2)), lerp2 = (A, B) => [A[0] + (B[0] - A[0])*fw2, A[1] + (B[1] - A[1])*fw2];
+      { const q0 = lerp2([p0.X, p0.Y + bdOf(p0)], [p0.X + (p1.X - p0.X)*(n1 - 0.5)*0.3, p0.Y + depth*seam*(0.35 + 0.45*n2)]), q1 = lerp2([p1.X, p1.Y + bdOf(p1)], [p1.X, p1.Y + depth*seam*(0.35 + 0.45*n3)]);
+        const bandC = jit(rsMix(face, lit, 0.35), 0.02, n4);
+        rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(rsMix(bandC, jit(face, 0.03, n4), fw2))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(rsMix(bandC, jit(rsMix(face, dark, 0.2), 0.03, n1), fw2))); }
+      if(fw2 < 0.999){
 
 
 
         const fw = V.worldAt(am, zm);
         if((fw === 'wilds' || fw === 'cities' || fw === 'builders') && d > W*0.5 && d < W*2.2 && p0.ec < TR.snow*0.4 && V.forestAt(am, zm) < 0.35 && V.cityAt(am, zm, RG_PROF[fw].cv*(0.3 + 0.9*V.works)) < 0.2 && V.dryAt(am, zm) < 0.68){
-          const CROPS = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]], cs = W*0.012, hedge = rsCss(rsMix(dark, BLACK, 0.2), 0.5);
+          const CROPS = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]], cs = W*0.012, hedge = rsCss(rsMix(dark, BLACK, 0.2), 0.5*(1 - fw2));
           for(let b = 0; b < 3; b++){ const v0 = 0.18 + b*0.26, v1 = v0 + 0.22, fi = Math.floor(am/cs), fj = Math.floor(zm/cs) + b*7, hv = mnHash(fi, fj, s + 77);
             if(hv < 0.25) continue; const crop = CROPS[Math.min(4, Math.floor(hv*hv*5.6))], fc = rgLit(V, rsMix(gc, crop, 0.45), day, haze, AIR);
             const A = [p0.X, p0.Y + depth*v0], B = [p1.X, p1.Y + depth*v0], C2 = [p1.X, p1.Y + depth*v1], D = [p0.X, p0.Y + depth*v1];
-            rsPoly(x, [A, B, C2, D], rsCss(fc, 0.75)); x.strokeStyle = hedge; x.lineWidth = Math.max(px(0.6), depth*0.012); x.beginPath(); x.moveTo(D[0], D[1]); x.lineTo(C2[0], C2[1]); x.stroke(); } } }
+            rsPoly(x, [A, B, C2, D], rsCss(fc, 0.75*(1 - fw2))); x.strokeStyle = hedge; x.lineWidth = Math.max(px(0.6), depth*0.012); x.beginPath(); x.moveTo(D[0], D[1]); x.lineTo(C2[0], C2[1]); x.stroke(); } } }
       x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), (0.7*day + 0.1)*(0.4 + 0.6*seam)); x.lineWidth = Math.max(px(1.2), depth*0.025*seam); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
 
     const dn = li + 1 < lay.length ? lay[li + 1].d : 0; drawFields(dn, d); drawWays(dn, d);
@@ -33945,11 +34013,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Ursa Major–Megrez';
+const RELEASE = 'Ursa Major–Alcor';
 
 const RELEASE_DATE = '2026-10-24';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"oYhEycxA","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"jMme20_l","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -34861,7 +34929,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-24 · cef8aec";
+const STAMP = "2026-10-24 · 5e1fef0";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

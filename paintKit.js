@@ -22,7 +22,8 @@ const pkPoly = (x, pts, fill) => { x.fillStyle = fill; x.beginPath(); pts.forEac
 const pkDisc = (x, X, Y, r, fill) => { if(!(r > 0)) return; x.fillStyle = fill; x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); };
 const pkEll = (x, X, Y, rx, ry, fill) => { if(!(rx > 0 && ry > 0)) return; x.fillStyle = fill; x.beginPath(); x.ellipse(X, Y, rx, ry, 0, 0, Math.PI*2); x.fill(); };
 const PK_WHITE = [255, 248, 232], PK_BLACK = [0, 0, 0];
-const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; return f; };   // (f.b: the thing's own number, the same every frame)
+const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; pkNow = b; pkFace = 0; pkLodNow = 1; return f; };
+let pkNow = 0, pkFace = 0, pkLodNow = 1;   // (the thing being drawn, how many faces of it so far: what its faces' grain is keyed by; and its detail size over its drawn size)   // (f.b: the thing's own number, the same every frame)
 export function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
   g.addColorStop(0, pkCss(col, a)); g.addColorStop(1, pkCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 // a soft shadow where a thing stands, thrown away from the light
@@ -34,17 +35,19 @@ const pkFoot = (x, X, Y, r, c) => pkEll(x, X - c.sd*r*0.35, Y, r, r*0.22, pkCss(
 // ground; weather streaking down from sills and copings; materials of their own (wood, stone, brick, rust, paint), lit
 // by the scene's light rather than all one grey.
 // a face, shaded from top to foot (plain when too small to show it)
-const pkShade = (x, pts, col, y0, y1, k = 0.14) => { if(!(y1 - y0 > 2)) return pkPoly(x, pts, pkCss(col));
+const pkShade = (x, pts, col, y0, y1, k = 0.14) => { const fi = ++pkFace; if(!(y1 - y0 > 2)) return pkPoly(x, pts, pkCss(col));
   const g = x.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, pkCss(pkMix(col, PK_WHITE, k*0.5))); g.addColorStop(0.62, pkCss(col)); g.addColorStop(1, pkCss(pkMix(col, PK_BLACK, k*1.2))); pkPoly(x, pts, g);
-  if(y1 - y0 > 70) pkGrain(x, pts, col); };
+  if((y1 - y0)*pkLodNow > 70) pkGrain(x, pts, col, fi); };
 // THE SURFACE NEAR (Ruby: "some minor texturing to the primitives especially when they're close"): a face large on the
 // page shows what it is made of, faintly: a mottle of slightly lighter and darker patches, and fine streaks along it,
 // kept inside the face; keyed to where the face stands, so it holds still as long as the thing does (a level of
 // detail: nothing at all where the face is small)
-function pkGrain(x, pts, col){
+function pkGrain(x, pts, col, fi){
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for(const [a, b] of pts){ x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); }
   const w = x1 - x0, h = y1 - y0; if(w < 24 || h < 24) return;
-  const R = mulberry32((Math.round(x0*7.13) ^ Math.imul(Math.round(y0*3.7), 2654435761) ^ Math.round(w*11)) >>> 0), n = Math.min(90, Math.floor(w*h/1400));
+  // (its mottle keyed to the thing and which of its faces this is, never to where the face is drawn: a pan moves it with
+  //  the face, never re-rolls it)
+  const R = mulberry32((pkNow ^ Math.imul(fi, 0x85EBCA77)) >>> 0), n = Math.min(90, Math.floor(w*h/1400));
   x.save(); x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
   // (small and faint beside the face, however near: a wall filling the frame shows a fine mottle, never soft grey
   //  blots that read as clouds on it)
@@ -56,8 +59,8 @@ function pkGrain(x, pts, col){
 // the shadow a thing from X0 to X1, h tall, throws on the ground away from the light, foreshortened
 const pkCast = (x, X0, X1, Y, h, c, a = 0.22) => { const dx = -c.sd*h*0.42, dy = h*0.07; pkPoly(x, [[X0, Y], [X1, Y], [X1 + dx, Y + dy], [X0 + dx, Y + dy]], pkCss(pkMix(c.dark, PK_BLACK, 0.5), a)); };
 // streaks of weather down a wall from x0..x0+w, top..top+ht (only where large enough to carry them)
-const pkStreaks = (x, x0, top, w, ht, c, R, px, a = 0.16) => { if(ht < px(28) || w < px(6)) return;
-  for(let k = 0, n = Math.min(14, 2 + Math.floor(w/px(9))); k < n; k++){ const sx = x0 + w*(0.04 + 0.92*R()), sy = top + ht*R()*0.7, len = ht*(0.06 + 0.22*R()), sw = Math.max(px(0.5), w*(0.005 + 0.012*R()));
+const pkStreaks = (x, x0, top, w, ht, c, R, px, a = 0.16) => { if(ht*(c.lod || 1) < px(28) || w*(c.lod || 1) < px(6)) return;
+  for(let k = 0, n = Math.min(14, 2 + Math.floor(w*(c.lod || 1)/px(9))); k < n; k++){ const sx = x0 + w*(0.04 + 0.92*R()), sy = top + ht*R()*0.7, len = ht*(0.06 + 0.22*R()), sw = Math.max(px(0.5), w*(0.005 + 0.012*R()));
     // (a soft stain: widest where the water ran off, fading as it goes)
     const g = x.createLinearGradient(0, sy, 0, sy + len); g.addColorStop(0, pkCss(c.dark, 0)); g.addColorStop(0.15, pkCss(c.dark, a*0.6)); g.addColorStop(1, pkCss(c.dark, 0)); x.fillStyle = g;
     x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + sw, sy); x.lineTo(sx + sw*0.75, sy + len); x.lineTo(sx + sw*0.25, sy + len); x.fill(); } };
@@ -136,14 +139,16 @@ function pkGrow(n, cx, cy, rx, ry, r0, R, F){ const lobes = [[cx, cy, r0]];
 // a crown of lobes (a broadleaf, a willow's, a poplar's): every lobe in shadow first, then each again smaller and
 // toward the light in the body's colour, then a few small lit lobes on the lit side of the crown's top
 function pkLobes(x, lobes, c, R, cx, cy, rr, px){
-  const lx = c.L[0], ly = c.L[1], big = px && rr > px(10);
+  // (rd: the crown's size as its detail reads it, at its true distance, so a turn never changes its stage; and the
+  //  leaves and the backlit dashes each on a stream of their own, so a leaf more moves nothing else)
+  const lx = c.L[0], ly = c.L[1], rd = rr*(c.lod || 1), big = px && rd > px(10), RLf = mulberry32((R()*4294967296) >>> 0), RBk = mulberry32((R()*4294967296) >>> 0);
   // (the crown's own shade: its lower inside, toward the trunk, deepest, as the light reaches it least)
   if(!big){ // far off: each lobe a disc in shadow, again smaller toward the light, a lit cap on the lit side
     for(const [X, Y, r] of lobes) pkDisc(x, X, Y, r, pkCss(c.dark));
     for(const [X, Y, r] of lobes) pkDisc(x, X + lx*r*0.22, Y + ly*r*0.22, r*0.78, pkCss(c.body));
     for(const [X, Y, r] of lobes){ const fx = (X - cx)/rr, fy = (Y - cy)/rr; if(fx*lx + fy*ly < 0.05) continue; pkDisc(x, X + lx*r*0.38, Y + ly*r*0.38, r*0.42, pkCss(c.lit)); }
-    if(rr > 6) for(let q = 0; q < 3; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = Math.atan2(ly, lx) + (R() - 0.5)*1.2; pkDisc(x, X + Math.cos(a)*r*0.6, Y + Math.sin(a)*r*0.6, r*0.14, pkCss(pkMix(c.lit, PK_WHITE, 0.35))); }
-    pkBacklit(x, lobes, c, R, false); return; }
+    if(px && rd > px(6)) for(let q = 0; q < 3; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = Math.atan2(ly, lx) + (R() - 0.5)*1.2; pkDisc(x, X + Math.cos(a)*r*0.6, Y + Math.sin(a)*r*0.6, r*0.14, pkCss(pkMix(c.lit, PK_WHITE, 0.35))); }
+    pkBacklit(x, lobes, c, RBk, false); return; }
   // NEAR (less cartoony: a crown is clumps of leaves, not balls): each lobe's edge broken into small clusters, so its
   // silhouette is ragged; within, clusters in the body's colour toward the light and lit clusters on the lit side, the
   // deep shade left showing between them; and a few gaps where the sky shows through
@@ -161,10 +166,10 @@ function pkLobes(x, lobes, c, R, cx, cy, rr, px){
   if(c.air) for(let q = 0; q < 2; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = R()*Math.PI*2; pkDisc(x, X + Math.cos(a)*r*0.8, Y + Math.sin(a)*r*0.8, r*0.07, pkCss(c.air, 0.85)); }
   // CLOSE BY, LEAVES: small leaves of the tree's own shape over the crown, each in the light of where it sits (lit toward
   // the light, in shade away from it), so the crown has a texture and not only a shape
-  if(rr > px(34)){ const n = Math.min(rr > px(90) ? 720 : 320, Math.round(rr*rr/(px(5)*px(5))*0.35)), s0 = Math.max(px(1.1), rr*0.028)*(c.leaf || 1);
+  if(rd > px(34)){ const n = Math.min(rd > px(90) ? 720 : 320, Math.round(rd*rd/(px(5)*px(5))*0.35)), s0 = Math.max(px(1.1), rr*0.028)*(c.leaf || 1), R = RLf;
     for(let q = 0; q < n; q++){ const [X, Y, r] = lobes[Math.floor(R()*lobes.length)], a = R()*Math.PI*2, d = r*Math.sqrt(R())*0.92, lxp = X + Math.cos(a)*d, lyp = Y + Math.sin(a)*d, f = ((lxp - cx)*lx + (lyp - cy)*ly)/rr + (R() - 0.5)*0.3;
       const col = f > 0.3 ? pkMix(c.lit, PK_WHITE, 0.08*R()) : f > -0.15 ? c.body : c.dark, s = s0*(0.7 + 0.6*R()); x.fillStyle = pkCss(col, 0.8); x.beginPath(); x.ellipse(lxp, lyp, s, s*(c.leafW || 0.45), R()*Math.PI, 0, Math.PI*2); x.fill(); } }
-  pkBacklit(x, lobes, c, R, true);
+  pkBacklit(x, lobes, c, RBk, true);
 }
 // THE LIGHT THROUGH THE LEAVES (the sun behind the tree, c.back): where a lobe lies on the crown's outline the leaves are
 // thin against the light and glow yellow-green, brightest at the very edge; near, a soft bloom of it
@@ -192,21 +197,21 @@ function pkFrond(x, tx, ty, a, len, col, droop, lit, c, h, px, R, feather, sprea
   if(!feather){ const up = [], dn = []; for(let k = 0; k <= 10; k++){ const t = k/10, hl = hang(t), [, , , , ax, ay] = tip(t, -1, hl), [, , , , bx, by] = tip(t, 1, hl); up.push([ax, ay]); dn.push([bx, by]); }
     pkPoly(x, [...up, ...dn.reverse()], pkCss(col)); return; }
   x.strokeStyle = pkCss(col); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.5), h*0.006); x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(mx, my, ex, ey); x.stroke();
-  const m = Math.min(40, Math.round(len/px(2.2))), lw = Math.max(px(0.45), h*0.0035);
+  const m = Math.min(40, Math.round(len*(c.lod || 1)/px(2.2))), lw = Math.max(px(0.45), h*0.0035);
   for(const sdd of [-1, 1]) for(let k = 1; k <= m; k++){ const t = k/(m + 1), hl = hang(t)*(0.8 + 0.4*R()), [qx, qy, ux, uy, lx, ly] = tip(t, sdd, hl);
     x.strokeStyle = pkCss(lit && sdd < 0 && R() < 0.6 ? c.lit : col, 0.92); x.lineWidth = lw; x.beginPath(); x.moveTo(qx, qy); x.quadraticCurveTo(qx + ux*hl*0.3, qy + uy*hl*0.3 + (1 - spread)*hl*0.15, lx, ly); x.stroke();
     if(c.back > 0.05 && R() < 0.5){ x.strokeStyle = pkCss(c.trans, c.back*0.55); x.stroke(); } } }
 // A LIMB from (x0, y0) to (x1, y1), tapering, a little bent: what holds a clump of the crown to the tree
 // (one smooth tapering shape, round at its root, so a thick limb has no steps)
-function pkLimb(x, x0, y0, x1, y1, w0, col, px, bend = 0.15){ const mx = (x0 + x1)/2 + (y1 - y0)*bend, my = (y0 + y1)/2 - (x1 - x0)*bend*0.4, w = Math.max(px(0.5), w0);
-  if(w < px(2)){ x.strokeStyle = pkCss(col); x.lineCap = 'round'; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(mx, my, x1, y1); x.stroke(); return; }
+function pkLimb(x, x0, y0, x1, y1, w0, col, px, bend = 0.15, lod = 1){ const mx = (x0 + x1)/2 + (y1 - y0)*bend, my = (y0 + y1)/2 - (x1 - x0)*bend*0.4, w = Math.max(px(0.5), w0);
+  if(w*lod < px(2)){ x.strokeStyle = pkCss(col); x.lineCap = 'round'; x.lineWidth = w; x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(mx, my, x1, y1); x.stroke(); return; }
   const q = t => [(1 - t)*(1 - t)*x0 + 2*(1 - t)*t*mx + t*t*x1, (1 - t)*(1 - t)*y0 + 2*(1 - t)*t*my + t*t*y1], L = [], Rt = [];
   for(let k = 0; k <= 8; k++){ const t = k/8, [a, b] = q(t), [a1, b1] = q(Math.min(1, t + 0.02)), [a0, b0] = q(Math.max(0, t - 0.02)), d = Math.hypot(a1 - a0, b1 - b0) || 1, nx = -(b1 - b0)/d, ny = (a1 - a0)/d, hw = w*(1 - 0.55*t)/2;
     L.push([a + nx*hw, b + ny*hw]); Rt.push([a - nx*hw, b - ny*hw]); }
   pkPoly(x, [...L, ...Rt.reverse()], pkCss(col)); pkDisc(x, x0, y0, w/2, pkCss(col)); pkDisc(x, x1, y1, w*0.45/2, pkCss(col)); }
 // BARK, near: each kind's own (docs/prior-art/ringworld-trees.md §5): a pine's plates, an oak's ridges, a birch's dark
 // marks across its white, a beech's smooth grey left bare, a cedar's fibrous strips
-function pkBark(x, X, Y, top, wd, lean, kind, c, R, px){ if(wd < px(5)) return; const w = wd/2, at = u => X + lean*u, dk = pkMix(c.trunk, PK_BLACK, 0.4), lt = pkMix(c.trunk, PK_WHITE, 0.22);
+function pkBark(x, X, Y, top, wd, lean, kind, c, R, px){ if(wd*(c.lod || 1) < px(5)) return; const w = wd/2, at = u => X + lean*u, dk = pkMix(c.trunk, PK_BLACK, 0.4), lt = pkMix(c.trunk, PK_WHITE, 0.22);
   if(kind === 'birch'){ for(let k = 0, n = Math.round(top/(w*0.9)); k < n; k++){ const u = 0.06 + 0.9*R(), y = Y - top*u, bx = at(u) + (R() - 0.5)*w*0.6, len = w*(0.3 + 0.6*R()); x.fillStyle = pkCss(PK_BLACK, 0.55); x.fillRect(bx - len/2, y, len, Math.max(px(0.5), w*0.08)); }
     x.fillStyle = pkCss(PK_BLACK, 0.5); x.beginPath(); x.moveTo(X - w*1.6, Y); x.lineTo(X - w*0.9, Y - top*0.08); x.lineTo(X + w*0.9, Y - top*0.1); x.lineTo(X + w*1.6, Y); x.fill(); return; }
   x.lineCap = 'round';
@@ -220,15 +225,15 @@ function pkBark(x, X, Y, top, wd, lean, kind, c, R, px){ if(wd < px(5)) return; 
 // its underside in shade, each side its own length, some short or gone, the upper tiers over the lower; a spire at the
 // top; near, its needles hanging from each tier's edge. o: { bw (half-width at the base, of h), n (tiers), droop, lift
 // (the tips turning up), spire (of h), bare (of h: the trunk bare below the lowest tier) }
-function pkConifer(x, X, Y, h, c, R, F, o, px, small){
-  const rnd = (a, b) => a + (b - a)*R(), sd = c.sd, lean = F.lean*h*0.3, bare = h*o.bare, top = Y - h, n = small ? Math.min(5, o.n) : o.n, axis = u => X + lean*u;
+function pkConifer(x, X, Y, h, c, R, F, o, px, small, sub){
+  const hd = h*(c.lod || 1), rnd = (a, b) => a + (b - a)*R(), sd = c.sd, lean = F.lean*h*0.3, bare = h*o.bare, top = Y - h, n = small ? Math.min(5, o.n) : o.n, axis = u => X + lean*u;
   // (the trunk, up the middle, thinning; seen where the tiers leave it bare)
   const tw = h*0.035*(0.8 + 0.4*F.age); if(tw < px(1.2)){ x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.6), tw); x.beginPath(); x.moveTo(X, Y); x.lineTo(axis(0.7), Y - h*0.7); x.stroke(); }
   else { pkPoly(x, [[X - tw*(small ? 0.5 : 1.5), Y + tw*0.2], [X - tw*0.5, Y - bare*0.6], [axis(0.85) - tw*0.08, Y - h*0.85], [axis(0.85) + tw*0.08, Y - h*0.85], [X + tw*0.5, Y - bare*0.6], [X + tw*(small ? 0.5 : 1.5), Y + tw*0.2]], pkCss(c.trunk));
     pkPoly(x, [[X + sd*tw*0.1, Y], [axis(0.85), Y - h*0.85], [X + sd*tw*0.5, Y - bare*0.6], [X + sd*tw*1.2, Y]], pkCss(pkMix(c.trunk, PK_WHITE, 0.15))); }
-  if(!small && h > px(60)) pkBark(x, X, Y, bare + h*0.08, tw*1.3, lean*(bare/h), o.bark || 'spruce', c, R, px);
+  if(!small && hd > px(60)) pkBark(x, X, Y, bare + h*0.08, tw*1.3, lean*(bare/h), o.bark || 'spruce', c, sub(6), px);
   // (dead lower limbs, on an old tree: bare twigs below the green)
-  if(!small && F.age > 0.6){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.25), 0.8); x.lineWidth = Math.max(px(0.4), h*0.006); for(let k = 0; k < 4; k++){ const u = rnd(0.25, 1)*bare/h, s = R() < 0.5 ? -1 : 1, yy = Y - h*u, len = h*o.bw*rnd(0.3, 0.7);
+  if(!small && F.age > 0.6){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.25), 0.8); x.lineWidth = Math.max(px(0.4), h*0.006); for(let k = 0; k < 4; k++){ const u = rnd(0.25, 1)*bare/h, s = R() < 0.5 ? -1 : 1, yy = Y - h*u, len = h*o.bw*rnd(0.3, 0.7);
     x.beginPath(); x.moveTo(axis(u), yy); x.lineTo(axis(u) + s*len, yy + len*0.25*o.droop); x.stroke(); } }
   const span = h*(1 - o.spire) - bare, th = span/n*1.5;
   for(let t = 0; t < n; t++){ const u = t/n, yt = Y - bare - span*u - th*0.15, env = h*o.bw*F.wide*Math.pow(1 - u*0.92, 0.95 + 0.3*F.age)*(o.round ? 1 - Math.pow(u, 3)*0.4 : 1);
@@ -247,10 +252,10 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small){
       if(lit && !small) pkPoly(x, [...P.slice(1, -1), ...P.slice(1, -1).reverse().map(([a, b], k, A) => [a, b + th*(0.1 + 0.3*(A.length - k)/A.length)])], pkCss(c.lit, 0.85));
       else if(!small) pkPoly(x, [...P.slice(3, -1), ...P.slice(3, -1).reverse().map(([a, b]) => [a, b + th*0.07])], pkCss(pkMix(c.body, c.lit, 0.35), 0.8));
       // (near: needles hanging from the tier's edge, and tufts along its top)
-      if(!small && h > px(80)){ x.lineCap = 'round'; x.lineWidth = Math.max(px(0.4), h*0.0035);
-        for(let k = 0, m = Math.round(wd/px(3)); k < m; k++){ const v = 0.15 + 0.85*R(), bx = ax + s*wd*v, by = yt + th*0.35*(1 - v) + dr*Math.pow(v, 1.3) + th*0.1, len = th*rnd(0.15, 0.35);
+      if(!small && hd > px(80)){ const R = sub(16 + t*2 + (s > 0 ? 1 : 0)), rnd = (a, b) => a + (b - a)*R(), wdd = wd*(c.lod || 1); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.4), h*0.0035);
+        for(let k = 0, m = Math.round(wdd/px(3)); k < m; k++){ const v = 0.15 + 0.85*R(), bx = ax + s*wd*v, by = yt + th*0.35*(1 - v) + dr*Math.pow(v, 1.3) + th*0.1, len = th*rnd(0.15, 0.35);
           x.strokeStyle = pkCss(R() < 0.6 ? pkMix(c.dark, PK_BLACK, 0.2) : c.body, 0.8); x.beginPath(); x.moveTo(bx, by - len*0.3); x.lineTo(bx + s*len*0.2, by + len*0.7); x.stroke(); }
-        for(let k = 0, m = Math.round(wd/px(5)); k < m; k++){ const v = 0.2 + 0.8*R(), [bx, by] = P[Math.min(P.length - 2, Math.round(v*5))], len = th*rnd(0.12, 0.25);
+        for(let k = 0, m = Math.round(wdd/px(5)); k < m; k++){ const v = 0.2 + 0.8*R(), [bx, by] = P[Math.min(P.length - 2, Math.round(v*5))], len = th*rnd(0.12, 0.25);
           x.strokeStyle = pkCss(lit ? (R() < 0.5 ? c.lit : pkMix(c.lit, PK_WHITE, 0.15)) : c.body, 0.85); x.beginPath(); x.moveTo(bx, by + th*0.08); x.lineTo(bx + s*len*0.6, by - len*0.4); x.stroke(); } }
       // (the sun behind: the tier's edge glowing through its needles)
       if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, Math.min(0.8, c.back*0.8)); x.lineWidth = Math.max(px(0.6), th*0.1); x.beginPath(); P.slice(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); } } }
@@ -261,41 +266,44 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small){
 // a tree's foot: the shadow it casts, longer the lower the light
 const pkTreeFoot = (x, X, Y, h, c) => pkEll(x, X - c.sd*h*0.12, Y, h*0.26, h*0.055, pkCss(c.dark, 0.3));
 export function pkTree(x, X, Y, h, c0, kind, R0, px){
-  const sub = pkSub(R0), R = sub(1), RL = sub(2), F = pkTreeForm(sub(5)), c = pkTreeTint(c0, F), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), small = h < px(7);
-  h *= F.tall;
-  const trunk = (top, wd, lean = 0, bark = kind) => { if(wd < px(2.5)){ x.strokeStyle = pkCss(c.trunk); x.lineWidth = Math.max(px(0.6), wd); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + lean, Y - top); x.stroke(); return; }
+  // (hd: the tree's height as its detail reads it, at its true distance (c0.lod: that over the drawn height), so a turn of
+  //  the camera never changes its stage; every number drawn only at some sizes on a stream of its own (sub 6 on), so a
+  //  stage gained or lost moves nothing else on the tree)
+  const sub = pkSub(R0), R = sub(1), RL = sub(2), F = pkTreeForm(sub(5)), c = pkTreeTint(c0, F), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), small = h*(c0.lod || 1) < px(7);
+  h *= F.tall; const hd = h*(c0.lod || 1), nR = R();
+  const trunk = (top, wd, lean = 0, bark = kind) => { if(wd*(c0.lod || 1) < px(2.5)){ x.strokeStyle = pkCss(c.trunk); x.lineWidth = Math.max(px(0.6), wd); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + lean, Y - top); x.stroke(); return; }
     // (near: a trunk that flares into its roots, darker on its shadow side, its bark marked)
     const w = wd/2, tk = c.trunk, dk = pkMix(tk, PK_BLACK, 0.35), lt = pkMix(tk, PK_WHITE, 0.18);
     pkPoly(x, [[X - w*2, Y + w*0.2], [X - w, Y - w*1.6], [X + lean - w*0.75, Y - top], [X + lean + w*0.75, Y - top], [X + w, Y - w*1.6], [X + w*2, Y + w*0.2]], pkCss(dk));
     pkPoly(x, [[X + sd*w*0.1, Y + w*0.2], [X + sd*w*0.2 + lean*0.05, Y - w*1.6], [X + lean + sd*w*0.15, Y - top], [X + lean + sd*w*0.75, Y - top], [X + sd*w, Y - w*1.6], [X + sd*w*1.8, Y + w*0.2]], pkCss(lt));
-    pkDisc(x, X + lean, Y - top, w*0.75, pkCss(dk)); pkBark(x, X, Y, top, wd, lean, bark, c, R, px); };
+    pkDisc(x, X + lean, Y - top, w*0.75, pkCss(dk)); pkBark(x, X, Y, top, wd, lean, bark, c, sub(6), px); };
   if(!small) pkTreeFoot(x, X, Y, h*F.wide, c);
   // ---- the conifers ----
-  if(kind === 'spruce'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.3), n: 8 + Math.floor(R()*5), droop: 0.55, lift: 0.22, spire: 0.07, bare: rnd(0.03, 0.08) + F.age*0.06, bark: 'spruce' }, px, small); return; }
-  if(kind === 'fir'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.1, 0.15), n: 11 + Math.floor(R()*6), droop: 0.18, lift: 0.08, spire: 0.08, bare: rnd(0.02, 0.06), round: F.age > 0.7, bark: 'fir' }, px, small); return; }
+  if(kind === 'spruce'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.3), n: 8 + Math.floor(R()*5), droop: 0.55, lift: 0.22, spire: 0.07, bare: rnd(0.03, 0.08) + F.age*0.06, bark: 'spruce' }, px, small, sub); return; }
+  if(kind === 'fir'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.1, 0.15), n: 11 + Math.floor(R()*6), droop: 0.18, lift: 0.08, spire: 0.08, bare: rnd(0.02, 0.06), round: F.age > 0.7, bark: 'fir' }, px, small, sub); return; }
   if(kind === 'pine' && F.age < 0.35){ // a young pine: still a rough cone, its whorls far apart and its tufts at their ends
-    pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.28), n: 5 + Math.floor(R()*3), droop: 0.1, lift: 0.25, spire: 0.1, bare: rnd(0.08, 0.15), bark: 'pine' }, px, small); return; }
+    pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.28), n: 5 + Math.floor(R()*3), droop: 0.1, lift: 0.25, spire: 0.1, bare: rnd(0.08, 0.15), bark: 'pine' }, px, small, sub); return; }
   if(kind === 'pine'){
     // a mature pine: a tall trunk bare and reddening toward its top, leaning a little, forking high into a few limbs, each
     // ending in a flattened cloud of needles; dead stubs on the trunk below; the crown flat-topped and uneven with age
     const lean = h*F.lean*0.9, top = h*rnd(0.84, 0.9); trunk(top, h*0.045, lean, 'pine');
-    if(!small && h > px(40)){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.2), 0.8); x.lineWidth = Math.max(px(0.4), h*0.008); for(let k = 0; k < 3; k++){ const u = rnd(0.25, 0.8), s = R() < 0.5 ? -1 : 1, yy = Y - top*u; x.beginPath(); x.moveTo(X + lean*u, yy); x.lineTo(X + lean*u + s*h*rnd(0.03, 0.07), yy - h*0.01); x.stroke(); } }
+    if(!small && hd > px(40)){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.2), 0.8); x.lineWidth = Math.max(px(0.4), h*0.008); for(let k = 0; k < 3; k++){ const u = rnd(0.25, 0.8), s = R() < 0.5 ? -1 : 1, yy = Y - top*u; x.beginPath(); x.moveTo(X + lean*u, yy); x.lineTo(X + lean*u + s*h*rnd(0.03, 0.07), yy - h*0.01); x.stroke(); } }
     // (its clumps each at its own height on its own limb, out to alternate sides, the top one on the leader; lower ones
     //  wider, as the oldest; an old pine's clumps fewer and flatter)
-    const cw = h*0.26*F.wide, nc = small ? 2 : 3 + Math.floor(R()*3), clumps = []; let s0 = R() < 0.5 ? -1 : 1;
+    const cw = h*0.26*F.wide, nc = small ? 2 : 3 + Math.floor(nR*3), clumps = []; let s0 = R() < 0.5 ? -1 : 1;
     for(let q = 0; q < nc; q++){ const u = q/(nc - 1 || 1), last = q === nc - 1, ty = Y - h*(0.64 + 0.27*u + rnd(-0.02, 0.02)), at = Math.min(top, Y - ty + h*rnd(0.02, 0.06)), ax = X + lean*at/top;
       const out = last ? rnd(-0.1, 0.1)*cw : s0*cw*(0.6 - 0.3*u)*rnd(0.7, 1.15) + F.side*cw*0.3, w = cw*(0.95 - 0.35*u)*rnd(0.85, 1.15); s0 = -s0; clumps.push([ax + out, ty, w, ax, Y - at]); }
-    for(const [tx, ty, w, ax, ay] of clumps){ if(!small) pkLimb(x, ax, ay, tx, ty + h*0.012, h*0.026, c.trunk, px, (tx - ax)/(Math.abs(tx - ax) + 1e-6)*0.12);
+    for(const [tx, ty, w, ax, ay] of clumps){ if(!small) pkLimb(x, ax, ay, tx, ty + h*0.012, h*0.026, c.trunk, px, (tx - ax)/(Math.abs(tx - ax) + 1e-6)*0.12, c.lod);
       const lobes = pkGrow(small ? 2 : 6 + Math.floor(R()*3), tx, ty, w, h*0.07, w*0.34, R, F); x.save(); x.translate(0, ty); x.scale(1, 0.62 - F.age*0.12); x.translate(0, -ty);
       pkLobes(x, lobes, { ...c, leaf: 0.8, leafW: 0.22 }, RL, tx, ty, w, px); x.restore(); }
     return; }
   if(kind === 'cedar'){
     // a cedar of Lebanon: three to six flat shelves, each held out on its own limb from the trunk, pushed a little aside,
     // flat-topped, the trunk through them
-    trunk(h*0.85, h*0.05, 0, 'cedar'); const n = small ? 2 : 3 + Math.floor(R()*4);
+    trunk(h*0.85, h*0.05, 0, 'cedar'); const n = small ? 2 : 3 + Math.floor(nR*4);
     for(let q = 0; q < n; q++){ const u = q/(n - 1 || 1), yy = Y - h*(0.28 + 0.62*u), wd = h*(0.5 - 0.27*u)*F.wide*rnd(0.8, 1.2), ox = rnd(-1, 1)*h*0.08 + F.side*wd*0.3, th = h*0.07;
-      const lobes = h > px(30) ? pkGrow(7, X + ox, yy, wd, th*1.4, wd*0.24, R, F) : null;
-      if(!small) for(const s of [-1, 1]){ const ends = lobes ? lobes.filter(l => (l[0] - X)*s > 0) : []; if(lobes && !ends.length) continue; const ex = ends.length ? ends.reduce((m, l) => Math.abs(l[0] - X) > Math.abs(m - X) ? l[0] : m, X) : X + ox + s*wd*0.5; pkLimb(x, X, yy + th*0.6, X + (ex - X)*0.8, yy + th*0.1, h*0.022, c.trunk, px, 0.05); }
+      const lobes = hd > px(30) ? pkGrow(7, X + ox, yy, wd, th*1.4, wd*0.24, sub(40 + q), F) : null;
+      if(!small) for(const s of [-1, 1]){ const ends = lobes ? lobes.filter(l => (l[0] - X)*s > 0) : []; if(lobes && !ends.length) continue; const ex = ends.length ? ends.reduce((m, l) => Math.abs(l[0] - X) > Math.abs(m - X) ? l[0] : m, X) : X + ox + s*wd*0.5; pkLimb(x, X, yy + th*0.6, X + (ex - X)*0.8, yy + th*0.1, h*0.022, c.trunk, px, 0.05, c.lod); }
       if(lobes){ x.save(); x.translate(0, yy); x.scale(1, 0.5); x.translate(0, -yy); pkLobes(x, lobes, { ...c, leaf: 0.8, leafW: 0.3 }, RL, X + ox, yy, wd, px); x.restore(); continue; }
       pkPoly(x, [[X + ox - wd, yy], [X + ox - wd*0.8, yy - th], [X + ox + wd*0.8, yy - th*1.1], [X + ox + wd, yy], [X + ox + wd*0.6, yy + th*0.5], [X + ox - wd*0.6, yy + th*0.5]], pkCss(c.dark));
       pkPoly(x, [[X + ox - wd*0.85, yy - th*0.2], [X + ox - wd*0.7, yy - th], [X + ox + wd*0.75, yy - th*1.05], [X + ox + wd*0.9, yy - th*0.2]], pkCss(c.body));
@@ -309,7 +317,7 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     const Rp = pts(1), Lp = pts(-1); pkPoly(x, [...Lp, ...Rp.reverse()], pkCss(c.dark));
     pkPoly(x, [[X, Y - h*0.04], ...pts(sd*0.85), [X + lean, Y - h]], pkCss(c.body));
     if(!small) pkPoly(x, [[X + sd*wd*0.15, Y - h*0.2], ...pts(sd*0.5).slice(3, 12), [X + lean + sd*wd*0.1, Y - h*0.8]], pkCss(c.lit, 0.8));
-    if(h > px(80)) for(let q = 0, m = Math.round(h*wd/(px(6)*px(6))*0.6); q < Math.min(260, m); q++){ const u = 0.05 + 0.9*R(), w = wd*Math.sin(Math.PI*Math.pow(u, 0.62)), ox = (R()*2 - 1)*w*0.9, lit = ox*sd > w*0.2;
+    if(hd > px(80)) for(let q = 0, m = Math.round(hd*wd*(c0.lod || 1)/(px(6)*px(6))*0.6); q < Math.min(260, m); q++){ const u = 0.05 + 0.9*R(), w = wd*Math.sin(Math.PI*Math.pow(u, 0.62)), ox = (R()*2 - 1)*w*0.9, lit = ox*sd > w*0.2;
       pkEll(x, X + lean*u + ox, Y - h*0.04 - h*0.96*u, wd*0.12, wd*0.07, pkCss(lit ? c.lit : R() < 0.5 ? c.dark : c.body, 0.8)); }
     if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, c.back*0.7); x.lineWidth = Math.max(px(0.6), wd*0.12); x.beginPath(); Lp.forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); x.beginPath(); pts(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); }
     return; }
@@ -317,7 +325,7 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
   if(kind === 'poplar'){
     // a Lombardy poplar: a tall narrow column of small lobes up a short trunk, its limbs held upright inside it
     const lean = F.lean*h*0.2; trunk(h*0.22, h*0.04, lean*0.2, 'poplar');
-    if(!small) for(let k = 0; k < 3; k++) pkLimb(x, X + lean*0.2, Y - h*0.2, X + lean*0.6 + rnd(-1, 1)*h*0.04, Y - h*rnd(0.45, 0.75), h*0.02, c.trunk, px, 0.02);
+    if(!small){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); for(let k = 0; k < 3; k++) pkLimb(x, X + lean*0.2, Y - h*0.2, X + lean*0.6 + rnd(-1, 1)*h*0.04, Y - h*rnd(0.45, 0.75), h*0.02, c.trunk, px, 0.02, c.lod); }
     const cx = X + lean*0.6, cy = Y - h*0.58, lobes = [];
     // (each lobe up the column overlapping the one below, so the column is whole)
     for(let q = 0, m = small ? 4 : 10, yq = Y - h*0.24; q < m; q++){ const u = q/(m - 1), r = h*(0.1 - 0.055*u)*Math.min(1.15, F.wide), yy = Y - h*(0.24 + 0.68*u);
@@ -328,19 +336,19 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     // lobes on drooping limbs, the sky through it
     const lean = F.lean*h*0.5, tw = h*0.032, tp = h*0.68, pale = pkMix(c.lit, PK_WHITE, 0.55);
     x.strokeStyle = pkCss(pale); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.6), tw); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + lean*0.2 + rnd(-1, 1)*h*0.02, Y - tp*0.5, X + lean, Y - tp); x.stroke();
-    if(!small) pkBark(x, X, Y, tp*0.8, tw, lean*0.8, 'birch', c, R, px);
+    if(!small) pkBark(x, X, Y, tp*0.8, tw, lean*0.8, 'birch', c, sub(6), px);
     const cx = X + lean, cy = Y - h*0.58, lobes = pkGrow(small ? 3 : 12, cx, cy, h*0.18*F.wide, h*0.33, h*0.085, R, F);
-    if(!small) for(const [lx2, ly2] of lobes.slice(1, 5)) pkLimb(x, X + lean*0.6, Y - h*0.55, lx2, ly2, h*0.012, pale, px, 0.2);
+    if(!small) for(const [lx2, ly2] of lobes.slice(1, 5)) pkLimb(x, X + lean*0.6, Y - h*0.55, lx2, ly2, h*0.012, pale, px, 0.2, c.lod);
     pkLobes(x, lobes, { ...c, leaf: 0.7, air: c.air || pkMix(c.lit, PK_WHITE, 0.3) }, RL, cx, cy, h*0.25, px);
-    if(h > px(60)){ x.strokeStyle = pkCss(c.body, 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 0; k < 14; k++){ const [lx2, ly2, r2] = lobes[Math.floor(R()*lobes.length)], ex = lx2 + rnd(-1, 1)*r2, ey = ly2 + r2*0.6; x.beginPath(); x.moveTo(ex, ey); x.quadraticCurveTo(ex + rnd(-1, 1)*r2*0.2, ey + r2*0.4, ex + rnd(-1, 1)*r2*0.3, ey + r2*rnd(0.5, 0.9)); x.stroke(); } }
+    if(hd > px(60)){ const R = sub(9), rnd = (a, b) => a + (b - a)*R(); x.strokeStyle = pkCss(c.body, 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 0; k < 14; k++){ const [lx2, ly2, r2] = lobes[Math.floor(R()*lobes.length)], ex = lx2 + rnd(-1, 1)*r2, ey = ly2 + r2*0.6; x.beginPath(); x.moveTo(ex, ey); x.quadraticCurveTo(ex + rnd(-1, 1)*r2*0.2, ey + r2*0.4, ex + rnd(-1, 1)*r2*0.3, ey + r2*rnd(0.5, 0.9)); x.stroke(); } }
     return; }
   if(kind === 'willow'){
     // a willow: a broad dome whose lobes hang down in long strands
     const lean = F.lean*h*0.4; trunk(h*0.4, h*0.06, lean*0.5, 'broadleaf'); const cx = X + lean, cy = Y - h*0.62, lobes = [], rw = h*0.3*F.wide;
     for(let q = 0; q < 6; q++){ const a = Math.PI + q/5*Math.PI; lobes.push([cx + Math.cos(a)*rw, cy + Math.sin(a)*h*0.18, h*0.15*rnd(0.85, 1.15)]); }
-    if(!small) for(const [lx2, ly2] of [lobes[1], lobes[4]]) pkLimb(x, X + lean*0.5, Y - h*0.38, lx2, ly2, h*0.03, c.trunk, px, 0.2);
+    if(!small) for(const [lx2, ly2] of [lobes[1], lobes[4]]) pkLimb(x, X + lean*0.5, Y - h*0.38, lx2, ly2, h*0.03, c.trunk, px, 0.2, c.lod);
     pkLobes(x, lobes, { ...c, leaf: 1.2, leafW: 0.25 }, RL, cx, cy, h*0.35, px);
-    if(!small){ const n = h > px(30) ? 34 : 9; x.lineCap = 'round';
+    if(!small){ const n = hd > px(30) ? 34 : 9; x.lineCap = 'round';
       // (the curtain: many long falls of leaves from the crown's edge, the ones toward the light lit, swaying a little)
       for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const u = q/(n - 1) - 0.5, sx = cx + u*rw*2.4 + rnd(-1, 1)*h*0.01, len = h*rnd(0.28, 0.55)*(1 - Math.abs(u)*0.5), sw = rnd(-1, 1)*h*0.03, lit = u*sd > 0.05;
         if(pass === 0 ? lit : !lit) continue; x.strokeStyle = pkCss(lit ? (R() < 0.4 ? c.lit : c.body) : (R() < 0.5 ? c.dark : c.body)); x.lineWidth = Math.max(px(0.5), h*(n > 9 ? 0.016 : 0.025));
@@ -359,42 +367,42 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     const lobes = pkGrow(small ? 4 : 13, X + F.side*rx*0.2, cy - ry*0.5, rx, ry*1.4, rx*0.24, R, F).map(([a, b, r]) => [a, Math.min(b, cy + ry*0.05), r]);
     // (its limbs reach the lowest lobes at either side and the middle, ending inside them, as the crown is drawn squashed)
     if(!small){ const by = l => -l[1] - l[2], lo = [...lobes].sort((p, q) => by(q) - by(p)), L0 = lo.filter(l => l[0] < tx)[0], L1 = lo.filter(l => l[0] >= tx)[0];
-      for(const L of [L0, L1, lo[0]]) if(L){ const ly = cy + (L[1] - cy)*0.62; pkLimb(x, tx, Y - h*0.52, tx + (L[0] - tx)*0.9, ly + (Y - h*0.52 - ly)*0.08, h*0.03, c.trunk, px, 0.1); } }
+      for(const L of [L0, L1, lo[0]]) if(L){ const ly = cy + (L[1] - cy)*0.62; pkLimb(x, tx, Y - h*0.52, tx + (L[0] - tx)*0.9, ly + (Y - h*0.52 - ly)*0.08, h*0.03, c.trunk, px, 0.1, c.lod); } }
     x.save(); x.translate(0, cy); x.scale(1, 0.62); x.translate(0, -cy); pkLobes(x, lobes, { ...c, leaf: 0.8, leafW: 0.25 }, RL, X, cy - ry, rx, px); x.restore(); return; }
   if(kind === 'palm'){
     // a palm: a ringed trunk curving up to one knot, eight to twelve fronds arching out and down from it, a dead frond or
     // two hanging; near, each frond's leaflets
     const lean = h*rnd(0.06, 0.22)*(R() < 0.5 ? -1 : 1)*(0.6 + F.wide*0.6), tx = X + lean, ty = Y - h*0.9, cw = rnd(0.85, 1.2);
     x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.6), h*0.035); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + lean*0.1, Y - h*0.5, tx, ty); x.stroke();
-    if(h > px(60)){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.35), 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 1; k < 20; k++){ const u = k/20, bx = X + lean*0.1*2*u*(1 - u) + lean*u*u, by = Y - h*0.9*u; x.beginPath(); x.moveTo(bx - h*0.017, by); x.lineTo(bx + h*0.017, by - h*0.004); x.stroke(); } }
-    const n = small ? 5 : 8 + Math.floor(R()*5), feather = h > px(70), frond = (a, len, col, droop, lit) => pkFrond(x, tx, ty, a, len, col, droop, lit, c, h, px, R, feather, 0);
+    if(hd > px(60)){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.35), 0.7); x.lineWidth = Math.max(px(0.4), h*0.004); for(let k = 1; k < 20; k++){ const u = k/20, bx = X + lean*0.1*2*u*(1 - u) + lean*u*u, by = Y - h*0.9*u; x.beginPath(); x.moveTo(bx - h*0.017, by); x.lineTo(bx + h*0.017, by - h*0.004); x.stroke(); } }
+    const n = small ? 5 : 8 + Math.floor(nR*5), feather = hd > px(70), frond = (a, len, col, droop, lit, k) => pkFrond(x, tx, ty, a, len, col, droop, lit, c, h, px, sub(k), feather, 0);
     // (one or two dead fronds hanging against the trunk, straw-brown, behind the living)
-    if(!small) for(let q = 0; q < 1 + Math.floor(R()*2); q++) frond(Math.PI*0.5 + rnd(-0.35, 0.35)*(q ? -1 : 1), h*0.2, pkMix(c.trunk, [170, 140, 84], 0.6), 0.75, false);
+    if(!small){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); for(let q = 0; q < 1 + Math.floor(R()*2); q++) frond(Math.PI*0.5 + rnd(-0.35, 0.35)*(q ? -1 : 1), h*0.2, pkMix(c.trunk, [170, 140, 84], 0.6), 0.75, false, 30 + q); }
     // (the fronds: those turned from the light first, darker, then those toward it; a few young ones still upright)
     for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const a = Math.PI*(1 + q/(n - 1)) + rnd(-0.12, 0.12), len = h*rnd(0.3, 0.42)*cw, lit = Math.cos(a)*sd > 0.2; if(pass === 0 ? lit : !lit) continue;
-      const up = Math.sin(a) < -0.85; frond(a, len*(up ? 0.75 : 1), lit ? c.body : c.dark, up ? 0.05 : rnd(0.25, 0.45), lit); }
-    if(!small && h > px(40)){ const RC = sub(5); for(let q = 0, nc = 2 + Math.floor(RC()*4); q < nc; q++) pkDisc(x, tx + (RC() - 0.5)*h*0.05, ty + h*(0.02 + RC()*0.025), h*0.014, pkCss(pkMix(c.trunk, [120, 110, 50], 0.4))); }
+      const up = Math.sin(a) < -0.85; frond(a, len*(up ? 0.75 : 1), lit ? c.body : c.dark, up ? 0.05 : rnd(0.25, 0.45), lit, 20 + q); }
+    if(!small && hd > px(40)){ const RC = sub(10); for(let q = 0, nc = 2 + Math.floor(RC()*4); q < nc; q++) pkDisc(x, tx + (RC() - 0.5)*h*0.05, ty + h*(0.02 + RC()*0.025), h*0.014, pkCss(pkMix(c.trunk, [120, 110, 50], 0.4))); }
     if(!small) pkDisc(x, tx, ty + h*0.02, h*0.03, pkCss(pkMix(c.trunk, PK_BLACK, 0.3)));
     return; }
   if(kind === 'baobab'){
     // a baobab: a bottle of a trunk, stubby branches like roots in the air, a few small leaf pads at their ends
     const bw = h*rnd(0.16, 0.22)*F.wide, top = Y - h*rnd(0.56, 0.66); x.fillStyle = pkCss(c.trunk); x.beginPath(); x.moveTo(X - bw, Y); x.bezierCurveTo(X - bw*1.1, Y - h*0.35, X - bw*0.5, top + h*0.05, X - bw*0.45, top); x.lineTo(X + bw*0.45, top); x.bezierCurveTo(X + bw*0.5, top + h*0.05, X + bw*1.1, Y - h*0.35, X + bw, Y); x.fill();
     x.fillStyle = pkCss(pkMix(c.trunk, PK_WHITE, 0.25)); x.beginPath(); x.moveTo(X + sd*bw*0.1, Y); x.bezierCurveTo(X + sd*bw*0.3, Y - h*0.35, X + sd*bw*0.35, top + h*0.05, X + sd*bw*0.35, top); x.lineTo(X + sd*bw*0.45, top); x.bezierCurveTo(X + sd*bw*0.5, top + h*0.05, X + sd*bw*1.1, Y - h*0.35, X + sd*bw, Y); x.fill();
-    if(h > px(50)) pkBark(x, X, Y - h*0.05, Y - top - h*0.1, bw*1.2, 0, 'beech', c, R, px);
-    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const pads = [], nb = small ? 3 : 4 + Math.floor(R()*4);
+    if(hd > px(50)) pkBark(x, X, Y - h*0.05, Y - top - h*0.1, bw*1.2, 0, 'beech', c, sub(6), px);
+    x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const pads = [], nb = small ? 3 : 4 + Math.floor(nR*4);
     for(let q = 0; q < nb; q++){ const v = q/(nb - 1) - 0.5, sx = X + v*bw*0.8, ex = sx + v*h*0.36*F.wide + rnd(-1, 1)*h*0.03, ey = top - h*rnd(0.1, 0.22)*(1 - Math.abs(v)*0.6);
       if(small){ x.lineWidth = Math.max(px(0.5), h*0.04); x.beginPath(); x.moveTo(sx, top + h*0.02); x.quadraticCurveTo((sx + ex)/2, top - h*0.02, ex, ey); x.stroke(); }
-      else pkLimb(x, sx, top + h*0.03, ex, ey, h*0.07, c.trunk, px, -v*0.5); pads.push(...pkGrow(3, ex, ey - h*0.02, h*0.08, h*0.05, h*rnd(0.035, 0.055), R, F)); }
+      else pkLimb(x, sx, top + h*0.03, ex, ey, h*0.07, c.trunk, px, -v*0.5, c.lod); pads.push(...pkGrow(3, ex, ey - h*0.02, h*0.08, h*0.05, h*rnd(0.035, 0.055), R, F)); }
     if(!small) pkLobes(x, pads, c, RL, X, top - h*0.2, h*0.3, px);
     return; }
   if(kind === 'acacia'){
     // an umbrella thorn: two or three limbs forking up to one flat, wide crown, grown on them
     x.strokeStyle = pkCss(c.trunk); x.lineCap = 'round'; const cy = Y - h*rnd(0.76, 0.86), cw = h*rnd(0.5, 0.72)*F.wide, fk = h*rnd(0.18, 0.34), lean = F.lean*h*0.5;
-    if(h > px(30)){ // (near: the flat crown is clumps of leaves on its limbs, not a slab; the trunk forks low, its limbs
+    if(hd > px(30)){ // (near: the flat crown is clumps of leaves on its limbs, not a slab; the trunk forks low, its limbs
       //  spreading like a vase and each ending inside one of the crown's lowest clumps)
       const lobes = pkGrow(10 + Math.floor(R()*4), X + lean + F.side*cw*0.2, cy, cw, h*0.06, cw*0.2, R, F), sq = 0.5; trunk(fk, h*0.06, lean*0.3, 'broadleaf');
       const fx = X + lean*0.3, fy = Y - fk, near = tx => lobes.reduce((m, l) => Math.abs(l[0] - tx) + (l[1] - cy)*-0.3 < Math.abs(m[0] - tx) + (m[1] - cy)*-0.3 ? l : m), pick = [...new Set([-0.5, 0.5, -0.15, 0.2].slice(0, 2 + Math.floor(R()*3)).map(u => near(fx + u*cw)))];
-      for(const L of pick){ const ty = cy + (L[1] - cy)*sq; pkLimb(x, fx, fy, fx + (L[0] - fx)*0.88, ty + (fy - ty)*0.05, h*0.045, c.trunk, px, (L[0] < fx ? -1 : 1)*-0.12); }
+      for(const L of pick){ const ty = cy + (L[1] - cy)*sq; pkLimb(x, fx, fy, fx + (L[0] - fx)*0.88, ty + (fy - ty)*0.05, h*0.045, c.trunk, px, (L[0] < fx ? -1 : 1)*-0.12, c.lod); }
       x.save(); x.translate(0, cy); x.scale(1, sq); x.translate(0, -cy); pkLobes(x, lobes, { ...c, leaf: 0.6 }, RL, X + lean, cy, cw, px); x.restore(); return; }
     for(const [ex, wd] of [[-0.35, 0.05], [0.3, 0.045], [0.05, 0.035]].slice(0, small ? 2 : 3)){ x.lineWidth = Math.max(px(0.5), h*wd); x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + ex*cw*0.2, Y - h*0.45, X + ex*cw, cy + h*0.04); x.stroke(); }
     pkPoly(x, [[X - cw, cy + h*0.02], [X - cw*0.8, cy - h*0.1], [X + cw*0.85, cy - h*0.11], [X + cw, cy + h*0.02], [X + cw*0.4, cy + h*0.07], [X - cw*0.45, cy + h*0.07]], pkCss(c.dark));
@@ -404,16 +412,16 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
   if(kind === 'saguaro'){
     // a saguaro: a ribbed column, rounded at its top; arms (none on a young one, up to five on an old one) going out and
     // turning up at a rounded elbow; shaded round as a column is, its ribs showing near
-    const wd = h*rnd(0.075, 0.1)*(0.85 + F.wide*0.2), arms = small || h < px(14) ? 0 : Math.round(F.age*4.5 + R()*0.6), body = (x0, y0, x1, y1, w) => {
+    const wd = h*rnd(0.075, 0.1)*(0.85 + F.wide*0.2), arms = small || hd < px(14) ? 0 : Math.round(F.age*4.5 + nR*0.6), body = (x0, y0, x1, y1, w) => {
       x.lineCap = 'round'; x.strokeStyle = pkCss(c.dark); x.lineWidth = w*2; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
       x.strokeStyle = pkCss(c.body); x.lineWidth = w*1.3; x.beginPath(); x.moveTo(x0 + sd*w*0.25, y0); x.lineTo(x1 + sd*w*0.25, y1); x.stroke();
       x.strokeStyle = pkCss(c.lit, 0.8); x.lineWidth = Math.max(px(0.4), w*0.35); x.beginPath(); x.moveTo(x0 + sd*w*0.55, y0); x.lineTo(x1 + sd*w*0.55, y1 + w*0.4); x.stroke();
-      if(w > px(4)){ x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3), 0.55); x.lineWidth = Math.max(px(0.3), w*0.06); for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } } };
+      if(w*(c0.lod || 1) > px(4)){ x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3), 0.55); x.lineWidth = Math.max(px(0.3), w*0.06); for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } } };
     for(let q = 0; q < arms; q++){ const s = q % 2 ? 1 : -1, at = rnd(0.35, 0.65), out = h*rnd(0.07, 0.14), up = h*rnd(0.12, 0.3)*(1 - at*0.5), aw = wd*rnd(0.6, 0.8), ax = X + s*(wd + out), ay = Y - h*at;
       x.lineCap = 'round'; x.strokeStyle = pkCss(c.dark); x.lineWidth = aw*2; x.beginPath(); x.moveTo(X, ay); x.quadraticCurveTo(ax, ay, ax, ay - up*0.35); x.lineTo(ax, ay - up); x.stroke();
       x.strokeStyle = pkCss(s === sd ? c.body : pkMix(c.body, c.dark, 0.4)); x.lineWidth = aw*1.2; x.beginPath(); x.moveTo(X + s*wd*0.5, ay - aw*0.2); x.quadraticCurveTo(ax + sd*aw*0.2, ay - aw*0.2, ax + sd*aw*0.2, ay - up*0.35); x.lineTo(ax + sd*aw*0.2, ay - up); x.stroke(); }
     body(X, Y, X + F.lean*h*0.1, Y - h + wd, wd);
-    if(!small && h > px(50)){ x.fillStyle = pkCss([236, 226, 196], 0.85); for(let k = 0; k < 5; k++) pkDisc(x, X + F.lean*h*0.1 + rnd(-0.6, 0.6)*wd, Y - h + wd*0.4 + rnd(0, 0.5)*wd, wd*0.12, pkCss([240, 232, 206], 0.8)); }
+    if(!small && hd > px(50)){ const R = sub(9), rnd = (a, b) => a + (b - a)*R(); x.fillStyle = pkCss([236, 226, 196], 0.85); for(let k = 0; k < 5; k++) pkDisc(x, X + F.lean*h*0.1 + rnd(-0.6, 0.6)*wd, Y - h + wd*0.4 + rnd(0, 0.5)*wd, wd*0.12, pkCss([240, 232, 206], 0.8)); }
     return; }
   if(kind === 'joshua'){
     // a Joshua tree: a shaggy trunk, crooked arms forking, each ending in a spiky ball
@@ -425,7 +433,7 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     return; }
   if(kind === 'bamboo'){
     // a stand of bamboo: thin culms, ringed at their nodes, feathery at the top
-    const n = small ? 4 : 7 + Math.floor(R()*8), spread = h*0.3*F.wide;
+    const n = small ? 4 : 7 + Math.floor(nR*8), spread = h*0.3*F.wide;
     for(let q = 0; q < n; q++){ const bx = X + (q/(n - 1) - 0.5)*spread + rnd(-1, 1)*h*0.02, hh = h*rnd(0.7, 1), lean = (rnd(-0.08, 0.08) + F.lean)*h, lit = q/(n - 1) - 0.5 > 0 === sd > 0;
       x.strokeStyle = pkCss(lit ? pkMix(c.body, c.lit, 0.4) : c.body); x.lineWidth = Math.max(px(0.5), h*0.012); x.beginPath(); x.moveTo(bx, Y); x.quadraticCurveTo(bx + lean*0.3, Y - hh*0.5, bx + lean, Y - hh); x.stroke();
       if(!small){ x.fillStyle = pkCss(c.dark); for(let k = 1; k < 6; k++){ const u = k/6; x.fillRect(bx + lean*u*u - h*0.008, Y - hh*u, h*0.016, Math.max(px(0.4), h*0.004)); }
@@ -433,11 +441,11 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     return; }
   if(kind === 'fern'){
     // a tree fern: a shaggy trunk, a shuttlecock of fronds arching out and down
-    trunk(h*0.6, h*0.06, F.lean*h*0.3); const tx = X + F.lean*h*0.3, ty = Y - h*0.6, n = small ? 5 : 9 + Math.floor(R()*3);
+    trunk(h*0.6, h*0.06, F.lean*h*0.3); const tx = X + F.lean*h*0.3, ty = Y - h*0.6, n = small ? 5 : 9 + Math.floor(nR*3);
     // (its fronds feathers spread flat, those turned from the light first; a skirt of dead fronds under them, near)
-    if(!small) for(let q = 0; q < 3; q++) pkFrond(x, tx, ty + h*0.03, Math.PI*(0.3 + 0.4*R()), h*0.18, pkMix(c.trunk, [150, 120, 70], 0.5), 0.7, false, c, h, px, R, h > px(70), 0.3);
+    if(!small){ const R = sub(7); for(let q = 0; q < 3; q++) pkFrond(x, tx, ty + h*0.03, Math.PI*(0.3 + 0.4*R()), h*0.18, pkMix(c.trunk, [150, 120, 70], 0.5), 0.7, false, c, h, px, sub(30 + q), hd > px(70), 0.3); }
     for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const a = Math.PI*(1.05 + 0.9*q/(n - 1)) + rnd(-0.08, 0.08), len = h*rnd(0.35, 0.45)*F.wide, lit = Math.cos(a)*sd > 0.1; if(pass === 0 ? lit : !lit) continue;
-      pkFrond(x, tx, ty, a, len, lit ? c.body : c.dark, rnd(0.15, 0.3), lit, c, h, px, R, h > px(70), 0.85); }
+      pkFrond(x, tx, ty, a, len, lit ? c.body : c.dark, rnd(0.15, 0.3), lit, c, h, px, sub(20 + q), hd > px(70), 0.85); }
     return; }
   if(kind === 'mushroom'){
     // a giant mushroom: a pale stalk, a dome of a cap, its gills dark beneath (aglow by night where the world is magic)
@@ -452,7 +460,7 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     return; }
   if(kind === 'crystal'){
     // a crystal tree: prisms of glass rising and spreading like limbs, their tips alight
-    const n = small ? 3 : 5 + Math.floor(R()*4), glass = pkMix(c.glow, c.lit, 0.4);
+    const n = small ? 3 : 5 + Math.floor(nR*4), glass = pkMix(c.glow, c.lit, 0.4);
     for(let q = 0; q < n; q++){ const a = (q/(n - 1) - 0.5)*1.1*F.wide + rnd(-0.1, 0.1), len = h*(q === Math.floor(n/2) ? 1 : rnd(0.45, 0.8)), wd = h*rnd(0.04, 0.07), ex = X + Math.sin(a)*len, ey = Y - Math.cos(a)*len, nx = Math.cos(a)*wd, ny = Math.sin(a)*wd;
       pkPoly(x, [[X - nx, Y - ny], [ex - nx, ey - ny], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + nx, ey + ny], [X + nx, Y + ny]], pkCss(pkMix(glass, PK_BLACK, 0.35), 0.85));
       pkPoly(x, [[X, Y], [X + Math.sin(a)*(len + wd*2), Y - Math.cos(a)*(len + wd*2)], [ex + sd*nx, ey + sd*ny], [X + sd*nx, Y + sd*ny]], pkCss(glass, 0.85));
@@ -463,28 +471,28 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     // twisted and split), limbs pruned open, a low crown wider than it is tall, an olive's silver-grey; near, its fruit
     const ol = kind === 'olive', th = h*(ol ? 0.36 : 0.42), lean = ol ? rnd(-0.1, 0.1)*h : F.lean*h*0.3; trunk(th, h*(ol ? 0.11 : 0.07), lean, ol ? 'olive' : 'broadleaf');
     if(ol && !small){ x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.35)); x.lineWidth = Math.max(px(0.5), h*0.016); x.beginPath(); x.moveTo(X - h*0.02, Y); x.quadraticCurveTo(X + h*0.035, Y - th*0.5, X - h*0.01, Y - th*0.95); x.stroke(); }
-    const cx = X + lean, cy = Y - h*0.64, rr = h*0.4*F.wide, lobes = pkGrow(small ? 3 : ol ? 11 + Math.floor(R()*4) : 7 + Math.floor(R()*3), cx, cy, rr, h*0.28, rr*(ol ? 0.34 : 0.42), R, F);
+    const cx = X + lean, cy = Y - h*0.64, rr = h*0.4*F.wide, lobes = pkGrow(small ? 3 : ol ? 11 + Math.floor(nR*4) : 7 + Math.floor(nR*3), cx, cy, rr, h*0.28, rr*(ol ? 0.34 : 0.42), R, F);
     // (its limbs leave the trunk below its top, as thick as it is there, so the trunk divides and does not end)
-    if(!small) for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 3)) pkLimb(x, X + lean*0.9, Y - th*0.88, lx2 + (X + lean - lx2)*0.15, ly2 + (Y - th - ly2)*0.15, h*(ol ? 0.06 : 0.045), c.trunk, px, (R() - 0.5)*0.3);
+    if(!small){ const R = sub(7); for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 3)) pkLimb(x, X + lean*0.9, Y - th*0.88, lx2 + (X + lean - lx2)*0.15, ly2 + (Y - th - ly2)*0.15, h*(ol ? 0.06 : 0.045), c.trunk, px, (R() - 0.5)*0.3, c.lod); }
     // (an olive's leaves grey-green above and silver beneath, the crown open, the sky through it in many places)
     const co = ol ? { ...c, dark: pkMix(c.dark, PK_BLACK, 0.25), lit: pkMix(c.lit, [226, 232, 220], 0.4), air: c.air || pkMix(c.lit, PK_WHITE, 0.45) } : c;
     pkLobes(x, lobes, { ...co, leaf: ol ? 0.7 : 1, leafW: ol ? 0.25 : 0.45 }, RL, cx, cy, rr, px);
-    if(!ol && !small && c.fruit){ const RB = sub(4); for(let q = 0, nb = h > px(30) ? 40 : 14; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.85;
+    if(!ol && !small && c.fruit){ const RB = sub(4); for(let q = 0, nb = hd > px(30) ? 40 : 14; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.85;
       pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*0.07), pkCss(c.fruit, 0.9)); } }
     return; }
   if(kind === 'bush'){
     // a bush: low lobes grown together, wider than tall, each its own
-    const lobes = pkGrow(small ? 3 : 4 + Math.floor(R()*4), X + F.side*h*0.2, Y - h*0.42, h*0.75*F.wide, h*0.4, h*0.36, R, F).map(([a, b, r]) => [a, Math.min(b, Y - r*0.7), r]);
+    const lobes = pkGrow(small ? 3 : 4 + Math.floor(nR*4), X + F.side*h*0.2, Y - h*0.42, h*0.75*F.wide, h*0.4, h*0.36, R, F).map(([a, b, r]) => [a, Math.min(b, Y - r*0.7), r]);
     pkLobes(x, lobes, c, RL, X, Y - h*0.4, h*0.6, px); return; }
   // a broadleaf (and the glowing trees): a trunk forking into limbs under a domed crown grown lobe on lobe: tall and narrow
   // where it grew among others, broad where it grew alone, leaning a little and fuller on the side it grew toward
   const lean = F.lean*h*0.4, fork = h*rnd(0.36, 0.5); trunk(fork, h*0.06*(0.8 + 0.4*F.age), lean, kind === 'glow' ? 'beech' : 'broadleaf');
-  const cx = X + lean + F.side*h*0.06, cy = Y - h*0.6, rr = h*0.34*F.wide, n = small ? 3 : 8 + Math.floor(R()*5), RG = sub(3);
+  const cx = X + lean + F.side*h*0.06, cy = Y - h*0.6, rr = h*0.34*F.wide, n = small ? 3 : 8 + Math.floor(nR*5), RG = sub(3);
   const lobes = pkGrow(n, cx, cy, rr*1.05, h*0.32, rr*0.46, R, F); if(!small) for(const s of [-1, 1]) lobes.push(...pkGrow(2, cx + s*rr*0.5, cy + h*0.12, rr*0.5, h*0.1, rr*0.36, R, F));
-  if(!small) for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 2 + Math.floor(R()*2))) pkLimb(x, X + lean, Y - fork, lx2, ly2, h*0.045, c.trunk, px, (R() - 0.5)*0.4);
+  if(!small){ const R = sub(7); for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 2 + Math.floor(R()*2))) pkLimb(x, X + lean, Y - fork, lx2, ly2, h*0.045, c.trunk, px, (R() - 0.5)*0.4, c.lod); }
   pkLobes(x, lobes, c, RL, cx, cy, rr, px);
-  if(kind === 'cherry' && !small){ const RB = sub(4); for(let q = 0, nb = h > px(30) ? 90 : 26; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.9;
-      pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*(h > px(30) ? 0.08 : 0.14)), pkCss(pkMix([248, 214, 226], c.lit, 0.25), 0.9)); } }
+  if(kind === 'cherry' && !small){ const RB = sub(4); for(let q = 0, nb = hd > px(30) ? 90 : 26; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.9;
+      pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*(hd > px(30) ? 0.08 : 0.14)), pkCss(pkMix([248, 214, 226], c.lit, 0.25), 0.9)); } }
   if(kind === 'glow'){ pkGlow(x, cx, cy, rr*2.2, c.glow, 0.4);
     for(let q = 0; q < (small ? 2 : 7); q++) pkDisc(x, cx + (RG()*1.6 - 0.8)*rr, cy + (RG()*1.3 - 0.6)*rr, Math.max(px(0.6), h*0.014), pkCss(pkMix(c.glow, PK_WHITE, 0.4), 0.95)); }
 }
@@ -526,9 +534,11 @@ export function pkVernacularOf(fam, v){ const arch = PK_VERNACULAR[fam] || PK_VE
 const pkLit = (c, night, r, base) => { if(night <= 0.2) return false; const t = Math.max(0, Math.min(1, (night - 0.6)/0.4)), share = base*(1 - 0.6*t*t*(3 - 2*t));
   if(!c.t) return r < share; const period = 3600*(1.5 + 4*((r*31.7) % 1)); return ((r*97.13 + c.t/period) % 1) < share; };
 function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
-  const pitch = Math.max(px(3), wd*0.11), cols = Math.max(1, Math.floor(wd/pitch) - 1), rows = Math.min(90, Math.max(1, Math.floor(ht/pitch) - 1)), cw = wd/(cols + 1), rh = ht/(rows + 1);
-  if(ht < px(10)) return;
-  const sky = pkMix(c.air || lit, PK_WHITE, 0.12), pane = pkMix(c.dark, PK_BLACK, 0.3), big = cw > px(5), lamp = k => k < 0.1 ? pkMix(c.glow2 || c.glow, [150, 180, 240], 0.6) : pkMix(c.glow, PK_WHITE, k*0.35);
+  // (how many windows, and whether near enough for their frames, by the building's size at its true distance (c.lod),
+  //  so a turn never re-flows its windows)
+  const lod = c.lod || 1, pitch = Math.max(px(3)/lod, wd*0.11), cols = Math.max(1, Math.floor(wd/pitch) - 1), rows = Math.min(90, Math.max(1, Math.floor(ht/pitch) - 1)), cw = wd/(cols + 1), rh = ht/(rows + 1);
+  if(ht*lod < px(10)) return;
+  const sky = pkMix(c.air || lit, PK_WHITE, 0.12), pane = pkMix(c.dark, PK_BLACK, 0.3), big = cw*lod > px(5), lamp = k => k < 0.1 ? pkMix(c.glow2 || c.glow, [150, 180, 240], 0.6) : pkMix(c.glow, PK_WHITE, k*0.35);
   if(kind === 'ribbon'){ // a slab's ribbon windows: one long band per floor, the sky in it, mullions where near
     for(let r = 1; r <= rows; r++){ const on = pkLit(c, night, R(), 0.55), y = top + r*rh, bh = rh*0.4;
       x.fillStyle = on ? pkCss(lamp(R()), 0.8*night) : pkCss(pkMix(pane, sky, 0.2 + 0.25*R()), 0.85); x.fillRect(x0 + cw*0.4, y, wd - cw*0.8, bh);
@@ -1050,16 +1060,17 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   if(c.view && (kind0 === 'torii' || kind0 === 'arch')){ // (a gate is a frame in its own plane: edge on, a post and a beam's end)
     const k = Math.max(kind0 === 'arch' ? 0.28 : 0.1, Math.abs(c.view.cs)); x.save(); x.translate(X, 0); x.scale(k, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, { ...c, view: null }, style, night, R0, px, kind0); x.restore(); return; }
   if(c.view){ const sn = c.view.sn; if(sn < 0){ x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, pkFlip({ ...c, view: null }), style, night, R0, px, kind0); x.restore(); return; } c = { ...c, view: null }; }
-  const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5), RD = sub(6);
+  const sub = pkSub(R0), R = sub(1), RW = sub(2), RT = sub(3), RN = sub(4), RU = sub(5), RD = sub(6); pkLodNow = c.lod || 1;
   const kind = (k => kind0 || k)(pkArchOf(style, R()));
   // each building its own material (warm stone, brick, concrete, blue glass, dark steel), laid over the world's own
   // colour and fading into the air with distance, so a city is many buildings and not one white block
   { const M = PK_MATS[style] || PK_MATS.city, m = M[Math.floor(R()*M.length)], k = 0.55*(1 - (c.haze || 0));
     if(m) c = { ...c, body: pkMix(c.body, pkMix(m, c.body, 0.3), k), lit: pkMix(c.lit, pkMix(m, PK_WHITE, 0.35), k), dark: pkMix(c.dark, pkMix(m, PK_BLACK, 0.45), k) }; }
-  const neon = style === 'neon', ruin = style === 'ruins' && h > px(6), w2 = wdt/2, top = Y - h, dep = wdt*0.32, detail = h > px(14), fine = h > px(48), lit = pkMix(c.lit, PK_WHITE, 0.2);
+  // (hd: its height as its detail reads it, at its true distance: c.lod; a turn of the camera never changes its stage)
+  const hd = h*(c.lod || 1), neon = style === 'neon', ruin = style === 'ruins' && hd > px(6), w2 = wdt/2, top = Y - h, dep = wdt*0.32, detail = hd > px(14), fine = hd > px(48), lit = pkMix(c.lit, PK_WHITE, 0.2);
   const ink = pkMix(c.dark, PK_BLACK, 0.35), bar = (x0, y0, w, t, col, a = 1) => { x.fillStyle = pkCss(col, a); x.fillRect(x0, y0, w, Math.max(px(0.4), t)); };
   // (its shadow on the ground first, thrown away from the light)
-  if(h > px(4) && !c.nocast && kind !== 'arch' && kind !== 'torii' && kind !== 'turbine') pkCast(x, X - wdt*0.5, X + wdt*0.5, Y, Math.min(h, wdt*1.6), c);
+  if(hd > px(4) && !c.nocast && kind !== 'arch' && kind !== 'torii' && kind !== 'turbine') pkCast(x, X - wdt*0.5, X + wdt*0.5, Y, Math.min(h, wdt*1.6), c);
   // RUIN: its top broken away along a jagged line (the building is drawn only below it), its floors open to the air
   let bk = 0;
   if(ruin){ bk = top + h*(0.08 + 0.3*RU()); const jag = [[X + wdt*2, Y + h], [X - wdt*2, Y + h]];
@@ -1100,8 +1111,8 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
         x.fillStyle = pkCss(night > 0.2 ? pkMix(c.glow, PK_WHITE, 0.25) : pkMix(ink, c.air || lit, 0.35), night > 0.2 ? 0.85 : 0.9); x.fillRect(sx, Y - sh*0.8, sw, sh*0.8);
         const a = pkMat(c, aw, 0.75); pkPoly(x, [[sx - sw*0.04, Y - sh*0.82], [sx - sw*0.04, Y - sh], [sx + sw*1.04, Y - sh], [sx + sw*1.04, Y - sh*0.82], [sx + sw*0.98, Y - sh*0.72], [sx + sw*0.02, Y - sh*0.72]], pkCss(a.body));
         if(fine) for(let q = 0; q < 6; q += 2) x.fillStyle = pkCss(PK_WHITE, 0.4), x.fillRect(sx + sw*q/6, Y - sh, sw/6, sh*0.18); }
-      if(fine && RT() < 0.55){ // a fire escape: landings at each floor, ladders between, in black iron
-        const fx = X - ww*(0.1 + 0.25*RT()), fw = ww*0.22, fl = Math.min(8, Math.floor((hh - sh)/(wdt*0.18))); x.strokeStyle = pkCss(PK_IRON, 0.9); x.lineWidth = Math.max(px(0.4), wdt*0.01); x.beginPath();
+      const fe = RT() < 0.55, fe1 = RT(); if(fine && fe){ // a fire escape: landings at each floor, ladders between, in black iron
+        const fx = X - ww*(0.1 + 0.25*fe1), fw = ww*0.22, fl = Math.min(8, Math.floor((hh - sh)/(wdt*0.18))); x.strokeStyle = pkCss(PK_IRON, 0.9); x.lineWidth = Math.max(px(0.4), wdt*0.01); x.beginPath();
         for(let k = 0; k < fl; k++){ const yy = Y - sh - (hh - sh)*(k + 0.5)/fl; x.moveTo(fx, yy); x.lineTo(fx + fw, yy); x.moveTo(fx, yy - (hh - sh)*0.04/fl*4); x.lineTo(fx + fw, yy - (hh - sh)*0.04/fl*4);
           if(k) { x.moveTo(fx + (k % 2 ? 0.1 : 0.7)*fw, yy); x.lineTo(fx + (k % 2 ? 0.4 : 1)*fw, yy + (hh - sh)/fl); } } x.stroke(); }
       if(RT() < 0.45 && !ruin){ const tx = X + wdt*(RT() - 0.5)*0.6, tw = wdt*0.22, th = tw*1.1, wood = pkMat(c, PK_GREYWOOD, 0.6); x.strokeStyle = pkCss(c.dark); x.lineWidth = Math.max(px(0.5), tw*0.08); x.beginPath(); x.moveTo(tx - tw*0.4, t2); x.lineTo(tx - tw*0.3, t2 - th*0.5); x.moveTo(tx + tw*0.4, t2); x.lineTo(tx + tw*0.3, t2 - th*0.5); x.stroke();
@@ -1183,7 +1194,7 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
       if(fine && !sl){ pkBox(x, X + wdt*(RT() - 0.5)*0.3, top, top - h*0.03, wdt*0.4, { ...c, body: pkMix(c.body, c.dark, 0.3) }, dep*0.3); } }
     if(R() < 0.35){ x.fillStyle = pkCss(c.dark); x.fillRect(X - Math.max(px(0.4), wdt*0.02), top - h*0.14, Math.max(px(0.8), wdt*0.04), h*0.14); if(night > 0.2) pkDisc(x, X, top - h*0.14, Math.max(px(0.8), wdt*0.03), pkCss([255, 80, 70], 0.9)); } }
   // NEON: the edges in light, a sign hung on the face, its glow on the air
-  if(neon && h > px(8) && kind !== 'needle'){ const R = RN; x.strokeStyle = pkCss(c.glow2, 0.85); x.lineWidth = Math.max(px(0.6), wdt*0.03); if(kind === 'glass'){ x.beginPath(); x.moveTo(X - w2, Y); x.lineTo(X - w2, top); x.lineTo(X + w2, top); x.lineTo(X + w2, Y); x.stroke(); }
+  if(neon && hd > px(8) && kind !== 'needle'){ const R = RN; x.strokeStyle = pkCss(c.glow2, 0.85); x.lineWidth = Math.max(px(0.6), wdt*0.03); if(kind === 'glass'){ x.beginPath(); x.moveTo(X - w2, Y); x.lineTo(X - w2, top); x.lineTo(X + w2, top); x.lineTo(X + w2, Y); x.stroke(); }
     if(R() < 0.65){ const sh = h*0.14, sy = top + h*(0.12 + 0.45*R()), vert = R() < 0.5, col = R() < 0.5 ? c.glow : c.glow2;
       x.fillStyle = pkCss(col, 0.92); if(vert) x.fillRect(X - w2 - wdt*0.12, sy, wdt*0.14, sh*1.6); else x.fillRect(X - w2*0.8, sy, wdt*0.8, sh*0.45);
       pkGlow(x, X, sy, wdt*1.3, col, 0.35); } }

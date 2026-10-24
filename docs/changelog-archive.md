@@ -2,6 +2,14 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Sycorax (2026-10-21)
+
+- Nothing you'll see: a housekeeping release.
+
+### Under the hood
+- The stylesheet prune is no longer a standing step of every ten releases: AGENTS.md and the hygiene test ask only
+  that the tests be reviewed within every five. tools/css-prune.py stays for when the stylesheet is touched.
+
 ## Uranus–Trinculo (2026-10-21)
 
 - Nothing you'll see: a housekeeping release.

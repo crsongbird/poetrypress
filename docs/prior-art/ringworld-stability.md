@@ -8,7 +8,9 @@
 - A reference such as "stepsRing.js 1210" is a line read in this repository.
 - [src](URL) marks a page opened and read for this doc.
 - [est] marks my own reasoning, or a measurement I made for this doc. §3 describes how each measurement was made.
-- Nothing here has been built yet. Every change in §4 needs renders and Ruby's eye before it ships (AGENTS.md §1 rule 1: tools/compare.mjs, tools/review.mjs "the camera moved").
+- Built in Ursa Major–Alcor: §4 steps 1 to 7 and 9, the cut as a circle about the eye (step 11a), and the envelope's
+  cousin for fields and ways (each drawn with the ridge before its nearest end). Step 8 (fades between stages) is done
+  only for the smallest trees; step 10 follows from 11a (the depth a thing is hazed by is its true distance).
 
 ---
 
