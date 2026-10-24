@@ -14,6 +14,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   Works the grazing between farms stays open, at much the patchwork fills in. Is the balance right at the default?
 - SUNRISE SCROLL'S CURSED LAND: the petals drift down through its ash and lie on the dead ground, blighted at their
   edges. Enough of them?
+- CORNERS: windows 3px, buttons and fields 2px, small marks 1px; a group of choices blunted only on its outside corners
+  (the radio rows, the film sheet's blocks, the Athanor's joined buttons); circles kept round. "Circles barely any" was
+  read as: the smallest things get the least. The left-edge lines on the cards and sub-blocks are gone. Right weight?
 
 ## 2 · Ruby's notes to act on
 - THE RINGWORLD UNDER A MOVING CAMERA (Ruby, 2026-10-24): the ground distorts and transforms as the camera moves (the
@@ -22,12 +25,20 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   each other. Keep the static look ("I like this weird look when it's a static image").
 - PEOPLE GO IN AT DOORS (Ruby): walking is good; at night they should walk to a door, not fade where they stand.
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
-  An hour of time passing during a pan is the right default.
+  An hour of time passing during a pan is the right default. A film's motion stays out of looks and spells (the draft
+  keeps it). docs/prior-art/film-animation.md.
+- THE RINGWORLD IN MOTION (Ruby, 2026-10-24): clouds building; smoke following the wind, smoothly; glows and lights
+  (large spires and buildings too) gently alive, never flickering; cirrus never flickering; more color variety by the
+  seed; a wider variety of things: small variations on buildings, and a wider library with smarter placing. And: the
+  comet should move; shooting stars, aurora, a greater sense of scale by layering; lightning never on a film's first
+  frame, and lighting the whole scene and its shading starkly (eased, within the photosensitivity rule); farms only near
+  the populated rings, not in the Wilds (druid groves and other wild things there instead).
+- THE RINGWORLD'S STREETS AND DISTANCES (Ruby, 2026-10-24): cracks and things in the street jump as the camera moves;
+  trees and other things are culled too early; things pop into view far off (draw a little farther).
 - SURFACES OVER SURFACES (Ruby): textures with displacement (glass, crystal), or distortion through the lighting, or
   that could take the surface beneath them (as Two Surfaces), take the texture below as an input and do something
-  creative with it.
-- ROUNDED EDGES (Ruby): about 2px of rounding on what makes sense to round (windows, buttons), with a hierarchy (circles
-  barely any), and joined buttons and radio rows blunted only on their outside edges.
+  creative with it. A switch per layer named See Through, on for a new page, off for looks saved before
+  (docs/prior-art/surface-beneath.md).
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
   interactions nobody asked for.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.

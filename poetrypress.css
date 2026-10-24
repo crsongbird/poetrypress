@@ -1,3 +1,4 @@
+:root{ --r-0:0; --r-1:1px; --r-2:2px; --r-3:3px; }   /* the corners' steps (SHAPE, below) */
 :root{
   --bg-deep:#100e16;
   --bg-panel:#17151f;
@@ -53,7 +54,7 @@ body{
 .card{
   background:var(--bg-card);
   border:1px solid var(--line);
-  border-radius:2px;
+  border-radius:var(--r-3);
   margin-bottom:8px;
 }
 
@@ -78,7 +79,7 @@ select, textarea, input[type="text"], input[type="number"], input[type="search"]
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 82%, black 18%), var(--bg-panel-2) 55%);
   border:1px solid var(--line);
   color:var(--text-main);
-  border-radius:2px;
+  border-radius:var(--r-2);
   padding:5px 6px;
   font-family:inherit;
   font-size:14px;
@@ -103,16 +104,16 @@ textarea{
 
 .color-pair{ display:block; }
 .clr-field{ width:100%; }
-.clr-field button{ border-radius:2px !important; }
-.clr-picker{ border-radius:2px !important; }
-.clr-swatches button{ border-radius:2px !important; }
+.clr-field button{ border-radius:var(--r-1) !important; }
+.clr-picker{ border-radius:var(--r-3) !important; }
+.clr-swatches button{ border-radius:var(--r-1) !important; }
 .hex-input{width:100%;}
 
 .check-row{ display:flex; align-items:center; gap:5px; cursor:pointer; user-select:none; }
 .check-row input[type="checkbox"]{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
 .check-row label{ margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }
 
-.subblock{ display:none; border-left:none; padding:1px 0 1px 7px; margin:1px 0 2px 2px; box-shadow:inset 2px 0 0 color-mix(in srgb, var(--accent-dim) 55%, transparent); }
+.subblock{ display:none; border-left:none; padding:1px 0 1px 7px; margin:1px 0 2px 2px; }
 .subblock.open{ display:grid; grid-template-columns:1fr 1fr; gap:6px 7px; }
 .subblock.open > .full{ grid-column:1/-1; }
 /* a section switched off by its heading's eye shows its controls faded, under a line that says so (appEvents eyeBlock) */
@@ -129,7 +130,7 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
 .radio-group{display:flex; gap:5px; flex-wrap:wrap;}
 .radio-btn{
   flex:1 1 28%; text-align:center; padding:5px 0;
-  border:1px solid var(--line); border-radius:2px;
+  border:1px solid var(--line); border-radius:var(--r-0);
   font-size:12.5px; color:var(--text-dim); cursor:pointer;
   background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 90%, var(--text-main) 4%), var(--bg-panel-2)); transition:all .12s ease; box-shadow:inset 0 1px 0 var(--hi); }
 .radio-btn.active, .film-pick input:checked + .radio-btn{ border-color:var(--accent-dim); color:var(--accent); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 17%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent)); box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--accent-2) 25%, transparent); }
@@ -147,21 +148,20 @@ body.editing-lower .layer-words .words-blend{ display:flex; }
 .layer-words .words-pair{ display:flex; flex:1 1 auto; justify-content:space-between; align-items:center; gap:4px 16px; }
 .layer-words .words-strength{ flex:1 1 100%; }
 /* while the lower surface is shown, the card says so: its border takes the second accent */
-body.editing-lower #textureBlock{ box-shadow:inset 2px 0 0 var(--accent-2); padding-left:8px; }
 
 button.ghost{
-  width:100%; padding:5px 0; border-radius:2px;
+  width:100%; padding:5px 0; border-radius:var(--r-2);
   border:1px solid var(--accent-dim); background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent); color:var(--accent);
   font-family:var(--ui-text); font-size:13px; letter-spacing:0.04em;
   cursor:pointer; transition:all .12s ease; margin-top:1px; box-shadow:inset 0 1px 0 var(--hi); }
 button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent))}
 
 .hint{font-size:12px; color:var(--text-dim); margin-top:4px; line-height:1.4;}
-.hint code{ background:var(--bg-panel-2); padding:1px 4px; border-radius:2px; color:var(--rose); }
+.hint code{ background:var(--bg-panel-2); padding:1px 4px; border-radius:var(--r-1); color:var(--rose); }
 
 .preset-grid{ display:grid; grid-template-columns:repeat(4,minmax(80px,1fr)); gap:4px; }
 .preset-btn{
-  border:1px solid var(--line); border-radius:2px; overflow:hidden;
+  border:1px solid var(--line); border-radius:var(--r-2); overflow:hidden;
   cursor:pointer; background:var(--bg-panel-2); padding:0;
   transition:transform .12s ease, border-color .12s ease; box-shadow:0 1px 0 var(--well); }
 .preset-btn:hover{ transform:translateY(-2px); border-color:var(--accent-dim); box-shadow:0 4px 10px -4px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 40%, transparent); }
@@ -182,7 +182,7 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
 
 .download-btn{
   position:fixed; top:18px; right:22px; z-index:50;
-  padding:9px 20px; border-radius:2px;
+  padding:9px 20px; border-radius:var(--r-2);
   border:2px solid #1a1610;
   background:var(--accent); color:#1a1610;
   font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:14px; letter-spacing:0.03em;
@@ -288,7 +288,7 @@ body.is-mobile .canvas-wrap {
   height: 100%;
   max-height: none;
   background: rgba(0,0,0,0.25);
-  border-radius: 3px;
+  border-radius: var(--r-3);
 }
 body.is-mobile .canvas-wrap canvas { margin: auto; }
 
@@ -450,7 +450,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .spell-wheel:empty{ display:none; }
 .spell-chip{
   cursor:pointer; min-width:0;
-  border:1px solid var(--line); border-radius:3px;
+  border:1px solid var(--line); border-radius:var(--r-2);
   background:var(--bg-deep); padding:0; overflow:hidden;
   font-family:inherit; color:var(--text-dim);
 }
@@ -464,7 +464,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
 .btn-row{ display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
 .btn-row > button{ flex:1 1 0; min-width:84px; }
 .btn-major, .btn-danger{
-  padding:8px 12px; border-radius:2px; cursor:pointer;
+  padding:8px 12px; border-radius:var(--r-2); cursor:pointer;
   font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13px; letter-spacing:0.03em;
   border:2px solid var(--accent); background:var(--accent); color:var(--on-accent, #1a1610);
   transition:opacity .12s ease;
@@ -498,7 +498,7 @@ body.is-mobile .tab-btn{ padding:2px 0; gap:1px; }
      Android, which is the same trap the layout hit earlier */
   max-height:calc(var(--vvh, 100vh) * 0.8); overflow:auto;
   background:var(--bg-deep); border:1px solid var(--line);
-  border-radius:0; padding:16px;
+  border-radius:var(--r-3); padding:16px;
   box-shadow:0 30px 70px -20px rgba(0,0,0,0.8);
 }
 .modal-title{
@@ -574,7 +574,7 @@ body.is-mobile .lock-btn{ font-size:13px; padding:0 4px; }
 /* preview reset — silver against the gold download, and quiet until wanted */
 .reset-view-btn{
   position:absolute; left:7px; bottom:7px; z-index:45;
-  border:1px solid rgba(190,196,208,0.45); border-radius:2px;
+  border:1px solid rgba(190,196,208,0.45); border-radius:var(--r-2);
   background:rgba(18,20,26,0.55); color:#BEC4D0;
   font-size:13px; line-height:1; padding:5px 9px; cursor:pointer; opacity:0.55;
 }
@@ -654,7 +654,7 @@ body.is-mobile .tab-btn.active svg{
    are declared once, for both, in the shared block below. */
 .editor-wrap{
   display:flex;
-  border:1px solid var(--line); border-radius:3px;
+  border:1px solid var(--line); border-radius:var(--r-2);
   background:var(--bg-deep);
 }
 .editor-gutter{
@@ -1096,7 +1096,6 @@ summary::-moz-list-bullet{ list-style-type:none; }
 :focus-visible{
   outline:2px solid var(--accent-dim);
   outline-offset:2px;
-  border-radius:3px;
 }
 .card:focus-visible, summary:focus-visible{
   outline:1px solid var(--accent-dim);
@@ -1276,7 +1275,7 @@ body.is-mobile #clr-picker{
 .pml-match{
   background:color-mix(in srgb, var(--accent) 34%, transparent);
   box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent);
-  border-radius:2px;
+  border-radius:var(--r-1);
 }
 
 /* the Vellum sigil beside the title — the diamond, drawn in whimsy */
@@ -1306,11 +1305,11 @@ body.is-mobile #clr-picker{
 #clr-picker .clr-close{
   background:var(--accent) !important;
   color:var(--on-accent, #161414) !important;
-  border:0 !important; border-radius:2px;
+  border:0 !important; border-radius:var(--r-2);
   font-family:var(--ui-display); font-variation-settings:var(--ui-soft); letter-spacing:.03em;
   padding:6px 14px; cursor:pointer;
 }
-#clr-picker .clr-hue, #clr-picker .clr-gradient{ border-radius:2px; }
+#clr-picker .clr-hue, #clr-picker .clr-gradient{ border-radius:var(--r-2); }
 
 /* on a phone: pinned to the right edge, above the keyboard and the bar */
 body.is-mobile #clr-picker{
@@ -1333,7 +1332,7 @@ body.is-mobile #clr-picker{
 /* ---------- Grimoire rows ---------- */
 .grimoire-list{
   max-height:12.5em; overflow-y:auto; border:1px solid var(--line);
-  background:var(--bg-panel-2); border-radius:2px;
+  background:var(--bg-panel-2); border-radius:var(--r-2);
 }
 .grimoire-row{
   display:flex; align-items:center; gap:8px; padding:6px 8px;
@@ -1421,7 +1420,6 @@ body.is-mobile .tool-row #textureSeedValue{ width:100%; min-width:0; box-sizing:
   outline:2px solid var(--ui-selected, var(--accent)) !important;
   outline-offset:2px;
   box-shadow:0 0 0 6px color-mix(in srgb, var(--ui-selected, var(--accent)) 28%, transparent) !important;
-  border-radius:3px;
 }
 #clr-picker.clr-open{ border-color:var(--ui-selected, var(--accent)) !important; }
 /* the speech-bubble tail, in the same colour as the picker's border */
@@ -1448,7 +1446,7 @@ body.is-mobile #undoBtn{ left:6px; bottom:138px; } body.is-mobile #redoBtn{ left
 #clr-picker #clr-close{ position:sticky; bottom:0; z-index:2; box-shadow:0 -6px 10px var(--bg-panel, #1a1717); }
 
 /* the snap toggle beside an angle slider */
-.snap-btn{ border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:6px;
+.snap-btn{ border:1px solid var(--border, #444); background:transparent; color:var(--text-dim); border-radius:var(--r-2);
   padding:0 6px; margin-left:6px; font-size:14px; line-height:22px; cursor:pointer; }
 .snap-btn[aria-pressed="true"]{ color:var(--accent); border-color:var(--accent); }
 /* an Angle knob's dial (ROADMAP D1): beside its slider, turned by dragging round it (0° up, clockwise) */
@@ -1464,7 +1462,7 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .field.full.has-dial > .range-val{ flex:0 0 auto; margin-left:8px; }
 /* a Curve Control's pad (ROADMAP D4): the curve drawn by hand, its points dragged; ↺ in its corner */
 .curve-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
-.curve-pad canvas{ display:block; width:100%; height:auto; aspect-ratio:2 / 1; max-height:170px; background:var(--bg-panel-2, rgba(0,0,0,.2)); border:1px solid var(--line); touch-action:none; cursor:crosshair; }
+.curve-pad canvas{ display:block; width:100%; height:auto; aspect-ratio:2 / 1; max-height:170px; background:var(--bg-panel-2, rgba(0,0,0,.2)); border:1px solid var(--line); touch-action:none; cursor:crosshair; border-radius:var(--r-2); }
 .curve-head .curve-reset{ margin:0; }
 
 /* the light dial: drag from the centre (light overhead) toward where the light
@@ -1482,7 +1480,7 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
 .ld-handle{ fill:var(--accent); stroke:var(--bg-panel, #1a1717); stroke-width:1.2; }   /* (its edge parts it from the ring it rides at 100%) */
 .ld-spike-body{ fill:var(--accent); }
 .ld-curl{ fill:none; stroke:var(--accent); stroke-width:1.9; stroke-linecap:round; }
-.ld-btn{ position:absolute; border:1px solid var(--border, #444); background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 85%, var(--text-main) 5%), var(--bg-panel-2)); color:var(--text-dim); border-radius:8px; font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; box-shadow:inset 0 1px 0 var(--hi), 0 1px 2px var(--well); }
+.ld-btn{ position:absolute; border:1px solid var(--border, #444); background:linear-gradient(180deg, color-mix(in srgb, var(--bg-panel-2) 85%, var(--text-main) 5%), var(--bg-panel-2)); color:var(--text-dim); border-radius:var(--r-2); font-size:16px; width:30px; height:30px; padding:0; cursor:pointer; line-height:1; box-shadow:inset 0 1px 0 var(--hi), 0 1px 2px var(--well); }
 .ld-btn:hover{ color:var(--accent-2); border-color:var(--accent-2)}
 .ld-reset{ right:0; bottom:0; }
 .ld-centre-btn{ left:0; bottom:0; }
@@ -1593,7 +1591,7 @@ body:not(.is-mobile) .tool-row:not(.has-camera) > .field{ min-width:0; }
 }
   /* each tab its own surface: a hover, and a clearly filled active state */
   body:not(.is-mobile) .tab-btn{
-  display:flex; align-items:center; gap:8px; padding:8px 16px; border:1px solid var(--line); border-radius:8px;
+  display:flex; align-items:center; gap:8px; padding:8px 16px; border:1px solid var(--line); border-radius:var(--r-2);
   background:var(--bg-panel-2); color:var(--text-dim); font-family:inherit; font-size:14px; letter-spacing:.05em; cursor:pointer;
   transition:background .15s, color .15s, border-color .15s;
 }
@@ -1690,7 +1688,6 @@ body.is-mobile .tool-row > #seedRow{   padding-right:12px;   }
 body.is-mobile .tool-row > .field:not(#lightRow):not(#seedRow){ grid-column:2; }
 body.is-mobile .tool-row .light-dial{ margin:0 auto; }
 /* (the hue fields' left rule is not for the seed, which sits under the dial) */
-body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padding-left:0; }
 
 /* the preset grid's group headings (Simple, Whimsy, Sharpness, Chaos, Touch) */
 .preset-group-head{ grid-column:1 / -1; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); margin:10px 0 2px; opacity:.85; display:flex; align-items:center; gap:6px; }
@@ -1706,11 +1703,22 @@ body.is-mobile .tool-row > .field#seedRow:not(#lightRow){ border-left:none; padd
    compact; nothing flashy.
    ============================================================ */   /* rosewood, and sage across the wheel */   /* gold, and the violet it always had: sharp */  /* deep water, and coral: chaos in the shallows */   /* paper and plum, and moss */
 
-/* square, everywhere (circles stay circles: they have no corners) */
-.card, details.card, summary, button, .radio-btn, .preset-btn, .tab-btn, .ld-btn, .seed-moon, .snap-btn,
-select, textarea, input[type="text"], input[type="number"], input[type="search"], .subblock, .eso-drawer, .hint code,
-.clr-field button, .clr-picker, .clr-swatches button, .download-btn, .modal, .toast,
-body:not(.is-mobile) .tab-btn, .preset-group-head{ border-radius:0 !important; }
+/* SHAPE (Ruby, 2026-10-24: "just, like, 2px of rounding … only the ones that make sense to round"; docs/prior-art/
+   corner-radii.md): windows --r-3, controls --r-2, small marks --r-1, circles stay circles; what runs to an edge, a
+   line, a picture or a port stays square. A group of choices is one shape: blunted on its outside corners only */
+.radio-group > .radio-btn:first-child, .film-seg > label:first-child > .radio-btn, .forge-zoom > button:first-child, .forge-use > button:first-child{
+  border-start-start-radius:var(--r-2); border-end-start-radius:var(--r-2); }
+.radio-group > .radio-btn:last-child, .film-seg > label:last-child > .radio-btn, .forge-zoom > button:last-child, .forge-use > button:last-child,
+.layer-seg > [data-layer="lower"]{ border-start-end-radius:var(--r-2); border-end-end-radius:var(--r-2); }
+.forge-zoom > button, .forge-use > button{ border-radius:0; }
+.forge-zoom > button:focus-visible, .forge-use > button:focus-visible{ position:relative; z-index:1; }
+/* (Swap is an action beside the choice, a button of its own) */
+.layer-seg > .layer-swap{ border-radius:var(--r-2); }
+/* (blocks of two rows: their four corners, by place) */
+#aspectGroup > .radio-btn:nth-child(1), .film-moves > label:nth-child(1) > .radio-btn, .film-cards > label:nth-child(1) > .radio-btn{ border-radius:var(--r-2) 0 0 0; }
+#aspectGroup > .radio-btn:nth-child(3), .film-moves > label:nth-child(2) > .radio-btn, .film-cards > label:nth-child(2) > .radio-btn{ border-radius:0 var(--r-2) 0 0; }
+#aspectGroup > .radio-btn:nth-child(4), .film-moves > label:nth-child(3) > .radio-btn, .film-cards > label:nth-child(3) > .radio-btn{ border-radius:0 0 0 var(--r-2); }
+#aspectGroup > .radio-btn:nth-child(6), .film-moves > label:nth-child(4) > .radio-btn, .film-cards > label:nth-child(4) > .radio-btn{ border-radius:0 0 var(--r-2) 0; }
 
 /* surfaces: a little depth */
 
@@ -1725,8 +1733,6 @@ select:focus, textarea:focus, input[type="text"]:focus, input[type="number"]:foc
 /* choices: the chosen one lit from within, both accents */
 .radio-btn:hover{ color:var(--text-main); border-color:color-mix(in srgb, var(--accent-dim) 60%, var(--line)); }
 
-/* the sub-blocks hang from a rule that fades from one accent into the other */
-
 /* presets: tiles that lift, group heads in the second accent */
 .preset-group-head::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg, color-mix(in srgb, var(--accent-2) 45%, transparent), transparent); }
 
@@ -1739,9 +1745,6 @@ body:not(.is-mobile) .tab-btn.active{ background:linear-gradient(180deg, var(--a
 
 /* small marks of the second accent: the locks when open, the knob readouts */
 .range-val, .angle-val{ color:color-mix(in srgb, var(--accent-2) 55%, var(--text-dim)); }
-/* each card carries a thin edge that runs from one accent into the other */
-.card::before{ content:""; position:absolute; left:-1px; top:-1px; bottom:-1px; width:2px; pointer-events:none;
-  background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 75%, transparent), color-mix(in srgb, var(--accent-2) 55%, transparent) 70%, transparent); opacity:.8; }
 /* the disclosure marks in the second accent */
 summary.card-title::marker, summary.card-title::-webkit-details-marker{ color:var(--accent-2); }
 body.is-mobile summary.card-title::after, .subcard > summary::after{ color:var(--accent-2); opacity:.8; }
@@ -1760,7 +1763,7 @@ body.is-mobile #filmBtn{ left:6px; bottom:50px; }
 .filmstrip::-webkit-scrollbar{ display:none; }
 .canvas-wrap.film-open .filmstrip{ display:flex; }
 body.is-mobile .filmstrip{ top:6px; bottom:auto; left:52px; right:6px; }
-.film-frame{ flex:0 0 auto; padding:0; border:1px solid rgba(190,196,208,0.35); border-radius:0; background:rgba(18,20,26,0.55); cursor:pointer; opacity:0.72; }
+.film-frame{ flex:0 0 auto; padding:0; border:1px solid rgba(190,196,208,0.35); border-radius:var(--r-2); overflow:hidden; background:rgba(18,20,26,0.55); cursor:pointer; opacity:0.72; }
 .film-frame:hover{ opacity:1; }
 .film-frame.current{ border-color:var(--accent); opacity:1; box-shadow:0 0 0 1px var(--accent); }
 .film-frame canvas{ display:block; width:72px; height:40px; }
@@ -1768,12 +1771,12 @@ body.is-mobile .film-frame canvas{ width:60px; height:34px; }
 .canvas-wrap.film-open #filmBtn{ opacity:1; color:var(--accent); }
 
 /* the shortcut sheet (desktop): ? opens it */
-.shortcut-btn{ margin-right:10px; border:1px solid var(--border, rgba(255,255,255,0.2)); border-radius:0; background:transparent; color:inherit; font:inherit; font-size:12.5px; padding:2px 8px; cursor:pointer; opacity:0.6; }
+.shortcut-btn{ margin-right:10px; border:1px solid var(--border, rgba(255,255,255,0.2)); border-radius:var(--r-2); background:transparent; color:inherit; font:inherit; font-size:12.5px; padding:2px 8px; cursor:pointer; opacity:0.6; }
 .shortcut-btn:hover{ opacity:1; }
 body.is-mobile .shortcut-btn{ display:none; }
 .sheet-veil{ position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; }
 .sheet-veil[hidden]{ display:none; }
-.sheet{ background:var(--bg-panel, #17141c); color:var(--text-main, #eee); border:1px solid var(--accent); border-radius:0; padding:16px 20px; max-width:min(560px, 92vw); max-height:calc(var(--vvh, 100vh) * 0.86); overflow:auto; box-shadow:0 18px 50px -20px rgba(0,0,0,0.8); }
+.sheet{ background:var(--bg-panel, #17141c); color:var(--text-main, #eee); border:1px solid var(--accent); border-radius:var(--r-3); padding:16px 20px; max-width:min(560px, 92vw); max-height:calc(var(--vvh, 100vh) * 0.86); overflow:auto; box-shadow:0 18px 50px -20px rgba(0,0,0,0.8); }
 .sheet-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:18px; letter-spacing:0.04em; margin-bottom:10px; color:var(--accent); }
 /* the Moving Image sheet: a label and its choice to a row */
 .moving-sheet{ width:min(460px, 94vw); }
@@ -1803,7 +1806,7 @@ body.is-mobile .film-pick .radio-btn{ min-height:40px; }
 .keys{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:13px; }
 .keys dt{ white-space:nowrap; opacity:0.9; }
 .keys dd{ margin:0; opacity:0.85; }
-kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; border-radius:0; padding:0 5px; opacity:0.85; }
+kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; border-radius:var(--r-1); padding:0 5px; opacity:0.85; }
 
 /* THE ATHANOR: the node editor, over the whole app, in the app's own theme
    (its grounds, panels, lines and accent). COLOUR carries the meaning on the
@@ -1831,13 +1834,13 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-cat > summary > span{ color:var(--cat); }
 .forge-cat > summary::-webkit-details-marker{ display:none; }
 .forge-cat > summary::after{ content:' ▾'; opacity:0.6; } .forge-cat:not([open]) > summary::after{ content:' ▸'; }
-.forge-part{ display:block; width:100%; text-align:left; border:1px solid var(--fg-line); border-left:3px solid var(--cat); border-radius:0; background:var(--fg-node); color:var(--fg-text); font:inherit; font-size:12.5px; padding:4px 7px; margin-bottom:3px; cursor:pointer; }
+.forge-part{ display:block; width:100%; text-align:left; border:1px solid var(--fg-line); border-left:3px solid var(--cat); border-radius:var(--r-2); background:var(--fg-node); color:var(--fg-text); font:inherit; font-size:12.5px; padding:4px 7px; margin-bottom:3px; cursor:pointer; }
 .forge-part[draggable="true"]{ cursor:grab; }
 .forge-part:hover{ border-color:var(--cat); }
 /* the grid */
 .forge-canvas{ flex:1; position:relative; min-width:0; min-height:0; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; background:
   radial-gradient(circle, color-mix(in srgb, var(--fg-text) 16%, transparent) 1px, transparent 1.5px) 0 0/24px 24px, var(--fg-ground); }
-.forge-canvas .drawflow .drawflow-node{ display:block; border-radius:0; background:var(--fg-node); border:1px solid var(--fg-line); border-top:3px solid var(--cat, #888); color:var(--fg-text);
+.forge-canvas .drawflow .drawflow-node{ display:block; border-radius:var(--r-3); background:var(--fg-node); border:1px solid var(--fg-line); border-top:3px solid var(--cat, #888); color:var(--fg-text);
   width:216px; padding:0 0 4px; font-size:13px; box-shadow:0 10px 24px -14px rgba(0,0,0,0.7); min-height:0; }
 .forge-canvas .drawflow .drawflow-node.selected{ border-color:var(--cat, var(--fg-accent)); box-shadow:0 0 0 1px var(--cat, var(--fg-accent)), 0 10px 24px -14px rgba(0,0,0,0.7); background:var(--fg-node); }
 /* the title bar is the handle: it alone moves a node (a pinned node not at all) */
@@ -1860,7 +1863,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 [data-t="field"]{ --tc:var(--t-field); } [data-t="image"]{ --tc:var(--t-image); } [data-t="colour"]{ --tc:var(--t-colour); } [data-t="value"]{ --tc:var(--t-value); } [data-t="curve"]{ --tc:var(--t-curve); }
 .forge-param{ flex:1; display:grid; grid-template-columns:70px 1fr 32px; gap:4px; align-items:center; font-size:12px; color:var(--fg-dim); min-width:0; }
 .forge-row.extra .forge-param{ grid-template-columns:70px 1fr; }
-.forge-param input, .forge-param select{ width:100%; min-width:0; font-size:12px; border-radius:0; accent-color:var(--cat); }
+.forge-param input, .forge-param select{ width:100%; min-width:0; font-size:12px; border-radius:var(--r-1); accent-color:var(--cat); }
 .forge-param output{ font-family:var(--ui-code); font-size:11px; text-align:right; color:var(--fg-text); white-space:nowrap; }
 .forge-param.wired{ color:var(--t-value); } .forge-param.wired input{ opacity:0.3; pointer-events:none; } .forge-param.wired output{ color:var(--t-value); }
 .forge-param.wired span::before{ content:'⚙ '; }
@@ -1884,7 +1887,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas input, .forge-canvas textarea{ -webkit-user-select:text; user-select:text; }
 .forge-canvas.panning, .forge-canvas.panning *{ cursor:grabbing !important; }
 /* ✂: where a wire was tapped */
-.forge-cut{ position:absolute; z-index:6; width:auto; margin:0; padding:4px 10px; border-radius:0; border:1px solid var(--fg-accent); background:var(--fg-panel); color:var(--fg-accent); font-size:13px; box-shadow:0 8px 20px -10px rgba(0,0,0,.8); }
+.forge-cut{ position:absolute; z-index:6; width:auto; margin:0; padding:4px 10px; border-radius:var(--r-2); border:1px solid var(--fg-accent); background:var(--fg-panel); color:var(--fg-accent); font-size:13px; box-shadow:0 8px 20px -10px rgba(0,0,0,.8); }
 .forge-cut[hidden]{ display:none; }
 /* each node's own result, at its foot (Step previews on) */
 .forge-node-preview{ display:none; width:calc(100% - 20px); height:auto; aspect-ratio:1; margin:6px 10px 2px; background:#808080; image-rendering:auto; }
@@ -1892,7 +1895,7 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-canvas.steps-on.steps-many .forge-node-preview{ display:none; }   /* (above 150 parts the step previews rest: forge.js) */
 .forge-canvas .drawflow .drawflow-node.forge-output .forge-node-preview, .forge-canvas .drawflow .drawflow-node.forge-inputs .forge-node-preview{ display:none; }
 /* THE DOCK: what it makes, bottom right over the grid — no wider than its preview */
-.forge-dock{ --pv:232px; position:absolute; right:10px; bottom:10px; z-index:5; width:var(--pv); background:var(--fg-panel); border:1px solid var(--fg-line); padding:6px; box-shadow:0 14px 30px -16px rgba(0,0,0,.85); }
+.forge-dock{ --pv:232px; position:absolute; right:10px; bottom:10px; z-index:5; width:var(--pv); background:var(--fg-panel); border:1px solid var(--fg-line); padding:6px; box-shadow:0 14px 30px -16px rgba(0,0,0,.85); border-radius:var(--r-3); }
 .forge-dock.big{ --pv:min(460px, calc(100vw - 40px), calc(var(--vvh, 100vh) - 180px)); }
 .forge-preview{ display:block; width:100%; height:auto; aspect-ratio:1; border:1px solid var(--fg-line); background:#808080; cursor:zoom-in; }
 .forge-dock.big .forge-preview{ cursor:zoom-out; }
@@ -1904,12 +1907,12 @@ kbd{ font-family:var(--ui-code); font-size:12px; border:1px solid currentColor; 
 .forge-working.on{ opacity:.9; }
 .forge-status{ flex:1; min-width:0; margin:0; font-size:11px; color:var(--fg-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .forge-check{ display:flex; align-items:center; gap:4px; font-size:11.5px; cursor:pointer; white-space:nowrap; } .forge-check input{ margin:0; }
-.forge-help-btn{ width:22px; height:22px; padding:0; margin:0; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-dim); font-size:12px; cursor:pointer; }
+.forge-help-btn{ width:22px; height:22px; padding:0; margin:0; border:1px solid var(--fg-line); border-radius:var(--r-1); background:transparent; color:var(--fg-dim); font-size:12px; cursor:pointer; }
 .forge-help-btn[aria-expanded="true"]{ color:var(--fg-accent); border-color:var(--fg-accent); }
 .forge-help{ font-size:11.5px; line-height:1.45; color:var(--fg-dim); margin:6px 0 0; }
 /* THE MENU: what a thing can do (a long press, a right-click, a node's ⋯) */
 .forge-menu{ position:absolute; z-index:20; min-width:220px; max-width:min(320px, calc(100vw - 16px)); max-height:calc(var(--vvh, 100vh) * 0.7); overflow:auto; overscroll-behavior:contain;
-  background:var(--fg-panel); border:1px solid var(--fg-accent); box-shadow:0 18px 44px -18px rgba(0,0,0,.9); padding:4px 0 6px; }
+  background:var(--fg-panel); border:1px solid var(--fg-accent); box-shadow:0 18px 44px -18px rgba(0,0,0,.9); padding:4px 0 6px; border-radius:var(--r-3); }
 .forge-menu[hidden]{ display:none; }
 .forge-menu-head{ display:flex; align-items:center; gap:6px; padding:4px 6px 4px 10px; font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:13.5px; color:var(--fg-accent); }
 .forge-menu-head span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1951,13 +1954,13 @@ body.is-mobile .forge-dock{ --pv:132px; right:6px; bottom:6px; padding:4px; }
 /* (tapped big on a phone too: this rule outranked .forge-dock.big, so a tap toggled the class and nothing grew) */
 body.is-mobile .forge-dock.big, .forge-dock.big{ --pv:min(460px, calc(100vw - 24px), calc(var(--vvh, 100vh) - 140px)); }
 .forge-preview{ touch-action:manipulation; -webkit-user-drag:none; user-select:none; }
-body.is-mobile .forge-menu{ position:fixed; left:0 !important; right:0; top:auto !important; bottom:0; max-width:none; width:auto; max-height:calc(var(--vvh, 100vh) * 0.6); border-left:0; border-right:0; border-bottom:0; }
+body.is-mobile .forge-menu{ position:fixed; left:0 !important; right:0; top:auto !important; bottom:0; max-width:none; width:auto; max-height:calc(var(--vvh, 100vh) * 0.6); border-left:0; border-right:0; border-bottom:0; border-radius:0; }
 body.is-mobile .forge-menu-item{ padding:11px 14px; font-size:14px; }
 /* the four readings of a surface (🜂 🜄 🜁 🜃, textureElements.js): square,
    compact, the glyphs in the symbol font; the texture's default is underlined,
    the one last applied is lit */
 .element-row{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
-.el-btn{ width:36px; height:32px; padding:0; border:1px solid var(--border, #444); border-radius:0; background:var(--bg-panel-2); color:var(--text-dim);
+.el-btn{ width:36px; height:32px; padding:0; border:1px solid var(--border, #444); border-radius:var(--r-2); background:var(--bg-panel-2); color:var(--text-dim);
   font:18px/1 'Noto Sans Symbols', 'Noto Sans Symbols 2', 'Segoe UI Symbol', sans-serif; cursor:pointer; }
 .el-btn:hover{ color:var(--accent-2); border-color:var(--accent-2); }
 .el-btn.is-default{ box-shadow:inset 0 -2px 0 var(--text-dim); }
@@ -1983,9 +1986,9 @@ body.is-mobile .forge-menu-item{ padding:11px 14px; font-size:14px; }
 .modal.modal-hard{ border-color:#d06a6a; box-shadow:inset 0 3px 0 #d06a6a; }
 /* a quiet note at the foot of the page (errors caught, things cleaned up) */
 .toast{ position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:220; max-width:min(560px, calc(100vw - 32px));
-  background:var(--bg-panel); color:var(--text-main); border:1px solid var(--accent); border-radius:0; padding:8px 12px; font-size:13px; box-shadow:0 10px 30px -12px rgba(0,0,0,0.7); }
+  background:var(--bg-panel); color:var(--text-main); border:1px solid var(--accent); border-radius:var(--r-3); padding:8px 12px; font-size:13px; box-shadow:0 10px 30px -12px rgba(0,0,0,0.7); }
 .toast[hidden]{ display:none; }
-.toast-act{ width:auto; margin:0 0 0 8px; padding:2px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); font:inherit; font-size:12.5px; cursor:pointer; }
+.toast-act{ width:auto; margin:0 0 0 8px; padding:2px 10px; border:1px solid var(--accent); background:transparent; color:var(--accent); font:inherit; font-size:12.5px; cursor:pointer; border-radius:var(--r-2); }
 
 /* while a phone's keyboard is up, the Write tab shows only what is being written */
 body.keyboard-open .spell-mark-row{ display:none; }
@@ -2001,8 +2004,8 @@ body.is-mobile .ld-values input{  width:4.4em; }
 .sound-row label{ margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }   /* (as every switch's and eye's name: Ruby saw Sound and Hints dimmer and smaller than Show Spell Code) */
 body.is-mobile .sound-row label{ font-size:15px; }
 .sound-row input[type=range]{ flex:1; min-width:0; }
-input.switch{ appearance:none; -webkit-appearance:none; width:34px; height:18px; margin:0; border:1px solid var(--line); background:var(--bg-card); position:relative; cursor:pointer; flex:0 0 auto; }
-input.switch::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--text-dim); transition:left .15s; }
+input.switch{ appearance:none; -webkit-appearance:none; width:34px; height:18px; margin:0; border:1px solid var(--line); background:var(--bg-card); position:relative; cursor:pointer; flex:0 0 auto; border-radius:var(--r-2); }
+input.switch::after{ content:''; position:absolute; top:2px; left:2px; width:12px; height:12px; background:var(--text-dim); transition:left .15s; border-radius:var(--r-1); }
 input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{ left:18px; background:var(--accent); }
 /* (in a row of options the switch keeps its own size: the row's 16px checkbox rule would squash it to a square) */
 .check-row input[type="checkbox"].switch{ width:34px; height:18px; margin:0 2px 0 0; flex:0 0 auto; accent-color:auto; }
@@ -2020,7 +2023,7 @@ input.switch:checked{ border-color:var(--accent); } input.switch:checked::after{
 .die-more:hover, .die-more:focus-visible{ opacity:1; color:var(--accent); }
 body.is-mobile .die-more{ display:none; }
 .die-menu{ position:fixed; z-index:1000; min-width:220px; max-width:min(320px, calc(100vw - 16px)); padding:4px 0; background:var(--bg-card); color:var(--text-main);
-  border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.45); font-family:var(--ui-text); }
+  border:1px solid var(--line); border-radius:var(--r-3); box-shadow:0 10px 30px rgba(0,0,0,.45); font-family:var(--ui-text); }
 body.is-mobile .die-menu{ left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom, 0px)); max-width:none; padding:6px 0 8px; }
 .die-menu-head{ padding:6px 14px 4px; font-family:var(--ui-caps); font-size:13px; color:var(--accent); }
 .die-menu-item{ display:flex; align-items:flex-start; gap:10px; width:100%; margin:0; padding:8px 14px; border:0; background:transparent; color:inherit; text-align:left; font:inherit; cursor:pointer; }
@@ -2054,13 +2057,13 @@ summary.card-title, .card-title{ overflow:hidden; }
 
 /* the Athanor: wiring by menu (a bar says what is being wired), what a graph teaches, the primer */
 .forge-pending{ position:absolute; z-index:7; left:50%; top:8px; transform:translateX(-50%); display:flex; align-items:center; gap:8px; max-width:calc(100% - 16px);
-  padding:6px 8px 6px 10px; background:var(--fg-panel); border:1px solid var(--fg-accent); color:var(--fg-text, var(--text-main)); font-size:13px; line-height:1.3; box-shadow:0 8px 20px -10px rgba(0,0,0,.8); }
+  padding:6px 8px 6px 10px; background:var(--fg-panel); border:1px solid var(--fg-accent); color:var(--fg-text, var(--text-main)); font-size:13px; line-height:1.3; box-shadow:0 8px 20px -10px rgba(0,0,0,.8); border-radius:var(--r-3); }
 .forge-pending[hidden]{ display:none; }
 .forge-pending i{ flex:0 0 auto; width:10px; height:10px; border-radius:50%; }
-.forge-pending .forge-pending-x{ flex:0 0 auto; width:auto; margin:0; padding:3px 8px; border-radius:0; font-size:12px; background:var(--fg-panel); border:1px solid var(--fg-accent); color:var(--fg-accent); }
+.forge-pending .forge-pending-x{ flex:0 0 auto; width:auto; margin:0; padding:3px 8px; border-radius:var(--r-2); font-size:12px; background:var(--fg-panel); border:1px solid var(--fg-accent); color:var(--fg-accent); }
 .drawflow.wiring .drawflow-node, #forgeCanvas.wiring .drawflow-node{ cursor:crosshair; }
 .forge-note{ position:absolute; z-index:6; left:8px; top:8px; width:min(340px, calc(100% - 16px)); padding:10px 30px 8px 12px; background:var(--fg-panel); border:1px solid var(--line);
-  border-left:3px solid var(--fg-accent); color:var(--fg-text, var(--text-main)); font-size:13px; line-height:1.4; box-shadow:0 8px 20px -12px rgba(0,0,0,.8); }
+  border-left:3px solid var(--fg-accent); color:var(--fg-text, var(--text-main)); font-size:13px; line-height:1.4; box-shadow:0 8px 20px -12px rgba(0,0,0,.8); border-radius:var(--r-3); }
 .forge-note[hidden]{ display:none; }
 .forge-note p{ margin:4px 0 0; }
 .forge-note .forge-note-how{ color:var(--text-dim); font-size:12px; }
@@ -2136,7 +2139,7 @@ strong, b{ font-weight:600; }
 .app-header-tools{ grid-column:3; justify-self:end; display:flex; align-items:center; gap:8px; }
 .app-header-tools .shortcut-btn{ margin:0; }
 /* 🜉 THE ATHANOR: the glyph large, its name small (Ruby: "<## 🜉> <-# The Athanor>") */
-.athanor-top{ display:inline-flex; align-items:center; gap:6px; width:auto; margin:0; padding:3px 10px 3px 8px; border-radius:0;
+.athanor-top{ display:inline-flex; align-items:center; gap:6px; width:auto; margin:0; padding:3px 10px 3px 8px; border-radius:var(--r-2);
   border:1px solid var(--accent-dim); background:transparent; color:var(--text-main); cursor:pointer; line-height:1; }
 .athanor-top .at-glyph{ font-family:'Noto Sans Symbols', 'Segoe UI Symbol', sans-serif; font-size:21px; color:var(--accent); }
 .athanor-top .at-label{ font-family:var(--ui-caps); font-size:12.5px; letter-spacing:0.06em; text-transform:lowercase; color:var(--text-dim); }
@@ -2145,7 +2148,7 @@ strong, b{ font-weight:600; }
 /* SUPPORT: quiet. A small heart that breathes now and then — the only thing on
    the page that moves on its own; still for anyone who asks for less motion */
 .support-btn{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border:1px solid var(--line); color:var(--text-dim);
-  text-decoration:none; font-family:var(--ui-sans); font-size:12.5px; letter-spacing:0.03em; line-height:1.4; white-space:nowrap; }
+  text-decoration:none; font-family:var(--ui-sans); font-size:12.5px; letter-spacing:0.03em; line-height:1.4; white-space:nowrap; border-radius:var(--r-2); }
 .support-btn:hover, .support-btn:focus-visible{ color:var(--accent); border-color:var(--accent-dim); }
 .support-heart{ display:inline-block; color:var(--accent); opacity:.7; font-size:13px; animation:support-breathe 9s ease-in-out infinite; transform-origin:50% 60%; }
 @keyframes support-breathe{ 0%, 78%, 100%{ transform:scale(1); opacity:.6; } 84%{ transform:scale(1.18); opacity:.95; } 90%{ transform:scale(1); opacity:.75; } }
@@ -2200,7 +2203,7 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 }
 
 /* ---------- the Athanor: the parts list (a search; each category says what it holds; each part what it does) ---------- */
-.forge-find{ width:100%; margin:0 0 6px; padding:5px 7px; border:1px solid var(--fg-line); border-radius:0; background:var(--fg-ground); color:var(--fg-text); font-family:var(--ui-sans); font-size:13px; }
+.forge-find{ width:100%; margin:0 0 6px; padding:5px 7px; border:1px solid var(--fg-line); border-radius:var(--r-2); background:var(--fg-ground); color:var(--fg-text); font-family:var(--ui-sans); font-size:13px; }
 .forge-cat[hidden], .forge-part[hidden]{ display:none; }
 .forge-cat-doc{ margin:0 0 4px; font-family:var(--ui-text); font-style:italic; font-size:11.5px; line-height:1.3; color:var(--fg-dim); }
 .forge-part{ display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:1px; }
@@ -2210,12 +2213,12 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 /* ---------- the Athanor's Help: a document over the grid, never over the parts list ---------- */
 .forge-doc{ position:absolute; z-index:12; top:8px; bottom:8px; right:8px; left:8px; overflow-y:auto; overscroll-behavior:contain;
   background:var(--fg-panel); border:1px solid var(--fg-line); box-shadow:0 20px 50px -20px rgba(0,0,0,.9); padding:0 22px 28px; color:var(--fg-text);
-  font-family:var(--ui-text); font-size:15px; line-height:1.55; }
+  font-family:var(--ui-text); font-size:15px; line-height:1.55; border-radius:var(--r-3); }
 .forge-doc[hidden]{ display:none; }
 @media (min-width: 900px){ .forge-doc{ left:calc(236px + 12px); max-width:56rem; } }
 .fd-head{ position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0 8px; background:var(--fg-panel); border-bottom:1px solid var(--fg-line); z-index:1; }
 .fd-head b{ font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:.1em; font-size:16px; color:var(--fg-accent); }
-.fd-close{ width:auto; margin:0; padding:3px 10px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:13px; cursor:pointer; }
+.fd-close{ width:auto; margin:0; padding:3px 10px; border:1px solid var(--fg-line); border-radius:var(--r-2); background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:13px; cursor:pointer; }
 .forge-doc section{ padding-top:6px; }
 .forge-doc h3{ margin:18px 0 6px; font-family:var(--ui-caps); font-weight:500; text-transform:lowercase; letter-spacing:.08em; font-size:15.5px; color:var(--fg-accent); }
 .forge-doc h4{ margin:16px 0 2px; font-family:var(--ui-text); font-weight:500; font-size:15px; }
@@ -2228,7 +2231,7 @@ body:not(.is-mobile) .tab-btn[data-tab="more"].active{ color:var(--text-main); b
 /* THE WIKI (forge.js + athanorWiki.js): contents beside the page on a desk; on a phone the contents fold
    away behind ☰ Contents and the page has the width */
 .wk-tools{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
-.wk-search{ width:min(220px, 40vw); margin:0; padding:4px 8px; font:13px var(--ui-sans); background:var(--fg-ground); color:var(--fg-text); border:1px solid var(--fg-line); border-radius:0; }
+.wk-search{ width:min(220px, 40vw); margin:0; padding:4px 8px; font:13px var(--ui-sans); background:var(--fg-ground); color:var(--fg-text); border:1px solid var(--fg-line); border-radius:var(--r-2); }
 .wk-back:disabled{ opacity:.35; cursor:default; }
 .wk-contents-btn{ display:none; }
 .wk-body{ display:grid; grid-template-columns:minmax(170px, 210px) 1fr; gap:22px; padding-top:8px; }
@@ -2271,9 +2274,9 @@ body.is-mobile .wk-index{ grid-template-columns:1fr; } body.is-mobile .wk-index 
 .wk-fig-step small{ font-size:10.5px; line-height:1.25; text-align:center; color:var(--fg-dim); }
 .wk-fig-op{ color:var(--fg-dim); font-size:15px; margin-bottom:16px; }
 .wk-fig figcaption{ margin-top:8px; font-size:12px; line-height:1.45; color:var(--fg-dim); }
-.wk-req{ font:11px var(--ui-sans); color:#ff7a7a; border:1px solid currentColor; padding:0 4px; margin-left:4px; }
+.wk-req{ font:11px var(--ui-sans); color:#ff7a7a; border:1px solid currentColor; padding:0 4px; margin-left:4px; border-radius:var(--r-1); }
 .wk-gear{ color:var(--t-value); }
-.wk-page a.wk-map{ font:11px var(--ui-sans); color:var(--t-field); border:1px solid currentColor; padding:0 4px; margin-left:4px; white-space:nowrap; }
+.wk-page a.wk-map{ font:11px var(--ui-sans); color:var(--t-field); border:1px solid currentColor; padding:0 4px; margin-left:4px; white-space:nowrap; border-radius:var(--r-1); }
 .wk-see{ margin-top:14px; font-size:13px; color:var(--fg-dim); }
 .wk-gloss{ display:grid; grid-template-columns:minmax(130px, 190px) 1fr; gap:5px 14px; }
 .wk-gloss dt{ font-weight:500; } .wk-gloss dd{ margin:0; color:var(--fg-dim); }
@@ -2281,7 +2284,7 @@ body.is-mobile .wk-index{ grid-template-columns:1fr; } body.is-mobile .wk-index 
 /* bottom:-28px and the matching margin: it rides over the wiki's own bottom padding, so no text shows beneath it */
 .wk-pager{ position:sticky; bottom:-28px; z-index:1; display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px 0 -28px; padding:8px 0 38px; background:var(--fg-panel); border-top:1px solid var(--fg-line); font-family:var(--ui-sans); }
 .wk-pager[hidden]{ display:none; }
-.wk-pager a{ display:flex; flex-direction:column; gap:1px; padding:6px 10px; min-height:40px; justify-content:center; border:1px solid var(--fg-line); color:var(--fg-text); text-decoration:none; min-width:0; }
+.wk-pager a{ display:flex; flex-direction:column; gap:1px; padding:6px 10px; min-height:40px; justify-content:center; border:1px solid var(--fg-line); color:var(--fg-text); text-decoration:none; min-width:0; border-radius:var(--r-2); }
 .wk-pager a span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; color:var(--fg-accent); }
 .wk-pager small{ font-size:11px; letter-spacing:.06em; text-transform:lowercase; color:var(--fg-dim); }
 .wk-pager .wk-next{ text-align:right; align-items:flex-end; }
@@ -2307,9 +2310,9 @@ body.is-mobile .forge-doc .fd-head b{ white-space:nowrap; }
 body.is-mobile .forge-doc .wk-tools{ justify-content:flex-start; }
 /* Close on the far side from Contents and Back, so a hurried thumb doesn't shut the wiki (Ruby) */
 body.is-mobile .forge-doc .wk-tools [data-doc="close"]{ margin-left:auto; }
-.forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
+.forge-seed-btn{ width:auto; margin:0; padding:2px 7px; border:1px solid var(--fg-line); border-radius:var(--r-1); background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; cursor:pointer; white-space:nowrap; }
 .forge-seed-btn:hover{ border-color:var(--fg-accent); color:var(--fg-accent); }
-.forge-channel{ width:auto; margin:0; padding:2px 4px; border:1px solid var(--fg-line); border-radius:0; background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; }
+.forge-channel{ width:auto; margin:0; padding:2px 4px; border:1px solid var(--fg-line); border-radius:var(--r-1); background:transparent; color:var(--fg-text); font-family:var(--ui-sans); font-size:12px; }
 
 /* ============================================================
    THE CHOOSER (chooser.js): a surface menu shown as tiles.
@@ -2329,15 +2332,15 @@ select.ch-native{ position:absolute !important; width:1px !important; height:1px
 .ch-glyph{ color:var(--accent-2); font-size:20px; line-height:1; }
 
 .ch-panel{ position:fixed; z-index:900; display:flex; flex-direction:column; background:var(--bg-panel); color:var(--text-main);
-  border:1px solid var(--line); box-shadow:0 18px 40px -12px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 18%, transparent); }
+  border:1px solid var(--line); box-shadow:0 18px 40px -12px var(--lo), 0 0 0 1px color-mix(in srgb, var(--accent-2) 18%, transparent); border-radius:var(--r-3); }
 .ch-panel.ch-sheet{ left:0; right:0; bottom:0; top:auto; width:auto; max-height:calc(var(--vvh) * 0.82); border-width:1px 0 0;
-  padding-bottom:env(safe-area-inset-bottom, 0); }
+  padding-bottom:env(safe-area-inset-bottom, 0); border-radius:0; }
 .ch-panel.ch-side{ left:0; top:0; bottom:0; right:auto; width:min(88vw, 420px); max-height:none; border-width:0 1px 0 0;
-  padding-top:env(safe-area-inset-top, 0); padding-bottom:env(safe-area-inset-bottom, 0); }
+  padding-top:env(safe-area-inset-top, 0); padding-bottom:env(safe-area-inset-bottom, 0); border-radius:0; }
 .ch-head{ display:flex; gap:6px; padding:8px; border-bottom:1px solid var(--line); background:var(--bg-panel-2); }
 .ch-search{ flex:1 1 auto; min-width:0; min-height:36px; font-size:15px; }
 .ch-panel input.ch-search{ width:auto; }
-.ch-close{ flex:0 0 40px; min-height:36px; background:none; border:1px solid var(--line); color:var(--text-dim); cursor:pointer; font-size:14px; }
+.ch-close{ flex:0 0 40px; min-height:36px; background:none; border:1px solid var(--line); color:var(--text-dim); cursor:pointer; font-size:14px; border-radius:var(--r-2); }
 .ch-close:hover{ color:var(--text-main); border-color:var(--accent-dim); }
 .ch-body{ overflow:auto; overscroll-behavior:contain; padding:0 8px 10px; flex:1 1 auto; min-height:0; }
 /* (a group's name stays at the top as its tiles pass beneath; its shadow above covers the sliver some browsers leave over it) */
@@ -2353,7 +2356,7 @@ select.ch-native{ position:absolute !important; width:1px !important; height:1px
 .ch-tile{ display:flex; flex-direction:column; gap:4px; padding:0; background:none; border:1px solid transparent; color:var(--text-main);
   cursor:pointer; text-align:left; font:inherit; min-width:0; border-radius:0; }
 .ch-tile[hidden]{ display:none; }
-.ch-thumb{ display:grid; place-items:center; aspect-ratio:1; width:100%; overflow:hidden; background:var(--bg-deep); border:1px solid var(--line); }
+.ch-thumb{ display:grid; place-items:center; aspect-ratio:1; width:100%; overflow:hidden; background:var(--bg-deep); border:1px solid var(--line); border-radius:var(--r-2); }
 .ch-thumb img, .ch-thumb canvas{ width:100%; height:100%; display:block; object-fit:cover; }
 .ch-name{ font-size:12px; line-height:1.25; padding:0 2px 2px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .ch-tile:hover .ch-thumb{ border-color:var(--accent-dim); }
@@ -2442,7 +2445,7 @@ body.is-mobile .tool-row.has-camera > .field.hue-head{ grid-column:1 / -1 !impor
 /* THE SURFACE'S CONTROLS: its sliders and curves under one drop-down heading (Opacity stays outside it) */
 /* (Ruby: plainly a drawer even when shut, with room above it): a bar across the panel, its count of sliders and a
    chevron at its right; open, the bar joins the sliders beneath it */
-.controls-fold{ margin:12px 0 4px; padding:0 10px; box-sizing:border-box; border:1px solid color-mix(in srgb, var(--line) 80%, transparent); background:color-mix(in srgb, var(--bg-panel-2, #1a171d) 70%, transparent); }
+.controls-fold{ margin:12px 0 4px; padding:0 10px; box-sizing:border-box; border:1px solid color-mix(in srgb, var(--line) 80%, transparent); background:color-mix(in srgb, var(--bg-panel-2, #1a171d) 70%, transparent); border-radius:var(--r-2); }
 .controls-fold > summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; min-height:34px; padding:0 10px; margin:0 -10px;
   font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-2); }
 .controls-fold > summary::-webkit-details-marker{ display:none; }
@@ -2542,7 +2545,7 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .sk-readout .sr-val{ color:var(--text-main); font-variant-numeric:tabular-nums; flex:1 1 auto; }
 .sk-readout .sr-tier{ color:var(--accent-2); font-size:11px; }
 .sk-readout .sr-step{ flex:0 0 34px; min-height:30px; background:none; border:1px solid var(--line); color:var(--text-main); font-size:16px; cursor:pointer; }
-.rack-btn{ background:none; border:1px solid transparent; color:var(--text-dim); font-size:14px; line-height:1; padding:4px 6px; cursor:pointer; min-width:30px; min-height:28px; }
+.rack-btn{ background:none; border:1px solid transparent; color:var(--text-dim); font-size:14px; line-height:1; padding:4px 6px; cursor:pointer; min-width:30px; min-height:28px; border-radius:var(--r-2); }
 .rack-btn:hover{ color:var(--accent-2); border-color:var(--line); }
 
 .sk-ticks.dense circle{ stroke:none; fill:var(--accent); opacity:.35; } .sk-ticks.dense circle.on{ opacity:1; }

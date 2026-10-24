@@ -819,6 +819,11 @@ Mistakes made once, so they aren't made twice: **docs/pitfalls.md**. Skim it bef
 **A spell synthesizer, not a music one** (Ruby). Controls are drawn as the light and camera dials are: thin lines,
 glyphs, rings and tick dots; flat, never skeuomorphic.
 
+**Corners, a little blunted** (Ruby, 2026-10-24: "just, like, 2px of rounding … only the ones that make sense to
+round"; docs/prior-art/corner-radii.md): windows 3px, controls 2px, small marks 1px, from the `--r-` steps on `:root`
+(poetrypress.css, SHAPE); circles stay circles. A group of choices is one shape, blunted on its outside corners only.
+What runs to the screen's edge, a line, a picture and the Athanor's ports stay square. Focus rings follow the shape.
+
 **One language for toggles** (Ruby: "my favorite one is the eye"): an **eye** where something is shown or hidden (a
 section in its heading, the inscription, highlighting, the spell code, step previews); a **switch** where a feature is
 turned on (Text Aware, Rounded Corners, Sound…). No plain checkbox: uiLocks.js's `EYES` and `SWITCHES` say which.

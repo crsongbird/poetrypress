@@ -2,6 +2,16 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Trinculo (2026-10-21)
+
+- Nothing you'll see: a housekeeping release.
+
+### Under the hood
+- Housekeeping: pruned the stylesheet: tools/css-prune.py audited all 2,530 lines and found 323 declarations that
+  looked overridden in every state, but each, taken out, changed some drawn element somewhere (a drawer's rows, a
+  sheet's width, a dial's turning point), so all went back. Nothing was removed; the stylesheet carries no dead weight
+  the audit can find.
+
 ## Uranus–Stephano (2026-10-21)
 
 - A castle turned from the camera keeps its battlements along every wall, not only along its front.

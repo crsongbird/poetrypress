@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Ursa Major–Megrez (2026-10-24)
+
+- Corners are a little rounded, in steps: windows (cards, sheets, dialogs, menus, toasts, the color picker) 3 pixels,
+  buttons and fields 2, small marks (keys, code, swatches) 1; circles stay circles. A row of choices is one shape,
+  rounded only on its outside corners: the radio rows, the Moving Image's blocks, the Athanor's zoom and Keep buttons.
+  What runs to the screen's edge, a line or a picture stays square.
+- The thin lines down the left edge of the cards and of the groups inside them are gone.
+- A keyboard focus ring follows each control's own shape, and no longer changes it.
+
+### Under the hood
+- SHAPE: the corners' steps are tokens on the root (--r-0 to --r-3), in place of the block that squared everything;
+  radii that never drew are gone, and each rounded rule says its step (docs/prior-art/corner-radii.md). Pruned the
+  stylesheet with tools/css-prune.py.
+- New research notes: the Ringworld held still under a moving camera (docs/prior-art/ringworld-stability.md).
+
 ## Ursa Major–Merak (2026-10-24)
 
 - Painted Ringworld is sealed: it no longer opens in the Athanor. The Surface card's Edit in the Athanor button is
@@ -367,13 +382,3 @@ prints it).
 ### Under the hood
 - The stylesheet prune is no longer a standing step of every ten releases: AGENTS.md and the hygiene test ask only
   that the tests be reviewed within every five. tools/css-prune.py stays for when the stylesheet is touched.
-
-## Uranus–Trinculo (2026-10-21)
-
-- Nothing you'll see: a housekeeping release.
-
-### Under the hood
-- Housekeeping: pruned the stylesheet: tools/css-prune.py audited all 2,530 lines and found 323 declarations that
-  looked overridden in every state, but each, taken out, changed some drawn element somewhere (a drawer's rows, a
-  sheet's width, a dial's turning point), so all went back. Nothing was removed; the stylesheet carries no dead weight
-  the audit can find.
