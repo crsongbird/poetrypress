@@ -298,6 +298,46 @@ made first as a quarter-size draft nobody saw. Now:
 - A building's face is read back (`pkFaceProof`) once per look and kept, not once per frame, and from a canvas the CPU
   keeps (a GPU canvas read back stalls its pipeline): about a tenth off a Ringworld frame.
 
+## The Ringworld as an engine (Neptune series)
+
+Ruby: "We are very close to having the fundamentals for a game or simulation engine on the ringworld … this is one
+texture we can optimize so it doesn't have to be loadable in the Athanor." It is SEALED now: its chain still draws the
+page, but it never opens in the Athanor (the Surface card's button is greyed, its parts are in no menu, and a graph
+holding them has them left out), so its insides can change shape for speed.
+
+Measured in node on the CPU (six stills of six worlds at 1200 × 750, and a film's frames at 2400 × 1500), against the
+release before:
+
+| | before | after |
+|---|---|---|
+| six stills, together | 12.1 s | 8.3 s (−31%, with more fields than before) |
+| a film's frame, camera moving | about 1.26 s | about 0.8 s (−37%) |
+
+What did it, every picture identical to the pixel where the change was meant to be invisible:
+1. **Pictures taken, not copied.** In a canvas pass each part copied the picture it was given before painting on it.
+   A part may now take the canvas arriving on an input as its own (`E.take`, `kitOwn`) when only it reads that output
+   and the part that made it paints a fresh one (its step says `fresh`). Three full-size copies a frame saved.
+2. **Oil Paint at nothing** hands its picture on as it came, on a two-by-two ground of paint.
+3. **Light on flat ground once.** With nothing to light but a flat ground (as Oil Paint at nothing gives it), the Light
+   Engine works the light out on a four-by-four grid and lays it on the picture, not on a million points.
+4. **A board's ink kept.** Choosing the colour of a board's words read a pixel back from the canvas, which stalls it,
+   every board, every frame; the choice is kept for the board (`pkInkKept`).
+5. **The ground's rise asked only when needed** (`ground`), and a field's cheaper tests made before the ground is sampled.
+6. **A building's face read once a size band** (`pkFaceProof` keyed in steps of about a tenth), which also stops a
+   building shifting a pixel from frame to frame.
+
+Brainstormed, not yet done (cheapest and surest first):
+- One canvas through the engine: the stars, the arch and the land drawn on one canvas, the masks only when asked.
+- Pictures kept across a film's frames: building faces, boards and trees drawn once per size band and laid down as
+  pictures (with the crossfades the camera's steadiness needs).
+- What the light doesn't change, kept when only the light moves: the store is kept already; the ridges' shapes and
+  the things' places could be too, and only their colours redone.
+- The terrain's heights on a world grid, sampled once and shared by the placing and the painting.
+- The frame drawn by more than one worker: the land in bands, or the things while the ridges are drawn.
+- The arch, the sky and the Light Engine on the GPU.
+- Toward a game: the store as the world's state, movers stepped in time instead of worked out from the clock alone,
+  and the scene drawn in (semi) real time at phone sizes (docs/prior-art/realtime-game.md).
+
 ## 3 · Decisions for Ruby
 
 1. ~~A–D~~ — done.

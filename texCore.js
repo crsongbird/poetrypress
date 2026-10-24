@@ -1075,6 +1075,10 @@ export function kitPicture(v, w, h, gw = w, gh = h, fill = 'rgb(128,128,128)'){
   if(typeof v === 'number'){ const g = Math.round(Math.max(0, Math.min(1, v))*255); x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(0, 0, w, h); return [c, x]; }
   x.fillStyle = fill; x.fillRect(0, 0, w, h); return [c, x];
 }
+/** A canvas pass's picture to paint over: the one arriving on input j, taken as it is when the part may own it (athanor.js
+ *  E.take) and it is the right size, else copied as kitPicture copies it (`def`: what an empty port reads as). */
+export function kitOwn(E, n, j, w, h, def){ const t = E.take ? E.take(n, j) : null; if(t && t.width === w && t.height === h) return [t, t.getContext('2d', CPU)];
+  const v = E.input(n, j); return v === undefined && def === undefined ? kitPicture(v, w, h) : kitPicture(v ?? def, w, h); }
 /** What came in, as a grey field on a gw×gh grid (a canvas sampled to it; a field or image already on it, as it is); nothing: null. */
 export function kitField(v, gw, gh){
   if(v == null) return null;

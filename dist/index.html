@@ -6015,6 +6015,10 @@ function kitPicture(v, w, h, gw = w, gh = h, fill = 'rgb(128,128,128)'){
   if(typeof v === 'number'){ const g = Math.round(Math.max(0, Math.min(1, v))*255); x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(0, 0, w, h); return [c, x]; }
   x.fillStyle = fill; x.fillRect(0, 0, w, h); return [c, x];
 }
+
+
+function kitOwn(E, n, j, w, h, def){ const t = E.take ? E.take(n, j) : null; if(t && t.width === w && t.height === h) return [t, t.getContext('2d', CPU)];
+  const v = E.input(n, j); return v === undefined && def === undefined ? kitPicture(v, w, h) : kitPicture(v ?? def, w, h); }
  
 function kitField(v, gw, gh){
   if(v == null) return null;
@@ -6085,7 +6089,7 @@ const pkPoly = (x, pts, fill) => { x.fillStyle = fill; x.beginPath(); pts.forEac
 const pkDisc = (x, X, Y, r, fill) => { if(!(r > 0)) return; x.fillStyle = fill; x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); };
 const pkEll = (x, X, Y, rx, ry, fill) => { if(!(rx > 0 && ry > 0)) return; x.fillStyle = fill; x.beginPath(); x.ellipse(X, Y, rx, ry, 0, 0, Math.PI*2); x.fill(); };
 const PK_WHITE = [255, 248, 232], PK_BLACK = [0, 0, 0];
-const pkSub = R => { const b = (R()*4294967296) >>> 0; return t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); };
+const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; return f; };
 function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
   g.addColorStop(0, pkCss(col, a)); g.addColorStop(1, pkCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
@@ -6990,7 +6994,9 @@ const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8,
 const PK_PROOFS = new Map();
 function pkFaceProof(face, c, R0, h, wdt, eave, id){
 
-  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+
+
+  const key = id ? id + '|' + Math.round(Math.log2(Math.max(1, h))*8) + '|' + Math.round(Math.log2(Math.max(1, wdt))*8) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
   const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
   if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
@@ -7858,6 +7864,11 @@ function pkBoardOf(w, u){ let tot = 0; const L = []; for(const k in PK_BOARDS){ 
   let r = u*tot; for(const k of L){ r -= PK_BOARDS[k].r; if(r < 0) return k; } return L[0] || null; }
 
 const pkLum = c => 0.3*c[0] + 0.59*c[1] + 0.11*c[2];
+
+
+const PK_INKS = new Map();
+function pkInkKept(key, cands, read){ const k = key + '|' + cands.map(q => Math.round(pkLum(q)/24)).join('.'); let i = PK_INKS.get(k);
+  if(i === undefined){ const ink = read(); i = cands.findIndex(q => q === ink); if(PK_INKS.size > 4000) PK_INKS.clear(); PK_INKS.set(k, i); } return cands[Math.max(0, i)]; }
 function pkInk(x, X, Y, cands){ let g = null; try { const d = x.getImageData(Math.round(X), Math.round(Y), 1, 1).data; if(d[3] > 0) g = [d[0], d[1], d[2]]; } catch(e){ g = null; }
   if(!g) return cands[0]; let best = cands[0], bd = -1; for(const k of cands){ const d = Math.abs(pkLum(k) - pkLum(g)); if(d > bd){ bd = d; best = k; } } return best; }
 const pkHex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -7992,9 +8003,9 @@ function pkBoard(x, X, Y, m, c, id, R0, px, night = 0, aged = 0){
     const al = zone === 'L' ? 'left' : zone === 'R' ? 'right' : 'center', tx = zone === 'L' ? ux + uw*0.05 : zone === 'R' ? ux + uw*0.95 : ux + uw/2, mw = zone === 'L' || zone === 'R' ? uw*0.46 : uw*0.9, col = neon ? pkMix(PP[0], [70, 70, 80], 1 - lit) : BB.art === 'type' || BB.art === 'glyphs' || BB.art === 'pendant' || BB.art === 'label' ? (BB.art === 'glyphs' ? PK_BLACK : PP[1]) : pkMix(PP[0], PK_BLACK, 0.25);
     if(BB.art === 'vertical' || fmt === 'vertical'){ const ls = words.join('').split(''); for(let k = 0; k < ls.length; k++) pkType(x, ls[k], ux + uw/2, uy + uh*(0.1 + 0.85*(k + 0.8)/ls.length), uh/ls.length*0.85, uw*0.8, col, px, { tube: true }); }
     else if(ser){ pkType(x, words[0], ux + uw/2, uy + uh*0.62, uh*0.36, uw*0.9, PP[1], px); }
-    else if(small){ x.fillStyle = pkCss(BB.art === 'throw' || BB.art === 'loop' ? PP[1] : pkMix(PP[0], PK_BLACK, 0.2)); x.fillRect(ux, uy + uh*0.8, uw, uh*0.2); pkType(x, words[0], ux + uw/2, uy + uh*0.96, uh*0.15, uw*0.9, pkInk(x, ux + uw/2, uy + uh*0.9, [...PP, [24, 22, 26], [242, 236, 222]]), px, { face: face0 }); }
+    else if(small){ x.fillStyle = pkCss(BB.art === 'throw' || BB.art === 'loop' ? PP[1] : pkMix(PP[0], PK_BLACK, 0.2)); x.fillRect(ux, uy + uh*0.8, uw, uh*0.2); { const cands = [...PP, [24, 22, 26], [242, 236, 222]]; pkType(x, words[0], ux + uw/2, uy + uh*0.96, uh*0.15, uw*0.9, pkInkKept(sub.b + '|s', cands, () => pkInk(x, ux + uw/2, uy + uh*0.9, cands)), px, { face: face0 }); } }
     else { const ty = BB.art === 'glyphs' ? uy + uh*0.75 : BB.art === 'type' ? uy + uh*0.55 : uy + uh*(zone === 'T' ? 0.24 : 0.3), ts = BB.art === 'type' ? uh*0.32 : BB.art === 'glyphs' ? uh*0.11 : uh*(zone === 'T' ? 0.16 : 0.19);
-      const sx = zone === 'L' ? tx + mw*0.3 : zone === 'R' ? tx - mw*0.3 : tx, ink = neon ? col : pkInk(x, sx, ty - ts*0.35, [...PP.map(q => pkMix(q, PK_BLACK, 0.12)), [24, 22, 26], [242, 236, 222]]);
+      const sx = zone === 'L' ? tx + mw*0.3 : zone === 'R' ? tx - mw*0.3 : tx, ink = neon ? col : (cands => pkInkKept(sub.b + '|w', cands, () => pkInk(x, sx, ty - ts*0.35, cands)))([...PP.map(q => pkMix(q, PK_BLACK, 0.12)), [24, 22, 26], [242, 236, 222]]);
       pkType(x, words[0], tx, ty, ts, mw, ink, px, { align: al, face: face0, tube: neon });
       if(words[1]) pkType(x, words[1], tx, ty + ts*1.1 + (BB.art === 'glyphs' ? uh*0.06 : 0), ts*0.5, mw, BB.art === 'glyphs' ? PK_BLACK : neon ? pkMix(PP[1], [70, 70, 80], 1 - lit) : ink, px, { align: al, face: face0, weight: 'normal', tube: neon }); }
     if(neon && lit > 0.5) pkGlow(x, face[0] + face[2]/2, face[1] + face[3]/2, Math.max(face[2], face[3])*0.7, PP[0], 0.3);
@@ -17809,9 +17820,10 @@ const WHIMSY_STEPS = {
   starfield: { cat: 'Marks', label: 'Starfield', ins: ['over', 'color a', 'color b'], outs: ['image'], io: { ins: ['image', 'colour', 'colour'], outs: ['image'] },
     params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
 
+    fresh: true,
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
       const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
-      const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0);
+      const [pc, x] = kitOwn(E, n, 1, w, h, 0); x.drawImage(c, 0, 0);
 
 
 
@@ -18797,11 +18809,11 @@ const LIGHT_STEPS = {
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130),
       LT_R('second', 'Second Light', 0, -100, 100), LT_R('secondTurn', 'Second Light From', 180, 0, 360), LT_R('secondHeight', 'Second Light Height', 120, 0, 130),
       LT_R('secondSoft', 'Second Light Softness', 30), ['secondKind', 'Second Light Gives', 'select', 'light and shine', { options: ['light and shine', 'light only', 'shine only'] }]],
-    cost: () => 10,
+    cost: () => 10, fresh: true,
 
     paint(E, n){
       const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2); if(M && M.am) o.amb = M.am;
-      const [pc, px] = kitPicture(E.input(n, 1), w, h);
+      const [pc, px] = kitOwn(E, n, 1, w, h);
       if(hv == null) return [pc, kitFieldCanvas(new Float32Array(4).fill(0.5), 2, 2), kitFieldCanvas(new Float32Array(4), 2, 2)];
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
@@ -18809,6 +18821,13 @@ const LIGHT_STEPS = {
       if(E.input(n, 10) != null){ const [nc, nx] = kitPicture(E.input(n, 10), gw, gh), d = nx.getImageData(0, 0, gw, gh).data, NM = new Float32Array(gw*gh*3);
         for(let i = 0; i < gw*gh; i++){ const x = d[i*4]/127.5 - 1, y = d[i*4 + 1]/127.5 - 1, z = Math.max(1e-3, d[i*4 + 2]/127.5 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
         o.normals = NM; nc.width = 0; nc.height = 0; }
+
+
+      let flat = !G && !o.normals && !o.reliefMap && !o.glossMap && !o.sssMap && !(o.sss > 0); if(flat){ const h0 = H[0]; for(let i = 1; i < H.length; i++) if(H[i] !== h0){ flat = false; break; } }
+      if(flat){ const L1 = ltLight(new Float32Array(16).fill(H[0]), 4, 4, o.deg, o, null), SK1 = L1.K2 ? ltSecondK(o) : null, SS1 = L1.K2 ? ltSecondS(o) : null, k = L1.K[5], s = L1.S[5]*o.shine*255, am = L1.A ? L1.A[5] : 0;
+        const mul = [0, 1, 2].map(c => ltK(k, M, c) + (L1.A ? am*(M.am[c] - 1) : 0) + (L1.K2 ? L1.K2[5]*SK1[c] : 0)), add = [0, 1, 2].map(c => s*(M ? M.hi[c] : 1) + (L1.K2 ? L1.S2[5]*255*SS1[c] : 0));
+        const im = px.getImageData(0, 0, w, h), dd = im.data, m0 = mul[0], m1 = mul[1], m2 = mul[2], a0 = add[0], a1 = add[1], a2 = add[2], L = dd.length; for(let q = 0; q < L; q += 4){ dd[q] = dd[q]*m0 + a0; dd[q + 1] = dd[q + 1]*m1 + a1; dd[q + 2] = dd[q + 2]*m2 + a2; }
+        px.putImageData(im, 0, 0); return [pc, kitFieldCanvas(new Float32Array(4).fill(ltClamp(k*0.5)), 2, 2), kitFieldCanvas(new Float32Array(4).fill(L1.S[5]), 2, 2)]; }
       const { K, S, A, K2, S2 } = ltLight(H, gw, gh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null;
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
@@ -18846,8 +18865,11 @@ const LIGHT_STEPS = {
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),
       LT_R('brush', 'Brush: Round · Flat · Knife · Dry', 0)],
-    cost: () => 16,
-    paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
+    cost: () => 16, fresh: true,
+
+
+    paint(E, n){ const o = oilOpts(E, n); if(!(o.amount > 0) && E.take){ const t = E.take(n, 1); if(t && t.width === E.ww && t.height === E.wh){ const [hc, hx] = kitCanvas(2, 2); hx.fillStyle = 'rgb(60,60,60)'; hx.fillRect(0, 0, 2, 2); return [t, hc]; } }
+      const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, o); },
     run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
       return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
   strokes: { cat: 'Marks', label: 'Paint Swipes', ins: [], outs: ['painting', 'heights'], io: { outs: ['image', 'field'] },
@@ -19591,8 +19613,9 @@ function rgStore(V){
 
   const ground = (a, z) => { const d = W*0.004, e = T.true(a, z, d), ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d);
     const slope = Math.hypot(ex, ez)/(2*d), wet = e <= TR.sea; let coast = false, ring = 0;
-    for(let q = 0; q < 6; q++){ const an = q/6*Math.PI*2, ca = Math.cos(an), sa = Math.sin(an), en = T.true(a + ca*W*0.012, z + sa*W*0.012, d); if(en <= TR.sea) coast = true; ring += T.true(a + ca*W*0.03, z + sa*W*0.03, W*0.01); }
-    return { e, slope, wet, coast, rise: (e - ring/6)/(W*0.002) }; };
+    for(let q = 0; q < 6 && !coast; q++){ const an = q/6*Math.PI*2, en = T.true(a + Math.cos(an)*W*0.012, z + Math.sin(an)*W*0.012, d); if(en <= TR.sea) coast = true; }
+
+    let rise; return { e, slope, wet, coast, get rise(){ if(rise === undefined){ for(let q = 0; q < 6; q++){ const an = q/6*Math.PI*2; ring += T.true(a + Math.cos(an)*W*0.03, z + Math.sin(an)*W*0.03, W*0.01); } rise = (e - ring/6)/(W*0.002); } return rise; } }; };
 
 
   const floraAt = (w, a, z) => { if(w === 'ruins') return PK_TREES.ruins;
@@ -19793,13 +19816,16 @@ function rgStore(V){
     const u = da*f.ux + dz*f.uz, v = -da*f.uz + dz*f.ux; if(Math.abs(u) < f.hl + rr && Math.abs(v) < f.hw + rr) return true; } return false; };
 
   const wayClear = f => { for(const p of [-1, -0.5, 0, 0.5, 1]) for(const q of [-1, 0, 1]){ const a = f.a + p*f.hl*f.ux - q*f.hw*f.uz, z = f.z + p*f.hl*f.uz + q*f.hw*f.ux; if(!offWay(a, z, (p || q ? 1 : Math.min(f.hl, f.hw)*0.9/M)*M)) return false; } return true; };
-  farms.forEach(([a0, z0, w, t], hi) => { if(w === 'neon') return;
+
+
+  { const k = 0.18 + 1.1*Math.max(0, V.works - 0.25); for(const st of seats.values()) if(!st.hamlet && st.n) farms.push([st.a, st.z, st.w, 0, k]); }
+  farms.forEach(([a0, z0, w, t, kf = 1], hi) => { if(w === 'neon') return;
     const R = rgRand(s, 1400, hi), th = R()*Math.PI, ux = Math.cos(th), uz = Math.sin(th), strips = R() < 0.35;
-    const cu = (strips ? 160 + 80*R() : 90 + 70*R())*M, cv = strips ? cu*(0.22 + 0.12*R()) : cu*(0.6 + 0.5*R()), Rf = (350 + 550*R())*M*(0.6 + t), nu = Math.ceil(Rf/cu), nv = Math.ceil(Rf/cv);
+    const cu = (strips ? 160 + 80*R() : 90 + 70*R())*M, cv = strips ? cu*(0.22 + 0.12*R()) : cu*(0.6 + 0.5*R()), Rf = (350 + 550*R())*M*(0.6 + t)*kf, nu = Math.ceil(Rf/cu), nv = Math.ceil(Rf/cv);
     for(let i = -nu; i <= nu; i++) for(let j = -nv; j <= nv; j++){
       const lu = (i + (j & 1)*0.5*(strips ? 0 : 1))*cu, lv = j*cv, dist = Math.hypot(lu, lv); if(dist > Rf || R() > 1.1 - Math.pow(dist/Rf, 2)) continue;
       const a = a0 + lu*ux - lv*uz, z = z0 + lu*uz + lv*ux; if(Math.abs(z) > W*0.47) continue;
-      const g = ground(a, z); if(g.wet || g.coast || (w !== 'wilds' && w !== 'magic' && villageAt(w, a, z) > 0.4) || V.forestAt(a, z) > 0.55) continue;
+      if((w !== 'wilds' && w !== 'magic' && villageAt(w, a, z) > 0.4) || V.forestAt(a, z) > 0.55) continue; const g = ground(a, z); if(g.wet || g.coast) continue;
       const hl = cu*(0.4 + 0.08*R()), hw = cv*(0.36 + 0.1*R());
       let f;
       if(g.slope < 0.28) f = { a, z, ux, uz, hl, hw, w, crop: cropOf(w, a, z, g.e, R), step: 0 };
@@ -20630,19 +20656,21 @@ function rgPaintLand(x, mk, dk, V){
 
 const RG_WEATHER_SEL = ['weather', 'Weather', 'select', 'by the seed', { options: ['by the seed', 'clear', 'clouds', 'rain', 'storm', 'snow', 'fog'] }];
 const RING_STEPS = {
-  ringarch: { cat: 'Textures', label: 'The Arch', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
+  ringarch: { cat: 'Textures', label: 'The Arch', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
       RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99),
       ['saturn', 'Gas Giant', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }], RG_WEATHER_SEL], cost: () => 4,
-    paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
+    fresh: true,
+    paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
       const V = rgView(E, n, ww, wh); rgPanSky(c, x, V); rgPaintArch(x, mk, V); return [c, mc]; },
     run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },
-  ringland: { cat: 'Marks', label: 'Land on the Ring', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
+  ringland: { cat: 'Marks', label: 'Land on the Ring', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
       RG_R('works', 'Works', 50), RG_R('clutter', 'Clutter', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99), RG_WEATHER_SEL], cost: () => 4,
-    paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);
+    fresh: true,
+    paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);
       mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh); dk.fillStyle = '#fff'; dk.fillRect(0, 0, ww, wh);
       const V = rgView(E, n, ww, wh); rgPaintLand(x, mk, dk, V); return [c, mc, dc]; },
     run(E, n){ const [c, m, d] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m)), E.asField(E.readCanvas(d))]; } },
@@ -23808,7 +23836,13 @@ const SCROLL_STEPS = {
           const g = x.createLinearGradient(0, 0, 0, top); g.addColorStop(0, 'rgba(255,255,255,0.22)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, ww, top); });
         for(let t = 0; t < 3 + 5*amt; t++){ const k = 3 + (R() < 0.6 ? 1 : 0), X = ww*R(); bare(k, X, crAt(k, X) + U*0.01, U*rnd(0.08, 0.2)*zs*(k === 4 ? 1.3 : 1), 0.95); }
 
-        put(5, 'ink', x => { scGrey(x, 0.5); for(let f = 0; f < 120*amt; f++){ const X = ww*R(), Y = wh*R(), r = U*rnd(0.002, 0.005); x.beginPath(); x.ellipse(X, Y, r*1.6, r, R()*3, 0, Math.PI*2); x.fill(); } }); }
+        put(5, 'ink', x => { scGrey(x, 0.5); for(let f = 0; f < 120*amt; f++){ const X = ww*R(), Y = wh*R(), r = U*rnd(0.002, 0.005); x.beginPath(); x.ellipse(X, Y, r*1.6, r, R()*3, 0, Math.PI*2); x.fill(); } });
+
+
+        { const pts = []; for(let f = 0; f < 40 + 70*amt; f++){ const fallen = R() < 0.45; pts.push([ww*R(), fallen ? top + (wh - top)*Math.pow(R(), 0.6) : wh*0.92*R(), U*rnd(0.004, 0.009), R()*Math.PI, fallen, R() < 0.4]); }
+          const petal = (x, [X, Y, r, a, fallen], k = 1) => { x.beginPath(); x.ellipse(X, Y, r*1.4*k, r*(fallen ? 0.42 : 0.8)*k, fallen ? a*0.2 : a, 0, Math.PI*2); x.fill(); };
+          put(5, 'bloom', x => { scGrey(x, 0.88); for(const p of pts) petal(x, p); });
+          put(5, 'ink', x => { scGrey(x, 0.42); for(const p of pts) if(p[5]){ x.save(); x.beginPath(); x.ellipse(p[0], p[1], p[2]*1.4, p[2]*(p[4] ? 0.42 : 0.8), p[4] ? p[3]*0.2 : p[3], 0, Math.PI*2); x.clip(); petal(x, [p[0] + p[2]*0.5, p[1] - p[2]*0.2, p[2], p[3], p[4]], 0.8); x.restore(); } }); } }
 
 
       const out = MAPS.map(() => new Float32Array(N));
@@ -28704,7 +28738,10 @@ const TEXTURE_CHAINS = {
       [5, 1, 13, 'centre'], [6, 1, 14, 'amount'], [7, 1, 14, 'brush'],
       [8, 1, 13, 2], [9, 1, 13, 'turn'], [9, 2, 13, 'tilt'], [9, 3, 13, 'size'],
       [10, 1, 13, 3], [11, 1, 13, 4], [12, 1, 13, 1], [13, 1, 14, 1], [14, 1, 15, 1], [14, 2, 15, 2], [15, 1, 16, 1]] },
-  ringpaint: { label: 'Ringworld', canvas: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills, their shadows lying on the land under them; by day over dry country a dust devil may whirl, and at dusk a murmuration of starlings wheels over the fields. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog; the sky glows round the sun, burning low at dusk, with the pink Belt of Venus opposite. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+
+
+
+  ringpaint: { label: 'Ringworld', canvas: true, sealed: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills, their shadows lying on the land under them; by day over dry country a dust devil may whirl, and at dusk a murmuration of starlings wheels over the fields. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog; the sky glows round the sun, burning low at dusk, with the pink Belt of Venus opposite. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 120],
       ['knob', { slot: '3' }, 40, 200],
@@ -29402,7 +29439,15 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
     c.width = 0; c.height = 0;
     return o;
   };
-  const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
+
+
+
+
+  const outReaders = new Map(); if(ctx.canvas && !ctx.all) for(const m of Object.values(nodes)) for(const p of Object.values(m.inputs || {})) for(const c of p.connections || []){ const k = String(c.node) + ':' + c.input; outReaders.set(k, (outReaders.get(k) || 0) + 1); }
+  const take = (n, j) => { if(!ctx.canvas || ctx.all) return null; const c = ((n.inputs || {})['input_' + j] || {}).connections || []; if(c.length !== 1) return null;
+    const src = String(c[0].node), sn = nodes[src]; if(!sn || !(STEPS[sn.name] || {}).fresh || outReaders.get(src + ':' + c[0].input) !== 1) return null;
+    const outs = evalNode(src), v = input(n, j); if(!(v && typeof v === 'object' && typeof v.getContext === 'function') || !outs || outs.indexOf(v) !== outs.lastIndexOf(v)) return null; return v; };
+  const E = { ww, wh, N, unit, ctx, deps, input, take, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
   const RUN = n => { const step = STEPS[n.name]; if(!step) return null;
 
     if(ctx.canvas){ if(step.paint) return step.paint(E, n); if(n.name === 'surface') return [input(n, 1)]; }
@@ -29554,6 +29599,7 @@ function athanorStarter(name){
 
 
 function athanorStarterAt(name, defs, values){
+  if((TEXTURE_CHAINS[name] || {}).sealed) return null;
   const g = athanorStarter(name); if(!g) return null;
   for(const n of Object.values(athanorNodes(g))) if(n.name === 'knob'){
     const s = parseInt((n.data || {}).slot, 10) || 1, d = (defs || [])[s - 1], v = parseFloat((values || [])[s - 1]);
@@ -29631,6 +29677,8 @@ function validateGraph(json){
     for(const id of Object.keys(data)){
       const n = data[id];
       if(!n || typeof n !== 'object' || !STEPS[n.name]){ problems.push(`an unknown part (${String(n && n.name).slice(0, 24)}) was left out`); continue; }
+
+      if(STEPS[n.name].sealed){ problems.push(`${STEPS[n.name].label} belongs to the Ringworld alone and was left out`); continue; }
       if(m !== 'Home' && n.name === 'surface'){ problems.push('a Surface inside a group was left out'); continue; }
       const d = {};
       for(const [k, v] of Object.entries(n.data || {})){
@@ -31094,6 +31142,8 @@ const KEPT = {
 const FORGE_BAR = {
 
   revealNone: 'This surface isn’t a graph yet, so it can’t open in the Athanor.',
+  revealSealed: 'The Ringworld is drawn by its own engine, so it doesn’t open in the Athanor.',
+  revealTitle: 'Open this surface’s parts and wires in the Athanor. The page keeps this surface until you Apply your version.',
   revealAskTitle: 'Open {name} in the Athanor?',
   revealAskBody: 'The Athanor’s current graph isn’t kept and will be replaced. Revert (in the ⋯ menu) brings it back until you close the Athanor; Keep it first to save it.',
   revealAskYes: 'Open (Reveal it)',
@@ -33892,11 +33942,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Neptune–Neso';
+const RELEASE = 'Ursa Major–Merak';
 
-const RELEASE_DATE = '2026-10-22';
+const RELEASE_DATE = '2026-10-24';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"eKexUgAV","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"v3lKzXkr","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"tuXXKWOW","sigils":"oFaAKxnj","skyring":"_dJFoQV8","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"oYhEycxA","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -34808,7 +34858,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-22 · fee38ee";
+const STAMP = "2026-10-24 · 439771f";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -41743,9 +41793,9 @@ async function openForge(deps){
         for(const [v, text, act, words] of items){ const o = document.createElement('option'); o.value = v; o.textContent = text; g.appendChild(o); openActs.set(v, act); openWords.set(v, words || ''); }
         openSel.appendChild(g); };
       const starter = (k, S) => async () => { const g = athanorStarter(k); if(g) await openGraph(g, S.label, S.teach); };
-      const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
+      const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t] && !TEXTURE_CHAINS[t].sealed).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
       group('🜉', FORGE_BAR.yours, forgeShelf().slice().reverse().map(rec => ['kept:' + encodeURIComponent(rec.name), rec.name, () => openKept(rec)]));
-      group(ATHANOR_BASICS.glyph, FORGE_BAR.basics, ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t]).map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
+      group(ATHANOR_BASICS.glyph, FORGE_BAR.basics, ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t] && !TEXTURE_CHAINS[t].sealed).map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
 
 
       const tries = name => (STUDY_GROUPS[name] || []).map(key => { const [kind, k] = key.split(':'), S = (kind === 'study' ? ATHANOR_STUDIES : ATHANOR_STARTERS)[k];
@@ -42425,6 +42475,7 @@ async function revealSurface(){
   const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
 
   if(type === 'athanor' && !page){ openAthanorNow(); return; }
+  if((TEXTURE_CHAINS[type] || {}).sealed){ toast(FORGE_BAR.revealSealed); return; }
   const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
   const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
@@ -42466,7 +42517,9 @@ async function protectText(){
   const got = at(hi);
   done(hi, lost ? say('raisedBut', faintest(full, stuck), hi) : say('raised', faintest(got), hi));
 }
-function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') || {}).value || ''; if(b) b.disabled = !(t === 'athanor' || TEXTURE_CHAINS[t]); }
+
+function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') || {}).value || '', sealed = !!(TEXTURE_CHAINS[t] || {}).sealed; if(!b) return;
+  b.disabled = sealed || !(t === 'athanor' || TEXTURE_CHAINS[t]); if(b.setAttribute) b.setAttribute('title', sealed ? FORGE_BAR.revealSealed : FORGE_BAR.revealTitle); }
 
 
 /* ==== uiDials.js ==== */

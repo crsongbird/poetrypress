@@ -504,7 +504,15 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
     c.width = 0; c.height = 0;   // (its pixels let go of at once: texCore freeCanvas)
     return o;
   };
-  const E = { ww, wh, N, unit, ctx, deps, input, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
+  // TAKEN, NOT COPIED (the Ringworld's speed: a canvas pass copied each picture from part to part): in a canvas pass, a
+  // part may take the canvas arriving on input j as its own to paint on, when it is the last part to read it and the
+  // part that made it paints a fresh one (its step says `fresh`), so no other part, nor any cache, ever sees it changed
+  //  (counted by output: a part may read two outputs of another, each its own canvas, and take the one only it reads)
+  const outReaders = new Map(); if(ctx.canvas && !ctx.all) for(const m of Object.values(nodes)) for(const p of Object.values(m.inputs || {})) for(const c of p.connections || []){ const k = String(c.node) + ':' + c.input; outReaders.set(k, (outReaders.get(k) || 0) + 1); }
+  const take = (n, j) => { if(!ctx.canvas || ctx.all) return null; const c = ((n.inputs || {})['input_' + j] || {}).connections || []; if(c.length !== 1) return null;
+    const src = String(c[0].node), sn = nodes[src]; if(!sn || !(STEPS[sn.name] || {}).fresh || outReaders.get(src + ':' + c[0].input) !== 1) return null;
+    const outs = evalNode(src), v = input(n, j); if(!(v && typeof v === 'object' && typeof v.getContext === 'function') || !outs || outs.indexOf(v) !== outs.lastIndexOf(v)) return null; return v; };
+  const E = { ww, wh, N, unit, ctx, deps, input, take, num, map, at, P, field, flat, asField, asImage, asColour, isCurve, hexCol, boxBlur, readCanvas, lightOf, isImg, lum, marks, px, carea, canvasPass: !!ctx.canvas };
   const RUN = n => { const step = STEPS[n.name]; if(!step) return null;
     // a canvas pass: a part that paints, paints; the Surface hands on what it is given
     if(ctx.canvas){ if(step.paint) return step.paint(E, n); if(n.name === 'surface') return [input(n, 1)]; }
@@ -656,6 +664,7 @@ export function athanorStarter(name){
  * sliders' values, each as its share of the slider's range (`defs`: the texture's TEXTURE_PARAMS).
  */
 export function athanorStarterAt(name, defs, values){
+  if((TEXTURE_CHAINS[name] || {}).sealed) return null;   // (the Ringworld never opens in the Athanor)
   const g = athanorStarter(name); if(!g) return null;
   for(const n of Object.values(athanorNodes(g))) if(n.name === 'knob'){
     const s = parseInt((n.data || {}).slot, 10) || 1, d = (defs || [])[s - 1], v = parseFloat((values || [])[s - 1]);
@@ -733,6 +742,8 @@ export function validateGraph(json){
     for(const id of Object.keys(data)){
       const n = data[id];
       if(!n || typeof n !== 'object' || !STEPS[n.name]){ problems.push(`an unknown part (${String(n && n.name).slice(0, 24)}) was left out`); continue; }
+      // (a sealed part, the Ringworld's own, never opens in the Athanor)
+      if(STEPS[n.name].sealed){ problems.push(`${STEPS[n.name].label} belongs to the Ringworld alone and was left out`); continue; }
       if(m !== 'Home' && n.name === 'surface'){ problems.push('a Surface inside a group was left out'); continue; }
       const d = {};
       for(const [k, v] of Object.entries(n.data || {})){

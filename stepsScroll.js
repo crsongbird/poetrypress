@@ -245,8 +245,14 @@ export const SCROLL_STEPS = {
         put(5, 'ink', x => { for(let b = 0; b < 10 + 14*amt; b++){ const X = ww*R(), y = top + (wh - top)*Math.pow(R(), 0.7); scGrey(x, rnd(0.2, 0.55)); scBlot(x, X, y, U*rnd(0.02, 0.07), U*rnd(0.01, 0.03), R, 0.5); }
           const g = x.createLinearGradient(0, 0, 0, top); g.addColorStop(0, 'rgba(255,255,255,0.22)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, ww, top); });
         for(let t = 0; t < 3 + 5*amt; t++){ const k = 3 + (R() < 0.6 ? 1 : 0), X = ww*R(); bare(k, X, crAt(k, X) + U*0.01, U*rnd(0.08, 0.2)*zs*(k === 4 ? 1.3 : 1), 0.95); }
-        // (ash drifting instead of petals)
-        put(5, 'ink', x => { scGrey(x, 0.5); for(let f = 0; f < 120*amt; f++){ const X = ww*R(), Y = wh*R(), r = U*rnd(0.002, 0.005); x.beginPath(); x.ellipse(X, Y, r*1.6, r, R()*3, 0, Math.PI*2); x.fill(); } }); }
+        // (ash drifting)
+        put(5, 'ink', x => { scGrey(x, 0.5); for(let f = 0; f < 120*amt; f++){ const X = ww*R(), Y = wh*R(), r = U*rnd(0.002, 0.005); x.beginPath(); x.ellipse(X, Y, r*1.6, r, R()*3, 0, Math.PI*2); x.fill(); } });
+        // (and the petals, which the curse does not stop (Ruby: "add the petals to the cursed lands"): drifting down through
+        //  the ash, and fallen on the dead ground, lying flat, blighted at their edges; in the Blossom Hue)
+        { const pts = []; for(let f = 0; f < 40 + 70*amt; f++){ const fallen = R() < 0.45; pts.push([ww*R(), fallen ? top + (wh - top)*Math.pow(R(), 0.6) : wh*0.92*R(), U*rnd(0.004, 0.009), R()*Math.PI, fallen, R() < 0.4]); }
+          const petal = (x, [X, Y, r, a, fallen], k = 1) => { x.beginPath(); x.ellipse(X, Y, r*1.4*k, r*(fallen ? 0.42 : 0.8)*k, fallen ? a*0.2 : a, 0, Math.PI*2); x.fill(); };
+          put(5, 'bloom', x => { scGrey(x, 0.88); for(const p of pts) petal(x, p); });
+          put(5, 'ink', x => { scGrey(x, 0.42); for(const p of pts) if(p[5]){ x.save(); x.beginPath(); x.ellipse(p[0], p[1], p[2]*1.4, p[2]*(p[4] ? 0.42 : 0.8), p[4] ? p[3]*0.2 : p[3], 0, Math.PI*2); x.clip(); petal(x, [p[0] + p[2]*0.5, p[1] - p[2]*0.2, p[2], p[3], p[4]], 0.8); x.restore(); } }); } }
 
       // ---- the maps: each band's things drawn, then hidden by the bands nearer than it, and laid together
       const out = MAPS.map(() => new Float32Array(N));

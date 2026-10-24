@@ -4,6 +4,33 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Ursa Major–Merak (2026-10-24)
+
+- Painted Ringworld is sealed: it no longer opens in the Athanor. The Surface card's Edit in the Athanor button is
+  greyed for it, with a note saying why, and its parts are in no menu. Its chain still draws the page, but its
+  insides can now grow into an engine of its own.
+- And it is faster: a still about a third faster, a film's frames more than that, with the same picture to the pixel.
+  Ring in the Sky got quicker on the way.
+- The Ringworld's countryside follows Works: each farmstead farms its own fields round its yard, as many as Works
+  raises. At a little Works the grazing between farms stays open; at much, the patchwork fills in.
+- Sunrise Scroll's cursed land keeps its petals: they drift down through the ash and lie on the dead ground,
+  blighted at their edges.
+
+### Under the hood
+- The Ringworld's chain is `sealed`: `athanorStarterAt` gives nothing for it, `paintReveal` greys the button,
+  `revealSurface` says why, the Athanor's Open drawer leaves it out, and The Arch and Land on the Ring are hidden
+  parts that `validateGraph` leaves out of any graph. chains.test.mjs checks all of it.
+- Speed (PERFORMANCE-AUDIT.md, the Ringworld as an engine): in a canvas pass a part may take the canvas arriving on an
+  input instead of copying it (`E.take`, `kitOwn`, steps marked `fresh`), counted by output so the Light Engine can
+  take its picture; Oil Paint at nothing passes its picture through; the Light Engine lights flat ground once; a
+  board's ink is kept (`pkInkKept`); a place's rise is worked out only when asked; a field's cheaper tests come
+  first; building proofs are read once a size band. Measured pixel-identical against the release before on Painted
+  Ringworld, Ring in the Sky, Painted Landscape, Brushstrokes and Sunrise Scroll; their fingerprints moved because
+  the drawing calls did. Painted Ringworld's also for the farmsteads' fields.
+- The first release named for a star: the §Build test reads a star cluster and its member as well as a planet and its
+  moon. New research notes for what comes next: corner radii, surfaces that bend the one beneath, and films with any
+  setting (docs/prior-art/).
+
 ## Neptune–Neso (2026-10-22)
 
 - Painted Ringworld's buildings stand on the land. None is built on the water or at its very edge (each keeps two
@@ -350,17 +377,3 @@ prints it).
   looked overridden in every state, but each, taken out, changed some drawn element somewhere (a drawer's rows, a
   sheet's width, a dial's turning point), so all went back. Nothing was removed; the stylesheet carries no dead weight
   the audit can find.
-
-## Uranus–Stephano (2026-10-21)
-
-- A castle turned from the camera keeps its battlements along every wall, not only along its front.
-- Now and then on a fair, windy day someone flies a kite in the fields or a city's green: high and downwind by the
-  ring's own wind, nodding on its string, its tail of bows waving as time passes. Kites are put away by dusk and in
-  rain, fog or snow.
-- Chimney smoke leans with the ring's wind (blown nearly flat in a strong one) and, as time passes, rises from the pot
-  and thins away; a factory's saw-tooth roof no longer leaves its teeth floating beside it when seen from the side.
-
-### Under the hood
-- `pkSmoke` draws the chimneys' smoke from the wind and the clock the Ringworld passes down; `PK_BOX3` takes a fifth
-  entry, how far above a flat top what stands on it begins. Texture fingerprints updated for the smoke, the castles,
-  the factories and the kites.

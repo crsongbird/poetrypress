@@ -2,6 +2,20 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Stephano (2026-10-21)
+
+- A castle turned from the camera keeps its battlements along every wall, not only along its front.
+- Now and then on a fair, windy day someone flies a kite in the fields or a city's green: high and downwind by the
+  ring's own wind, nodding on its string, its tail of bows waving as time passes. Kites are put away by dusk and in
+  rain, fog or snow.
+- Chimney smoke leans with the ring's wind (blown nearly flat in a strong one) and, as time passes, rises from the pot
+  and thins away; a factory's saw-tooth roof no longer leaves its teeth floating beside it when seen from the side.
+
+### Under the hood
+- `pkSmoke` draws the chimneys' smoke from the wind and the clock the Ringworld passes down; `PK_BOX3` takes a fifth
+  entry, how far above a flat top what stands on it begins. Texture fingerprints updated for the smoke, the castles,
+  the factories and the kites.
+
 ## Uranus–Caliban (2026-10-21)
 
 - Tractors, food carts, crates, wayside shrines and the builders' cargo are solid when the camera turns: a tractor's

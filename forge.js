@@ -1160,9 +1160,9 @@ export async function openForge(deps){
         for(const [v, text, act, words] of items){ const o = document.createElement('option'); o.value = v; o.textContent = text; g.appendChild(o); openActs.set(v, act); openWords.set(v, words || ''); }
         openSel.appendChild(g); };
       const starter = (k, S) => async () => { const g = athanorStarter(k); if(g) await openGraph(g, S.label, S.teach); };
-      const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t]).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
+      const chained = TEXTURE_GROUPS.map(g => [g, g.types.filter(t => TEXTURE_CHAINS[t] && !TEXTURE_CHAINS[t].sealed).sort((p, q) => TEXTURE_CHAINS[p].label.localeCompare(TEXTURE_CHAINS[q].label))]).filter(([, ts]) => ts.length);
       group('🜉', FORGE_BAR.yours, forgeShelf().slice().reverse().map(rec => ['kept:' + encodeURIComponent(rec.name), rec.name, () => openKept(rec)]));
-      group(ATHANOR_BASICS.glyph, FORGE_BAR.basics, ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t]).map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
+      group(ATHANOR_BASICS.glyph, FORGE_BAR.basics, ATHANOR_BASICS.types.filter(t => TEXTURE_CHAINS[t] && !TEXTURE_CHAINS[t].sealed).map(k => [k, TEXTURE_CHAINS[k].label, starter(k, TEXTURE_CHAINS[k]), TEXTURE_CHAINS[k].teach]));
       // (each group: its surfaces, then the starters and studies that belong with them, marked — the Surface menu's
       //  order; Screens & Signals, studies alone, last)
       const tries = name => (STUDY_GROUPS[name] || []).map(key => { const [kind, k] = key.split(':'), S = (kind === 'study' ? ATHANOR_STUDIES : ATHANOR_STARTERS)[k];

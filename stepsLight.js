@@ -24,7 +24,7 @@
  * Each paints at full size in a canvas pass (the page's own textures) and runs
  * on the Athanor's grid otherwise; the same code does both.
  */
-import { cpx, canonDiv, lightHeights, lightRig, withLightTilt, lightTiltNow, lightLow, kitCanvas, kitPicture, kitField, kitFieldCanvas, kitImage, isCanvasLike, CPU } from './texCore.js';
+import { cpx, canonDiv, lightHeights, lightRig, withLightTilt, lightTiltNow, lightLow, kitCanvas, kitPicture, kitOwn, kitField, kitFieldCanvas, kitImage, isCanvasLike, CPU } from './texCore.js';
 
 const LT_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const ltClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -469,11 +469,11 @@ export const LIGHT_STEPS = {
       ['from', 'Light Height From', 'select', 'the dial', { options: ['the dial', 'its own height'] }], LT_R('height', 'Light Height', 60, 0, 130),
       LT_R('second', 'Second Light', 0, -100, 100), LT_R('secondTurn', 'Second Light From', 180, 0, 360), LT_R('secondHeight', 'Second Light Height', 120, 0, 130),
       LT_R('secondSoft', 'Second Light Softness', 30), ['secondKind', 'Second Light Gives', 'select', 'light and shine', { options: ['light and shine', 'light only', 'shine only'] }]],
-    cost: () => 10,
+    cost: () => 10, fresh: true,
     // a canvas pass (full size): light on a grid of at most ~1.2M points, the picture composed at full size
     paint(E, n){
       const { ww: w, wh: h } = E, o = ltSettings(E, n), M = ltMaterial(E, n), hv = E.input(n, 2); if(M && M.am) o.amb = M.am;
-      const [pc, px] = kitPicture(E.input(n, 1), w, h);
+      const [pc, px] = kitOwn(E, n, 1, w, h);
       if(hv == null) return [pc, kitFieldCanvas(new Float32Array(4).fill(0.5), 2, 2), kitFieldCanvas(new Float32Array(4), 2, 2)];
       const dv = Math.max(1, Math.ceil(Math.sqrt(w*h/1.2e6))), gw = Math.ceil(w/dv), gh = Math.ceil(h/dv);
       const H = kitField(hv, gw, gh) || kitField(kitFieldCanvas(kitField(hv, w, h) || new Float32Array(w*h).fill(0.5), w, h), gw, gh);
@@ -481,6 +481,13 @@ export const LIGHT_STEPS = {
       if(E.input(n, 10) != null){ const [nc, nx] = kitPicture(E.input(n, 10), gw, gh), d = nx.getImageData(0, 0, gw, gh).data, NM = new Float32Array(gw*gh*3);
         for(let i = 0; i < gw*gh; i++){ const x = d[i*4]/127.5 - 1, y = d[i*4 + 1]/127.5 - 1, z = Math.max(1e-3, d[i*4 + 2]/127.5 - 1), l = Math.hypot(x, y, z) || 1; NM[i*3] = x/l; NM[i*3 + 1] = y/l; NM[i*3 + 2] = z/l; }
         o.normals = NM; nc.width = 0; nc.height = 0; }
+      // (FLAT GROUND, as Oil Paint at nothing hands on: no slope, no hollow, no shadow anywhere, so the light is the same at
+      //  every point; worked out once and laid on the picture as it is, not on a grid of a million points)
+      let flat = !G && !o.normals && !o.reliefMap && !o.glossMap && !o.sssMap && !(o.sss > 0); if(flat){ const h0 = H[0]; for(let i = 1; i < H.length; i++) if(H[i] !== h0){ flat = false; break; } }
+      if(flat){ const L1 = ltLight(new Float32Array(16).fill(H[0]), 4, 4, o.deg, o, null), SK1 = L1.K2 ? ltSecondK(o) : null, SS1 = L1.K2 ? ltSecondS(o) : null, k = L1.K[5], s = L1.S[5]*o.shine*255, am = L1.A ? L1.A[5] : 0;
+        const mul = [0, 1, 2].map(c => ltK(k, M, c) + (L1.A ? am*(M.am[c] - 1) : 0) + (L1.K2 ? L1.K2[5]*SK1[c] : 0)), add = [0, 1, 2].map(c => s*(M ? M.hi[c] : 1) + (L1.K2 ? L1.S2[5]*255*SS1[c] : 0));
+        const im = px.getImageData(0, 0, w, h), dd = im.data, m0 = mul[0], m1 = mul[1], m2 = mul[2], a0 = add[0], a1 = add[1], a2 = add[2], L = dd.length; for(let q = 0; q < L; q += 4){ dd[q] = dd[q]*m0 + a0; dd[q + 1] = dd[q + 1]*m1 + a1; dd[q + 2] = dd[q + 2]*m2 + a2; }
+        px.putImageData(im, 0, 0); return [pc, kitFieldCanvas(new Float32Array(4).fill(ltClamp(k*0.5)), 2, 2), kitFieldCanvas(new Float32Array(4).fill(L1.S[5]), 2, 2)]; }
       const { K, S, A, K2, S2 } = ltLight(H, gw, gh, o.deg, o, G), SK = K2 ? ltSecondK(o) : null, SS = K2 ? ltSecondS(o) : null;
       const im = px.getImageData(0, 0, w, h), dd = im.data, sk = o.shine*255;
       for(let y = 0; y < h; y++){ const gy = Math.min(gh - 1.001, (y + 0.5)/dv - 0.5), y0 = Math.max(0, gy|0), fy = Math.max(0, gy - y0), r0 = y0*gw, r1 = Math.min(gh - 1, y0 + 1)*gw;
@@ -518,8 +525,11 @@ export const LIGHT_STEPS = {
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),
       LT_R('brush', 'Brush: Round · Flat · Knife · Dry', 0)],
-    cost: () => 16,
-    paint(E, n){ const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, oilOpts(E, n)); },
+    cost: () => 16, fresh: true,
+    // (with no paint over it (Amount at nothing), the picture handed on as it came, taken rather than copied, on a flat
+    //  ground of paint: as oilPaint gives it, without the copy)
+    paint(E, n){ const o = oilOpts(E, n); if(!(o.amount > 0) && E.take){ const t = E.take(n, 1); if(t && t.width === E.ww && t.height === E.wh){ const [hc, hx] = kitCanvas(2, 2); hx.fillStyle = 'rgb(60,60,60)'; hx.fillRect(0, 0, 2, 2); return [t, hc]; } }
+      const [src] = kitPicture(E.input(n, 1), E.ww, E.wh); return oilPaint(src, E.ww, E.wh, o); },
     run(E, n){ const v = E.input(n, 1), src = isCanvasLike(v) ? v : kitPicture(v, E.ww, E.wh)[0], [pc, hc] = oilPaint(src, E.ww, E.wh, oilOpts(E, n));
       return [kitImage(pc, E.ww, E.wh), kitField(hc, E.ww, E.wh)]; } },
   strokes: { cat: 'Marks', label: 'Paint Swipes', ins: [], outs: ['painting', 'heights'], io: { outs: ['image', 'field'] },

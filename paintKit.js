@@ -22,7 +22,7 @@ const pkPoly = (x, pts, fill) => { x.fillStyle = fill; x.beginPath(); pts.forEac
 const pkDisc = (x, X, Y, r, fill) => { if(!(r > 0)) return; x.fillStyle = fill; x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); };
 const pkEll = (x, X, Y, rx, ry, fill) => { if(!(rx > 0 && ry > 0)) return; x.fillStyle = fill; x.beginPath(); x.ellipse(X, Y, rx, ry, 0, 0, Math.PI*2); x.fill(); };
 const PK_WHITE = [255, 248, 232], PK_BLACK = [0, 0, 0];
-const pkSub = R => { const b = (R()*4294967296) >>> 0; return t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); };
+const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; return f; };   // (f.b: the thing's own number, the same every frame)
 export function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
   g.addColorStop(0, pkCss(col, a)); g.addColorStop(1, pkCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 // a soft shadow where a thing stands, thrown away from the light
@@ -927,7 +927,9 @@ const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8,
 const PK_PROOFS = new Map();
 function pkFaceProof(face, c, R0, h, wdt, eave, id){
   // (keyed by everything the face is drawn from but the clock, which only lights its windows: by the hour)
-  const key = id ? id + '|' + Math.round(h) + '|' + Math.round(wdt) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+  // (its size in steps of about a tenth, so a film whose camera moves reads the same proof frame after frame, and the
+  //  building keeps its shape instead of shifting a pixel each frame)
+  const key = id ? id + '|' + Math.round(Math.log2(Math.max(1, h))*8) + '|' + Math.round(Math.log2(Math.max(1, wdt))*8) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
   const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
   if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
@@ -1795,6 +1797,11 @@ export function pkBoardOf(w, u){ let tot = 0; const L = []; for(const k in PK_BO
   let r = u*tot; for(const k of L){ r -= PK_BOARDS[k].r; if(r < 0) return k; } return L[0] || null; }
 // of the colours offered, the one that reads best on what is already painted at (X, Y): the picture's own ground
 const pkLum = c => 0.3*c[0] + 0.59*c[1] + 0.11*c[2];
+// (the ink a board's words take, kept for the board (its own number, which call, and its colours' lightness, coarsely):
+//  reading a pixel back stalls the canvas every time, frame after frame, for the same answer)
+const PK_INKS = new Map();
+function pkInkKept(key, cands, read){ const k = key + '|' + cands.map(q => Math.round(pkLum(q)/24)).join('.'); let i = PK_INKS.get(k);
+  if(i === undefined){ const ink = read(); i = cands.findIndex(q => q === ink); if(PK_INKS.size > 4000) PK_INKS.clear(); PK_INKS.set(k, i); } return cands[Math.max(0, i)]; }
 function pkInk(x, X, Y, cands){ let g = null; try { const d = x.getImageData(Math.round(X), Math.round(Y), 1, 1).data; if(d[3] > 0) g = [d[0], d[1], d[2]]; } catch(e){ g = null; }
   if(!g) return cands[0]; let best = cands[0], bd = -1; for(const k of cands){ const d = Math.abs(pkLum(k) - pkLum(g)); if(d > bd){ bd = d; best = k; } } return best; }
 const pkHex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -1929,9 +1936,9 @@ export function pkBoard(x, X, Y, m, c, id, R0, px, night = 0, aged = 0){
     const al = zone === 'L' ? 'left' : zone === 'R' ? 'right' : 'center', tx = zone === 'L' ? ux + uw*0.05 : zone === 'R' ? ux + uw*0.95 : ux + uw/2, mw = zone === 'L' || zone === 'R' ? uw*0.46 : uw*0.9, col = neon ? pkMix(PP[0], [70, 70, 80], 1 - lit) : BB.art === 'type' || BB.art === 'glyphs' || BB.art === 'pendant' || BB.art === 'label' ? (BB.art === 'glyphs' ? PK_BLACK : PP[1]) : pkMix(PP[0], PK_BLACK, 0.25);
     if(BB.art === 'vertical' || fmt === 'vertical'){ const ls = words.join('').split(''); for(let k = 0; k < ls.length; k++) pkType(x, ls[k], ux + uw/2, uy + uh*(0.1 + 0.85*(k + 0.8)/ls.length), uh/ls.length*0.85, uw*0.8, col, px, { tube: true }); }
     else if(ser){ pkType(x, words[0], ux + uw/2, uy + uh*0.62, uh*0.36, uw*0.9, PP[1], px); }
-    else if(small){ x.fillStyle = pkCss(BB.art === 'throw' || BB.art === 'loop' ? PP[1] : pkMix(PP[0], PK_BLACK, 0.2)); x.fillRect(ux, uy + uh*0.8, uw, uh*0.2); pkType(x, words[0], ux + uw/2, uy + uh*0.96, uh*0.15, uw*0.9, pkInk(x, ux + uw/2, uy + uh*0.9, [...PP, [24, 22, 26], [242, 236, 222]]), px, { face: face0 }); }
+    else if(small){ x.fillStyle = pkCss(BB.art === 'throw' || BB.art === 'loop' ? PP[1] : pkMix(PP[0], PK_BLACK, 0.2)); x.fillRect(ux, uy + uh*0.8, uw, uh*0.2); { const cands = [...PP, [24, 22, 26], [242, 236, 222]]; pkType(x, words[0], ux + uw/2, uy + uh*0.96, uh*0.15, uw*0.9, pkInkKept(sub.b + '|s', cands, () => pkInk(x, ux + uw/2, uy + uh*0.9, cands)), px, { face: face0 }); } }
     else { const ty = BB.art === 'glyphs' ? uy + uh*0.75 : BB.art === 'type' ? uy + uh*0.55 : uy + uh*(zone === 'T' ? 0.24 : 0.3), ts = BB.art === 'type' ? uh*0.32 : BB.art === 'glyphs' ? uh*0.11 : uh*(zone === 'T' ? 0.16 : 0.19);
-      const sx = zone === 'L' ? tx + mw*0.3 : zone === 'R' ? tx - mw*0.3 : tx, ink = neon ? col : pkInk(x, sx, ty - ts*0.35, [...PP.map(q => pkMix(q, PK_BLACK, 0.12)), [24, 22, 26], [242, 236, 222]]);
+      const sx = zone === 'L' ? tx + mw*0.3 : zone === 'R' ? tx - mw*0.3 : tx, ink = neon ? col : (cands => pkInkKept(sub.b + '|w', cands, () => pkInk(x, sx, ty - ts*0.35, cands)))([...PP.map(q => pkMix(q, PK_BLACK, 0.12)), [24, 22, 26], [242, 236, 222]]);
       pkType(x, words[0], tx, ty, ts, mw, ink, px, { align: al, face: face0, tube: neon });
       if(words[1]) pkType(x, words[1], tx, ty + ts*1.1 + (BB.art === 'glyphs' ? uh*0.06 : 0), ts*0.5, mw, BB.art === 'glyphs' ? PK_BLACK : neon ? pkMix(PP[1], [70, 70, 80], 1 - lit) : ink, px, { align: al, face: face0, weight: 'normal', tube: neon }); }
     if(neon && lit > 0.5) pkGlow(x, face[0] + face[2]/2, face[1] + face[3]/2, Math.max(face[2], face[3])*0.7, PP[0], 0.3);

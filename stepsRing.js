@@ -10,7 +10,7 @@
  * one world (the land's heights, its seas, forests and cities, who built it) is shared by both, so the arch overhead
  * and the land at your feet are the same ring.
  */
-import { mulberry32, kitCanvas, kitPicture, seedChoice } from './texCore.js';
+import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
 import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
@@ -746,8 +746,9 @@ function rgStore(V){
   // is near (a coast), and how it stands against the land round it (a rise or a hollow), in the land's own units
   const ground = (a, z) => { const d = W*0.004, e = T.true(a, z, d), ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d);
     const slope = Math.hypot(ex, ez)/(2*d), wet = e <= TR.sea; let coast = false, ring = 0;
-    for(let q = 0; q < 6; q++){ const an = q/6*Math.PI*2, ca = Math.cos(an), sa = Math.sin(an), en = T.true(a + ca*W*0.012, z + sa*W*0.012, d); if(en <= TR.sea) coast = true; ring += T.true(a + ca*W*0.03, z + sa*W*0.03, W*0.01); }
-    return { e, slope, wet, coast, rise: (e - ring/6)/(W*0.002) }; };
+    for(let q = 0; q < 6 && !coast; q++){ const an = q/6*Math.PI*2, en = T.true(a + Math.cos(an)*W*0.012, z + Math.sin(an)*W*0.012, d); if(en <= TR.sea) coast = true; }
+    // (how far it stands above the land round it: worked out only when asked, as only some of what is placed asks it)
+    let rise; return { e, slope, wet, coast, get rise(){ if(rise === undefined){ for(let q = 0; q < 6; q++){ const an = q/6*Math.PI*2; ring += T.true(a + Math.cos(an)*W*0.03, z + Math.sin(an)*W*0.03, W*0.01); } rise = (e - ring/6)/(W*0.002); } return rise; } }; };
   // TREES: where the forests are, each kind by its world and the land's climate (dry country, warm, jungle, the cold
   // heights, the fey places of a magic world), sized by its kind
   const floraAt = (w, a, z) => { if(w === 'ruins') return PK_TREES.ruins;
@@ -948,13 +949,16 @@ function rgStore(V){
     const u = da*f.ux + dz*f.uz, v = -da*f.uz + dz*f.ux; if(Math.abs(u) < f.hl + rr && Math.abs(v) < f.hw + rr) return true; } return false; };
   // (no way runs through it: its middle, corners and the middles of its sides all clear of every way)
   const wayClear = f => { for(const p of [-1, -0.5, 0, 0.5, 1]) for(const q of [-1, 0, 1]){ const a = f.a + p*f.hl*f.ux - q*f.hw*f.uz, z = f.z + p*f.hl*f.uz + q*f.hw*f.ux; if(!offWay(a, z, (p || q ? 1 : Math.min(f.hl, f.hw)*0.9/M)*M)) return false; } return true; };
-  farms.forEach(([a0, z0, w, t], hi) => { if(w === 'neon') return;
+  // (and each farmstead out in the country its own fields round its yard, as many as Works raises: at a little Works the
+  //  rough grazing between farms is left open, as Ruby likes it; as Works rises the patchwork fills in between them)
+  { const k = 0.18 + 1.1*Math.max(0, V.works - 0.25); for(const st of seats.values()) if(!st.hamlet && st.n) farms.push([st.a, st.z, st.w, 0, k]); }
+  farms.forEach(([a0, z0, w, t, kf = 1], hi) => { if(w === 'neon') return;
     const R = rgRand(s, 1400, hi), th = R()*Math.PI, ux = Math.cos(th), uz = Math.sin(th), strips = R() < 0.35;
-    const cu = (strips ? 160 + 80*R() : 90 + 70*R())*M, cv = strips ? cu*(0.22 + 0.12*R()) : cu*(0.6 + 0.5*R()), Rf = (350 + 550*R())*M*(0.6 + t), nu = Math.ceil(Rf/cu), nv = Math.ceil(Rf/cv);
+    const cu = (strips ? 160 + 80*R() : 90 + 70*R())*M, cv = strips ? cu*(0.22 + 0.12*R()) : cu*(0.6 + 0.5*R()), Rf = (350 + 550*R())*M*(0.6 + t)*kf, nu = Math.ceil(Rf/cu), nv = Math.ceil(Rf/cv);
     for(let i = -nu; i <= nu; i++) for(let j = -nv; j <= nv; j++){
       const lu = (i + (j & 1)*0.5*(strips ? 0 : 1))*cu, lv = j*cv, dist = Math.hypot(lu, lv); if(dist > Rf || R() > 1.1 - Math.pow(dist/Rf, 2)) continue;
       const a = a0 + lu*ux - lv*uz, z = z0 + lu*uz + lv*ux; if(Math.abs(z) > W*0.47) continue;
-      const g = ground(a, z); if(g.wet || g.coast || (w !== 'wilds' && w !== 'magic' && villageAt(w, a, z) > 0.4) || V.forestAt(a, z) > 0.55) continue;   // (a village's fields come up to its houses; a town's begin past its streets)
+      if((w !== 'wilds' && w !== 'magic' && villageAt(w, a, z) > 0.4) || V.forestAt(a, z) > 0.55) continue; const g = ground(a, z); if(g.wet || g.coast) continue;   // (the cheaper tests first) (a village's fields come up to its houses; a town's begin past its streets)
       const hl = cu*(0.4 + 0.08*R()), hw = cv*(0.36 + 0.1*R());
       let f;
       if(g.slope < 0.28) f = { a, z, ux, uz, hl, hw, w, crop: cropOf(w, a, z, g.e, R), step: 0 };
@@ -1785,19 +1789,21 @@ function rgPaintLand(x, mk, dk, V){
 // the weather (both parts read it the same way, so the arch's clouds and the land's rain agree)
 const RG_WEATHER_SEL = ['weather', 'Weather', 'select', 'by the seed', { options: ['by the seed', 'clear', 'clouds', 'rain', 'storm', 'snow', 'fog'] }];
 export const RING_STEPS = {
-  ringarch: { cat: 'Textures', label: 'The Arch', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
+  ringarch: { cat: 'Textures', label: 'The Arch', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
       RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99),
       ['saturn', 'Gas Giant', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }], RG_WEATHER_SEL], cost: () => 4,
-    paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
+    fresh: true,   // (it paints a canvas of its own, which the next part may take: athanor.js E.take)
+    paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
       const V = rgView(E, n, ww, wh); rgPanSky(c, x, V); rgPaintArch(x, mk, V); return [c, mc]; },
     run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },
-  ringland: { cat: 'Marks', label: 'Land on the Ring', ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
+  ringland: { cat: 'Marks', label: 'Land on the Ring', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
       RG_R('works', 'Works', 50), RG_R('clutter', 'Clutter', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99), RG_WEATHER_SEL], cost: () => 4,
-    paint(E, n){ const { ww, wh } = E, [c, x] = kitPicture(E.input(n, 1) ?? 0, ww, wh), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);
+    fresh: true,
+    paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);
       mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh); dk.fillStyle = '#fff'; dk.fillRect(0, 0, ww, wh);
       const V = rgView(E, n, ww, wh); rgPaintLand(x, mk, dk, V); return [c, mc, dc]; },
     run(E, n){ const [c, m, d] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m)), E.asField(E.readCanvas(d))]; } },

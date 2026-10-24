@@ -33,7 +33,14 @@ for(const [type, ch] of Object.entries(TEXTURE_CHAINS)){
   check(`${ch.label}: opens as an Athanor template (Open → the app's own textures), named, with its sliders`,
     g && A.athanorName(g) === ch.label && A.athanorKnobs(g).length >= 2);
 }
-check('the Athanor\'s Open menu lists the app\'s textures as templates, under the Surface menu\'s own group headings (TEXTURE_GROUPS), each with its starters and studies', /TEXTURE_GROUPS\.map\(g => \[g, g\.types\.filter\(t => TEXTURE_CHAINS\[t\]\)/.test(src('forge.js')) && /FORGE_BAR\.starterMark/.test(src('forge.js')));
+check('the Athanor\'s Open menu lists the app\'s textures as templates, under the Surface menu\'s own group headings (TEXTURE_GROUPS), each with its starters and studies', /TEXTURE_GROUPS\.map\(g => \[g, g\.types\.filter\(t => TEXTURE_CHAINS\[t\] && !TEXTURE_CHAINS\[t\]\.sealed\)/.test(src('forge.js')) && /FORGE_BAR\.starterMark/.test(src('forge.js')));
+// (Ruby: the Ringworld "definitely shouldn't be" loadable in the Athanor: its chain still draws the page, but it never
+//  opens there, its parts are in no menu, and a graph holding them has them left out)
+{ const sealed = Object.keys(TEXTURE_CHAINS).filter(t => TEXTURE_CHAINS[t].sealed), parts = Object.keys(STEPS).filter(k => STEPS[k].sealed);
+  const v = A.validateGraph(JSON.stringify(A.athanorStarter('ringpaint')));
+  check('the Ringworld is sealed: it never opens in the Athanor, its parts are hidden, and a graph holding them has them left out',
+    sealed.includes('ringpaint') && sealed.every(t => A.athanorStarterAt(t, [], []) === null) && parts.length >= 2 && parts.every(k => STEPS[k].hidden)
+    && v.problems.some(p => /Ringworld alone/.test(p)) && !Object.values(((v.graph || {}).drawflow || {}).Home ? v.graph.drawflow.Home.data : {}).some(n => STEPS[n.name] && STEPS[n.name].sealed)); }
 check('a bound param shows as written in its node (editable text)', F.forgeNodeHtml('streaks', {}, { angle: '@dial' }).includes('value="@dial"') && F.forgeNodeHtml('streaks', {}, { angle: '@dial' }).includes('forge-bound'));
 check('a bound param with no range of its own reads its step\'s range', JSON.stringify(stepRange('hatching', 'cross')) === '[0,100]');
 check('every range param of a working step has a ⚙ port after the step\'s own (Filter Forge: every slider takes a wire); inputs and the Surface have none',

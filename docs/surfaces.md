@@ -306,6 +306,12 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   logic as the 3D generator but 2D", and of the flat style, "simplified, but
   cosmic"): Starfield → The Arch → Land on the Ring → Oil Paint (Paint 0: the
   flat shapes alone).
+  - **Sealed** (Ruby: "it definitely shouldn't be" loadable in the Athanor; "it's
+    pretty special"): its chain draws the page but never opens in the Athanor
+    (the Surface card's button greyed, `paintReveal`), The Arch and Land on the
+    Ring are hidden parts (`sealed`), and a graph holding them has them left out
+    (`validateGraph`), so its insides can grow into an engine of its own
+    (PERFORMANCE-AUDIT.md: the Ringworld as an engine).
   - Both parts see through Ringworld's own camera (`ringCamera`, from
     `ringParams`, so the 'ring' guide shows the shot; `curved` draws it the
     same way) in a **stereographic** projection: a pinhole draws the arch, a

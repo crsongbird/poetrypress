@@ -675,6 +675,8 @@ export const KEPT = {
 export const FORGE_BAR = {
   // the Surface card's 🜉 Open in the Athanor (ROADMAP H1: Reveal Spell Graph)
   revealNone: 'This surface isn’t a graph yet, so it can’t open in the Athanor.',
+  revealSealed: 'The Ringworld is drawn by its own engine, so it doesn’t open in the Athanor.',
+  revealTitle: 'Open this surface’s parts and wires in the Athanor. The page keeps this surface until you Apply your version.',
   revealAskTitle: 'Open {name} in the Athanor?',
   revealAskBody: 'The Athanor’s current graph isn’t kept and will be replaced. Revert (in the ⋯ menu) brings it back until you close the Athanor; Keep it first to save it.',
   revealAskYes: 'Open (Reveal it)',

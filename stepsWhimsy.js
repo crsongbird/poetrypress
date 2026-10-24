@@ -26,7 +26,7 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, pageSunAt, kitCanvas, kitPicture, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, pageSunAt, kitCanvas, kitPicture, kitOwn, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh, genFeathers } from './texWhimsy.js';
 import { skyRingFrame } from './stepsGenerative.js';
 import { pkTree, pkSpire, pkMonolith, pkCrystals } from './paintKit.js';
@@ -1373,9 +1373,10 @@ export const WHIMSY_STEPS = {
   starfield: { cat: 'Marks', label: 'Starfield', ins: ['over', 'color a', 'color b'], outs: ['image'], io: { ins: ['image', 'colour', 'colour'], outs: ['image'] },
     params: [WHIM_R('amount', 'Stars', 100, 20, 300), WHIM_R('atmosphere', 'Atmosphere', 20), WHIM_R('variant', 'Variation', 0, 0, 99)], cost: () => 6,
     // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked
+    fresh: true,
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
       const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
-      const [pc, x] = kitPicture(E.input(n, 1) ?? 0, w, h); x.drawImage(c, 0, 0);
+      const [pc, x] = kitOwn(E, n, 1, w, h, 0); x.drawImage(c, 0, 0);
       // (Ruby's favorite planet, very rarely among the stars, about one sky in thirty-six: a small Saturn, an Easter egg;
       //  from a stream of its own, so every other sky is as it was. Seen through an atmosphere (an Earth sky, the
       //  aurora's) it is what it would be there, Ruby: "much dimmer and fainter": a faint warm point, its rings a hint)

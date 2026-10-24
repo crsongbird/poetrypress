@@ -8,50 +8,26 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- THE RINGWORLD'S SKY AND CLOUDS IN A FILM: the clouds drift slower and live in stages (gathering, standing, thinning,
-  gone), billowing as one body; their shadows sweep the land; the small motions slowed a little; the droids wander
-  long paths; nothing cut before it leaves the frame; the sky glows round the sun and at dusk (the Belt of Venus
-  opposite), clouds lit from below at dusk, silver linings, curtains of rain, far showers. Does a film read right now?
-- SUNRISE SCROLL'S LANDS: by the seed (or the new Land knob) misty towers, a coast with a great curling wave, the snowy
-  north, a bamboo grove, a village with its gate and pagoda, a great tree over terraced fields, a cursed land; things
-  stand on the scroll's own ridges. Which land reads best, which needs more, and should the curse take the petals?
-- PAINTED LANDSCAPE'S RIVER, remade: one winding course in perspective (broad bends near, level slivers far), the sky
-  in it by the angle you see it at, its banks' lines and reflections, trees along it. Does it read as water now?
-- THE COUNTRYSIDE FROM A HEIGHT (asked: look at it from a little height and say what it needs). What it needed, and
-  now has: fields laid over each other (now none crosses another, a way or a yard); houses standing alone all over
-  the fields (now farmsteads, laid out linear, courtyard or clustered, and hamlets, with lanes to the road and
-  windbreaks in windy country; villages only round a town's heart; lights only there by night); rocks in the fields
-  (now cleared, heaped at the edges); every slope terraced and flooded (now only where the country terraces); the
-  ridges' lit bands and facets hanging like panes when looked down on (now thinner, facets only where the land is
-  steep). New: orchards and olive groves, a field half ploughed with gulls waiting by the tractor. Still to look at:
-  the spiky conifers read cartoony from above; plain green is left between farms (rough grazing) where a fuller
-  patchwork might be wanted; the research's next ones (dew ponds, gates with cattle watching, tramlines, field
-  margins). Does it read as farmland now?
-- PAINTED LANDSCAPE'S LAND AND WATER: every country has its own marks now (fields as a patchwork with hedges, dune
-  crests and slip faces, honami and flower drifts, canopy masses, mesa beds, tundra polygons, a volcano's gullies and
-  lava), one wind per seed turning them, and the water's mood as a Beaufort number (puffs, foam lines, a mirror strip,
-  white horses). Under the default Impasto the oil strokes soften the finer marks; with Impasto at 0 they show whole.
-  Is that balance right, and which country still looks plain?
-- BUILDINGS ON THE LAND: never on or at the edge of the water, level on a stone plinth on a slope; the pagoda and the
-  mosque turn through every angle; walls, hedgerows and fences in placed pieces. The truly round ones (towers, silos,
-  domes, the observatory, the oast's kiln) stay alike from every side. Does anything still float or turn with you?
-- LIFE IN A FILM: people walk their streets and go in by the hour (fading where they stand: going in at a door is
-  still to come), movers keep timetables instead of circles, the clouds' clock runs evenly, the sea's glints drift
-  and a faint swell comes in. Do the people and the clouds read right in a film of a day?
-- THE FILM SHEET: four groups (Move, Length, Size, Output), every choice a row of buttons, a summary line; time passes
-  during a Camera Round (an hour by default on the Ringworld), from a time of day if chosen; a quarter, half or full
-  turn; even or eased; once through or there and back. Is the order right, and is an hour the right default?
-- THE TREES: every kind remade (its own form within its kind, crowns grown so nothing floats, limbs into the crown,
-  shading near and far, leaves near, the glow of a backlit crown, feathered palms and tree ferns). Do they match
-  the style now, and which kind still looks off?
-- TURNED THINGS IN DEPTH: what turns with the camera is drawn as a solid now: the buildings as boxes taking their
-  shape and colours from their own fronts (setbacks, stilts, gables, battlements), the boxlike props, cars, tractors,
-  carts, crates, shrines and cargo, windmills' sails, gates narrowing edge on; the round ones the same from every side.
-  Does it read as depth in the style of the rest, and what still looks cheap turned?
-- MACRO BLOOM ON A PHONE: Chrome's worker and Firefox ran out of memory; it now uses far less and works on a capped
-  grid. Does it hold?
+- THE RINGWORLD, SEALED AND FASTER: it no longer opens in the Athanor (the Surface card's button greyed, its parts in no
+  menu); stills about a third faster, a film's frames more so (PERFORMANCE-AUDIT.md). Does it feel quicker on the phone?
+- THE COUNTRYSIDE BY WORKS: each farmstead now farms its own fields round its yard, as many as Works raises: at a little
+  Works the grazing between farms stays open, at much the patchwork fills in. Is the balance right at the default?
+- SUNRISE SCROLL'S CURSED LAND: the petals drift down through its ash and lie on the dead ground, blighted at their
+  edges. Enough of them?
 
 ## 2 · Ruby's notes to act on
+- THE RINGWORLD UNDER A MOVING CAMERA (Ruby, 2026-10-24): the ground distorts and transforms as the camera moves (the
+  ridges are planes approximating the land, sampled from where the camera stands); the land morphing lifts and drops
+  what stands on it; trees change through their stages of detail as the camera moves slowly; some buildings pop over
+  each other. Keep the static look ("I like this weird look when it's a static image").
+- PEOPLE GO IN AT DOORS (Ruby): walking is good; at night they should walk to a door, not fade where they stand.
+- THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
+  An hour of time passing during a pan is the right default.
+- SURFACES OVER SURFACES (Ruby): textures with displacement (glass, crystal), or distortion through the lighting, or
+  that could take the surface beneath them (as Two Surfaces), take the texture below as an input and do something
+  creative with it.
+- ROUNDED EDGES (Ruby): about 2px of rounding on what makes sense to round (windows, buttons), with a hierarchy (circles
+  barely any), and joined buttons and radio rows blunted only on their outside edges.
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
   interactions nobody asked for.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.

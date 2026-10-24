@@ -182,6 +182,7 @@ export async function revealSurface(){
   const page = type === 'athanor' ? (() => { const v = validateGraph(($('forgeGraph') || {}).value || ''); return v.ok ? v.graph : null; })() : null;
   // the empty Athanor (no graph on the page yet): the editor opens as it is, to start one (Ruby: it is where anyone would go)
   if(type === 'athanor' && !page){ openAthanorNow(); return; }
+  if((TEXTURE_CHAINS[type] || {}).sealed){ toast(FORGE_BAR.revealSealed); return; }
   const chain = TEXTURE_CHAINS[type], g = page || (chain && athanorStarterAt(type, paramsFor(type), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => ($('texP' + i) || {}).value)));
   if(!g){ toast(FORGE_BAR.revealNone); return; }
   const label = page ? (athanorName(JSON.stringify(page)) || 'My Surface') : chain.label;
@@ -223,4 +224,6 @@ export async function protectText(){
   const got = at(hi);
   done(hi, lost ? say('raisedBut', faintest(full, stuck), hi) : say('raised', faintest(got), hi));
 }
-export function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') || {}).value || ''; if(b) b.disabled = !(t === 'athanor' || TEXTURE_CHAINS[t]); }
+// (greyed for a surface that isn't a graph, and for the sealed Ringworld, its title saying why)
+export function paintReveal(){ const b = $('revealSurfaceBtn'), t = ($('textureType') || {}).value || '', sealed = !!(TEXTURE_CHAINS[t] || {}).sealed; if(!b) return;
+  b.disabled = sealed || !(t === 'athanor' || TEXTURE_CHAINS[t]); if(b.setAttribute) b.setAttribute('title', sealed ? FORGE_BAR.revealSealed : FORGE_BAR.revealTitle); }
