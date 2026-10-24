@@ -989,7 +989,9 @@ function rgStore(V){
   // Islanders and Dorfromantik place a thing near what it goes with and away from its own kind:
   //  a SACRED GROVE on open ground by a forest: a ring of great trees round a greater one, a standing stone in it, and
   //   where there is magic its lights; a STONE ROW across an open, dry moor, the largest stones at its ends and a cairn
-  //   at one; a HOLY WELL at a wood's edge, a tree over it; and a RUIN OF THE OLD ONES, columns standing in the grass
+  //   at one; a HOLY WELL at a wood's edge, a tree over it; a RUIN OF THE OLD ONES, columns standing in the grass; a
+  //   LOOKOUT on a high place; a BOTHY in the open hills; a WILD CAMP by a wood, its fire by night; CHARCOAL STACKS
+  //   smoking in a pine wood; a HIDE at a wood's edge
   { const CELL = 2600*M, span = W*2.2, i0 = Math.floor(-span/CELL), i1 = Math.ceil(span/CELL), j0 = Math.floor((L.z0 - span)/CELL), j1 = Math.ceil((L.z0 + span)/CELL);
     const put = (o, a, z, R) => { if(Math.abs(z) > W*0.47 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M)) return; out.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0 }); };
     for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
@@ -997,18 +999,28 @@ function rgStore(V){
       const w = V.worldAt(a0, z0); if(w !== 'wilds' && w !== 'magic') continue; if(mnHash(i, j, s + 1503) > (w === 'magic' ? 0.6 : 0.5)) continue;
       const g = ground(a0, z0); if(g.wet || g.coast || g.slope > 0.45 || V.cityAt(a0, z0, 0.12) > 0.05) continue;
       const R = rgRand(s, 1510, i*4099 + j), fo = V.forestAt(a0, z0), dr = V.dryAt(a0, z0), u = R(), th = R()*Math.PI*2, ca = Math.cos(th), sn = Math.sin(th);
-      if(fo > 0.15 && fo < 0.6 && u < 0.45){   // the grove
+      const u2 = R(), high = g.e > TR.snow*0.55 || g.rise > 0.35;
+      if(u2 < 0.4 && w === 'wilds'){   // the hills' and the woods' own buildings and work
+        if(high && fo < 0.4) put({ c: 'prop', w, kind: 'lookout', hM: pkMetres('lookout', R()), face: th }, a0, z0, R);
+        else if(fo < 0.3 && g.slope < 0.35) put({ c: 'prop', w, kind: 'bothy', hM: pkMetres('bothy', R()), face: th }, a0, z0, R);
+        else if(fo > 0.45 && g.slope < 0.3){ for(let k = 0, n = 2 + Math.floor(R()*4); k < n; k++){ const an = R()*Math.PI*2, d = (12 + 30*R())*M; put({ c: 'prop', w, kind: 'charcoal', hM: pkMetres('charcoal', R()) }, a0 + Math.cos(an)*d, z0 + Math.sin(an)*d, R); } }
+        else if(fo > 0.2){ const kind = R() < 0.5 ? 'camp' : 'hide'; put({ c: 'prop', w, kind, hM: pkMetres(kind, R()), face: th }, a0, z0, R); }
+        continue; }
+      // (which of them, among those whose ground this is, by weight: a grove the likeliest)
+      const fits = [['grove', fo < 0.85 && g.slope < 0.4 ? 3 : 0], ['row', fo < 0.3 && dr > 0.15 && g.slope < 0.3 ? 2 : 0], ['well', fo > 0.1 ? 1.5 : 0], ['ruin', 0.7]];
+      let pick = u*fits.reduce((t, f) => t + f[1], 0), place = 'ruin'; for(const [k, wt] of fits){ pick -= wt; if(pick < 0){ place = k; break; } }
+      if(place === 'grove'){   // the grove
         const n = 7 + Math.floor(R()*5), rr = (16 + 10*R())*M, kind = w === 'magic' && R() < 0.5 ? 'glow' : 'broadleaf';
         put({ c: 'tree', w, kind: 'broadleaf', hM: pkMetres('broadleaf', 0.8 + 0.2*R())*1.35 }, a0, z0, R);
         for(let k = 0; k < n; k++){ const an = th + k/n*Math.PI*2 + (R() - 0.5)*0.3, d = rr*(0.9 + 0.2*R()); put({ c: 'tree', w, kind, hM: pkMetres(kind, 0.5 + 0.5*R()) }, a0 + Math.cos(an)*d, z0 + Math.sin(an)*d, R); }
         put({ c: 'prop', w, kind: 'menhir', hM: 1.8 + 1.2*R(), face: th }, a0 + ca*rr*0.45, z0 + sn*rr*0.45, R);
         if(w === 'magic') for(let k = 0; k < 3; k++){ const an = R()*Math.PI*2, d = rr*0.6*R(); put({ c: 'prop', w, kind: 'wisp', hM: pkMetres('wisp', R()) }, a0 + Math.cos(an)*d, z0 + Math.sin(an)*d, R); } }
-      else if(fo < 0.25 && dr > 0.3 && g.slope < 0.3 && u < 0.75){   // the stone row
+      else if(place === 'row'){   // the stone row
         const n = 6 + Math.floor(R()*13), sp = (5 + 3*R())*M;
         for(let k = 0; k < n; k++){ const t = (k - (n - 1)/2)*sp, end = Math.min(k, n - 1 - k), hM = 0.8 + 0.5*R() + (end === 0 ? 0.9 : end === 1 ? 0.35 : 0);
           put({ c: 'prop', w, kind: 'menhir', hM, face: th + Math.PI/2 }, a0 + ca*t + (R() - 0.5)*0.6*M, z0 + sn*t + (R() - 0.5)*0.6*M, R); }
         const e = ((n - 1)/2 + 1.6)*sp; put({ c: 'prop', w, kind: 'cairn', hM: 1.2 + 0.8*R() }, a0 + ca*e, z0 + sn*e, R); }
-      else if(fo > 0.2 && u < 0.88){   // the holy well
+      else if(place === 'well'){   // the holy well
         put({ c: 'prop', w, kind: w === 'magic' ? 'wishing' : 'well', hM: 2.4, face: th }, a0, z0, R);
         put({ c: 'tree', w, kind: w === 'magic' ? 'glow' : 'birch', hM: pkMetres('birch', R())*0.8 }, a0 + ca*5*M, z0 + sn*5*M, R);
         if(R() < 0.5) put({ c: 'prop', w, kind: 'shrine', hM: 2.2, face: th }, a0 - sn*6*M, z0 + ca*6*M, R); }
@@ -1196,6 +1208,7 @@ function rgStore(V){
     switch(k){ case 'haybale': case 'haystack': case 'scarecrow': case 'tractor': case 'beehives': return false; case 'grainbin': return fo < 0.4 && g.slope < 0.3 && ci < 0.3 && !!inField(a, z, 40*M);   // (the field's own things stand in its fields)
       case 'windpump': case 'trough': return dr > 0.45 && g.slope < 0.35; case 'wall': return g.slope > 0.15 || dr > 0.5; case 'hedge': return dr < 0.55 && g.slope < 0.4;
       case 'well': case 'shrine': case 'mailbox': case 'wishing': return ci > 0.03; case 'busstop': case 'kiosk': case 'signal': case 'phonebox': case 'vending': case 'cart': return ci > 0.15;
+      case 'fountain': return ci > 0.2 && g.slope < 0.2; case 'bandstand': return ci > 0.12 && ci < 0.7 && g.slope < 0.15;
       case 'wisp': return g.coast || g.rise < -0.2; case 'fairyring': return fo > 0.2 && g.slope < 0.25; case 'solar': case 'dish': return g.slope < 0.25; case 'pole': return false; default: return true; } };
   sow(7, W*0.002, W*0.006, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], ci = V.cityAt(a, z, w === 'wilds' ? 0.12 : P.cv), near = 0.05 + 0.5*ci;
     if(R() > near*0.45*CL) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8 || !offWay(a, z, 1.5*M)) return null;

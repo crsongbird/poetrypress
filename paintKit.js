@@ -98,6 +98,7 @@ export const PK_SIZE = {
   wall: [1.1, 1.5], hedge: [1.5, 2.6], gate: [1.2, 1.3], haybale: [1.2, 1.5], haystack: [3, 5], trough: [0.5, 0.6], pole: [10, 13], milestone: [0.6, 1], cairn: [0.6, 2], stonepile: [0.4, 0.7], gulls: [1, 1], scarecrow: [1.7, 1.9],
   beehives: [0.6, 1.0], well: [2.3, 2.7], wishing: [2.3, 2.7], windpump: [9, 11], tractor: [2.5, 3], grainbin: [6, 10], shrine: [2, 3], busstop: [2.5, 2.7], phonebox: [2.4, 2.5], vending: [1.8, 1.9],
   signal: [3, 3.4], kiosk: [2.6, 3], cart: [2.1, 2.4], parked: [1.4, 1.6], hulk: [1.3, 1.4], scooter: [1.0, 1.2], rubble: [0.6, 2.4], column: [1.5, 4], statue: [1.6, 2.4], container: [2.59, 2.6], traps: [1.2, 1.4],
+  camp: [1.8, 2.4], charcoal: [1.8, 3.2], hide: [3.5, 5], bothy: [3.5, 5], lookout: [9, 14], bandstand: [5, 7], fountain: [2.5, 4],
   cargo: [1.2, 2.4], solar: [2, 2.6], dish: [6, 12], beacon: [5, 10], pipes: [1.5, 2.5], tripod: [1.4, 1.6], menhir: [1.8, 4.5], dolmen: [1.8, 2.6], fairyring: [0.12, 0.16], wisp: [0.3, 0.4], flower: [3, 5],
   toadstool: [2.5, 4], moongate: [3, 4],
   warden: [1.0, 1.4], gate: [14, 22], pod: [3, 4], spire: [90, 160], cogdoor: [8, 11], diner: [5, 6.5], car: [1.4, 1.6], suit: [6, 8], caps: [0.12, 0.15],
@@ -1272,7 +1273,7 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
 // weighted by repeats; a few kinds stand in rows or clusters of their own.)
 export const PK_PROPS = {
   wilds: ['fence', 'fence', 'wall', 'hedge', 'gate', 'haybale', 'haybale', 'haystack', 'trough', 'pole', 'pole', 'mailbox', 'sign', 'milestone', 'cairn', 'scarecrow', 'beehives', 'well', 'windpump', 'tractor', 'grainbin', 'shrine', 'figure'],
-  cities: ['lamp', 'lamp', 'bench', 'hydrant', 'bicycle', 'sign', 'figure', 'figure', 'mailbox', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'parked', 'scooter', 'pole'],
+  cities: ['lamp', 'lamp', 'bench', 'hydrant', 'bicycle', 'sign', 'figure', 'figure', 'mailbox', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'parked', 'scooter', 'pole', 'fountain', 'bandstand'],
   neon: ['lamp', 'sign', 'bicycle', 'crate', 'figure', 'figure', 'vending', 'vending', 'signal', 'cart', 'scooter', 'scooter', 'parked'],
   builders: ['lamp', 'crate', 'bench', 'cargo', 'cargo', 'solar', 'solar', 'dish', 'beacon', 'pipes', 'tripod'],
   ruins: ['barrel', 'barrel', 'crate', 'sign', 'fence', 'rubble', 'rubble', 'column', 'hulk', 'hulk', 'container', 'traps', 'statue', 'pole'],
@@ -1290,7 +1291,7 @@ function pkPropEnd(x, X, Y, h, c, kind, R0, px, night, front){
   pkBar(x, X - h*0.12, Y - h*0.55, h*0.34, h*0.08, m.body, px); pkBar(x, X - h*0.24, Y - h*0.95, h*0.1, h*0.32, m.lit, px);
 }
 // the kinds large enough to be seen from further off (the caller sows them on a coarser grid)
-export const PK_PROPS_BIG = ['windpump', 'grainbin', 'haystack', 'tractor', 'dish', 'beacon', 'solar', 'container', 'statue', 'dolmen', 'flower', 'toadstool', 'moongate', 'well', 'wishing', 'shrine', 'busstop', 'kiosk', 'menhir', 'column'];
+export const PK_PROPS_BIG = ['lookout', 'bothy', 'bandstand', 'fountain', 'windpump', 'grainbin', 'haystack', 'tractor', 'dish', 'beacon', 'solar', 'container', 'statue', 'dolmen', 'flower', 'toadstool', 'moongate', 'well', 'wishing', 'shrine', 'busstop', 'kiosk', 'menhir', 'column'];
 // wires from one pole's top A to the next's B (h the near pole's height): three, sagging, thin as they are
 export function pkWires(x, A, B, h, c, px){ const d = Math.hypot(B[0] - A[0], B[1] - A[1]); if(d > h*12 || d < px(2)) return; x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.5), 0.6); x.lineWidth = Math.max(px(0.3), h*0.003); x.beginPath();
   for(const s of [-0.08, 0, 0.08]){ x.moveTo(A[0] + s*h, A[1] + h*0.05); x.quadraticCurveTo((A[0] + B[0])/2, Math.max(A[1], B[1]) + d*0.05, B[0] + s*h*0.6, B[1] + h*0.04); } x.stroke(); }
@@ -1671,6 +1672,70 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     for(const s of [-1, 0.3, 1]) ln([[X, Y - h*0.82], [X + s*h*0.28, Y]], pkCss(pkMat(c, [200, 170, 60], 0.7).body), h*0.04); box(X - h*0.08, Y - h, h*0.16, h*0.18, pkMat(c, [230, 200, 60], 0.7), 0.15);
     ln([[X + h*0.7, Y], [X + h*0.7, Y - h*0.7]], pkCss(grey.body), h*0.02); pkPoly(x, [[X + h*0.7, Y - h*0.7], [X + h*0.9, Y - h*0.64], [X + h*0.7, Y - h*0.58]], pkCss([240, 90, 40])); return; }
   case 'menhir': pkStone(x, X, Y, h, c, mulberry32((R()*4294967296) >>> 0), px); return;
+  // ---- THE WILDS' OWN AND THE TOWNS' NEW (Ruby: "expanding the library and spawning logic"; docs/prior-art/
+  //      ringworld-motion-and-variety.md §8 item 19) ----
+  case 'camp': { // a wild camp: a ridge tent of canvas, its door flap open, guy lines pegged out; a ring of stones with a fire,
+    // its glow and its smoke at dusk and by night; a log for a seat
+    const can = pkMat(c, [[176, 132, 70], [86, 116, 74], [196, 104, 56], [120, 120, 104]][Math.floor(R()*4)], 0.7), tw = h*1.1, tx = X - sd*h*0.35;
+    pkPoly(x, [[tx - tw/2, Y], [tx, Y - h*0.95], [tx + tw/2, Y]], pkCss(can.body)); pkPoly(x, [[tx, Y - h*0.95], [tx + sd*tw/2, Y], [tx + sd*tw*0.15, Y]], pkCss(can.lit, 0.85));
+    pkPoly(x, [[tx - tw*0.12, Y], [tx, Y - h*0.55], [tx + tw*0.12, Y]], pkCss(PK_BLACK, 0.7));
+    if(near){ ln([[tx, Y - h*0.95], [tx - tw*0.85, Y]], pkCss(can.dark, 0.6), h*0.008); ln([[tx, Y - h*0.95], [tx + tw*0.85, Y]], pkCss(can.dark, 0.6), h*0.008); }
+    const fx = X + sd*h*0.55, fr = h*0.16; for(let k = 0; k < 7; k++){ const a = k/7*Math.PI*2; pkEll(x, fx + Math.cos(a)*fr, Y + Math.sin(a)*fr*0.3, fr*0.32, fr*0.2, pkCss(stone.body)); }
+    box(fx + sd*h*0.35 - h*0.2, Y - h*0.12, h*0.4, h*0.12, wood, 0.25);
+    const fire = pkDk(c, night); if(fire > 0){ pkPoly(x, [[fx - fr*0.5, Y], [fx - fr*0.1, Y - fr*1.4*fire], [fx + fr*0.1, Y - fr*0.8*fire], [fx + fr*0.4, Y - fr*1.6*fire], [fx + fr*0.55, Y]], pkCss([255, 170, 70], 0.9*fire));
+      pkGlow(x, fx, Y - fr*0.6, h*0.9, [255, 150, 70], 0.55*fire*pkBreathe(c, X)); }
+    if(night > 0.05) pkSmoke(x, fx, Y - fr*1.2, h*1.4, h*0.35, c, 4, 0.25*Math.min(1, night*3)); return; }
+  case 'charcoal': { // a charcoal stack in the wood: a low mound of earth and turf over the stacked wood, its vent at the top
+    // smoking, and by night a red glow at the vent; a rake leaning on it
+    const w = h*1.5, turf = pkMat(c, [72, 64, 50], 0.75), top = Y - h*0.8;
+    pkShade(x, [[X - w, Y], [X - w*0.7, Y - h*0.45], [X - w*0.3, top], [X + w*0.3, top], [X + w*0.7, Y - h*0.45], [X + w, Y]], turf.body, top, Y, 0.3);
+    pkPoly(x, [[X + sd*w*0.3, top], [X + sd*w*0.7, Y - h*0.45], [X + sd*w, Y], [X + sd*w*0.35, Y]], pkCss(turf.lit, 0.5));
+    if(near) for(let k = 0; k < 6; k++){ const u = R()*1.6 - 0.8, v = R(); pkEll(x, X + u*w*0.8, Y - h*(0.1 + 0.6*v)*(1 - Math.abs(u)*0.6), h*0.12, h*0.05, pkCss(pkMat(c, [86, 110, 62], 0.7).body, 0.7)); }
+    pkEll(x, X, top + h*0.02, w*0.12, h*0.04, pkCss(PK_BLACK, 0.8)); if(night > 0.2) pkGlow(x, X, top, h*0.5, [255, 90, 40], 0.5*night*pkBreathe(c, X));
+    pkSmoke(x, X, top, h*1.6, h*0.45, c, 5, 0.45); if(near) ln([[X - sd*w*0.9, Y], [X - sd*w*0.55, Y - h*0.75]], pkCss(grey.dark), h*0.03); return; }
+  case 'hide': { // a raised hunting hide at a wood's edge: four legs braced, a small cabin of boards on top with its slit
+    // window and a roof, a ladder up to its door
+    const cw = h*0.42, cb = Y - h*0.62, ct = Y - h*0.95;
+    for(const s of [-1, 1]) ln([[X + s*cw*0.7, Y], [X + s*cw*0.45, cb]], pkCss(grey.dark), h*0.025);
+    if(near){ ln([[X - cw*0.65, Y - h*0.1], [X + cw*0.5, cb + h*0.08]], pkCss(grey.dark, 0.8), h*0.012); ln([[X + cw*0.65, Y - h*0.1], [X - cw*0.5, cb + h*0.08]], pkCss(grey.dark, 0.8), h*0.012); }
+    box(X - cw/2, ct, cw, cb - ct, grey, 0.2); pkPoly(x, [[X - cw*0.62, ct + h*0.02], [X, ct - h*0.06], [X + cw*0.62, ct + h*0.02]], pkCss(PK_SLATE));
+    x.fillStyle = pkCss(PK_BLACK, 0.8); x.fillRect(X - cw*0.35, ct + (cb - ct)*0.3, cw*0.7, Math.max(px(0.5), (cb - ct)*0.12));
+    const lx = X + sd*cw*0.75; ln([[lx, Y], [lx - sd*cw*0.25, cb]], pkCss(wood.dark), h*0.012); ln([[lx + sd*cw*0.15, Y], [lx - sd*cw*0.1, cb]], pkCss(wood.dark), h*0.012);
+    if(near) for(let k = 1; k < 6; k++){ const u = k/6; ln([[lx - sd*cw*0.25*u, Y - (Y - cb)*u], [lx + sd*cw*0.15 - sd*cw*0.25*u, Y - (Y - cb)*u]], pkCss(wood.dark), h*0.008); } return; }
+  case 'bothy': { // a bothy (a shepherd's or a walker's shelter in the hills): low walls of rough stone, a roof of slate or
+    // of turf, one door, one small window, a chimney at its gable end, smoking now and then; its window lit by night
+    const w = h*1.25, eave = Y - h*0.55, wall = pkMat(c, R() < 0.5 ? [132, 128, 118] : [156, 146, 128], 0.7), turfRoof = R() < 0.45, roof = turfRoof ? pkMat(c, [92, 112, 66], 0.7) : pkMat(c, PK_SLATE, 0.65);
+    pkShade(x, [[X - w/2, Y], [X - w/2, eave], [X + w/2, eave], [X + w/2, Y]], wall.body, eave, Y, 0.2);
+    if(near){ x.fillStyle = pkCss(wall.dark, 0.35); for(let k = 0; k < 14; k++){ const sx = X - w/2 + w*R(), sy = Y - (Y - eave)*R(); x.fillRect(sx, sy, w*0.08, Math.max(px(0.4), h*0.03)); } }
+    pkPoly(x, [[X - w*0.56, eave], [X - w*0.36, Y - h*0.95], [X + w*0.36, Y - h*0.95], [X + w*0.56, eave]], pkCss(roof.body)); pkPoly(x, [[X - w*0.56, eave], [X - w*0.36, Y - h*0.95], [X - w*0.2, Y - h*0.95], [X - w*0.4, eave]], pkCss(sd > 0 ? roof.dark : roof.lit, 0.6));
+    const cx2 = X - sd*w*0.42; box(cx2 - h*0.07, Y - h*1.08, h*0.14, h*0.3, wall, 0.2); if(R() < 0.6) pkSmoke(x, cx2, Y - h*1.1, h*0.9, h*0.3, c, 4, 0.35);
+    box(X + sd*w*0.15 - h*0.1, Y - h*0.38, h*0.2, h*0.38, pkMat(c, [[70, 52, 40], [60, 80, 90], [120, 48, 40]][Math.floor(R()*3)], 0.7), 0.15);
+    const win = pkLit(c, night, R(), 0.6); x.fillStyle = pkCss(pkMix(pkMix(c.dark, PK_BLACK, 0.4), pkMix(c.glow, PK_WHITE, 0.25), win)); x.fillRect(X - sd*w*0.18 - h*0.06, Y - h*0.38, h*0.12, h*0.1); return; }
+  case 'lookout': { // a fire lookout on a summit: a timber tower on four splayed legs, braced crosswise, a stair turning up
+    // inside it, a cabin on top glazed all round under a hipped roof, a light in it by night
+    const bw = h*0.32, tw = h*0.14, cb = Y - h*0.8, ct = Y - h*0.95;
+    x.strokeStyle = pkCss(wood.dark); x.lineWidth = Math.max(px(0.5), h*0.012); x.beginPath(); for(const s of [-1, 1]){ x.moveTo(X + s*bw, Y); x.lineTo(X + s*tw, cb); }
+    for(let k = 0; k < 5; k++){ const y0 = Y - (Y - cb)*k/5, y1 = Y - (Y - cb)*(k + 1)/5, w0 = bw - (bw - tw)*k/5, w1 = bw - (bw - tw)*(k + 1)/5; x.moveTo(X - w0, y0); x.lineTo(X + w1, y1); x.moveTo(X + w0, y0); x.lineTo(X - w1, y1); x.moveTo(X - w1, y1); x.lineTo(X + w1, y1); } x.stroke();
+    const cw = tw*2.4; box(X - cw/2, ct, cw, cb - ct, wood, 0.15);
+    const lit2 = pkLit(c, night, R(), 0.8); x.fillStyle = pkCss(pkMix(pkMix(c.air || c.lit, PK_WHITE, 0.15), pkMix(c.glow, PK_WHITE, 0.3), lit2), 0.9); x.fillRect(X - cw*0.42, ct + (cb - ct)*0.15, cw*0.84, (cb - ct)*0.45);
+    if(near){ x.fillStyle = pkCss(wood.dark); for(let k = 1; k < 4; k++) x.fillRect(X - cw*0.42 + cw*0.84*k/4 - px(0.3), ct + (cb - ct)*0.15, Math.max(px(0.5), cw*0.02), (cb - ct)*0.45); }
+    pkPoly(x, [[X - cw*0.62, ct], [X - cw*0.1, ct - h*0.06], [X + cw*0.1, ct - h*0.06], [X + cw*0.62, ct]], pkCss(PK_SLATE)); if(lit2 > 0.05) pkGlow(x, X, ct + (cb - ct)*0.4, cw*1.4, c.glow, 0.35*lit2); return; }
+  case 'bandstand': { // a bandstand on the green: an octagon on a low plinth, slender iron posts, a roof curving up to its
+    // finial, painted (a park's green, white, or a deep red), lit by night
+    const w = h*0.7, paint = pkMat(c, [[62, 92, 74], [228, 226, 216], [150, 46, 40]][Math.floor(R()*3)], 0.7), pl = Y - h*0.14, eave = Y - h*0.62;
+    pkEll(x, X, Y, w*1.05, h*0.1, pkCss(stone.dark, 0.6)); pkShade(x, [[X - w, Y], [X - w, pl], [X + w, pl], [X + w, Y]], stone.body, pl, Y, 0.2); pkEll(x, X, pl, w, h*0.08, pkCss(stone.lit));
+    for(let k = 0; k < 6; k++){ const px0 = X + w*0.92*Math.cos(Math.PI*(k/5)); ln([[px0, pl], [px0, eave]], pkCss(paint.dark), h*0.018); }
+    if(near) ln([[X - w*0.92, pl - h*0.12], [X + w*0.92, pl - h*0.12]], pkCss(paint.dark, 0.8), h*0.008);
+    pkPoly(x, [[X - w*1.08, eave], [X - w*0.6, eave - h*0.16], [X, Y - h*0.97], [X + w*0.6, eave - h*0.16], [X + w*1.08, eave]], pkCss(paint.body)); pkPoly(x, [[X, Y - h*0.97], [X + sd*w*0.6, eave - h*0.16], [X + sd*w*1.08, eave], [X, eave]], pkCss(paint.lit, 0.6));
+    pkBar(x, X - w*1.08, eave, w*2.16, h*0.03, paint.dark, px); ln([[X, Y - h*0.97], [X, Y - h]], pkCss(paint.dark), h*0.012);
+    if(night > 0.2) pkGlow(x, X, eave + h*0.1, w*1.2, c.glow, 0.3*pkDk(c, night)); return; }
+  case 'fountain': { // a town's fountain: a round stone basin, a column rising from it to a smaller bowl, water falling from
+    // the bowl's rim to the basin, a jet above it, the water catching the sky
+    const w = h*0.9, rim = Y - h*0.22, water = pkMix(c.air || c.lit, [150, 190, 220], 0.5);
+    pkShade(x, [[X - w, Y], [X - w, rim], [X + w, rim], [X + w, Y]], stone.body, rim, Y, 0.2); pkEll(x, X, rim, w, h*0.1, pkCss(stone.lit)); pkEll(x, X, rim + h*0.01, w*0.9, h*0.08, pkCss(water, 0.9));
+    box(X - w*0.07, Y - h*0.62, w*0.14, h*0.42, stone, 0.2); pkEll(x, X, Y - h*0.62, w*0.42, h*0.06, pkCss(stone.lit)); pkEll(x, X, Y - h*0.61, w*0.36, h*0.04, pkCss(water, 0.9));
+    x.strokeStyle = pkCss(pkMix(water, PK_WHITE, 0.4), 0.55); x.lineWidth = Math.max(px(0.4), h*0.01); x.beginPath();
+    for(let k = 0; k < 6; k++){ const u = (k/5)*2 - 1, sx = X + u*w*0.4; x.moveTo(sx, Y - h*0.61); x.quadraticCurveTo(sx + u*w*0.25, Y - h*0.58, sx + u*w*0.3, rim); } x.moveTo(X, Y - h*0.64); x.lineTo(X, Y - h*0.95); x.stroke(); return; }
   case 'dolmen': { // a dolmen: three uprights, a thin capstone tilted over a dark hollow, its mound
     pkEll(x, X, Y, h*1.6, h*0.25, pkCss(pkMat(c, [80, 110, 70], 0.8).dark, 0.5)); pkPoly(x, [[X - h*0.7, Y], [X - h*0.65, Y - h*0.75], [X + h*0.65, Y - h*0.7], [X + h*0.7, Y]], pkCss(PK_BLACK, 0.8));
     for(const [u, sh] of [[-0.6, 0.78], [0.05, 0.72], [0.55, 0.7]]) pkStone(x, X + u*h, Y, h*sh, c, mulberry32((R()*4294967296) >>> 0), px, { wide: 0.45 });

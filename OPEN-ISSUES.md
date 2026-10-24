@@ -39,7 +39,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
   docs/prior-art/film-animation.md.
 - THE RINGWORLD'S VARIETY (Ruby, 2026-10-24), what is left: more small variations on buildings (the table in
-  docs/prior-art/ringworld-motion-and-variety.md §8 item 15), a wider library of kinds by world (item 19), and more of
+  docs/prior-art/ringworld-motion-and-variety.md §8 item 15), more of the wider library of kinds by world (item 19:
+  begun with the Wilds' lookout, bothy, charcoal, camp and hide and the towns' fountain and bandstand), and more of
   the sense of scale by layering (item 18: a cloud deck below the far horizon, rows of pylons running back, a ship's
   light crawling along the wall's top).
 - SEE THROUGH, MORE SURFACES: Stained Glass, Tessellate, rain on glass, Water, Frost and the dew webs could bend what is

@@ -440,7 +440,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     (`PK_LIGHTS`), turbines and windmills turn, a pylon carries a climbing light and glows breathe (`pkBreathe`).
   - **What stands where, and its colours.** Farmsteads stand in the belt where a city meets the country (`beltAt`), never
     in the Wilds, whose places are their own: sacred groves, stone rows, holy wells and the old ones' columns. Each region
-    paints by a palette family the seed chose (`rgPaletteOf`); flat roofs gather their clutter (`pkRoofThings`).
+    paints by a palette family the seed chose (`rgPaletteOf`); flat roofs gather their clutter (`pkRoofThings`). The
+    Wilds' hills and woods hold lookouts, bothies, charcoal stacks, camps and hides; towns, fountains and bandstands.
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
     objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
     (`paintHeap`), each on its own sheet laid at once so its billows never darken each other, every billow a gradient

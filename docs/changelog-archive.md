@@ -2,6 +2,18 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Naiad (2026-10-21)
+
+- Painted Landscape has a new country, a river: green hills opening into a valley, the river winding down it toward
+  you and widening as it comes, glints on it and its banks dark. It is two in five of the grassland seeds (no other
+  seed's country changes), and the Country menu offers it.
+- The Painted Landscape's water has a mood by the seed: still as a mirror with its reflections whole, ruffled as it
+  was, or choppy, short strokes crowding with white on their crests.
+
+### Under the hood
+- Contour Map's preview gap narrowed down, not yet fixed (OPEN-ISSUES §3): not the hillshade, not the Terrain; the
+  preview's lines carry a little less ink. Texture fingerprints updated for the landscapes with water.
+
 ## Uranus–Ferdinand (2026-10-21)
 
 - The Ringworld's walkers, shepherd droids and tracked crawlers turn with the camera instead of only flipping: a
