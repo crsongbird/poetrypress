@@ -4,6 +4,19 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Hyades–Secunda Hyadum (2026-10-24)
+
+- Any setting can move in a film. The Moving Image has an Also moving row: choose one of the surface's sliders, or the
+  light (the sun, on the Ringworld) or its height, and how it moves (it sways round where it stands, sweeps out to its
+  far end and back, or drifts), how far (a little, some, much) and how many times in the film. Mark as many as you
+  like; the line under the row says which are moving. Each comes back to where it began by the film's end, so a film
+  that loops still loops, and every control is put back after.
+
+### Under the hood
+- `markValue` gives a marked control's value through the film (test/moving.test.mjs checks it starts and ends where
+  it stands, sweeps without snapping, keeps to its ends and wraps an angle); a marked slider is set to step freely during
+  the film, so a slow sway never stair-steps.
+
 ## Hyades–Prima Hyadum (2026-10-24)
 
 - The Moving Image can rest at its ends: None, half a second or a second held still at the start and the end (and at
@@ -434,13 +447,3 @@ prints it).
 - chains.test.mjs compares the gas giant's drawings warm: the kit keeps a building's face once it has read it, so a
   first drawing makes canvases a second never does.
 - Fingerprints: Ringworld's only, for its clouds, their shadows and the sky.
-
-## Neptune–Despina (2026-10-21)
-
-- Nothing you'll see yet: after Neptune's last moon, releases will be named for stars, each cluster and one of its
-  members (`Pleiades–Maia`), the nearest clusters first and each one's members nearest first: Ursa Major, the Hyades,
-  Crux, the Pleiades, Lupus, Scorpius, Alpha Persei, the Beehive, Perseus and Orion's belt, forty-six names.
-
-### Under the hood
-- `CLUSTERS` in build.mjs, from docs/prior-art/star-cluster-names.md (every star's IAU name, its distance and its
-  membership, with the sources and the disputed members); the release notes' name now reads a name with a space in it.

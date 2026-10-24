@@ -5,7 +5,7 @@
  */
 import { readFileSync } from 'fs';
 import { check, done } from './harness.mjs';
-import { blendLooks, cameraAlso, shotAlong, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
+import { blendLooks, cameraAlso, markValue, shotAlong, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
 
 const cat = parts => { const n = parts.reduce((s, p) => s + p.length, 0), o = new Uint8Array(n); let at = 0; for(const p of parts){ o.set(p, at); at += p.length; } return o; };
 const dv = b => new DataView(b.buffer, b.byteOffset, b.byteLength), str = (b, at, n) => String.fromCharCode(...b.subarray(at, at + n));
@@ -120,6 +120,10 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   check('a spiral pulls back and leans as it goes (a helix)', a('spiral', 1).zoom < 70 && a('spiral', 1).view === 65 && a('spiral', 0).zoom === 100);
   const sa = (u, t0, t1) => shotAlong({ turn: t0, view: 20, zoom: 100 }, { turn: t1, view: 60, zoom: 400 }, u);
   check('to a shot: the short way round (350° to 10° by 0°), the view between, the zoom by its ratio', Math.abs(sa(0.5, 350, 10).turn - 0) < 1e-9 && Math.abs(sa(1, 350, 10).turn - 10) < 1e-9 && sa(0.5, 350, 10).view === 40 && Math.abs(sa(0.5, 0, 0).zoom - 200) < 1e-9 && sa(0, 30, 200).turn === 30);
+  const mv = (how, u, o = {}) => markValue({ how, v0: 50, lo: 0, hi: 100, amt: 0.4, times: 2, ...o }, u), us = Array.from({ length: 101 }, (_, k) => k/100);
+  check('a mark starts where the control stands and comes back to it at the film\'s end, so the film loops (sway, sweep, drift)', ['sway', 'sweep', 'drift'].every(h => Math.abs(mv(h, 0) - 50) < 1e-9 && Math.abs(mv(h, 1) - 50) < 1e-6));
+  check('a sway swings round where it stands; a sweep goes out to the farther end and back, never snapping; a drift wanders', Math.abs(mv('sway', 0.125) - 70) < 1e-9 && Math.abs(mv('sweep', 0.25) - 90) < 1e-9 && us.every((u, k) => !k || Math.abs(mv('sweep', u) - mv('sweep', us[k - 1])) < 3) && us.some(u => Math.abs(mv('drift', u) - 50) > 5));
+  check('a mark keeps to the control\'s ends, and an angle wraps round', mv('sway', 0.125, { v0: 95 }) === 100 && Math.abs(markValue({ how: 'sweep', v0: 350, lo: 0, hi: 360, amt: 0.25, times: 1, wrap: true }, 0.5) - 80) < 1e-9);
   check('the view and zoom keep to their ranges', a('in', 1, 40, 380).zoom === 400 && a('out', 1, 40, 30).zoom === 25 && a('tilt', 0.5, 95).view >= 0 && a('spiral', 1, 90).view <= 100 && a('in', 1, 40, 300).zoom === 400);
 }
 // ---- the sheet's markup: each choice a radio group with one chosen by default, each group under a legend ----

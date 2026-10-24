@@ -84,6 +84,21 @@ export function shotAlong(cam, shot, u){
   const d = ((shot.turn - cam.turn) % 360 + 540) % 360 - 180, z0 = Math.max(25, cam.zoom || 100), z1 = Math.max(25, shot.zoom || 100);
   return { turn: ((cam.turn + d*u) % 360 + 360) % 360, view: cam.view + (shot.view - cam.view)*u, zoom: z0*Math.pow(z1/z0, u) };
 }
+/**
+ * A control's value at u (0 to 1, the film's own fraction) when it is marked to move (docs/prior-art/film-animation.md
+ * §D): SWAY, round where it stands; SWEEP, out toward its farther end and back, eased; DRIFT, a smooth wander from where
+ * it stands. Each a whole number of times (m.times) so the film still loops; how far, a share of its span (m.amt). An
+ * angle wraps round; anything else is held to its ends. m: { how, v0, lo, hi, amt, times, ph, wrap }.
+ */
+export function markValue(m, u){
+  const { how, v0, lo, hi, amt = 0.25, times = 1, ph = 0, wrap = false } = m, A = (hi - lo)*amt, T = Math.max(1, Math.round(times)), tau = Math.PI*2;
+  let v = v0;
+  if(how === 'sway') v = v0 + A/2*Math.sin(tau*T*u);
+  else if(how === 'sweep'){ const x = T*u - Math.floor(T*u), s = x < 0.5 ? x*2 : 2 - x*2, dir = wrap || hi - v0 >= v0 - lo ? 1 : -1; v = v0 + dir*A*(0.5 - 0.5*Math.cos(Math.PI*s)); }
+  else if(how === 'drift'){ const f = t => 0.62*Math.sin(tau*T*t + ph) + 0.38*Math.sin(tau*2*T*t + ph*1.7); v = v0 + A/2*(f(u) - f(0)); }
+  if(wrap) return ((v - lo) % (hi - lo) + (hi - lo)) % (hi - lo) + lo;
+  return Math.max(lo, Math.min(hi, v));
+}
 export function cameraAlso(kind, u, view, zoom){
   const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
   if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };

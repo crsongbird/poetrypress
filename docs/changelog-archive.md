@@ -2,6 +2,16 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Despina (2026-10-21)
+
+- Nothing you'll see yet: after Neptune's last moon, releases will be named for stars, each cluster and one of its
+  members (`Pleiades–Maia`), the nearest clusters first and each one's members nearest first: Ursa Major, the Hyades,
+  Crux, the Pleiades, Lupus, Scorpius, Alpha Persei, the Beehive, Perseus and Orion's belt, forty-six names.
+
+### Under the hood
+- `CLUSTERS` in build.mjs, from docs/prior-art/star-cluster-names.md (every star's IAU name, its distance and its
+  membership, with the sources and the disputed members); the release notes' name now reads a name with a space in it.
+
 ## Neptune–Thalassa (2026-10-21)
 
 - Films are made faster: while one frame is drawn and encoded, the frames to come are made side by side, one on each

@@ -30,12 +30,12 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   farmsteads in the belt round each city. Each region's palette by the seed (Burano, Jaipur, the Cyclades, ochres,
   Falu red, Kyoto). The comet travelling, meteors living their second, the aurora by height, lighthouses with their
   characters, turbines turning. Right amounts?
-- THE FILM'S NEW MOVES: a rest at the ends; To a shot (Set the shot… on the dial); four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral out); Set it now… for the
+- THE FILM'S NEW MOVES: Also moving (any slider, the light or its height swaying, sweeping or drifting); a rest at the ends; To a shot (Set the shot… on the dial); four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral out); Set it now… for the
   look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do the amounts feel right?
 
 ## 2 · Ruby's notes to act on
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
-  Next: controls marked to sway, sweep or drift, the seed drifting. An hour of time
+  Next: marking controls on the page itself (a ∿ in each lock's place) and during To another look; the seed drifting. An hour of time
   passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
   docs/prior-art/film-animation.md.
 - THE RINGWORLD'S VARIETY (Ruby, 2026-10-24), what is left: more small variations on buildings (the table in
