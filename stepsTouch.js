@@ -221,7 +221,7 @@ export const TOUCH_STEPS = {
   glassrain: kitWhole({ cat: 'Textures', label: 'Rain on Glass', ins: ['light from'], outs: ['glass'], io: { ins: ['value'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Drop Size', 100, 40, 300), TOUCH_R('amount', 'Rain', 100, 20, 300), TOUCH_R('form', 'Condensation', 30), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 12 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
-      return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null); }),
+      return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null, !!E.ctx.lens); }),
   water: kitWhole({ cat: 'Textures', label: 'Scrying Pool', ins: ['light from'], outs: ['pool'], io: { ins: ['value'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Wave Scale', 100, 40, 250), TOUCH_R('amount', 'Turbulence', 35), TOUCH_R('form', 'Depth', 35), TOUCH_R('haze', 'Haze', 10), TOUCH_R('murk', 'Murk', 0), TOUCH_R('tilt', 'View', 35), TOUCH_R('variant', 'Variation', 0, 0, 99),
       TOUCH_R('turn', 'Turn', 0, 0, 360), TOUCH_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12 },

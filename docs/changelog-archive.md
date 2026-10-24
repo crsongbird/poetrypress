@@ -2,6 +2,38 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Galatea (2026-10-21)
+
+- Ringworld's clouds are remade. Each heap's billows grow out of one another into one body, so none floats free as a
+  ball; the heap is lit as a whole and its edge breaks into faint wisps; drawn near, it shows a cauliflower's smaller
+  billows. The light on it follows the sun: from above by day; from below at dawn and dusk, the undersides warm and the
+  tops gone violet; and with the sun behind it, a dark heart and a shining edge.
+- In a film the clouds drift slowly, breathe and roll, and each lives in clean stages: it gathers from scattered wisps,
+  stands, thins and is gone, and a new shape only ever gathers from nothing. A heap that swells overhead fades away.
+- Clouds cast shadows on the land, soft and lumpy, which sweep the hills as the clouds drift; whatever stands in a
+  shadow darkens with the ground under it.
+- Rain falls from a heap in a curtain of streaks, swaying with the wind; some heaps trail rain that never reaches the
+  ground; in cloudy weather a far heap may rain a shower out over the land; lightning lights the whole scene a moment.
+  Cloudy weather has more heaps, more of them nearer.
+- The sky glows round the sun and along the horizon under it, burning orange and red low down at dusk and lingering
+  after the sun has gone; at dusk and dawn the pink Belt of Venus rises opposite, over the blue-grey of the world's
+  shadow. Cirrus are combed into fine strands, some hooked.
+- New in the air: by day over dry country, now and then a dust devil wanders and dies away; at dusk on some rings a
+  murmuration of starlings folds over the fields.
+- Films move a little slower: the grass, the droids, rain and snow, flicker and smoke run on a gentler clock, and the
+  droids, walkers and flocks wander long smooth paths instead of shuttling back and forth.
+- Nothing is cut off before it leaves the frame: big near buildings, rocks, boards and droids are drawn until they are
+  wholly out of view. A wall filling the frame shows a fine mottle, never grey blots.
+
+### Under the hood
+- `rgCloudTime` and `rgMotionTime` (the clouds' clock and the small motions'), `cloudShadeAt` (a cloud's shade at a
+  point of the floor) and the shadow sheet laid on each ridge's face before what stands on it; `RG_MOVES` as two slow
+  sines whose periods never line up. Wind Waker's cloud code (as noclip.website reads it) is in
+  docs/prior-art/ringworld-time.md §4, and the sky's prior art in docs/prior-art/ringworld-sky.md.
+- chains.test.mjs compares the gas giant's drawings warm: the kit keeps a building's face once it has read it, so a
+  first drawing makes canvases a second never does.
+- Fingerprints: Ringworld's only, for its clouds, their shadows and the sky.
+
 ## Neptune–Despina (2026-10-21)
 
 - Nothing you'll see yet: after Neptune's last moon, releases will be named for stars, each cluster and one of its

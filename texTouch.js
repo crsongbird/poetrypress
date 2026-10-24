@@ -391,7 +391,7 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
  * it blends like the other grey-ground textures.
  * DROP SIZE · RAIN · CONDENSATION
  */
-export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
+export function genGlassRain(w,h,amt,zoom,light,form,M3,env,see=false){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const mist=Math.max(0,Math.min(1, form==null ? 0.3 : form));
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
@@ -543,6 +543,9 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
   const fog={r:236,g:238,b:240};
+  // (SEE THROUGH: each drop a little lens over whatever lies beneath the glass, turning it over, as it turns the view
+  //  outside: its offsets, in this grid's pixels, by the drop's slope; dry glass bends nothing)
+  const DX=new Float32Array(ww*wh), DY=new Float32Array(ww*wh), LK=-Math.min(ww,wh)*0.09;
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const i=y*ww+x, q=i*4, hv=H[i];
     if(hv<=0){
@@ -552,7 +555,7 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
     const gx=(H[y*ww+Math.min(ww-1,x+1)]-H[y*ww+Math.max(0,x-1)])*0.5, gy=(H[Math.min(wh-1,y+1)*ww+x]-H[Math.max(0,y-1)*ww+x])*0.5;
     // a drop sees wide: whatever its height on the glass it looks out at
     // much the same view, mostly sky — then turns it over
-    const nz=1/Math.sqrt(1+gx*gx+gy*gy), u=x/ww, v=0.3 + 0.3*(y/wh);
+    const nz=1/Math.sqrt(1+gx*gx+gy*gy), u=x/ww, v=0.3 + 0.3*(y/wh); DX[i]=gx*LK; DY[i]=gy*LK;
     // refraction: the lens turns the view over; red, green and blue bend a
     // little differently (chromatic aberration at the rims)
     const K=0.45;
@@ -566,16 +569,19 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env){
     const sky=[envAt(u,0.05,0), envAt(u,0.05,1), envAt(u,0.05,2)], ref=[rr,gg,bb];
     for(let c=0;c<3;c++){
       const sh=M3 ? M3.sh[c] : 1;
-      let val=ref[c]*(1-rim*0.6*(2-sh)) + sky[c]*fres + sp*(M3 ? M3.hi[c] : 1);
+      // (seeing through: the drop's body shows what lies beneath, bent by its lens (the page does that), so here only
+      //  its dark rim, the sky in its rim and its highlight)
+      let val=see ? 22*(1-sh*0.5) + (sky[c]*fres + sp*(M3 ? M3.hi[c] : 1))/Math.max(0.05, Math.min(1, rim*0.7 + fres + sp/255)) : ref[c]*(1-rim*0.6*(2-sh)) + sky[c]*fres + sp*(M3 ? M3.hi[c] : 1);
       d[q+c]=val<0?0:val>255?255:val;
     }
-    d[q+3]=Math.round(255*Math.min(1, hv/0.6));
+    d[q+3]=Math.round(255*Math.min(1, hv/0.6)*(see ? Math.max(0.1, Math.min(1, rim*0.7 + fres + sp/255)) : 1));
   }
   // runners clear the fog where they went: a wet, clear trail
   sctx.putImageData(img,0,0);
   // (the runners' paths were wiped clear of fog: see WIPE, in the dry-glass branch above)
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
+  c.lens={ DX, DY, w:ww, h:wh, pxCell:w/ww };
   return c;
 }
 

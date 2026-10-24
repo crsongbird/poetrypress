@@ -692,10 +692,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     ground until its blend is changed.
   - **See Through** (Ruby: glass and water "should take the texture below as an input and do something creative with it";
     docs/prior-art/surface-beneath.md): a surface whose caps say `seeThrough` (Under Glass, Broken Glass, Crystal Leaf,
-    Poured Wax so far) shows the layer's switch. On, its request asks for the lens too: the worker stacks it beneath the
+    Poured Wax, Rain on Glass so far) shows the layer's switch. On, its request asks for the lens too: the worker stacks it beneath the
     picture on one canvas twice as tall (`seeStack`, `seeLens`; red and green the offset, `SEE_REACH` canonical pixels at
     most), made from the height a Light Engine lit (`ltLensed`) or the bend a glass part works out itself (Glass Pane,
-    Glass Shards). `drawSurfaceLayer` bends the page drawn so far through it (`bendBeneath`: the nearest pixel in the
+    Glass Shards, and a whole generator's own offsets left on its canvas, which `kitWhole` hands on: Rain on Glass, whose
+    drops, seeing through, show only their rims and highlights so the bent page shows in them, turned over). `drawSurfaceLayer` bends the page drawn so far through it (`bendBeneath`: the nearest pixel in the
     preview, smooth in the saved image), then lays the picture by its blend. A look saved before the switch has it off
     (`seeByDefault`: a look with a version); the app's own looks, with none, have it on.
   - A new lower starts as Waking Grain on `seed ^ 0x5bd1e995`. Presets clear

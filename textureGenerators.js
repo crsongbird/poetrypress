@@ -198,7 +198,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // glass in front of the page: transparent, the drops showing the outdoors
   // made from the page's own colours (pageEnv), so Normal is its default
-  glassrain:     { blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
+  glassrain:     { seeThrough:true, blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
   // the camera dial is the camera: its turn where you look round the ring, its view how far up (the middle: the arch
   // overhead), its zoom the lens. The light dial is the day (the star never moves; the shadow squares do): at its middle
   // noon, at its rim dusk, past it night; its direction which way round the dusk comes

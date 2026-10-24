@@ -1114,8 +1114,11 @@ export function kitImage(cv, gw, gh){
  */
 export function kitWhole(part, prep){
   return { ...part,
-    paint(E, n){ const draw = prep(E, n, E.ww, E.wh); return [withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0, draw)]; },
-    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } };
+    // (a generator that bends what lies beneath it (See Through) leaves its offsets on its canvas, c.lens, in its own
+    //  grid's pixels: handed on with the picture, the grid's cell in canonical pixels)
+    paint(E, n){ const draw = prep(E, n, E.ww, E.wh), c = withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0, draw), r = [c];
+      if(c && c.lens){ r.lens = { ...c.lens, cell: (c.lens.pxCell || 1)/(E.ctx.scale || 1) }; delete c.lens; } return r; },
+    run(E, n){ const p = this.paint(E, n), r = [E.readCanvas(p[0])]; if(p.lens) r.lens = p.lens; return r; } };
 }
 /** Its dial: the degrees the texture was given (a turn × 360 can miss a whole degree by a hair), else the page's light. */
 export function wholeDial(E, n, j){

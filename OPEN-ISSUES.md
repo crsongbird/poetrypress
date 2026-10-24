@@ -21,8 +21,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - CORNERS: windows 3px, buttons and fields 2px, small marks 1px; a group of choices blunted only on its outside corners
   (the radio rows, the film sheet's blocks, the Athanor's joined buttons); circles kept round. "Circles barely any" was
   read as: the smallest things get the least. The left-edge lines on the cards and sub-blocks are gone. Right weight?
-- SEE THROUGH: Under Glass, Broken Glass, Crystal Leaf and Poured Wax laid over another surface bend it (the switch with
-  the surface's tools; on for a new page). The bend is gentle at the defaults: strong enough, or should it reach farther?
+- SEE THROUGH: Under Glass, Broken Glass, Crystal Leaf, Poured Wax and now Rain on Glass laid over another surface bend
+  it (the switch with the surface's tools; on for a new page): each raindrop shows the surface beneath it turned over in
+  its lens. The bend is gentle at the defaults: strong enough, or should it reach farther?
 - THE RINGWORLD WITHOUT FLICKER: the cirrus and bands drift and fade instead of leaping; heaps build billow by billow;
   smoke plumes lean with the wind; lights ease on and off; lightning lights the land, cold and from its side (the film
   sent shows the clouds before and after). Is the lightning stark enough, and the building quick enough?
@@ -30,21 +31,24 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   farmsteads in the belt round each city. Each region's palette by the seed (Burano, Jaipur, the Cyclades, ochres,
   Falu red, Kyoto). The comet travelling, meteors living their second, the aurora by height, lighthouses with their
   characters, turbines turning. Right amounts?
-- THE FILM'S NEW MOVES: Also moving (any slider, the light or its height swaying, sweeping or drifting); a rest at the ends; To a shot (Set the shot… on the dial); four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral out); Set it now… for the
-  look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do the amounts feel right?
+- THE FILM'S NEW MOVES: Also moving (any slider, the light or its height swaying, sweeping or drifting); a rest at the
+  ends; To a shot (Set the shot… on the dial); four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral
+  out); Set it now… for the look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do
+  the amounts feel right?
 
 ## 2 · Ruby's notes to act on
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
-  Next: marking controls on the page itself (a ∿ in each lock's place) and during To another look; the seed drifting. An hour of time
-  passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
+  Next: marking controls on the page itself (a ∿ in each lock's place) and during To another look; the seed drifting.
+  An hour of time passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
   docs/prior-art/film-animation.md.
 - THE RINGWORLD'S VARIETY (Ruby, 2026-10-24), what is left: more small variations on buildings (the table in
   docs/prior-art/ringworld-motion-and-variety.md §8 item 15), more of the wider library of kinds by world (item 19:
   begun with the Wilds' lookout, bothy, charcoal, camp and hide and the towns' fountain and bandstand), and more of
   the sense of scale by layering (item 18: a cloud deck below the far horizon, rows of pylons running back, a ship's
   light crawling along the wall's top).
-- SEE THROUGH, MORE SURFACES: Stained Glass, Tessellate, rain on glass, Water, Frost and the dew webs could bend what is
-  beneath too, once their parts hand on a lens (docs/prior-art/surface-beneath.md).
+- SEE THROUGH, MORE SURFACES: Stained Glass, Water (the pool's floor become the surface beneath), Frost and the dew webs
+  could bend what is beneath too, once their parts hand on a lens (docs/prior-art/surface-beneath.md); Scrying Pool and
+  Hoarfrost are whole generators, as Rain on Glass is, and can leave their offsets on their canvas the same way.
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
   interactions nobody asked for.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.

@@ -6107,8 +6107,11 @@ function kitImage(cv, gw, gh){
 
 function kitWhole(part, prep){
   return { ...part,
-    paint(E, n){ const draw = prep(E, n, E.ww, E.wh); return [withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0, draw)]; },
-    run(E, n){ return [E.readCanvas(this.paint(E, n)[0])]; } };
+
+
+    paint(E, n){ const draw = prep(E, n, E.ww, E.wh), c = withSeed(((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919) >>> 0, draw), r = [c];
+      if(c && c.lens){ r.lens = { ...c.lens, cell: (c.lens.pxCell || 1)/(E.ctx.scale || 1) }; delete c.lens; } return r; },
+    run(E, n){ const p = this.paint(E, n), r = [E.readCanvas(p[0])]; if(p.lens) r.lens = p.lens; return r; } };
 }
  
 function wholeDial(E, n, j){
@@ -11169,7 +11172,7 @@ function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
 
 
 
-function genGlassRain(w,h,amt,zoom,light,form,M3,env){
+function genGlassRain(w,h,amt,zoom,light,form,M3,env,see=false){
   amt=(amt==null?1:amt); zoom=(zoom==null?1:zoom);
   const mist=Math.max(0,Math.min(1, form==null ? 0.3 : form));
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div), unit=Math.min(ww,wh), N=ww*wh;
@@ -11321,6 +11324,9 @@ function genGlassRain(w,h,amt,zoom,light,form,M3,env){
   const small=document.createElement('canvas'); small.width=ww; small.height=wh;
   const sctx=small.getContext('2d', CPU), img=sctx.createImageData(ww,wh), d=img.data;
   const fog={r:236,g:238,b:240};
+
+
+  const DX=new Float32Array(ww*wh), DY=new Float32Array(ww*wh), LK=-Math.min(ww,wh)*0.09;
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
     const i=y*ww+x, q=i*4, hv=H[i];
     if(hv<=0){
@@ -11330,7 +11336,7 @@ function genGlassRain(w,h,amt,zoom,light,form,M3,env){
     const gx=(H[y*ww+Math.min(ww-1,x+1)]-H[y*ww+Math.max(0,x-1)])*0.5, gy=(H[Math.min(wh-1,y+1)*ww+x]-H[Math.max(0,y-1)*ww+x])*0.5;
 
 
-    const nz=1/Math.sqrt(1+gx*gx+gy*gy), u=x/ww, v=0.3 + 0.3*(y/wh);
+    const nz=1/Math.sqrt(1+gx*gx+gy*gy), u=x/ww, v=0.3 + 0.3*(y/wh); DX[i]=gx*LK; DY[i]=gy*LK;
 
 
     const K=0.45;
@@ -11344,16 +11350,19 @@ function genGlassRain(w,h,amt,zoom,light,form,M3,env){
     const sky=[envAt(u,0.05,0), envAt(u,0.05,1), envAt(u,0.05,2)], ref=[rr,gg,bb];
     for(let c=0;c<3;c++){
       const sh=M3 ? M3.sh[c] : 1;
-      let val=ref[c]*(1-rim*0.6*(2-sh)) + sky[c]*fres + sp*(M3 ? M3.hi[c] : 1);
+
+
+      let val=see ? 22*(1-sh*0.5) + (sky[c]*fres + sp*(M3 ? M3.hi[c] : 1))/Math.max(0.05, Math.min(1, rim*0.7 + fres + sp/255)) : ref[c]*(1-rim*0.6*(2-sh)) + sky[c]*fres + sp*(M3 ? M3.hi[c] : 1);
       d[q+c]=val<0?0:val>255?255:val;
     }
-    d[q+3]=Math.round(255*Math.min(1, hv/0.6));
+    d[q+3]=Math.round(255*Math.min(1, hv/0.6)*(see ? Math.max(0.1, Math.min(1, rim*0.7 + fres + sp/255)) : 1));
   }
 
   sctx.putImageData(img,0,0);
 
   const c=document.createElement('canvas'); c.width=w; c.height=h;
   const ctx=c.getContext('2d', CPU); ctx.imageSmoothingEnabled=true; ctx.drawImage(small,0,0,w,h);
+  c.lens={ DX, DY, w:ww, h:wh, pxCell:w/ww };
   return c;
 }
 
@@ -13898,7 +13907,7 @@ const TOUCH_STEPS = {
   glassrain: kitWhole({ cat: 'Textures', label: 'Rain on Glass', ins: ['light from'], outs: ['glass'], io: { ins: ['value'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Drop Size', 100, 40, 300), TOUCH_R('amount', 'Rain', 100, 20, 300), TOUCH_R('form', 'Condensation', 30), TOUCH_R('variant', 'Variation', 0, 0, 99)], cost: () => 12 },
     (E, n, w, h) => { const light = wholeDial(E, n, 1), a = wholeAmt(E, n, 'amount', 100), z = wholeZoom(E, n, 'zoom', 100), f = wholeShare(E, n, 'form', 30);
-      return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null); }),
+      return () => genGlassRain(w, h, a, z, light, f, E.ctx.mat || null, E.ctx.env || null, !!E.ctx.lens); }),
   water: kitWhole({ cat: 'Textures', label: 'Scrying Pool', ins: ['light from'], outs: ['pool'], io: { ins: ['value'], outs: ['image'] },
     params: [TOUCH_R('zoom', 'Wave Scale', 100, 40, 250), TOUCH_R('amount', 'Turbulence', 35), TOUCH_R('form', 'Depth', 35), TOUCH_R('haze', 'Haze', 10), TOUCH_R('murk', 'Murk', 0), TOUCH_R('tilt', 'View', 35), TOUCH_R('variant', 'Variation', 0, 0, 99),
       TOUCH_R('turn', 'Turn', 0, 0, 360), TOUCH_R('lens', 'Camera Zoom', 100, 25, 400)], cost: () => 12 },
@@ -30286,7 +30295,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
 
 
-  glassrain:     { blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
+  glassrain:     { seeThrough:true, blends:['source-over','screen','overlay','soft-light','hard-light','lighten','multiply'], material:true, light:true, tints:0, pageEnv:true },
 
 
 
@@ -34473,7 +34482,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Hyades–Secunda Hyadum';
+const RELEASE = 'Hyades–Chamukuy';
 
 const RELEASE_DATE = '2026-10-24';
 
@@ -35433,7 +35442,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-24 · a29fe56";
+const STAMP = "2026-10-24 · a47dd56";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
