@@ -61,7 +61,7 @@ import { HINTS_ON, LOCKABLE, closeDieMenu, dieLevel, dieMenu, installHeadings, i
 import { editLayer, freshLower, lowerOn, paintLayerWords, pickLayer, readingOf, swapLayers, syncBaseUi } from './uiLayers.js';
 import { CREDIT_KEY, applyCustomSize, applyLayout, applyPreviewScale, applyPreviewScaleSoon, backdropColours, detectMobile, fitEditorRoom, generateFilenameBase, maybeRerollSeed, offerAltText, pickAspect, poemAltText, randomSeed, summonCard, syncCustomSize } from './uiLayout.js';
 import { aimPointer, applyPreset, applyThemePalette, filterPresets, freezeSeed, groupHead, groupTile, markPicking, mutateGently, pickPreset, pickerPointer, pickerSwatches, presetTile, rafOr, renderSavedPresets, serializeCurrentSettings, summonVariation, tileQueue } from './uiLook.js';
-import { applyElement, curveOf, draftTimer, draftWhileDragging, followAccents, holdSurface, keptHash, keptThumb, openTileStamp, openTileThumb, paintCurvePad, paintCurves, paintElements, setCurvePoints, syncTextureParams, syncTextureTools, textureNameOf } from './uiSurface.js';
+import { applyElement, curveOf, draftTimer, draftWhileDragging, followAccents, holdSurface, keptHash, keptThumb, openTileStamp, openTileThumb, paintCurvePad, paintCurves, paintElements, setCurvePoints, syncSaveHint, syncTextureParams, syncTextureTools, textureNameOf } from './uiSurface.js';
 import { EFFECT_SLOT_DEFAULTS, RANGE_UNITS, SOUND_ON, SOUND_VOL, modalPrompt, refreshReadouts, repaintEditor, syncAllFxSlots, syncFrameVisibility, syncFxSlot, syncSeedWords } from './uiControls.js';
 export { EFFECT_SLOT_DEFAULTS, applyLegacyEffects, modalPrompt, refreshReadouts, repaintEditor, syncAllFxSlots, syncFrameVisibility, syncSeedWords } from './uiControls.js';
 export { applyElement, draftWhileDragging, holdSurface, keptOpts, openTileStamp, openTileThumb, syncTextureParams, syncTextureTools } from './uiSurface.js';
@@ -319,6 +319,7 @@ toggleSubblock('borderToggle','borderBlock');
 toggleSubblock('accent1Toggle','accent1Block');
 toggleSubblock('accent2Toggle','accent2Block');
 toggleSubblock('textureToggle','textureBlock');
+if($('textureToggle') && $('textureToggle').addEventListener) $('textureToggle').addEventListener('change', syncSaveHint);   // (the hint under Save: only while a surface that moves is shown)
 
 // ---------- SURFACE LAYERS (Ruby: "all controls for the second layer, a swap, every blend") ----------
 export const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
@@ -477,8 +478,8 @@ $('downloadBtn').addEventListener('click', async ()=>{
   // Render the FULL export for the file, then go back to the preview. The
   // full-size textures are made in the texture worker, so the page stays
   // responsive; the first render asks for them, the second draws them.
-  const btn = $('downloadBtn'), label = btn.textContent;
-  state.ui.saving = true; btn.textContent = 'Saving…'; btn.disabled = true; if(typeof setWorking === 'function') setWorking('saving');
+  const btn = $('downloadBtn'), lab = $('saveLabel') || btn, label = lab.textContent;
+  state.ui.saving = true; lab.textContent = 'Saving…'; btn.disabled = true; if(typeof setWorking === 'function') setWorking('saving');
   if(document.body && document.body.classList) document.body.classList.add('saving');
   const pw = canvas.width, ph = canvas.height;
   try {
@@ -493,7 +494,7 @@ $('downloadBtn').addEventListener('click', async ()=>{
   } finally {
     canvas.width = pw; canvas.height = ph;
     setRenderScale(pw / (state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
-    state.ui.saving = false; btn.textContent = label; btn.disabled = false; setWorking(null);
+    state.ui.saving = false; lab.textContent = label; btn.disabled = false; setWorking(null);
     // the full-size textures go: a phone shouldn't keep several 38 MB textures it won't reuse soon
     dropLargeTextures((state.page.exportW || pw)*(state.page.exportH || ph));
     if(document.body && document.body.classList) document.body.classList.remove('saving');

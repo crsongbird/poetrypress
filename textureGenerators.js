@@ -713,6 +713,9 @@ function blendNeutral(blend){ return !blend || blend === 'source-over' || blend 
 // beside its picture, stacked under it on one canvas twice as tall: per pixel where to look, red and green the offset
 // across and down (128 none, ±127 the reach, SEE_REACH canonical pixels), alpha how much glass is there. Made from the
 // height its Light Engine lit: a slope bends the view as a pane of rippled glass does
+// WHAT CAN MAKE A FILM (Ruby: "Surfaces should advertise whether they're capable of video rendering or not"): a surface
+// with a clock of its own, a camera or a light to turn moves in a film by itself; any page can still move between looks
+export const canFilm = caps => !!(caps && (caps.time || caps.camera || caps.light));
 export const SEE_REACH = 60;
 function seeLens(L, w, h){
   const c = document.createElement('canvas'); c.width = w; c.height = h * 2;

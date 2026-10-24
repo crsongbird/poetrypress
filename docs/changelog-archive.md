@@ -2,6 +2,21 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Hippocamp (2026-10-21)
+
+- Painted Landscape's river is remade. It is one river winding down its valley, seen in perspective: broad bends
+  near you, its far bends flattening into thin level slivers that step back toward the horizon, hidden here and there
+  behind the hills, and it no longer starts right under the sun. It holds the sky the way water does, light far off
+  and darker at your feet where you look down into it, with the sky's own colour at the height it mirrors. A dark
+  strip lies under the far bank (the bank reflected), with a light water line along the far shore and a dark lip
+  under the near bank; level ripples, a glitter only where it crosses under the sun, and trees and bushes along its
+  banks. River seeds paint differently from before; no other country changes.
+
+### Under the hood
+- `rvAt`, the river's course walked up the valley (its direction a sine of the distance along it) and projected;
+  each band paints the reach at its own depths, clipped to itself. The research is in
+  docs/prior-art/painted-rivers.md.
+
 ## Neptune–Larissa (2026-10-21)
 
 - Ringworld's films are kinder to the eyes. Lightning no longer lights the whole scene for a frame: a strike now plays

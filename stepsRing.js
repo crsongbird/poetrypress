@@ -1327,6 +1327,14 @@ const RG_ROUND_CUTS = true;
 // how lit a strike is at its phase (0 to 1 over its 1.2 s): nothing while its leader creeps down (a fifth of a second),
 // then rising over a quarter, held a tenth, fading over two thirds; a still's bolt (at 0.42) whole
 const rgBoltLit = ph => rsSmooth(0.17, 0.375, ph)*(1 - rsSmooth(0.45, 1, ph));
+// THE DISHES' SKY (Ruby: "Satellite dishes should move, and they should point in sync at the same targets like real
+// satellite dishes (but not all at the exact same time)"): an array listens to one source at a time. By the seed a run
+// of sources (a bearing in the world and a height in the sky); each held seven seconds of the film while the dishes
+// track it slowly across the sky, then all slew to the next over its last two, each dish starting its own moment late
+// (lag, up to a second), as an array's dishes do; a still shows every dish on the first. [bearing, height] in radians
+const rgDishAim = (s, ft, lag) => { const P = 7, t = Math.max(0, ft - lag), k = Math.floor(t/P), u = t/P - k, src = j => { const R = rgRand(s, 1700, j); return [R()*Math.PI*2, (22 + 55*R())*Math.PI/180]; };
+  const [a0, e0] = src(k), [a1, e1] = src(k + 1), trk = 0.5*Math.PI/180, sl = rsSmooth(0.7, 1, u), a0t = a0 + trk*u*P, e0t = e0 + 0.3*trk*u*P;
+  return [a0t + Math.atan2(Math.sin(a1 - a0t), Math.cos(a1 - a0t))*sl, e0t + (e1 - e0t)*sl]; };
 // a storm's strike at a moment of a film (ft, in the film's own seconds): slots 2.8 s long, each striking or not by its
 // own stream, a strike beginning in its slot's first 0.3 s and lasting 1.2 s, none beginning in the film's first 1.5 s;
 // the strike's phase, its slot, and its draw for which cloud it falls from (null: none now)
@@ -1561,7 +1569,9 @@ function rgPaintLand(x, mk, dk, V){
     if(o.c === 'prop'){ const h = o.hM*f[2], hl = h*lodOf(o, f); if(hl < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > (RG_WIDE.includes(o.kind) ? wh*0.6 : nearCut)) return;   // (shown by its size at its true distance, so a turn never shows or hides it; too large for the frame by its size drawn)
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
       // (set into the ground a little, always; the ruins' wrecks and bikes half buried, clipped where the ground meets them)
-      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(o, f) };
+      // (a dish turned to where the array listens now, its own moment late: rgDishAim)
+      const aim = o.kind === 'dish' ? rgDishAim(s, V.time > 0 ? FT : 0, ((o.rs >>> 5) % 1000)/1000*0.9) : null;
+      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(aim ? { ...o, face: aim[0] } : o, f), ...(aim ? { dishEl: aim[1] } : {}) };
       // PEOPLE BY THE HOUR (Ruby: "humans … should mostly try to go inside at night"; docs/prior-art/ringworld-life-and-
       // views.md §1, §7): by day nearly everyone is out, by night about one in twelve (§1's counts: from 23:00 to 05:00 some
       // 8% of noon's), the night watch with a lantern and a late walker; each goes in at its own point of the dusk and out
@@ -1875,11 +1885,20 @@ function rgPaintLand(x, mk, dk, V){
         // (and in plain cloudy weather now and then a far heap rains: a shower out over the land, its curtain reaching the
         //  ground there while the sky over you stays dry)
         const shower = !h.rain && wx === 'clouds' && (h.seed % 9) === 0 && dd > W*0.6 && h.ht > h.wd*0.4, virga = !h.rain && !shower && (wx === 'clouds' || wx === 'snow') && (h.seed % 7) < 2 && h.ht > h.wd*0.45;
+        // (Ruby: "Rain curtains should not be just a single panel and should fade in and out": a heap's rain falls as two
+        //  to five curtains across its base, each its own width and weight and a little nearer or farther, each slanting
+        //  with the wind and swaying with it, each thickening and thinning on its own slow time, so a shower moves along
+        //  the base and comes and goes; its streaks thickest at its middle, fading to its edges)
         if(h.rain || shower || virga){ const G = at(h.a, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003))); if(G && G[1] > Y){ const ln = G[1] - Y, Rr = mulberry32(h.seed ^ 0x7a17), sway = tm ? Math.sin(tm*0.004 + (h.seed % 97))*0.05 : 0, sl = (Math.cos(wAng)*0.12 + sway)*W0;
-          const n = Math.max(14, Math.min(70, Math.round(W0/px(2.5)))), col = rsMix(base, AIR, 0.25), a0 = (storm ? 0.16 : 0.11)*(virga ? 0.7 : 1);
-          for(let q = 0; q < n; q++){ const u0 = (Rr() + Rr() + Rr())/3*0.84 - 0.42, w0 = Math.max(px(0.6), W0*(0.006 + 0.03*Rr()*Rr())), reach = virga ? 0.2 + 0.4*Rr() : 0.75 + 0.25*Rr(), Y1 = Y + ln*reach;
-            const g = x.createLinearGradient(0, Y, 0, Y1); g.addColorStop(0, rsCss(col, a0*(0.5 + Rr()))); g.addColorStop(0.6, rsCss(col, a0*0.45)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
-            const X0 = X + u0*W0; x.beginPath(); x.moveTo(X0, Y); x.lineTo(X0 + w0, Y); x.lineTo(X0 + w0 + sl*reach, Y1); x.lineTo(X0 + sl*reach, Y1); x.fill(); } } }
+          const col = rsMix(base, AIR, 0.25), a0 = (storm ? 0.16 : 0.11)*(virga ? 0.7 : 1), nc = 2 + Math.floor(Rr()*(storm ? 4 : 3)), gtm = V.time ? rgGrowTime(V) : 0;
+          for(let k = 0; k < nc; k++){ const cu = (Rr()*2 - 1)*0.34, cw = 0.12 + 0.22*Rr(), dep = Rr(), per = 240 + 420*Rr(), ph = Rr()*6.283, pw = 0.7 + 0.6*Rr();
+            // (how heavy it falls now: a slow swell and ebb of its own, none ever quite gone in a still)
+            const I = V.time ? 0.15 + 0.85*Math.pow(0.5 + 0.5*Math.sin(gtm/per*6.283 + ph), 1.3) : 0.55 + 0.45*Math.sin(ph), wk = (0.55 + 0.45*(1 - dep))*I, slk = sl*(0.8 + 0.4*dep) + Math.sin(tm*0.003 + ph)*0.03*W0*(tm ? 1 : 0);
+            const n = Math.max(6, Math.min(40, Math.round(W0*cw/px(2.2))));
+            for(let q = 0; q < n; q++){ const v = (Rr() + Rr())/2*2 - 1, u0 = cu + v*cw, w0 = Math.max(px(0.6), W0*(0.005 + 0.024*Rr()*Rr()))*pw, reach = virga ? 0.2 + 0.4*Rr() : 0.72 + 0.28*Rr(), Y1 = Y + ln*reach, edge = 1 - Math.abs(v)*0.75;
+              const al = a0*(0.5 + Rr())*wk*edge; if(al < 0.004) continue;
+              const g = x.createLinearGradient(0, Y, 0, Y1); g.addColorStop(0, rsCss(col, al)); g.addColorStop(0.6, rsCss(col, al*0.45)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
+              const X0 = X + u0*W0; x.beginPath(); x.moveTo(X0, Y); x.lineTo(X0 + w0, Y); x.lineTo(X0 + w0 + slk*reach, Y1); x.lineTo(X0 + slk*reach, Y1); x.fill(); } } } }
         // (and, as Wind Waker's do overhead, a heap fades as it nears and swells past half the frame: drawn up close a painted
         //  heap would show itself a flat sheet; so it thins away as you pass under it, and gathers again as it draws off)
         const overhead = rsSmooth(ww*1.2, ww*0.55, W0);

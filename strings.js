@@ -79,6 +79,7 @@ export const UI_STRINGS = {
   'button.advancedLoadBtn':                "⇩ Load settings from JSON above",
   'button.resetViewBtn':                   "⟲",
   'button.downloadBtn':                    "Save image",
+  'button.save_hint':                     "hold for video",
   'button.modalConfirm':                   "OK",
   'button.modalCancel':                    "Cancel",
   // ---- labels ----

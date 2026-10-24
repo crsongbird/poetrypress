@@ -37,6 +37,16 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   the amounts feel right?
 
 ## 2 · Ruby's notes to act on
+- RUBY'S AFTERNOON NOTES (2026-10-24), what is left: cloud lighting with depth and faked subsurface scattering; a
+  depth pass over all the drawings; clouds more dramatic in the rain and storms that look like storms; wind on trees in
+  the rain that shows its strength and way; a few good buildings near the eye where they don't block the view; planets
+  and moons with more variety, the ring's distance from its planet by the seed, the star's light on them (color,
+  Rayleigh scattering, their air); fictional star systems, other light colors, an accurate Milky Way, skies from other
+  galaxies; the generators kept fast and portable for a game; gem walkers and other constructs in magic worlds, elves
+  and fae in place of people in the wilds, demonic and eldritch things, truly weird rare worlds (a candy world first);
+  Martian, Venusian and Enceladian rings as extremely rare seeds with their own buildings, plants and animals; the
+  Kinesis tab (desktop: after Materia, its panel in the left column, the preview playing the film as it renders; the
+  phone: a long press on Save, the page behind hidden), with two cameras, the sun's arc, and keyframes on a timeline.
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
   Next: marking controls on the page itself (a ∿ in each lock's place) and during To another look; the seed drifting.
   An hour of time passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).

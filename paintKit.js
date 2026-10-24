@@ -1471,8 +1471,24 @@ function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
     else { x.strokeStyle = pkCss(pkMat(c, [236, 228, 210], 0.8).body); x.lineWidth = Math.max(px(0.6), h*0.1); x.beginPath(); x.moveTo(mx, my - h*0.38); x.lineTo(bx, by - h*0.05); x.stroke(); } }
   if(night > 0.3 && type !== 'row') pkGlow(x, ...S.P(L*0.1, 0, H + 0.8), h*0.6, c.glow, 0.4*night);
 }
+// AN ANTENNA DISH, turned in the round (Ruby: dishes that "point in sync at the same targets"): its pedestal, and the
+// dish on its yoke turned to a bearing (c.view: how that bearing stands to the eye) and tipped up to a height in the
+// sky (c.dishEl, radians): the disc drawn as the eye sees it, its bowl when it faces you and its ribbed back when it
+// faces away, the feed on its struts out along its axis. Without a view, tipped toward the light as it always was
+function pkDish(x, X, Y, h, c, px){
+  const m = pkMat(c, [228, 228, 224], 0.5), steel = pkMat(c, PK_STEEL, 0.65), r = h*0.45, el = c.dishEl ?? 0.9, cs = c.view ? c.view.cs : 0.75, sn = c.view ? c.view.sn : -0.66*c.sd;
+  const ns = Math.cos(el)*sn, nu = Math.sin(el), nt = Math.cos(el)*cs, ang = Math.atan2(-nu, ns) + Math.PI/2, k = Math.max(0.06, Math.abs(nt)), cy = Y - h*0.55;
+  pkPoly(x, [[X - h*0.15, Y], [X - h*0.05, Y - h*0.45], [X + h*0.05, Y - h*0.45], [X + h*0.15, Y]], pkCss(steel.dark));
+  const feed = () => { x.strokeStyle = pkCss(steel.dark); x.lineWidth = Math.max(px(0.4), r*0.02); x.beginPath(); const fx = X + ns*r*0.75, fy = cy - nu*r*0.75;
+    for(const s of [-0.7, 0, 0.7]){ const ex = X + Math.cos(ang)*s*r, ey = cy + Math.sin(ang)*s*r; x.moveTo(ex, ey); x.lineTo(fx, fy); } x.stroke(); pkDisc(x, fx, fy, r*0.05, pkCss(steel.dark)); };
+  if(nt < 0) feed();   // (facing away: the feed behind the dish)
+  x.save(); x.translate(X, cy); x.rotate(ang); x.fillStyle = pkCss(nt >= 0 ? m.dark : pkMix(m.dark, PK_BLACK, 0.15)); x.beginPath(); x.ellipse(0, 0, r, r*k, 0, 0, Math.PI*2); x.fill();
+  if(nt >= 0){ x.fillStyle = pkCss(m.body); x.beginPath(); x.ellipse(0, r*k*0.08, r*0.92, r*k*0.86, 0, 0, Math.PI*2); x.fill(); }
+  else if(h > px(14)){ x.strokeStyle = pkCss(steel.dark, 0.6); x.lineWidth = Math.max(px(0.3), r*0.012); x.beginPath(); for(let q = 0; q < 6; q++){ const a = q/6*Math.PI*2; x.moveTo(0, 0); x.lineTo(Math.cos(a)*r*0.95, Math.sin(a)*r*k*0.95); } x.stroke(); }
+  x.restore(); if(nt >= 0) feed(); }
 export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(PK_SOLIDS.includes(kind)){ pkSolidProp(x, X, Y, h, c, kind, R0, px, night); return; }
+  if(kind === 'dish'){ pkDish(x, X, Y, h, c, px); return; }
   if(c.view && PK_PROP3[kind]){ const v0 = R0(), R1 = () => v0;
     if(pkTurned(x, X, Y, h, h, c, R1, px, night, { kind, id: 'p|' + kind, dk: PK_PROP3[kind], eave: 0, plain: true, back: PK_BACKED.includes(kind), ends: kind === 'vending', post: kind === 'mailbox',
       face: (q, cc, R) => pkProp(q, 0, 0, h, cc, kind, R, px, night) })) return; R0 = R1; }
@@ -1655,10 +1671,6 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
       const pts = [[x0, ry - h*0.4], [x0 + h*0.25, ry - h], [x0 + w + h*0.25, ry - h], [x0 + w, ry - h*0.4]]; pkPoly(x, pts, pkCss(pv.body));
       const g = x.createLinearGradient(x0, ry - h, x0 + w, ry - h*0.4); g.addColorStop(0, pkCss(c.air || pv.lit, 0.35)); g.addColorStop(0.5, pkCss(c.air || pv.lit, 0.05)); g.addColorStop(1, pkCss(c.air || pv.lit, 0.25)); pkPoly(x, pts, g);
       if(near){ x.strokeStyle = pkCss(pkMix(pv.lit, PK_WHITE, 0.4), 0.5); x.lineWidth = Math.max(px(0.3), h*0.01); x.beginPath(); for(let q = 1; q < 10; q++){ x.moveTo(x0 + w*q/10, ry - h*0.4); x.lineTo(x0 + w*q/10 + h*0.25, ry - h); } x.moveTo(x0 + h*0.125, ry - h*0.7); x.lineTo(x0 + w + h*0.125, ry - h*0.7); x.stroke(); } } return; }
-  case 'dish': { // an antenna dish: its lattice mount, the parabola tipped to the sky, the feed horn on its struts
-    const m = pkMat(c, [228, 228, 224], 0.5), r = h*0.45; pkPoly(x, [[X - h*0.15, Y], [X - h*0.05, Y - h*0.45], [X + h*0.05, Y - h*0.45], [X + h*0.15, Y]], pkCss(steel.dark));
-    x.save(); x.translate(X, Y - h*0.55); x.rotate(-0.5*sd); x.fillStyle = pkCss(m.dark); x.beginPath(); x.ellipse(0, 0, r, r*0.35, 0, 0, Math.PI*2); x.fill(); x.fillStyle = pkCss(m.body); x.beginPath(); x.ellipse(0, -r*0.03, r*0.92, r*0.3, 0, 0, Math.PI*2); x.fill();
-    x.strokeStyle = pkCss(steel.dark); x.lineWidth = Math.max(px(0.4), r*0.02); x.beginPath(); for(const s of [-0.7, 0, 0.7]){ x.moveTo(s*r, -s*s*r*0.05); x.lineTo(0, -r*0.75); } x.stroke(); pkDisc(x, 0, -r*0.75, r*0.05, pkCss(steel.dark)); x.restore(); return; }
   case 'beacon': { // a relay beacon: a slim mast, a glowing orb at its tip in rings of light
     const m = pkMat(c, [230, 232, 236], 0.5); pkShade(x, [[X - h*0.025, Y], [X - h*0.012, Y - h*0.9], [X + h*0.012, Y - h*0.9], [X + h*0.025, Y]], m.body, Y - h, Y, 0.1);
     pkDisc(x, X, Y - h*0.94, h*0.05, pkCss(pkMix(c.glow, PK_WHITE, 0.5))); pkGlow(x, X, Y - h*0.94, h*0.3, c.glow, 0.6); x.strokeStyle = pkCss(c.glow, 0.6); x.lineWidth = Math.max(px(0.4), h*0.006);

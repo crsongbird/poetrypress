@@ -190,6 +190,12 @@ button.ghost:hover{ background:linear-gradient(180deg, color-mix(in srgb, var(--
   box-shadow:0 8px 24px -6px rgba(0,0,0,0.65);
 }
 .download-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 28px -6px rgba(201,168,118,0.55); }
+/* (Ruby: "offset 'Save Image' vertically up and then in tiny text below write 'hold for video'", where the surface can
+   make a film: the button no larger, its label lifted and the hint tucked under it) */
+.download-btn .save-label{ display:block; position:relative; transition:top .15s ease; top:0; }
+.download-btn.has-hint .save-label{ top:-4px; }
+.download-btn .save-hint{ position:absolute; left:0; right:0; bottom:2px; text-align:center; font-family:var(--ui-sans); font-size:7.5px; line-height:1; letter-spacing:0.08em; opacity:.72; pointer-events:none; }
+.download-btn .save-hint[hidden]{ display:none; }
 
 /* ---------- MOBILE APP HEADER (hidden on desktop) ---------- */
 .app-header{

@@ -6,7 +6,7 @@
 import { $ } from './appOptions.js';
 import { BLEND_NAMES, HUE5_HINTS, KEPT, UI_STRINGS, fill } from './strings.js';
 import { LIGHT_DEFAULT, cameraStart, keepGround, labelText, lightsReach, putCamera, setKnobTicks, setLabelText, setLight, syncCameraPad, syncHueHeads, syncLightPad } from './uiDials.js';
-import { LIGHT_TURNED, SURFACE_HUE_KEYS, capsFor, paramReadout, paramsFor } from './textureGenerators.js';
+import { LIGHT_TURNED, SURFACE_HUE_KEYS, canFilm, capsFor, paramReadout, paramsFor } from './textureGenerators.js';
 import { SURFACE_BLENDS, graphUsesPoem, scheduleRender, textLayoutNow } from './canvasRenderer.js';
 import { SWATCH_STAMP } from './release.js';
 import { askSure, hardNo, toast } from './uiGuard.js';
@@ -106,9 +106,12 @@ export function draftWhileDragging(){
 /** What the light dial moves on a surface where it isn't the light, in one word for the Main button (caps.dial's first
  *  word; Position is Pos, Daylight is Day). */
 function dialWord(dial){ const w = String(dial).split(/[\s&]+/)[0]; return ({ Position: 'Pos', Daylight: 'Day' })[w] || w; }
+/** The hint under Save image, "hold for video", where the surface shown can make a film by itself. */
+export function syncSaveHint(){ const on = !!($('textureToggle') || {}).checked && canFilm(capsFor(($('textureType') || {}).value)), h = $('saveHint'), b = $('downloadBtn');
+  if(h) h.hidden = !on; if(b && b.classList) b.classList.toggle('has-hint', on); }
 export function syncTextureTools(resetToDefaults){
   const type = $('textureType').value;
-  const caps = capsFor(type);
+  const caps = capsFor(type); syncSaveHint();
   // (See Through only where the surface can bend what lies beneath it)
   if($('seeThroughRow')) $('seeThroughRow').hidden = !caps.seeThrough;
 
