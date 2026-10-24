@@ -422,6 +422,19 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     early summer, days of fourteen hours (`SUN_DAY`), long dusks. Time passes in a Camera Round too (Ruby: "time
     should pass during the camera pan"), as much as the sheet says, from the light as it is or from dawn, midday, dusk
     or night.
+  - **Motion without flicker** (Ruby: "clouds and smoke should follow the wind and never flicker";
+    docs/prior-art/ringworld-motion-and-variety.md). The bands and the cirrus ride the wind along chords wide enough that
+    they fade in and out low over the horizon, never leaping across the sky; the cirrus is combed along the wind as the
+    page sees it, larger as it nears. A heap's billows are dealt once (64, in the order it grows them) and shown by its
+    size and growth, so it builds turret by turret on its own clock (`rgGrowTime`) and never re-deals. What pulses or
+    flickers runs on the film's own seconds (`rgFilmTime`, from the film's frame rate), under one cycle a second at any
+    pace through the hours. A window, a far light and a dusk light ease on and off (`pkLit` gives a level, `pkDm` eases
+    the kit's dusk lights), and a turned building's proof is read with its windows dark. Smoke is a plume of puffs, each
+    placed by its age alone (`pkSmoke`): leaning downwind as the page sees the wind there, rising as the two-thirds power
+    of its age, born faint. A thing that moves farther in a frame than its own size is drawn faint, as a long exposure
+    would show it. Lightning strikes in the film's own seconds (`rgStrike`): never in the first second and a half, never
+    two within 2.5 s, rising over a quarter second and fading over two thirds; it lights the land from its side, cold and
+    hard, its strength held by measure so no tenth of the frame changes by more than 0.06 of relative luminance.
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
     objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
     (`paintHeap`), each on its own sheet laid at once so its billows never darken each other, every billow a gradient

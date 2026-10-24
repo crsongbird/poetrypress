@@ -528,7 +528,7 @@ function cameraOf(type, opts){
   //  passing: none at rest, so every still keys and draws as it always did; in a film, its frame and mean step too)
   const r2 = v => Math.round(v*100)/100, film = c.frame !== undefined && c.frame !== null && isFinite(+c.frame), time = num(c.time, 0) > 0 ? r2(num(c.time, 0)) : 0, dt = time || film ? r2(Math.max(0, num(c.dt, 0))) : 0;
   return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))),
-    ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}) } : {}) } : {}) };
+    ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}), ...(num(c.fps, 0) > 0 ? { fps: Math.round(num(c.fps, 0)) } : {}) } : {}) } : {}) };
 }
 // THE PAGE'S TRUE SHAPE (Ruby: the saved image's board was not the preview's): the parts that grow by chance on
 // their grid (texCore `pageGrid`) are given the export's own size, and grow on its grid at every size. A request

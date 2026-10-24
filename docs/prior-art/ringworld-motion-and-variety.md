@@ -275,6 +275,10 @@ Most meteors glow for about a second (docs/prior-art/ringworld-time.md §5). In 
 
 ## 8. What we take [est]
 
+Built in Ursa Major–Phecda: items 1 to 7 (the drift's seam closed, the cirrus by the wind, the film's own clock for
+lights, lights easing, the smoke's plume, heaps keeping their billows and building on a growth clock, lightning that
+lights the land within a measured limit), and fast movers drawn faint. The rest are still to come.
+
 Ordered by what it does for the picture over what it costs. Each says what changes, where, how a film stays stateless and calm (the scene clock or film seconds only, nothing switched faster than an ease of at least 1 s, no large region changing quickly), and what a still shows. Any visible change goes to Ruby as tools/compare.mjs or tools/review.mjs sheets first (AGENTS.md §1 rule 1).
 
 1. **Close the drift's seam** (rgPaintArch's drift, the cirrus and the low bands). Keep each cloud's starting direction, but carry it on a circle far larger than its start, so that the chord's ends lie a few degrees above the horizon (for cirrus at 9 km, 2.5° up is about 200 km out) and the start lies inside the chord, not at its end; fade the cloud out over the last tenth of the chord and in over the first. Stateless: the position stays start plus wind times the cloud clock, wrapped. Still: unchanged, since at time 0 every cloud is where it was; a film's first frame then equals the still. Cost: a few lines.

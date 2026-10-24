@@ -23,6 +23,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   read as: the smallest things get the least. The left-edge lines on the cards and sub-blocks are gone. Right weight?
 - SEE THROUGH: Under Glass, Broken Glass, Crystal Leaf and Poured Wax laid over another surface bend it (the switch with
   the surface's tools; on for a new page). The bend is gentle at the defaults: strong enough, or should it reach farther?
+- THE RINGWORLD WITHOUT FLICKER: the cirrus and bands drift and fade instead of leaping; heaps build billow by billow;
+  smoke plumes lean with the wind; lights ease on and off; lightning lights the land, cold and from its side (the film
+  sent shows the clouds before and after). Is the lightning stark enough, and the building quick enough?
 - THE FILM'S NEW MOVES: four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral out); Set it now… for the
   look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do the amounts feel right?
 
@@ -31,13 +34,12 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   Next: a rest at the ends, To a shot, controls marked to sway, sweep or drift, the seed drifting. An hour of time
   passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
   docs/prior-art/film-animation.md.
-- THE RINGWORLD IN MOTION (Ruby, 2026-10-24): clouds building; smoke following the wind, smoothly; glows and lights
-  (large spires and buildings too) gently alive, never flickering; cirrus never flickering; more color variety by the
-  seed; a wider variety of things: small variations on buildings, and a wider library with smarter placing. And: the
-  comet should move; shooting stars, aurora, a greater sense of scale by layering; lightning never on a film's first
-  frame, and lighting the whole scene and its shading starkly (eased, within the photosensitivity rule); farms only near
-  the populated rings, not in the Wilds (druid groves and other wild things there instead).
-  docs/prior-art/ringworld-motion-and-variety.md.
+- THE RINGWORLD IN MOTION (Ruby, 2026-10-24), what is left: glows on the large spires and buildings gently alive
+  (beacons, a lighthouse's character, turbines and windmills turning); more color variety by the seed; a wider variety
+  of things: small variations on buildings, and a wider library with smarter placing. And: the comet should move;
+  shooting stars that live their second, aurora with height and drift, a greater sense of scale by layering; farms only
+  near the populated rings, not in the Wilds (druid groves and other wild things there instead).
+  docs/prior-art/ringworld-motion-and-variety.md §8.
 - SEE THROUGH, MORE SURFACES: Stained Glass, Tessellate, rain on glass, Water, Frost and the dew webs could bend what is
   beneath too, once their parts hand on a lens (docs/prior-art/surface-beneath.md).
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more

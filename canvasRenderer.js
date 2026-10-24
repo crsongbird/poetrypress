@@ -1273,13 +1273,14 @@ let LAST_RENDER_MS = 0, LAST_PROFILE = '';
 let RENDER_SCALE = 1, PAGE_SIZE = null;
 // THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, handed to a surface with a camera
 // (the Ringworld's clouds drift, its stars wheel, its lights flicker); 0 at rest, so a still is as it always was
-let SCENE_TIME = 0, SCENE_DT = 0, SCENE_FRAME = null, SCENE_STEP = 0, SCENE_SIDE = 0;
+let SCENE_TIME = 0, SCENE_DT = 0, SCENE_FRAME = null, SCENE_STEP = 0, SCENE_SIDE = 0, SCENE_FPS = 0;
 // (a film's frame and its mean step, the scene's seconds a frame over the whole film: from these the scene runs its own
 //  clocks evenly and only forward, however the hours are spread over the frames; none in a still)
 // (and, held the length of a film, which way round the Ringworld's dusk comes: the dial's light would turn it over as the
 //  sun's bearing passes ahead or behind, and the whole land's day and night would flip between two frames)
-export function setSceneTime(t, dt = 0, frame = null, step = 0, side = 0){ SCENE_TIME = t > 0 && isFinite(t) ? t : 0; SCENE_FRAME = frame !== null && isFinite(frame) && frame >= 0 ? frame : null;
-  SCENE_DT = (SCENE_TIME || SCENE_FRAME !== null) && dt > 0 ? dt : 0; SCENE_STEP = SCENE_FRAME !== null && step > 0 ? step : 0; SCENE_SIDE = SCENE_FRAME !== null && side ? (side < 0 ? -1 : 1) : 0; }
+export function setSceneTime(t, dt = 0, frame = null, step = 0, side = 0, fps = 0){ SCENE_TIME = t > 0 && isFinite(t) ? t : 0; SCENE_FRAME = frame !== null && isFinite(frame) && frame >= 0 ? frame : null;
+  SCENE_DT = (SCENE_TIME || SCENE_FRAME !== null) && dt > 0 ? dt : 0; SCENE_STEP = SCENE_FRAME !== null && step > 0 ? step : 0; SCENE_SIDE = SCENE_FRAME !== null && side ? (side < 0 ? -1 : 1) : 0;
+  SCENE_FPS = SCENE_FRAME !== null && fps > 0 ? fps : 0; }
 // a texture finished in the worker: draw the page again
 onTextureReady(() => scheduleRender());
 export function setRenderScale(s, page){ RENDER_SCALE = (s > 0 && isFinite(s)) ? s : 1; if(page && page[0] > 0 && page[1] > 0) PAGE_SIZE = [Math.round(page[0]), Math.round(page[1])]; }
@@ -1399,7 +1400,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const p4 = has(4) ? num(L.texP4) : null, p5 = has(5) ? num(L.texP5) : null, p6 = has(6) ? num(L.texP6) : null, p7 = has(7) ? num(L.texP7) : null, p8 = has(8) ? num(L.texP8) : null, p9 = has(9) ? num(L.texP9) : null, p10 = has(10) ? num(L.texP10) : null;
   const accent1 = $('accent1ColorHex').value, accent2 = $('accent2ColorHex').value;
   // the camera dial's (a texture with a camera, or a graph with a Camera Dial; the request keys it only then)
-  const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom, ...(SCENE_TIME > 0 || SCENE_FRAME !== null ? { time: SCENE_TIME, dt: SCENE_DT, ...(SCENE_FRAME !== null ? { frame: SCENE_FRAME, step: SCENE_STEP, ...(SCENE_SIDE ? { side: SCENE_SIDE } : {}) } : {}) } : {}) } : undefined;
+  const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom, ...(SCENE_TIME > 0 || SCENE_FRAME !== null ? { time: SCENE_TIME, dt: SCENE_DT, ...(SCENE_FRAME !== null ? { frame: SCENE_FRAME, step: SCENE_STEP, ...(SCENE_SIDE ? { side: SCENE_SIDE } : {}), ...(SCENE_FPS ? { fps: SCENE_FPS } : {}) } : {}) } : {}) } : undefined;
   const name = s => slot === 'main' ? s : 'base' + (s === 'main' ? '' : s);
   // SEE THROUGH (Ruby: glass and water "should take the texture below as an input and do something creative with it"): a
   // surface that can, with its switch on, hands back its lens beneath its picture; the page drawn so far is bent through

@@ -2,6 +2,16 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Setebos (2026-10-21)
+
+- Windows keep the hours: as the evening begins most of a town's windows are lit, and as the night deepens toward its
+  middle fewer stay on. In a Time Passing film each window goes on and off in its own time, hours apart: an evening's
+  comings and goings, a light left burning, a kitchen before dawn.
+
+### Under the hood
+- `pkLit` decides every window (the blocks' grids and ribbons, the houses' framed windows, the turned buildings'
+  sides) from the night's depth and the scene's clock. Texture fingerprints updated for night scenes with buildings.
+
 ## Uranus–Prospero (2026-10-21)
 
 - Fixed: standing right beside a factory on the Ringworld could fill the bottom of the picture with a vast flat roof.

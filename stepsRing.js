@@ -126,7 +126,7 @@ function rgView(E, n, ww, wh){
     // (in a film, its frame and the scene's mean seconds a frame, from which the scene's own clocks run evenly; and a
     //  film's first frame is already a film's, its clock a moment past nought, so nothing moves from it to the next)
     ...(cam => { const film = !!cam && cam.frame !== undefined && cam.frame !== null; return { time: (cam && cam.time) || (film ? 1e-3 : 0), dt: (cam && cam.dt) || 0,
-      frame: film ? cam.frame : null, step: film ? cam.step || 0 : 0, spin: ((cam && cam.time) || 0)*RG_SPIN }; })(E.ctx.camera) };
+      frame: film ? cam.frame : null, step: film ? cam.step || 0 : 0, fps: film ? cam.fps || 0 : 0, spin: ((cam && cam.time) || 0)*RG_SPIN }; })(E.ctx.camera) };
 }
 // THE RING'S SPIN under the stars (docs/prior-art/ringworld-time.md: Niven's ring turns once in seven and a half of its
 // thirty-hour days, 225 hours): radians a second of the film's clock turns the sky, a degree and a half an hour
@@ -146,13 +146,25 @@ const RG_SPIN = Math.PI*2/(225*3600);
 //  (its dawn and dusk given more of them) the time between frames changes from frame to frame, and a clock made from the
 //  hours and that time ran unevenly, even backward, so the clouds leapt to and fro. Each clock now runs from the frame
 //  itself: the frame times the film's mean step, held to its cap, so it runs evenly and only forward)
-export const rgClock = (V, cap) => V.frame !== null && V.frame !== undefined && V.step > 0 ? V.frame*Math.min(cap, V.step) : V.dt > cap ? V.time/V.dt*cap : V.time;
+// (a real-time film's step comes rounded to a hundredth, 1/30 as 0.03: with its frame rate known it is the frame's own
+//  length, so its clocks keep the scene's true time)
+const rgStep = V => V.fps > 0 && Math.abs(V.step*V.fps - 1) < 0.2 ? 1/V.fps : V.step;
+export const rgClock = (V, cap) => V.frame !== null && V.frame !== undefined && V.step > 0 ? V.frame*Math.min(cap, rgStep(V)) : V.dt > cap ? V.time/V.dt*cap : V.time;
+// THE FILM'S OWN CLOCK (docs/prior-art/ringworld-motion-and-variety.md §4.7): seconds of the film itself, however fast
+// it runs through the scene's hours and at whatever frame rate. What pulses, flickers, sweeps or turns runs on it, so a
+// light's rate is the same in a time-lapse as in real time, and none goes faster than once a second (the photosensitivity
+// rule, AGENTS.md §11). In real time it is the scene's own time.
+export const rgFilmTime = V => V.frame !== null && V.frame !== undefined ? V.frame/(V.fps > 0 ? V.fps : V.step > 0 && V.step < 0.2 ? 1/V.step : 30) : V.dt > 0.2 ? V.time/V.dt/30 : V.time;
 const rgCloudTime = V => rgClock(V, 0.7);
 const rgSwayTime = V => rgClock(V, 0.25);
 const rgMotionTime = V => rgClock(V, 2.5);
 // (and the water's, gentler: a swell's line or a glint moves on at most 0.4 s a frame, docs/prior-art/
 //  ringworld-life-and-views.md §4: at minutes a frame the sea would only shimmer)
 const rgWaterTime = V => rgClock(V, 0.4);
+// (and a heap's life, its building and thinning: at most four seconds a frame, so in a time-lapse a cumulus builds and
+//  fades in some seconds of film while the wind barely carries it, as real time-lapses show them; docs/prior-art/
+//  ringworld-motion-and-variety.md §2)
+const rgGrowTime = V => rgClock(V, 4);
 // the wind, by the seed (docs/prior-art/ringworld-time.md: fair-weather cumulus drift at three to seven metres a second,
 // faster under a storm): its way and its speed
 const rgWind = V => { const WD = seedChoice(V.seed, 'wind'), ang = WD()*Math.PI*2; return [ang, 3 + 4*WD() + (V.weather === 'storm' ? 5 : 0)]; };
@@ -412,7 +424,7 @@ function rgPaintArch(x, mk, V){
         if(hp > px(40) && wp > px(20) && R() < 0.3 && ww2 !== 'magic'){ const u0 = 0.2 + 0.5*R(), A = inQ(q, u0, 0), B = inQ(q, u0 + 0.08, 0), C2 = inQ(q, u0 + 0.08, 0.07), D = inQ(q, u0, 0.07);
           rsPoly(x, [A, B, C2, D], rsCss(rsMix(c, [0, 0, 0], 0.5))); line([A, D, C2, B], rsCss(rsMix(c, [255, 255, 255], 0.3), 0.8), Math.max(px(0.4), hp*0.004));
           if(night > 0.3) rsPoly(x, [inQ(q, u0 + 0.01, 0.005), inQ(q, u0 + 0.07, 0.005), inQ(q, u0 + 0.07, 0.06), inQ(q, u0 + 0.01, 0.06)], rsCss(glowC, 0.4*night)); }
-        if(night > 0.4 && ww2 !== 'ruins' && (R() < 0.5)){ const [X, Y] = inQ(q, 0.5, 0.985), pu = V.time ? 0.35 + 0.65*(0.5 + 0.5*Math.sin(rgSwayTime(V)*2.4 + X*0.05)) : 1; rgGlow(x, X, Y, Math.max(px(3), hp*0.02), [255, 70, 60], 0.7*night*pu); }
+        if(night > 0.4 && ww2 !== 'ruins' && (R() < 0.5)){ const [X, Y] = inQ(q, 0.5, 0.985), pu = V.time ? 0.35 + 0.65*(0.5 + 0.5*Math.sin(rgFilmTime(V)*Math.PI*2*0.3 + X*0.05)) : 1; rgGlow(x, X, Y, Math.max(px(3), hp*0.02), [255, 70, 60], 0.7*night*pu); }
         // (what is painted or lit on a wall stays on that wall: drawn inside its own outline, never spilling off a narrow,
         //  far wall seen edge on into the sky)
         x.save(); x.beginPath(); q.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
@@ -506,20 +518,30 @@ function rgPaintArch(x, mk, V){
   // plane carries it: across the sky, growing as it nears and shrinking down to the horizon, gone past it and coming
   // round again from the far side (a still: every cloud where it always was)
   const [wAng, wSp] = rgWind(V);
-  // (each cloud keeps to its own circle of the plane, as far out as it began: it crosses the sky along a chord of it with
-  //  the wind, and past the horizon comes in again on the far side, so the sky keeps the clouds it began with)
-  const drift = (az, e, hc, k = 1) => { if(!V.time) return [az, e, 1]; const d = hc/Math.tan(e), ux = Math.cos(wAng), uy = Math.sin(wAng), x0 = d*Math.cos(az), y0 = d*Math.sin(az);
-    const u0 = x0*ux + y0*uy, w = -x0*uy + y0*ux, Dc = Math.sqrt(Math.max(1, d*d - w*w)), u = ((u0 + wSp*k*rgCloudTime(V) + Dc) % (2*Dc) + 2*Dc) % (2*Dc) - Dc;
-    const xx = u*ux - w*uy, yy = u*uy + w*ux, d2 = Math.max(hc*0.3, Math.hypot(xx, yy));
-    return [Math.atan2(yy, xx), Math.atan(hc/d2), Math.min(1.6, d/d2)]; };
-  if(wx === 'clear' && R0() < 0.55) for(let k = 0, n = 8 + Math.floor(R0()*14); k < n; k++){ const R = rgRand(s, 809, k), rnd = (a, b) => a + (b - a)*R(), [az, e, gk] = drift(R()*Math.PI*2, rnd(2, 12)*Math.PI/180, 1200), P0 = skyAt(az, e); if(!P0) continue; const X = P0[0], Y = P0[1], wd = F*rnd(0.2, 0.6)*gk, ht = wd*rnd(0.03, 0.07), pts = [];
+  // (each cloud rides the wind along a chord of a circle of the plane wide enough that the chord's ends lie low over the
+  //  horizon, its start well inside it: it fades in over the chord's first tenth and out over its last, low and small, and
+  //  comes in again on the far side, so the sky keeps the clouds it began with and none jumps (docs/prior-art/
+  //  ringworld-motion-and-variety.md §1.2: a chord through its start, as before, had the start at one end, so half the
+  //  clouds leapt across the sky at the film's first tick). It hands back its direction, how much nearer it has come, how
+  //  much of it is there, and the direction a step downwind of it, which way the wind carries it on the page)
+  const RG_DRIFT_END = Math.tan(2.5*Math.PI/180);
+  const drift = (az, e, hc, k = 1) => { const d = hc/Math.tan(e), ux = Math.cos(wAng), uy = Math.sin(wAng), x0 = d*Math.cos(az), y0 = d*Math.sin(az);
+    const u0 = x0*ux + y0*uy, w = -x0*uy + y0*ux, Rc = Math.max(hc/RG_DRIFT_END, d*1.35), Dc = Math.sqrt(Rc*Rc - w*w);
+    const u = V.time ? ((u0 + wSp*k*rgCloudTime(V) + Dc) % (2*Dc) + 2*Dc) % (2*Dc) - Dc : u0, p = (u + Dc)/(2*Dc), fade = rsSmooth(0, 0.1, p)*rsSmooth(1, 0.9, p);
+    const at = uu => { const xx = uu*ux - w*uy, yy = uu*uy + w*ux, d2 = Math.max(hc*0.12, Math.hypot(xx, yy)); return [Math.atan2(yy, xx), Math.atan(hc/d2), d2]; };
+    const [a1, e1, d2] = V.time ? at(u) : [az, e, d], [a2, e2] = at(u + hc*0.08);
+    return [a1, e1, Math.min(1.6, d/d2), fade, a2, e2]; };
+  if(wx === 'clear' && R0() < 0.55) for(let k = 0, n = 8 + Math.floor(R0()*14); k < n; k++){ const R = rgRand(s, 809, k), rnd = (a, b) => a + (b - a)*R(), [az, e, gk, fa] = drift(R()*Math.PI*2, rnd(2, 12)*Math.PI/180, 1200), P0 = skyAt(az, e); if(!P0 || fa <= 0) continue; const X = P0[0], Y = P0[1], wd = F*rnd(0.2, 0.6)*gk, ht = wd*rnd(0.03, 0.07), pts = [];
     for(let q = 0; q <= 8; q++){ const u = q/8; pts.push([X - wd/2 + wd*u, Y - ht*Math.pow(Math.sin(Math.PI*u), 0.6)*rnd(0.6, 1.2)]); }
-    rsPoly(x, [...pts, [X + wd/2, Y + ht*0.25], [X - wd/2, Y + ht*0.25]], rsCss(cWhite, 0.8)); }
+    rsPoly(x, [...pts, [X + wd/2, Y + ht*0.25], [X - wd/2, Y + ht*0.25]], rsCss(cWhite, 0.8*fa)); }
   if(wx === 'clear' || wx === 'clouds') if(R0() < 0.5) for(let k = 0, n = 5 + Math.floor(R0()*8); k < n; k++){ // cirrus: long thin streaks high up, combed one way
-    const R = rgRand(s, 812, k), rnd = (a, b) => a + (b - a)*R(), [caz, ce] = drift(R()*Math.PI*2, rnd(18, 50)*Math.PI/180, 9000, 2.5), P0 = skyAt(caz, ce); if(!P0) continue; const len = F*rnd(0.2, 0.7), ang = rnd(-0.25, 0.25), th = F*rnd(0.004, 0.012);
+    // (each streak drawn as large as it has come nearer, and laid along the way the wind carries it across the page, a
+    //  little of the seed's spread about that: so the sky's streaks are combed one way, turning as the sky curves)
+    const R = rgRand(s, 812, k), rnd = (a, b) => a + (b - a)*R(), [caz, ce, gk, fa, waz, we] = drift(R()*Math.PI*2, rnd(18, 50)*Math.PI/180, 9000, 2.5), P0 = skyAt(caz, ce); if(!P0 || fa <= 0) continue;
+    const P1 = skyAt(waz, we), wsa = P1 ? Math.atan2(P1[1] - P0[1], P1[0] - P0[0]) : 0, len = F*rnd(0.2, 0.7)*gk, ang = Math.max(-1, Math.min(1, Math.abs(wsa) > Math.PI/2 ? wsa - Math.PI*Math.sign(wsa) : wsa)) + rnd(-0.25, 0.25)*0.5, th = F*rnd(0.004, 0.012)*Math.sqrt(gk);
     // (combed into fine strands as a painter dry-brushes them, each bowed a little and fading at its ends, some hooked
     //  down at their tail where their ice falls (mares' tails), lit warm at dusk like the heaps)
-    x.save(); x.translate(P0[0], P0[1]); x.rotate(ang); const g = x.createLinearGradient(-len/2, 0, len/2, 0), cc = rsMix(cWhite, [255, 176, 150], dusk*0.35); g.addColorStop(0, rsCss(cc, 0)); g.addColorStop(0.45, rsCss(cc, 0.3*(0.4 + 0.6*kday))); g.addColorStop(1, rsCss(cc, 0));
+    x.save(); x.translate(P0[0], P0[1]); x.rotate(ang); const g = x.createLinearGradient(-len/2, 0, len/2, 0), cc = rsMix(cWhite, [255, 176, 150], dusk*0.35); g.addColorStop(0, rsCss(cc, 0)); g.addColorStop(0.45, rsCss(cc, 0.3*(0.4 + 0.6*kday)*fa)); g.addColorStop(1, rsCss(cc, 0));
     x.strokeStyle = g; x.lineCap = 'round';
     for(let q = 0, m = 5 + Math.floor(R()*6); q < m; q++){ const y0 = (q - m/2)*th*1.5 + rnd(-1, 1)*th, l0 = len*rnd(0.45, 1), x0 = rnd(-0.15, 0.15)*len, bend = rnd(-1, 1)*th*3, hook = R() < 0.35;
       x.lineWidth = Math.max(px(0.5), th*rnd(0.35, 1)); x.beginPath(); x.moveTo(x0 - l0/2, y0); x.quadraticCurveTo(x0, y0 + bend, x0 + l0/2, y0 + (hook ? th*5 : bend*0.3)); x.stroke(); }
@@ -1200,7 +1222,17 @@ const RG_ROUND_CUTS = true;
 //   4. BACK TO FRONT: each ridge, then what stands between it and the next nearer one, far to near; nearer ridges then
 //      mask what they partly hide. A thing stands on the ground that shows: never above the farther crest.
 // Kept plain on purpose: a game exploring the ring would do the same, in real time (OPEN-ISSUES §5).
+// how lit a strike is at its phase (0 to 1 over its 1.2 s): nothing while its leader creeps down (a fifth of a second),
+// then rising over a quarter, held a tenth, fading over two thirds; a still's bolt (at 0.42) whole
+const rgBoltLit = ph => rsSmooth(0.17, 0.375, ph)*(1 - rsSmooth(0.45, 1, ph));
+// a storm's strike at a moment of a film (ft, in the film's own seconds): slots 2.8 s long, each striking or not by its
+// own stream, a strike beginning in its slot's first 0.3 s and lasting 1.2 s, none beginning in the film's first 1.5 s;
+// the strike's phase, its slot, and its draw for which cloud it falls from (null: none now)
+export const rgStrike = (s, ft) => { const P = 2.8, k0 = Math.floor(ft/P); let out = null;
+  for(const k of [k0 - 1, k0]){ const Rk = rgRand(s, 818, k); if(Rk() < 0.5){ const t0 = k*P + Rk()*0.3, ph = (ft - t0)/1.2, pick = Rk(); if(t0 >= 1.5 && ph >= 0 && ph < 1) out = { ph, ev: k, pick, t0 }; } }
+  return out; };
 function rgPaintLand(x, mk, dk, V){
+  let FLASH = null;   // (a strike's light on the land, set where the storm's heaps are dealt, laid at the end)
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, BLACK = [0, 0, 0], s = V.seed | 0;
   const LT = V.sun.LT, sd = V.sun.sd, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
@@ -1321,13 +1353,18 @@ function rgPaintLand(x, mk, dk, V){
   // by its stream), warm or cold by its world's lights, the brightest with a little bloom
   // (with the clock: a light now and then going out for the night or coming on again, each half hour; a fire in the
   //  ruins and one light in sixteen flickering)
-  const nightDot = (o, f, l, wday, haze, big = 1) => { const nt = 1 - rsSmooth(0.3, 0.7, wday); if(nt < 0.15 || (o.rs % 997)/997 > nt*1.4 - 0.15) return;
-    if(V.time && mnHash(o.rs & 4095, Math.floor(V.time/1800 + (o.rs % 97)/97), s + 840) < 0.15) return;
-    const fl = V.time && (o.w === 'ruins' || (o.rs & 15) === 5) ? 0.75 + 0.25*Math.sin(ST*(1.5 + (o.rs & 7)*0.2) + (o.rs & 255)) : 1;
+  // (in a film each comes on through the dusk, and goes out and on again, over a minute or so of the scene's time, never
+  //  in one frame; and a flicker is a slow breath of the film's own clock, under half a second's rate, docs/prior-art/
+  //  ringworld-motion-and-variety.md §4.7)
+  const nightDot = (o, f, l, wday, haze, big = 1) => { const nt = 1 - rsSmooth(0.3, 0.7, wday), th = (o.rs % 997)/997, dk = nt*1.4 - 0.15; if(nt < 0.15 || dk < th) return;
+    let on = V.time ? rsSmooth(th, th + 0.04, dk) : 1;
+    if(V.time){ const u = V.time/1800 + (o.rs % 97)/97, k = Math.floor(u), out = j => mnHash(o.rs & 4095, j, s + 840) < 0.15 ? 1 : 0, o1 = out(k), o0 = out(k - 1);
+      on *= 1 - (o1 + (o0 - o1)*(1 - rsSmooth(0, 60/1800, u - k))); if(on <= 0.004) return; }
+    const fl = on*(V.time && (o.w === 'ruins' || (o.rs & 15) === 5) ? 0.75 + 0.25*Math.sin(FT*Math.PI*2*(0.2 + (o.rs & 7)*0.035) + (o.rs & 255)) : 1);
     const X = f[0], Y = stand(l, X, f[1]) - px(0.6)*big; if(!vis(l, X - px(1), X + px(1), Y - px(2), Y + px(1))) return;
     const lights = V.lightsOf(o.w), col = rsMix(o.rs & 2 ? lights[0] : lights[1] || lights[0], AIR, haze*0.5), r = px(0.55 + 0.5*((o.rs >> 3) % 3)/2)*big;
     x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.35), Math.min(1, nt*1.3)*fl); x.fillRect(X - r, Y - r, r*2, r*2);
-    if((o.rs & 12) === 12) rgGlow(x, X, Y, r*5, col, 0.35*nt); };
+    if((o.rs & 12) === 12) rgGlow(x, X, Y, r*5, col, 0.35*nt*on); };
   // WHAT MOVES (Ruby: "robots moving, minor animations"; "longer, smoother paths"; then, 2026-10-22: "humans don't
   // move? … some objects still move in circles"): each mover keeps a timetable of its own, as townsfolk do in games
   // (docs/prior-art/ringworld-life-and-views.md §1, §2, §7): stops drawn one by one round its home, each independent of
@@ -1336,7 +1373,7 @@ function rgPaintLand(x, mk, dk, V){
   // stop until that leg's time is up. [metres it ranges along its way, across it, its pace in metres a second] by kind:
   // a person along the street or lane it is beside, a drone in quick straight legs between hovers, a sheep a step or
   // two as it grazes, a harvester and a lamplighter along their rows and rounds
-  const MT = rgMotionTime(V), ST = rgSwayTime(V);
+  const MT = rgMotionTime(V), ST = rgSwayTime(V), FT = rgFilmTime(V);
   const RG_MOVES = { helper: [14, 14, 1.0], drone: [12, 12, 4], crawler: [8, 8, 0.4], walker: [24, 24, 1.5], harvester: [40, 5, 1.6], shepherd: [16, 16, 1.0], crab: [5, 5, 0.3],
     lamplighter: [16, 3, 1.0], sheep: [2, 2, 0.15], figure: [18, 1.5, 1.25] };
   // (a walker with a door, at its going-in: from wherever its round has it, along the way to its door, in at the door; and
@@ -1344,9 +1381,9 @@ function rgPaintLand(x, mk, dk, V){
   const toDoor = (o, p) => { const q = ((o.rs >>> 10) % 1000)/1000; if(!o.door || q < 0.1) return p;
     const out = 0.08 + 0.92*rsSmooth(0.15, 0.65, ringDay(L, o.a)), k = rsSmooth(q + 0.14, q + 0.03, out); if(k <= 0) return p;
     const da = o.door.a - p.a, dz = o.door.z - p.z; return { ...p, a: p.a + da*k, z: p.z + dz*k, ...(k < 1 && Math.hypot(da, dz) > W*0.0001 ? { face: Math.atan2(dz, da), walking: 1 } : { walking: 0 }) }; };
-  const moved = o => o.door ? toDoor(o, movedRound(o)) : movedRound(o);
-  const movedRound = o => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, R = mulberry32(o.rs ^ 0x6d6f7665), ax = o.walk ?? o.face ?? (o.rs % 62832)/10000;
-    const ca = Math.cos(ax), sa = Math.sin(ax), pace = mv[2]*(0.8 + 0.35*R()), T = 2*Math.hypot(mv[0], mv[1])/pace/0.95 + 2 + 8*R(), t = MT + R()*T*40;
+  const moved = (o, mt = MT) => o.door ? toDoor(o, movedRound(o, mt)) : movedRound(o, mt);
+  const movedRound = (o, mt) => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, R = mulberry32(o.rs ^ 0x6d6f7665), ax = o.walk ?? o.face ?? (o.rs % 62832)/10000;
+    const ca = Math.cos(ax), sa = Math.sin(ax), pace = mv[2]*(0.8 + 0.35*R()), T = 2*Math.hypot(mv[0], mv[1])/pace/0.95 + 2 + 8*R(), t = mt + R()*T*40;
     // (a person, a harvester and a lamplighter go up and down their street, row or round, each stop at its own distance
     //  toward one end or the other, so they are mostly on their way; the rest stop anywhere round home)
     const alt = o.kind === 'figure' || o.kind === 'harvester' || o.kind === 'lamplighter';
@@ -1355,7 +1392,19 @@ function rgPaintLand(x, mk, dk, V){
     const u = u0 + du*e, w = w0 + dw*e;
     return { ...o, a: o.a + (ca*u - sa*w)*M1, z: o.z + (sa*u + ca*w)*M1, face: Math.atan2(sa*du + ca*dw, ca*du - sa*dw), walking: s < 1 ? Math.min(1, 6*s*(1 - s)) : 0 }; };
   const smokeWind = (([wa, ws]) => Math.cos(wa)*Math.min(1, ws/9))(rgWind(V)); // (chimney smoke leans with the ring's wind)
+  // (and leans the way the wind runs across the page where it rises, so turning the camera turns its lean: the wind's
+  //  way at the thing's foot, a step along it, as seen; straight up where the wind blows toward or away from the eye)
+  const [SWA, SWS] = rgWind(V), smokeAt = (o, f) => { const d = 1e-4, b = at(o.a + d*Math.cos(SWA), o.z + d*Math.sin(SWA), f[3] || 0); if(!b) return smokeWind;
+    const dx = b[0] - f[0], l = Math.hypot(dx, b[1] - f[1]); return l > 1e-12 ? dx/l*Math.min(1, SWS/9) : smokeWind; };
+  // (a thing that moves farther in one of a film's frames than its own size (a time-lapse's drone, or a walker near the
+  //  eye) is seen as a long exposure sees it: faint while it goes, whole where it stops, so it never flicks from place to
+  //  place, there one frame and gone the next)
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
+    if(V.frame === null || o === o0) return rgPaintThing0(o, l, dd, o0);
+    const p = moved(o0, MT - Math.min(2.5, rgStep(V))), f1 = foot(o.a, o.z), f0 = foot(p.a, p.z); if(!f1 || !f0) return rgPaintThing0(o, l, dd, o0);
+    const sz = Math.max(px(2), (o.hM || 1.7)*f1[2]), gh = rsSmooth(sz*2.5, sz*0.9, Math.hypot(f1[0] - f0[0], f1[1] - f0[1]));
+    if(gh >= 0.97) return rgPaintThing0(o, l, dd, o0); if(gh < 0.03) return; x.save(); x.globalAlpha = gh; rgPaintThing0(o, l, dd, o0); x.restore(); };
+  const rgPaintThing0 = (o, l, dd, o0) => {
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));   // (its colours by the sun that reaches it, under a cloud's shadow or not; its nights by the hour)
     if(o.c === 'tree'){ const h = o.hM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1) || h > nearCut) return;   // (Ruby: "trees … culled too early": kept down to a speck)
@@ -1375,7 +1424,7 @@ function rgPaintLand(x, mk, dk, V){
       // (on a slope, level: its floor at its uphill corner's ground, on a stone plinth down to the ground at its lowest
       //  corner and a little into it, so no corner of it hangs in the air)
       const fall = (o.up || 0) + (o.down || 0), pl = fall > 0.25 ? (fall + 0.3)*f[2] : 0, onPl = pl > px(0.6) && !RG_LIGHTFOOT.includes(o.kind);
-      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, windX: smokeWind, plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, smt: ST, windX: smokeAt(o, f), plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
       // CLOSE BY, its foot (the building's base detailed, Ruby: "close-up versions with details for their base"): a door
       // two metres tall with its step, a lamp beside it lit at night, a planter
       const m = f[2]; if(m*lo*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -1420,7 +1469,7 @@ function rgPaintLand(x, mk, dk, V){
         if(al > 0.98){ pkProp(x, X, Y + sink, h, fc, 'figure', R, rgPx, nt); return; }
         // (fading: drawn whole on its own sheet and laid down see-through, so its coat never shows its legs through it)
         const bw = Math.ceil(h*1.8), bh = Math.ceil(h*1.5), [fcv, fx] = kitCanvas(bw, bh); pkProp(fx, bw/2, h*1.3, h, fc, 'figure', R, rgPx, nt);
-        x.globalAlpha = al; x.drawImage(fcv, X - bw/2, Y + sink - h*1.3); x.globalAlpha = 1; return; }
+        const ga = x.globalAlpha; x.globalAlpha = ga*al; x.drawImage(fcv, X - bw/2, Y + sink - h*1.3); x.globalAlpha = ga; return; }
       // (a piece of a run: as wide on the page as its own length is from here, its two ends projected, a little more so
       //  the pieces meet; never turned or mirrored, as the run itself carries the turn)
       if(o.piece){ const ca = Math.cos(o.axis), sa = Math.sin(o.axis), hp = o.piece*0.5*W*0.00025, e0 = foot(o.a - ca*hp, o.z - sa*hp), e1 = foot(o.a + ca*hp, o.z + sa*hp); if(!e0 || !e1) return;
@@ -1615,15 +1664,17 @@ function rgPaintLand(x, mk, dk, V){
     if(cloudy){ const R0 = rgRand(s, 850), n = wx === 'clouds' ? 16 + Math.floor(R0()*10) : 20 + Math.floor(R0()*10), M1 = W*0.00025, A = W*1.6, Zh = W*0.44, storm = wx === 'storm';
       const [wAng, wSp] = rgWind(V), wrap = (v, h) => ((v + h) % (2*h) + 2*h) % (2*h) - h;
       const lxC = V.sun.screen[0] > 0 ? 1 : -1;
-      // LIGHTNING, gently (Ruby: photosensitivity, "a creeping bolt, a couple frames of easing"): a strike is an event on
-      // the small motions' clock, at most one a second of film, that plays over some ten frames: its leader creeps down
-      // from the cloud's base, touches the land, and dims away; the light it gives is the cloud lit from within and a
-      // small glow where it lands, both easing in and out, never the whole scene. A still shows one bolt, whole
-      // (it strikes from one of the heaps in view)
-      let strike = -1, sph = 0.45, sev = 0; const inView = [], allHeaps = [];
+      // LIGHTNING, stark and safe (Ruby: photosensitivity, "a creeping bolt, a couple frames of easing"; and "should never
+      // be the first frame of animation, and should change the whole scene lighting fairly starkly as well as shading").
+      // A strike is an event in the film's own seconds, the same at any frame rate and any pace through the hours
+      // (docs/prior-art/ringworld-motion-and-variety.md §5.4, §8 item 7): slots 2.8 s long, each striking or not by its own
+      // stream, a strike beginning in its slot's first 0.3 s, so two are never nearer than 2.5 s; none in a film's first
+      // 1.5 s. Each plays over 1.2 s: its leader creeps down from the cloud's base over a fifth of a second, touches the
+      // land, and the light rises over a quarter, holds, and fades over two thirds (rgBoltLit). The light it gives: the
+      // cloud lit from within, a glow where it lands, and the land lit from it (FLASH, at the end). A still shows one bolt
+      let strike = -1, sph = 0.42, sev = 0; const inView = [], allHeaps = [];
       if(storm){ if(!V.time && V.frame == null) strike = R0();   // (a still storm shows its bolt; a film's first frame never does: Ruby)
-        else { const mpf = Math.min(2.5, V.step || V.dt || 2.5), P = 24*mpf, Ln = 10.5*mpf, k0 = Math.floor(MT/P);
-          for(const k of [k0 - 1, k0]){ const Rk = rgRand(s, 818, k); if(Rk() < 0.5){ const ph = (MT - (k + Rk()*0.5)*P)/Ln; if(ph >= 0 && ph < 1){ strike = Rk(); sph = ph; sev = k; } } } } }
+        else { const st = rgStrike(s, rgFilmTime(V)); if(st){ strike = st.pick; sph = st.ph; sev = st.ev; } } }
       for(let k = 0; k < n; k++){ const R = rgRand(s, 851, k), rnd = (a, b) => a + (b - a)*R();
         const tc = rgCloudTime(V), u0 = R()*2 - 1, a = wrap(Math.sign(u0)*Math.pow(Math.abs(u0), 1.35)*A + Math.cos(wAng)*wSp*M1*tc, A), z = wrap((R()*2 - 1)*Zh + Math.sin(wAng)*wSp*M1*tc*0.3, Zh);
         const eb = Math.max(TR.sea, TR.snow*rnd(0.7, 1.05)), wd0 = rnd(250, 900)*M1*(storm ? 1.4 : 1), ht0 = wd0*rnd(0.35, storm ? 1.3 : 0.7), seed0 = (R()*4294967296) >>> 0, rain = (wx === 'rain' || storm) && R() < 0.6;
@@ -1631,7 +1682,10 @@ function rgPaintLand(x, mk, dk, V){
         //  it GATHERS (its billows drawing in from wisps, a third of its life), stands, then THINS (fading and loosening as
         //  it spreads), and is gone a while before another of its own shape gathers in its place; a new shape only ever
         //  begins from nothing. At the film's start, and in a still, each stands at its fullest)
-        const lifeT = (900 + 1500*R())*(storm ? 2 : 1), ph0 = 0.45, cyc = V.time ? Math.floor(tc/lifeT + ph0) : 0, lp = V.time ? (tc/lifeT + ph0) % 1 : ph0;
+        // (its life runs on a clock of its own, faster than the wind's in a time-lapse, as a time-lapse of cumulus shows
+        //  them: a quarter hour's life in some seconds of film, building and thinning while they barely drift; docs/
+        //  prior-art/ringworld-motion-and-variety.md §2)
+        const gt = rgGrowTime(V), lifeT = (900 + 1500*R())*(storm ? 2 : 1), ph0 = 0.45, cyc = V.time ? Math.floor(gt/lifeT + ph0) : 0, lp = V.time ? (gt/lifeT + ph0) % 1 : ph0;
         const grow = rsSmooth(0, 0.3, lp), fade = rsSmooth(0.86, 0.62, lp), life = grow*fade;
         const wd = wd0*(0.6 + 0.4*grow)*(1 + 0.25*(1 - fade)), ht = ht0*(0.35 + 0.65*grow)*(0.75 + 0.25*fade), seed = (seed0 ^ Math.imul(cyc, 0x9E3779B1)) >>> 0;
         if(life < 0.03) continue;
@@ -1641,7 +1695,8 @@ function rgPaintLand(x, mk, dk, V){
         const P0 = at(a, z, eb); if(P0 && P0[0] > ww*0.08 && P0[0] < ww*0.92 && P0[1] > 0 && P0[1] < wh) inView.push(hp); things.push({ dd, draw: l => paintHeap(hp, l, dd) }); }
       // (in a film the bolt's cloud is chosen among every cloud about you, so a turn never moves it to another; in a still,
       //  among those in view, so a still storm shows its bolt)
-      const pool = V.time ? allHeaps : inView; if(strike >= 0 && pool.length) pool[Math.floor(strike*pool.length)].bolt = { ph: sph, ev: sev };
+      const pool = V.time ? allHeaps : inView; if(strike >= 0 && pool.length){ const hb = pool[Math.floor(strike*pool.length)], G = at(hb.a, hb.z, Math.max(TR.sea, T(hb.a, hb.z, W*0.003)));
+        hb.bolt = { ph: sph, ev: sev }; FLASH = { lit: rgBoltLit(sph)*(G ? 1 : 0.8), X: G ? G[0] : ww/2, Y: G ? G[1] : -wh*0.5 }; }
       const paintHeap = (h, l, dd) => { const B = at(h.a, h.z, h.eb); if(!B) return; const kpx = F/B[2], W0 = h.wd*kpx, H0 = h.ht*kpx; if(W0 < px(2) || W0 > ww*1.2) return;
         const X = B[0], Y = B[1]; if(!vis(l, X - W0*1.2, X + W0*1.2, Y - H0*1.3, Y + H0*0.1)) return;
         const day = ringDay(L, h.a), haze = hazeOf(dd), dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), R = mulberry32(h.seed), rnd = (a, b) => a + (b - a)*R();
@@ -1651,9 +1706,10 @@ function rgPaintLand(x, mk, dk, V){
         //  on the base; a tower's billows climb it)
         // (how many by its width at its true distance, so a turn never re-forms it)
         const Wt = h.wd*F/Math.max(1e-9, Math.hypot((1 - h.eb)*Math.cos(h.a) - L.Px, (1 - h.eb)*Math.sin(h.a), h.z - L.z0));
-        const S0 = Math.sqrt(W0*Math.max(H0, W0*0.35)), pr0 = S0*0.11, np = Math.max(10, Math.min(64, Math.round(W0*H0/(pr0*pr0)*0.55), Math.round(Wt/px(4))));
+        const S0 = Math.sqrt(W0*Math.max(H0, W0*0.35)), pr0 = S0*0.11, npf = Math.max(6, Math.min(64, W0*H0/(pr0*pr0)*0.55, Wt/px(4)))*(0.4 + 0.6*(h.grow ?? 1));
         const pad = W0*0.25 + pr0*1.5, cw = Math.ceil(W0*1.5 + pad*2), ch = Math.ceil(H0*1.3 + pad*2), ox = X - cw/2, oy = Y - H0*1.15 - pad;
-        if(cw*ch > 4.2e6) return; const [cc, cx] = kitCanvas(cw, ch), L0 = (px0, py) => [px0 - ox, py - oy], puffs = [];
+        // (a heap too large for its own sheet is drawn on a smaller one and laid on enlarged, rather than left out)
+        const ks = Math.min(1, Math.sqrt(4.2e6/(cw*ch))), [cc, cx] = kitCanvas(Math.ceil(cw*ks), Math.ceil(ch*ks)), L0 = (px0, py) => [px0 - ox, py - oy], puffs = []; if(ks < 1) cx.setTransform(ks, 0, 0, ks, 0, 0);
         // (with the clock, as Wind Waker's cumulus do: each billow breathes, swelling and settling a few percent in its own
         //  time, and the upper ones roll up a little and back, so the heap churns; and while it forms (the first part of its
         //  life) its billows GATHER: scattered wide and thin at first, low and flat, drawing in to the heap as it builds)
@@ -1662,18 +1718,25 @@ function rgPaintLand(x, mk, dk, V){
         //  a ball). Laid out in the heap's own measure, so the same heap keeps its shape at any distance; while it
         //  gathers the layout is spread wide and low and its billows small)
         const tm = V.time ? h.tc : 0, grow = h.grow ?? 1, spread = 1 + 0.9*(1 - grow), Hn = H0*0.92, ru = pr0/W0, rv = pr0/Hn;
-        const env = v => 0.5*Math.sqrt(Math.max(0, 1 - v)) + 0.06, nb = Math.max(3, Math.round(np*0.3)), sk = [];
-        for(let q = 0; q < np; q++){ const rr = rnd(0.7, 1.3); let u = -1, v = 0;
-          if(q < nb){ u = 0.5 + (((q + 0.5)/nb)*2 - 1)*env(0)*0.85 + (R() - 0.5)*ru; v = R()*rv*0.4; }
+        // (its billows DEALT ONCE, the most it ever shows (64), in the order it grows them: three in every ten along its base,
+        //  laid from the middle outward, the rest each bulging up or out from one already there. How many show is how large
+        //  it stands and how far it has grown, the next swelling in as the count reaches it: so a heap drifting nearer, or
+        //  building, adds billows one by one, its top climbing in turrets, and never re-deals the rest (docs/prior-art/
+        //  ringworld-motion-and-variety.md §1.3: a count taken from its size re-dealt the whole heap now and then)
+        const env = v => 0.5*Math.sqrt(Math.max(0, 1 - v)) + 0.06, sk = [], vdc = b => { let v = 0, f = 0.5; for(b++; b; b >>= 1, f /= 2) if(b & 1) v += f; return v; }; let nbs = 0;
+        for(let q = 0; q < 64; q++){ const rr = rnd(0.7, 1.3); let u = -1, v = 0;
+          if(q % 10 < 3 || !sk.length){ u = 0.5 + (vdc(nbs++)*2 - 1)*env(0)*0.85 + (R() - 0.5)*ru; v = R()*rv*0.4; }
           else for(let t = 0; t < 6 && u < 0; t++){ const p = sk[Math.floor(R()*sk.length)], th = (R()*2 - 1)*1.25, d = (p[2] + rr)*0.5, u1 = p[0] + Math.sin(th)*d*ru, v1 = p[1] + Math.cos(th)*d*rv;
             if(v1 <= 1 && Math.abs(u1 - 0.5) <= env(v1)){ u = u1; v = v1; } }
-          if(u >= 0) sk.push([u, v, rr*(1 - 0.2*v)*(0.8 + 0.4*(1 - Math.abs(u - 0.5)*2))]); }
-        sk.forEach(([u0, v0, r0], q) => { const ph = q*2.399 + (h.seed % 628)/100, breathe = tm ? 1 + 0.08*Math.sin(tm*0.021 + ph) : 1, roll = tm ? Math.sin(tm*0.013 + ph*1.7)*0.06*v0 : 0;
-          puffs.push([X - W0/2 + W0*(0.5 + (u0 - 0.5)*spread), Y - Hn*(v0*(0.45 + 0.55*grow) + roll) - pr0*0.4, pr0*r0*breathe*(0.6 + 0.4*grow), 1]); });
-        // (and, drawn large, a cauliflower's smaller billows on its outline, coming in as the heap nears so none pops in)
+          if(u >= 0) sk.push([u, v, rr*(1 - 0.2*v)*(0.8 + 0.4*(1 - Math.abs(u - 0.5)*2)), rsSmooth(q - 1, q + 1, npf)]); }
+        const all = sk.map(([u0, v0, r0, wq], q) => { const ph = q*2.399 + (h.seed % 628)/100, breathe = tm ? 1 + 0.08*Math.sin(tm*0.021 + ph) : 1, roll = tm ? Math.sin(tm*0.013 + ph*1.7)*0.06*v0 : 0;
+          return [X - W0/2 + W0*(0.5 + (u0 - 0.5)*spread), Y - Hn*(v0*(0.45 + 0.55*grow) + roll) - pr0*0.4, pr0*r0*breathe*(0.6 + 0.4*grow)*(0.55 + 0.45*wq), wq]; });
+        for(const p of all) if(p[3] > 0.01) puffs.push(p);
+        // (and, drawn large, a cauliflower's smaller billows on its outline, coming in as the heap nears so none pops in;
+        //  dealt for every billow, shown or not, so one more never re-deals the rest)
         { const det = rsSmooth(px(90), px(220), W0), Rd = mulberry32(h.seed ^ 0x5eed5eed), n0 = puffs.length;
-          if(det > 0) for(let q = 0; q < n0; q++){ const [p0, p1, r] = puffs[q]; for(let c = 0; c < 3; c++){ const th = (Rd()*2 - 1)*1.7, cr = r*(0.3 + 0.2*Rd()), k0 = p0 + Math.sin(th)*r*0.8, k1 = p1 - Math.cos(th)*r*0.8;
-            if(k1 < Y - pr0*0.3 && !puffs.some(([s0, s1, sr], j) => j !== q && j < n0 && Math.hypot(k0 - s0, k1 - s1) < sr*0.85)) puffs.push([k0, k1, cr, det]); } } }
+          if(det > 0) all.forEach(([p0, p1, r, wq]) => { for(let c = 0; c < 3; c++){ const th = (Rd()*2 - 1)*1.7, cr = r*(0.3 + 0.2*Rd()), k0 = p0 + Math.sin(th)*r*0.8, k1 = p1 - Math.cos(th)*r*0.8;
+            if(wq > 0.01 && k1 < Y - pr0*0.3 && !puffs.some(([s0, s1, sr], j) => j < n0 && sr > 0 && Math.hypot(k0 - s0, k1 - s1) < sr*0.85 && !(s0 === p0 && s1 === p1))) puffs.push([k0, k1, cr, det*wq]); } }); }
         // (soft as a painter's cloud: each billow a gradient, its rim fading into the air, so the edge is soft and no
         //  billow outlines another; then its body lit toward the sun and from above; the lit caps on top; the flat
         //  shaded base beneath it all)
@@ -1698,10 +1761,10 @@ function rgPaintLand(x, mk, dk, V){
           g.addColorStop(0, rsCss(warm, 0.62*lowK)); g.addColorStop(0.35, rsCss(warm, 0.22*lowK)); g.addColorStop(0.7, rsCss(cool, 0.2*lowK)); g.addColorStop(1, rsCss(cool, 0.5*lowK)); cx.fillStyle = g; cx.fillRect(0, 0, cw, ch); }
         if(back > 0.01){ const [qx, qy] = L0(X, Y - H0*0.5), g = cx.createRadialGradient(qx, qy, 0, qx, qy, Math.max(W0, H0)*0.6); g.addColorStop(0, rsCss(rsMix(base, [16, 18, 30], 0.4), 0.45*back)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.fillRect(0, 0, cw, ch); }
         cx.restore();
-        { const nf = Math.min(160, puffs.length*3), fr = pr0*0.32, rimC = rsMix([255, 250, 238], lit, 0.3); for(let q = 0; q < nf; q++){ const [p0, p1, r] = puffs[(q*7) % puffs.length], an = q*2.399 + (h.seed % 97), fx = p0 + Math.cos(an)*r*1.05, fy = p1 + Math.sin(an)*r*0.9;
-          if(fy > Y - pr0*0.2 || puffs.some(([s0, s1, sr]) => Math.hypot(fx - s0, fy - s1) < sr*0.92)) continue;   // (only out on the edge)
+        { const nf = Math.min(160, all.length*3), fr = pr0*0.32, rimC = rsMix([255, 250, 238], lit, 0.3); for(let q = 0; q < nf; q++){ const [p0, p1, r, wq] = all[(q*7) % all.length], an = q*2.399 + (h.seed % 97), fx = p0 + Math.cos(an)*r*1.05, fy = p1 + Math.sin(an)*r*0.9;
+          if(wq < 0.05 || fy > Y - pr0*0.2 || puffs.some(([s0, s1, sr, sa]) => sa > 0.5 && Math.hypot(fx - s0, fy - s1) < sr*0.92)) continue;   // (only out on the edge; and only off a billow that shows)
           const [qx, qy] = L0(fx, fy), rim = back*(sp2 ? rsSmooth(W0*1.4, W0*0.2, Math.hypot(sp2[0] - fx, sp2[1] - fy)) : 0);
-          const g = cx.createRadialGradient(qx, qy, 0, qx, qy, fr*(1 + 0.6*rim)); g.addColorStop(0, rsCss(rim > 0.05 ? rsMix(Math.sin(an) < 0 ? lit : base, rimC, rim) : Math.sin(an) < 0 ? lit : base, 0.32 + 0.55*rim)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, fr*(1 + 0.6*rim), 0, Math.PI*2); cx.fill(); } }
+          const g = cx.createRadialGradient(qx, qy, 0, qx, qy, fr*(1 + 0.6*rim)); g.addColorStop(0, rsCss(rim > 0.05 ? rsMix(Math.sin(an) < 0 ? lit : base, rimC, rim) : Math.sin(an) < 0 ? lit : base, (0.32 + 0.55*rim)*wq)); g.addColorStop(1, rsCss(base, 0)); cx.fillStyle = g; cx.beginPath(); cx.arc(qx, qy, fr*(1 + 0.6*rim), 0, Math.PI*2); cx.fill(); } }
         // rain from its base to the ground under it, slanting with the wind, fading as it falls
         // (a curtain of streaks, not slabs: many thin falls of rain, thickest under the heap's middle, each fading as it
         //  falls, slanting with the wind and swaying with it as the clock runs; and where the heap's rain never reaches the
@@ -1717,9 +1780,9 @@ function rgPaintLand(x, mk, dk, V){
         // (and, as Wind Waker's do overhead, a heap fades as it nears and swells past half the frame: drawn up close a painted
         //  heap would show itself a flat sheet; so it thins away as you pass under it, and gathers again as it draws off)
         const overhead = rsSmooth(ww*1.2, ww*0.55, W0);
-        x.save(); x.globalAlpha = (0.93 - 0.25*haze)*Math.min(1, (h.life ?? 1)*1.3)*overhead; x.drawImage(cc, ox, oy); x.restore(); cc.width = 0;
+        x.save(); x.globalAlpha = (0.93 - 0.25*haze)*Math.min(1, (h.life ?? 1)*1.3)*overhead; x.drawImage(cc, ox, oy, cc.width/ks, cc.height/ks); x.restore(); cc.width = 0;
         // a bolt of lightning from its base down to the land (with the clock, now and then, as an eased event above)
-        if(h.bolt){ const ph = h.bolt.ph, creep = rsSmooth(0, 0.3, ph), lit = rsSmooth(0.1, 0.45, ph)*(1 - rsSmooth(0.45, 1, ph)), G = at(h.a + W0/kpx*0.1, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003)));
+        if(h.bolt){ const ph = h.bolt.ph, creep = rsSmooth(0, 0.167, ph), lit = rgBoltLit(ph), G = at(h.a + W0/kpx*0.1, h.z, Math.max(TR.sea, T(h.a, h.z, W*0.003)));
           if(G && G[1] > Y + px(6)){ const Rb = mulberry32((h.seed ^ Math.imul(h.bolt.ev + 1, 0x2c1b3c6d)) >>> 0), drop = G[1] - Y, jag = Math.min(W0*0.08, drop*0.12); let bx = X + (Rb() - 0.5)*Math.min(W0*0.3, drop*0.3), by = Y; const pts = [[bx, by]], steps = 10;
             for(let q = 0; q < steps; q++){ bx += (G[0] - bx)/(steps - q) + (Rb() - 0.5)*jag; by += (G[1] - by)/(steps - q); pts.push([bx, by]); }
             x.save(); x.globalCompositeOperation = 'screen';
@@ -1838,6 +1901,24 @@ function rgPaintLand(x, mk, dk, V){
     // (with the clock each streak falls on, steeply, and comes round again at the top)
     const fall = MT*wh*1.6; for(let k = 0; k < Math.min(n, 4000); k++){ const ln = px(10 + 30*R()), X0 = R()*ww, Y = ((R()*wh + fall) % (wh + ln)) - ln, X = ((X0 + fall*sl) % ww); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
     if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); } }
+  // LIGHTNING LIGHTS THE LAND (Ruby: "should change the whole scene lighting fairly starkly as well as shading"): while a
+  // bolt burns, the whole land takes its light, cold and hard: lit from the bolt's side of the frame, its lights pushed
+  // toward a blue-white and its shadows deepened (an overlay, so the contrast rises rather than the brightness), the side
+  // away from it left dark. So it reads by its direction and its hardness, while no tenth of the frame brightens or
+  // darkens by more than the photosensitivity rule's tenth of relative luminance (AGENTS.md §11; docs/prior-art/
+  // ringworld-motion-and-variety.md §5.4)
+  // (its strength held by measure, as arithmetic, not by eye: the land drawn small, the light laid on it, each tenth of the
+  //  frame's change in relative luminance found at the light's full strength, and the light scaled so that none changes
+  //  by more than 0.06; laid only over the land itself, never over the sky behind it)
+  if(FLASH && FLASH.lit > 0.01){ const { lit, X: fx, Y: fy } = FLASH, sx = fx < ww/2 ? -1 : 1;
+    const lay = (cx, w, h, a) => { const k = w/ww, x0 = (sx < 0 ? Math.min(0, fx) : Math.max(ww, fx))*k, x1 = (sx < 0 ? ww*1.1 : -ww*0.1)*k, g = cx.createLinearGradient(x0, Math.min(fy, 0)*h/wh, x1, h);
+      g.addColorStop(0, rsCss([216, 226, 255], 0.6*a)); g.addColorStop(0.45, rsCss([170, 182, 226], 0.36*a)); g.addColorStop(1, rsCss([40, 46, 84], 0.4*a)); cx.save(); cx.globalCompositeOperation = 'overlay'; cx.fillStyle = g; cx.fillRect(0, 0, w, h); cx.restore(); };
+    const lin = v => { v /= 255; return v <= 0.04045 ? v/12.92 : Math.pow((v + 0.055)/1.055, 2.4); }, tenths = cx => { const d = cx.getImageData(0, 0, 20, 20).data, t = new Float64Array(10);
+      for(let i = 0; i < 400; i++){ const r = Math.floor(Math.floor(i/20)/4)*2 + (i % 20 < 10 ? 0 : 1); t[r] += (0.2126*lin(d[i*4]) + 0.7152*lin(d[i*4 + 1]) + 0.0722*lin(d[i*4 + 2]))*d[i*4 + 3]/255/40; } return t; };
+    const [mc0, mx0] = kitCanvas(20, 20); mx0.drawImage(x.canvas, 0, 0, 20, 20); const t0 = tenths(mx0); lay(mx0, 20, 20, 1); mx0.globalCompositeOperation = 'destination-in'; mx0.drawImage(x.canvas, 0, 0, 20, 20);
+    const t1 = tenths(mx0), dmax = Math.max(1e-9, ...t1.map((v, r) => Math.abs(v - t0[r]))), a = lit*Math.min(1, 0.06/dmax); mc0.width = 0;   // (measured at its full strength, so it eases in and out as the strike does)
+    const [lc, lx] = kitCanvas(ww, wh); lx.drawImage(x.canvas, 0, 0); lay(lx, ww, wh, a); lx.globalCompositeOperation = 'destination-in'; lx.drawImage(x.canvas, 0, 0);
+    x.save(); x.globalCompositeOperation = 'source-atop'; x.drawImage(lc, 0, 0); x.restore(); lc.width = 0; }
   if(V.weather === 'snow'){ const R = rgRand(s, 821), n = Math.min(3000, Math.round(ww*wh/(px(34)*px(34)))); x.fillStyle = rsCss([250, 252, 255], 0.85); x.beginPath();
     for(let k = 0; k < n; k++){ const X0 = R()*ww, Y0 = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)), sp2 = wh*(0.05 + 0.04*r/px(3.4)), Y = (Y0 + MT*sp2) % wh, X = ((X0 + Math.sin(ST*0.8 + k)*px(6)*(V.time ? 1 : 0)) % ww + ww) % ww;   // (with the clock: drifting down, swaying, the near flakes faster)
       x.moveTo(X + r, Y); x.arc(X, Y, r, 0, Math.PI*2); } x.fill(); }

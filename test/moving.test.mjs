@@ -74,20 +74,29 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   const keys = asked.map(r => textureKeyFor(r.type, r.w, r.h, r.opts));
   check('a film\'s look ahead asks for the textures its frame then draws (the same keys, found waiting in the cache)', keys.length > 0 && keys.every(k => peekTexture(k))); }
 
-// ---- a film never flashes (Ruby: photosensitivity) ----
-// a storm on the Ringworld, frame after frame of a time-lapse while lightning strikes: the bolt is drawn, but the scene as
-// a whole never brightens or darkens from one frame to the next (drawn on a real canvas when one is here)
+// ---- a film never flashes (Ruby: photosensitivity), and its lightning lights the scene ----
+// a storm on the Ringworld, frame after frame of a time-lapse at 30 frames a second while lightning strikes (its strikes
+// in the film's own seconds, docs/prior-art/ringworld-motion-and-variety.md §5.4): the scene's light changes with it,
+// but no tenth of the frame brightens or darkens by a tenth of relative luminance (WCAG's flash), nor by much from one
+// frame to the next; and none strikes in the film's first second and a half (Ruby: "never the first frame")
 { let NC = null; try { NC = await import('@napi-rs/canvas'); } catch(e){ console.log('(no @napi-rs/canvas here: the flash check is skipped)'); }
   if(NC){ const doc = globalThis.document; globalThis.document = { createElement: () => NC.createCanvas(1, 1) };
     const T = await import('../textureGenerators.js'), caps = T.TEXTURE_CAPS.ringpaint, defs = T.paramsFor('ringpaint'), W = 160, H = 90, t6 = caps.tintDefaults || [];
-    const frame = f => { const o = { seed: 24757, light: 150, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: W/3072, camera: { turn: 150, view: 100, zoom: 100, time: f*48, dt: 48 } };
-      defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); T.clearTextureCache(); const d = T.getTextureCanvas('ringpaint', W, H, o).getContext('2d').getImageData(0, 0, W, H).data, L = new Float32Array(W*H);
-      for(let i = 0; i < W*H; i++) L[i] = 0.2126*d[i*4] + 0.7152*d[i*4 + 1] + 0.0722*d[i*4 + 2]; return L; };
-    const F = []; for(let f = 76; f <= 88; f++) F.push(frame(f));
-    let worst = 0, area = 0, bolt = 0;
-    for(let k = 1; k < F.length; k++){ let sum = 0, big = 0; for(let i = 0; i < W*H; i++){ const dl = F[k][i] - F[k - 1][i]; sum += dl; if(Math.abs(dl) > 25) big++; bolt = Math.max(bolt, Math.abs(dl)); }
-      worst = Math.max(worst, Math.abs(sum/(W*H))); area = Math.max(area, big/(W*H)); }
-    check(`while lightning strikes, no frame flashes the scene (mean change ${worst.toFixed(2)} of 255, ${(area*100).toFixed(1)}% of the frame changing by a tenth; the bolt and the rain change only locally, up to ${bolt.toFixed(0)})`, worst < 1.5 && area < 0.02 && bolt > 40);
+    const lin = c => { c /= 255; return c <= 0.04045 ? c/12.92 : Math.pow((c + 0.055)/1.055, 2.4); };
+    const frame = f => { const o = { seed: 24757, light: 150, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: W/3072, camera: { turn: 150, view: 100, zoom: 100, time: f*48, dt: 48, frame: f, step: 48, fps: 30 } };
+      defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); T.clearTextureCache(); const d = T.getTextureCanvas('ringpaint', W, H, o).getContext('2d').getImageData(0, 0, W, H).data, tenths = new Float64Array(10);
+      for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){ const i = (y*W + x)*4; tenths[Math.min(4, Math.floor(y/H*5))*2 + (x < W/2 ? 0 : 1)] += 0.2126*lin(d[i]) + 0.7152*lin(d[i + 1]) + 0.0722*lin(d[i + 2]); }
+      return Array.from(tenths, v => v/(W*H/10)); };
+    // (this storm's strikes: one at 0.29 s, which is let go, and one at 8.51 s, lit over the second after it)
+    const { rgStrike } = await import('../stepsRing.js'), starts = [];
+    for(let sd = 1; sd <= 300; sd++){ let last = null; for(let ft = 0; ft < 30; ft += 1/30){ const st = rgStrike(sd, ft); if(st && st.t0 !== last){ starts.push([sd, st.t0, last]); last = st.t0; } } }
+    check('no strike begins in a film\'s first second and a half, and two never begin within 2.5 s of each other, at any seed', starts.length > 100 && starts.every(([, t0, prev]) => t0 >= 1.5 && (prev === null || t0 - prev >= 2.5)));
+    check('this storm\'s strike at 0.29 s is let go, its next at 8.51 s', !rgStrike(24757, 0.4) && !!rgStrike(24757, 8.7));
+    const F = []; for(let f = 252; f <= 292; f += 2) F.push(frame(f));
+    let step = 0, swing = 0, moved = 0;
+    for(let k = 0; k < F.length; k++) for(let r = 0; r < 10; r++){ if(k) step = Math.max(step, Math.abs(F[k][r] - F[k - 1][r]));
+      const win = F.slice(Math.max(0, k - 7), k + 1).map(t => t[r]); swing = Math.max(swing, Math.max(...win) - Math.min(...win)); moved = Math.max(moved, Math.abs(F[k][r] - F[0][r])); }
+    check(`while lightning strikes the scene's light changes (${moved.toFixed(3)} of relative luminance at most in a tenth of the frame), but never as a flash: no tenth swings by a tenth within half a second (${swing.toFixed(3)}), nor by more than 0.03 between frames two apart (${step.toFixed(3)})`, moved > 0.005 && swing < 0.1 && step < 0.03);
     globalThis.document = doc; } }
 
 // ---- the film's moves (the sheet's Turn, Easing and Playback) ----
