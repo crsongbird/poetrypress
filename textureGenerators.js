@@ -235,7 +235,7 @@ export const TEXTURE_CAPS = {
   drapery:   { blends:['source-over','multiply','overlay','soft-light','hard-light','luminosity','screen','lighten','darken'], material:true, light:true, tints:3,
                    tintLabels:['Warp Hue','Weft Hue','Ground Hue'], tintDefaults:['#C9B7A0','#A8957C','#24202A'] },
   // looking into a crystal (genCrystalLeaf): its own colours, lit
-  crystal:   { blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
+  crystal:   { seeThrough:true, blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
                    tintLabels:['Crystal Hue','Inclusion Hue'], tintDefaults:['#B9A6D8','#D9A441'] },
   spangle:       { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], material:true, ground:'grey', light:true, tints:1,
                    tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
@@ -264,13 +264,13 @@ export const TEXTURE_CAPS = {
   stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
                    tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
   // shards on mid-gray: Screen keeps only the light they catch; Hard Light lays their shadows too. The camera dial lays them on a plane
-  brokenglass:   { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
+  brokenglass:   { seeThrough:true, blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Shadow Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:0, zoom:100, guide:'plane' } },
   // webs on mid-gray: the dial is the light the silk and dew catch
   dewwebs:       { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
   // the light the glass catches, on mid-gray: Screen adds only that; Hard Light adds it and darkens too (grime, a thick edge), on any page
-  underglass:    { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, tints:2, genericTint:true,
+  underglass:    { seeThrough:true, blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Reflection Hue','Grime Hue'], tintDefaults:['#FFFFFF','#000000'] },
   suminagashi:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Breath Direction', tints:2,
                    tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['#1C1C26','#2C4C8E'] },
@@ -284,7 +284,7 @@ export const TEXTURE_CAPS = {
                    tintLabels:['Frost Hue'], tintDefaults:['#EAF4FF'] },
   ash:           { blends:ledBlends('soft-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:2,
                    tintLabels:['Ash Hue','Ember Hue'], tintDefaults:['#D6D0C6','#FF5A1E'] },
-  wax:           { blends:ledBlends('hard-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:1,
+  wax:           { seeThrough:true, blends:ledBlends('hard-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
                    light:true, material:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'], camera:{ turn:0, view:40, zoom:100, guide:'plane' } },
@@ -567,6 +567,7 @@ export function chainReadsPoem(type, shaped = true){ const c = TEXTURE_CHAINS[RE
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
+  const seeThrough = !!opts.seeThrough && !!(TEXTURE_CAPS[type] || {}).seeThrough;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
   // material hues (lit textures): only when set — white is "none"
   // (a picker's alpha is how much of its colour to use: resolved here, once)
@@ -632,8 +633,10 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' + Math.round(+opts.fill*100) : '') + (opts.around ? '_R' + Math.round(+opts.around*100) : '') + (opts.aware === false ? '_A0' : '') : '')
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time || cam.frame !== undefined ? `_T${cam.time}x${cam.dt}` + (cam.frame !== undefined ? `f${cam.frame}s${cam.step}` + (cam.side ? `d${cam.side}` : '') : '') : '') : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
-            + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
+            + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)))
+            // (SEE THROUGH: the lens stacked under the picture, only for a surface that can bend what lies beneath)
+            + (seeThrough ? '_ST' : '');
+  return { type, key, seeThrough, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
 }
 /** A surface layer's lights (the look's keys) as a request's (ROADMAP C1, C2): the Ambient slider (0–200; 100 the
  *  surface's own) and the Ambient Hue, and the rim light, the light dial's second handle (its way and height; its hue,
@@ -706,8 +709,27 @@ const chainHues = (td, t1, t2, more) => [t1 || td[0], t2 || td[1], ...[0, 1, 2, 
 /** What a graph lays its marks on when it draws over the page (an Imprint's ground): the page itself under Normal, else
  *  the blend's own neutral (white for Multiply's family, black for Screen's, grey for Overlay's), so only marks touch it. */
 function blendNeutral(blend){ return !blend || blend === 'source-over' || blend === 'normal' ? 'page' : blendFamily(blend); }
+// SEE THROUGH (docs/prior-art/surface-beneath.md §7.0): a surface that bends what lies beneath hands the page a LENS
+// beside its picture, stacked under it on one canvas twice as tall: per pixel where to look, red and green the offset
+// across and down (128 none, ±127 the reach, SEE_REACH canonical pixels), alpha how much glass is there. Made from the
+// height its Light Engine lit: a slope bends the view as a pane of rippled glass does
+export const SEE_REACH = 60;
+function seeLens(L, w, h){
+  const c = document.createElement('canvas'); c.width = w; c.height = h * 2;
+  if(!L || !(L.H || L.DX)) return c;
+  // (a part that bends its own picture hands its offsets in its own grid's pixels: DX, DY)
+  if(L.DX){ const { DX, DY, w: gw, h: gh } = L, cell = L.cell || 1, small = document.createElement('canvas'); small.width = gw; small.height = gh; const sx = small.getContext('2d', CPU), im = sx.createImageData(gw, gh), d = im.data;
+    for(let i = 0; i < gw*gh; i++){ const q = i*4; d[q] = 128 + Math.max(-1, Math.min(1, DX[i]*cell/SEE_REACH))*127; d[q + 1] = 128 + Math.max(-1, Math.min(1, DY[i]*cell/SEE_REACH))*127; d[q + 2] = 0; d[q + 3] = 255; }
+    sx.putImageData(im, 0, 0); const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, h, w, h); return c; }
+  const { H, w: gw, h: gh } = L, k = 2400*(L.relief ?? 0.5)/Math.max(1e-6, L.cell || 1), small = document.createElement('canvas'); small.width = gw; small.height = gh;
+  const sx = small.getContext('2d', CPU), im = sx.createImageData(gw, gh), d = im.data;
+  for(let y = 0; y < gh; y++) for(let x = 0; x < gw; x++){ const i = y*gw + x, gxv = (H[y*gw + Math.min(gw - 1, x + 1)] - H[y*gw + Math.max(0, x - 1)])/2, gyv = (H[Math.min(gh - 1, y + 1)*gw + x] - H[Math.max(0, y - 1)*gw + x])/2;
+    const ox = Math.max(-1, Math.min(1, -gxv*k/SEE_REACH)), oy = Math.max(-1, Math.min(1, -gyv*k/SEE_REACH)), q = i*4; d[q] = 128 + ox*127; d[q + 1] = 128 + oy*127; d[q + 2] = 0; d[q + 3] = 255; }
+  sx.putImageData(im, 0, 0); const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, h, w, h); return c; }
+// the picture with its lens beneath it (SEE THROUGH), or the picture alone
+function seeStack(pic, L, w, h){ const c = seeLens(L, w, h); c.getContext('2d', CPU).drawImage(pic, 0, 0, w, h); return c; }
 function genChain(type, w, h, light, extra, tint1, tint2){
-  const chain = TEXTURE_CHAINS[type];
+  const chain = TEXTURE_CHAINS[type], lens = extra.seeThrough ? {} : null;
   if(!chainGraphs.has(type)) chainGraphs.set(type, athanorStarter(type));
   const defs = paramsFor(type), knobs = (extra.knobs || []).map((v, i) => { const d = defs[i]; if(!d || v == null) return 50;
     return Math.max(0, Math.min(100, (v - d.min)/Math.max(1e-6, d.max - d.min)*100)); });
@@ -716,15 +738,15 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
     // a CANVAS PASS: its parts paint at full size (athanor.js ctx.canvas)
     const out = evalAthanor(chainGraphs.get(type), w, h, { neutral: extra.neutral || 'page', knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true,
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true, lens,
       text: chain.poem && extra.text ? poemLines(extra.text) : '', aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 1) }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
-    if(out) return out;
-    const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
+    if(out) return lens ? seeStack(out, lens, w, h) : out;
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return lens ? seeStack(c, lens, w, h) : c;
   }
   const div = cappedDiv(chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { neutral: extra.neutral || 'page', knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
+      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1), lens },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -734,15 +756,15 @@ function genChain(type, w, h, light, extra, tint1, tint2){
     d[q+3] = 255;
   }
   sx.putImageData(im, 0, 0);
-  if(ww === w && wh === h) return small;
+  if(ww === w && wh === h) return lens ? seeStack(small, lens, w, h) : small;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   // (a CRISP chain, pixel art, is enlarged pixel for pixel; every other is smoothed)
   const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !chain.crisp; cx.drawImage(small, 0, 0, w, h);
-  return c;
+  return lens ? seeStack(c, lens, w, h) : c;
 }
 export function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page, seeThrough } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -784,7 +806,7 @@ export function getTextureCanvas(type, w, h, opts = {}){
   // otherwise inherit
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend) }))))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend), seeThrough }))))));
 
 
   // A monochrome texture's tint moves its light marks toward the colour and
@@ -797,8 +819,11 @@ export function getTextureCanvas(type, w, h, opts = {}){
   const ownColour = (type === 'bokeh' || type === 'landscape') && hueSpread > 0;
   const tintNow = caps.genericTint && !ownColour;
   const ground = (tintNow && caps.hue5 && caps.hue5.role === 'ground') ? t5 : null;
-  if(result && ((tintNow && (tint1 || tint2 || ground)) || doRemap))
-    result = pixelPass(result, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null, ground);
+  if(result && ((tintNow && (tint1 || tint2 || ground)) || doRemap)){
+    // (a surface that sees through carries its lens beneath its picture: only the picture is tinted and remapped)
+    if(seeThrough && result.height === h*2){ const top = document.createElement('canvas'); top.width = w; top.height = h; top.getContext('2d', CPU).drawImage(result, 0, 0, w, h, 0, 0, w, h);
+      const done = pixelPass(top, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null, ground), rc = result.getContext('2d', CPU); rc.clearRect(0, 0, w, h); rc.drawImage(done, 0, 0); }
+    else result = pixelPass(result, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null, ground); }
   storeTexture(key, result);
   return result;
 }

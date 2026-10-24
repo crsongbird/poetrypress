@@ -224,6 +224,27 @@ export function boxGlass(src, r, mode, amount, scale, S = 1, seed = 0){
  * lies under it. Returns a canvas for the rectangle `r`, already blended
  * (draw it normally). `full`: work at the rectangle's own size.
  */
+/**
+ * SEE THROUGH (docs/prior-art/surface-beneath.md §7.0): the page as drawn so far, bent through a surface's LENS before the
+ * surface itself is laid on it, as glass, water or crystal bends what lies under it. `tex` carries the surface's picture
+ * above and its lens below (red and green the offset across and down, 128 none, ±127 `reach` pixels of this canvas;
+ * alpha how much glass is there). Past the page's edge the look is mirrored back. `fine`: smooth lookups (the saved
+ * image), else the nearest pixel (the preview, quick enough on a phone).
+ */
+export function bendBeneath(ctx, tex, reach, fine){
+  const cw = ctx.canvas.width, ch = ctx.canvas.height; if(!cw || !ch || !tex || !(reach > 0)) return;
+  const lc = document.createElement('canvas'); lc.width = cw; lc.height = ch; const lx = bfxCtx(lc); lx.imageSmoothingEnabled = true;
+  lx.drawImage(tex, 0, tex.height/2, tex.width, tex.height/2, 0, 0, cw, ch);
+  const L = lx.getImageData(0, 0, cw, ch).data, P = ctx.getImageData(0, 0, cw, ch), S = P.data, O = new Uint8ClampedArray(S.length), k = reach/127;
+  const mir = (v, n) => { v = v < 0 ? -v : v; const p = 2*n - 2; if(p <= 0) return 0; v %= p; return v >= n ? p - v : v; };
+  for(let y = 0, q = 0; y < ch; y++) for(let x = 0; x < cw; x++, q += 4){
+    const a = L[q + 3]/255, dx = (L[q] - 128)*k*a, dy = (L[q + 1] - 128)*k*a;
+    if(!dx && !dy){ O[q] = S[q]; O[q + 1] = S[q + 1]; O[q + 2] = S[q + 2]; O[q + 3] = S[q + 3]; continue; }
+    if(!fine){ const p = (mir(Math.round(y + dy), ch)*cw + mir(Math.round(x + dx), cw))*4; O[q] = S[p]; O[q + 1] = S[p + 1]; O[q + 2] = S[p + 2]; O[q + 3] = S[p + 3]; continue; }
+    const fx = x + dx, fy = y + dy, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+    const a0 = (mir(y0, ch)*cw + mir(x0, cw))*4, a1 = (mir(y0, ch)*cw + mir(x0 + 1, cw))*4, b0 = (mir(y0 + 1, ch)*cw + mir(x0, cw))*4, b1 = (mir(y0 + 1, ch)*cw + mir(x0 + 1, cw))*4;
+    for(let c = 0; c < 4; c++) O[q + c] = (S[a0 + c]*(1 - tx) + S[a1 + c]*tx)*(1 - ty) + (S[b0 + c]*(1 - tx) + S[b1 + c]*tx)*ty; }
+  P.data.set(O); ctx.putImageData(P, 0, 0); lc.width = 0; lc.height = 0; }
 export function boxBlend(src, r, layer, lr, blend, opacity, full = false){
   const bi = BOX_GPU_BLENDS.indexOf(blend);
   if(bi < 0 || !src || !layer || r.w < 2 || r.h < 2) return null;

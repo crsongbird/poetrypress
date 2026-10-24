@@ -1302,6 +1302,8 @@ function gsRender(ww, wh, unit, S, o, cam, ground){
         col[ch] = 1 - (1 - v)*(1 - Math.min(1, L));
       }
       for(let ch = 0; ch < 3; ch++) base[ch] = base[ch]*(1 - c) + col[ch]*c;
+      // (SEE THROUGH: where the eye lands through the shard, for the page to bend what lies beneath by)
+      if(o.lensDX){ o.lensDX[q] = o.lensDX[q]*(1 - c) + n[0]*sh.th*unit*6*c; o.lensDY[q] = o.lensDY[q]*(1 - c) + n[1]*sh.th*unit*6*c; }
     }
     out.r[q] = base[0]; out.g[q] = base[1]; out.b[q] = base[2];
   }
@@ -1747,7 +1749,10 @@ export const GEN_STEPS = {
       const cam = o.fill ? null : groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       if(cam) o.lines = [];   // (through the camera the glass lies on another plane than the words)
       const S = withSeed(genSeed(E, n), () => gsShards(ww/unit, wh/unit, o));
-      return gsRender(ww, wh, unit, S, o, cam, pic != null ? E.asImage(pic) : null); } },
+      if(E.ctx.lens){ o.lensDX = new Float32Array(ww*wh); o.lensDY = new Float32Array(ww*wh); }
+      const res = gsRender(ww, wh, unit, S, o, cam, pic != null ? E.asImage(pic) : null);
+      if(o.lensDX) res.lens = { DX: o.lensDX, DY: o.lensDY, w: ww, h: wh, cell: (E.ctx.div || 1)/(E.ctx.scale || 1) };
+      return res; } },
   // DEWY WEBS (Ruby: "dewy spider webs getting caught by the light"): orb webs, beaded with dew, the silk glinting where
   // it runs across the light's way, in the colours thin silk splits light into; the drops each a lens with a point of light
   dewwebs: { cat: 'Marks', label: 'Dewy Webs', ins: ['light from'], outs: ['silk', 'glints', 'dew'], io: { ins: ['value'], outs: ['field', 'image', 'field'] },

@@ -2499,6 +2499,7 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .controls-fold.rack > .fold-body > .field.as-knob > .dice-btn{ left:auto; right:-4px; top:0; transform:none; }
 .controls-fold.rack > .fold-body > .field.as-knob > .knob-dial{ display:none !important; }
 .field.hidden-off{ display:none !important; }
+.check-row.see-through[hidden]{ display:none; }
 /* (the keyboard's focus only: a finger or a mouse holding a control draws no box round it, Ruby: "remove that blue selection box") */
 .controls-fold.rack > .fold-body > .field:has(> input:focus-visible) .sk-knob svg, .controls-fold.rack > .fold-body > .field:has(> input:focus-visible) .sk-strip{ outline:1px dotted var(--accent-2); outline-offset:2px; }
 

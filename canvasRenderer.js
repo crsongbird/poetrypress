@@ -28,7 +28,7 @@
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
 import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, graphUsesCurves, chainReadsPoem, layerLights } from './textureGenerators.js';
+import { getTextureCanvas, SEE_REACH, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, graphUsesCurves, chainReadsPoem, layerLights } from './textureGenerators.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { POEM_PUNCT, punctMark } from './steps.js';
 import { fill, CHOOSER } from './strings.js';
@@ -38,7 +38,7 @@ import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs, clearMeasureCache } from './glyphs.js';
 import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge, STITCH_STYLES } from './stitches.js';
-import { boxGlass, boxBlend, BOX_GPU_BLENDS, CANVAS_BLENDS } from './boxFx.js';
+import { boxGlass, boxBlend, bendBeneath, BOX_GPU_BLENDS, CANVAS_BLENDS } from './boxFx.js';
 import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './effects.js';
 import { requestTexture, onTextureReady, textureServiceInfo } from './textureService.js';
 import { ensureFonts, fontsRequested } from './fonts.js';
@@ -1334,7 +1334,7 @@ export function surfaceFromDom(){
     textureRim: v('textureRim'), textureRimTilt: v('textureRimTilt'), textureAmbient: v('textureAmbient'), textureTint7: v('textureTint7Hex'), textureTint8: v('textureTint8Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
     textureCurve1: v('textureCurve1') || '', textureCurve2: v('textureCurve2') || '',
-    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
+    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureSeeThrough: chk('textureSeeThrough', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
     ...(ground ? { textureGround: ground } : {}) };
 }
 /** An Athanor surface's own sliders and hues, read from its graph (each layer may carry a different one):
@@ -1401,8 +1401,14 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   // the camera dial's (a texture with a camera, or a graph with a Camera Dial; the request keys it only then)
   const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom, ...(SCENE_TIME > 0 || SCENE_FRAME !== null ? { time: SCENE_TIME, dt: SCENE_DT, ...(SCENE_FRAME !== null ? { frame: SCENE_FRAME, step: SCENE_STEP, ...(SCENE_SIDE ? { side: SCENE_SIDE } : {}) } : {}) } : {}) } : undefined;
   const name = s => slot === 'main' ? s : 'base' + (s === 'main' ? '' : s);
+  // SEE THROUGH (Ruby: glass and water "should take the texture below as an input and do something creative with it"): a
+  // surface that can, with its switch on, hands back its lens beneath its picture; the page drawn so far is bent through
+  // it first, then the picture laid on by its blend (old looks have no switch: off, as they were)
+  const see = !!caps.seeThrough && L.textureSeeThrough === true;
   // a texture that can't be drawn is skipped, never allowed to abort the frame
-  const put = t => { if(!t) return; try {
+  const put = t0 => { if(!t0) return; try {
+    let t = t0; if(see && Math.abs(t0.height/t0.width - 2*H/W) < 0.02*H/W){   // (stacked: a picture still on its way shows the one before, alone) bendBeneath(ctx, t0, SEE_REACH*S*(ctx.canvas.width/W), S >= 0.99);
+      const pc = document.createElement('canvas'); pc.width = t0.width; pc.height = t0.height/2; pc.getContext('2d', { willReadFrequently: true }).drawImage(t0, 0, 0, t0.width, t0.height/2, 0, 0, t0.width, t0.height/2); t = pc; }
     const img = clearing > 0 ? clearedSurface(t, canvas.width, canvas.height, clearing) : t;
     if(gpu){   // the blends a canvas can't do, mixed per pixel at full size (the GPU when there is one)
       const m = boxBlend(ctx.canvas, { x: 0, y: 0, w: ctx.canvas.width, h: ctx.canvas.height }, img, { x: 0, y: 0, w: img.width, h: img.height }, blend, opacity, true);
@@ -1437,7 +1443,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
     // (the curves drawn under Surface, for a graph with a Curve Control: '' is the control's own Default)
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, ...(see ? { seeThrough: true } : {}), around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 

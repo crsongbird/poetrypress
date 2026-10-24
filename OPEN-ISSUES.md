@@ -21,6 +21,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - CORNERS: windows 3px, buttons and fields 2px, small marks 1px; a group of choices blunted only on its outside corners
   (the radio rows, the film sheet's blocks, the Athanor's joined buttons); circles kept round. "Circles barely any" was
   read as: the smallest things get the least. The left-edge lines on the cards and sub-blocks are gone. Right weight?
+- SEE THROUGH: Under Glass, Broken Glass, Crystal Leaf and Poured Wax laid over another surface bend it (the switch with
+  the surface's tools; on for a new page). The bend is gentle at the defaults: strong enough, or should it reach farther?
 
 ## 2 · Ruby's notes to act on
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
@@ -32,10 +34,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   comet should move; shooting stars, aurora, a greater sense of scale by layering; lightning never on a film's first
   frame, and lighting the whole scene and its shading starkly (eased, within the photosensitivity rule); farms only near
   the populated rings, not in the Wilds (druid groves and other wild things there instead).
-- SURFACES OVER SURFACES (Ruby): textures with displacement (glass, crystal), or distortion through the lighting, or
-  that could take the surface beneath them (as Two Surfaces), take the texture below as an input and do something
-  creative with it. A switch per layer named See Through, on for a new page, off for looks saved before
-  (docs/prior-art/surface-beneath.md).
+  docs/prior-art/ringworld-motion-and-variety.md.
+- SEE THROUGH, MORE SURFACES: Stained Glass, Tessellate, rain on glass, Water, Frost and the dew webs could bend what is
+  beneath too, once their parts hand on a lens (docs/prior-art/surface-beneath.md).
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more
   interactions nobody asked for.
 - GENTLE MATERIALS: metallic, albedo and displacement used with a light touch in the remakes.

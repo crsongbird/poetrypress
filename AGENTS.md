@@ -285,7 +285,8 @@ current), `tools/` (§2).
 ### 5.1 · Rendering
 `render()` draws, in order:
 1. backdrop;
-2. the surface: the lower layer first (Two Surfaces), then the upper;
+2. the surface: the lower layer first (Two Surfaces), then the upper; a layer that sees through bends what is drawn
+   beneath it first (See Through, docs/surfaces.md);
 3. vignette;
 4. inset box;
 5. border (its bloom on its own half-resolution layer);

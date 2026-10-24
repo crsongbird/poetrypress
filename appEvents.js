@@ -323,7 +323,7 @@ toggleSubblock('textureToggle','textureBlock');
 // ---------- SURFACE LAYERS (Ruby: "all controls for the second layer, a swap, every blend") ----------
 export const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
   'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex', 'textureTint9Hex', 'textureTint10Hex', 'textureTint11Hex', 'textureTint12Hex']);
-for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
+for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureSeeThrough']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
 if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
 if($('layerSwap') && $('layerSwap').addEventListener) $('layerSwap').addEventListener('click', swapLayers);

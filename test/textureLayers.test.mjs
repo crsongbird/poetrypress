@@ -186,4 +186,18 @@ check('a preset turns the lower surface off (it never leaks from one look to the
   check('a switched-off section keeps its controls in view (faded), and a change made there by hand switches it on; a roll\'s does not',
     block.classList.contains('eye-block') && reg['cardBlock'].classList.contains('eye-block') && still && box.checked === true && woke === 1); }
 
+// SEE THROUGH (Ruby: glass and water "should take the texture below as an input"): a look saved before it was offered
+// keeps it off; one of the app's own (no version) has it on; the switch is the layer's own; the surface hands back its
+// lens beneath its picture only when asked
+{ const old = { ...base, texture: true, textureType: 'underglass', baseToggle: false, locks: [] }; delete old.textureSeeThrough; load(old);
+  check('See Through: a look saved before it was offered keeps its old picture (off)', reg['textureSeeThrough'].checked === false && save().textureSeeThrough === false);
+  const own = { ...old }; delete own.lookVersion; load(own);
+  check('…one of the app\'s own looks, with no version, has it on, and it is saved with the look', reg['textureSeeThrough'].checked === true && save().textureSeeThrough === true);
+  two(true); show('lower'); set('textureType', 'brokenglass'); reg['textureSeeThrough'].checked = false; reg['textureSeeThrough'].dispatchEvent({ type: 'change' }); show('upper');
+  check('…and it is each surface\'s own: the lower\'s off, the upper\'s on', save().baseLayer.textureSeeThrough === false && save().textureSeeThrough === true);
+  const { getTextureCanvas } = await import('../textureGenerators.js'), o = { seed: 3, scale: 0.1 };
+  check('…a surface that can see through hands back its lens beneath its picture, when asked', getTextureCanvas('underglass', 64, 48, { ...o, seeThrough: true }).height === 96 && getTextureCanvas('underglass', 64, 48, o).height === 48);
+  check('…and one that can\'t never does', getTextureCanvas('hatch', 64, 48, { ...o, seeThrough: true }).height === 48);
+  two(false); }
+
 done();

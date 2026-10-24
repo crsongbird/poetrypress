@@ -136,6 +136,9 @@ export function applyPersisted(s){
 // from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
 const LOOK_VERSION = 10;
+// SEE THROUGH's default for a look that doesn't say (Ruby: on for a new page, saved looks as they were): a look someone saved
+// carries its version and was made without it; the app's own looks (its presets, the page it opens on) carry none
+const seeByDefault = s => !(+(s && s.lookVersion) > 0);
 export function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -368,6 +371,8 @@ export function restoreSettings(s){
   const wasEditing = state.layers.editing;
   state.layers.editing = 'upper';
   state.layers.other = s.baseLayer && typeof s.baseLayer === 'object' ? pickLayer(s.baseLayer) : null;
+  // (See Through: a look saved before it was offered keeps its lower surface as it was; one of the app's own, on)
+  if(state.layers.other && state.layers.other.textureSeeThrough === undefined && capsFor(state.layers.other.textureType).seeThrough) state.layers.other.textureSeeThrough = seeByDefault(s);
   state.layers.otherLocks = Array.isArray(s.baseLocks) ? s.baseLocks.filter(id => LAYER_LOCK_IDS.has(id)) : [];
   state.layers.otherUi = null;
   // the look's Athanor graph first: a Athanor surface's sliders are named from it
@@ -474,6 +479,8 @@ function restoreSurfaceDetails(s){
   // the surface and the words (a look from before them: aware, as every surface was; neither blended into the letters)
   { const set = (id, v) => { if($(id)) $(id).checked = v; };
     set('textureTextAware', s.textureTextAware !== false); set('textureTextBlend', !!s.textureTextBlend); set('textureShapeAware', !!s.textureShapeAware); set('textureTextCut', !!s.textureTextCut);
+    // (See Through: a look saved before it was offered draws as it did, without; the app's own looks, with)
+    set('textureSeeThrough', s.textureSeeThrough ?? seeByDefault(s));
     // (how strongly: a look from before the slider, fully)
     if($('textureShapeStrength')){ $('textureShapeStrength').value = s.textureShapeStrength ?? 100; if($('textureShapeStrengthVal')) $('textureShapeStrengthVal').textContent = $('textureShapeStrength').value + '%'; }
     paintLayerWords(); }

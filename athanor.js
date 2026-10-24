@@ -455,9 +455,11 @@ export function evalAthanor(graph, ww, wh, ctx, deps = {}){
       // (a part's own VARIATION, Filter Forge's local Variation, turns its draw without moving the page's seed; 0 is as before)
       const vr = Math.round(+((n.data || {}).variation) || 0);
       try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
-      out = trimOuts(id, out);
+      const lens = out && out.lens; out = trimOuts(id, out); if(lens && out) out.lens = lens;   // (a lit surface's height, kept with it: See Through)
       if(key && out) athanorKeep(key, out);
     }
+    // (SEE THROUGH: the last lit surface's height, for the page to bend what lies beneath by)
+    if(ctx.lens && out && out.lens) Object.assign(ctx.lens, out.lens);
     busy.delete(id); memo.set(id, out); if(memo.size > athanorPeak) athanorPeak = memo.size; doneReading(n);
     return out;
   };

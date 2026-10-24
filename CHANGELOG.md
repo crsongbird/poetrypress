@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Ursa Major–Alioth (2026-10-24)
+
+- See Through: a glass surface laid over another now bends the surface beneath it. Under Glass refracts what is behind
+  each pane by the pane's own slope (its seams and bubbles turn the lines beneath), Broken Glass offsets the picture
+  under each shard by that shard's tilt, and Crystal Leaf and Poured Wax bend it by their relief. The switch sits with
+  the surface's tools when it can see through: on for a new page; a look saved before keeps its old picture, and
+  saving a look keeps the choice.
+
+### Under the hood
+- A surface that can see through hands its lens to the page under its picture: the Light Engine keeps the height it lit
+  (`ltLensed`), the glass pane and the shards keep their own offsets, and the texture stacks the lens, as offsets and
+  coverage, below the picture (`seeLens`, `seeStack`, reaching `SEE_REACH` canonical pixels). The page bends what is
+  already drawn through it before the layer is laid (`bendBeneath`); a look without a version turns it on
+  (`seeByDefault`). No fingerprint moved: a surface draws its lens only when asked.
+
 ## Ursa Major–Alcor (2026-10-24)
 
 - The Ringworld holds still while the camera moves. Each ridge of land is now cut round the eye, its points fixed in
@@ -389,16 +404,3 @@ prints it).
   the ground to edge on at the eye and seen-from-below over it, and `pkTurned` lays a face in strips when that changes
   across it. The Ringworld passes the camera's own eye near and a higher painter's eye far (`seen`). Found by rendering
   forty seeds from random cameras and looking at them. Texture fingerprints updated for the Ringworld's buildings.
-
-## Uranus–Margaret (2026-10-21)
-
-- Fixed: on some Ringworld seeds a rune of wall graffiti hung in the sky, as big as a moon. Graffiti, the builders'
-  glowing script and the city screens painted on a far wall seen almost edge on spilled off it; now whatever is
-  painted on a wall stays inside that wall, and a word of graffiti slants as a hand would write it.
-
-### Under the hood
-- Housekeeping: reviewed the tests: the Ringworld's walls had no check that their art stays on them; chains.test.mjs
-  now renders the reported seed and finds no mark bigger than a star standing free in its sky (it fails on the old
-  code, 366 pixels). The hygiene suite's stylesheet window went with that step; no suite still tests the retired end-on
-  drawings of cars, tractors and carts. AGENTS.md's rule 12 no longer lists pruning the stylesheet.
-- Texture fingerprints updated for the Ringworld's walls.

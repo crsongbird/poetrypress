@@ -109,6 +109,8 @@ function dialWord(dial){ const w = String(dial).split(/[\s&]+/)[0]; return ({ Po
 export function syncTextureTools(resetToDefaults){
   const type = $('textureType').value;
   const caps = capsFor(type);
+  // (See Through only where the surface can bend what lies beneath it)
+  if($('seeThroughRow')) $('seeThroughRow').hidden = !caps.seeThrough;
 
   // EVERY BLEND for every surface (Ruby): the ones made for this surface first (its default at their
   // head), then every other one a layer can take

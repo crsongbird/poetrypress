@@ -617,9 +617,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     any overlay blend leaves the page alone. Screen adds only light; Hard
     Light also darkens, and works on dark pages (Overlay and Soft Light are
     weak there).
-  - Refraction needs what is under the glass, so it happens only in a graph
-    (the starter A Picture Under Glass: Texture from the Menu into the
-    Pane's Picture). Two Surfaces is a blend: no bending.
+  - Refraction needs what is under the glass: in a graph, the starter A
+    Picture Under Glass (Texture from the Menu into the Pane's Picture); on
+    the page, See Through (Two Surfaces, below): the Pane hands its bend on as
+    a lens and the page beneath is bent through it.
   - Scratches glint where they lie across the way to the light's own
     reflection (`ugUnit`: the page's middle overhead, toward the light as
     the dial is drawn out), so swirls ring the light.
@@ -669,6 +670,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     ones mixed per pixel by `boxBlend`). A grey surface is made on its blend's
     neutral ground (`blendFamily`); `textureGround` keeps an older look's
     ground until its blend is changed.
+  - **See Through** (Ruby: glass and water "should take the texture below as an input and do something creative with it";
+    docs/prior-art/surface-beneath.md): a surface whose caps say `seeThrough` (Under Glass, Broken Glass, Crystal Leaf,
+    Poured Wax so far) shows the layer's switch. On, its request asks for the lens too: the worker stacks it beneath the
+    picture on one canvas twice as tall (`seeStack`, `seeLens`; red and green the offset, `SEE_REACH` canonical pixels at
+    most), made from the height a Light Engine lit (`ltLensed`) or the bend a glass part works out itself (Glass Pane,
+    Glass Shards). `drawSurfaceLayer` bends the page drawn so far through it (`bendBeneath`: the nearest pixel in the
+    preview, smooth in the saved image), then lays the picture by its blend. A look saved before the switch has it off
+    (`seeByDefault`: a look with a version); the app's own looks, with none, have it on.
   - A new lower starts as Waking Grain on `seed ^ 0x5bd1e995`. Presets clear
     it (unless something of it is locked). Old looks' `baseType`… keys become
     `baseLayer` in `retireBaseLayer`.

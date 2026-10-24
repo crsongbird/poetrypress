@@ -2532,6 +2532,7 @@ body.is-mobile .tab-btn + .tab-btn{ border-left:1px solid color-mix(in srgb, var
 .controls-fold.rack > .fold-body > .field.as-knob > .dice-btn{ left:auto; right:-4px; top:0; transform:none; }
 .controls-fold.rack > .fold-body > .field.as-knob > .knob-dial{ display:none !important; }
 .field.hidden-off{ display:none !important; }
+.check-row.see-through[hidden]{ display:none; }
 /* (the keyboard's focus only: a finger or a mouse holding a control draws no box round it, Ruby: "remove that blue selection box") */
 .controls-fold.rack > .fold-body > .field:has(> input:focus-visible) .sk-knob svg, .controls-fold.rack > .fold-body > .field:has(> input:focus-visible) .sk-strip{ outline:1px dotted var(--accent-2); outline-offset:2px; }
 
@@ -3357,6 +3358,12 @@ but bear with me, dear}]/jitter:200
                   <input type="checkbox" id="textureTextCut">
                   <label for="textureTextCut" data-str="label.text_cut" title="Cut the letters out of this surface, so what lies beneath it shows through the words. Text effects stay.">Cut Out by Text</label>
                 </div>
+              </div>
+              <!-- SEE THROUGH (Ruby: glass and water "should take the texture below as an input and do something creative
+                   with it"): only for a surface that can bend what lies beneath it -->
+              <div class="check-row see-through" id="seeThroughRow" hidden>
+                <input type="checkbox" id="textureSeeThrough" checked>
+                <label for="textureSeeThrough" data-str="label.see_through" title="Glass, water and crystal bend what lies beneath them (the page, and the lower surface) instead of only lying over it.">See Through</label>
               </div>
               <div class="field full words-strength">
                 <label for="textureShapeStrength" data-str="label.shape_strength" title="How fully Shape Aware works. At 100% the surface clears the words completely; lower values only thin it near the lines. A surface built on The Poem keeps clear of the words by its own margin at 100%, less as this goes down, and not at all at 0%.">Shape Strength</label>
@@ -14701,6 +14708,8 @@ function ugPane(E, n){
   const look = (F, x, y) => { x = Math.max(0, Math.min(ww - 1.001, x)); y = Math.max(0, Math.min(wh - 1.001, y)); const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = y0*ww + x0, j = Math.min(wh - 1, y0 + 1)*ww + x0, x1 = x0 < ww - 1 ? 1 : 0;
     return (F[i]*(1 - fx) + F[i + x1]*fx)*(1 - fy) + (F[j]*(1 - fx) + F[j + x1]*fx)*fy; };
   const edgeTint = [0.84, 0.97, 0.91];
+
+  const DX = ctx.lens ? new Float32Array(N) : null, DY = DX ? new Float32Array(N) : null;
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const i = y*ww + x;
 
@@ -14709,6 +14718,7 @@ function ugPane(E, n){
       ox += gx*unit*unit*bk*0.006; oy += gy*unit*unit*bk*0.006; }
     const sh = SH ? SH[i] : 0, tx = sh > 0.02 ? Math.sin(sh*917.3) : 0, ty = sh > 0.02 ? Math.cos(sh*533.7) : 0;
     if(sh > 0.02){ ox += tx*unit*0.006*(0.3 + bk); oy += ty*unit*0.006*(0.3 + bk); }
+    if(DX){ DX[i] = ox; DY[i] = oy; }
 
     const Rv = Rf ? (sh > 0.02 ? look(Rf, x + tx*unit*0.09, y + ty*unit*0.09) : Rf[i]) : 0, oil = O ? O[i] : 0;
     let L = rk*Rv*(1 - 0.75*ok*oil) + ok*oil*0.34 + gk*(G ? G[i] : 0) + dk*((D ? D[i] : 0)*0.9 + (Sp ? Sp[i] : 0)*0.8);
@@ -14727,6 +14737,7 @@ function ugPane(E, n){
       if(tint > 0) v *= 1 - tint*(1 - edgeTint[c]);
       Q[c][i] = v; }
   }
+  if(DX) out.lens = { DX, DY, w: ww, h: wh, cell: (ctx.div || 1)/(ctx.scale || 1) };
   return out;
 }
 
@@ -14762,7 +14773,7 @@ Object.assign(TOUCH_STEPS, {
   glasspane: { cat: 'Light & Color', label: 'Glass Pane', ins: ['picture', 'reflection', 'glints', 'oil', 'dust', 'spots', 'cracks', 'shards', 'waves'], outs: ['picture'],
     io: { ins: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'], outs: ['image'] },
     params: [TOUCH_R('reflect', 'Reflection', 60), TOUCH_R('glint', 'Glints', 80), TOUCH_R('smudge', 'Smudges', 60), TOUCH_R('dust', 'Dust', 70), TOUCH_R('bend', 'Bend', 30), TOUCH_R('edge', 'Edge', 0)], cost: () => 3,
-    run(E, n){ return [ugPane(E, n)]; } },
+    run(E, n){ const o = ugPane(E, n), r = [o]; if(o.lens) r.lens = o.lens; return r; } },
 });
 
 
@@ -16031,6 +16042,8 @@ function gsRender(ww, wh, unit, S, o, cam, ground){
         col[ch] = 1 - (1 - v)*(1 - Math.min(1, L));
       }
       for(let ch = 0; ch < 3; ch++) base[ch] = base[ch]*(1 - c) + col[ch]*c;
+
+      if(o.lensDX){ o.lensDX[q] = o.lensDX[q]*(1 - c) + n[0]*sh.th*unit*6*c; o.lensDY[q] = o.lensDY[q]*(1 - c) + n[1]*sh.th*unit*6*c; }
     }
     out.r[q] = base[0]; out.g[q] = base[1]; out.b[q] = base[2];
   }
@@ -16476,7 +16489,10 @@ const GEN_STEPS = {
       const cam = o.fill ? null : groundCam(ww/unit, wh/unit, num(n, 'turn', 0), num(n, 'view', 0), num(n, 'lens', 100));
       if(cam) o.lines = [];
       const S = withSeed(genSeed(E, n), () => gsShards(ww/unit, wh/unit, o));
-      return gsRender(ww, wh, unit, S, o, cam, pic != null ? E.asImage(pic) : null); } },
+      if(E.ctx.lens){ o.lensDX = new Float32Array(ww*wh); o.lensDY = new Float32Array(ww*wh); }
+      const res = gsRender(ww, wh, unit, S, o, cam, pic != null ? E.asImage(pic) : null);
+      if(o.lensDX) res.lens = { DX: o.lensDX, DY: o.lensDY, w: ww, h: wh, cell: (E.ctx.div || 1)/(E.ctx.scale || 1) };
+      return res; } },
 
 
   dewwebs: { cat: 'Marks', label: 'Dewy Webs', ins: ['light from'], outs: ['silk', 'glints', 'dew'], io: { ins: ['value'], outs: ['field', 'image', 'field'] },
@@ -18458,6 +18474,10 @@ function ltBlur(F, gw, gh, r){
   return O;
 }
 
+
+
+
+function ltLensed(res, H, w, h, relief, cell){ res.lens = { H, w, h, relief, cell }; return res; }
 function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
   const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25), TM = byPoint ? E.map(n, 'translucency', 0) : null;
@@ -18854,7 +18874,8 @@ const LIGHT_STEPS = {
           else for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); } }
       px.putImageData(im, 0, 0);
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
-      return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
+
+      return ltLensed([pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)], H, gw, gh, o.relief, dv/(E.ctx.scale || 1)); },
     run(E, n){
       const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n); if(M && M.am) o.amb = M.am;
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
@@ -18875,7 +18896,7 @@ const LIGHT_STEPS = {
 
         if(TR && (TR[i] > 0 || BD[i] > 0)){ const m = Math.max(1e-3, ch[0][i], ch[1][i], ch[2][i]);
           for(let c = 0; c < 3; c++){ const u = Math.max(0, ch[c][i])/m, tint = u*Math.sqrt(u)*Math.min(1, m*4), hue = M && M.di ? M.di[c] : 1; oc[c][i] += tint*(TR[i]*0.75 + BD[i]*0.3)*hue; } } }
-      return [out, lf, S]; } },
+      return ltLensed([out, lf, S], H, ww, wh, o.relief, (E.ctx.div || 1)/(E.ctx.scale || 1)); } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),
       LT_R('brush', 'Brush: Round · Flat · Knife · Dry', 0)],
@@ -29461,9 +29482,11 @@ function evalAthanor(graph, ww, wh, ctx, deps = {}){
 
       const vr = Math.round(+((n.data || {}).variation) || 0);
       try { out = v2 ? withSeed(fnv((ctx.seed >>> 0) + ':' + id + (vr ? '~' + vr : '')), () => RUN(n)) : RUN(n); } catch(e){ out = null; }
-      out = trimOuts(id, out);
+      const lens = out && out.lens; out = trimOuts(id, out); if(lens && out) out.lens = lens;
       if(key && out) athanorKeep(key, out);
     }
+
+    if(ctx.lens && out && out.lens) Object.assign(ctx.lens, out.lens);
     busy.delete(id); memo.set(id, out); if(memo.size > athanorPeak) athanorPeak = memo.size; doneReading(n);
     return out;
   };
@@ -29957,7 +29980,7 @@ const TEXTURE_CAPS = {
   drapery:   { blends:['source-over','multiply','overlay','soft-light','hard-light','luminosity','screen','lighten','darken'], material:true, light:true, tints:3,
                    tintLabels:['Warp Hue','Weft Hue','Ground Hue'], tintDefaults:['#C9B7A0','#A8957C','#24202A'] },
 
-  crystal:   { blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
+  crystal:   { seeThrough:true, blends:['overlay','source-over','soft-light','hard-light','screen','color-dodge','multiply','lighten','darken','color-burn'], material:true, light:true, tints:2,
                    tintLabels:['Crystal Hue','Inclusion Hue'], tintDefaults:['#B9A6D8','#D9A441'] },
   spangle:       { blends:['overlay','soft-light','hard-light','color-dodge','multiply','screen','lighten','darken','color-burn'], material:true, ground:'grey', light:true, tints:1,
                    tintLabels:['Metal Hue'], tintDefaults:['#C9CED6'] },
@@ -29986,13 +30009,13 @@ const TEXTURE_CAPS = {
   stainedglass:  { blends:['source-over','overlay','soft-light','hard-light','multiply','screen','luminosity','color'], light:true, tints:2,
                    tintLabels:['Glass Hue','Second Glass Hue'], tintDefaults:['#2148A8','#A8182C'] },
 
-  brokenglass:   { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
+  brokenglass:   { seeThrough:true, blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Shadow Hue'], tintDefaults:['#FFFFFF','#000000'], camera:{ turn:0, view:0, zoom:100, guide:'plane' } },
 
   dewwebs:       { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, lowLight:true, tints:2, genericTint:true,
                    tintLabels:['Light Hue','Dark Hue'], tintDefaults:['#FFFFFF','#000000'] },
 
-  underglass:    { blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, tints:2, genericTint:true,
+  underglass:    { seeThrough:true, blends:['screen','hard-light','soft-light','overlay','lighten','color-dodge','multiply','darken','color-burn'], ground:'grey', light:true, tints:2, genericTint:true,
                    tintLabels:['Reflection Hue','Grime Hue'], tintDefaults:['#FFFFFF','#000000'] },
   suminagashi:   { blends:['multiply','darken','color-burn','source-over','overlay','soft-light'], light:true, dial:'Breath Direction', tints:2,
                    tintLabels:['Ink Hue','Second Ink Hue'], tintDefaults:['#1C1C26','#2C4C8E'] },
@@ -30006,7 +30029,7 @@ const TEXTURE_CAPS = {
                    tintLabels:['Frost Hue'], tintDefaults:['#EAF4FF'] },
   ash:           { blends:ledBlends('soft-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:2,
                    tintLabels:['Ash Hue','Ember Hue'], tintDefaults:['#D6D0C6','#FF5A1E'] },
-  wax:           { blends:ledBlends('hard-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:1,
+  wax:           { seeThrough:true, blends:ledBlends('hard-light', GREY_BLENDS), ground:'grey', light:true, material:true, tints:1,
                    tintLabels:['Wax Hue'], tintDefaults:['#7A2B2B'] },
   dunes:         { blends:['source-over','soft-light','overlay','hard-light','multiply','color-burn','darken','screen','color-dodge','lighten'],
                    light:true, material:true, tints:2, tintLabels:['Sand Hue','Sun Hue'], tintDefaults:['#D9B98C','#FFF1D8'], camera:{ turn:0, view:40, zoom:100, guide:'plane' } },
@@ -30289,6 +30312,7 @@ function chainReadsPoem(type, shaped = true){ const c = TEXTURE_CHAINS[RETIRED[t
 function layoutHash(str){ let h = 0x811c9dc5; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36) + str.length.toString(36); }
 function describeRequest(type, w, h, opts){
   type = RETIRED[type] || type;
+  const seeThrough = !!opts.seeThrough && !!(TEXTURE_CAPS[type] || {}).seeThrough;
   const { accent1, accent2, seed, p1, p2, p3, light, tint1, tint2, blend } = opts;
 
 
@@ -30354,8 +30378,10 @@ function describeRequest(type, w, h, opts){
             + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' + Math.round(+opts.fill*100) : '') + (opts.around ? '_R' + Math.round(+opts.around*100) : '') + (opts.aware === false ? '_A0' : '') : '')
             + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time || cam.frame !== undefined ? `_T${cam.time}x${cam.dt}` + (cam.frame !== undefined ? `f${cam.frame}s${cam.step}` + (cam.side ? `d${cam.side}` : '') : '') : '') : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
-            + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)));
-  return { type, key, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
+            + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)))
+
+            + (seeThrough ? '_ST' : '');
+  return { type, key, seeThrough, t3, t4, t5, t6, env, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, camera: cameraOf(type, opts), page: pageOf(type, w, h, opts) };
 }
 
 
@@ -30428,8 +30454,27 @@ const chainHues = (td, t1, t2, more) => [t1 || td[0], t2 || td[1], ...[0, 1, 2, 
 
 
 function blendNeutral(blend){ return !blend || blend === 'source-over' || blend === 'normal' ? 'page' : blendFamily(blend); }
+
+
+
+
+const SEE_REACH = 60;
+function seeLens(L, w, h){
+  const c = document.createElement('canvas'); c.width = w; c.height = h * 2;
+  if(!L || !(L.H || L.DX)) return c;
+
+  if(L.DX){ const { DX, DY, w: gw, h: gh } = L, cell = L.cell || 1, small = document.createElement('canvas'); small.width = gw; small.height = gh; const sx = small.getContext('2d', CPU), im = sx.createImageData(gw, gh), d = im.data;
+    for(let i = 0; i < gw*gh; i++){ const q = i*4; d[q] = 128 + Math.max(-1, Math.min(1, DX[i]*cell/SEE_REACH))*127; d[q + 1] = 128 + Math.max(-1, Math.min(1, DY[i]*cell/SEE_REACH))*127; d[q + 2] = 0; d[q + 3] = 255; }
+    sx.putImageData(im, 0, 0); const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, h, w, h); return c; }
+  const { H, w: gw, h: gh } = L, k = 2400*(L.relief ?? 0.5)/Math.max(1e-6, L.cell || 1), small = document.createElement('canvas'); small.width = gw; small.height = gh;
+  const sx = small.getContext('2d', CPU), im = sx.createImageData(gw, gh), d = im.data;
+  for(let y = 0; y < gh; y++) for(let x = 0; x < gw; x++){ const i = y*gw + x, gxv = (H[y*gw + Math.min(gw - 1, x + 1)] - H[y*gw + Math.max(0, x - 1)])/2, gyv = (H[Math.min(gh - 1, y + 1)*gw + x] - H[Math.max(0, y - 1)*gw + x])/2;
+    const ox = Math.max(-1, Math.min(1, -gxv*k/SEE_REACH)), oy = Math.max(-1, Math.min(1, -gyv*k/SEE_REACH)), q = i*4; d[q] = 128 + ox*127; d[q + 1] = 128 + oy*127; d[q + 2] = 0; d[q + 3] = 255; }
+  sx.putImageData(im, 0, 0); const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = true; cx.drawImage(small, 0, h, w, h); return c; }
+
+function seeStack(pic, L, w, h){ const c = seeLens(L, w, h); c.getContext('2d', CPU).drawImage(pic, 0, 0, w, h); return c; }
 function genChain(type, w, h, light, extra, tint1, tint2){
-  const chain = TEXTURE_CHAINS[type];
+  const chain = TEXTURE_CHAINS[type], lens = extra.seeThrough ? {} : null;
   if(!chainGraphs.has(type)) chainGraphs.set(type, athanorStarter(type));
   const defs = paramsFor(type), knobs = (extra.knobs || []).map((v, i) => { const d = defs[i]; if(!d || v == null) return 50;
     return Math.max(0, Math.min(100, (v - d.min)/Math.max(1e-6, d.max - d.min)*100)); });
@@ -30438,15 +30483,15 @@ function genChain(type, w, h, light, extra, tint1, tint2){
   if(chain.canvas){
 
     const out = evalAthanor(chainGraphs.get(type), w, h, { neutral: extra.neutral || 'page', knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div: 1,
-      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true,
+      accents: extra.accents || null, mat: extra.mat || null, glow: extra.glow || null, base: extra.base || null, env: extra.env || null, camera: extra.camera || null, canvas: true, lens,
       text: chain.poem && extra.text ? poemLines(extra.text) : '', aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: gridAtExport(extra.page, 1) }, { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
-    if(out) return out;
-    const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return c;
+    if(out) return lens ? seeStack(out, lens, w, h) : out;
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d', CPU); cx.fillStyle = '#808080'; cx.fillRect(0, 0, w, h); return lens ? seeStack(c, lens, w, h) : c;
   }
   const div = cappedDiv(chain.grid ? chain.grid(w, h, scaleNow(), knobs) : canonDiv(chain.div || 1), w, h), ww = Math.ceil(w/div), wh = Math.ceil(h/div);
   const img = evalAthanor(chainGraphs.get(type), ww, wh, { neutral: extra.neutral || 'page', knobs, tints: chainHues(td, tint1, tint2, extra.hues), light, lightTilt: extra.lightTilt, seed: extra.seed, scale: scaleNow(), div,
       mat: extra.mat || null, glow: extra.glow || null, env: extra.env || null, text: chain.poem && extra.text ? poemLines(extra.text) : '', camera: extra.camera || null,
-      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1) },
+      aware: extra.aware !== false, fill: +extra.fill || 0, around: +extra.around || 0, page: chain.grid ? null : gridAtExport(extra.page, chain.div || 1), lens },
     { texture: (t, tw, th, opts) => getTextureCanvas(t, tw, th, opts) });
   const small = document.createElement('canvas'); small.width = ww; small.height = wh;
   const sx = small.getContext('2d', CPU), im = sx.createImageData(ww, wh), d = im.data;
@@ -30456,15 +30501,15 @@ function genChain(type, w, h, light, extra, tint1, tint2){
     d[q+3] = 255;
   }
   sx.putImageData(im, 0, 0);
-  if(ww === w && wh === h) return small;
+  if(ww === w && wh === h) return lens ? seeStack(small, lens, w, h) : small;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
 
   const cx = c.getContext('2d', CPU); cx.imageSmoothingEnabled = !chain.crisp; cx.drawImage(small, 0, 0, w, h);
-  return c;
+  return lens ? seeStack(c, lens, w, h) : c;
 }
 function getTextureCanvas(type, w, h, opts = {}){
   const req = describeRequest(type, w, h, opts);
-  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page } = req;
+  const { key, defs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, scale, lightTilt, rig, t3, t4, t5, t6, env, camera, page, seeThrough } = req;
   type = req.type;
   const { accent1, accent2, seed, p1, p3, light, tint1, tint2, blend } = opts;
   if(textureCache.has(key)) return textureCache.get(key);
@@ -30506,7 +30551,7 @@ function getTextureCanvas(type, w, h, opts = {}){
 
   const c1 = tint1 || accent1, c2 = tint2 || accent2;
   let result = withLightRig(rig, () => withPage(page, () => withScale(scale, () => withLightTilt(lightTilt/100, () => withSeed(seed, () => buildTexture(type, w, h, c1, c2, amt, angle, zoom, light, tint1, tint2, form, { shape, hueSpread, tilt: camTilt, mat: materialOf(t3, t4, t6), glow: glowOf(type, t5), base: baseOf(type, t5), env: env ? env.split(',') : null,
-    knobs: [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend) }))))));
+    knobs: [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10], hues: Array.isArray(opts.hues) ? opts.hues : null, graph: opts.graph, text: opts.text || '', box: opts.box || null, curves: Array.isArray(opts.curves) ? opts.curves : null, channel: type === 'athanor' ? opts.channel || null : null, aware: opts.aware !== false, fill: +opts.fill || 0, around: +opts.around || 0, page, seed, lightTilt, camera, accents: [accent1, accent2, opts.ink || null], neutral: blendNeutral(blend), seeThrough }))))));
 
 
 
@@ -30519,8 +30564,11 @@ function getTextureCanvas(type, w, h, opts = {}){
   const ownColour = (type === 'bokeh' || type === 'landscape') && hueSpread > 0;
   const tintNow = caps.genericTint && !ownColour;
   const ground = (tintNow && caps.hue5 && caps.hue5.role === 'ground') ? t5 : null;
-  if(result && ((tintNow && (tint1 || tint2 || ground)) || doRemap))
-    result = pixelPass(result, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null, ground);
+  if(result && ((tintNow && (tint1 || tint2 || ground)) || doRemap)){
+
+    if(seeThrough && result.height === h*2){ const top = document.createElement('canvas'); top.width = w; top.height = h; top.getContext('2d', CPU).drawImage(result, 0, 0, w, h, 0, 0, w, h);
+      const done = pixelPass(top, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null, ground), rc = result.getContext('2d', CPU); rc.clearRect(0, 0, w, h); rc.drawImage(done, 0, 0); }
+    else result = pixelPass(result, tintNow ? tint1 : null, tintNow ? tint2 : null, doRemap ? blendFamily(blend) : null, ground); }
   storeTexture(key, result);
   return result;
 }
@@ -30750,6 +30798,7 @@ const UI_STRINGS = {
   'label.text_blend':                        "Blend with Text",
   'label.shape_aware':                       "Shape Aware",
   'label.text_cut':                          "Cut Out by Text",
+  'label.see_through':                       "See Through",
   'label.shape_strength':                    "Shape Strength",
   'button.layer_upper':                      "Upper",
   'button.light_main':                       "Main",
@@ -32231,6 +32280,27 @@ function boxGlass(src, r, mode, amount, scale, S = 1, seed = 0){
 
 
 
+
+
+
+
+
+
+
+function bendBeneath(ctx, tex, reach, fine){
+  const cw = ctx.canvas.width, ch = ctx.canvas.height; if(!cw || !ch || !tex || !(reach > 0)) return;
+  const lc = document.createElement('canvas'); lc.width = cw; lc.height = ch; const lx = bfxCtx(lc); lx.imageSmoothingEnabled = true;
+  lx.drawImage(tex, 0, tex.height/2, tex.width, tex.height/2, 0, 0, cw, ch);
+  const L = lx.getImageData(0, 0, cw, ch).data, P = ctx.getImageData(0, 0, cw, ch), S = P.data, O = new Uint8ClampedArray(S.length), k = reach/127;
+  const mir = (v, n) => { v = v < 0 ? -v : v; const p = 2*n - 2; if(p <= 0) return 0; v %= p; return v >= n ? p - v : v; };
+  for(let y = 0, q = 0; y < ch; y++) for(let x = 0; x < cw; x++, q += 4){
+    const a = L[q + 3]/255, dx = (L[q] - 128)*k*a, dy = (L[q + 1] - 128)*k*a;
+    if(!dx && !dy){ O[q] = S[q]; O[q + 1] = S[q + 1]; O[q + 2] = S[q + 2]; O[q + 3] = S[q + 3]; continue; }
+    if(!fine){ const p = (mir(Math.round(y + dy), ch)*cw + mir(Math.round(x + dx), cw))*4; O[q] = S[p]; O[q + 1] = S[p + 1]; O[q + 2] = S[p + 2]; O[q + 3] = S[p + 3]; continue; }
+    const fx = x + dx, fy = y + dy, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+    const a0 = (mir(y0, ch)*cw + mir(x0, cw))*4, a1 = (mir(y0, ch)*cw + mir(x0 + 1, cw))*4, b0 = (mir(y0 + 1, ch)*cw + mir(x0, cw))*4, b1 = (mir(y0 + 1, ch)*cw + mir(x0 + 1, cw))*4;
+    for(let c = 0; c < 4; c++) O[q + c] = (S[a0 + c]*(1 - tx) + S[a1 + c]*tx)*(1 - ty) + (S[b0 + c]*(1 - tx) + S[b1 + c]*tx)*ty; }
+  P.data.set(O); ctx.putImageData(P, 0, 0); lc.width = 0; lc.height = 0; }
 function boxBlend(src, r, layer, lr, blend, opacity, full = false){
   const bi = BOX_GPU_BLENDS.indexOf(blend);
   if(bi < 0 || !src || !layer || r.w < 2 || r.h < 2) return null;
@@ -34013,7 +34083,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Ursa Major–Alcor';
+const RELEASE = 'Ursa Major–Alioth';
 
 const RELEASE_DATE = '2026-10-24';
 
@@ -34929,7 +34999,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-24 · 5e1fef0";
+const STAMP = "2026-10-24 · 1a9af78";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -36354,7 +36424,7 @@ function surfaceFromDom(){
     textureRim: v('textureRim'), textureRimTilt: v('textureRimTilt'), textureAmbient: v('textureAmbient'), textureTint7: v('textureTint7Hex'), textureTint8: v('textureTint8Hex'),
     textureSeedWords: v('textureSeedWords') || '', textureSeed: parseInt(v('textureSeedValue'), 10), forgeGraph: v('forgeGraph') || '',
     textureCurve1: v('textureCurve1') || '', textureCurve2: v('textureCurve2') || '',
-    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
+    textureTextAware: chk('textureTextAware', true), textureTextBlend: chk('textureTextBlend', false), textureShapeAware: chk('textureShapeAware', false), textureTextCut: chk('textureTextCut', false), textureSeeThrough: chk('textureSeeThrough', false), textureShapeStrength: parseFloat(v('textureShapeStrength') ?? 100),
     ...(ground ? { textureGround: ground } : {}) };
 }
 
@@ -36422,7 +36492,13 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom, ...(SCENE_TIME > 0 || SCENE_FRAME !== null ? { time: SCENE_TIME, dt: SCENE_DT, ...(SCENE_FRAME !== null ? { frame: SCENE_FRAME, step: SCENE_STEP, ...(SCENE_SIDE ? { side: SCENE_SIDE } : {}) } : {}) } : {}) } : undefined;
   const name = s => slot === 'main' ? s : 'base' + (s === 'main' ? '' : s);
 
-  const put = t => { if(!t) return; try {
+
+
+  const see = !!caps.seeThrough && L.textureSeeThrough === true;
+
+  const put = t0 => { if(!t0) return; try {
+    let t = t0; if(see && Math.abs(t0.height/t0.width - 2*H/W) < 0.02*H/W){
+      const pc = document.createElement('canvas'); pc.width = t0.width; pc.height = t0.height/2; pc.getContext('2d', { willReadFrequently: true }).drawImage(t0, 0, 0, t0.width, t0.height/2, 0, 0, t0.width, t0.height/2); t = pc; }
     const img = clearing > 0 ? clearedSurface(t, canvas.width, canvas.height, clearing) : t;
     if(gpu){
       const m = boxBlend(ctx.canvas, { x: 0, y: 0, w: ctx.canvas.width, h: ctx.canvas.height }, img, { x: 0, y: 0, w: img.width, h: img.height }, blend, opacity, true);
@@ -36457,7 +36533,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
     const box = graph && graphUsesBox(graph) ? boxNow() : undefined;
 
     const curves = graph && graphUsesCurves(graph) ? [L.textureCurve1 || '', L.textureCurve2 || ''] : undefined;
-    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
+    layer(blend, SURFACE_REQUEST(name('main'), type, W, H, { seed, p1, p2, p3, light, lightTilt, tint1, tint2, tint3, tint4, tint5, tint6, hues, env: envs, blend: groundFor, scale: S, p4, p5, p6, p7, p8, p9, p10, camera, graph, text, box, curves, aware, fill, ...(see ? { seeThrough: true } : {}), around, page: PAGE_SIZE, ...lights, ...(graph ? { accent1, accent2, ink: $('textColorHex').value } : {}) }));
   }
 }
 
@@ -43392,7 +43468,7 @@ const EYES = ['spellMark', 'highlightToggle', 'forgeSteps'];
 
 
 const SWITCHES = ['bgGradientToggle', 'textGradientToggle', 'accent1Toggle', 'accent2Toggle', 'baseToggle', 'borderGradientToggle', 'cardGradientToggle',
-  'customSizeToggle', 'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'borderStitchOut', 'borderRounded', 'cardLink',
+  'customSizeToggle', 'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureSeeThrough', 'borderStitchOut', 'borderRounded', 'cardLink',
   'cardStitchOut', 'cardRounded', 'fullPreview'];
 
 
@@ -43538,7 +43614,7 @@ function paintSeedMoon(){
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureRim', 'textureRimTilt', 'textureAmbient', 'textureTint7', 'textureTint8',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureTint9', 'textureTint10', 'textureTint11', 'textureTint12', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
-  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
+  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureSeeThrough', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
 const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
  
@@ -43604,7 +43680,9 @@ function paintLayerWords(){ const lower = state.layers && state.layers.editing =
   const strengthOff = !chk('textureShapeAware') || !!($('textureShapeAware') || {}).disabled;
   grey('textureShapeStrength', strengthOff);
 
-  const sf = $('textureShapeStrength'), row = sf && sf.closest && sf.closest('.field'); if(row && row.classList) row.classList.toggle('hidden-off', strengthOff); }
+  const sf = $('textureShapeStrength'), row = sf && sf.closest && sf.closest('.field'); if(row && row.classList) row.classList.toggle('hidden-off', strengthOff);
+
+  if($('seeThroughRow') && $('textureType')) $('seeThroughRow').hidden = !capsFor($('textureType').value).seeThrough; }
  
 function readingOf(L, ui){
   if(!L || !ui || !ui.element) return '';
@@ -44198,6 +44276,9 @@ function applyPersisted(s){
 
 
 const LOOK_VERSION = 10;
+
+
+const seeByDefault = s => !(+(s && s.lookVersion) > 0);
 function serializeCurrentSettings(){
   return layersIntoLook({
     lookVersion: LOOK_VERSION,
@@ -44430,6 +44511,8 @@ function restoreSettings(s){
   const wasEditing = state.layers.editing;
   state.layers.editing = 'upper';
   state.layers.other = s.baseLayer && typeof s.baseLayer === 'object' ? pickLayer(s.baseLayer) : null;
+
+  if(state.layers.other && state.layers.other.textureSeeThrough === undefined && capsFor(state.layers.other.textureType).seeThrough) state.layers.other.textureSeeThrough = seeByDefault(s);
   state.layers.otherLocks = Array.isArray(s.baseLocks) ? s.baseLocks.filter(id => LAYER_LOCK_IDS.has(id)) : [];
   state.layers.otherUi = null;
 
@@ -44536,6 +44619,8 @@ function restoreSurfaceDetails(s){
 
   { const set = (id, v) => { if($(id)) $(id).checked = v; };
     set('textureTextAware', s.textureTextAware !== false); set('textureTextBlend', !!s.textureTextBlend); set('textureShapeAware', !!s.textureShapeAware); set('textureTextCut', !!s.textureTextCut);
+
+    set('textureSeeThrough', s.textureSeeThrough ?? seeByDefault(s));
 
     if($('textureShapeStrength')){ $('textureShapeStrength').value = s.textureShapeStrength ?? 100; if($('textureShapeStrengthVal')) $('textureShapeStrengthVal').textContent = $('textureShapeStrength').value + '%'; }
     paintLayerWords(); }
@@ -45024,6 +45109,8 @@ function dialWord(dial){ const w = String(dial).split(/[\s&]+/)[0]; return ({ Po
 function syncTextureTools(resetToDefaults){
   const type = $('textureType').value;
   const caps = capsFor(type);
+
+  if($('seeThroughRow')) $('seeThroughRow').hidden = !caps.seeThrough;
 
 
 
@@ -46186,7 +46273,7 @@ toggleSubblock('textureToggle','textureBlock');
 
 const LAYER_LOCK_IDS = new Set(['textureType', 'textureOpacity', 'textureBlend', 'textureLight', 'cameraTurn', 'textureSeedValue',
   'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureShapeStrength', 'textureTint1Hex', 'textureTint2Hex', 'textureTint3Hex', 'textureTint4Hex', 'textureTint5Hex', 'textureTint6Hex', 'textureTint7Hex', 'textureTint8Hex', 'textureTint9Hex', 'textureTint10Hex', 'textureTint11Hex', 'textureTint12Hex']);
-for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
+for(const id of ['textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureSeeThrough']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => { paintLayerWords(); scheduleRender(); commitSoon(); });
 if($('layerSeg') && $('layerSeg').addEventListener) $('layerSeg').addEventListener('click', e => {
   const b = e.target && e.target.closest ? e.target.closest('[data-layer]') : null; if(b) editLayer(b.dataset.layer); });
 if($('layerSwap') && $('layerSwap').addEventListener) $('layerSwap').addEventListener('click', swapLayers);

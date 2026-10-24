@@ -1190,6 +1190,8 @@ function ugPane(E, n){
   const look = (F, x, y) => { x = Math.max(0, Math.min(ww - 1.001, x)); y = Math.max(0, Math.min(wh - 1.001, y)); const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = y0*ww + x0, j = Math.min(wh - 1, y0 + 1)*ww + x0, x1 = x0 < ww - 1 ? 1 : 0;
     return (F[i]*(1 - fx) + F[i + x1]*fx)*(1 - fy) + (F[j]*(1 - fx) + F[j + x1]*fx)*fy; };
   const edgeTint = [0.84, 0.97, 0.91];
+  // (SEE THROUGH: where the eye lands through the glass, kept as the lens the page bends what lies beneath by)
+  const DX = ctx.lens ? new Float32Array(N) : null, DY = DX ? new Float32Array(N) : null;
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const i = y*ww + x;
     // where the eye lands through the glass: bent along the waves' slope, and by each shard's tilt
@@ -1198,6 +1200,7 @@ function ugPane(E, n){
       ox += gx*unit*unit*bk*0.006; oy += gy*unit*unit*bk*0.006; }
     const sh = SH ? SH[i] : 0, tx = sh > 0.02 ? Math.sin(sh*917.3) : 0, ty = sh > 0.02 ? Math.cos(sh*533.7) : 0;
     if(sh > 0.02){ ox += tx*unit*0.006*(0.3 + bk); oy += ty*unit*0.006*(0.3 + bk); }
+    if(DX){ DX[i] = ox; DY[i] = oy; }
     // the light the glass gives back (a shard mirrors the room from its own angle)
     const Rv = Rf ? (sh > 0.02 ? look(Rf, x + tx*unit*0.09, y + ty*unit*0.09) : Rf[i]) : 0, oil = O ? O[i] : 0;
     let L = rk*Rv*(1 - 0.75*ok*oil) + ok*oil*0.34 + gk*(G ? G[i] : 0) + dk*((D ? D[i] : 0)*0.9 + (Sp ? Sp[i] : 0)*0.8);
@@ -1216,6 +1219,7 @@ function ugPane(E, n){
       if(tint > 0) v *= 1 - tint*(1 - edgeTint[c]);
       Q[c][i] = v; }
   }
+  if(DX) out.lens = { DX, DY, w: ww, h: wh, cell: (ctx.div || 1)/(ctx.scale || 1) };
   return out;
 }
 
@@ -1251,5 +1255,5 @@ Object.assign(TOUCH_STEPS, {
   glasspane: { cat: 'Light & Color', label: 'Glass Pane', ins: ['picture', 'reflection', 'glints', 'oil', 'dust', 'spots', 'cracks', 'shards', 'waves'], outs: ['picture'],
     io: { ins: ['image', 'field', 'field', 'field', 'field', 'field', 'field', 'field', 'field'], outs: ['image'] },
     params: [TOUCH_R('reflect', 'Reflection', 60), TOUCH_R('glint', 'Glints', 80), TOUCH_R('smudge', 'Smudges', 60), TOUCH_R('dust', 'Dust', 70), TOUCH_R('bend', 'Bend', 30), TOUCH_R('edge', 'Edge', 0)], cost: () => 3,
-    run(E, n){ return [ugPane(E, n)]; } },
+    run(E, n){ const o = ugPane(E, n), r = [o]; if(o.lens) r.lens = o.lens; return r; } },
 });

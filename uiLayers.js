@@ -22,7 +22,7 @@ import { restoreSurfaceLayer } from './uiLook.js';
 const LAYER_KEYS = ['textureType', 'texP1', 'texP2', 'texP3', 'texP4', 'texP5', 'texP6', 'texP7', 'texP8', 'texP9', 'texP10', 'textureOpacity', 'textureBlend', 'textureLight', 'textureLightTilt', 'cameraTurn', 'cameraView', 'cameraZoom',
   'textureRim', 'textureRimTilt', 'textureAmbient', 'textureTint7', 'textureTint8',
   'textureTint1', 'textureTint2', 'textureTint3', 'textureTint4', 'textureTint5', 'textureTint6', 'textureTint9', 'textureTint10', 'textureTint11', 'textureTint12', 'textureSeedWords', 'textureSeed', 'forgeGraph', 'textureGround',
-  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
+  'textureTextAware', 'textureTextBlend', 'textureShapeAware', 'textureTextCut', 'textureSeeThrough', 'textureShapeStrength', 'textureCurve1', 'textureCurve2'];
 export const pickLayer = s => Object.fromEntries(LAYER_KEYS.filter(k => s[k] !== undefined).map(k => [k, s[k]]));
 export const lowerOn = () => !!($('baseToggle') && $('baseToggle').checked && $('textureToggle').checked);
 /** A new lower surface: Waking Grain beneath, as the base layer always began, on its own seed. */
@@ -88,7 +88,9 @@ export function paintLayerWords(){ const lower = state.layers && state.layers.ed
   const strengthOff = !chk('textureShapeAware') || !!($('textureShapeAware') || {}).disabled;
   grey('textureShapeStrength', strengthOff);
   // (Ruby: Shape Strength only shows while Shape Aware is on)
-  const sf = $('textureShapeStrength'), row = sf && sf.closest && sf.closest('.field'); if(row && row.classList) row.classList.toggle('hidden-off', strengthOff); }
+  const sf = $('textureShapeStrength'), row = sf && sf.closest && sf.closest('.field'); if(row && row.classList) row.classList.toggle('hidden-off', strengthOff);
+  // (See Through only where the surface can bend what lies beneath it)
+  if($('seeThroughRow') && $('textureType')) $('seeThroughRow').hidden = !capsFor($('textureType').value).seeThrough; }
 /** The reading a waiting surface wears, as its row would say it (§Reading). */
 export function readingOf(L, ui){
   if(!L || !ui || !ui.element) return '';

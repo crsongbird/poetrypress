@@ -104,6 +104,10 @@ function ltBlur(F, gw, gh, r){
   return O;
 }
 // (on the grid, `byPoint`: Relief and Gloss may be maps, a value per point; a canvas pass reads them whole)
+// SEE THROUGH (Ruby: glass and water "should take the texture below as an input and do something creative with it";
+// docs/prior-art/surface-beneath.md): the Light Engine's outputs carry the height it lit (H on a w × h grid, a cell this
+// many canonical pixels, its Relief), so a surface made with it can bend the page beneath by its own shape
+function ltLensed(res, H, w, h, relief, cell){ res.lens = { H, w, h, relief, cell }; return res; }
 function ltSettings(E, n, byPoint){
   const dial = E.input(n, 7), deg = typeof dial === 'number' ? dial*360 : (E.ctx.light ?? 315);
   const RM = byPoint ? E.map(n, 'relief', 50) : E.num(n, 'relief', 50), GM = byPoint ? E.map(n, 'gloss', 25) : E.num(n, 'gloss', 25), TM = byPoint ? E.map(n, 'translucency', 0) : null;
@@ -500,7 +504,8 @@ export const LIGHT_STEPS = {
           else for(let c = 0; c < 3; c++) dd[q + c] = dd[q + c]*(ltK(k, M, c) + (A ? am*(M.am[c] - 1) : 0)) + s*(M ? M.hi[c] : 1); } }
       px.putImageData(im, 0, 0);
       const lf = new Float32Array(K.length); for(let i = 0; i < K.length; i++) lf[i] = ltClamp(K[i]*0.5);
-      return [pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)]; },
+      // (SEE THROUGH: the surface's height goes with what it hands on, so the page can bend what lies beneath by it)
+      return ltLensed([pc, kitFieldCanvas(lf, gw, gh), kitFieldCanvas(S, gw, gh)], H, gw, gh, o.relief, dv/(E.ctx.scale || 1)); },
     run(E, n){
       const { ww, wh, N } = E, o = ltSettings(E, n, true), M = ltMaterial(E, n); if(M && M.am) o.amb = M.am;
       const img = E.asImage(E.input(n, 1) ?? 0.5), H = E.asField(E.input(n, 2));
@@ -521,7 +526,7 @@ export const LIGHT_STEPS = {
         //   the front: Stavenga 2020, the pigment filters the light on its way through)
         if(TR && (TR[i] > 0 || BD[i] > 0)){ const m = Math.max(1e-3, ch[0][i], ch[1][i], ch[2][i]);
           for(let c = 0; c < 3; c++){ const u = Math.max(0, ch[c][i])/m, tint = u*Math.sqrt(u)*Math.min(1, m*4), hue = M && M.di ? M.di[c] : 1; oc[c][i] += tint*(TR[i]*0.75 + BD[i]*0.3)*hue; } } }
-      return [out, lf, S]; } },
+      return ltLensed([out, lf, S], H, ww, wh, o.relief, (E.ctx.div || 1)/(E.ctx.scale || 1)); } },
   oilpaint: { cat: 'Marks', label: 'Oil Paint', ins: ['picture'], outs: ['painting', 'heights'], io: { ins: ['image'], outs: ['image', 'field'] },
     params: [LT_R('amount', 'Amount', 100), LT_R('size', 'Brush Size', 100, 30, 300), LT_R('length', 'Stroke Length', 100, 30, 300), LT_R('detail', 'Detail', 50), LT_R('vary', 'Color Variation', 50),
       LT_R('brush', 'Brush: Round · Flat · Knife · Dry', 0)],

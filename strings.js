@@ -212,6 +212,7 @@ export const UI_STRINGS = {
   'label.text_blend':                        "Blend with Text",
   'label.shape_aware':                       "Shape Aware",
   'label.text_cut':                          "Cut Out by Text",
+  'label.see_through':                       "See Through",
   'label.shape_strength':                    "Shape Strength",
   'button.layer_upper':                      "Upper",
   'button.light_main':                       "Main",

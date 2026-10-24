@@ -805,6 +805,12 @@ but bear with me, dear}]/jitter:200
                   <label for="textureTextCut" data-str="label.text_cut" title="Cut the letters out of this surface, so what lies beneath it shows through the words. Text effects stay.">Cut Out by Text</label>
                 </div>
               </div>
+              <!-- SEE THROUGH (Ruby: glass and water "should take the texture below as an input and do something creative
+                   with it"): only for a surface that can bend what lies beneath it -->
+              <div class="check-row see-through" id="seeThroughRow" hidden>
+                <input type="checkbox" id="textureSeeThrough" checked>
+                <label for="textureSeeThrough" data-str="label.see_through" title="Glass, water and crystal bend what lies beneath them (the page, and the lower surface) instead of only lying over it.">See Through</label>
+              </div>
               <div class="field full words-strength">
                 <label for="textureShapeStrength" data-str="label.shape_strength" title="How fully Shape Aware works. At 100% the surface clears the words completely; lower values only thin it near the lines. A surface built on The Poem keeps clear of the words by its own margin at 100%, less as this goes down, and not at all at 0%.">Shape Strength</label>
                 <input type="range" id="textureShapeStrength" min="0" max="100" value="100">
