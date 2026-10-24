@@ -100,6 +100,16 @@ export const SPELLS = {
   segments: 3,
 };
 
+/** The Moving Image's camera, beyond its turn (the sheet's Also; docs/prior-art/film-animation.md §C): how much closer
+ *  a push in comes by the film's end (a pull back goes as far the other way), how far a tilt leans across the view
+ *  (in the view's points, 0 to 100) at its middle, and a spiral's pull back and lean by its end. */
+export const FILM_CAMERA = {
+  push: 1.5,
+  tilt: 30,
+  spiralPull: 1.5,
+  spiralTilt: 25,
+};
+
 // ---------- sharing ----------
 /** Where a shared-spell link points when the app is not being served from
  *  its own https address (opened as a local file, say). */

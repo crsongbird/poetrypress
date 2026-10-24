@@ -23,11 +23,14 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   read as: the smallest things get the least. The left-edge lines on the cards and sub-blocks are gone. Right weight?
 - SEE THROUGH: Under Glass, Broken Glass, Crystal Leaf and Poured Wax laid over another surface bend it (the switch with
   the surface's tools; on for a new page). The bend is gentle at the defaults: strong enough, or should it reach farther?
+- THE FILM'S NEW MOVES: four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral out); Set it now… for the
+  look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do the amounts feel right?
 
 ## 2 · Ruby's notes to act on
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
-  An hour of time passing during a pan is the right default. A film's motion stays out of looks and spells (the draft
-  keeps it). docs/prior-art/film-animation.md.
+  Next: a rest at the ends, To a shot, controls marked to sway, sweep or drift, the seed drifting. An hour of time
+  passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
+  docs/prior-art/film-animation.md.
 - THE RINGWORLD IN MOTION (Ruby, 2026-10-24): clouds building; smoke following the wind, smoothly; glows and lights
   (large spires and buildings too) gently alive, never flickering; cirrus never flickering; more color variety by the
   seed; a wider variety of things: small variations on buildings, and a wider library with smarter placing. And: the

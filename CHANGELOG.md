@@ -4,6 +4,23 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Ursa Major–Mizar (2026-10-24)
+
+- The Moving Image's easing has four shapes: Even, Ease in (setting off slowly), Ease out (arriving slowly), and In
+  and out.
+- A Camera round can do something else as it turns, chosen under Also: Push in, Pull back, Tilt (across the view and
+  back, so a full round still loops) or Spiral out (pulling back and leaning as it goes). The camera goes back to where
+  it was when the film is done, and the summary line says when a film ends where it goes rather than looping.
+- To another look can now be any look at all: Set it now… tucks the sheet into a bar at the foot of the page, and the
+  page itself is changed, anything on it, the Athanor too. Done keeps that as the look the film moves to (listed as
+  "The look you set") and puts the page back as it was; Cancel just puts it back. The changes leave no steps in the
+  undo history.
+
+### Under the hood
+- `moveAlong` takes a shape (`'in'`, `'out'`, `'ease'`) where it took a yes or no; `cameraAlso` gives the view and zoom
+  for a camera round's second move, its amounts in `FILM_CAMERA`; the history is held and put back whole around Set it
+  now (`historyHold`, `historyPutBack`). docs/prior-art/film-animation.md says what was built and what is still to come.
+
 ## Ursa Major–Alioth (2026-10-24)
 
 - See Through: a glass surface laid over another now bends the surface beneath it. Under Glass refracts what is behind
@@ -390,17 +407,3 @@ prints it).
 ### Under the hood
 - `pkLit` decides every window (the blocks' grids and ribbons, the houses' framed windows, the turned buildings'
   sides) from the night's depth and the scene's clock. Texture fingerprints updated for night scenes with buildings.
-
-## Uranus–Prospero (2026-10-21)
-
-- Fixed: standing right beside a factory on the Ringworld could fill the bottom of the picture with a vast flat roof.
-  Turned buildings and things are now seen from above only as far as the eye is above them: a roof at your own
-  height is seen edge on, a taller one from below, and a building's front leans in as a tall wall does when you stand
-  near it. Far off, the town is still seen a little from above, as the painting likes it.
-- A terrace of houses keeps its roof when turned (its row of gables had been read as a flat top).
-
-### Under the hood
-- `pkSpace` takes the eye's height over a thing's foot (the view's `eyePx`): its tilt runs from seen-from-above at
-  the ground to edge on at the eye and seen-from-below over it, and `pkTurned` lays a face in strips when that changes
-  across it. The Ringworld passes the camera's own eye near and a higher painter's eye far (`seen`). Found by rendering
-  forty seeds from random cameras and looking at them. Texture fingerprints updated for the Ringworld's buildings.

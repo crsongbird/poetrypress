@@ -6,6 +6,7 @@
  * WebCodecs). What arrives here is bytes: each encoded frame, whether it is a key frame, and the codec's own setup.
  * Prior art: docs/prior-art/moving-image.md.
  */
+import { FILM_CAMERA } from './tunables.js';
 
 // ---------- a look toward another ----------
 
@@ -60,7 +61,24 @@ export function wholeChanges(a, b, snap = () => false){
  */
 export function moveAlong(i, n, { back = false, ends = false, eased = false } = {}){
   const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : ends ? Math.min(1, i/Math.max(1, n - 1)) : u;
-  return eased ? 0.5 - 0.5*Math.cos(Math.PI*s) : s;
+  // (eased: in and out (true, or 'ease'); 'in', setting off slowly; 'out', arriving slowly; else evenly: Procreate Dreams'
+  //  and Keynote's four, docs/prior-art/film-animation.md)
+  const e = eased === true || eased === 'ease' ? 'both' : eased;
+  return e === 'both' ? 0.5 - 0.5*Math.cos(Math.PI*s) : e === 'in' ? 1 - Math.cos(Math.PI*s/2) : e === 'out' ? Math.sin(Math.PI*s/2) : s;
+}
+/**
+ * A camera round's second move, u from 0 to 1 along the film (DJI's named moves, on this app's dial): as it turns it
+ * also pushes in, pulls back, tilts across its view and back (so a full round still loops), or spirals out (a helix:
+ * pulling back and leaning as it goes). A tilt or a spiral leans toward the other side of the view from where it
+ * stands, so it always has room. The view (0 to 100) and the zoom (25 to 400) stay in their ranges.
+ */
+export function cameraAlso(kind, u, view, zoom){
+  const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
+  if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };
+  if(kind === 'out') return { view, zoom: z(zoom/Math.pow(F.push, u)) };
+  if(kind === 'tilt') return { view: v(view + toward*F.tilt*Math.sin(Math.PI*u)), zoom };
+  if(kind === 'spiral') return { view: v(view + toward*F.spiralTilt*u), zoom: z(zoom/Math.pow(F.spiralPull, u)) };
+  return { view, zoom };
 }
 
 // ---------- the sun through a day ----------

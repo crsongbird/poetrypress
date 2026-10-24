@@ -33,7 +33,7 @@ import { graphScattersGlyphs } from './stepsPatterns.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
-import { closeMoving, makeMoving, movingBusy, movingWake, openMoving, paintMoving } from './uiMoving.js';
+import { closeMoving, makeMoving, movingBusy, movingSetEnd, movingSetNow, movingWake, openMoving, paintMoving } from './uiMoving.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, retireOldPanel, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
@@ -517,6 +517,9 @@ $('downloadBtn').addEventListener('click', async ()=>{
   }
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
+  if($('movingSetNow') && $('movingSetNow').addEventListener) $('movingSetNow').addEventListener('click', movingSetNow);
+  if($('movingTuckDone') && $('movingTuckDone').addEventListener) $('movingTuckDone').addEventListener('click', () => movingSetEnd(true));
+  if($('movingTuckCancel') && $('movingTuckCancel').addEventListener) $('movingTuckCancel').addEventListener('click', () => movingSetEnd(false));
   if($('movingSheet') && $('movingSheet').addEventListener){
     $('movingSheet').addEventListener('change', paintMoving);   // (any choice on the sheet: its rows and its summary line)
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
@@ -1516,7 +1519,7 @@ for(const type of ['input', 'change']){
 }
 document.addEventListener('click', (e)=>{
   const t = e.target && e.target.closest ? e.target.closest('button, .preset-btn, .radio-btn') : null;
-  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet'))) commitSoon();   // (a film's frames are not history)
+  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet, #movingTuck'))) commitSoon();   // (a film's frames are not history)
 }, true);
 if($('shortcutBtn') && $('shortcutBtn').addEventListener) $('shortcutBtn').addEventListener('click', () => showShortcuts(true));
 if($('shortcutSheet') && $('shortcutSheet').addEventListener) $('shortcutSheet').addEventListener('click', (e) => { if(e.target === $('shortcutSheet')) showShortcuts(false); });

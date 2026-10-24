@@ -5,7 +5,7 @@
  */
 import { readFileSync } from 'fs';
 import { check, done } from './harness.mjs';
-import { blendLooks, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
+import { blendLooks, cameraAlso, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from '../moving.js';
 
 const cat = parts => { const n = parts.reduce((s, p) => s + p.length, 0), o = new Uint8Array(n); let at = 0; for(const p of parts){ o.set(p, at); at += p.length; } return o; };
 const dv = b => new DataView(b.buffer, b.byteOffset, b.byteLength), str = (b, at, n) => String.fromCharCode(...b.subarray(at, at + n));
@@ -97,10 +97,21 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   check('a part turn ends where it goes, on its last frame', part[0] === 0 && part[n - 1] === 1);
   check('there and back goes there by the middle and comes back, so it loops', back[0] === 0 && back[n/2] === 1 && back[n - 1] < 0.02 && back.every((v, i) => !i || Math.abs(v - back[i - 1]) < 2.01/n));
   check('eased, it leaves and arrives slowly (its first and last steps the smallest)', eased[1] - eased[0] < (eased[n/2 + 1] - eased[n/2])/10 && eased[n - 1] - eased[n - 2] < (eased[n/2 + 1] - eased[n/2])/10);
+  const ein = at({ ends: true, eased: 'in' }), eout = at({ ends: true, eased: 'out' }), rising = a => a.every((v, i) => !i || v >= a[i - 1]);
+  check('eased in, it sets off slowly and arrives at speed; eased out, the other way; both end where they go', ein[1] - ein[0] < (ein[n - 1] - ein[n - 2])/10 && eout[n - 1] - eout[n - 2] < (eout[1] - eout[0])/10 && Math.abs(ein[n - 1] - 1) < 1e-12 && Math.abs(eout[n - 1] - 1) < 1e-12 && rising(ein) && rising(eout));
+  check('"In and out" is the old eased (true reads the same)', at({ ends: true, eased: 'ease' }).every((v, i) => v === eased[i]));
+}
+// ---- the camera's second move (the sheet's Also) ----
+{ const a = (k, u, v = 40, z = 100) => cameraAlso(k, u, v, z);
+  check('nothing else: the view and zoom stay', a('hold', 0.7).view === 40 && a('hold', 0.7).zoom === 100);
+  check('pushing in comes 1.5 times as close by the end; pulling back goes as far the other way', Math.abs(a('in', 1).zoom - 150) < 1e-9 && Math.abs(a('out', 1).zoom - 100/1.5) < 1e-9 && a('in', 0).zoom === 100);
+  check('a tilt leans toward the other side of the view and comes back, so a full round still loops', a('tilt', 0.5).view === 70 && Math.abs(a('tilt', 1).view - 40) < 1e-9 && a('tilt', 0.5, 90).view === 60);
+  check('a spiral pulls back and leans as it goes (a helix)', a('spiral', 1).zoom < 70 && a('spiral', 1).view === 65 && a('spiral', 0).zoom === 100);
+  check('the view and zoom keep to their ranges', a('in', 1, 40, 380).zoom === 400 && a('out', 1, 40, 30).zoom === 25 && a('tilt', 0.5, 95).view >= 0 && a('spiral', 1, 90).view <= 100 && a('in', 1, 40, 300).zoom === 400);
 }
 // ---- the sheet's markup: each choice a radio group with one chosen by default, each group under a legend ----
 { const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8'), sheet = html.slice(html.indexOf('id="movingSheet"'), html.indexOf('id="movingMake"'));
-  const names = ['movingMove', 'movingTurn', 'movingSpan', 'movingBegin', 'movingEase', 'movingPlay', 'movingFps', 'movingSize', 'movingFormat'];
+  const names = ['movingMove', 'movingTurn', 'movingAlso', 'movingSpan', 'movingBegin', 'movingEase', 'movingPlay', 'movingFps', 'movingSize', 'movingFormat'];
   const checkedOf = nm => [...sheet.matchAll(new RegExp(`name="${nm}" value="[^"]+"( checked)?`, 'g'))];
   check('every choice on the film sheet is a radio group with exactly one chosen by default', names.every(nm => { const r = checkedOf(nm); return r.length >= 2 && r.filter(m => m[1]).length === 1; }));
   check('the frame rates read "24 fps" and so on, in order', /24 fps[\s\S]*30 fps[\s\S]*48 fps[\s\S]*60 fps/.test(sheet) && !/a second<\/option>/.test(sheet));

@@ -224,6 +224,11 @@ What the light patterns share [est]:
 
 Everything here is [est]: a design built on the sources above.
 
+Built in Ursa Major–Mizar: A's four easings; B's set-now end look (the start is the page); C's Also row, its amounts in
+tunables.js (FILM_CAMERA), a tilt and a spiral leaning toward the other side of the view from where the dial stands
+(so one at the dial's middle still moves), the spiral a helix that pulls back as it leans; the summary's "ends where it
+goes". Still to come: rest at the ends, To a shot, the marks (D) and the seed (E).
+
 **The shape of it.** Keep the four moves as the spine: Camera round, Light round, Time passing, To another look. Add two light ways to animate anything, and no timeline:
 1. **Set the far look on the spot** (the second way). It moves any number of controls, once or there and back.
 2. **Mark controls to move in the film** (the third way). Each marked control sways, sweeps or drifts on its own rate, on top of whatever the spine does.

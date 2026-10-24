@@ -1823,6 +1823,21 @@ body.is-mobile .shortcut-btn{ display:none; }
 /* (on a phone, each row's label above its choice, so five choices have the sheet's whole width) */
 @media (max-width:560px){ .film-sub{ grid-template-columns:1fr; gap:4px; margin:8px 0; } }
 .film-sub select{ width:100%; min-width:0; }
+.moving-look-pick{ display:flex; gap:6px; align-items:center; min-width:0; }
+.moving-look-pick select{ flex:1 1 0; min-width:0; }
+button.moving-set{ width:auto; flex:0 0 auto; white-space:nowrap; margin:0; padding:5px 12px; }
+/* (Set it now: the sheet tucked away to a bar at the foot, where a toast sits, while the page is changed; on a phone
+   above the tabs, so every tab stays free, and the controls given room to scroll clear of it) */
+.moving-tuck{ position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:220;
+  width:max-content; max-width:min(560px, calc(100vw - 24px)); display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  background:var(--bg-panel); color:var(--text-main); border:1px solid var(--accent); border-radius:var(--r-3); padding:8px 12px;
+  font-size:13px; box-shadow:0 10px 30px -12px rgba(0,0,0,0.7); }
+.moving-tuck[hidden]{ display:none; }
+.moving-tuck span{ flex:1 1 14em; }
+.moving-tuck .btn-row{ margin:0; gap:6px; }
+.moving-tuck .btn-row button{ width:auto; margin:0; padding:4px 12px; }
+body.is-mobile .moving-tuck{ left:8px; right:8px; transform:none; width:auto; max-width:none; bottom:calc(var(--tabbar-h, 50px) + 8px + env(safe-area-inset-bottom, 0px)); }
+body.moving-tucked .controls{ padding-bottom:calc(var(--tabbar-h) + 96px); }
 .film-seg{ display:flex; gap:4px; min-width:0; }
 .film-moves, .film-cards{ display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:4px 0 8px; }
 .film-pick label{ position:relative; flex:1 1 0; min-width:0; display:flex; }
@@ -4086,15 +4101,17 @@ but bear with me, dear}]/jitter:200
            that do not apply to the chosen move stay where they are, dimmed, so nothing moves under the hand) -->
       <fieldset class="film-group"><legend data-str="moving.g_move">Move</legend>
         <div class="film-moves film-pick"><label><input type="radio" name="movingMove" value="camera" checked><span class="radio-btn"><b data-str="moving.camera">Camera round</b></span></label><label><input type="radio" name="movingMove" value="light"><span class="radio-btn"><b id="movingLightName" data-str="moving.light_round">Light round</b></span></label><label><input type="radio" name="movingMove" value="time"><span class="radio-btn"><b data-str="moving.time">Time passing</b></span></label><label><input type="radio" name="movingMove" value="look"><span class="radio-btn"><b data-str="moving.look">To another look</b></span></label></div>
-      <div class="film-sub" id="movingLookRow"><label class="film-k" for="movingLook" data-str="moving.other">The other look</label><select id="movingLook"></select></div>
+      <div class="film-sub" id="movingLookRow"><label class="film-k" for="movingLook" data-str="moving.other">The other look</label><div class="moving-look-pick"><select id="movingLook"></select><button class="ghost moving-set" id="movingSetNow" type="button" data-str="moving.set_now">Set it now…</button></div></div>
       <div class="film-sub" id="movingTurnRow"><span class="film-k" id="movingTurnRowLabel" data-str="moving.turn">Turn</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingTurnRowLabel"><label><input type="radio" name="movingTurn" value="90"><span class="radio-btn"><b data-str="moving.turn90">Quarter</b></span></label><label><input type="radio" name="movingTurn" value="180"><span class="radio-btn"><b data-str="moving.turn180">Half</b></span></label><label><input type="radio" name="movingTurn" value="360" checked><span class="radio-btn"><b data-str="moving.turn360">Full round</b></span></label></div></div>
+      <div class="film-sub" id="movingAlsoRow"><span class="film-k" id="movingAlsoRowLabel" data-str="moving.also">Also</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingAlsoRowLabel"><label><input type="radio" name="movingAlso" value="hold" checked><span class="radio-btn"><b data-str="moving.a_hold">Nothing</b></span></label><label><input type="radio" name="movingAlso" value="in"><span class="radio-btn"><b data-str="moving.a_in">Push in</b></span></label><label><input type="radio" name="movingAlso" value="out"><span class="radio-btn"><b data-str="moving.a_out">Pull back</b></span></label><label><input type="radio" name="movingAlso" value="tilt"><span class="radio-btn"><b data-str="moving.a_tilt">Tilt</b></span></label><label><input type="radio" name="movingAlso" value="spiral"><span class="radio-btn"><b data-str="moving.a_spiral">Spiral out</b></span></label></div></div>
       <div class="film-sub" id="movingSpanRow"><span class="film-k" id="movingSpanRowLabel" data-str="moving.span">Time passes</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingSpanRowLabel"><label><input type="radio" name="movingSpan" value="0"><span class="radio-btn"><b data-str="moving.real">Real time</b></span></label><label><input type="radio" name="movingSpan" value="3600" checked><span class="radio-btn"><b data-str="moving.hour">1 hour</b></span></label><label><input type="radio" name="movingSpan" value="21600"><span class="radio-btn"><b data-str="moving.hours6">6 hours</b></span></label><label><input type="radio" name="movingSpan" value="86400"><span class="radio-btn"><b data-str="moving.day1">1 day</b></span></label><label><input type="radio" name="movingSpan" value="172800"><span class="radio-btn"><b data-str="moving.days2">2 days</b></span></label></div></div>
       <div class="film-sub" id="movingBeginRow"><span class="film-k" id="movingBeginRowLabel" data-str="moving.begin">Begins at</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingBeginRowLabel"><label><input type="radio" name="movingBegin" value="lit" checked><span class="radio-btn"><b data-str="moving.b_lit">As lit</b></span></label><label><input type="radio" name="movingBegin" value="dawn"><span class="radio-btn"><b data-str="moving.b_dawn">Dawn</b></span></label><label><input type="radio" name="movingBegin" value="noon"><span class="radio-btn"><b data-str="moving.b_noon">Midday</b></span></label><label><input type="radio" name="movingBegin" value="dusk"><span class="radio-btn"><b data-str="moving.b_dusk">Dusk</b></span></label><label><input type="radio" name="movingBegin" value="night"><span class="radio-btn"><b data-str="moving.b_night">Night</b></span></label></div></div>
       <div class="film-sub" id="movingEaseRow"><span class="film-k" id="movingEaseRowLabel" data-str="moving.ease">Easing</span>
-        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingEaseRowLabel"><label><input type="radio" name="movingEase" value="even" checked><span class="radio-btn"><b data-str="moving.even">Even</b></span></label><label><input type="radio" name="movingEase" value="ease"><span class="radio-btn"><b data-str="moving.eased">Ease in and out</b></span></label></div></div>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingEaseRowLabel"><label><input type="radio" name="movingEase" value="even" checked><span class="radio-btn"><b data-str="moving.even">Even</b></span></label><label><input type="radio" name="movingEase" value="in"><span class="radio-btn"><b data-str="moving.ease_in">Ease in</b></span></label><label><input type="radio" name="movingEase" value="out"><span class="radio-btn"><b data-str="moving.ease_out">Ease out</b></span></label><label><input type="radio" name="movingEase" value="ease"><span class="radio-btn"><b data-str="moving.eased">In and out</b></span></label></div></div>
       <div class="film-sub" id="movingPlayRow"><span class="film-k" id="movingPlayRowLabel" data-str="moving.play">Playback</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingPlayRowLabel"><label><input type="radio" name="movingPlay" value="once" checked><span class="radio-btn"><b data-str="moving.once">Once through</b></span></label><label><input type="radio" name="movingPlay" value="back"><span class="radio-btn"><b data-str="moving.back">There and back</b></span></label></div></div>
       </fieldset>
@@ -4124,6 +4141,11 @@ but bear with me, dear}]/jitter:200
         <button class="ghost" id="movingClose" type="button" data-str="moving.close">Close</button>
       </div>
     </div>
+  </div>
+  <!-- (the Moving Image's Set it now: the sheet tucked away while the film's other look is set on the page itself) -->
+  <div class="moving-tuck" id="movingTuck" role="region" aria-labelledby="movingTuckText" hidden>
+    <span id="movingTuckText" data-str="moving.tuck">Set the look the film moves to, then Done. The page goes back as it was.</span>
+    <div class="btn-row"><button class="btn-major" id="movingTuckDone" type="button" data-str="moving.tuck_done">Done</button><button class="ghost" id="movingTuckCancel" type="button" data-str="moving.tuck_cancel">Cancel</button></div>
   </div>
 
   <nav class="tabbar" id="tabBar">
@@ -4227,6 +4249,16 @@ const SPELLS = {
 
 
   segments: 3,
+};
+
+
+
+
+const FILM_CAMERA = {
+  push: 1.5,
+  tilt: 30,
+  spiralPull: 1.5,
+  spiralTilt: 25,
 };
 
 
@@ -30954,7 +30986,19 @@ const UI_STRINGS = {
   'moving.b_night':                       "Night",
   'moving.ease':                          "Easing",
   'moving.even':                          "Even",
-  'moving.eased':                         "Ease in and out",
+  'moving.eased':                         "In and out",
+  'moving.ease_in':                       "Ease in",
+  'moving.ease_out':                      "Ease out",
+  'moving.also':                          "Also",
+  'moving.a_hold':                        "Nothing",
+  'moving.a_in':                          "Push in",
+  'moving.a_out':                         "Pull back",
+  'moving.a_tilt':                        "Tilt",
+  'moving.a_spiral':                      "Spiral out",
+  'moving.set_now':                       "Set it now…",
+  'moving.tuck':                          "Set the look the film moves to, then Done. The page goes back as it was.",
+  'moving.tuck_done':                     "Done",
+  'moving.tuck_cancel':                   "Cancel",
   'moving.play':                          "Playback",
   'moving.once':                          "Once through",
   'moving.back':                          "There and back",
@@ -31154,10 +31198,15 @@ const MOVING = {
   sum: '{len} s · {fps} fps · {frames} frames · {size} · {fmt}, about {mb}',
   sumTime: '{span} at {rate} a second',
   sumBack: 'the sun returns the way it came',
+  sumEnds: 'ends where it goes: {what}',
+  endsIn: 'the camera pushes in',
+  endsOut: 'the camera pulls back',
+  endsSpiral: 'the camera spirals out',
   eta: 'about {name} to go',
 
   uSeconds: '{name} seconds', uMinute: 'a minute', uMinutes: '{name} minutes', uHour: 'an hour', uHours: '{name} hours', uDay: 'a day', uDays: '{name} days',
   before: 'The look before the last change',
+  setLook: 'The look you set',
   make: 'Make the film',
   stop: 'Stop',
   stopSure: 'Stop? Tap again',
@@ -31168,7 +31217,7 @@ const MOVING = {
   made: 'Saved: {name}.',
   stopped: 'Stopped. Nothing was saved.',
   failed: 'The film couldn’t be made in this browser. The PNG frames may work.',
-  noLook: 'Choose the other look first.',
+  noLook: 'Choose the other look first, or set it now.',
   tooBig: 'The frames passed 4 GB, more than a zip holds. Try a shorter film or a smaller size.',
   noCodec: 'This browser can’t make {name} at this size. Try WebM, a smaller size, or the PNG frames.',
   noEncoder: 'This browser has no video encoder, so the film is saved as PNG frames in a zip.',
@@ -34083,7 +34132,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Ursa Major–Alioth';
+const RELEASE = 'Ursa Major–Mizar';
 
 const RELEASE_DATE = '2026-10-24';
 
@@ -34342,7 +34391,24 @@ function wholeChanges(a, b, snap = () => false){
 
 function moveAlong(i, n, { back = false, ends = false, eased = false } = {}){
   const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : ends ? Math.min(1, i/Math.max(1, n - 1)) : u;
-  return eased ? 0.5 - 0.5*Math.cos(Math.PI*s) : s;
+
+
+  const e = eased === true || eased === 'ease' ? 'both' : eased;
+  return e === 'both' ? 0.5 - 0.5*Math.cos(Math.PI*s) : e === 'in' ? 1 - Math.cos(Math.PI*s/2) : e === 'out' ? Math.sin(Math.PI*s/2) : s;
+}
+
+
+
+
+
+
+function cameraAlso(kind, u, view, zoom){
+  const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
+  if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };
+  if(kind === 'out') return { view, zoom: z(zoom/Math.pow(F.push, u)) };
+  if(kind === 'tilt') return { view: v(view + toward*F.tilt*Math.sin(Math.PI*u)), zoom };
+  if(kind === 'spiral') return { view: v(view + toward*F.spiralTilt*u), zoom: z(zoom/Math.pow(F.spiralPull, u)) };
+  return { view, zoom };
 }
 
 
@@ -34999,7 +35065,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-24 · 1a9af78";
+const STAMP = "2026-10-24 · f0b78f3";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -42258,6 +42324,13 @@ function commitHistory(){
   paintHistoryButtons();
   checkLitPreset();
 }
+
+
+function historyHold(){ const h = state.history; clearTimeout(h.timer); commitHistory(); return { stack: h.stack.slice(), index: h.index }; }
+function historyPutBack(kept){
+  const h = state.history; clearTimeout(h.timer); h.stack = kept.stack; h.index = kept.index; h.restoring = true;
+  try { if(h.stack[h.index]) restoreSettings(JSON.parse(h.stack[h.index])); } finally { h.restoring = false; }
+  refreshUi(); scheduleRender(); paintHistoryButtons(); checkLitPreset(); }
 function commitSoon(){ clearTimeout(state.history.timer); state.history.timer = setTimeout(commitHistory, 450); }
 function stepHistory(dir){
   const h = state.history, to = h.index + dir;
@@ -45789,7 +45862,7 @@ function modalPrompt(opts){
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 
 const MOVING_FADE = [0.38, 0.62];
-const movingRun = { busy: false, stop: false, sure: 0, wake: null, caps: {}, able: {}, eased: false };
+const movingRun = { busy: false, stop: false, sure: 0, wake: null, caps: {}, able: {}, eased: false, setFrom: null, setLook: null, pickSet: false };
 
 
 const MOVING_BEGIN = { dawn: -0.5, noon: SUN_DAY/2, dusk: SUN_DAY - 0.6, night: SUN_DAY + (24 - SUN_DAY)/2 };
@@ -45822,6 +45895,9 @@ function movingSummary(){
     .replace('{fmt}', { mp4: 'MP4', webm: 'WebM', png: 'PNG' }[fmt] || fmt).replace('{mb}', bytes >= 1e9 ? (bytes/1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(bytes/1e6)) + ' MB');
   const span = movingSpan(movingPick('movingMove', 'camera'));
   if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
+
+  const also = movingPick('movingMove', 'camera') === 'camera' ? movingPick('movingAlso', 'hold') : 'hold', ends = { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral }[also];
+  if(ends && movingPick('movingPlay', 'once') !== 'back') text += ' · ' + MOVING.sumEnds.replace('{what}', ends);
   el.textContent = text; }
 
 function movingSpan(move){ const caps = movingRun.caps || {}, timeable = !!(caps.time || caps.dial === 'Daylight');
@@ -45829,6 +45905,7 @@ function movingSpan(move){ const caps = movingRun.caps || {}, timeable = !!(caps
  
 function movingLooks(){
   const out = [];
+  if(movingRun.setLook) out.push({ value: 'set', label: MOVING.setLook, look: () => JSON.parse(JSON.stringify(movingRun.setLook)) });
   if(state.history && state.history.index > 0) out.push({ value: 'history', label: MOVING.before, look: () => JSON.parse(state.history.stack[state.history.index - 1]) });
   for(const rec of readStore(SPELL_KEY)) if(rec && rec.settings) out.push({ value: 'spell:' + rec.name, label: rec.name, look: () => stripToLook({ ...rec.settings, spell: rec.spell }) });
   return out;
@@ -45836,11 +45913,13 @@ function movingLooks(){
  
 function openMoving(){
   const sheet = $('movingSheet'); if(!sheet) return;
+  if(movingRun.setFrom){ movingSetEnd(true); return; }
   const type = ($('textureType') || {}).value, on = !!($('textureToggle') || {}).checked, caps = (on && capsFor(type)) || {};
   const looks = movingLooks(), pick = $('movingLook');
   if(pick){ pick.innerHTML = ''; for(const l of looks){ const o = document.createElement('option'); o.value = l.value; o.textContent = l.label; pick.appendChild(o); } }
 
-  movingRun.caps = caps; movingRun.able = { camera: !!caps.camera, light: !!caps.light, time: !!caps.time, look: looks.length > 0 };
+  movingRun.caps = caps; movingRun.able = { camera: !!caps.camera, light: !!caps.light, time: !!caps.time, look: true };
+  if(movingRun.pickSet && pick && movingRun.setLook){ pick.value = 'set'; movingSet('movingMove', 'look'); } movingRun.pickSet = false;
   const ln = $('movingLightName'); if(ln) ln.textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light;
   if(!movingRun.able[movingPick('movingMove', 'camera')]){ const first = movingRadios('movingMove').find(r => movingRun.able[r.value]); if(first) movingSet('movingMove', first.value); }
   const coded = typeof VideoEncoder !== 'undefined'; if(!coded) movingSet('movingFormat', 'png');
@@ -45851,6 +45930,16 @@ function openMoving(){
 
 
 function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+
+
+
+function movingSetNow(){ if(movingRun.busy) return; movingRun.setFrom = historyHold();
+  const s = $('movingSheet'), t = $('movingTuck'); if(s) s.hidden = true; if(t) t.hidden = false;
+  if(document.body && document.body.classList) document.body.classList.add('moving-tucked'); }
+function movingSetEnd(keep){ const f = movingRun.setFrom; if(!f) return; movingRun.setFrom = null;
+  if(keep){ movingRun.setLook = stripToLook(serializeCurrentSettings()); movingRun.pickSet = true; }
+  const t = $('movingTuck'); if(t) t.hidden = true; if(document.body && document.body.classList) document.body.classList.remove('moving-tucked');
+  historyPutBack(f); openMoving(); }
  
 const movingBusy = () => movingRun.busy;
 
@@ -45869,13 +45958,14 @@ function paintMoving(e){
   if(m === 'time' && movingPick('movingSpan', '0') === '0') movingSet('movingSpan', '86400');
   if(!movingRun.eased) movingSet('movingEase', m === 'look' || (m === 'camera' && movingPick('movingTurn', '360') !== '360') ? 'ease' : 'even');
   const timeable = !!(caps.time || caps.dial === 'Daylight'), timed = movingSpan(m) > 0;
-  const on = { movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
+  const on = { movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingAlsoRow: m === 'camera', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
   for(const [id, ok] of Object.entries(on)){ const row = $(id); if(!row) continue; if(row.classList) row.classList.toggle('off', !ok);
     for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok || (el.name === 'movingSpan' && el.value === '0' && m === 'time'); }
   for(const r of movingRadios('movingMove')) r.disabled = busy || !able[r.value];
   for(const r of movingRadios('movingFormat')) r.disabled = busy || (r.value !== 'png' && typeof VideoEncoder === 'undefined');
   for(const n of ['movingSize', 'movingFps']) for(const r of movingRadios(n)) r.disabled = busy;
   if($('movingLength')) $('movingLength').disabled = busy;
+  if($('movingSetNow')) $('movingSetNow').disabled = busy || m !== 'look';
   const b = $('movingMake'); if(b) b.textContent = busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
   movingSummary();
 }
@@ -45932,7 +46022,7 @@ async function makeMoving(){
     if(!movingRun.sure){ movingRun.sure = setTimeout(() => { movingRun.sure = 0; paintMoving(); }, 3500); paintMoving(); return; }
     clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
   const canvas = $('poemCanvas'), move = movingPick('movingMove', 'camera'), fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;
-  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), back = movingPick('movingPlay', 'once') === 'back', eased = movingPick('movingEase', 'even') === 'ease';
+  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), back = movingPick('movingPlay', 'once') === 'back', ease = movingPick('movingEase', 'even'), eased = ease === 'even' ? false : ease;
   const turn = +movingPick('movingTurn', '360') || 360, spanS = movingSpan(move), timed = spanS > 0, begin = movingPick('movingBegin', 'lit');
   const start = serializeCurrentSettings(), looked = move === 'look';
   const other = looked ? movingLooks().find(l => l.value === ($('movingLook') || {}).value) : null;
@@ -45942,6 +46032,7 @@ async function makeMoving(){
   const end = other ? other.look() : null, snap = k => { const el = $(k) || $(k + 'Hex'); return !!(el && el.tagName === 'SELECT'); };
   const fades = end ? wholeChanges(start, end, snap).filter(k => k !== 'lookName' && k !== 'spell') : [];
   const pw = canvas.width, ph = canvas.height, num = id => parseFloat(($(id) || {}).value) || 0, cam0 = num('cameraTurn'), light0 = num('textureLight'), tilt0 = num('textureLightTilt');
+  const also = move === 'camera' ? movingPick('movingAlso', 'hold') : 'hold', view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100;
 
 
 
@@ -45965,7 +46056,8 @@ async function makeMoving(){
 
     if(timed){ const at = j => clock(back ? tri(j/n) : j/n), hrs = at(i); sunAt(hrs); if(clocked) setSceneTime(hrs*3600, Math.max(1, Math.abs(at(i + 1) - hrs)*3600), i, spanS/n, side); }
     else if(clocked) setSceneTime(i/fps, 1/fps, i, 1/fps, side);
-    if(move === 'camera') $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
+    if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
+      if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); } }
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); } };
 
 
@@ -46007,7 +46099,7 @@ async function makeMoving(){
     setFilmPool(false); if(movingRun.wake){ try { movingRun.wake.release(); } catch(e){   } movingRun.wake = null; }
     clearTimeout(movingRun.sure); movingRun.sure = 0;
     setSceneTime(0); if(looked) restoreSettings(start);
-    else for(const [id, v] of [['cameraTurn', cam0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
+    else for(const [id, v] of [['cameraTurn', cam0], ['cameraView', view0], ['cameraZoom', zoom0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
     canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
     if(document.body && document.body.classList) document.body.classList.remove('saving');
     const stopped = movingRun.stop; movingRun.busy = false; movingRun.stop = false; setWorking(null); paintMoving(); render();
@@ -46467,6 +46559,9 @@ $('downloadBtn').addEventListener('click', async ()=>{
   }
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
+  if($('movingSetNow') && $('movingSetNow').addEventListener) $('movingSetNow').addEventListener('click', movingSetNow);
+  if($('movingTuckDone') && $('movingTuckDone').addEventListener) $('movingTuckDone').addEventListener('click', () => movingSetEnd(true));
+  if($('movingTuckCancel') && $('movingTuckCancel').addEventListener) $('movingTuckCancel').addEventListener('click', () => movingSetEnd(false));
   if($('movingSheet') && $('movingSheet').addEventListener){
     $('movingSheet').addEventListener('change', paintMoving);
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
@@ -47466,7 +47561,7 @@ for(const type of ['input', 'change']){
 }
 document.addEventListener('click', (e)=>{
   const t = e.target && e.target.closest ? e.target.closest('button, .preset-btn, .radio-btn') : null;
-  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet'))) commitSoon();
+  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet, #movingTuck'))) commitSoon();
 }, true);
 if($('shortcutBtn') && $('shortcutBtn').addEventListener) $('shortcutBtn').addEventListener('click', () => showShortcuts(true));
 if($('shortcutSheet') && $('shortcutSheet').addEventListener) $('shortcutSheet').addEventListener('click', (e) => { if(e.target === $('shortcutSheet')) showShortcuts(false); });

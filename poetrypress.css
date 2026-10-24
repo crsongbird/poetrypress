@@ -1790,6 +1790,21 @@ body.is-mobile .shortcut-btn{ display:none; }
 /* (on a phone, each row's label above its choice, so five choices have the sheet's whole width) */
 @media (max-width:560px){ .film-sub{ grid-template-columns:1fr; gap:4px; margin:8px 0; } }
 .film-sub select{ width:100%; min-width:0; }
+.moving-look-pick{ display:flex; gap:6px; align-items:center; min-width:0; }
+.moving-look-pick select{ flex:1 1 0; min-width:0; }
+button.moving-set{ width:auto; flex:0 0 auto; white-space:nowrap; margin:0; padding:5px 12px; }
+/* (Set it now: the sheet tucked away to a bar at the foot, where a toast sits, while the page is changed; on a phone
+   above the tabs, so every tab stays free, and the controls given room to scroll clear of it) */
+.moving-tuck{ position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:220;
+  width:max-content; max-width:min(560px, calc(100vw - 24px)); display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  background:var(--bg-panel); color:var(--text-main); border:1px solid var(--accent); border-radius:var(--r-3); padding:8px 12px;
+  font-size:13px; box-shadow:0 10px 30px -12px rgba(0,0,0,0.7); }
+.moving-tuck[hidden]{ display:none; }
+.moving-tuck span{ flex:1 1 14em; }
+.moving-tuck .btn-row{ margin:0; gap:6px; }
+.moving-tuck .btn-row button{ width:auto; margin:0; padding:4px 12px; }
+body.is-mobile .moving-tuck{ left:8px; right:8px; transform:none; width:auto; max-width:none; bottom:calc(var(--tabbar-h, 50px) + 8px + env(safe-area-inset-bottom, 0px)); }
+body.moving-tucked .controls{ padding-bottom:calc(var(--tabbar-h) + 96px); }
 .film-seg{ display:flex; gap:4px; min-width:0; }
 .film-moves, .film-cards{ display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:4px 0 8px; }
 .film-pick label{ position:relative; flex:1 1 0; min-width:0; display:flex; }

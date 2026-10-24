@@ -75,6 +75,13 @@ export function commitHistory(){
   paintHistoryButtons();
   checkLitPreset();
 }
+// (held and put back whole: the Moving Image's Set it now changes the page to set a film's other look, then the page
+//  and its history go back to how they were)
+export function historyHold(){ const h = state.history; clearTimeout(h.timer); commitHistory(); return { stack: h.stack.slice(), index: h.index }; }
+export function historyPutBack(kept){
+  const h = state.history; clearTimeout(h.timer); h.stack = kept.stack; h.index = kept.index; h.restoring = true;
+  try { if(h.stack[h.index]) restoreSettings(JSON.parse(h.stack[h.index])); } finally { h.restoring = false; }
+  refreshUi(); scheduleRender(); paintHistoryButtons(); checkLitPreset(); }
 export function commitSoon(){ clearTimeout(state.history.timer); state.history.timer = setTimeout(commitHistory, 450); }
 function stepHistory(dir){
   const h = state.history, to = h.index + dir;
