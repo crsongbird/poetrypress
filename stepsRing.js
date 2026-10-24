@@ -165,6 +165,9 @@ const rgWaterTime = V => rgClock(V, 0.4);
 //  fades in some seconds of film while the wind barely carries it, as real time-lapses show them; docs/prior-art/
 //  ringworld-motion-and-variety.md §2)
 const rgGrowTime = V => rgClock(V, 4);
+// (rain falls at its own pace in any film, a thirtieth of a second a frame, so its curtain slides as it does in real time
+//  rather than being dealt afresh each frame; snow drifts on at most an eighth of a second a frame; and the low mist
+//  breathes on the clouds' clock, never on the raw hours, which in a two-day film made it shimmer)
 // the wind, by the seed (docs/prior-art/ringworld-time.md: fair-weather cumulus drift at three to seven metres a second,
 // faster under a storm): its way and its speed
 const rgWind = V => { const WD = seedChoice(V.seed, 'wind'), ang = WD()*Math.PI*2; return [ang, 3 + 4*WD() + (V.weather === 'storm' ? 5 : 0)]; };
@@ -313,34 +316,64 @@ function rgPaintArch(x, mk, V){
     else { x.save(); x.globalAlpha = a; x.fillStyle = rsCss(c2); x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill(); x.clip();
       for(let b = 0; b < 5; b++){ x.fillStyle = rsCss(b % 2 ? c1 : rsMix(c1, c2, 0.5)); x.fillRect(X - r, Y - r + bands[b][0], r*2, bands[b][1]); }
       x.fillStyle = rsCss(SPACE, 0.55); x.beginPath(); x.arc(X + lit*r*0.55, Y - r*0.2, r*1.05, 0, Math.PI*2); x.fill(); x.restore(); } } }
-  { const R = rgRand(s, 803), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.25, P0 = farAt(R()*Math.PI*2 + V.time/86400*1.5*Math.PI/180, rnd(0.25, 0.8)), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
-  if(has && P0){ const ang = rnd(0.2, 0.9)*(R() < 0.5 ? 1 : -1) + Math.PI/2, len = F*rnd(0.12, 0.3), wd = F*0.012;
-    const tx = X - Math.cos(ang)*len, ty = Y - Math.sin(ang)*len, g = x.createLinearGradient(X, Y, tx, ty); g.addColorStop(0, rsCss([240, 250, 255], 0.8*(1 - 0.6*kday))); g.addColorStop(1, rsCss(S, 0));
-    rsPoly(x, [[X - Math.sin(ang)*wd, Y + Math.cos(ang)*wd], [tx, ty], [X + Math.sin(ang)*wd, Y - Math.cos(ang)*wd]], g); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); } }
+  // A COMET (Ruby: "comet in space needs to move it shouldn't just hang there"; docs/prior-art/ringworld-motion-and-
+  // variety.md §5.1): it crosses the far sky on its own way, half a degree or so a second of film, as well as turning
+  // with the stars; its ion tail runs straight away from the star, thin and blue, its dust tail wider and white-gold,
+  // bending back along the way it came; a faint green coma round its head. Its place and its tails by the clock alone
+  { const R = rgRand(s, 803), rnd = (a, b) => a + (b - a)*R(), has = R() < 0.25, az0 = R()*Math.PI*2, el0 = rnd(0.25, 0.8), way = R()*Math.PI*2, spd = rnd(0.3, 0.8)*Math.PI/180, len0 = rnd(0.12, 0.3), sideR = R();
+  const FTc = V.time > 0 ? rgFilmTime(V) : 0, along = spd*FTc + V.time/86400*1.5*Math.PI/180, cAz = az0 + Math.cos(way)*along/Math.max(0.3, Math.cos(el0)), cEl = el0 + Math.sin(way)*along*0.6;
+  const P0 = farAt(cAz, cEl), Pb = farAt(cAz - Math.cos(way)*0.03/Math.max(0.3, Math.cos(el0)), cEl - Math.sin(way)*0.018), X = P0 ? P0[0] : 0, Y = P0 ? P0[1] : 0;
+  if(has && P0){ const wd = F*0.012, len = F*len0, k = 1 - 0.6*kday;
+    // (away from the star: from the star's place on the page to the head, or, the star off the page, the way that its
+    //  direction falls; a little of the seed's lean where the star stands right behind it)
+    const SA = V.sun.at, ang0 = sideR*0.9*(sideR < 0.5 ? 1 : -1) + Math.PI/2, ion = SA ? Math.atan2(Y - SA[1], X - SA[0]) : (() => { const D = V.sun.D, q = proj(L.Px + D[0]*0.01, D[1]*0.01, L.z0 + D[2]*0.01); return q ? Math.atan2(Y - q[1], X - q[0]) : ang0; })();
+    const back = Pb ? Math.atan2(Pb[1] - Y, Pb[0] - X) : ion, dd = Math.atan2(Math.sin(back - ion), Math.cos(back - ion)), dust = ion + Math.max(-0.6, Math.min(0.6, dd*0.5));
+    x.save(); x.globalCompositeOperation = 'screen';
+    // the dust tail: a broad fan, curving from the ion tail's line toward its own way back
+    { const n = 16; for(let q = 0; q < n; q++){ const u = q/(n - 1), a = ion + (dust - ion)*u*u, l = len*(0.75 + 0.25*u), tx = X + Math.cos(a)*l, ty = Y + Math.sin(a)*l, g = x.createLinearGradient(X, Y, tx, ty);
+      g.addColorStop(0, rsCss([255, 238, 206], 0.11*k)); g.addColorStop(1, rsCss(S, 0)); rsPoly(x, [[X - Math.sin(a)*wd*1.6, Y + Math.cos(a)*wd*1.6], [tx, ty], [X + Math.sin(a)*wd*1.6, Y - Math.cos(a)*wd*1.6]], g); } }
+    // the ion tail: straight and thin, blue
+    { const tx = X + Math.cos(ion)*len*1.3, ty = Y + Math.sin(ion)*len*1.3, g = x.createLinearGradient(X, Y, tx, ty); g.addColorStop(0, rsCss([200, 226, 255], 0.75*k)); g.addColorStop(1, rsCss([120, 170, 255], 0));
+      rsPoly(x, [[X - Math.sin(ion)*wd*0.7, Y + Math.cos(ion)*wd*0.7], [tx, ty], [X + Math.sin(ion)*wd*0.7, Y - Math.cos(ion)*wd*0.7]], g); }
+    { const g = x.createRadialGradient(X, Y, 0, X, Y, wd*3.5); g.addColorStop(0, rsCss([170, 255, 200], 0.35*k)); g.addColorStop(1, rsCss([170, 255, 200], 0)); x.fillStyle = g; x.beginPath(); x.arc(X, Y, wd*3.5, 0, Math.PI*2); x.fill(); }
+    x.restore(); x.fillStyle = rsCss([255, 255, 255], 0.9*(1 - 0.5*kday)); x.beginPath(); x.arc(X, Y, wd*0.8, 0, Math.PI*2); x.fill(); } }
   // METEORS by night (Ruby: "comets, meteor shower"; docs/prior-art/ringworld-time.md): with the scene's clock running,
   // every so often a meteor, a fraction of a second, caught by each frame's shutter (its time between frames, up to
   // twenty seconds, as a long exposure catches them); on some rings a shower, many more, all streaking out from one
   // point among the stars (the radiant), turning with them
+  // (and in a film whose frames come quicker than a meteor lives, each lives its second (docs/prior-art/ringworld-motion-
+  //  and-variety.md §5.2): its head runs from where it lit to where it burns out over its own 0.3 to 1.5 s, its streak
+  //  growing behind it and fading from its tail, and a faint train lingers a moment after)
   if(V.time > 0 && kday < 0.6){ const MC = seedChoice(V.seed, 'meteors'), shower = MC() < 0.4, rate = shower ? 120 : 10, tau = 3600/rate, raz = MC()*Math.PI*2, rel = (25 + 50*MC())*Math.PI/180, expo = Math.min(20, Math.max(1/60, V.dt || 1/30));
     x.save(); x.globalCompositeOperation = 'screen';
-    for(let k = Math.floor(V.time/tau); k*tau < V.time + expo; k++){ const R = rgRand(s, 830, k), tk = (k + R())*tau; if(tk < V.time || tk >= V.time + expo) continue;
+    for(let k = Math.floor((V.time - 2.5)/tau); k*tau < V.time + expo; k++){ const R = rgRand(s, 830, k), tk = (k + R())*tau;
       const ang = R()*Math.PI*2, d0 = (shower ? 8 + 40*R() : 0)*Math.PI/180, len = (4 + 14*R())*Math.PI/180, az0 = shower ? raz : R()*Math.PI*2, el0 = shower ? rel : (20 + 60*R())*Math.PI/180;
-      const pt = d => [az0 + Math.cos(ang)*d/Math.max(0.2, Math.cos(el0)), el0 + Math.sin(ang)*d], A = farAt(...pt(d0)), B = farAt(...pt(d0 + len)); if(!A || !B) continue;
-      const br = 0.35 + 0.65*R()*R(), col = R() < 0.3 ? [190, 255, 210] : [255, 246, 220], g = x.createLinearGradient(A[0], A[1], B[0], B[1]);
-      g.addColorStop(0, rsCss(col, 0)); g.addColorStop(0.8, rsCss(col, 0.8*br*(1 - kday))); g.addColorStop(1, rsCss([255, 255, 255], br*(1 - kday)));
+      const br = 0.35 + 0.65*R()*R(), col = R() < 0.3 ? [190, 255, 210] : [255, 246, 220], life = 0.3 + 1.2*R();
+      // (whole when its life fits within a frame's exposure, as a still or a time-lapse catches it; else where it is now)
+      const whole = expo >= life, t = (V.time + expo - tk)/life; if(whole ? (tk < V.time || tk >= V.time + expo) : (t < 0 || t > 1.6)) continue;
+      const hd = whole ? 1 : Math.min(1, t), tl = whole ? 0 : Math.max(0, Math.min(1, (t - 0.35)/0.9)), fade = whole ? 1 : t <= 1 ? 1 : 1 - (t - 1)/0.6;
+      const pt = d => [az0 + Math.cos(ang)*d/Math.max(0.2, Math.cos(el0)), el0 + Math.sin(ang)*d], A = farAt(...pt(d0 + len*tl)), B = farAt(...pt(d0 + len*hd)); if(!A || !B || hd - tl < 0.02) continue;
+      const g = x.createLinearGradient(A[0], A[1], B[0], B[1]), on = t <= 1 || whole;
+      g.addColorStop(0, rsCss(col, 0)); g.addColorStop(0.8, rsCss(col, 0.8*br*(1 - kday)*fade*(on ? 1 : 0.35))); g.addColorStop(1, rsCss(on ? [255, 255, 255] : col, br*(1 - kday)*fade*(on ? 1 : 0.25)));
       x.strokeStyle = g; x.lineWidth = Math.max(px(0.6), px(1.4)*br); x.lineCap = 'round'; x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke(); }
     x.restore(); }
-  // AN AURORA, now and then by night where there is magic or the builders' fields: faint curtains of light low over
-  // one side of the horizon, folded, their hems bright and their tops fading; with the clock they ripple and drift
-  { const AC = seedChoice(V.seed, 'aurora'); if((V.world.list.includes('magic') || V.world.list.includes('builders')) && AC() < 0.3 && kday < 0.35){
-    const az0 = AC()*Math.PI*2, span = (50 + 60*AC())*Math.PI/180, hue = [g1, g2, [120, 255, 170]][Math.floor(AC()*3)], a0 = 0.16*(1 - kday/0.35);
+  // AN AURORA, now and then by night (more often where there is magic or the builders' fields): curtains of light low
+  // over one side of the horizon, folded, colored by height as the real ones are (docs/prior-art/ringworld-motion-and-
+  // variety.md §5.3): a pink hem on a strong night, its body in its hue, its tops reddening as they fade upward, fine
+  // rays up it. In a film its folds drift along the arc and it breathes, slowly, by the film's own seconds (never the
+  // real thing's quick pulsing)
+  { const AC = seedChoice(V.seed, 'aurora'), wild = V.world.list.includes('magic') || V.world.list.includes('builders'); if(AC() < (wild ? 0.35 : 0.12) && kday < 0.35){
+    const az0 = AC()*Math.PI*2, span = (50 + 60*AC())*Math.PI/180, hue = [g1, g2, [120, 255, 170]][Math.floor(AC()*3)], a0 = 0.16*(1 - kday/0.35), strong = AC() < 0.5;
+    const top = rsMix(hue, [255, 84, 110], 0.55), hem = rsMix(hue, [255, 150, 210], 0.6);
     x.save(); x.globalCompositeOperation = 'screen';
-    const ta = rgSwayTime(V);
+    const ta = V.time > 0 ? rgFilmTime(V)*4 : 0, br = V.time > 0 ? 1 + 0.12*Math.sin(rgFilmTime(V)*Math.PI*2/9) : 1;
     for(let q = 0; q < 60; q++){ const u = q/59, az = az0 + (u - 0.5)*span, wob = Math.sin(u*9 + ta*0.05 + AC()*6)*0.6 + Math.sin(u*23 - ta*0.11)*0.25;
       const B = skyAt(az, (6 + 3*wob)*Math.PI/180), T2 = skyAt(az, (22 + 8*wob + 6*Math.sin(u*5 + ta*0.03))*Math.PI/180); if(!B || !T2) continue;
-      const g = x.createLinearGradient(B[0], B[1], T2[0], T2[1]), al = a0*(0.4 + 0.6*Math.pow(Math.sin(Math.PI*u), 0.6))*(0.6 + 0.4*Math.sin(u*31 + ta*0.2));
-      g.addColorStop(0, rsCss(rsMix(hue, [255, 255, 255], 0.3), al)); g.addColorStop(0.25, rsCss(hue, al*0.7)); g.addColorStop(1, rsCss(hue, 0));
-      x.strokeStyle = g; x.lineWidth = Math.max(px(1), F*span/60*1.3); x.beginPath(); x.moveTo(B[0], B[1]); x.lineTo(T2[0], T2[1]); x.stroke(); }
+      const g = x.createLinearGradient(B[0], B[1], T2[0], T2[1]), al = br*a0*(0.4 + 0.6*Math.pow(Math.sin(Math.PI*u), 0.6))*(0.6 + 0.4*Math.sin(u*31 + ta*0.2));
+      g.addColorStop(0, rsCss(rsMix(strong ? hem : hue, [255, 255, 255], 0.3), al)); g.addColorStop(0.08, rsCss(rsMix(hue, [255, 255, 255], 0.25), al*0.9)); g.addColorStop(0.3, rsCss(hue, al*0.7)); g.addColorStop(0.65, rsCss(top, al*0.3)); g.addColorStop(1, rsCss(top, 0));
+      x.strokeStyle = g; x.lineWidth = Math.max(px(1), F*span/60*1.3); x.beginPath(); x.moveTo(B[0], B[1]); x.lineTo(T2[0], T2[1]); x.stroke();
+      // (fine rays up it, brighter threads among the folds)
+      if(q % 3 === 1){ x.strokeStyle = rsCss(rsMix(hue, [255, 255, 255], 0.4), al*0.5); x.lineWidth = Math.max(px(0.5), F*span/60*0.25); x.beginPath(); x.moveTo(B[0], B[1]); x.lineTo(B[0] + (T2[0] - B[0])*0.7, B[1] + (T2[1] - B[1])*0.7); x.stroke(); } }
     x.restore(); } }
   // THE STAR, at the ring's middle (so on the arch's own line), and the SHADOW SQUARES circling close about it: they
   // stand between it and the land, and make its nights (where you stand under one, it hides the star)
@@ -399,12 +432,15 @@ function rgPaintArch(x, mk, V){
   for(const zw of [-W/2, W/2]) for(const sg of [1, -1]) for(let i = 0; i + 1 < aW.length; i++){ const a0 = aW[i]*sg, a1 = aW[i + 1]*sg, am = (a0 + a1)/2, q = [at(a0, zw, 0), at(a1, zw, 0), at(a1, zw, Hw), at(a0, zw, Hw)];
     if(q.some(v => !v)) continue;
     const zc = (q[0][2] + q[2][2])/2, eS = elevOf((1 - Hw*0.5)*Math.cos(am), (1 - Hw*0.5)*Math.sin(am), zw), rib = i % 4 === 0 ? 0.12 : 0, day = ringDay(L, am);
-    quads.push([zc, q, rgLit(V, rsMix(WALL, [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.45*V.air + hzOf(zc, eS)*0.7), AIR), null, true, rgRand(s, 810, i*sg, zw > 0 ? 1 : 0), V.worldAt(am, zw*0.96), day]); }
+    // (the wall above its foot stands clear of the air, crisper and darker against space than the land at its feet, and
+    //  rises out of a haze along its foot: a scale cue, docs/prior-art/ringworld-motion-and-variety.md §6)
+    quads.push([zc, q, rgLit(V, rsMix(WALL, [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.32*V.air + hzOf(zc, eS)*0.5), AIR), null, true, rgRand(s, 810, i*sg, zw > 0 ? 1 : 0), V.worldAt(am, zw*0.96), day, Math.min(0.9, 0.35 + 0.6*V.air)]); }
   quads.sort((p, q) => q[0] - p[0]);
   // a point inside a quad (u along it, v up or across it)
   const inQ = (q, u, v) => [q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v + (q[2][0] - q[1][0] - q[3][0] + q[0][0])*u*v, q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v + (q[2][1] - q[1][1] - q[3][1] + q[0][1])*u*v];
   const line = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = wd; x.beginPath(); pts.forEach(([X, Y], k) => k ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.stroke(); };
-  for(const [, q, c, lights, wall, R, ww2, wday] of quads){ rsPoly(x, q, rsCss(c)); rsPoly(mk, q, '#fff');
+  for(const [, q, c, lights, wall, R, ww2, wday, footHaze] of quads){ rsPoly(x, q, rsCss(c)); rsPoly(mk, q, '#fff');
+    if(wall === true && footHaze){ const A = inQ(q, 0.5, 0), B = inQ(q, 0.5, 0.22), g = x.createLinearGradient(A[0], A[1], B[0], B[1]); g.addColorStop(0, rsCss(AIR, footHaze)); g.addColorStop(0.45, rsCss(AIR, footHaze*0.35)); g.addColorStop(1, rsCss(AIR, 0)); rsPoly(x, q, g); }
     if(wall === 'frame'){ // the ring's bare frame: its ribs across and along, lit on their edges
       const fc = rsCss(rsMix(c, [255, 255, 255], 0.3), 0.8), wd = Math.max(px(0.6), Math.abs(q[3][1] - q[0][1])*0.04);
       for(let k = 0; k <= 3; k++){ line([inQ(q, k/3, 0), inQ(q, k/3, 1)], fc, wd); line([inQ(q, 0, k/3), inQ(q, 1, k/3)], fc, wd*0.7); }
@@ -572,6 +608,9 @@ function rgPaintArch(x, mk, V){
 // ONE OF THE WORKS, at the ground point (X, Y), k pixels per ring unit there (F over its depth), in its colours c
 function rgWork(x, o, X, Y, k, c, night, R, V, e){
   const { L, W, at, px } = V, AIR = c.air, haze = c.haze, day = ringDay(L, o.a), BLACK = [0, 0, 0], sd = c.sd, F = V.F;
+  // (in a film a work's glow breathes, by at most an eighth over six to twelve seconds of the film, each in its own time:
+  //  docs/prior-art/ringworld-motion-and-variety.md §4.7)
+  const bre = V.time > 0 ? 1 + 0.12*Math.sin(rgFilmTime(V)*Math.PI*2/(6 + 6*o.h) + o.h2*6.283) : 1;
     if(o.kind === 'sp'){ pkSpire(x, X, Y, W*(0.02 + 0.08*o.h)*k, c, o.w === 'ruins', R, px); }
     else if(o.kind === 'mo' && o.w !== 'builders'){ // a stone circle far off, as the store's near ones (rgHenge)
       rgHenge(x, { a: o.a, z: o.z, n: 9 + Math.floor(o.h2*12), rr: W*0.00025*(8 + 20*o.h), hm: 2.5 + 4.5*o.h }, (a, z) => { const p = at(a, z, e); return p && [p[0], p[1], W*0.00025*F/p[2], p[2]]; }, c, R, px); }
@@ -583,9 +622,9 @@ function rgWork(x, o, X, Y, k, c, night, R, V, e){
       x.strokeStyle = rsCss(c.glow, 0.9); x.lineWidth = Math.max(rgPx(1), r*k*0.05); x.beginPath(); pts.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.closePath(); x.stroke();
       x.beginPath(); inn.forEach(([a, b2], q) => q ? x.lineTo(a, b2) : x.moveTo(a, b2)); x.closePath(); x.stroke();
       x.beginPath(); for(let q = 0; q < 5; q++){ const A = inn[Math.floor(q*28/5)], B = inn[Math.floor(((q + 2) % 5)*28/5)]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); } x.stroke();
-      rgGlow(x, X, Y, r*k*1.3, c.glow, 0.35); }
+      rgGlow(x, X, Y, r*k*1.3, c.glow, 0.35*bre); }
     else if(o.kind === 'pi'){ const wd = W*(0.003 + 0.006*o.h)*k, top = Math.max(0, Y - W*(0.15 + 0.3*o.h2)*k); if(wd < 1) return; const g = x.createLinearGradient(X, Y, X, top); g.addColorStop(0, rsCss(c.glow, 0.7)); g.addColorStop(0.4, rsCss(c.glow, 0.25)); g.addColorStop(1, rsCss(c.glow, 0));
-      x.save(); x.globalCompositeOperation = 'screen'; x.fillStyle = g; rsPoly(x, [[X - wd/2, Y], [X - wd*0.2, top], [X + wd*0.2, top], [X + wd/2, Y]], g); x.restore(); rgGlow(x, X, Y, wd*3, c.glow, 0.6); }
+      x.save(); x.globalCompositeOperation = 'screen'; x.fillStyle = g; rsPoly(x, [[X - wd/2, Y], [X - wd*0.2, top], [X + wd*0.2, top], [X + wd/2, Y]], g); x.restore(); rgGlow(x, X, Y, wd*3, c.glow, 0.6*bre); }
     else if(o.kind === 'cr'){ pkCrystals(x, X, Y, W*0.0021*k, [rsMix(c.glow, AIR, haze*0.4), rsMix(c.glow2, AIR, haze*0.4)], c, 3 + Math.floor(o.h2*4), R, px); }
     else if(o.kind === 'to'){ const hh = W*(0.02 + 0.07*o.h)*k*(o.w === 'neon' ? 1.4 : 1); if(hh >= 2) pkBuilding(x, X, Y, hh, hh*(0.12 + 0.1*o.h2), c, PK_STYLE[o.w], night, R, px); }
     else if(o.kind === 'wr'){ // a crashed ship: its hull half sunk and tilted, a fin, its trench behind it, smoke
@@ -629,7 +668,8 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4 + (t ? Math.sin(t*(2.1 + q*0.7) + q*2.3 + X*0.01)*h*0.35 : 0), iy = cy + (R() - 0.5)*h*0.6 + (t ? Math.sin(t*(2.9 + q*0.5) + q*1.7)*h*0.18 : 0); dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));   // (with the clock, a swarm's dance)
       // (at dusk and by night they are fireflies: each a cold yellow-green light, flashing for most of a second every five
       //  or six, each in its own time)
-      if((c.night || 0) > 0.35){ const ph = ((t || 0)/5.5 + q*0.37 + (X*0.013 % 1)) % 1, on = !t || ph < 0.14; if(on) rgGlow(x, ix, iy, Math.max(rgPx(5), h*0.16), [200, 255, 120], 0.6*c.night); }
+      //  (each flash swelling and fading, never on in one frame)
+      if((c.night || 0) > 0.35){ const ph = ((t || 0)/5.5 + q*0.37 + (X*0.013 % 1)) % 1, on = !t ? 1 : ph < 0.14 ? Math.sin(Math.PI*ph/0.14) : 0; if(on > 0.02) rgGlow(x, ix, iy, Math.max(rgPx(5), h*0.16), [200, 255, 120], 0.6*c.night*on); }
       if(h > rgPx(40) && R() < 0.5){ x.strokeStyle = rsCss(c.lit, 0.45); x.lineWidth = Math.max(rgPx(0.8), h*0.012); x.beginPath(); x.moveTo(ix - h*0.06, iy - h*0.04); x.lineTo(ix, iy); x.lineTo(ix + h*0.06, iy - h*0.04); x.stroke(); } }
     return; }
   if(kind === 'gulls'){ // GULLS FOLLOWING THE PLOUGH (Ruby: "more interactions nobody asked for"): a loose flock behind the
@@ -719,6 +759,18 @@ const RG_LIGHTFOOT = ['arch', 'torii', 'pylon', 'turbine', 'radiomast', 'needle'
 const RG_WIDE = ['gate', 'wall', 'hedge', 'fence', 'container', 'solar', 'pipes', 'traps', 'haybale', 'bench', 'parked', 'hulk', 'rubble', 'statue', 'dolmen', 'stonepile'];
 // which tradition the wilds build in here: the cold north's, the dry country's, the jungle's, else the temperate land's,
 // each region its own by the seed
+// THE COLORS OF A PLACE (Ruby: "more colouration in variety seed dependent"; docs/prior-art/ringworld-motion-and-
+// variety.md §7.2): each region of the ring paints by one rule, as real towns do, chosen by the seed among its world's
+// families, and some regions left in their own colors: Falu red (barn red, the trim kept light), Burano (each house its
+// own strong color from the street's few), Jaipur's rose, the Cyclades' whitewash, Roussillon's ochres, the dark wood
+// of Kyoto's streets; violet only ever an accent. A function that takes a material's color to the region's
+const RG_PALETTES = { falu: [[150, 52, 40]], burano: [[196, 64, 60], [232, 176, 64], [70, 120, 176], [88, 150, 104], [220, 120, 150], [236, 210, 120]], jaipur: [[214, 140, 122], [224, 160, 130]],
+  cyclades: [[238, 238, 234]], ochre: [[204, 140, 72], [196, 112, 64], [224, 176, 96]], kyoto: [[74, 54, 42], [96, 70, 52]] };
+const RG_PALETTE_OF = { cities: ['own', 'burano', 'jaipur', 'ochre', 'cyclades', 'burano'], wilds: ['own', 'falu', 'falu', 'ochre', 'kyoto', 'cyclades'], magic: ['own', 'burano', 'jaipur', 'cyclades'], ruins: ['own', 'ochre'], neon: ['own'], builders: ['own', 'cyclades'] };
+function rgPaletteOf(V, o, w){ const W = V.W, s = V.seed | 0, fams = RG_PALETTE_OF[w] || ['own'], r = mnValue(o.a/(W*0.3) - 2.1, o.z/(W*0.3) + 4.7, s + 57), fam = fams[Math.min(fams.length - 1, Math.floor(r*fams.length*0.999))];
+  if(fam === 'own') return null; const P = RG_PALETTES[fam], each = P[((o.rs >>> 7) % P.length + P.length) % P.length], k = fam === 'burano' ? 0.55 : fam === 'cyclades' ? 0.5 : 0.42;
+  // (dark materials, a roof's slate or iron, keep most of their own; light ones take the region's)
+  return m => { const lum = (m[0]*0.3 + m[1]*0.59 + m[2]*0.11)/255; return rsMix(m, each, k*(0.35 + 0.65*Math.min(1, lum*1.6))); }; }
 function rgVernacular(V, a, z){ const W = V.W, s = V.seed | 0, dr = V.dryAt(a, z), e = V.T.true(a, z, W*0.01), r = mnValue(a/(W*0.35) + 5.5, z/(W*0.35) - 1.3, s + 51);
   if(e > V.TR.snow*0.45) return 'north'; if(dr > 0.6) return ['steppe', 'savanna', 'mesa'][Math.floor(r*2.999)];
   if(mnValue(a/(W*0.5) + 9.1, z/(W*0.5) + 1.7, s + 31) > 0.64 && dr < 0.5) return 'tropic'; return ['shire', 'prairie', 'apulia', 'galicia', 'kyo'][Math.floor(r*4.999)]; }
@@ -814,7 +866,8 @@ function rgStore(V){
   { const C = W*0.03, Rr = W*0.3; for(let i = Math.floor(-Rr/C); i <= Math.ceil(Rr/C); i++) for(let j = Math.floor((L.z0 - Rr)/C); j <= Math.ceil((L.z0 + Rr)/C); j++){
     const a = (i + 0.5)*C, z = (j + 0.5)*C; if(Math.abs(z) > W*0.46 || Math.hypot(a, z - L.z0) > Rr) continue; const w = V.worldAt(a, z), t = villageAt(w, a, z); if(t < 0.06) continue;
     let top = true; for(const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const a2 = a + di*C, z2 = z + dj*C; if(villageAt(V.worldAt(a2, z2), a2, z2) > t){ top = false; break; } }
-    if(top && T.true(a, z, W*0.003) > TR.sea) farms.push([a, z, w, Math.min(1, t*2)]); } }
+    // (Ruby: "farms should only appear around or near densely populated rings": a wild village keeps no fields)
+    if(top && w !== 'wilds' && T.true(a, z, W*0.003) > TR.sea) farms.push([a, z, w, Math.min(1, t*2)]); } }
   hubs.forEach(([a, z, w, t], hi) => { const R = rgRand(s, 1310, hi), n = 2 + Math.floor(R()*(0.5 + 2.5*V.works)), mat = pickMat(w, R), step = (w === 'wilds' || w === 'magic' ? 14 : 12)*M;
     for(let k = 0; k < n; k++) addWay(walk(a, z, k/n*Math.PI*2 + R()*0.8, (120 + 380*R()*t)*M, step, null, R), k === 0 || R() < 0.7 ? mat : pickMat(w, R), w, false, R);
     let near = null, nd = Infinity; hubs.forEach((h2, hj) => { if(hj <= hi) return; const d = Math.hypot(h2[0] - a, h2[1] - z); if(d < nd){ nd = d; near = h2; } });
@@ -878,15 +931,20 @@ function rgStore(V){
   //  hamlet's houses in a ring round its green, a well on the green; near you fewer, as everywhere, and far off only
   //  the house of a farmstead and half a hamlet. Its kinds are its region's tradition, PK_VERNACULAR; a farmstead keeps
   //  to what a farm builds, RG_FARM)
+  // (Ruby, 2026-10-24: "farms should only appear around or near densely populated rings … maybe druid groves and other
+  //  things in Wilds?": the farmsteads stand in the countryside round the cities, a belt about each city's edge as von
+  //  Thünen's rings have it (docs/prior-art/ringworld-countryside.md §1), and where magic is; none in the wilds, whose
+  //  places are their own (below))
+  const beltAt = (a, z) => { const cv = RG_PROF.cities.cv*(0.3 + 0.9*V.works); return V.cityAt(a, z, cv + 0.25)*(1 - V.cityAt(a, z, cv)); };
   { const span = W*2.2, i0 = Math.floor(-span/SEAT), i1 = Math.ceil(span/SEAT), j0 = Math.floor((L.z0 - span)/SEAT), j1 = Math.ceil((L.z0 + span)/SEAT);
     for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
       const sa = (i + 0.2 + 0.6*mnHash(i, j, s + 92))*SEAT, sz = (j + 0.2 + 0.6*mnHash(i, j, s + 93))*SEAT; if(Math.abs(sz) > W*0.45) continue;
-      const rs0 = Math.hypot(sa, sz - L.z0); if(rs0 > span) continue; const w = V.worldAt(sa, sz); if(w !== 'wilds' && w !== 'magic') continue;
-      const ci = w === 'wilds' ? 0.7*V.cityAt(sa, sz, 0.12*(0.3 + 0.9*V.works)) : V.cityAt(sa, sz, RG_PROF[w].cv*(0.3 + 0.9*V.works));
+      const rs0 = Math.hypot(sa, sz - L.z0); if(rs0 > span) continue; const w = V.worldAt(sa, sz); if(w !== 'cities' && w !== 'magic') continue;
+      const ci = w === 'cities' ? 0.7*beltAt(sa, sz) : V.cityAt(sa, sz, RG_PROF[w].cv*(0.3 + 0.9*V.works));
       if(ci < 0.05 || mnHash(i, j, s + 91) > 0.3 + 0.45*ci) continue;
       const g0 = ground(sa, sz); if(g0.wet || g0.slope > 0.8) continue;
       const seat = seatOf(sa, sz, ci); if(!seat || seat.key !== i + ',' + j) continue;
-      const R = rgRand(s, 1420, i*4099 + j), fam = w === 'wilds' ? rgVernacular(V, sa, sz) : null, farm = fam ? RG_FARM[fam] || RG_FARM.shire : null, th0 = R()*Math.PI*2;
+      const R = rgRand(s, 1420, i*4099 + j), fam = w === 'cities' ? rgVernacular(V, sa, sz) : null, farm = fam ? RG_FARM[fam] || RG_FARM.shire : null, th0 = R()*Math.PI*2;
       let n = seat.hamlet ? 5 + Math.floor(R()*9) : 2 + Math.floor(R()*4); if(rs0 > W*0.7) n = seat.hamlet ? Math.ceil(n/2) : 1;
       // (a farmstead's plan, as the Peak District's farmsteads share them: four in ten a LINEAR range, house and barn and
       //  sheds in one row along the yard; nearly as many a COURTYARD, buildings on two to four sides of a yard; the rest
@@ -926,6 +984,37 @@ function rgStore(V){
   //  land like any way, earth or gravel, never more than half a kilometre)
   for(const st of seats.values()){ const gap = wayGap(st.a, st.z); if(!(gap < 500*M) || gap < st.rr || !wayAt) continue; const R = rgRand(s, 1430, Math.round(st.a/M)*7 + Math.round(st.z/M)), goal = wayAt.slice();
     addWay(walk(st.a, st.z, Math.atan2(goal[1] - st.z, goal[0] - st.a), gap*1.6, 10*M, goal, R), R() < 0.7 ? 'earth' : 'gravel', st.w, false, R); }
+  // THE WILDS' OWN PLACES (Ruby: "maybe druid groves and other things in Wilds?"; docs/prior-art/ringworld-motion-and-
+  // variety.md §7.4): each sown sparsely, one in a cell of a few kilometres at most, on the ground it belongs on, as
+  // Islanders and Dorfromantik place a thing near what it goes with and away from its own kind:
+  //  a SACRED GROVE on open ground by a forest: a ring of great trees round a greater one, a standing stone in it, and
+  //   where there is magic its lights; a STONE ROW across an open, dry moor, the largest stones at its ends and a cairn
+  //   at one; a HOLY WELL at a wood's edge, a tree over it; and a RUIN OF THE OLD ONES, columns standing in the grass
+  { const CELL = 2600*M, span = W*2.2, i0 = Math.floor(-span/CELL), i1 = Math.ceil(span/CELL), j0 = Math.floor((L.z0 - span)/CELL), j1 = Math.ceil((L.z0 + span)/CELL);
+    const put = (o, a, z, R) => { if(Math.abs(z) > W*0.47 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M)) return; out.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0 }); };
+    for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
+      const a0 = (i + 0.15 + 0.7*mnHash(i, j, s + 1501))*CELL, z0 = (j + 0.15 + 0.7*mnHash(i, j, s + 1502))*CELL; if(Math.abs(z0) > W*0.44 || Math.hypot(a0, z0 - L.z0) > span) continue;
+      const w = V.worldAt(a0, z0); if(w !== 'wilds' && w !== 'magic') continue; if(mnHash(i, j, s + 1503) > (w === 'magic' ? 0.6 : 0.5)) continue;
+      const g = ground(a0, z0); if(g.wet || g.coast || g.slope > 0.45 || V.cityAt(a0, z0, 0.12) > 0.05) continue;
+      const R = rgRand(s, 1510, i*4099 + j), fo = V.forestAt(a0, z0), dr = V.dryAt(a0, z0), u = R(), th = R()*Math.PI*2, ca = Math.cos(th), sn = Math.sin(th);
+      if(fo > 0.15 && fo < 0.6 && u < 0.45){   // the grove
+        const n = 7 + Math.floor(R()*5), rr = (16 + 10*R())*M, kind = w === 'magic' && R() < 0.5 ? 'glow' : 'broadleaf';
+        put({ c: 'tree', w, kind: 'broadleaf', hM: pkMetres('broadleaf', 0.8 + 0.2*R())*1.35 }, a0, z0, R);
+        for(let k = 0; k < n; k++){ const an = th + k/n*Math.PI*2 + (R() - 0.5)*0.3, d = rr*(0.9 + 0.2*R()); put({ c: 'tree', w, kind, hM: pkMetres(kind, 0.5 + 0.5*R()) }, a0 + Math.cos(an)*d, z0 + Math.sin(an)*d, R); }
+        put({ c: 'prop', w, kind: 'menhir', hM: 1.8 + 1.2*R(), face: th }, a0 + ca*rr*0.45, z0 + sn*rr*0.45, R);
+        if(w === 'magic') for(let k = 0; k < 3; k++){ const an = R()*Math.PI*2, d = rr*0.6*R(); put({ c: 'prop', w, kind: 'wisp', hM: pkMetres('wisp', R()) }, a0 + Math.cos(an)*d, z0 + Math.sin(an)*d, R); } }
+      else if(fo < 0.25 && dr > 0.3 && g.slope < 0.3 && u < 0.75){   // the stone row
+        const n = 6 + Math.floor(R()*13), sp = (5 + 3*R())*M;
+        for(let k = 0; k < n; k++){ const t = (k - (n - 1)/2)*sp, end = Math.min(k, n - 1 - k), hM = 0.8 + 0.5*R() + (end === 0 ? 0.9 : end === 1 ? 0.35 : 0);
+          put({ c: 'prop', w, kind: 'menhir', hM, face: th + Math.PI/2 }, a0 + ca*t + (R() - 0.5)*0.6*M, z0 + sn*t + (R() - 0.5)*0.6*M, R); }
+        const e = ((n - 1)/2 + 1.6)*sp; put({ c: 'prop', w, kind: 'cairn', hM: 1.2 + 0.8*R() }, a0 + ca*e, z0 + sn*e, R); }
+      else if(fo > 0.2 && u < 0.88){   // the holy well
+        put({ c: 'prop', w, kind: w === 'magic' ? 'wishing' : 'well', hM: 2.4, face: th }, a0, z0, R);
+        put({ c: 'tree', w, kind: w === 'magic' ? 'glow' : 'birch', hM: pkMetres('birch', R())*0.8 }, a0 + ca*5*M, z0 + sn*5*M, R);
+        if(R() < 0.5) put({ c: 'prop', w, kind: 'shrine', hM: 2.2, face: th }, a0 - sn*6*M, z0 + ca*6*M, R); }
+      else {   // the old ones' ruin
+        const n = 2 + Math.floor(R()*4); for(let k = 0; k < n; k++){ const t = (k - (n - 1)/2)*(4 + 2*R())*M; put({ c: 'prop', w, kind: 'column', hM: pkMetres('column', R()) }, a0 + ca*t, z0 + sn*t, R); }
+        if(R() < 0.5) put({ c: 'prop', w, kind: 'dolmen', hM: pkMetres('dolmen', R()), face: th }, a0 - sn*8*M, z0 + ca*8*M, R); } } }
   // (a town's lights by night, between its houses: streets, yards, windows too small to be houses, out to the far
   //  side of the land; few in the ruins, a fire here and there)
   sow(14, W*0.005, W*0.03, W*2.5, 2, (a, z, r, R) => { const w = V.worldAt(a, z), ci = w === 'wilds' ? V.cityAt(a, z, 0.12) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
@@ -1311,11 +1400,12 @@ function rgPaintLand(x, mk, dk, V){
   // (a thing is kept while any of it can be in view: its angle within the view's reach by as much as its own width)
   const keep = (a, z, w0 = 0) => { const r = Math.hypot(a, z - L.z0), ph = angOf(a, z), dd = r*smax(Math.cos(ph)); if(dd <= 0 || dd > dWall*1.02) return null;
     if(Math.abs(ph) > PHI + Math.atan2(w0 + W*0.0005, Math.max(r, 1e-9))) return null; return dd; };
-  const colsOf = (w, day, haze) => { const lights = V.lightsOf(w), g = lights[0], g2 = lights[1];
+  // (a building takes its region's palette (rgPaletteOf): its materials mixed toward the family the seed chose there)
+  const colsOf = (w, day, haze, o = null) => { const lights = V.lightsOf(w), g = lights[0], g2 = lights[1], pal = o ? rgPaletteOf(V, o, w) : null;
     const metal = w === 'ruins' ? [120, 108, 96] : w === 'neon' ? [44, 42, 60] : w === 'magic' ? rsMix([200, 196, 230], V.g1, 0.15) : [212, 216, 228];
     const lit = rgLit(V, rsMix(metal, [255, 246, 226], 0.15), day, haze, AIR), dark = rgLit(V, rsMix(metal, BLACK, 0.35), day, haze, AIR);
     // (and any material, wood, stone, rust or paint, lit by the same light: the kit's own colours, never all one grey)
-    const mat = m => ({ body: rgLit(V, m, day, haze, AIR), lit: rgLit(V, rsMix(m, [255, 246, 226], 0.28), day, haze, AIR), dark: rgLit(V, rsMix(m, BLACK, 0.42), day, haze, AIR) });
+    const mat = m0 => { const m = pal ? pal(m0) : m0; return { body: rgLit(V, m, day, haze, AIR), lit: rgLit(V, rsMix(m, [255, 246, 226], 0.28), day, haze, AIR), dark: rgLit(V, rsMix(m, BLACK, 0.42), day, haze, AIR) }; };
     return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat }; };
   // where a world point meets the screen, standing on its ground: [X, Y, px per metre, distance]
   // (a thing stands on the land as finely as the ridges about it show it, so it stands on the ground that is painted)
@@ -1424,7 +1514,7 @@ function rgPaintLand(x, mk, dk, V){
       // (on a slope, level: its floor at its uphill corner's ground, on a stone plinth down to the ground at its lowest
       //  corner and a little into it, so no corner of it hangs in the air)
       const fall = (o.up || 0) + (o.down || 0), pl = fall > 0.25 ? (fall + 0.3)*f[2] : 0, onPl = pl > px(0.6) && !RG_LIGHTFOOT.includes(o.kind);
-      const cb = colsOf(o.w, cday, haze), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, smt: ST, windX: smokeAt(o, f), plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, cday, haze, o), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, smt: ST, ft: FT, windX: smokeAt(o, f), plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
       // CLOSE BY, its foot (the building's base detailed, Ruby: "close-up versions with details for their base"): a door
       // two metres tall with its step, a lamp beside it lit at night, a planter
       const m = f[2]; if(m*lo*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -1891,7 +1981,7 @@ function rgPaintLand(x, mk, dk, V){
     if(MIST && li < lay.length - 2){ x.fillStyle = rsCss(MISTC, MIST); x.fillRect(0, 0, ww, wh); }
     // (at dawn and dusk on a still day, mist lies in the low land: a soft pale band along the foot of each low ridge, thicker
     //  the lower it lies, breathing a little with the clock)
-    if(LOWMIST > 0 && d > W*0.01 && li < lay.length - 1){ const lowness = rsSmooth(TR.snow*0.25, TR.sea, mid.ec); if(lowness > 0.05){ const yB = yC + depth*0.5, a = LOWMIST*lowness*(0.8 + 0.2*Math.sin(V.time*0.002 + li));
+    if(LOWMIST > 0 && d > W*0.01 && li < lay.length - 1){ const lowness = rsSmooth(TR.snow*0.25, TR.sea, mid.ec); if(lowness > 0.05){ const yB = yC + depth*0.5, a = LOWMIST*lowness*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + li));
       const g = x.createLinearGradient(0, yC - depth*0.15, 0, yB); g.addColorStop(0, rsCss(MISTC, 0)); g.addColorStop(0.6, rsCss(MISTC, a)); g.addColorStop(1, rsCss(MISTC, 0)); x.fillStyle = g; x.fillRect(0, yC - depth*0.15, ww, depth*0.65); } }
   });
   // ---- 5. THE AIR OVER IT ALL: the sun's glare low in the sky, and the weather falling ----
@@ -1899,7 +1989,7 @@ function rgPaintLand(x, mk, dk, V){
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(col, 0.22)); g.addColorStop(0.4, rsCss(col, 0.07)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
   if(V.weather === 'rain' || V.weather === 'storm'){ const R = rgRand(s, 820), n = Math.round(ww*wh/(px(26)*px(26))), sl = 0.18; x.strokeStyle = rsCss(rsMix(AIR, [230, 236, 246], 0.5), V.weather === 'storm' ? 0.24 : 0.18); x.lineWidth = Math.max(px(0.5), px(0.9)); x.beginPath();
     // (with the clock each streak falls on, steeply, and comes round again at the top)
-    const fall = MT*wh*1.6; for(let k = 0; k < Math.min(n, 4000); k++){ const ln = px(10 + 30*R()), X0 = R()*ww, Y = ((R()*wh + fall) % (wh + ln)) - ln, X = ((X0 + fall*sl) % ww); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
+    const fall = rgClock(V, 1/30)*wh*1.6; for(let k = 0; k < Math.min(n, 4000); k++){ const ln = px(10 + 30*R()), X0 = R()*ww, Y = ((R()*wh + fall) % (wh + ln)) - ln, X = ((X0 + fall*sl) % ww); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
     if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); } }
   // LIGHTNING LIGHTS THE LAND (Ruby: "should change the whole scene lighting fairly starkly as well as shading"): while a
   // bolt burns, the whole land takes its light, cold and hard: lit from the bolt's side of the frame, its lights pushed
@@ -1920,7 +2010,7 @@ function rgPaintLand(x, mk, dk, V){
     const [lc, lx] = kitCanvas(ww, wh); lx.drawImage(x.canvas, 0, 0); lay(lx, ww, wh, a); lx.globalCompositeOperation = 'destination-in'; lx.drawImage(x.canvas, 0, 0);
     x.save(); x.globalCompositeOperation = 'source-atop'; x.drawImage(lc, 0, 0); x.restore(); lc.width = 0; }
   if(V.weather === 'snow'){ const R = rgRand(s, 821), n = Math.min(3000, Math.round(ww*wh/(px(34)*px(34)))); x.fillStyle = rsCss([250, 252, 255], 0.85); x.beginPath();
-    for(let k = 0; k < n; k++){ const X0 = R()*ww, Y0 = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)), sp2 = wh*(0.05 + 0.04*r/px(3.4)), Y = (Y0 + MT*sp2) % wh, X = ((X0 + Math.sin(ST*0.8 + k)*px(6)*(V.time ? 1 : 0)) % ww + ww) % ww;   // (with the clock: drifting down, swaying, the near flakes faster)
+    for(let k = 0; k < n; k++){ const X0 = R()*ww, Y0 = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)), sp2 = wh*(0.05 + 0.04*r/px(3.4)), Y = (Y0 + rgClock(V, 0.12)*sp2) % wh, X = ((X0 + Math.sin(ST*0.8 + k)*px(6)*(V.time ? 1 : 0)) % ww + ww) % ww;   // (with the clock: drifting down, swaying, the near flakes faster)
       x.moveTo(X + r, Y); x.arc(X, Y, r, 0, Math.PI*2); } x.fill(); }
 }
 

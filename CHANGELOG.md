@@ -4,6 +4,41 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Hyades–Lembu (2026-10-24)
+
+- Farms belong to the cities now: farmsteads, hamlets and their fields stand in the countryside round a city's edge,
+  and the Wilds are wild. In their place the Wilds have places of their own: sacred groves (a ring of great trees round
+  a greater one, a standing stone among them, lights in them where there is magic), stone rows across the open moors
+  with a cairn at one end, holy wells at a wood's edge under their tree, and the columns of an older people standing in
+  the grass.
+- More colour by the seed: each region of a ring paints by one rule, as real towns do. Some are Burano's strong colours
+  house by house, some Jaipur's rose, the whitewash of the Cyclades, Roussillon's ochres, Falu red, or the dark wood of
+  Kyoto's streets, and some keep their own colours.
+- Flat roofs gather aerials, dishes and the boxes of their plant, each building its own.
+- The comet travels across the sky in a film, about half a degree a second, as well as turning with the stars. Its
+  ion tail points straight away from the star, blue and thin; its dust tail is broad and white-gold, curving back
+  along its way; a faint green coma hangs round its head.
+- Shooting stars live their second in a real-time film: the head runs across the sky, the streak grows behind it and
+  fades from its tail, and a faint train lingers.
+- The aurora is coloured by height: a pink hem on a strong night, its body in its hue, its tops reddening as they
+  fade, with fine rays up it. It drifts and breathes slowly, and now and then hangs over any world, not only magic and
+  the builders'.
+- Warning lights on masts, needles, glass towers and turbines pulse calmly together, twenty-five times a minute. A
+  lighthouse has a character of its own: its beams sweep round once in four to fifteen seconds, alone or in groups of
+  two or three, and its lantern blazes up as a beam turns toward you. Turbines and windmills turn. A pylon's line of
+  light carries a bright spot climbing it, and the glows of pylons, arches, circles and pillars of light breathe.
+- Rain falls at its own pace in a time-lapse, so the curtain slides instead of flickering; snow drifts gently; the low
+  mist breathes on the clouds' clock. Fireflies swell and fade instead of blinking.
+- The rim walls rise out of a haze along their foot and stand crisper above it, for a little more sense of their size.
+
+### Under the hood
+- docs/prior-art/ringworld-motion-and-variety.md §8: items 8 to 13 built, and the first of 15 to 18. The kit's
+  `pkBeacon`, `pkBreathe`, `PK_LIGHTS` and `pkRoofThings`; the Ringworld's `beltAt` (farmsteads where a city meets the
+  country), the wild places, `RG_PALETTES` and `rgPaletteOf`. The Ringworld's fingerprints moved for all of this; no
+  other surface's did.
+- Reviewed the tests the Ringworld's motion leans on (test/moving.test.mjs, test/ringworldView.test.mjs and the
+  fingerprints) and swept 90 scenes across seeds, worlds, hours and films for any part that fails: none did.
+
 ## Ursa Major–Phecda (2026-10-24)
 
 - The Ringworld's sky no longer flickers in a film. The cirrus and the long low bands used to leap across the sky at a
@@ -414,13 +449,3 @@ prints it).
 ### Under the hood
 - Contour Map's preview gap narrowed down, not yet fixed (OPEN-ISSUES §3): not the hillshade, not the Terrain; the
   preview's lines carry a little less ink. Texture fingerprints updated for the landscapes with water.
-
-## Uranus–Ferdinand (2026-10-21)
-
-- The Ringworld's walkers, shepherd droids and tracked crawlers turn with the camera instead of only flipping: a
-  walker coming toward you is its head between four legs, the far legs behind its body and the near ones before it;
-  a shepherd's head is turned as it goes; a crawler shows both tracks and its wheels from the side, its arm over it.
-
-### Under the hood
-- `PK_BOTS3` names the droids drawn in the round (with the harvester); the Ringworld passes them their view and its
-  eye. Texture fingerprints updated for scenes with these droids.

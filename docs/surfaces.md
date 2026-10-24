@@ -435,6 +435,12 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     would show it. Lightning strikes in the film's own seconds (`rgStrike`): never in the first second and a half, never
     two within 2.5 s, rising over a quarter second and fading over two thirds; it lights the land from its side, cold and
     hard, its strength held by measure so no tenth of the frame changes by more than 0.06 of relative luminance.
+    The comet travels by the film's seconds with its tails away from the star; a meteor lives its second in real time;
+    the aurora is coloured by height; warning lights pulse together (`pkBeacon`), a lighthouse sweeps by its character
+    (`PK_LIGHTS`), turbines and windmills turn, a pylon carries a climbing light and glows breathe (`pkBreathe`).
+  - **What stands where, and its colours.** Farmsteads stand in the belt where a city meets the country (`beltAt`), never
+    in the Wilds, whose places are their own: sacred groves, stone rows, holy wells and the old ones' columns. Each region
+    paints by a palette family the seed chose (`rgPaletteOf`); flat roofs gather their clutter (`pkRoofThings`).
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
     objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
     (`paintHeap`), each on its own sheet laid at once so its billows never darken each other, every billow a gradient

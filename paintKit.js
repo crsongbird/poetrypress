@@ -541,6 +541,17 @@ const pkLit = (c, night, r, base) => { if(night <= 0.2 || c.unlit) return 0; con
 // A LIGHT THAT COMES ON AT DUSK (a sign, a lantern, a lit face): in a still on once the night passes a fifth; in a film
 // eased in across the dusk, so a town's lights never all come on in one frame. pkDm: a when lit, b when not, between
 const pkDk = (c, night) => c && c.t ? pkSs(0.16, 0.26, night) : night > 0.2 ? 1 : 0;
+// A WARNING LIGHT'S PULSE (docs/prior-art/ringworld-motion-and-variety.md §4.2: a mast's red lights flash twenty to
+// thirty times a minute): in a film, on the film's own seconds (c.ft), a raised-cosine pulse of 0.8 s every 2.4 s, every
+// mast's in step, so it is the same calm pace at any frame rate or speed of time; in a still, steady
+const pkBeacon = c => { if(!c || !c.t || c.ft === undefined) return 1; const t = ((c.ft % 2.4) + 2.4) % 2.4; return t < 0.8 ? 0.15 + 0.85*(0.5 - 0.5*Math.cos(Math.PI*2*t/0.8)) : 0.15; };
+// A LIGHTHOUSE'S CHARACTER (§4.3), chosen by its own draw: its beam's period in seconds and how many beams in a group
+// (Fl 5s, Fl(2) 10s, Fl(3) 15s, Fl 6s, Fl(2) 8s, Fl 4s)
+const PK_LIGHTS = [[5, 1], [10, 2], [15, 3], [6, 1], [8, 2], [4, 1]];
+// A GLOW THAT BREATHES (§4.7: Ruby, "glow, lights, etc should also be animated … large spires and other buildings like
+// this"): in a film, by at most an eighth over six to twelve seconds of the film, each building in its own time (by
+// where it stands, k); in a still, steady
+const pkBreathe = (c, k) => !c || !c.t || c.ft === undefined ? 1 : 1 + 0.12*Math.sin(Math.PI*2*c.ft/(6 + 6*(((k*0.01371) % 1) + 1) % 1) + k*0.37);
 const pkDm = (c, night, a, b) => { const k = pkDk(c, night); return k >= 1 ? a : k <= 0 ? b : Array.isArray(a) ? pkMix(b, a, k) : b + (a - b)*k; };
 function pkWindows(x, x0, top, wd, ht, c, night, lit, R, px, kind){
   // (how many windows, and whether near enough for their frames, by the building's size at its true distance (c.lod),
@@ -645,7 +656,8 @@ const PK_BUILT = {
     // (the tower round, the same from any side; its cap and sails turned with the mill, the sails a cross in their own
     //  plane, narrowed as the mill turns edge on, behind the tower when it faces away)
     const w2 = wd/2, bt = Y - h*0.62, tw = pkMat(c, o.R() < 0.5 ? [70, 66, 60] : PK_CREAM, 0.6), sail = pkMat(c, [226, 218, 200], 0.6), tn = c.turn, kx = tn ? (tn.cs < 0 ? -1 : 1)*Math.max(0.08, Math.abs(tn.cs)) : 1;
-    const hub = [X + (tn ? tn.sn*w2*0.45 : c.sd*w2*0.2), bt - w2*0.12], ang = o.R()*Math.PI/2, L2 = h*0.4;
+    // (its sails turning slowly in a film, by the film's own seconds)
+    const hub = [X + (tn ? tn.sn*w2*0.45 : c.sd*w2*0.2), bt - w2*0.12], ang = o.R()*Math.PI/2 + (c.t && c.ft ? c.ft*0.45 : 0), L2 = h*0.4;
     const sails = () => { for(let q = 0; q < 4; q++){ const a = ang + q*Math.PI/2, ca = Math.cos(a), sa = Math.sin(a), nx = -sa*L2*0.11, ny = ca*L2*0.11, P = (u, v) => [hub[0] + (ca*L2*u + nx*v)*kx, hub[1] + sa*L2*u + ny*v];
       x.strokeStyle = pkCss(tw.dark); x.lineWidth = Math.max(o.px(0.5), L2*0.025); x.beginPath(); x.moveTo(...P(0, 0)); x.lineTo(...P(1, 0)); x.stroke();
       if(q % 2 && o.detail){ x.lineWidth = Math.max(o.px(0.3), L2*0.008); x.beginPath(); for(let k = 0; k <= 6; k++){ const u = 0.2 + 0.8*k/6; x.moveTo(...P(u, 0)); x.lineTo(...P(u, 1)); } x.moveTo(...P(0.2, 1)); x.lineTo(...P(1, 1)); x.stroke(); }
@@ -708,10 +720,16 @@ const PK_BUILT = {
     if(o.detail) for(let q = 0; q < 3; q++) pkBar(x, X - wd*0.03, Y - h*(0.3 + q*0.18), wd*0.06, h*0.04, pkDm(c, night, c.glow, o.ink), o.px, 0.85);
     x.fillStyle = pkCss(o.ink); x.fillRect(X - w2*0.8, gt - h*0.02, wd*0.8, h*0.02);
     if(o.detail){ x.strokeStyle = pkCss(o.ink); x.lineWidth = Math.max(o.px(0.4), wd*0.01); x.beginPath(); x.moveTo(X - w2*0.8, gt - h*0.05); x.lineTo(X + w2*0.8, gt - h*0.05); for(let k = 0; k <= 6; k++){ const sx = X - w2*0.8 + wd*0.8*k/6; x.moveTo(sx, gt - h*0.02); x.lineTo(sx, gt - h*0.05); } x.stroke(); }
-    const lamp = pkMix(c.glow2 || c.glow, PK_WHITE, 0.4); pkPoly(x, [[X - w2*0.4, gt - h*0.02], [X - w2*0.4, gt - h*0.12], [X + w2*0.4, gt - h*0.12], [X + w2*0.4, gt - h*0.02]], pkCss(lamp));
-    pkPoly(x, [[X - w2*0.5, gt - h*0.12], [X, Y - h], [X + w2*0.5, gt - h*0.12]], pkCss(o.ink)); pkGlow(x, X, gt - h*0.07, wd*(1.5 + 3*night), pkMix(c.glow2 || c.glow, PK_WHITE, 0.5), 0.5 + 0.4*night);
-    if(night > 0.3){ x.save(); x.globalCompositeOperation = 'screen'; const dir = o.R() < 0.5 ? -1 : 1, by = gt - h*0.07, g = x.createLinearGradient(X, by, X + dir*h*1.6, by); g.addColorStop(0, pkCss(lamp, 0.4*night)); g.addColorStop(1, pkCss(lamp, 0)); x.fillStyle = g;
-      x.beginPath(); x.moveTo(X, by - h*0.01); x.lineTo(X + dir*h*1.6, by - h*0.12); x.lineTo(X + dir*h*1.6, by + h*0.08); x.closePath(); x.fill(); x.restore(); } },
+    // (its light has a character of its own (PK_LIGHTS): in a film its beams sweep round on the film's own seconds, each
+    //  drawn as long as it lies across the page, and the lantern blazes up, eased, as a beam swings toward you; in a
+    //  still, one beam out to its side as before)
+    const lamp = pkMix(c.glow2 || c.glow, PK_WHITE, 0.4), rl = o.R(), dir = rl < 0.5 ? -1 : 1, [per, nbm] = PK_LIGHTS[Math.floor(((rl*7.919) % 1)*PK_LIGHTS.length)], film = !!(c.t && c.ft !== undefined);
+    const th0 = dir < 0 ? Math.PI : 0, beams = Array.from({ length: film ? nbm : 1 }, (_, k) => th0 + (film ? Math.PI*2*c.ft/per : 0) + k*0.32), face = film ? Math.max(...beams.map(b => pkSs(0.86, 1, Math.sin(b)))) : 0;
+    pkPoly(x, [[X - w2*0.4, gt - h*0.02], [X - w2*0.4, gt - h*0.12], [X + w2*0.4, gt - h*0.12], [X + w2*0.4, gt - h*0.02]], pkCss(lamp));
+    pkPoly(x, [[X - w2*0.5, gt - h*0.12], [X, Y - h], [X + w2*0.5, gt - h*0.12]], pkCss(o.ink)); pkGlow(x, X, gt - h*0.07, wd*(1.5 + 3*night)*(1 + 0.5*face*night), pkMix(c.glow2 || c.glow, PK_WHITE, 0.5), Math.min(1, 0.5 + 0.4*night + 0.35*face*night));
+    if(night > 0.3){ x.save(); x.globalCompositeOperation = 'screen'; const by = gt - h*0.07;
+      for(const b of beams){ const cb = Math.cos(b), ln = h*1.6*Math.abs(cb), sd2 = cb < 0 ? -1 : 1; if(ln < h*0.05) continue; const g = x.createLinearGradient(X, by, X + sd2*ln, by); g.addColorStop(0, pkCss(lamp, 0.4*night)); g.addColorStop(1, pkCss(lamp, 0)); x.fillStyle = g;
+        x.beginPath(); x.moveTo(X, by - h*0.01); x.lineTo(X + sd2*ln, by - h*0.12); x.lineTo(X + sd2*ln, by + h*0.08); x.closePath(); x.fill(); } x.restore(); } },
   cathedral(x, X, Y, h, wd, c, night, lit, o){ // a long nave under a steep roof, flying buttresses along it, lancet windows, two west towers
     // with their spires and belfry louvres, a rose window, a great door
     const w2 = wd/2, ne = Y - h*0.3, st = pkMat(c, [196, 186, 166], 0.45), roof = pkMat(c, [90, 110, 104], 0.5);
@@ -778,9 +796,11 @@ const PK_BUILT = {
     if(o.detail){ x.strokeStyle = pkCss(c.lit); x.lineWidth = Math.max(o.px(0.5), w2*0.06); x.beginPath(); x.moveTo(X, db - w2*0.3); x.lineTo(X + w2*0.05, db - w2*0.8); x.stroke(); } },
   turbine(x, X, Y, h, wd, c, night, lit, o){ // a white stalk, a nacelle, three long blades
     const hub = [X, Y - h*0.62], bl = h*0.38, sw = Math.max(o.px(0.6), h*0.012), white = pkMix(c.lit, PK_WHITE, 0.4);
-    pkPoly(x, [[X - sw*1.5, Y], [X - sw*0.7, hub[1]], [X + sw*0.7, hub[1]], [X + sw*1.5, Y]], pkCss(white)); const a0 = o.R()*Math.PI*2;
+    // (its rotor turning in a film, on the film's own seconds at about twelve turns a minute, faster in a stronger wind;
+    //  its warning light pulsing with every mast's)
+    pkPoly(x, [[X - sw*1.5, Y], [X - sw*0.7, hub[1]], [X + sw*0.7, hub[1]], [X + sw*1.5, Y]], pkCss(white)); const a0 = o.R()*Math.PI*2 + (c.t && c.ft ? c.ft*1.25*(0.7 + 0.6*Math.min(1, Math.abs(c.windX || 0.5))) : 0);
     for(let q = 0; q < 3; q++){ const a = a0 + q*Math.PI*2/3, ex = hub[0] + Math.cos(a)*bl, ey = hub[1] + Math.sin(a)*bl, nx = -Math.sin(a)*sw*1.6, ny = Math.cos(a)*sw*1.6; pkPoly(x, [[hub[0] + nx, hub[1] + ny], [ex, ey], [hub[0] - nx*0.3, hub[1] - ny*0.3]], pkCss(white)); }
-    pkEll(x, hub[0], hub[1], sw*2.4, sw*1.3, pkCss(c.body)); if(night > 0.2) pkDisc(x, hub[0], hub[1] - sw*1.5, sw, pkCss([255, 70, 60], 0.9)); },
+    pkEll(x, hub[0], hub[1], sw*2.4, sw*1.3, pkCss(c.body)); if(night > 0.2) pkDisc(x, hub[0], hub[1] - sw*1.5, sw, pkCss([255, 70, 60], 0.9*pkBeacon(c))); },
   // ---- the vernacular (docs/prior-art/ringworld-sprites.md, Part C: each settlement builds in one tradition) ----
   yurt(x, X, Y, h, wd, c, night, lit, o){ // a ger: a low white drum, a shallow cone of a roof, its crown ring, bands round it, a painted door
     const w2 = wd/2, felt = pkMat(c, [234, 228, 214], 0.6), ye = Y - h*0.6; pkShade(x, [[X - w2, Y], [X - w2, ye], [X + w2, ye], [X + w2, Y]], felt.body, ye, Y, 0.18);
@@ -850,7 +870,7 @@ const PK_BUILT = {
     const red = pkMat(c, [200, 50, 40], 0.7), wh = pkMat(c, [236, 236, 232], 0.5), mw = Math.max(o.px(0.5), wd*0.15);
     for(let k = 0; k < 7; k++) x.fillStyle = pkCss(k % 2 ? wh.body : red.body), x.fillRect(X - mw/2, Y - h*(k + 1)/7, mw, h/7);
     x.strokeStyle = pkCss(PK_BLACK, 0.3); x.lineWidth = Math.max(o.px(0.3), wd*0.01); x.beginPath(); for(const v of [0.35, 0.65, 0.95]) for(const s of [-1, 1]){ x.moveTo(X, Y - h*v); x.lineTo(X + s*h*0.35*v, Y); } x.stroke();
-    for(const v of [0.5, 1]) pkDisc(x, X, Y - h*v, Math.max(o.px(0.6), mw*0.6), pkCss([255, 60, 50], pkDm(c, night, 1, 0.5))); if(night > 0.2) pkGlow(x, X, Y - h, h*0.06, [255, 60, 50], 0.6); },
+    for(const v of [0.5, 1]) pkDisc(x, X, Y - h*v, Math.max(o.px(0.6), mw*0.6), pkCss([255, 60, 50], pkDm(c, night, 1, 0.5)*pkBeacon(c))); if(night > 0.2) pkGlow(x, X, Y - h, h*0.06, [255, 60, 50], 0.6*pkBeacon(c)); },
   oast(x, X, Y, h, wd, c, night, lit, o){ // an oast house: round kilns of brick with steep cones, each topped by a white cowl and its vane, a long barn beside
     const br = pkMat(c, PK_BRICK, 0.6), roof = pkMat(c, [120, 70, 56], 0.6), wh = pkMat(c, [240, 238, 230], 0.5), w2 = wd/2;
     pkBox(x, X + w2*0.35, Y, Y - h*0.38, wd*0.6, pkMat(c, [210, 200, 180], 0.6), o.dep*0.3); pkGable(x, X + w2*0.05, X + w2*0.95, Y - h*0.38, Y - h*0.55, roof, 0.04);
@@ -957,7 +977,7 @@ function pkFaceProof(face, c, R0, h, wdt, eave, id){
   // (keyed by everything the face is drawn from but the clock, which only lights its windows: by the hour)
   // (its size in steps of about a tenth, so a film whose camera moves reads the same proof frame after frame, and the
   //  building keeps its shape instead of shifting a pixel each frame)
-  const key = id ? id + '|' + Math.round(Math.log2(Math.max(1, h))*8) + '|' + Math.round(Math.log2(Math.max(1, wdt))*8) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+  const key = id ? id + '|' + Math.round(Math.log2(Math.max(1, h))*8) + '|' + Math.round(Math.log2(Math.max(1, wdt))*8) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'ft' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
   const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
   if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
@@ -1066,6 +1086,15 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   if(front) crown();
   return true;
 }
+// THE ROOF'S CLUTTER (Ruby: "minor variations on buildings"; docs/prior-art/ringworld-motion-and-variety.md §7.1): on a
+// flat roof from X0 to X1 at top, now and then aerials, a dish, the boxes of its plant; drawn from a stream of its own
+// (R), so adding them changed nothing else on the building
+const pkRoofThings = (x, X0, X1, top, h, c, R, px) => { const sp = X1 - X0;
+  if(R() < 0.45){ const n = 1 + Math.floor(R()*3); x.strokeStyle = pkCss(c.dark, 0.85); x.lineWidth = Math.max(px(0.3), h*0.004); x.beginPath();
+    for(let k = 0; k < n; k++){ const ax = X0 + sp*(0.15 + 0.7*R()), ah = h*(0.05 + 0.08*R()); x.moveTo(ax, top); x.lineTo(ax, top - ah); x.moveTo(ax - ah*0.18, top - ah*0.75); x.lineTo(ax + ah*0.18, top - ah*0.75); } x.stroke(); }
+  if(R() < 0.35){ const dx = X0 + sp*(0.2 + 0.6*R()), dr = Math.min(sp*0.08, h*0.025); pkEll(x, dx, top - dr*0.9, dr, dr*0.55, pkCss(pkMix(c.lit, PK_WHITE, 0.4))); }
+  if(R() < 0.6){ for(let k = 0, n = 2 + Math.floor(R()*3); k < n; k++){ const bx = X0 + sp*(0.1 + 0.8*R()), bw = Math.min(sp*0.12, h*(0.03 + 0.03*R())), bh = bw*(0.5 + 0.4*R());
+    x.fillStyle = pkCss(pkMix(c.body, c.lit, 0.4)); x.fillRect(bx - bw/2, top - bh, bw, bh); x.fillStyle = pkCss(c.dark, 0.6); x.fillRect(bx - bw/2, top - bh*0.25, bw, bh*0.25); } } };
 export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   // (on a slope (c.plinth, its height in pixels): first the stone plinth it stands on, its footprint's own box, from its
   //  floor at Y down into the ground at its lowest corner)
@@ -1114,12 +1143,12 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
     // the undercroft: deep shade between the columns it stands on
     x.fillStyle = pkCss(pkMix(ink, PK_BLACK, 0.2), 0.9); x.fillRect(X - ww/2 + ww*0.04, und, ww*0.92, Y - und);
     for(let k = 0; k < 7; k++){ const cx = X - ww/2 + ww*(0.06 + 0.88*k/6); pkShade(x, [[cx - ww*0.012, Y], [cx - ww*0.012, und], [cx + ww*0.012, und], [cx + ww*0.012, Y]], c.body, und, Y, 0.3); }
-    if(detail){ pkWindows(x, X - ww/2, t2, ww, und - t2, c, night, lit, RW, px, neon ? 'neon' : 'ribbon'); pkBox(x, X + ww*(RT() - 0.5)*0.4, t2, t2 - hh*0.08, ww*0.25, c, dep*0.3);
+    if(detail){ pkWindows(x, X - ww/2, t2, ww, und - t2, c, night, lit, RW, px, neon ? 'neon' : 'ribbon'); pkRoofThings(x, X - ww*0.48, X + ww*0.48, t2, hh, c, sub(21), px); pkBox(x, X + ww*(RT() - 0.5)*0.4, t2, t2 - hh*0.08, ww*0.25, c, dep*0.3);
       if(fine){ x.fillStyle = pkCss(c.dark, 0.18); for(let k = 0; k < 14; k++) x.fillRect(X - ww/2, t2 + (und - t2)*k/14, ww, Math.max(px(0.4), hh*0.002)); pkStreaks(x, X - ww/2, t2, ww, und - t2, c, RD, px, 0.12); } } }
   else if(kind === 'brick'){ // a mid-rise: a grid of windows over shopfronts under awnings, string courses, a cornice on brackets, a
     // fire escape zigzagging down its face, a water tower now and then
     const hh = h*0.7, t2 = Y - hh, sh = Math.min(hh*0.16, wdt*0.35), ww = wdt*1.1; pkBox(x, X, Y, t2, ww, c, dep);
-    if(detail){ pkWindows(x, X - ww/2, t2, ww, hh - sh, c, night, lit, RW, px);
+    if(detail){ pkWindows(x, X - ww/2, t2, ww, hh - sh, c, night, lit, RW, px); if(!ruin) pkRoofThings(x, X - ww*0.45, X + ww*0.45, t2 - Math.max(px(0.6), hh*0.02), hh, c, sub(21), px);
       bar(X - ww*0.55, t2 - Math.max(px(0.6), hh*0.02), ww*1.1, Math.max(px(1), hh*0.03), c.dark); // the cornice
       if(fine){ for(let k = 0; k < 18; k++) bar(X - ww*0.53 + ww*1.06*k/18, t2 + hh*0.012, ww*0.02, hh*0.012, c.lit, 0.8); // its dentils
         for(let k = 1; k < 3; k++) bar(X - ww/2, t2 + (hh - sh)*k/3, ww, hh*0.006, c.lit, 0.5); } // string courses
@@ -1160,7 +1189,7 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
     pkEll(x, X, st + wdt*0.06, wdt*0.42, wdt*0.12, pkCss(ink)); pkEll(x, X, st, wdt*0.5, wdt*0.12, pkCss(c.body)); pkEll(x, X + c.sd*wdt*0.1, st - wdt*0.03, wdt*0.32, wdt*0.07, pkCss(wht));
     if(detail){ x.fillStyle = pkCss(pkDm(c, night, c.glow, pkMix(ink, c.air || lit, 0.35)), 0.85); x.fillRect(X - wdt*0.44, st + wdt*0.015, wdt*0.88, Math.max(px(0.5), wdt*0.05)); pkEll(x, X, st - wdt*0.1, wdt*0.18, wdt*0.06, pkCss(c.body)); }
     x.fillStyle = pkCss(c.body); x.fillRect(X - Math.max(px(0.4), wdt*0.02), st - sh*0.2, Math.max(px(0.8), wdt*0.04), sh*0.2);
-    pkDisc(x, X, st - sh*0.2, Math.max(px(0.8), wdt*0.035), pkCss([255, 70, 60], pkDm(c, night, 0.95, 0.5))); if(night > 0.2) pkGlow(x, X, st - sh*0.2, wdt*0.4, [255, 70, 60], 0.5*night); }
+    pkDisc(x, X, st - sh*0.2, Math.max(px(0.8), wdt*0.035), pkCss([255, 70, 60], pkDm(c, night, 0.95, 0.5)*pkBeacon(c))); if(night > 0.2) pkGlow(x, X, st - sh*0.2, wdt*0.4, [255, 70, 60], 0.5*night*pkBeacon(c)); }
   else if(kind === 'pylon'){ // the builders' white pylon: rounded, its panels seamed, chamfered on the light's side, a line of light up its edge
     const t2 = top + wdt*0.5; pkShade(x, [[X - w2, Y], [X - w2*0.8, t2], [X + w2*0.8, t2], [X + w2, Y]], c.body, top, Y, 0.12);
     x.fillStyle = pkCss(c.body); x.beginPath(); x.arc(X, t2, w2*0.8, Math.PI, 0); x.fill();
@@ -1168,14 +1197,18 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
     if(detail){ x.fillStyle = pkCss(c.dark, 0.35); for(let k = 1; k < 9; k++){ const yy = t2 + (Y - t2)*k/9, kk = 0.8 + 0.2*k/9; x.fillRect(X - w2*kk, yy, wdt*kk, Math.max(px(0.4), h*0.003)); }
       pkShade(x, [[X - w2*1.15, Y], [X - w2*1.15, Y - h*0.04], [X + w2*1.15, Y - h*0.04], [X + w2*1.15, Y]], c.dark, Y - h*0.04, Y); }
     x.fillStyle = pkCss(c.glow, 0.85); x.fillRect(X - c.sd*w2*0.55 - px(0.5), t2, Math.max(px(0.8), wdt*0.05), Y - t2);
-    pkGlow(x, X, t2 - w2*0.5, wdt*0.9, c.glow, 0.5); }
+    // (in a film a soft bright spot climbs its line of light, once in four to eight seconds of the film, and its crown
+    //  breathes)
+    if(c.t && c.ft !== undefined){ const per = 4 + 4*(((X*0.0193) % 1) + 1) % 1, u = ((c.ft/per + X*0.011) % 1 + 1) % 1, sy = Y - (Y - t2)*u;
+      pkGlow(x, X - c.sd*w2*0.55, sy, Math.max(px(2), wdt*0.3), pkMix(c.glow, PK_WHITE, 0.4), 0.55*Math.sin(Math.PI*u)); }
+    pkGlow(x, X, t2 - w2*0.5, wdt*0.9, c.glow, 0.5*pkBreathe(c, X)); }
   else if(kind === 'arch'){ // the builders' arch: two legs and a span, its face seamed into blocks, light beneath it
     const aw = wdt*1.8, th = aw*0.16, ry = Y - h*0.5;
     x.fillStyle = pkCss(c.body); x.beginPath(); x.moveTo(X - aw/2, Y); x.lineTo(X - aw/2, ry); x.arc(X, ry, aw/2, Math.PI, 0); x.lineTo(X + aw/2, Y); x.lineTo(X + aw/2 - th, Y); x.lineTo(X + aw/2 - th, ry); x.arc(X, ry, aw/2 - th, 0, Math.PI, true); x.lineTo(X - aw/2 + th, Y); x.closePath(); x.fill();
     x.strokeStyle = pkCss(c.lit); x.lineWidth = Math.max(px(0.6), th*0.3); x.beginPath(); x.arc(X, ry, aw/2 - th*0.15, c.sd > 0 ? -Math.PI/2 : Math.PI, c.sd > 0 ? 0 : -Math.PI/2); x.stroke();
     if(detail){ x.strokeStyle = pkCss(c.dark, 0.4); x.lineWidth = Math.max(px(0.4), th*0.05); x.beginPath(); for(let k = 1; k < 10; k++){ const a = Math.PI + k/10*Math.PI; x.moveTo(X + Math.cos(a)*(aw/2 - th), ry + Math.sin(a)*(aw/2 - th)); x.lineTo(X + Math.cos(a)*aw/2, ry + Math.sin(a)*aw/2); }
       for(const s of [-1, 1]) for(let k = 1; k < 5; k++){ const yy = ry + (Y - ry)*k/5; x.moveTo(X + s*aw/2, yy); x.lineTo(X + s*(aw/2 - th), yy); } x.stroke(); }
-    pkGlow(x, X, Y - h*0.15, aw*0.4, c.glow, 0.35); }
+    pkGlow(x, X, Y - h*0.15, aw*0.4, c.glow, 0.35*pkBreathe(c, X)); }
   else if(kind === 'wizard'){ // a tower of the magi: round, its stone coursed, arched windows lit, a balcony of merlons, a tall cone
     // of a roof shingled in bands, a pennant at its tip, ivy up one side
     const tw = wdt*0.7, t2 = Y - h*0.75, roof = pkMat(c, [70, 64, 110], 0.35); pkBox(x, X, Y, t2, tw, c, tw*0.15);
@@ -1210,7 +1243,7 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
     if(detail){ pkWindows(x, X - w2, top + Math.abs(sl), wdt, lob - top - Math.abs(sl), c, night, lit, RW, px, neon ? 'neon' : 'mullion');
       x.fillStyle = pkCss(pkDm(c, night, pkMix(c.glow, ink, 0.3), ink), 0.85); x.fillRect(X - w2*0.92, lob, wdt*0.92, Y - lob); bar(X - w2, lob - px(0.5), wdt, (Y - lob)*0.1, c.lit, 0.8);
       if(fine && !sl){ pkBox(x, X + wdt*(RT() - 0.5)*0.3, top, top - h*0.03, wdt*0.4, { ...c, body: pkMix(c.body, c.dark, 0.3) }, dep*0.3); } }
-    if(R() < 0.35){ x.fillStyle = pkCss(c.dark); x.fillRect(X - Math.max(px(0.4), wdt*0.02), top - h*0.14, Math.max(px(0.8), wdt*0.04), h*0.14); if(night > 0.2) pkDisc(x, X, top - h*0.14, Math.max(px(0.8), wdt*0.03), pkCss([255, 80, 70], 0.9)); } }
+    if(R() < 0.35){ x.fillStyle = pkCss(c.dark); x.fillRect(X - Math.max(px(0.4), wdt*0.02), top - h*0.14, Math.max(px(0.8), wdt*0.04), h*0.14); if(night > 0.2) pkDisc(x, X, top - h*0.14, Math.max(px(0.8), wdt*0.03), pkCss([255, 80, 70], 0.9*pkBeacon(c))); } }
   // NEON: the edges in light, a sign hung on the face, its glow on the air
   if(neon && hd > px(8) && kind !== 'needle'){ const R = RN; x.strokeStyle = pkCss(c.glow2, 0.85); x.lineWidth = Math.max(px(0.6), wdt*0.03); if(kind === 'glass'){ x.beginPath(); x.moveTo(X - w2, Y); x.lineTo(X - w2, top); x.lineTo(X + w2, top); x.lineTo(X + w2, Y); x.stroke(); }
     if(R() < 0.65){ const sh = h*0.14, sy = top + h*(0.12 + 0.45*R()), vert = R() < 0.5, col = R() < 0.5 ? c.glow : c.glow2;

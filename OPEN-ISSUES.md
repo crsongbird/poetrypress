@@ -26,6 +26,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE RINGWORLD WITHOUT FLICKER: the cirrus and bands drift and fade instead of leaping; heaps build billow by billow;
   smoke plumes lean with the wind; lights ease on and off; lightning lights the land, cold and from its side (the film
   sent shows the clouds before and after). Is the lightning stark enough, and the building quick enough?
+- THE WILDS AND THE CITIES' COUNTRY: no farms in the Wilds now; groves, stone rows, holy wells and old columns instead;
+  farmsteads in the belt round each city. Each region's palette by the seed (Burano, Jaipur, the Cyclades, ochres,
+  Falu red, Kyoto). The comet travelling, meteors living their second, the aurora by height, lighthouses with their
+  characters, turbines turning. Right amounts?
 - THE FILM'S NEW MOVES: four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral out); Set it now… for the
   look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do the amounts feel right?
 
@@ -34,12 +38,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   Next: a rest at the ends, To a shot, controls marked to sway, sweep or drift, the seed drifting. An hour of time
   passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
   docs/prior-art/film-animation.md.
-- THE RINGWORLD IN MOTION (Ruby, 2026-10-24), what is left: glows on the large spires and buildings gently alive
-  (beacons, a lighthouse's character, turbines and windmills turning); more color variety by the seed; a wider variety
-  of things: small variations on buildings, and a wider library with smarter placing. And: the comet should move;
-  shooting stars that live their second, aurora with height and drift, a greater sense of scale by layering; farms only
-  near the populated rings, not in the Wilds (druid groves and other wild things there instead).
-  docs/prior-art/ringworld-motion-and-variety.md §8.
+- THE RINGWORLD'S VARIETY (Ruby, 2026-10-24), what is left: more small variations on buildings (the table in
+  docs/prior-art/ringworld-motion-and-variety.md §8 item 15), a wider library of kinds by world (item 19), and more of
+  the sense of scale by layering (item 18: a cloud deck below the far horizon, rows of pylons running back, a ship's
+  light crawling along the wall's top).
 - SEE THROUGH, MORE SURFACES: Stained Glass, Tessellate, rain on glass, Water, Frost and the dew webs could bend what is
   beneath too, once their parts hand on a lens (docs/prior-art/surface-beneath.md).
 - THE RING, NEXT (Ruby, 2026-10-20): keep widening the library each pass, in a less cartoony hand throughout; more

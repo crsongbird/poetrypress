@@ -2,6 +2,16 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Uranus–Ferdinand (2026-10-21)
+
+- The Ringworld's walkers, shepherd droids and tracked crawlers turn with the camera instead of only flipping: a
+  walker coming toward you is its head between four legs, the far legs behind its body and the near ones before it;
+  a shepherd's head is turned as it goes; a crawler shows both tracks and its wheels from the side, its arm over it.
+
+### Under the hood
+- `PK_BOTS3` names the droids drawn in the round (with the harvester); the Ringworld passes them their view and its
+  eye. Texture fingerprints updated for scenes with these droids.
+
 ## Uranus–Setebos (2026-10-21)
 
 - Windows keep the hours: as the evening begins most of a town's windows are lit, and as the night deepens toward its

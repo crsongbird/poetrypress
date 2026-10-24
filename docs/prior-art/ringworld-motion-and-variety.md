@@ -277,7 +277,10 @@ Most meteors glow for about a second (docs/prior-art/ringworld-time.md §5). In 
 
 Built in Ursa Major–Phecda: items 1 to 7 (the drift's seam closed, the cirrus by the wind, the film's own clock for
 lights, lights easing, the smoke's plume, heaps keeping their billows and building on a growth clock, lightning that
-lights the land within a measured limit), and fast movers drawn faint. The rest are still to come.
+lights the land within a measured limit), and fast movers drawn faint. Built in Hyades–Lembu: items 8 to 13 (the
+comet, meteors, aurora, beacons and lighthouses, turbines and windmills, rain and mist), the first of 15 (roof
+clutter), 16 (a palette family per region) and 17 (farmsteads round the cities, the wild places), and of 18 (the walls'
+foot haze). Still to come: the wider kit of 15 and 19, and the rest of 18.
 
 Ordered by what it does for the picture over what it costs. Each says what changes, where, how a film stays stateless and calm (the scene clock or film seconds only, nothing switched faster than an ease of at least 1 s, no large region changing quickly), and what a still shows. Any visible change goes to Ruby as tools/compare.mjs or tools/review.mjs sheets first (AGENTS.md §1 rule 1).
 
