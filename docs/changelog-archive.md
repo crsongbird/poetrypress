@@ -2,6 +2,25 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Thalassa (2026-10-21)
+
+- Films are made faster: while one frame is drawn and encoded, the frames to come are made side by side, one on each
+  spare core of the machine (up to eight; a phone keeps to its usual one or two). Each frame is drawn once, never first
+  with the last frame's surface, and a slow surface is no longer made first as a small draft nobody sees. The note says
+  how many frames are being drawn ahead.
+- The screen is kept awake while a film is made, and asked for again if the page is hidden and shown again.
+- Nothing stops a film by accident: closing the sheet, Escape or a tap outside it now says the film is still being made
+  and carries on; Stop asks first (tap it twice); leaving or closing the page asks first too.
+- A film keeps going in a tab in the background: it waits on the encoder's own signal, not on a timer the browser slows.
+
+### Under the hood
+- Housekeeping: reviewed the tests: nothing checked that a film's frames made ahead are the ones its drawing asks for
+  (if the two keys ever differ, every frame is made twice); moving.test.mjs now boots the page and checks it, and fails
+  when the look ahead's scale is off.
+- `surfaceRequests` (the textures the page would ask for, without drawing), `prefetchTexture`, `adoptPrefetched` and
+  `setFilmPool` (a worker per spare core while a film is made); PERFORMANCE-AUDIT.md has the measurements. A building's
+  face is read back once per look and kept (`pkFaceProof`), from a canvas the CPU keeps.
+
 ## Neptune–Naiad (2026-10-21)
 
 - Painted Landscape has a new country, a river: green hills opening into a valley, the river winding down it toward

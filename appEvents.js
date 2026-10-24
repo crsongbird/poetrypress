@@ -517,7 +517,8 @@ $('downloadBtn').addEventListener('click', async ()=>{
   }
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
-  if($('movingSetNow') && $('movingSetNow').addEventListener) $('movingSetNow').addEventListener('click', movingSetNow);
+  if($('movingSetNow') && $('movingSetNow').addEventListener) $('movingSetNow').addEventListener('click', () => movingSetNow('look'));
+  if($('movingSetShot') && $('movingSetShot').addEventListener) $('movingSetShot').addEventListener('click', () => movingSetNow('shot'));
   if($('movingTuckDone') && $('movingTuckDone').addEventListener) $('movingTuckDone').addEventListener('click', () => movingSetEnd(true));
   if($('movingTuckCancel') && $('movingTuckCancel').addEventListener) $('movingTuckCancel').addEventListener('click', () => movingSetEnd(false));
   if($('movingSheet') && $('movingSheet').addEventListener){

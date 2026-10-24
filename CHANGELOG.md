@@ -4,6 +4,18 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Hyades–Prima Hyadum (2026-10-24)
+
+- The Moving Image can rest at its ends: None, half a second or a second held still at the start and the end (and at
+  the turn, there and back), the move between them. It is dimmed where the film loops round.
+- To a shot: a fourth Turn, beside Quarter, Half and Full round. Set the shot… tucks the sheet away while the camera dial
+  is turned to the shot; Done keeps it, shown on the sheet, and puts the camera back. The film then eases from the
+  camera as it is to the shot, the short way round, closing in or drawing back evenly; There and back makes it loop.
+
+### Under the hood
+- `moveAlong` takes a rest; `shotAlong` gives the camera between two shots; Set it now takes a mode, so the same tuck
+  sets a look or a shot. test/moving.test.mjs checks both.
+
 ## Hyades–Ain (2026-10-24)
 
 - New things in the Wilds, each where it belongs: a fire lookout on a high place, its cabin lit by night; a bothy of
@@ -432,22 +444,3 @@ prints it).
 ### Under the hood
 - `CLUSTERS` in build.mjs, from docs/prior-art/star-cluster-names.md (every star's IAU name, its distance and its
   membership, with the sources and the disputed members); the release notes' name now reads a name with a space in it.
-
-## Neptune–Thalassa (2026-10-21)
-
-- Films are made faster: while one frame is drawn and encoded, the frames to come are made side by side, one on each
-  spare core of the machine (up to eight; a phone keeps to its usual one or two). Each frame is drawn once, never first
-  with the last frame's surface, and a slow surface is no longer made first as a small draft nobody sees. The note says
-  how many frames are being drawn ahead.
-- The screen is kept awake while a film is made, and asked for again if the page is hidden and shown again.
-- Nothing stops a film by accident: closing the sheet, Escape or a tap outside it now says the film is still being made
-  and carries on; Stop asks first (tap it twice); leaving or closing the page asks first too.
-- A film keeps going in a tab in the background: it waits on the encoder's own signal, not on a timer the browser slows.
-
-### Under the hood
-- Housekeeping: reviewed the tests: nothing checked that a film's frames made ahead are the ones its drawing asks for
-  (if the two keys ever differ, every frame is made twice); moving.test.mjs now boots the page and checks it, and fails
-  when the look ahead's scale is off.
-- `surfaceRequests` (the textures the page would ask for, without drawing), `prefetchTexture`, `adoptPrefetched` and
-  `setFilmPool` (a worker per spare core while a film is made); PERFORMANCE-AUDIT.md has the measurements. A building's
-  face is read back once per look and kept (`pkFaceProof`), from a canvas the CPU keeps.

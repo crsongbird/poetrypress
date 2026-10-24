@@ -19,12 +19,13 @@ import { draftTimer } from './uiSurface.js';
 import { generateFilenameBase } from './uiLayout.js';
 import { restoreSettings, serializeCurrentSettings } from './uiLook.js';
 import { historyHold, historyPutBack } from './uiHistory.js';
-import { blendLooks, cameraAlso, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
+import { cameraNow } from './uiDials.js';
+import { blendLooks, cameraAlso, shotAlong, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
 
 const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
 // (where a look's kind changes, the film fades across this middle stretch of the move)
 const MOVING_FADE = [0.38, 0.62];
-const movingRun = { busy: false, stop: false, sure: 0, wake: null, caps: {}, able: {}, eased: false, setFrom: null, setLook: null, pickSet: false };
+const movingRun = { busy: false, stop: false, sure: 0, wake: null, caps: {}, able: {}, eased: false, setFrom: null, setLook: null, pickSet: false, setMode: 'look', shot: null };
 // (where a film that begins at a time of day starts, in hours after sunrise: a little before it, at noon, a little
 //  before sunset, at midnight)
 const MOVING_BEGIN = { dawn: -0.5, noon: SUN_DAY/2, dusk: SUN_DAY - 0.6, night: SUN_DAY + (24 - SUN_DAY)/2 };
@@ -58,7 +59,7 @@ function movingSummary(){
   const span = movingSpan(movingPick('movingMove', 'camera'));
   if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
   // (a push, a pull or a spiral does not come round as a full turn does, unless the film goes there and back)
-  const also = movingPick('movingMove', 'camera') === 'camera' ? movingPick('movingAlso', 'hold') : 'hold', ends = { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral }[also];
+  const cam = movingPick('movingMove', 'camera') === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold', ends = cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral }[also];
   if(ends && movingPick('movingPlay', 'once') !== 'back') text += ' · ' + MOVING.sumEnds.replace('{what}', ends);
   el.textContent = text; }
 // (how much time passes in the film, in seconds: none in real time; Time Passing always some)
@@ -95,11 +96,14 @@ export function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking
 // SET IT NOW (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe"): the sheet
 // tucks away and the page itself is changed, anything at all; Done keeps that as the look the film moves to, Cancel
 // drops it, and either way the page goes back to how it was and the changes leave the history
-export function movingSetNow(){ if(movingRun.busy) return; movingRun.setFrom = historyHold();
-  const s = $('movingSheet'), t = $('movingTuck'); if(s) s.hidden = true; if(t) t.hidden = false;
+// (and To a shot's Set the shot: the same, but only the camera kept, the film then easing from the camera as it is to
+//  the shot set: docs/prior-art/film-animation.md §C)
+export function movingSetNow(mode = 'look'){ if(movingRun.busy) return; movingRun.setFrom = historyHold(); movingRun.setMode = mode === 'shot' ? 'shot' : 'look';
+  const s = $('movingSheet'), t = $('movingTuck'), tx = $('movingTuckText'); if(s) s.hidden = true; if(t) t.hidden = false; if(tx) tx.textContent = movingRun.setMode === 'shot' ? MOVING.tuckShot : MOVING.tuckLook;
   if(document.body && document.body.classList) document.body.classList.add('moving-tucked'); }
 export function movingSetEnd(keep){ const f = movingRun.setFrom; if(!f) return; movingRun.setFrom = null;
-  if(keep){ movingRun.setLook = stripToLook(serializeCurrentSettings()); movingRun.pickSet = true; }
+  if(keep && movingRun.setMode === 'shot') movingRun.shot = cameraNow(); else if(keep){ movingRun.setLook = stripToLook(serializeCurrentSettings()); movingRun.pickSet = true; }
+  if(keep && movingRun.setMode === 'shot'){ movingSet('movingMove', 'camera'); movingSet('movingTurn', 'shot'); }
   const t = $('movingTuck'); if(t) t.hidden = true; if(document.body && document.body.classList) document.body.classList.remove('moving-tucked');
   historyPutBack(f); openMoving(); }
 /** Is a film being made (the page asks before it is closed or left). */
@@ -120,7 +124,10 @@ export function paintMoving(e){
   if(m === 'time' && movingPick('movingSpan', '0') === '0') movingSet('movingSpan', '86400');
   if(!movingRun.eased) movingSet('movingEase', m === 'look' || (m === 'camera' && movingPick('movingTurn', '360') !== '360') ? 'ease' : 'even');
   const timeable = !!(caps.time || caps.dial === 'Daylight'), timed = movingSpan(m) > 0;
-  const on = { movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingAlsoRow: m === 'camera', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
+  // (the rest at the ends dimmed where the film loops round: a full round, a light round, time passing)
+  const tp = movingPick('movingTurn', '360'), loops = (m === 'camera' && tp === '360' && movingPick('movingPlay', 'once') !== 'back') || m === 'light' || m === 'time';
+  const sh = movingRun.shot, si = $('movingShotIs'); if(si) si.textContent = sh ? MOVING.shotIs.replace('{turn}', String(Math.round(sh.turn))).replace('{view}', String(Math.round(sh.view))).replace('{zoom}', String(Math.round(sh.zoom))) : MOVING.shotNone;
+  const on = { movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingShotRow: m === 'camera' && tp === 'shot', movingRestRow: !loops, movingAlsoRow: m === 'camera' && tp !== 'shot', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
   for(const [id, ok] of Object.entries(on)){ const row = $(id); if(!row) continue; if(row.classList) row.classList.toggle('off', !ok);
     for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok || (el.name === 'movingSpan' && el.value === '0' && m === 'time'); }
   for(const r of movingRadios('movingMove')) r.disabled = busy || !able[r.value];
@@ -128,6 +135,7 @@ export function paintMoving(e){
   for(const n of ['movingSize', 'movingFps']) for(const r of movingRadios(n)) r.disabled = busy;
   if($('movingLength')) $('movingLength').disabled = busy;
   if($('movingSetNow')) $('movingSetNow').disabled = busy || m !== 'look';
+  if($('movingSetShot')) $('movingSetShot').disabled = busy || m !== 'camera' || tp !== 'shot';
   const b = $('movingMake'); if(b) b.textContent = busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
   movingSummary();
 }
@@ -185,7 +193,9 @@ export async function makeMoving(){
     clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
   const canvas = $('poemCanvas'), move = movingPick('movingMove', 'camera'), fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;   // (a minute at most)
   const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), back = movingPick('movingPlay', 'once') === 'back', ease = movingPick('movingEase', 'even'), eased = ease === 'even' ? false : ease;
-  const turn = +movingPick('movingTurn', '360') || 360, spanS = movingSpan(move), timed = spanS > 0, begin = movingPick('movingBegin', 'lit');
+  const tpick = movingPick('movingTurn', '360'), toShot = move === 'camera' && tpick === 'shot', turn = toShot ? 0 : +tpick || 360, spanS = movingSpan(move), timed = spanS > 0, begin = movingPick('movingBegin', 'lit');
+  if(toShot && !movingRun.shot){ movingNote(MOVING.noShot); return; }
+  const restS = +movingPick('movingRest', '0') || 0, lenS = n/fps, rest = restS > 0 ? restS/(back ? lenS/2 : lenS) : 0;
   const start = serializeCurrentSettings(), looked = move === 'look';
   const other = looked ? movingLooks().find(l => l.value === ($('movingLook') || {}).value) : null;
   if(looked && !other){ movingNote(MOVING.noLook); return; }
@@ -194,7 +204,7 @@ export async function makeMoving(){
   const end = other ? other.look() : null, snap = k => { const el = $(k) || $(k + 'Hex'); return !!(el && el.tagName === 'SELECT'); };
   const fades = end ? wholeChanges(start, end, snap).filter(k => k !== 'lookName' && k !== 'spell') : [];
   const pw = canvas.width, ph = canvas.height, num = id => parseFloat(($(id) || {}).value) || 0, cam0 = num('cameraTurn'), light0 = num('textureLight'), tilt0 = num('textureLightTilt');
-  const also = move === 'camera' ? movingPick('movingAlso', 'hold') : 'hold', view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100;
+  const also = move === 'camera' && !toShot ? movingPick('movingAlso', 'hold') : 'hold', view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100, shot = toShot ? { ...movingRun.shot } : null;
   // (on the Ringworld the light dial is the sun: a Daylight Round is one day of it; Time Passing, or the camera turning
   //  while time passes (Ruby: "time should pass during the camera pan"), as long as was chosen, the scene's clock running
   //  with it, so its clouds drift, its stars wheel and its lights flicker as the hours go; from the light as it is, or
@@ -205,7 +215,7 @@ export async function makeMoving(){
   const clock = sun ? filmHours(sun, (timed ? spanS : 86400)/3600) : null;   // (dawn and dusk given more of the film)
   // (how far along the move frame i is: a full round, or there and back, comes round to where it began so the film
   //  loops; a part turn and a move to a look end where they go; evenly, or eased in and out)
-  const tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: looked || (move === 'camera' && turn < 360), eased });
+  const tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: looked || toShot || (move === 'camera' && turn < 360), eased, rest: looked || toShot || (move === 'camera' && turn < 360) || back ? rest : 0 });
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
   // FRAME i's dials and clock (the moves that turn a dial or run the clock; a move between looks is placed below)
@@ -218,7 +228,8 @@ export async function makeMoving(){
     // (the scene told its frame and the film's mean step too, so its own clocks run evenly from frame to frame)
     if(timed){ const at = j => clock(back ? tri(j/n) : j/n), hrs = at(i); sunAt(hrs); if(clocked) setSceneTime(hrs*3600, Math.max(1, Math.abs(at(i + 1) - hrs)*3600), i, spanS/n, side, fps); }
     else if(clocked) setSceneTime(i/fps, 1/fps, i, 1/fps, side, fps);
-    if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
+    if(move === 'camera' && shot){ const c = shotAlong({ turn: cam0, view: view0, zoom: zoom0 }, shot, u); $('cameraTurn').value = String(c.turn); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); }
+    else if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
       if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); } }
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); } };
   // FRAMES AHEAD (Ruby: the film kept a twentieth of the machine busy): the frames to come set up one by one, their

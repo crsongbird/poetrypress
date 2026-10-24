@@ -59,8 +59,11 @@ export function wholeChanges(a, b, snap = () => false){
  * frame; one that comes round (a full round, a light round) stops a frame short, so the film loops without a doubled
  * frame; "there and back" goes there by the middle and returns, so it loops too. Evenly, or eased in and out.
  */
-export function moveAlong(i, n, { back = false, ends = false, eased = false } = {}){
-  const u = n > 1 ? i/n : 0, s = back ? (u < 0.5 ? u*2 : 2 - u*2) : ends ? Math.min(1, i/Math.max(1, n - 1)) : u;
+export function moveAlong(i, n, { back = false, ends = false, eased = false, rest = 0 } = {}){
+  const u = n > 1 ? i/n : 0, s0 = back ? (u < 0.5 ? u*2 : 2 - u*2) : ends ? Math.min(1, i/Math.max(1, n - 1)) : u;
+  // (a rest at the ends, as a share of each leg: held still there, a drone's hovering time, the move between them;
+  //  docs/prior-art/film-animation.md §A)
+  const q = Math.min(0.3, Math.max(0, rest)), s = q > 0 ? Math.max(0, Math.min(1, (s0 - q)/(1 - 2*q))) : s0;
   // (eased: in and out (true, or 'ease'); 'in', setting off slowly; 'out', arriving slowly; else evenly: Procreate Dreams'
   //  and Keynote's four, docs/prior-art/film-animation.md)
   const e = eased === true || eased === 'ease' ? 'both' : eased;
@@ -72,6 +75,15 @@ export function moveAlong(i, n, { back = false, ends = false, eased = false } = 
  * pulling back and leaning as it goes). A tilt or a spiral leans toward the other side of the view from where it
  * stands, so it always has room. The view (0 to 100) and the zoom (25 to 400) stay in their ranges.
  */
+/**
+ * A camera move to a shot set on the dial (the sheet's To a shot; Ken Burns' start and end): from the camera as it is
+ * to the shot, u from 0 to 1, turning the short way round, the view between, the zoom by its ratio (so it closes in
+ * evenly). cam and shot are { turn, view, zoom }.
+ */
+export function shotAlong(cam, shot, u){
+  const d = ((shot.turn - cam.turn) % 360 + 540) % 360 - 180, z0 = Math.max(25, cam.zoom || 100), z1 = Math.max(25, shot.zoom || 100);
+  return { turn: ((cam.turn + d*u) % 360 + 360) % 360, view: cam.view + (shot.view - cam.view)*u, zoom: z0*Math.pow(z1/z0, u) };
+}
 export function cameraAlso(kind, u, view, zoom){
   const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
   if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };
