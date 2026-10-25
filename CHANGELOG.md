@@ -4,6 +4,16 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Dschubba (2026-10-25)
+
+- Walled towns fly their colours. Every other tower on a town's wall now flies the square banner of the faction that
+  holds the region, its field above and its charge below. Banners stream downwind and ripple in films. Ruined walls fly
+  none.
+
+### Under the hood
+- The tower painter lays each banner on a pole five metres over the tower's top, coloured from the region's faction
+  (`RK_TINCTURES`). The Ringworld's fingerprint did not change: its test picture shows no walled town.
+
 ## Lupus–Xamidimura (2026-10-25)
 
 - The Ringworld's trees keep their seasons. Each seed's season now reaches its broadleaf trees, birches, poplars,
@@ -446,15 +456,3 @@ prints it).
 - `markValue` gives a marked control's value through the film (test/moving.test.mjs checks it starts and ends where
   it stands, sweeps without snapping, keeps to its ends and wraps an angle); a marked slider is set to step freely during
   the film, so a slow sway never stair-steps.
-
-## Hyades–Prima Hyadum (2026-10-24)
-
-- The Moving Image can rest at its ends: None, half a second or a second held still at the start and the end (and at
-  the turn, there and back), the move between them. It is dimmed where the film loops round.
-- To a shot: a fourth Turn, beside Quarter, Half and Full round. Set the shot… tucks the sheet away while the camera dial
-  is turned to the shot; Done keeps it, shown on the sheet, and puts the camera back. The film then eases from the
-  camera as it is to the shot, the short way round, closing in or drawing back evenly; There and back makes it loop.
-
-### Under the hood
-- `moveAlong` takes a rest; `shotAlong` gives the camera between two shots; Set it now takes a mode, so the same tuck
-  sets a look or a shot. test/moving.test.mjs checks both.

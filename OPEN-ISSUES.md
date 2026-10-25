@@ -73,7 +73,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   shares its worlds out region by region with clear borders; boundary stones, banners and signs where the ways cross a
   border, town names on signs. Do the borders read, and are the names right for the app's voice?
 - TOWN WALLS: curtain walls with round towers and gates round some towns of the wilds and the magic world, broken in the
-  ruins. Right height and how often?
+  ruins; every other tower now flies its region's holder's square banner. Right height and how often?
 - MAGIC BY ELEMENT: each magic region ruled by an element (Fire, Wind, Water, Earth; rarely Amber, Vitrum, Sound, Radio)
   colouring its ground, leaves, lights and crystals; glowing trees now rare. Enough variety, and the right colours?
 - SLIMES AND STRIDERS: the magic world's own creatures, slimes (jelly mounds with two eyes, hopping and squashing, of
@@ -102,7 +102,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     talking in twos and threes, carrying things, working; animals drinking at water, playing); interactions and hunts
     between animals (a hawk stooping on a hare, a fox stalking the birds); their states tracked by id.
   - THE WORLD'S REGIONS, what is left: the sense that something deeper lies here; rare battles between factions; banners
-    on the walled towns' towers and gates; runner stones along the borders off the roads.
+    on the walled towns' gates; runner stones along the borders off the roads.
   - OVERHEAD: spacedocks, satellites, ships of many kinds, builder ships and drones watching one another.
   - THINGS IN THE ROUND: every object in at least 8 angles (16 or 32), large objects in horizontal slices, buildings that
     can be walked around and so any shape (or simple 3D models, as the land will be); everything existing in space.

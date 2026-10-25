@@ -6,6 +6,11 @@ How to read the tags: [src](URL) is a page that was opened and read; [est] is an
 
 ## 1 · Town walls
 
+- A lord's banner was "square-shaped, in contrast to the tapering standard or the pennon", bearing his family's arms;
+  the Old French *baniere* from the lord's power of command, a "token of authority"
+  [src](https://en.wikipedia.org/wiki/Knight_banneret). So in the painter [est]: every other tower of a whole wall flies
+  its region's holder's square banner on a pole five metres over its top, its field above its charge, streaming
+  downwind and rippling with the film's sway; none on a ruin.
 - Behind the parapet, "a wall walk from which the defenders could fight or move"; after gunpowder "the height of the
   curtain walls was reduced" [src](https://en.wikipedia.org/wiki/Curtain_wall_(fortification)).
 - The "crenel was typically one-third the width of the adjacent merlon" [src](https://en.wikipedia.org/wiki/Battlement);

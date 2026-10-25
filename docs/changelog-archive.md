@@ -2,6 +2,18 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Hyades–Prima Hyadum (2026-10-24)
+
+- The Moving Image can rest at its ends: None, half a second or a second held still at the start and the end (and at
+  the turn, there and back), the move between them. It is dimmed where the film loops round.
+- To a shot: a fourth Turn, beside Quarter, Half and Full round. Set the shot… tucks the sheet away while the camera dial
+  is turned to the shot; Done keeps it, shown on the sheet, and puts the camera back. The film then eases from the
+  camera as it is to the shot, the short way round, closing in or drawing back evenly; There and back makes it loop.
+
+### Under the hood
+- `moveAlong` takes a rest; `shotAlong` gives the camera between two shots; Set it now takes a mode, so the same tuck
+  sets a look or a shot. test/moving.test.mjs checks both.
+
 ## Hyades–Ain (2026-10-24)
 
 - New things in the Wilds, each where it belongs: a fire lookout on a high place, its cabin lit by night; a bothy of

@@ -2323,10 +2323,21 @@ function rgPaintLand(x, mk, dk, V){
     if(rp > px(3)){ x.fillStyle = rsCss(rsMix(cSh, [0, 0, 0], 0.45)); for(const u of [0.35, 0.68]){ const yy = Yt + (Yb - Yt)*u; x.fillRect(X - rp*0.06 - rp*0.25*sdx, yy, Math.max(px(0.6), rp*0.1), (Yb - Yt)*0.1); } }
     if(wl.roof){ const rh = (Yb - Yt)*0.55 + rp*1.6, el3 = wl.w === 'magic' && el ? el.lights[0] : null, rc = el3 ? rsMix([74, 70, 96], el3, 0.25) : wl.tile ? [150, 76, 58] : [82, 86, 102], cR = lit(rc, 0.95), cR2 = lit(rsMix(rc, [0, 0, 0], 0.3), 0.8);
       const g2 = x.createLinearGradient(X - rp, 0, X + rp, 0); g2.addColorStop(0, rsCss(sdx < 0 ? cR : cR2)); g2.addColorStop(1, rsCss(sdx < 0 ? cR2 : cR)); x.fillStyle = g2;
-      x.beginPath(); x.moveTo(X - rp*1.15, Yt); x.lineTo(X, Yt - rh); x.lineTo(X + rp*1.15, Yt); x.ellipse(X, Yt, rp*1.15, Math.max(0.01, ry*1.15), 0, 0, Math.PI); x.closePath(); x.fill(); return; }
+      x.beginPath(); x.moveTo(X - rp*1.15, Yt); x.lineTo(X, Yt - rh); x.lineTo(X + rp*1.15, Yt); x.ellipse(X, Yt, rp*1.15, Math.max(0.01, ry*1.15), 0, 0, Math.PI); x.closePath(); x.fill(); towerFlag(X, Yt - rh); return; }
     x.fillStyle = rsCss(lit(rsMix(stone, [0, 0, 0], 0.25), 0.8)); x.beginPath(); x.ellipse(X, Yt, rp*0.9, Math.max(0.01, ry*0.9), 0, 0, Math.PI*2); x.fill();
     if(rp > px(2.5)){ const nm = 6, mw = rp*0.22, mh = Math.max(px(0.8), rp*0.32); x.fillStyle = rsCss(rsMix(cLit, cSh, 0.3));
-      for(let m = 0; m < nm; m++){ const u = (m + 0.5)/nm, xx = X - rp + 2*rp*u, j = wl.broke ? mnHash(wl.i*7 + k, m, s + 1346) : 1; if(j < 0.35) continue; x.fillRect(xx - mw/2, Yt - mh*j + ry*Math.sqrt(Math.max(0, 1 - (2*u - 1)**2)), mw, mh*j); } } };
+      for(let m = 0; m < nm; m++){ const u = (m + 0.5)/nm, xx = X - rp + 2*rp*u, j = wl.broke ? mnHash(wl.i*7 + k, m, s + 1346) : 1; if(j < 0.35) continue; x.fillRect(xx - mw/2, Yt - mh*j + ry*Math.sqrt(Math.max(0, 1 - (2*u - 1)**2)), mw, mh*j); } }
+    towerFlag(X, Yt);
+    // (BANNERS ON THE TOWERS, Ruby's order, REGIONS: "banners on the walled towns' towers and gates": every other tower
+    //  of a whole wall flies its region's holder's banner from a pole on its top, square as a lord's banner of arms was
+//  (docs/prior-art/ringworld-regions.md §1), the field above and the charge below,
+    //  streaming downwind and rippling on the film's own sway clock; none on a ruin)
+    function towerFlag(fx, fy){ if(wl.broke || k % 2 || rp < px(2)) return; const ppm = rp/tr*M1, ph = ppm*5, fl = ppm*2.4, fh = ppm*2.4, Fc = V.regionAt(wl.a, wl.z).faction; if(!Fc) return;
+      const [wA] = rgWind(V), dir = Math.cos(wA - V.psi) >= 0 ? 1 : -1, tq = V.time ? rgSwayTime(V) : 0, wave = u => Math.sin(u*5 - tq*4 + k)*fh*0.12*u;
+      x.strokeStyle = rsCss(lit([60, 52, 44], 0.8)); x.lineWidth = Math.max(px(0.4), ppm*0.15); x.beginPath(); x.moveTo(fx, fy); x.lineTo(fx, fy - ph); x.stroke();
+      for(const [c0, v0, v1] of [[Fc.field, 0, 0.5], [Fc.charge, 0.5, 1]]){ x.fillStyle = rsCss(lit(c0, 0.95)); x.beginPath();
+        for(let q = 0; q <= 6; q++){ const u = q/6; x.lineTo(fx + dir*fl*u, fy - ph + fh*v0 + wave(u)); }
+        for(let q = 6; q >= 0; q--){ const u = q/6; x.lineTo(fx + dir*fl*u, fy - ph + fh*v1 + wave(u)); } x.closePath(); x.fill(); } } };
 
   // DUST DEVILS (Ruby: "more atmospheric effects"): on some rings, by day in clear weather over the dry country, a few
   // whirls of dust stand up from the hot ground, a tapering column leaning with the wind, its skirt of dust at the foot;

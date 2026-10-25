@@ -487,7 +487,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     the magic world, a curtain six to ten metres high and two to three thick wandering round the town's heart, a round
     tower every thirty-odd metres and a pair at each gate where the ways go through, stopping at the water; each
     length drawn as a piece of the painter's list (far face, wall walk, near face, merlons along the outer edge when
-    near), each tower a drum under a cone of slate or tile; in the ruins, broken. Nothing is built or grown on them.
+    near), each tower a drum under a cone of slate or tile, every other one flying its region's holder's square banner;
+    in the ruins, broken. Nothing is built or grown on them.
   - **Ways and Clutter** (Ruby: streets "related to works … destroyed … fairly uncommon … different materials … curved
     … follow the contour of the land"): the main roads and, from the heart of each town Works raises, a few ways out and
     one to the next town, each walked a step at a time toward the level and away from the steep (the store's `ways`);
