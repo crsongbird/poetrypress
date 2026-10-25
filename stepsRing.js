@@ -17,6 +17,9 @@ import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } f
 import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
+// DETAIL (Ruby: "longer view distance with higher detail (low, medium, high, ultra) … The current values represent
+// medium"): how much farther, and how much more finely, the things round the eye are sown, by step
+const RG_DETAIL = [0.6, 1, 1.6, 2.4];
 // THE WORLDS (Ruby: "sometimes natural, sometimes city, sometimes cyberpunk, sometimes builders, sometimes magical,
 // sometimes mixed, sometimes apocalyptic, sometimes destroyed, sometimes populated by [small life], sometimes with
 // crashed spaceships"). By the Seed picks one; Mixed lays three side by side, region by region. (The small life was
@@ -35,7 +38,7 @@ const RG_PROF = {
   ruins:    { tr: 0.15, de: 0.7,  gt: 0,   to: 0.6,  sp: 0.4,  sa: 0.6,  mo: 0.3,  cr: 0.1,  ci: 0,   pi: 0,    do: 0.2,  br: 0,   ca: 1,   wr: 0.9,  sh: 0.2,  be: 0.25, ro: 0.7,  gr: 0.3,  cv: 0.4 },
 };
 // the ground each world lays (mixed into the Land Hue), and its lights (null: the page's own accents)
-const RG_GROUND = { wilds: [[0, 0, 0], 0], cities: [[132, 132, 128], 0.22], neon: [[34, 30, 48], 0.55], builders: [[208, 204, 190], 0.3], magic: [[120, 90, 170], 0.22], ruins: [[118, 96, 78], 0.5] };
+const RG_GROUND = { wilds: [[0, 0, 0], 0], cities: [[132, 132, 128], 0.22], neon: [[76, 72, 90], 0.5], builders: [[208, 204, 190], 0.3], magic: [[120, 90, 170], 0.22], ruins: [[118, 96, 78], 0.5] };
 const RG_LIGHTS = { wilds: [[226, 255, 170], [255, 214, 150]], cities: [[255, 212, 150], [255, 240, 210]], neon: null, builders: [[150, 224, 255], [210, 244, 255]], magic: null, ruins: [[255, 140, 64], [255, 196, 120]] };
 
 // which world is where: one (By the Seed, or chosen), or three, region by region (Mixed)
@@ -121,7 +124,9 @@ function rgView(E, n, ww, wh){
   // (the land's facets and the painted things, lit from the sun's side of the screen, and from above as it rises)
   const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
   return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf, psi,
-    life: num(n, 'life', 50)/100, works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
+    // (Flora is what grows, Fauna what lives and moves; Detail how far and how finely: Low, Medium, High, Ultra, as a
+    //  reach on the things sown round the eye, Medium as it always was: RG_DETAIL)
+    life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[Math.max(0, Math.min(3, Math.floor(num(n, 'detail', 37)/25)))], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
     // THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, and the time between its frames
     // (0 in a still, so a still draws as it always did); and the ring's slow spin under the stars since then
     // (in a film, its frame and the scene's mean seconds a frame, from which the scene's own clocks run evenly; and a
@@ -130,8 +135,10 @@ function rgView(E, n, ww, wh){
       frame: film ? cam.frame : null, step: film ? cam.step || 0 : 0, fps: film ? cam.fps || 0 : 0, spin: ((cam && cam.time) || 0)*RG_SPIN }; })(E.ctx.camera) };
 }
 // THE RING'S SPIN under the stars (docs/prior-art/ringworld-time.md: Niven's ring turns once in seven and a half of its
-// thirty-hour days, 225 hours): radians a second of the film's clock turns the sky, a degree and a half an hour
-const RG_SPIN = Math.PI*2/(225*3600);
+// thirty-hour days, 225 hours, a degree and a half an hour): radians a second of the film's clock turns the sky, kept to
+// a sixth of that (Ruby: "movement introduced by the ring itself should be subtle"), so a day's film drifts the sky a
+// few degrees rather than sweeping it round
+const RG_SPIN = Math.PI*2/(225*3600)/6;
 // THE CLOUDS' CLOCK (Ruby: "slower and more physically accurate cloud movement"): when a film's frames are far apart in
 // time (a day in seconds), the clouds would leap from frame to frame; they are carried as a time-lapse carries them, at
 // most two seconds of wind a frame (some sixty times their true pace at thirty frames a second), so they drift
@@ -193,19 +200,21 @@ function rgAirOf(V, day){ const dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), w =
   // (a world's own air: the smoke over ruins, the neon's glow in the haze, the magic's)
   return w === 'ruins' ? rsMix(a, [150, 112, 88], 0.32) : w === 'neon' ? rsMix(a, V.g1, 0.22 + 0.2*(1 - day)) : w === 'magic' ? rsMix(a, V.g2, 0.15) : a; }
 
-// THE STARS BEHIND (what the Arch is laid over) pan with the camera, wrapping round, so turning the camera turns the sky
-// with the land instead of leaving the stars pinned to the page
+// THE STARS BEHIND (what the Arch is laid over; Ruby: "stars should not pan with the camera - movement introduced by the
+// ring itself should be subtle, and the skybox should be a backdrop"): a backdrop, still as the camera turns, tilts or
+// zooms, drifting only a little, wrapping round, with the ring's own slow spin (V.spin, already made gentle)
 function rgPanSky(c, x, V){
-  const { ww, wh, F } = V, ox = ((-V.psi*F) % ww + ww) % ww, oy = (((V.th + V.spin*V.hx)*F) % wh + wh) % wh; if(ox < 0.5 && oy < 0.5) return;
-  const [t, tx] = kitCanvas(ww, wh); tx.drawImage(c, 0, 0);
-  for(const dx of [ox - ww, ox]) for(const dy of [oy - wh, oy]) x.drawImage(t, dx, dy);
+  const { wh, F } = V, oy = ((V.spin*F) % wh + wh) % wh; if(oy < 0.5) return;
+  const [t, tx] = kitCanvas(V.ww, wh); tx.drawImage(c, 0, 0);
+  for(const dy of [oy - wh, oy]) x.drawImage(t, 0, dy);
   t.width = 0; t.height = 0;
 }
 // ---------------- THE ARCH ----------------
 // THE WEATHER (Ruby: "more clouds, slightly rare weather effects … atmospherics, possibly rays from the sun"): by the seed
 // mostly clear, often clouds, now and then fog, rarely rain, a storm or snow (never snow where it's neon or ruins hot)
 function rgWeatherOf(seed, chosen, world){ if(chosen && chosen !== 'by the seed') return chosen; const u = mnHash(seed | 0, 77, 5);
-  return u < 0.46 ? 'clear' : u < 0.74 ? 'clouds' : u < 0.84 ? 'fog' : u < 0.93 ? 'rain' : u < 0.97 ? 'storm' : world.list.includes('neon') ? 'rain' : 'snow'; }
+  // (Ruby: "rain is too common": a seed in twenty-two rains, one in forty storms)
+  return u < 0.5 ? 'clear' : u < 0.82 ? 'clouds' : u < 0.9 ? 'fog' : u < 0.945 ? 'rain' : u < 0.97 ? 'storm' : world.list.includes('neon') ? 'rain' : 'snow'; }
 // A RUNE (Ruby: "better rune graffiti"): a letter of a runic hand, as the old futhark is cut, straight strokes only (a
 // knife's or a brush's): a stave, and twigs from it (up or down, one side or both, from its top or its middle), now and
 // then a bow or a lozenge; the same seed always cuts the same letter. (X, Y) its middle, g half its height
@@ -583,12 +592,36 @@ function rgPaintArch(x, mk, V){
     for(let q = 0, m = 5 + Math.floor(R()*6); q < m; q++){ const y0 = (q - m/2)*th*1.5 + rnd(-1, 1)*th, l0 = len*rnd(0.45, 1), x0 = rnd(-0.15, 0.15)*len, bend = rnd(-1, 1)*th*3, hook = R() < 0.35;
       x.lineWidth = Math.max(px(0.5), th*rnd(0.35, 1)); x.beginPath(); x.moveTo(x0 - l0/2, y0); x.quadraticCurveTo(x0, y0 + bend, x0 + l0/2, y0 + (hook ? th*5 : bend*0.3)); x.stroke(); }
     x.restore(); }
+  // THE OVERCAST (Ruby: "there should always be overhead clouds during the rains"): in rain, a storm or snow a deck of
+  // cloud covers the sky, a plane some two kilometres up laid out in rings round the eye, each patch projected where it
+  // stands, so it grows overhead and thins to a lighter band at the horizon as a real ceiling does; mottled with the
+  // darker bases of its rolls, and riding the wind as the heaps do. Storm the darkest, snow the palest
+  if(wx === 'rain' || wx === 'storm' || wx === 'snow'){ const H = 1800, NR = 44, NA = 96, tc = V.time ? rgCloudTime(V) : 0, ox = Math.cos(wAng)*wSp*tc, oy = Math.sin(wAng)*wSp*tc;
+    const dark = rsMix(cGrey, [26, 28, 38], wx === 'storm' ? 0.55 : wx === 'rain' ? 0.3 : 0.05), light = rsMix(cGrey, cWhite, wx === 'snow' ? 0.7 : 0.35), far = rsMix(AIR, cWhite, 0.25);
+    const dOf = i => H*0.2*Math.pow(200, i/NR), thinOf = d => rsSmooth(H*1.5, H*35, d), colOf = d => rsMix(rsMix(dark, light, 0.35 + 0.3*rsSmooth(H, H*8, d)), far, thinOf(d)*0.85);
+    x.save(); x.lineJoin = 'round';
+    // (its body: ring after ring of the ceiling, darkest overhead, each ring a band all the way round)
+    for(let i = NR - 1; i >= 0; i--){ const d0 = dOf(i), d1 = dOf(i + 1), e0 = Math.atan(H/d0), e1 = Math.atan(H/d1), dm = (d0 + d1)/2, css = rsCss(colOf(dm), 0.97 - 0.3*thinOf(dm));
+      x.fillStyle = css; x.strokeStyle = css; x.lineWidth = px(1);
+      for(let j = 0; j < NA; j++){ const a0 = j/NA*Math.PI*2, a1 = (j + 1)/NA*Math.PI*2, P = [skyAt(a0, e0), skyAt(a1, e0), skyAt(a1, e1), skyAt(a0, e1)]; if(P.some(p => !p)) continue;
+        x.beginPath(); P.forEach((p, q) => q ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.closePath(); x.fill(); x.stroke(); } }
+    // (and its rolls: soft darker bases laid on it in the plane, flattened as they go off toward the horizon, riding the
+    //  wind; the lighter gaps between them are the deck itself)
+    const RD = rgRand(s, 832), nRoll = 260;
+    for(let k = 0; k < nRoll; k++){ const r0 = H*0.4*Math.pow(60, RD()), an = RD()*Math.PI*2, w0 = (500 + 900*RD()), sh = RD(), ph = RD();
+      let qx = r0*Math.cos(an) + ox, qy = r0*Math.sin(an) + oy; const span = H*24*2; qx = ((qx + span/2) % span + span) % span - span/2; qy = ((qy + span/2) % span + span) % span - span/2;
+      const d = Math.hypot(qx, qy); if(d < H*0.3 || d > H*24) continue; const az = Math.atan2(qy, qx), el = Math.atan(H/d), P = skyAt(az, el); if(!P) continue;
+      const rx = F*w0/Math.hypot(d, H), ry = rx*Math.max(0.12, Math.sin(el))*(0.55 + 0.3*sh), fade = (1 - thinOf(d))*rsSmooth(H*24, H*18, d); if(rx < px(2) || fade < 0.03) continue;
+      const g = x.createRadialGradient(P[0], P[1], 0, P[0], P[1], rx), cc = rsMix(dark, [18, 20, 28], 0.2 + 0.3*ph);
+      g.addColorStop(0, rsCss(cc, 0.32*fade)); g.addColorStop(0.6, rsCss(cc, 0.16*fade)); g.addColorStop(1, rsCss(cc, 0));
+      x.fillStyle = g; x.save(); x.translate(P[0], P[1]); x.scale(1, ry/rx); x.translate(-P[0], -P[1]); x.beginPath(); x.arc(P[0], P[1], rx, 0, Math.PI*2); x.fill(); x.restore(); }
+    x.restore(); }
   // (the heaps of cumulus, and the storm's towers with their lightning, stand in the world over the land, and are drawn
   //  with it: rgPaintLand's clouds)
   // the SUN'S RAYS: when it stands low, or the sky is heaped with cloud, light fanning from it across the air in shafts,
   // a gap between each (crepuscular rays), soft, in the sun's own colour
   // (they fan downward and to the sides, as shafts through broken cloud do, some gaps wide; soft-edged, faint)
-  if(sp && (lowSun || cloudy) && wx !== 'fog'){ const R = rgRand(s, 814), n = 6 + Math.floor(R()*6), Lr = F*1.5, col = rsMix([255, 236, 200], [255, 170, 130], dusk*0.6), str = (cloudy ? 0.06 : 0.045)*(0.4 + 0.6*kday + dusk*0.6);
+  if(sp && (lowSun || cloudy) && (wx === 'clear' || wx === 'clouds')){ const R = rgRand(s, 814), n = 6 + Math.floor(R()*6), Lr = F*1.5, col = rsMix([255, 236, 200], [255, 170, 130], dusk*0.6), str = (cloudy ? 0.06 : 0.045)*(0.4 + 0.6*kday + dusk*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; for(let k = 0; k < n; k++){ const a = Math.PI/2 + (k/(n - 1) - 0.5)*2.6 + (R() - 0.5)*0.25, wa = 0.03 + 0.07*R(), g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], Lr*(0.6 + 0.4*R()));
       g.addColorStop(0, rsCss(col, str)); g.addColorStop(0.35, rsCss(col, str*0.45)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
       for(const k2 of [1, 0.55, 0.25]){ x.beginPath(); x.moveTo(sp[0], sp[1]); x.arc(sp[0], sp[1], Lr, a - wa*k2*1.6, a + wa*k2*1.6); x.closePath(); x.fill(); } } x.restore(); }
@@ -813,7 +846,7 @@ const RG_NEAR_KINDS = { cities: ['row', 'brick', 'chapel', 'cottage'], neon: ['m
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
-  const key = [s, V.world.list.join('+'), V.forms, V.life, V.works, V.clutter, W.toFixed(6), L.z0.toFixed(6)].join('|');
+  const key = [s, V.world.list.join('+'), V.forms, V.life, V.fauna, V.detailK, V.works, V.clutter, W.toFixed(6), L.z0.toFixed(6)].join('|');
   const kept = RG_KEPT_STORES.get(key); if(kept) return kept;
   const out = [];
   const sow = (id, c0, B0, rMax, cap, fn) => {
@@ -825,6 +858,9 @@ function rgStore(V){
           if(Math.abs(z) > W*0.485) continue; const r = Math.hypot(a, z - L.z0); if(r >= hi) continue;
           const o = fn(a, z, r, R); if(o){ o.a = a; o.z = z; o.r = r; o.rs = (R()*4294967296) >>> 0; out.push(o); } } }
       if(hi >= rMax) break; } };
+  // (what is sown round the eye, by Detail: farther out, and its finest cells reaching farther, so more stands at middle
+  //  distance; Medium is 1, as it always was)
+  const DK = V.detailK || 1, sowD = (id, c0, B0, rMax, cap, fn) => sow(id, c0, B0*DK, rMax*DK, cap, fn);
   // THE GROUND at a point, as the placing rules read it: its height, how steep, whether it is under water, whether water
   // is near (a coast), and how it stands against the land round it (a rise or a hollow), in the land's own units
   const ground = (a, z) => { const d = W*0.004, e = T.true(a, z, d), ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d);
@@ -1186,7 +1222,7 @@ function rgStore(V){
       if(f.crop === 'stubble' && f.w !== 'ruins' && R() < 0.04*CLF) put('tractor', f.hl - 6*M, (R()*2 - 1)*f.hw*0.7);
       if(f.edge === 'hedge') for(let k = 0, n = Math.floor(f.hl*2/(25*M)); k < n; k++) if(R() < 0.18*V.life*2){ const side = R() < 0.5 ? -1 : 1, kind = ['broadleaf', 'broadleaf', 'poplar', 'birch'][Math.floor(R()*4)];
         put(kind, -f.hl + (k + 0.5)*f.hl*2/n, side*(f.hw + 1.2*M), {}); out[out.length - 1].c = 'tree'; } } }
-  sow(1, W*0.0036, W*0.02, W*3.2, 4, (a, z, r, R) => {
+  sowD(1, W*0.0036, W*0.02, Math.min(W*4, W*3.2*DK)/DK, 4, (a, z, r, R) => {
     const w = V.worldAt(a, z), P = RG_PROF[w], tot = P.tr + P.de + P.gt; if(!tot) return null;
     // (fewer trees where a town stands, none under water)
     const town = V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works)); if(T.true(a, z, W*0.004) <= TR.sea || !offWay(a, z, 2*M) || inField(a, z, -2*M)) return null;
@@ -1198,21 +1234,21 @@ function rgStore(V){
   // ROCKS: boulders where the land is rough
   // (boulders gather where the land is steep, as scree under a slope)
   // (never in a field: a farmer clears the stones off it, and they lie in heaps at its edge, below)
-  sow(3, W*0.006, W*0.02, W*1.0, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope)) || inField(a, z, 3*M)) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
+  sowD(3, W*0.006, W*0.02, W*1.0, 2, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || R() > RG_PROF[w].ro*V.forms*(0.4 + 0.9*Math.min(1, g.slope)) || inField(a, z, 3*M)) return null; return { c: 'rock', w, kind: 'rock', hM: pkMetres('rock', R()) }; });
   // GRASS AND FLOWERS near you
-  sow(4, W*0.0012, W*0.004, W*0.05, 3, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > RG_PROF[w].gr*V.life*1.4) return null; return { c: 'grass', w, kind: 'grass', hM: pkMetres('grass', R()) }; });
+  sowD(4, W*0.0012, W*0.004, W*0.05, 3, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > RG_PROF[w].gr*V.life*1.4) return null; return { c: 'grass', w, kind: 'grass', hM: pkMetres('grass', R()) }; });
   // SMALL LIFE lives on some rings, not all: insects, fairies, flowers, slime and kites flown on a windy day, each world
   // its own mix
-  { const beMax = Math.max(...V.world.list.map(w => RG_PROF[w].be)), lively = mnHash(s, 41, 9) < 0.25 + 0.6*V.life*beMax;
+  { const beMax = Math.max(...V.world.list.map(w => RG_PROF[w].be)), lively = mnHash(s, 41, 9) < 0.25 + 0.6*V.fauna*beMax;
     const MIX = { magic: [1, 3, 1, 1, 0.4], wilds: [3, 1, 3, 1, 0.8], ruins: [2, 0.5, 1, 3, 0], neon: [1, 2, 0.5, 1, 0], cities: [2, 0.5, 2, 0.5, 1], builders: [2, 1, 2, 1, 0.2] }, KINDS = ['insects', 'fairies', 'flowers', 'slime', 'kite'];
-    if(lively) sow(5, W*0.003, W*0.01, W*0.12, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.12*V.life*(0.3 + 0.7*RG_PROF[w].be)) return null;
+    if(lively) sowD(5, W*0.003, W*0.01, W*0.12, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.12*V.fauna*(0.3 + 0.7*RG_PROF[w].be)) return null;
       const mix = MIX[w] || [2, 1, 2, 1, 0], tot = mix.reduce((p, q) => p + q, 0); let pick = R()*tot, ki = 0; while(ki < KINDS.length - 1 && pick > mix[ki]){ pick -= mix[ki]; ki++; }
       return { c: 'life', w, kind: KINDS[ki] }; }); }
   // ROBOTS AND DROIDS, as life, where they belong (Ruby: "cute robots and threatening ones, in appropriate biomes
   // only"): the builders' helpers and drones, the neon's sentries and walkers, the ruins' scavengers, and now and then
   // a giant fallen long ago, kneeling in the grass
   { const BOTS = { builders: 0.2, neon: 0.14, cities: 0.07, ruins: 0.1, wilds: 0.012, magic: 0.015 };
-    sow(6, W*0.004, W*0.012, W*0.3, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > (BOTS[w] || 0)*(0.3 + V.life)) return null;
+    sow(6, W*0.004, W*0.012, W*0.3, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > (BOTS[w] || 0)*(0.3 + V.fauna)) return null;
       const g = ground(a, z); if(g.wet || g.slope > 1.2) return null; const L2 = PK_BOTS[w] || PK_BOTS.cities, kind = L2[Math.floor(R()*L2.length)];
       if(kind === 'derelict' && R() > 0.2) return null;
       return { c: 'bot', w, kind, hM: pkMetres(kind, R()) }; }); }
@@ -1223,21 +1259,21 @@ function rgStore(V){
   // on open ground, pigeons and sparrows in town; ducks and swans on the water by its edge, a heron at the edge; over
   // the land a raptor circling and swallows and swifts hawking, bats round the trees and water at dusk, butterflies and
   // dragonflies near you, and now and then a skein of geese going over
-  { const LIFE = V.life, wildish = w => ({ wilds: 1, magic: 0.85, ruins: 0.75, cities: 0.55, builders: 0.4, neon: 0.12 })[w] ?? 0.5, wild = (kind, w, x2 = {}) => ({ c: 'wild', kind, w, ...x2 });
-    sow(17, W*0.02, W*0.04, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.5*LIFE*wildish(w)) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+  { const LIFE = V.fauna, wildish = w => ({ wilds: 1, magic: 0.85, ruins: 0.75, cities: 0.55, builders: 0.4, neon: 0.12 })[w] ?? 0.5, wild = (kind, w, x2 = {}) => ({ c: 'wild', kind, w, ...x2 });
+    sowD(17, W*0.02, W*0.04, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.5*LIFE*wildish(w)) return null; const g = ground(a, z), fo = V.forestAt(a, z);
       if(g.wet || g.slope > 0.7 || fo < 0.1 || fo > 0.62 || inTown(w, a, z)) return null; return wild(T.true(a, z, W*0.01) > TR.snow*0.3 || R() < 0.2 ? 'elk' : 'deer', w); });
-    sow(18, W*0.008, W*0.02, W*0.25, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.24*LIFE*wildish(w)) return null; const g = ground(a, z);
+    sowD(18, W*0.008, W*0.02, W*0.25, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.24*LIFE*wildish(w)) return null; const g = ground(a, z);
       if(g.wet || g.slope > 0.6 || V.forestAt(a, z) > 0.5 || inTown(w, a, z)) return null; return wild(R() < 0.3 ? 'fox' : 'hare', w); });
-    sow(19, W*0.012, W*0.03, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.38*LIFE) return null; const g = ground(a, z); if(g.wet || V.forestAt(a, z) > 0.45) return null;
+    sowD(19, W*0.012, W*0.03, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.24*LIFE) return null; const g = ground(a, z); if(g.wet || V.forestAt(a, z) > 0.45) return null;
       const u = R(); return wild(inTown(w, a, z) ? (u < 0.6 ? 'pigeons' : 'sparrows') : w === 'ruins' || w === 'magic' ? (u < 0.7 ? 'rooks' : 'starlings') : u < 0.45 ? 'rooks' : u < 0.8 ? 'starlings' : 'sparrows', w); });
-    sow(20, W*0.012, W*0.03, W*0.5, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE) return null; const g = ground(a, z); if(!g.coast) return null;
+    sowD(20, W*0.012, W*0.03, W*0.5, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE) return null; const g = ground(a, z); if(!g.coast) return null;
       if(g.wet) return wild(R() < 0.25 ? 'swans' : 'ducks', w, { afloat: true }); return R() < 0.5 ? wild('heron', w) : null; });
-    sow(21, W*0.06, W*0.12, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE*(w === 'neon' ? 0.25 : 1)) return null; const u = R();
+    sowD(21, W*0.06, W*0.12, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE*(w === 'neon' ? 0.25 : 1)) return null; const u = R();
       return wild(inTown(w, a, z) ? (u < 0.7 ? 'swifts' : 'raptor') : u < 0.4 ? 'raptor' : u < 0.8 ? 'swallows' : 'swifts', w); });
-    sow(22, W*0.015, W*0.04, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE) return null; const g = ground(a, z); if((g.wet && !g.coast) || (!g.coast && V.forestAt(a, z) < 0.3)) return null; return wild('bats', w); });
-    sow(24, W*0.004, W*0.008, W*0.04, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet && !g.coast) return null; return wild(g.coast ? 'dragonflies' : 'butterflies', w); });
+    sowD(22, W*0.015, W*0.04, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE) return null; const g = ground(a, z); if((g.wet && !g.coast) || (!g.coast && V.forestAt(a, z) < 0.3)) return null; return wild('bats', w); });
+    sowD(24, W*0.004, W*0.008, W*0.04, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet && !g.coast) return null; return wild(g.coast ? 'dragonflies' : 'butterflies', w); });
     // (and near you, where they are seen best: a hare or two, a fox, a few birds on the grass, swallows over it)
-    sow(25, W*0.005, W*0.012, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.5*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
+    sowD(25, W*0.005, W*0.012, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.38*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
       const u = R(), town = inTown(w, a, z), fo = V.forestAt(a, z); return wild(town ? (u < 0.5 ? 'sparrows' : u < 0.8 ? 'pigeons' : 'swifts') : fo > 0.5 ? (u < 0.5 ? 'butterflies' : 'sparrows') : u < 0.3 ? 'hare' : u < 0.4 ? 'fox' : u < 0.6 ? 'swallows' : u < 0.8 ? 'starlings' : 'rooks', w); });
     sow(23, W*0.4, W*0.8, W*2.4, 1, (a, z, r, R) => R() < 0.35*LIFE ? wild('geese', V.worldAt(a, z)) : null); }
   // SMALL THINGS near you (Ruby: "small things that get found closer to the player"): fences and mailboxes in the wilds,
@@ -1251,12 +1287,12 @@ function rgStore(V){
       case 'well': case 'shrine': case 'mailbox': case 'wishing': return ci > 0.03; case 'busstop': case 'kiosk': case 'signal': case 'phonebox': case 'vending': case 'cart': return ci > 0.15;
       case 'fountain': return ci > 0.2 && g.slope < 0.2; case 'bandstand': return ci > 0.12 && ci < 0.7 && g.slope < 0.15;
       case 'wisp': return g.coast || g.rise < -0.2; case 'fairyring': return fo > 0.2 && g.slope < 0.25; case 'solar': case 'dish': return g.slope < 0.25; case 'pole': return false; default: return true; } };
-  sow(7, W*0.002, W*0.006, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], ci = V.cityAt(a, z, w === 'wilds' ? 0.12 : P.cv), near = 0.05 + 0.5*ci;
+  sowD(7, W*0.002, W*0.006, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], ci = V.cityAt(a, z, w === 'wilds' ? 0.12 : P.cv), near = 0.05 + 0.5*ci;
     if(R() > near*0.45*CL) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8 || !offWay(a, z, 1.5*M)) return null;
     const L2 = (PK_PROPS[w] || PK_PROPS.cities).filter(k => !PK_PROPS_BIG.includes(k) && !RG_STREET_KINDS.includes(k)), kind = L2[Math.floor(R()*L2.length)]; if(!kind || (kind === 'figure' && R() > 0.4)) return null;
     // (a person walks along the street or lane beside it, faceOf turned a quarter: the way to the way, turned along it)
     if(!propFits(kind, w, g, a, z, ci)) return null; return { c: 'prop', w, kind, hM: pkMetres(kind, R()), sink: w === 'ruins' && RG_SINKS.includes(kind) ? 0.08 + 0.3*R() : 0, ...(kind === 'figure' ? { walk: faceOf(a, z, R()) + Math.PI/2 } : {}) }; });
-  sow(11, W*0.006, W*0.02, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], ci = V.cityAt(a, z, w === 'wilds' ? 0.12 : P.cv);
+  sowD(11, W*0.006, W*0.02, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z), P = RG_PROF[w], ci = V.cityAt(a, z, w === 'wilds' ? 0.12 : P.cv);
     if(R() > (0.08 + 0.4*ci)*0.45*CL) return null; const g = ground(a, z); if(g.wet || g.slope > 0.6 || !offWay(a, z, 4*M)) return null;
     const L2 = (PK_PROPS[w] || PK_PROPS.cities).filter(k => PK_PROPS_BIG.includes(k) && !RG_STREET_KINDS.includes(k)); if(!L2.length) return null; const kind = L2[Math.floor(R()*L2.length)];
     if(!propFits(kind, w, g, a, z, ci)) return null; return { c: 'prop', w, kind, hM: pkMetres(kind, R()), sink: w === 'ruins' && RG_SINKS.includes(kind) ? 0.05 + 0.2*R() : 0 }; });
@@ -1270,7 +1306,7 @@ function rgStore(V){
       const o = { c: 'prop', w, kind, hM: pkMetres(kind, R()), a: a2, z: z2, r: Math.hypot(a2, z2 - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nz*sd2, -nx*sd2), ...extra }; out.push(o); return o; };
     if(RG_LIT_WAYS.includes(wy.mat) && w !== 'wilds'){ let k = 0; along(wy, 25*M, (a, z, nx, nz, u, dec) => { k++; if(inTown(w, a, z) && dec < 0.7 && R() < Math.min(1, 0.3 + 1.4*V.clutter)){ put('lamp', a, z, nx, nz, k % 2 ? 1 : -1);
       // (and now and then, beside a lamp, the lamplighter on its round: seen only about dusk)
-      if(w !== 'neon' && R() < 0.012*V.life*2){ const o = put('lamplighter', a + nz*1.2*M, z - nx*1.2*M, nx, nz, k % 2 ? 1 : -1, 0.6*M); if(o) o.c = 'bot'; } } }); }
+      if(w !== 'neon' && R() < 0.012*V.fauna*2){ const o = put('lamplighter', a + nz*1.2*M, z - nx*1.2*M, nx, nz, k % 2 ? 1 : -1, 0.6*M); if(o) o.c = 'bot'; } } }); }
     along(wy, 16*M, (a, z, nx, nz, u, dec) => { const town = inTown(w, a, z);
       if((w === 'cities' || w === 'neon') && town){ if(R() < 0.1*CL) put('parked', a, z, nx, nz, side(), -0.7*M); if(R() < 0.04*CL) put('hydrant', a, z, nx, nz, side(), 0.4*M);
         if(R() < 0.035*CL){ const s2 = side(); put(R() < 0.35 ? 'busstop' : 'bench', a, z, nx, nz, s2, 1.6*M); if(R() < 0.6) put('bicycle', a + nz*3*M, z - nx*3*M, nx, nz, s2, 1.2*M); }
@@ -1286,7 +1322,7 @@ function rgStore(V){
   // NODS (Ruby: "Easter eggs … that nod to both [Halo and Fallout] … rarely or commonly depending on how obnoxious they
   // are and seed dependently"): each on the ground its rule asks, by the seed; the loud ones rare (PK_EGGS)
   { const KINDS = Object.keys(PK_EGGS);
-    const fits = (k, g, a, z, r, ci) => k === 'gate' ? g.rise > 0.4 || g.slope > 0.5 : k === 'cogdoor' ? g.slope > 0.15 && g.slope < 0.9 && ci < 0.1 : k === 'spire' ? g.rise > 0.6
+    const fits = (k, g, a, z, r, ci) => k === 'slabgate' ? g.rise > 0.4 || g.slope > 0.5 : k === 'cogdoor' ? g.slope > 0.15 && g.slope < 0.9 && ci < 0.1 : k === 'spire' ? g.rise > 0.6
       : k === 'pod' || k === 'suit' ? V.forestAt(a, z) < 0.35 && ci < 0.05 && g.slope < 0.4 : k === 'diner' || k === 'car' ? ci < 0.7 && g.slope < 0.35
       : k === 'caps' ? r < W*0.03 : true;
     sow(8, W*0.02, W*0.05, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z), g = ground(a, z); if(g.wet) return null;
@@ -1342,9 +1378,31 @@ function rgStore(V){
     for(const o of out){ if(o.c !== 'prop' || o.kind !== 'figure' || o.w === 'neon') continue; let best = null, bd = 250*M;
       for(const b of doors){ const d = Math.abs(b.a - o.a) + Math.abs(b.z - o.z); if(d < bd*1.42 && Math.hypot(b.a - o.a, b.z - o.z) < bd){ bd = Math.hypot(b.a - o.a, b.z - o.z); best = b; } }
       if(best){ const ex = -best.a, ez = L.z0 - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } } }
+  // EVERY THING NAMED (Ruby: "Each NPC should probably have an internal ID and tag so they can be tracked and given specific
+  // animation states and their states can be captured … Same with the plants … and the buildings"): an id from its own
+  // stream (the same thing has the same id from wherever it is seen, view after view, film frame after frame), and its tags
+  // (what it is, what world built it, and what it does: rgTagsOf); a wild group's members are its id and their number
+  const seenIds = new Set();
+  for(const o of out){ let id = RG_ID_CLASS[o.c] + '-' + (o.kind || o.c) + '-' + (o.rs >>> 0).toString(36); while(seenIds.has(id)) id += "'"; seenIds.add(id); o.id = id; o.tags = rgTagsOf(o); }
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
+// (each record's class as its id's first word, and its tags: its class's role, its kind, its world, and what it does)
+const RG_ID_CLASS = { tree: 'plant', grass: 'plant', bldg: 'building', prop: 'thing', bot: 'droid', life: 'life', wild: 'animal', rock: 'stone', board: 'board', glim: 'light', henge: 'stones', egg: 'find' };
+const RG_ANIMALS = ['sheep', 'gulls', 'crab'], RG_PEOPLE = ['figure', 'shepherd', 'lamplighter', 'harvester'];
+function rgTagsOf(o){ const t = [RG_ID_CLASS[o.c] || o.c, o.kind, o.w].filter(Boolean);
+  if(o.c === 'wild' || RG_ANIMALS.includes(o.kind)) t.push('animal', 'moves'); if(RG_PEOPLE.includes(o.kind)) t.push('npc', 'person', 'moves');
+  if(o.c === 'bot') t.push('npc', 'droid', 'moves'); if(o.c === 'tree' || o.c === 'grass') t.push('plant'); if(o.c === 'bldg') t.push(o.near ? 'near' : 'far'); if(o.door) t.push('has-door');
+  if(o.c === 'wild' && WK_FLYERS.includes(o.kind)) t.push('flies'); return t; }
+/** THE STATE OF A THING at a moment of the clock (t, seconds): what a tracker, a game or a test can capture of it, by its
+ *  id; for a wild group, each member's own (its id the group's and its number). Pure: the same record and moment, the same
+ *  answer (test hook: the ids and states are read by test/wildlife.test.mjs). */
+export function ringStateOf(o, t = 0, env = {}){   // test hook: a thing's state by its id, for a tracker or a game
+  const base = { id: o.id, tags: o.tags, kind: o.kind, a: o.a, z: o.z };
+  if(o.c !== 'wild') return base;
+  const n = wkCount(o.kind, o.rs), members = []; for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); members.push({ id: o.id + '#' + j, on: st.on, x: st.x, z: st.z, y: st.y, pose: st.pose, face: st.face }); }
+  return { ...base, members }; }
+export const ringKeptStores = () => [...RG_KEPT_STORES.values()];   // test hook: the stores the views made, every thing in them with its id and tags
 
 // ---------------- THE LAND ----------------
 // the trees whose crown is a narrow spire or column: what they hide is narrow too
@@ -2131,7 +2189,7 @@ export const RING_STEPS = {
     run(E, n){ const [c, m] = this.paint(E, n); return [E.readCanvas(c), E.asField(E.readCanvas(m))]; } },
   ringland: { cat: 'Marks', label: 'Land on the Ring', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
-    params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
+    params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Flora', 50), RG_R('fauna', 'Fauna', 40), RG_R('detail', 'Detail', 37),
       RG_R('works', 'Works', 50), RG_R('clutter', 'Clutter', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99), RG_WEATHER_SEL], cost: () => 4,
     fresh: true,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);

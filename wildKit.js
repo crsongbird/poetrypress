@@ -39,9 +39,9 @@ export const WK_KINDS = {
   hare:      { way: 'hop', n: [1, 3], P: 24, range: 6, spread: 5, walk: 2.4, run: 10, bolt: 0.18, wander: 0.5, tau: 9, size: 0.55, stride: 1.1, coat: [152, 124, 90] },
   fox:       { way: 'prowl', n: [1, 1], P: 80, range: 35, spread: 0, walk: 2.1, run: 9, bolt: 0.08, wander: 0.8, tau: 14, size: 0.75, stride: 1.4, coat: [196, 98, 44] },
   // the ground's birds, flushed all at once and wheeling down elsewhere (hgt: how high they rise)
-  rooks:     { way: 'flock', n: [7, 20], P: 55, range: 28, spread: 8, fly: 9, wander: 1.3, tau: 7, size: 0.85, hgt: [5, 14], coat: [30, 30, 36], body: 0.46 },
-  pigeons:   { way: 'flock', n: [6, 16], P: 40, range: 20, spread: 5, fly: 10, wander: 1.0, tau: 6, size: 0.65, hgt: [4, 11], coat: [128, 132, 146], body: 0.33 },
-  starlings: { way: 'flock', n: [10, 28], P: 34, range: 22, spread: 6, fly: 10, wander: 1.2, tau: 5, size: 0.4, hgt: [3, 9], coat: [44, 46, 54], body: 0.21 },
+  rooks:     { way: 'flock', n: [5, 12], P: 55, range: 28, spread: 8, fly: 9, wander: 1.3, tau: 7, size: 0.85, hgt: [5, 14], coat: [30, 30, 36], body: 0.46 },
+  pigeons:   { way: 'flock', n: [4, 10], P: 40, range: 20, spread: 5, fly: 10, wander: 1.0, tau: 6, size: 0.65, hgt: [4, 11], coat: [128, 132, 146], body: 0.33 },
+  starlings: { way: 'flock', n: [6, 16], P: 34, range: 22, spread: 6, fly: 10, wander: 1.2, tau: 5, size: 0.4, hgt: [3, 9], coat: [44, 46, 54], body: 0.21 },
   sparrows:  { way: 'flock', n: [4, 10], P: 26, range: 14, spread: 2.5, fly: 6, wander: 0.7, tau: 4, size: 0.24, hgt: [1.5, 4], coat: [134, 104, 76], body: 0.15 },
   // on the water: a slow drift, now and then up-ended to feed
   ducks:     { way: 'paddle', n: [2, 7], spread: 3, wander: 5, tau: 38, size: 0.55, coat: [116, 96, 74], head: [40, 88, 60] },
@@ -50,8 +50,8 @@ export const WK_KINDS = {
   heron:     { way: 'wade', n: [1, 1], P: 90, range: 6, fly: 9, flyOff: 45, flies: 0.22, size: 0.95, coat: [150, 156, 164] },
   // in the air: circling on a thermal and gliding to the next; hawking for insects on noise (amp: how far, hgt: how high)
   raptor:    { way: 'soar', n: [1, 2], P: 160, size: 1.3, speed: 9, coat: [96, 72, 52] },
-  swallows:  { way: 'hawk', n: [4, 10], tau: 10, amp: 18, hgt: [1.2, 9], size: 0.32, flap: 5, coat: [36, 40, 64] },
-  swifts:    { way: 'hawk', n: [5, 14], tau: 14, amp: 40, hgt: [22, 65], size: 0.42, flap: 6, coat: [42, 40, 40] },
+  swallows:  { way: 'hawk', n: [3, 7], tau: 10, amp: 18, hgt: [1.2, 9], size: 0.32, flap: 5, coat: [36, 40, 64] },
+  swifts:    { way: 'hawk', n: [4, 9], tau: 14, amp: 40, hgt: [22, 65], size: 0.42, flap: 6, coat: [42, 40, 40] },
   bats:      { way: 'hawk', n: [3, 8], tau: 6, amp: 7, hgt: [3, 14], size: 0.28, flap: 6, coat: [44, 36, 34] },
   butterflies: { way: 'hawk', n: [1, 3], tau: 3, amp: 2, hgt: [0.3, 1.6], size: 0.07, flap: 5, coat: [230, 200, 90] },
   dragonflies: { way: 'dart', n: [1, 3], P: 2.6, range: 2, hgt: [0.4, 1.4], size: 0.09, coat: [70, 140, 170] },

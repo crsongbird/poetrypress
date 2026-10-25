@@ -1796,17 +1796,20 @@ body .tab-btn[data-tab="film"]{ display:none; }
 /* THE PREVIEW BOX (the phone's sheet): a third of the screen high and always so, the frame letterboxed in it, the film
    itself over it once made, a thin rule along its foot for how far a film has come; held at the sheet's top as the
    cards scroll under it. On a desk the stage does this, so the Kinesis card has none */
-.moving-preview{ position:sticky; top:0; z-index:2; height:calc(var(--vvh, 100vh) * 0.3); margin:0 0 10px; background:color-mix(in srgb, var(--bg-panel) 70%, #000); border-radius:var(--r-1); overflow:hidden; }
+.moving-preview{ position:relative; flex:none; height:calc(var(--vvh, 100vh) * 0.3); margin:0 0 10px; background:color-mix(in srgb, var(--bg-panel) 70%, #000); border-radius:var(--r-1); overflow:hidden; }
 .moving-preview canvas, .moving-preview video{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
 .moving-preview video[hidden]{ display:none; }
 .moving-progress{ position:absolute; left:0; right:0; bottom:0; height:2px; background:var(--accent); transform:scaleX(0); transform-origin:left center; }
 .kinesis-card .moving-preview{ display:none; }
-/* its foot (the summary, the note, Make the film) held at the bottom of the sheet, and of the column in the tab */
-.moving-foot{ position:sticky; bottom:0; z-index:2; background:var(--bg-panel); padding:4px 0 2px; }
-.kinesis-card .moving-foot{ background:var(--bg-card, var(--bg-panel)); }
+/* its foot (the summary, the note, Make the film): in the tab it follows the choices; on a phone the sheet is a column, the
+   preview and the foot holding still and the choices scrolling between them, so nothing lies over anything (Ruby: "summary
+   and buttons overlap format options") */
+.moving-foot{ padding:4px 0 2px; }
 /* on a phone the sheet is the whole screen: the page behind it hidden, no veil, no height cap */
 body.is-mobile #movingSheet{ background:var(--bg-panel); align-items:stretch; }
-body.is-mobile #movingSheet > .moving-sheet{ width:100%; max-width:none; height:var(--vvh, 100vh); max-height:none; border:0; border-radius:0; box-shadow:none; padding:12px 14px 0; }
+body.is-mobile #movingSheet > .moving-sheet{ width:100%; max-width:none; height:var(--vvh, 100vh); max-height:none; border:0; border-radius:0; box-shadow:none; padding:12px 14px 6px; display:flex; flex-direction:column; overflow:hidden; }
+body.is-mobile #movingSheet .moving-cards{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+body.is-mobile #movingSheet .moving-foot{ flex:none; border-top:1px solid var(--line); }
 /* while a film is made, what can't be touched is faded (uiMoving.js, movingInert) */
 body.film-making .tabbar, body.film-making #esoDrawer, body.film-making .history-btn, body.film-making #filmBtn, body.film-making #filmstrip, body.film-making #resetViewBtn{ opacity:.4; transition:opacity .3s; }
 /* THE FILM'S GROUPS (docs/prior-art/film-export.md §5): each a fieldset under a thin rule, its legend small; a row's label

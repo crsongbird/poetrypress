@@ -422,6 +422,15 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     early summer, days of fourteen hours (`SUN_DAY`), long dusks. Time passes in a Camera Round too (Ruby: "time
     should pass during the camera pan"), as much as the sheet says, from the light as it is or from dawn, midday, dusk
     or night.
+  - **Flora, Fauna, Detail** (Ruby, 2026-10-25: "Retiring the paint filter and remapping those sliders"): the oil paint is
+    gone from the chain; Life is Flora (trees, grass, hedges, flowers), the seventh slider Fauna (the wild things, the
+    small finds, the droids), the eighth Detail (`RG_DETAIL`: how much farther and closer together the things round the eye
+    are sown, `sowD`; Medium is 1). Older looks meet Fauna and Detail at their defaults (format 11). Every thing in the
+    store has an id and tags (`rgTagsOf`; the same thing the same id from any view), and `ringStateOf` gives its state at a
+    moment, a wild group's members each by the group's id and their number.
+  - **The sky as a backdrop** (Ruby: "stars should not pan with the camera"): the star field stays put as the camera
+    turns (`rgPanSky`), drifting only with the ring's spin, kept to a sixth of the true one (`RG_SPIN`). In rain, a storm or
+    snow an overcast ceiling covers the sky: rings of a plane two kilometres up, darkest overhead, and soft darker rolls.
   - **The wild things** (Ruby: "wildlife still travel on short predictable paths and do not really move or scatter";
     wildKit.js, docs/prior-art/ringworld-wildlife.md). Each herd, flock or creature is a store record (`c: 'wild'`) at a
     home of its own; its members' places come from `wkAt` alone, by the group's seed and `rgMotionTime`, so a film can

@@ -35,32 +35,49 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   ends; To a shot (Set the shot… on the dial); four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral
   out); Set it now… for the look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do
   the amounts feel right?
-- THE WILD THINGS: deer and elk at the woods' edge that graze, look up, walk on and now and then bolt and fan out; hares
-  and a fox (its mousing pounce); rooks, starlings, sparrows and pigeons that lift all together and wheel down
-  elsewhere; ducks and swans drifting and up-ending, a heron still at the edge; a hawk circling up a thermal and gliding
-  on; swallows and swifts hawking, bats at dusk, butterflies and dragonflies near you, geese going over against the
-  wind. The sheep, gulls, insects and fairies drift on noise now, never a loop. Drawn half again their size so they are
-  found: enough of them, and big enough?
-- THE DISH IN THE ROUND: a bowl a third of its radius deep, its rim, the feed on four legs at the focus, the hub, the
-  axle in the yoke's arms, the turntable on its pedestal, all joined and lit from the sun.
-- A FEW BUILDINGS NEAR THE EYE: now and then a row house, cottage, chapel, motel, observatory or wizard's tower stands
-  close, facing you, fading out before it could fill the frame.
-- KINESIS: on a desk the film's choices as a tab after Materia (☿), the stage beside it showing each frame as it is
-  drawn; on a phone the sheet the whole screen, a preview at its top (the page, the frames as they are made, then the
-  film looping); Esoterica's Make a film of the page…. Is the glyph right, and the place?
+- THE SKY AS A BACKDROP: the stars stand still behind everything as the camera turns, tilts and zooms, drifting only a
+  little with the ring's spin (a sixth of what it was); in rain, a storm or snow an overcast ceiling covers the sky,
+  mottled with the darker bases of its rolls, and rain is rarer (a seed in twenty-two).
+- FLORA, FAUNA AND DETAIL: Life is Flora (what grows), Paint is gone and its slider is Fauna (what lives and moves, at 40
+  by default, the flocks smaller), the Brush fader is Detail (Low, Medium, High, Ultra; Medium as it always was). Right
+  amounts at the defaults?
 
 ## 2 · Ruby's notes to act on
-- RUBY'S AFTERNOON NOTES (2026-10-24), what is left: cloud lighting with depth and faked subsurface scattering; a
-  depth pass over all the drawings; clouds more dramatic in the rain and storms that look like storms; wind on trees in
-  the rain that shows its strength and way; planets
-  and moons with more variety, the ring's distance from its planet by the seed, the star's light on them (color,
-  Rayleigh scattering, their air); fictional star systems, other light colors, an accurate Milky Way, skies from other
-  galaxies; the generators kept fast and portable for a game; gem walkers and other constructs in magic worlds, elves
-  and fae in place of people in the wilds, demonic and eldritch things, truly weird rare worlds (a candy world first);
-  Martian, Venusian and Enceladian rings as extremely rare seeds with their own buildings, plants and animals; the
-  Kinesis tab, begun: the desk's tab and the phone's full-screen sheet with its preview (docs/prior-art/film-studio.md,
-  What to build first: next the hint's surface ability and the chooser's ☿ mark, then the two cameras, the sun's arc,
-  and keys on a reel).
+- RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
+  production). In the order they are being built:
+  - THE FILM WINDOW: length a slider with ticks; aspect a radio; resolution a radio (720p, 1080p, 1440p, 2160p, or a
+    custom width and height); the two cameras and the sun's arc in the window itself for the surfaces that have them;
+    a journey (the eye carried along a seed's own interesting path, up to two days long); clearer moves, more of them;
+    then keys on a reel (docs/prior-art/film-studio.md).
+  - THE LAND GENERATED AND DRAWN: real landmasses and biomes by the seed, rendered with intention, with transition zones;
+    water with clear shores; nothing morphing as the camera rises or turns; the bands kept to mark drops in elevation and
+    sharp borders; ground textures for each kind of terrain; ground meeting objects well; far land drawn far and well (the
+    distant ring no longer squares); floating islands, deep canyons, caves and undergrounds made possible; elevated
+    highways in the neon world (seed "Every hood that sang after Chiron" floats its roads); its districts not all one
+    color; draw distance and level of detail by Detail.
+  - LIGHT: shadows cast by the sun where it stands and by lights nearby; nearby lights lighting what is near them more;
+    ambient occlusion; rocks of different stones.
+  - PLANTS: more cacti; saguaros with more limbs as they grow taller, limb counts never identical, limbs shaded by
+    position and direction, blooming only in their season; growth stages; sizes regular for their kind and stage; color
+    variations; plants that meet each other; their art styles made one.
+  - ANIMALS AND PEOPLE: fewer, better, more alive: personalities, many animations and the situations to use them (a deer
+    not always eating), birds hopping and flapping, flocks, interactions, hunts between animals; people of all genders
+    and types, humanoid species; their states tracked by id (begun: every thing has an id and tags).
+  - THE WORLD'S REGIONS: towns with walls; eras side by side (a medieval town by a robot-infested ruin) with clear
+    borders; factions holding regions; names from the seeds and the app's own esoteric language; crystals of a color for
+    each magical element ruling a region; the sense that something deeper lies here; rare battles between factions.
+  - OVERHEAD: spacedocks, satellites, ships of many kinds, builder ships and drones watching one another.
+  - THINGS IN THE ROUND: every object in at least 8 angles (16 or 32), large objects in horizontal slices, buildings that
+    can be walked around and so any shape (or simple 3D models, as the land will be); everything existing in space.
+  - WEATHER WITH DEPTH: rain and snow in layers that keep their distance (parallax); cloud lighting with depth and faked
+    subsurface scattering; storms that look like storms; wind on the trees in the rain showing its strength and way.
+  - THE SKY BEYOND: planets and moons with more variety, the ring's distance from its planet by the seed, the star's
+    color and Rayleigh scattering on them; fictional star systems, other light colors, an accurate Milky Way, skies from
+    other galaxies.
+  - OTHER WORLDS: Mars, Venus, Enceladus, a candy world and stranger as very rare biomes of the ring, and as generators of
+    their own sharing the ring's code and rules, so all of it ports to a game engine together; gem walkers, elves and fae,
+    demonic and eldritch things.
+  - A BETTER SENSE OF SCALE throughout; a wider variety of life; the depth pass over every drawing.
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
   Next: marking controls on the page itself (a ∿ in each lock's place) and during To another look; the seed drifting.
   An hour of time passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).
@@ -149,6 +166,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   Athanor's surface has no Light/Dark remap of its own yet.
 - The Athanor's GPU passes (blur, warp inside a graph).
 - Dream Bloom's convolution on the GPU (PERFORMANCE-AUDIT "Next on the GPU").
-- THE NEXT TEST REVIEW: mobileCss.test reads the stylesheet rule by rule; its phone invariants belong in
-  invariants.test (§7 Phones) and the rest as behavior (mobileLayout, or the built page on a phone in Playwright).
+- THE NEXT TEST REVIEW: mobileCss.test still reads the stylesheet rule by rule for the phone (the editor's layers have
+  gone to editor.test); its phone invariants belong in invariants.test (§7 Phones) and the rest as behavior.
 

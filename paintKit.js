@@ -101,7 +101,7 @@ export const PK_SIZE = {
   camp: [1.8, 2.4], charcoal: [1.8, 3.2], hide: [3.5, 5], bothy: [3.5, 5], lookout: [9, 14], bandstand: [5, 7], fountain: [2.5, 4],
   cargo: [1.2, 2.4], solar: [2, 2.6], dish: [6, 12], beacon: [5, 10], pipes: [1.5, 2.5], tripod: [1.4, 1.6], menhir: [1.8, 4.5], dolmen: [1.8, 2.6], fairyring: [0.12, 0.16], wisp: [0.3, 0.4], flower: [3, 5],
   toadstool: [2.5, 4], moongate: [3, 4],
-  warden: [1.0, 1.4], gate: [14, 22], pod: [3, 4], spire: [90, 160], cogdoor: [8, 11], diner: [5, 6.5], car: [1.4, 1.6], suit: [6, 8], caps: [0.12, 0.15],
+  warden: [1.0, 1.4], slabgate: [14, 22], pod: [3, 4], spire: [90, 160], cogdoor: [8, 11], diner: [5, 6.5], car: [1.4, 1.6], suit: [6, 8], caps: [0.12, 0.15],
   rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8], sheep: [0.75, 0.9], boat: [1.6, 2.6],
   harvester: [2.4, 3.2], shepherd: [0.7, 0.9], lamplighter: [2.4, 2.8], crab: [0.4, 0.7] };
 // a size in its range, tall specimens rarer (u: a draw from 0 to 1)
@@ -1846,7 +1846,7 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
 // (q: the chance a place the rule allows holds one, tuned so a scene shows a common nod about one time in two, an
 //  uncommon one in seven, a rare one in twenty-five, a very rare one hardly ever; loud ones one to a scene)
 export const PK_EGGS = {
-  warden:   { worlds: ['builders', 'ruins'], q: 0.03, loud: false },  gate:     { worlds: ['builders', 'ruins'], q: 0.003, loud: true },
+  warden:   { worlds: ['builders', 'ruins'], q: 0.03, loud: false },  slabgate: { worlds: ['builders', 'ruins'], q: 0.003, loud: true },
   pod:      { worlds: ['wilds', 'ruins'], q: 0.015, loud: true },      spire:    { worlds: ['builders'], q: 0.006, loud: true },
   cogdoor:  { worlds: ['wilds', 'ruins'], q: 0.02, loud: false },      diner:    { worlds: ['ruins', 'cities'], q: 0.27, loud: false },
   car:      { worlds: ['ruins', 'cities'], q: 1, loud: false },
@@ -1861,7 +1861,7 @@ export function pkEgg(x, X, Y, h, c, kind, R0, px, night = 0){
       x.fillStyle = pkCss(pkMix(glow, PK_WHITE, 0.5), 0.95); x.fillRect(cx - h*0.18, cy - h*0.02, h*0.36, Math.max(px(0.5), h*0.04)); pkGlow(x, cx, cy, h*0.5, glow, 0.35 + 0.3*night);
       for(let k = -1; k <= 1; k++) ln([[cx + k*h*0.18, cy + h*0.18], [cx + k*h*0.2, cy + h*0.5]], pkCss(glow, 0.6), h*0.04); }
     return; }
-  if(kind === 'gate'){ // a keyless gate: a tall slab set into the hill, a slit of light, two leaning buttresses, script on its lintel
+  if(kind === 'slabgate'){ // a keyless gate: a tall slab set into the hill, a slit of light, two leaning buttresses, script on its lintel
     const w = h*0.5; pkPoly(x, [[X - w*0.9, Y], [X - w*0.55, Y - h], [X - w*0.35, Y - h], [X - w*0.5, Y]], pkCss(c.dark)); pkPoly(x, [[X + w*0.9, Y], [X + w*0.55, Y - h], [X + w*0.35, Y - h], [X + w*0.5, Y]], pkCss(c.dark));
     pkPoly(x, [[X - w*0.5, Y], [X - w*0.4, Y - h*1.05], [X + w*0.4, Y - h*1.05], [X + w*0.5, Y]], pkCss(c.body)); pkPoly(x, [[X, Y], [X, Y - h*1.05], [X + sd*w*0.4, Y - h*1.05], [X + sd*w*0.5, Y]], pkCss(c.lit));
     x.fillStyle = pkCss(pkMix(glow, PK_WHITE, 0.4), 0.9); x.fillRect(X - w*0.03, Y - h*0.85, w*0.06, h*0.85); pkGlow(x, X, Y - h*0.4, w*0.8, glow, 0.35 + 0.3*night);

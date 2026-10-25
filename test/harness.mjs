@@ -25,3 +25,18 @@ export function done(){
 import { readdirSync, readFileSync } from 'fs';
 export const UI_FILES = ['appEvents.js', ...readdirSync(new URL('..', import.meta.url)).filter(f => /^ui[A-Z]\w*\.js$/.test(f)).sort()];
 export function uiSource(){ return UI_FILES.map(f => readFileSync(new URL('../' + f, import.meta.url), 'utf8')).join('\n'); }
+// The LAST declaration of a property for a selector — what actually applies.
+// Tests should assert on this, not on whichever block happens to come first:
+// earlier blocks overridden later are dead code, and get removed.
+export function effective(css, selector, prop){
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const blocks = [...css.matchAll(new RegExp(esc + '\\{([^}]*)\\}', 'g'))].map(m => m[1]);
+  let val = null;
+  for(const b of blocks){
+    for(const d of b.split(';')){
+      const [k, ...v] = d.split(':');
+      if(k && k.trim() === prop) val = v.join(':').trim();
+    }
+  }
+  return val;
+}

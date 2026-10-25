@@ -208,11 +208,14 @@ export const TEXTURE_PARAMS = {
                   sliderOf('amt', 'Landforms', 50),
                   // who and what: the seed's own world, or one chosen; Mixed lays three side by side
                   sliderOf('world', 'World', 0, { ticks:[0,14,29,43,57,71,86,100], names:['By the Seed','Wilds','Cities','Neon','Builders','Magic','Ruins','Mixed'] }),
-                  sliderOf('shape', 'Life', 50),
+                  // what grows (Flora) and what lives and moves (Fauna), each its own (Ruby: "maybe flora and fauna levels should
+                  // be controlled seperately?"); the oil paint retired, its two sliders become Fauna and Detail
+                  sliderOf('shape', 'Flora', 50),
                   sliderOf('form', 'Works', 35),
                   sliderOf('alt', 'Altitude', 15),
-                  sliderOf('paint', 'Paint', 0),
-                  sliderOf('brush', 'Brush', 37, { ticks:[12,37,62,88], names:['Round','Flat','Knife','Dry'] }),
+                  sliderOf('paint', 'Fauna', 40),
+                  // how far and how finely the land is drawn (Ruby: "low, medium, high, ultra … The current values represent medium")
+                  sliderOf('brush', 'Detail', 37, { ticks:[12,37,62,88], names:['Low','Medium','High','Ultra'] }),
                   // the small things of the streets and roads: signs, boards, lamps, benches, bikes, cars (Works is the rest)
                   sliderOf('clutter', 'Clutter', 50)],
   // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon

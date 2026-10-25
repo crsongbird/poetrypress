@@ -135,7 +135,7 @@ export function applyPersisted(s){
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
 // from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 10;
+const LOOK_VERSION = 11;
 // SEE THROUGH's default for a look that doesn't say (Ruby: on for a new page, saved looks as they were): a look someone saved
 // carries its version and was made without it; the app's own looks (its presets, the page it opens on) carry none
 const seeByDefault = s => !(+(s && s.lookVersion) > 0);
@@ -202,7 +202,12 @@ export function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireRingworld(retireFormat10(retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))))))); }
+function retireLook(s){ return retireFormat11(retireRingworld(retireFormat10(retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))))))))); }
+/** THE RINGWORLD'S PAINT RETIRED (format 11; Ruby: "Retiring the paint filter and remapping those sliders for other
+ *  purposes"): its seventh slider is Fauna now and its eighth Detail. An older look meets them at their defaults (Fauna as
+ *  the new one, Detail at Medium, which is how the land was always drawn), and its Life is the Flora it always set. */
+function retireFormat11Layer(L){ if(!L || L.textureType !== 'ringpaint') return L; return { ...L, texP7: '40', texP8: '37' }; }
+function retireFormat11(s){ if(!s || +s.lookVersion >= 11) return s; let o = retireFormat11Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat11Layer(o.baseLayer) }; return o; }
 /** LINEN TOOTH REMADE ON THE CLOTH PARTS (format 10; Ruby: "completely remake this in the cloth and lighting engine"):
  *  its Weave (silk → twill → linen → canvas → burlap) is the Fabric now, nine of them (the nearest: twill is denim), and
  *  Details (stitching, slubs, buttons, rivets) gives way to Creases, at their gentle default. */

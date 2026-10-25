@@ -3,8 +3,8 @@
 Ruby's notes on the Ringworld, each expanded into what it could become, with more beside them (Ruby, 2026-10-24:
 "Expand on the ideas I gave you and add more, interesting things to it"). The frame for all of it is Ruby's: "remaking
 Elder Scrolls Arena basically and setting it on a ringworld (also with transporters to other places like mars and
-other lands)". So every idea here is something a painting can show today and a game could walk into later. What is
-built leaves this page for the changelog; what is chosen to build goes to OPEN-ISSUES.md or ROADMAP.md. The research
+other lands)". So every idea here is something a painting can show today and a game could walk into later. Every idea
+here is approved for production (Ruby, 2026-10-25). What is built leaves this page for the changelog; what is chosen to build goes to OPEN-ISSUES.md or ROADMAP.md. The research
 behind it: docs/prior-art/ringworld-wildlife.md, docs/prior-art/arena-on-a-ringworld.md, and the ringworld docs beside
 them.
 

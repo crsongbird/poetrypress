@@ -1540,6 +1540,8 @@ but bear with me, dear}]/jitter:200
            with the film's frame marked on it, then each frame as it is made, then the film itself, looping; held at the
            sheet's top, always the same height, so nothing moves. On a desk the stage beside the Kinesis tab does this -->
       <div class="moving-preview" id="movingPreview" aria-hidden="true"><canvas id="movingPreviewCanvas" width="2" height="2"></canvas><video id="movingPreviewVideo" muted loop playsinline hidden></video><i class="moving-progress" id="movingProgress"></i></div>
+      <!-- (the choices: on a phone these scroll between the preview and the foot, which hold still) -->
+      <div class="moving-cards">
       <p class="hint" data-str="moving.hint">The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.</p>
       <!-- (FOUR GROUPS, picture first: what moves, how long, how big, what file; docs/prior-art/film-export.md §5. Rows
            that do not apply to the chosen move stay where they are, dimmed, so nothing moves under the hand) -->
@@ -1584,6 +1586,7 @@ but bear with me, dear}]/jitter:200
       <fieldset class="film-group"><legend data-str="moving.g_output">Output</legend>
         <div class="film-seg film-pick"><label><input type="radio" name="movingFormat" value="mp4" checked><span class="radio-btn"><b data-str="moving.mp4">MP4</b><small data-str="moving.mp4_c">H.264</small></span></label><label><input type="radio" name="movingFormat" value="webm"><span class="radio-btn"><b data-str="moving.webm">WebM</b><small data-str="moving.webm_c">VP9</small></span></label><label><input type="radio" name="movingFormat" value="png"><span class="radio-btn"><b data-str="moving.png">PNG frames</b><small data-str="moving.png_c">zip</small></span></label></div>
       </fieldset>
+      </div>
       <!-- (its foot, held at the bottom: what the film will be, how it goes, and Make the film) -->
       <div class="moving-foot">
       <p class="hint film-summary" id="movingSummary" aria-live="polite"></p>

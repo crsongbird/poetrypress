@@ -49,4 +49,17 @@ for(const kind of kinds){ let worst = 0;
     for(const m of [0.5, 40]) try { K.wkPaint(g, 100, 100, m, kind, { x: 0, z: 0, y: 0.5, pose, ph: 0.3, head: 0.5, dir: -1, side: 0.7, stag: 1, hue: 1, on: 1 }, c, v => v); } catch(e){ bad = `${kind} ${pose}: ${e.message}`; }
   check('every kind paints in every pose' + (bad ? ` (${bad})` : ''), !bad && calls.n > 0); }
 
+// every thing named (Ruby: "Each NPC should probably have an internal ID and tag so they can be tracked"): the Ringworld drawn
+// with the camera turned two ways, its store's things each with an id of their own and tags, the same thing keeping its id
+{ const { installCanvasMock } = await import('./canvasMock.mjs'); installCanvasMock();
+  const T = await import('../textureGenerators.js'), R = await import('../stepsRing.js'), defs = T.paramsFor('ringpaint'), t6 = T.TEXTURE_CAPS.ringpaint.tintDefaults || [];
+  const draw = (turn, clutter) => { const o = { seed: 4242, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 120/3072, camera: { turn, view: 100, zoom: 100 } };
+    defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); o.p9 = String(clutter); T.getTextureCanvas('ringpaint', 120, 80, o); return R.ringKeptStores().slice(-1)[0] || []; };
+  const a = draw(0, 50), b = draw(140, 61), ids = new Set(a.map(o => o.id)), byRs = new Map(a.map(o => [o.c + o.rs, o.id]));
+  check(`every thing in the world has an id of its own and tags (${a.length} things)`, a.length > 50 && ids.size === a.length && a.every(o => o.id && Array.isArray(o.tags) && o.tags.length >= 2));
+  const trees = b.filter(o => o.c === 'tree');
+  check('a tree keeps its id in a world built again (the camera turned, the streets\' clutter changed)', trees.length > 20 && b !== a && trees.every(o => byRs.get(o.c + o.rs) === o.id));
+  const herd = a.find(o => o.c === 'wild'), st = herd && R.ringStateOf(herd, 12.5);
+  check('a wild group\'s members each have an id and a state that can be captured', !herd || (st.members.length > 0 && st.members.every((m, j) => m.id === herd.id + '#' + j && 'pose' in m))); }
+
 done();

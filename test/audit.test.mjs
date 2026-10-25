@@ -212,7 +212,7 @@ check('importing the same spell twice does not duplicate it',
 {
   // (the camera taken out: an old look of a surface with a camera, saved before it, has none)
   const base = save(), { lookVersion, cameraTurn, cameraView, cameraZoom, ...old } = base;
-  check('a look says which format it was saved in', base.lookVersion === 10);
+  check('a look says which format it was saved in', base.lookVersion === 11);
   // (format 9: Floral Imprints' sixth slider became its Medium, its ink hues moved to the first two, the defaults emptied)
   load({ ...old, lookVersion: 8, texture: true, textureType: 'imprints', texP6: '70', textureTint2: '#1F4E8C', textureTint12: '#AA2200' });
   { const b = save(); check('an old Floral Imprints look: its Medium starts By the Seed, its default ink is the medium\'s own, a chosen second ink kept', b.texP6 === '0' && b.textureTint1 === '' && /^#AA2200$/i.test(b.textureTint2)); }
@@ -237,6 +237,10 @@ check('importing the same spell twice does not duplicate it',
   load({ ...old, lookVersion: 4, texture: true, textureType: 'ringworld', texP2: '70', texP4: '40', texP7: '30', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
   s = save();
   check('…its Landforms and Altitude carry on, its Cities as Works', s.textureType === 'ringpaint' && +s.texP2 === 70 && +s.texP6 === 30 && +s.texP5 === 42);
+  // format 11: the Ringworld's oil paint retired, its Paint and Brush sliders become Fauna and Detail (Ruby)
+  load({ ...old, lookVersion: 10, texture: true, textureType: 'ringpaint', texP4: '70', texP7: '60', texP8: '88' });
+  s = save();
+  check('an older Ringworld look meets Fauna and Detail at their defaults (40, Medium), its Life its Flora', +s.texP7 === 40 && +s.texP8 === 37 && +s.texP4 === 70);
   // format 4: the Tilt sliders onto the camera dial (Dune Ripples' fourth, Moss on Stone's fourth, Scrying Pool's sixth)
   load({ ...old, lookVersion: 3, texture: true, textureType: 'dunes', texP1: '140', texP4: '60', cameraTurn: '90', cameraView: '0', cameraZoom: '100' });
   s = save();

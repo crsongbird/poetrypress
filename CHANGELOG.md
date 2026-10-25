@@ -4,6 +4,34 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Maia (2026-10-25)
+
+- The Ringworld's stars are a backdrop now: they stay where they are as the camera turns, tilts or zooms, and drift only
+  a little with the ring's own slow spin, a sixth of what it was, as do the planets and the nebula beyond it.
+- Rain is rarer (about one seed in twenty-two, storms one in forty), and whenever it rains, storms or snows an overcast
+  ceiling covers the sky: darkest overhead, thinning to a paler band at the horizon, mottled with the darker bases of its
+  rolls, riding the wind. No sun rays shine through it.
+- Field gates were drawn the size of the rare keyless gate in a cliff, as tall as a house; they are a gate's size again.
+  The keyless gate keeps its own.
+- The Ringworld's oil paint is retired. Life is now Flora (trees, grass, hedges, flowers); its seventh slider is Fauna
+  (the wild things, the small finds and the droids), 40 by default, with smaller flocks; its eighth is Detail: Low,
+  Medium, High or Ultra, how far out and how closely the plants, stones and small things round you are sown (Medium is
+  how it always was; each step up takes longer to make). An older look opens with Fauna and Detail at their defaults.
+- The neon world's ground is a lit grey now, not near black.
+- The Moving Image on a phone is a column: the preview at the top and Make the film at the bottom hold still while the
+  choices scroll between them; in the Kinesis tab the summary and the buttons follow the choices, so nothing lies over
+  the file formats any more.
+
+### Under the hood
+- Every thing in the Ringworld's store has an id and tags (what it is, its world, what it does: npc, animal, plant,
+  building, moves, flies…), the same thing keeping its id from any view; `ringStateOf` captures its state at a moment of
+  the clock, a wild group's members each under the group's id and their number. The ids and states are tested.
+- The keyless gate is `slabgate`: two tables shared the name gate, and the later won.
+- The orders of the 24th and 25th are written into OPEN-ISSUES.md as the list being built, in order.
+- Reviewed the tests: the editor's two-layer style checks moved from mobileCss.test to editor.test, the suite of their
+  concern, and the helper both read (`effective`) into the shared harness; the Ringworld's slider remap is tested where
+  the looks are (audit.test), and the things' ids where the wild things are (wildlife.test).
+
 ## Crux–Matza (2026-10-24)
 
 - On a phone the Moving Image is the whole screen now, the page hidden behind it, with a preview at its top that always
@@ -400,29 +428,3 @@ prints it).
   tapering shape, `pkConifer`, `pkFrond`. stepsRing.js gives the trees the sun's `back` (how far the camera looks
   toward it). Research for the next passes (people, water, clouds, turning and grounding things) is in
   docs/prior-art/ringworld-life-and-views.md. No fingerprint changed.
-
-## Neptune–Halimede (2026-10-21)
-
-- Painted Ringworld's countryside, seen from a little height, reads as farmland now. Fields no longer lie over one
-  another, across a road or over a yard; each is laid only where it fits, and a smaller one fills a corner left
-  between others. Out in the country the houses gather into farmsteads some 600 to 900 m apart (a house with its
-  barns and sheds round one yard in the region's own tradition, laid out in a row, round a courtyard or as a loose
-  cluster) and hamlets round a green with a well, each with a lane out to the road; villages stand round a town's
-  heart, closest there and thinning to their edges. By night only they show lights, the farmland between them dark.
-  In windy country a farmstead has a windbreak on its windward sides, tall trees inside and shrubs outside.
-- Terraces only where the country terraces and the slope is steep, and flooded paddies only where it is warm and wet,
-  so the hills no longer look glazed. Rocks are cleared out of the fields and lie in low heaps at their edges.
-- New in the fields: orchards on their grids (apples or plums on some, cherries in blossom), modern orchards in
-  rows, olive groves; and now and then a field half ploughed, the tractor on the line between ploughed and stubble,
-  the gulls waiting level with it and a few in the air. The same gulls follow a harvester. Near, a furrow's ridge
-  catches the light.
-- Looked down on, the land's ridges are painted thinner along their lit bands, with facets only where the land itself
-  is steep, so they no longer hang across the country like panes of glass. At the usual height little changes.
-- Painted Landscape: the foam lines on a lake lie side by side along the one wind, as they do.
-
-### Under the hood
-- `rgStore` (stepsRing.js): `seatOf` and `RG_FARM` for the farmsteads and hamlets, their lanes walked with the ways;
-  `fieldClash` tests fields' rectangles on all four axes; fields keep off yards and windbreaks. New things in
-  paintKit.js: the `stonepile` prop, `fruit` and `olive` trees; `gulls` in the small life. The research is in
-  docs/prior-art/ringworld-countryside.md §12–17. A large ring takes about a tenth longer. Fingerprints: Painted
-  Ringworld's only.
