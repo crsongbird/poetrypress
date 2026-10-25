@@ -55,6 +55,12 @@ export const WK_KINDS = {
   bats:      { way: 'hawk', n: [3, 8], tau: 6, amp: 7, hgt: [3, 14], size: 0.28, flap: 6, coat: [44, 36, 34] },
   butterflies: { way: 'hawk', n: [1, 3], tau: 3, amp: 2, hgt: [0.3, 1.6], size: 0.07, flap: 5, coat: [230, 200, 90] },
   dragonflies: { way: 'dart', n: [1, 3], P: 2.6, range: 2, hgt: [0.4, 1.4], size: 0.09, coat: [70, 140, 170] },
+  // the magic world's own (Ruby, 2026-10-25: "cute slimes, chocobo-like birds and such (legally distinct)";
+  // docs/prior-art/ringworld-magic-creatures.md): slimes, low mounds of jelly that hop about and bounce where they sit,
+  // squashing as they gather and land and stretching as they leap; striders, tall flightless runners of the open
+  // country as emus are (size: a slime's width, a strider's height)
+  slimes:    { way: 'hop', body: 'slime', n: [1, 4], P: 40, range: 8, spread: 2.5, walk: 1.2, run: 4, bolt: 0.1, wander: 1.2, tau: 10, size: 0.5, stride: 0.9, coat: [120, 200, 150] },
+  striders:  { way: 'walk', body: 'strider', n: [2, 5], P: 150, range: 50, spread: 5, walk: 1.4, run: 12, bolt: 0.3, wander: 3, tau: 30, size: 2, stride: 2.75, coat: [176, 150, 112] },
   // a skein of geese passing over in its V, once in an era, against the wind
   geese:     { way: 'skein', n: [7, 15], P: 520, speed: 16, hgt: [120, 240], size: 1.6, coat: [110, 104, 96] },
 };
@@ -76,7 +82,15 @@ const wkGraze = (K, s, j, L, T, t) => { const w = wkWander(s + j*97, t, K.tau), 
 
 // WHERE member j of a group of kind (its seed s) is at time t: { x, z, y (metres), pose, ph (its gait or wingbeat's
 // turn), head (0 down … 1 up), on (0 … 1: whether it is here at all) } (env: { wind: [way, m/s] })
-export function wkAt(kind, s, j, t, env = {}){
+// (a slime's own bounce on top of where it is: a hop every second or two of its own, sitting or on its way, gathering
+//  itself flat before it and squashing as it lands, stretched in the air, a jelly's wobble after. sq: -1 squashed …
+//  +1 stretched, its volume kept by its painter)
+export function wkAt(kind, s, j, t, env = {}){ const st = wkAt0(kind, s, j, t, env), K = WK_KINDS[kind]; if(K.body !== 'slime' || !st.on) return st;
+  const per = 1.4 + 1.2*wkHash(j, 40, s), tt = t + wkHash(j, 41, s)*per, u = (tt % per)/per, up = 0.3;
+  const y = u < up ? 0.55*K.size*Math.sin(Math.PI*u/up) : 0, wob = u >= up && u < up + 0.3 ? 0.12*Math.sin((u - up)*60)*(1 - (u - up)/0.3) : 0;
+  const sq = u < up ? 0.28*Math.sin(Math.PI*u/up) : u < up + 0.08 ? -0.4*(1 - (u - up)/0.08) : u > 0.9 ? -0.35*wkSmooth((u - 0.9)/0.1) : wob;
+  return { ...st, y, sq }; }
+function wkAt0(kind, s, j, t, env = {}){
   const K = WK_KINDS[kind], n = wkCount(kind, s), tt = t + (K.P ? wkHash(s, 2, 9)*K.P*30 : wkHash(s, 4, 9)*500);
   switch(K.way){
   case 'walk': case 'hop': case 'prowl': case 'flock': {
@@ -182,6 +196,51 @@ function wkQuad(x, X, Y, m, kind, st, c, px){
 
 // A HARE: sitting hunched on its great haunch, ears up when it listens and laid back when it feeds or runs; running
 // stretched long, its hind feet thrown past its fore
+// A SLIME (docs/prior-art/ringworld-magic-creatures.md §1): a low mound of jelly, wider than tall, see-through, its
+// darker heart showing inside it, a gleam on the light's side, two small dark eyes and no mouth (a mound of its own, not
+// a teardrop); squashed flat as it gathers and lands, stretched tall in the air (st.sq), its volume kept; of its
+// region's element (c.glow), lit faintly from within by night (st.nt)
+function wkSlime(x, X, Y, m, st, c, px){
+  const K = WK_KINDS.slimes, L = K.size*m, sq = st.sq || 0, w = L*(1 - 0.45*sq), h = L*0.62*(1 + sq), d = st.dir || 1, yb = Y - st.y*m, sd = c.sd || 1;
+  const jel = wkMix(c.mat(K.coat).body, c.glow || K.coat, 0.55), nt = st.nt || 0;
+  if(L < px(1.6)){ x.fillStyle = wkCss(jel, 0.8); x.fillRect(X - px(0.8), yb - px(1.2), px(1.6), px(1.2)); return; }
+  wkEll(x, X, Y, w*0.5*(1 - Math.min(0.5, st.y/(K.size*1.2))), Math.max(px(0.5), L*0.07), 0, wkCss([0, 0, 0], 0.18));
+  const dome = () => { x.beginPath(); x.moveTo(X - w/2, yb); x.bezierCurveTo(X - w/2, yb - h*0.85, X - w*0.24, yb - h, X, yb - h); x.bezierCurveTo(X + w*0.24, yb - h, X + w/2, yb - h*0.85, X + w/2, yb);
+    x.quadraticCurveTo(X, yb + h*0.1, X - w/2, yb); x.closePath(); };
+  if(nt > 0.2){ const g = x.createRadialGradient(X, yb - h*0.4, 0, X, yb - h*0.4, L*1.1); g.addColorStop(0, wkCss(c.glow || jel, 0.22*nt)); g.addColorStop(1, wkCss(c.glow || jel, 0)); x.fillStyle = g; x.fillRect(X - L*1.1, yb - h*0.4 - L*1.1, L*2.2, L*2.2); }
+  dome(); x.fillStyle = wkCss(wkMix(jel, [255, 255, 255], 0.08*nt), 0.74); x.fill();
+  wkEll(x, X + d*w*0.08, yb - h*0.34, w*0.17, h*0.17, 0, wkCss(wkMix(jel, [0, 0, 0], 0.38), 0.45));
+  wkEll(x, X + sd*w*0.17, yb - h*0.7, w*0.12, h*0.09, -0.5*sd, wkCss([255, 255, 255], 0.55));
+  if(L > px(6)){ x.strokeStyle = wkCss(wkMix(jel, [0, 0, 0], 0.3), 0.5); x.lineWidth = Math.max(px(0.4), L*0.03); dome(); x.stroke(); }
+  if(L > px(4)){ const ey = yb - h*0.5, ex = X + d*w*0.1*(st.side ?? 1), sp = w*0.13*Math.max(0.5, 1 - 0.5*(st.side ?? 1)) + w*0.05;
+    for(const s2 of [-1, 1]) wkEll(x, ex + s2*sp, ey, Math.max(px(0.5), w*0.045), Math.max(px(0.6), h*0.075), 0, wkCss([22, 18, 26], 0.9)); } }
+// A STRIDER (docs/prior-art/ringworld-magic-creatures.md §2): the magic world's tall runner of the open country, a bird
+// as an emu is: some two metres tall, a deep body under shaggy plumes, a long bare neck, a small head with a short beak
+// and a fan of plumes on its crown, little wings, a plumed tail; long bare legs that never straighten, two toes; its
+// plumage of its region's element. Walking, running with its neck stretched forward, its head down to feed, sitting to rest
+function wkStrider(x, X, Y, m, st, c, px){
+  const K = WK_KINDS.striders, H = K.size*m, d = st.dir || 1, sk = Math.max(0.35, st.side ?? 1), lie = st.lie || 0, run = st.pose === 'run', walk = st.pose === 'walk', ph = st.ph*Math.PI*2;
+  const pl = c.mat(wkMix(K.coat, c.glow || K.coat, 0.45)), skin = c.mat([118, 136, 168]), leg = c.mat([96, 84, 72]), lift = st.y*m;
+  if(H < px(2.5)){ x.fillStyle = wkCss(pl.dark); x.fillRect(X - px(0.8), Y - lift - H*0.7, px(1.6), H*0.5); return; }
+  const hip = H*0.5*(1 - 0.72*lie), bl = H*(0.18 + 0.26*sk), bh = H*0.27, by = Y - lift - hip - bh*0.2, lw = Math.max(px(0.5), H*0.028), q = u => X + d*u*bl;
+  // (its legs: the shin hidden in the body, the ankle bent back, the long bare foot forward; one swinging as the other bears)
+  if(lie < 0.6) for(const [o, far] of [[0, true], [Math.PI, false]]){ const sw = run ? Math.sin(ph + o)*0.75 : walk ? Math.sin(ph + o)*0.42 : 0, up = (run || walk) ? Math.max(0, Math.cos(ph + o))*H*(run ? 0.08 : 0.04) : 0;
+    const top = [q(far ? -0.14 : 0.04), by + bh*0.3], ft = [top[0] + d*Math.sin(sw)*H*0.32, Y - lift - up], ank = [(top[0] + ft[0])/2 - d*H*0.07, (top[1] + ft[1])/2 + H*0.02], col = wkCss(far ? wkMix(leg.dark, [0, 0, 0], 0.3) : leg.dark);
+    wkLine(x, [top, ank, ft], col, lw*(far ? 1 : 1.15)); if(H > px(12)) wkLine(x, [ft, [ft[0] + d*H*0.06, ft[1]]], col, lw); }
+  // (its tail plume, its body under shaggy plumes, a little wing; lit along its back)
+  wkEll(x, q(-0.55), by - bh*0.12, bl*0.28, bh*0.3, -d*0.5, wkCss(pl.dark));
+  wkEll(x, X, by, bl*0.55, bh*0.5, 0, wkCss(pl.body));
+  if(H > px(14)){ x.strokeStyle = wkCss(pl.dark, 0.8); x.lineWidth = Math.max(px(0.4), H*0.012); x.beginPath(); for(let k = 0; k < 9; k++){ const u = -0.45 + 0.9*k/8, bx = q(u), byy = by + bh*0.42*Math.sqrt(Math.max(0, 1 - u*u*1.6)); x.moveTo(bx, byy - bh*0.1); x.lineTo(bx - d*H*0.012, byy + bh*0.18); } x.stroke(); }
+  if(H > px(6)) wkEll(x, q(-0.05), by - bh*0.28, bl*0.42, bh*0.16, 0, wkCss(pl.lit, 0.55));
+  wkEll(x, q(0.02), by - bh*0.02, bl*0.2, bh*0.2, -d*0.3, wkCss(wkMix(pl.body, pl.dark, 0.5)));
+  // (its neck and head: up and looking round; forward as it runs; down to the ground as it feeds)
+  const hd = Math.max(0, Math.min(1, st.head ?? 1)), base = [q(0.42), by - bh*0.15], low = [q(0.75), Y - lift - H*0.06], high = [q(run ? 0.85 : 0.55), Y - lift - H*(run ? 0.78 : 0.95)*(1 - 0.35*lie) ];
+  const head = st.pose === 'graze' ? [low[0] + (high[0] - low[0])*hd, low[1] + (high[1] - low[1])*hd] : high, mid = [(base[0] + head[0])/2 + d*H*0.04, (base[1] + head[1])/2];
+  wkLine(x, [base, mid, head], wkCss(skin.body), Math.max(px(0.6), H*0.05));
+  wkEll(x, head[0], head[1], H*0.05, H*0.04, 0, wkCss(skin.body));
+  wkPolyF(x, [[head[0] + d*H*0.035, head[1] - H*0.012], [head[0] + d*H*0.1, head[1] + H*0.004], [head[0] + d*H*0.035, head[1] + H*0.016]], wkCss(leg.dark));
+  if(H > px(10)){ wkEll(x, head[0] + d*H*0.015, head[1] - H*0.008, Math.max(px(0.4), H*0.008), Math.max(px(0.4), H*0.008), 0, wkCss([16, 14, 18]));
+    x.strokeStyle = wkCss(pl.lit); x.lineWidth = Math.max(px(0.4), H*0.012); x.beginPath(); for(let k = 0; k < 4; k++){ const an = -Math.PI/2 - d*(0.35 + 0.28*k); x.moveTo(head[0] - d*H*0.01, head[1] - H*0.03); x.lineTo(head[0] - d*H*0.01 + Math.cos(an)*H*0.09, head[1] - H*0.03 + Math.sin(an)*H*0.09); } x.stroke(); } }
 function wkHare(x, X, Y, m, st, c, px){
   const K = WK_KINDS.hare, d = st.dir, sk = Math.max(0.35, st.side), L = K.size*m, coat = c.mat(K.coat), fill = wkCss(coat.body), q = u => X + d*u*sk, y0 = Y - st.y*m;
   const run = st.pose === 'run' || st.pose === 'walk', s = run ? Math.sin(st.ph*Math.PI*2) : 0, ink = wkCss(coat.dark), lw = Math.max(px(0.4), L*0.045);
@@ -257,6 +316,8 @@ function wkSwimmer(x, X, Y, m, kind, st, c, px){
 export function wkPaint(x, X, Y, m, kind, st, c, px){
   const K = WK_KINDS[kind]; if(!K) return;
   if(K.way === 'paddle') return wkSwimmer(x, X, Y, m, kind, st, c, px);
+  if(K.body === 'slime') return wkSlime(x, X, Y, m, st, c, px);
+  if(K.body === 'strider') return wkStrider(x, X, Y, m, st, c, px);
   if(K.way === 'walk' || K.way === 'hop' || K.way === 'prowl'){ const L = K.size*m; if(L < px(1.4)){ x.fillStyle = wkCss(c.mat(K.coat).dark); x.fillRect(X - px(0.7), Y - st.y*m - px(1.2), px(1.4), px(1)); return; } return wkQuad(x, X, Y, m, kind, st, c, px); }
   return wkBird(x, X, Y, m, kind, st, c, px);
 }

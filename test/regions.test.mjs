@@ -37,6 +37,15 @@ const W = 0.0566, M = W*0.00025;
   for(let k = 0; k < 2000 && n < 20; k++){ const a = k*W*0.01, z = 0.1*W, { id, id2, b } = R.at(a, z), q = R.at(a + W*0.01, z); if(q.id !== id){ n++; if(b < W*0.02 && q.b < W*0.02 && id2 === q.id) ok++; } }
   check(`on either side of a border each point knows it is near it, and which region lies over it (${ok} of ${n})`, n > 5 && ok >= n*0.8); }
 
+// the Ringworld's World: each band names its world; By the Seed picks one of the six (now and then Mixed),
+// and Mixed lays three different ones side by side
+{ const { rgWorldOf, RG_WORLDS } = await import('../stepsRing.js');
+  const named = [14, 29, 43, 57, 71, 86].map(v => rgWorldOf(1234, v).name), seeded = Array.from({ length: 60 }, (_, s) => rgWorldOf(s*7919, 0)), mixed = rgWorldOf(99, 100);
+  check('the Ringworld\'s World: each band its world, in order', named.join() === RG_WORLDS.slice(1, 7).join());
+  check('…By the Seed picks among them (and sometimes Mixed), each world a single list but Mixed\'s three, all different',
+    seeded.every(w => RG_WORLDS.includes(w.name) && w.name !== 'seed') && new Set(seeded.map(w => w.name)).size >= 5 && seeded.every(w => w.name === 'mixed' ? w.list.length === 3 : w.list.join() === w.name)
+    && mixed.name === 'mixed' && new Set(mixed.list).size === 3); }
+
 // THE STORE: border marks where the ways cross, walls round old-world towns, nothing built on a wall
 { const { installCanvasMock } = await import('./canvasMock.mjs'); installCanvasMock();
   const T = await import('../textureGenerators.js'), SR = await import('../stepsRing.js'), defs = T.paramsFor('ringpaint'), t6 = T.TEXTURE_CAPS.ringpaint.tintDefaults || [];

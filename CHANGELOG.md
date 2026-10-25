@@ -4,6 +4,27 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Asterope (2026-10-25)
+
+- The magic world has creatures of its own. Slimes are low, see-through mounds of jelly with a darker heart inside and
+  two small eyes. They hop every second or two, sitting or on their way, gathering themselves flat before each leap,
+  stretching in the air and squashing as they land, with a jelly's wobble after. Each takes its region's element for
+  its colour and glows faintly by night. One to four of them wander the meadows and the edges of the woods.
+- Striders are tall runners of the magic world's open country, built the way emus are built. They stand about two
+  metres tall, with shaggy plumes, a long bare neck, a fan of plumes on the crown, little wings and long bare legs
+  that never quite straighten. Their plumage takes their region's element. Two to five graze together, put their heads
+  down to feed, sit to rest, and bolt with their necks stretched forward.
+
+### Under the hood
+- `WK_KINDS` has `slimes` and `striders`; `wkAt` gives a slime its own bounce and its squash and stretch (`sq`);
+  `wkSlime` and `wkStrider` paint them.
+- Reviewed the tests the Ringworld leans on (test/wildlife.test.mjs, test/regions.test.mjs, test/land.test.mjs,
+  test/ringworldView.test.mjs and test/chains.test.mjs). The Ringworld's checks moved out of chains.test into the suites
+  of their concern: the choice of worlds to regions.test, the lens, the sun and Saturn to ringworldView.test. The
+  wildlife suite's speed limits now cover the new creatures, and its stand-in canvas draws curves.
+- docs/prior-art/ringworld-magic-creatures.md is the research (slimes in games and fiction, squash and stretch, how
+  ostriches and emus run, and how a strider keeps its distance from a chocobo).
+
 ## Pleiades–Pleione (2026-10-25)
 
 - The Ringworld's floor is parted into regions, each about five kilometres along and two across, with borders that
@@ -441,31 +462,3 @@ prints it).
   coverage, below the picture (`seeLens`, `seeStack`, reaching `SEE_REACH` canonical pixels). The page bends what is
   already drawn through it before the layer is laid (`bendBeneath`); a look without a version turns it on
   (`seeByDefault`). No fingerprint moved: a surface draws its lens only when asked.
-
-## Ursa Major–Alcor (2026-10-24)
-
-- The Ringworld holds still while the camera moves. Each ridge of land is now cut round the eye, its points fixed in
-  the world, so a turn no longer swings the cuts through the hills: the land stops swelling and sinking, the facets no
-  longer crawl, and what stands on the land stays at its height. A still picture looks as it did.
-- Trees and buildings keep their shape as the camera turns: how much of each is drawn is chosen by how far away it truly
-  is, not by how large the painter's perspective draws it toward the frame's edges; nearer things are drawn over
-  farther ones by their true distance, so buildings no longer pop over each other; the cracks and wear on a road, and
-  the grain on a wall, belong to the road and the wall.
-- Things are drawn a little farther off, the smallest trees are kept down to a speck and fade in as they grow, and a
-  narrow conifer hides only what is really behind it.
-- People go home at dusk: each walks to the nearest door and goes in, and comes out again at dawn.
-- Lightning never strikes on a film's first frame.
-
-### Under the hood
-- Painted Ringworld (docs/prior-art/ringworld-stability.md): ridges are circles about the eye (`RG_ROUND_CUTS`), their
-  samples at bearings fixed in the world (`NB`); a facet grows out of the lit band by the land's slope (`fw2`); each
-  ridge's band, wash, day and seam are read smoothly round the middle of the view (`vw`); the land's finest octave fades
-  in by its size; fields and ways are drawn with the ridge before their nearest end. Things choose their detail by
-  their size at their true distance (`lodOf`, handed to the kit as its colours' `lod`); every detail drawn only at some
-  sizes takes its own stream (`pkSub` from 6 on), a wall's grain is keyed to the thing (`pkGrain`) and a road's wear to
-  where each piece lies; the loud nod, the dust devils and a film's lightning cloud are chosen from the world; walkers
-  have doors (`toDoor`, `RG_DOORLESS`). The kit's windows, streaks, limbs and trunks read the detail size too. Its
-  fingerprints moved for all of this; no other surface's did.
-- Reviewed the tests that cover what this pass and the last touched (the Ringworld, the kit, the corners, the release
-  names): nothing stale was found. A new suite, test/ringworldView.test.mjs, checks that a tree or a building drawn
-  larger toward a frame's corner keeps the stage of detail its true distance gives it.

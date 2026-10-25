@@ -441,7 +441,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Magic by element** (Ruby: "regions of earth, fire, water and air coloring the ground, trees and lights; glowing
     trees rare and of the region's colors"): each magic region is ruled by one of Runology's Primal Archetypes
     (`RK_ELEMENTS`: Fire, Wind, Water and Earth most often, Amber, Vitrum, Sound and Radio rarely); its lights, its
-    ground, its trees' leaves, its crystals and the glow of its few glowing trees are the element's.
+    ground, its trees' leaves, its crystals and the glow of its few glowing trees are the element's. Its own creatures
+    (docs/prior-art/ringworld-magic-creatures.md): slimes, low see-through mounds of jelly with a darker heart and two
+    eyes, hopping every second or two with squash and stretch (`sq` from `wkAt`), glowing faintly by night; and
+    striders, tall runners built as emus are, plumed in the element's colours (`wkStrider`).
   - **Town walls** (Ruby: "towns with walls"; docs/prior-art/ringworld-regions.md §1): round some towns of the wilds and
     the magic world, a curtain six to ten metres high and two to three thick wandering round the town's heart, a round
     tower every thirty-odd metres and a pair at each gate where the ways go through, stopping at the water; each

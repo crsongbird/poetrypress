@@ -58,6 +58,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   ruins. Right height and how often?
 - MAGIC BY ELEMENT: each magic region ruled by an element (Fire, Wind, Water, Earth; rarely Amber, Vitrum, Sound, Radio)
   colouring its ground, leaves, lights and crystals; glowing trees now rare. Enough variety, and the right colours?
+- SLIMES AND STRIDERS: the magic world's own creatures, slimes (jelly mounds with two eyes, hopping and squashing, of
+  their region's element) and striders (tall plumed runners built as emus are). Cute enough, and distinct enough?
 - FLORA, FAUNA AND DETAIL: Life is Flora (what grows), Paint is gone and its slider is Fauna (what lives and moves, at 40
   by default, the flocks smaller), the Brush fader is Detail (Low, Medium, High, Ultra; Medium as it always was). Right
   amounts at the defaults?
@@ -113,7 +115,6 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     South always losing badly), the test bed for a wide variety of people and animations: women, people of every color;
     where the seed has elves and other folk, it turns Tolkien or Star Trek.
   - STABILITY: graffiti must not change its kind or place.
-  - MAGIC BY ELEMENT, what is left: cute slimes, chocobo-like birds and such (legally distinct).
   - WILDLIFE WIDER: insects, ground creatures, cats, middle predators and the rest, not birds in their place; water
     creatures and better water animation.
   - PLANTS AND BUILDINGS WIDER: more kinds of trees, grasses and shrubs; the library of buildings kept growing until they

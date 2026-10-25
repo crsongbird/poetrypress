@@ -16,7 +16,7 @@ const kinds = Object.keys(K.WK_KINDS), env = { wind: [1.1, 6] }, dt = 1/30;
   check('a place is the same each time it is asked', JSON.stringify(a) === JSON.stringify(b)); }
 
 // (no faster than it can go: metres a second, frame to frame, across ten minutes of three groups of each kind)
-const top = { deer: 16, elk: 16, hare: 17, fox: 16, rooks: 20, pigeons: 20, starlings: 20, sparrows: 14, ducks: 3, swans: 3, heron: 18, raptor: 20, swallows: 24, swifts: 36, bats: 16, butterflies: 8, dragonflies: 18, geese: 20 };
+const top = { deer: 16, elk: 16, hare: 17, fox: 16, rooks: 20, pigeons: 20, starlings: 20, sparrows: 14, ducks: 3, swans: 3, heron: 18, raptor: 20, swallows: 24, swifts: 36, bats: 16, butterflies: 8, dragonflies: 18, geese: 20, slimes: 6, striders: 20 };
 for(const kind of kinds){ let worst = 0;
   for(const s of [7, 31337, 900001]) for(let j = 0; j < K.wkCount(kind, s); j += 2){ let prev = null;
     for(let t = 0; t < 600; t += dt){ const p = K.wkAt(kind, s, j, t, env); if(!p.on){ prev = null; continue; } if(prev) worst = Math.max(worst, Math.hypot(p.x - prev.x, p.z - prev.z, p.y - prev.y)/dt); prev = p; } }
@@ -43,7 +43,7 @@ for(const kind of kinds){ let worst = 0;
 { let on = 0, off = 0; for(let t = 0; t < 3000; t += 2){ if(K.wkAt('geese', 12, 0, t, env).on) on++; else off++; } check('geese pass over now and then', on > 0 && off > on); }
 
 // every kind in every pose, drawn on a stand-in canvas that only counts its strokes
-{ const calls = { n: 0 }, g = new Proxy({}, { get: (o, k) => typeof k === 'string' && /^(beginPath|moveTo|lineTo|stroke|fill|ellipse|closePath|fillRect|save|restore|rect|clip|arc)$/.test(k) ? () => { calls.n++; } : o[k], set: (o, k, v) => { o[k] = v; return true; } });
+{ const calls = { n: 0 }, g = new Proxy({}, { get: (o, k) => typeof k === 'string' && /^(beginPath|moveTo|lineTo|bezierCurveTo|quadraticCurveTo|stroke|fill|ellipse|closePath|fillRect|save|restore|rect|clip|arc)$/.test(k) ? () => { calls.n++; } : o[k], set: (o, k, v) => { o[k] = v; return true; } });
   const c = { dark: [30, 30, 30], lit: [240, 240, 240], mat: rgb => ({ body: rgb, lit: rgb, dark: rgb }), flowers: [[200, 50, 60]] };
   let bad = null; for(const kind of kinds) for(const pose of ['graze', 'walk', 'run', 'pounce', 'peck', 'fly', 'soar', 'glide', 'swim', 'stand', 'wade', 'hover', 'dart'])
     for(const m of [0.5, 40]) try { K.wkPaint(g, 100, 100, m, kind, { x: 0, z: 0, y: 0.5, pose, ph: 0.3, head: 0.5, dir: -1, side: 0.7, stag: 1, hue: 1, on: 1 }, c, v => v); } catch(e){ bad = `${kind} ${pose}: ${e.message}`; }
