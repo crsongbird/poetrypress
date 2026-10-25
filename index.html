@@ -943,6 +943,11 @@ but bear with me, dear}]/jitter:200
                   <!-- the halfway mark (it catches lightly) and the centre -->
                   <circle class="ld-half" r="13"></circle>
                   <circle class="ld-centre" r="1.4"></circle>
+                  <!-- THE SUN'S ARC (in the film's window, on a surface whose dial is the sun): the way it goes over the film,
+                       from where it starts (a ring) to where it ends (a dot), rising and setting along its day -->
+                  <path class="ld-arc" id="lightArc" d="" hidden></path>
+                  <circle class="ld-from" id="lightFromMark" r="2.4" cx="0" cy="0" hidden></circle>
+                  <circle class="ld-to" id="lightToMark" r="2.1" cx="0" cy="0" hidden></circle>
                   <!-- the rim light's handle, under the main light's; where the two overlap they mix to white (to black on a light
                        theme), as two lights do -->
                   <defs><clipPath id="lightMainClip"><circle id="lightMainClipDot" r="5.6" cx="0" cy="0"></circle></clipPath></defs>
@@ -1580,8 +1585,8 @@ but bear with me, dear}]/jitter:200
       </fieldset>
       <fieldset class="film-group"><legend data-str="moving.g_length">Length</legend>
       <div class="film-sub"><label class="film-k" for="movingLength" data-str="moving.length">Length</label>
-        <div class="film-slide"><input type="range" id="movingLength" min="2" max="60" step="1" value="12"><output class="film-read" id="movingLengthRead" for="movingLength">12 s</output>
-          <div class="film-ticks" aria-hidden="true"><span style="left:6.9%">6</span><span style="left:17.2%">12</span><span style="left:37.9%">24</span><span style="left:48.3%">30</span><span style="left:74.1%">45</span><span style="left:100%">60</span></div></div></div>
+        <div class="film-slide"><input type="range" id="movingLength" min="2" max="180" step="1" value="12"><output class="film-read" id="movingLengthRead" for="movingLength">12 s</output>
+          <div class="film-ticks" aria-hidden="true"><span style="left:5.6%">12</span><span style="left:15.7%">30</span><span style="left:32.6%">60</span><span style="left:49.4%">90</span><span style="left:66.3%">120</span><span style="left:100%">180</span></div></div></div>
       <div class="film-sub" id="movingFpsRow"><span class="film-k" id="movingFpsRowLabel" data-str="moving.fps">Frame rate</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingFpsRowLabel"><label><input type="radio" name="movingFps" value="24"><span class="radio-btn"><b data-str="moving.fps24">24 fps</b><small data-str="moving.c24">film</small></span></label><label><input type="radio" name="movingFps" value="30" checked><span class="radio-btn"><b data-str="moving.fps30">30 fps</b><small data-str="moving.c30">web</small></span></label><label><input type="radio" name="movingFps" value="48"><span class="radio-btn"><b data-str="moving.fps48">48 fps</b><small data-str="moving.c48">high rate</small></span></label><label><input type="radio" name="movingFps" value="60"><span class="radio-btn"><b data-str="moving.fps60">60 fps</b><small data-str="moving.c60">smoothest</small></span></label></div></div>
       </fieldset>

@@ -46,6 +46,9 @@ export function setRimOn(on){ const h = rimHex().slice(0, 7); setColorField('tex
  *  the finger, its centre this far from the middle (in the dial's 100-unit box); past the rim (to 130%, an engine-lit
  *  surface's lower light) it goes on outside the ring, to the dashed circle. The camera's View the same. */
 export const DIAL_R = 26;
+// (a drawing laid on the light dial each time it is drawn, by whoever needs one: the film's window lays the sun's arc)
+let lightPadAfter = null;
+export const setLightPadAfter = f => { lightPadAfter = f; };
 export function syncLightPad(){
   const deg = parseFloat($('textureLight').value) || 0, tilt = $('textureLightTilt') ? parseFloat($('textureLightTilt').value) : 100;
   const k = Math.max(0, Math.min(130, isNaN(tilt) ? 100 : tilt)) / 100, a = deg * Math.PI / 180;
@@ -97,6 +100,7 @@ export function syncLightPad(){
   // the rim light's strength, under the dial while Rim is chosen
   const rki = $('lightRimKIn'), rkr = $('rimStrength');
   if(rki && ae !== rki) rki.value = String(rs); if(rkr && ae !== rkr) rkr.value = String(rs);
+  if(lightPadAfter) lightPadAfter();
 }
 /** The rim light's strength, 0–100 (its hue's alpha; 0 while it is off). */
 function rimStrengthNow(){ const h = rimHex(); return h.length === 7 ? 100 : Math.round(parseInt(h.slice(7, 9), 16)/255*100); }

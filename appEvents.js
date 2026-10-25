@@ -33,7 +33,7 @@ import { graphScattersGlyphs } from './stepsPatterns.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
-import { closeMoving, makeMoving, movingBusy, movingLeave, movingSetEnd, movingSetNow, movingWake, openMoving, paintMoving } from './uiMoving.js';
+import { closeMoving, makeMoving, movingArc, movingBusy, movingLeave, movingSetEnd, movingSetNow, movingWake, openMoving, paintMoving } from './uiMoving.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, retireOldPanel, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
@@ -56,7 +56,7 @@ import { setWorking } from './uiWorking.js';
 import { clickId, commitHistory, commitSoon, notePoemSoon, poemHistoryNow, setFilmstrip, showShortcuts, stepAny } from './uiHistory.js';
 import { EXAMPLE_LOOK, FIRST_VISIT_KEY, GUARDED, guardWork, hardNo, markFresh, needsGuard, reconcileControls, remeasureAndRender, restoreDraft, resyncSurfaceControls, safeRestore, saveDraft, saveDraftSoon, settingsForSpell, toast } from './uiGuard.js';
 import { applyAthanorGraph, forgeDeps, keptByValue, openAthanorNow, paintForgeSummary, paintReveal, paintShelfOptions, paintTryOptions, protectText, revealSurface, tryGraphOf } from './uiAthanor.js';
-import { DIAL_R, LIGHT_DEFAULT, RIM_DEFAULT, addAngleSnap, cameraNow, cameraStart, dialMax, drawCameraGuide, drawDialGuide, keepGround, lightPick, movePicked, paintKnobDial, pickedNow, putRim, seedCamera, setCamera, setLight, setRimOn, setRimStrength, syncCameraPad, syncLightPad } from './uiDials.js';
+import { DIAL_R, LIGHT_DEFAULT, RIM_DEFAULT, addAngleSnap, cameraNow, cameraStart, dialMax, drawCameraGuide, drawDialGuide, keepGround, lightPick, movePicked, paintKnobDial, pickedNow, putRim, seedCamera, setCamera, setLight, setLightPadAfter, setRimOn, setRimStrength, syncCameraPad, syncLightPad } from './uiDials.js';
 import { HINTS_ON, LOCKABLE, closeDieMenu, dieLevel, dieMenu, installHeadings, installLocks, linkCopy, paintMasterLocks, paintMoons, paintSeedMoon, refreshHints, rollByLabel, rollSection, showHints, syncLinkedBox, syncStopFields, withLocksPreserved } from './uiLocks.js';
 import { editLayer, freshLower, lowerOn, paintLayerWords, pickLayer, readingOf, swapLayers, syncBaseUi } from './uiLayers.js';
 import { CREDIT_KEY, applyCustomSize, applyLayout, applyPreviewScale, applyPreviewScaleSoon, backdropColours, detectMobile, fitEditorRoom, generateFilenameBase, maybeRerollSeed, offerAltText, pickAspect, poemAltText, randomSeed, summonCard, syncCustomSize } from './uiLayout.js';
@@ -1018,6 +1018,7 @@ if($('cameraReset') && $('cameraReset').addEventListener) $('cameraReset').addEv
 for(const id of ['cameraTurnIn', 'cameraViewIn']) if($(id) && $(id).addEventListener) $(id).addEventListener('change', () => {
   const c = cameraNow(), n = k => { const v = parseFloat(($(k) || {}).value); return isNaN(v) ? null : v; };
   setCamera(n('cameraTurnIn') ?? c.turn, n('cameraViewIn') ?? c.view, c.zoom, true); });
+setLightPadAfter(movingArc);   // (the sun's arc laid on the light dial while the film's window holds it)
 syncLightPad();
 $('textureBlend').addEventListener('change', () => { keepGround(''); scheduleRender(); });
 // choosing a tint yourself stops it following the accents

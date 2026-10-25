@@ -10,6 +10,11 @@ How the interface works: the tabs and the phone layout, the preview, locks and d
   film looping) and its foot held at the bottom. While a film is made the rest of the page is
   inert and faded (`movingInert`, body.film-making), the tabs don't change and no shortcut runs, and the preview's
   scale holds (`applyPreviewScale`).
+  The page's light and camera dials move into its Camera and Light card while the film's window is open (`movingDials`);
+  From and To switch both (`movingCamSwitch`: To sets where the camera and the light end). On a surface whose dial is the
+  sun, the light dial carries the sun's arc over the film (`movingArc`, laid after each drawing of the dial through
+  `setLightPadAfter`): from where it starts to where it ends along its day (`movingSunPlan`), turning round as Time
+  passes grows; the film carries a light set To along the same arc.
 - **`refreshUi()`** is THE refresh: every view of a value made to match it.
   - It is called after `restoreSettings`, undo/redo, and every
     `withLocksPreserved` (presets, randomisers, readings).

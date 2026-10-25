@@ -328,12 +328,21 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     from its side of the screen and from above as it rises (`V.sun.LT`,
     `V.sun.sd`); Saturn takes its light from it. The shadow squares and
     `L.side` still make the arch's days.
-  - One world for both (`rgView`): the land's heights (`rgTerrain`: ridged big
-    octaves, ranges at the walls' feet, flatter in cities, terraced by the
-    builders), the sea below the camera's ground, the biomes by world
-    coordinates (`rgGround`), the camera standing on the land (`Px` lifted by
-    its height). Far land is drawn up to 3.2× taller than it is (a painter's
-    exaggeration), its colour by its true height (`T.true`).
+  - One world for both (`rgView`), and its land is the land kit's (landKit.js, `lkLand`; Ruby, 2026-10-25: "real
+    landmasses and biomes by the seed … nothing morphing as the camera rises or turns"; docs/prior-art/ringworld-terrain.md):
+    heights a pure function of the seed and the place, in metres inside (the band 4000 m across), every noise periodic
+    round the ring. Continents and seas from domain-warped noise, the sea's share by the seed; a coast rising to plains
+    and plateaus; mountain belts of ridged noise inland and the spill mountains at the walls' feet, eased under the rim
+    walls (Ruby: "no mountain above the rim walls"); hills crested and folded where erosion has not worn them flat;
+    escarpments stepping up in long cliffs; rivers winding across the lowlands to the sea, lakes in the wet ones, canyons
+    cut stepwise through the dry uplands; how rugged the land is by the seed (`rug`); a landing where the seed stands
+    you, kept gentle and clear of the water. Climate: warmth by the seed and region, cooled with height; moisture by
+    region, wetter by the coasts; ten biomes by both on Whittaker's diagram (`LK_BIOMES`), each a weight fading into the
+    next over a transition as wide as Detail asks. The ground's colour (`rgGround`) mixes the biomes' grounds (each the
+    Land Hue leaning toward its own, `RG_BIOME_GROUND`), the forest's dark canopy, a town's grey, rock where it is steep,
+    sand at the water, snow above the snowline; the patchwork of fields far off (`rgFieldPatch`). Far land is drawn up to
+    3.2 times taller than it is (a painter's exaggeration, by how far along the floor it lies from where you stand, so
+    still the land's and not the camera's: `exH`), never above the walls; its colours by its true height.
   - **World** (`RG_WORLDS`, `RG_PROF`): By the Seed, Wilds, Cities, Neon,
     Builders, Magic, Ruins, Mixed (three, region by region). Each world's
     weights say what it raises; its ground, its lights (the page's accents for
@@ -341,16 +350,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     air's tint.
   - **The camera sweeps; the world stays** (Ruby: "we should be able to sweep
     the camera and see it not really change much but get a different
-    perspective"). The land is 16 ridges, each the land's true height along one cut. **Held still under a moving
-    camera** (Ruby, Ursa Major: "the ground distorts and transforms when you move the camera";
-    docs/prior-art/ringworld-stability.md): a turn, a tilt or a zoom moves the camera about one fixed eye, so the picture can be a
-    function of the world and the eye alone. Each cut is a circle about the eye (`RG_ROUND_CUTS`; straight cuts swung
-    through the hills as the camera turned, and on the tilted cameras the land uses a circle reads as straight); its
-    samples stand at bearings fixed in the world, a whole number round the eye (`NB`), so a facet, a field's crop and a
-    glint stay on their own piece of land; a facet grows out of the lit band by the land's slope instead of switching
-    on (`fw2`); a ridge's band, wash, day and seam are read smoothly round the middle of the view, never at one sample
-    (`vw`); the land's finest octave fades in by its size, so a zoom never adds one at once. Things are ordered by
-    their true distance, stand on the land as finely as the ridges show it, and choose their detail by their size at
+    perspective"). **The land is a mesh fixed in the world** (Ruby, 2026-10-25: "nothing morphing as the camera rises or
+    turns"; docs/prior-art/ringworld-terrain.md §4): nested rings of square cells, each ring's twice the last (a geometry
+    clipmap), the finest round where you stand, each corner's height the land kit's at its own place asked for detail
+    down to its cell's size (`vh`); each ring's outer part eases into the next coarser ring's shape, so their edges meet.
+    Rising, tilting, turning or zooming the camera changes how the grid is seen, never the grid; finer rings are left out
+    only where their cells would be smaller than a pixel from the eye's height. Detail sets the cells' size on the page
+    (some 16 to 7.5 pixels) and how far the land reaches. Things are ordered by
+    their true distance, stand on the land as the mesh draws it (`meshH`), and choose their detail by their size at
     their true distance (`lodOf`, handed to the kit as `lod`), so a turn never changes a tree's or a building's stage;
     every feature drawn only at some sizes has a stream of its own, so a stage gained moves nothing else; the smallest
     trees fade in; a wall's grain and a road's wear are keyed to the world, not the screen; the one loud nod, the four
@@ -359,16 +366,19 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     doubles in size with each doubling of distance, so the screen holds about
     as many at every depth), the works in their own cells, roads cut into world
     lengths; the sky's things stand in directions of the world (`skyAt`), and
-    the stars behind are panned with the camera (`rgPanSky`).
-  - **How it is painted** (Ruby's method from game development): the ridges are
-    found first; for each, the highest of the nearer crests in every column is
-    its occlusion horizon. Then every thing is measured nearest first, the
-    solid heart of each (a crown, a building's lower body, a boulder) laid in
-    its columns; a thing wholly below the nearer ridges, or wholly inside what
-    nearer things cover, is never drawn (`vis`). Then all is painted back to
-    front, each thing after the ridge behind it, standing on the ground that
-    shows (never above that ridge's crest: `stand`). About nine in ten things
-    in a city are culled before they are drawn.
+    the stars behind stand on a skybox of the world (`rgPanSky`).
+  - **How it is painted** (Ruby's method from game development): the cells in view are walked nearest first, and in
+    each column of the page the highest land yet is kept (the occlusion horizon), snapshotted at forty depths. Where a
+    farther cell rises above it from behind it, the land below was a crest: Ruby's bands are kept there (Ruby: "the
+    bands kept to mark drops in elevation and sharp borders"), each face lit along its top and deepening a band below
+    (`bandAt`), its crest a bright line. Then every thing is measured nearest first, the solid heart of each laid in its
+    columns; a thing wholly below the nearer land, or wholly inside what nearer things cover, is never drawn (`vis`).
+    Then every cell, thing, run of way and piece of field is painted far to near, a thing just after the cells under its
+    nearest edge. A cell takes its corners' colours (`vcol`), so a border between two grounds runs smoothly across the
+    cells; it is lit by its slope against the sun (raking at dusk), its hollows darker, cloud shadows and low mist over
+    it, water with its shallows and a line of foam where the land meets it; near, it carries marks of its ground
+    (`rgGroundMarks`: blades, ripples, cracks, sastrugi, lichen, tussocks, paving), placed by its own place in the world.
+    About nine in ten things in a city are culled before they are drawn.
   - **One ruler** (Ruby: "buildings that are the size (small) of lil shrubs"):
     every thing has a size in metres (paintKit's `PK_SIZE`), drawn at the
     ring's px per metre where it stands (`W·0.00025·F` over its depth); a
@@ -384,11 +394,15 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     the larger ones sown further off); poles carry wires along the roads (`pkWires`); boards stand beside the roads,
     each world's own and the jokey ones rare (`PK_BOARDS`, a serial verse now and then, `PK_SERIALS`); the wilds'
     standing stones are a stone circle at true scale, in the world (`pkStone`, `pkLintel`).
-  - **The view's reach** (Ruby: "make the drawing script aware of the view frustum"): each cut of the land runs as far
-    round as the page sees, its corners included (`PHI`), so a wide lens never shows a cut's end (were the cuts straight,
-    they bend round the eye as a circle past 55°, `smax`); fields and ways are drawn with the ridge before their nearest
-    end, so no ridge they lie across paints over them; a thing is kept while any of it can be in view; the lens is held
-    under 118° (`ringParams`).
+  - **The view's reach** (Ruby: "make the drawing script aware of the view frustum"): the land is kept as far round as
+    the page sees, its corners included (`PHI`); fields and ways are drawn after the land under their nearest edge, so
+    no cell they lie on paints over them; a thing is kept while any of it can be in view; the lens is held under 118°
+    (`ringParams`). The far floor on the arch is laid as a map (`rgPaintArch`): patches a few pixels across by their
+    true distance, on a grid of the world's, each of the land kit's broad regions where it lies and shaded by its
+    relief, so lakes and ranges read as shapes, not squares.
+  - **Highways** (the neon world's main roads; Ruby: the roads that floated, made highways): an elevated expressway on a
+    line of columns some 42 m apart, its deck some 12 m over the highest ground beneath it, eased along, over land and
+    water alike.
   - **Ways and Clutter** (Ruby: streets "related to works … destroyed … fairly uncommon … different materials … curved
     … follow the contour of the land"): the main roads and, from the heart of each town Works raises, a few ways out and
     one to the next town, each walked a step at a time toward the level and away from the steep (the store's `ways`);
@@ -428,9 +442,12 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     are sown, `sowD`; Medium is 1). Older looks meet Fauna and Detail at their defaults (format 11). Every thing in the
     store has an id and tags (`rgTagsOf`; the same thing the same id from any view), and `ringStateOf` gives its state at a
     moment, a wild group's members each by the group's id and their number.
-  - **The sky as a backdrop** (Ruby: "stars should not pan with the camera"): the star field stays put as the camera
-    turns (`rgPanSky`), drifting only with the ring's spin, kept to a sixth of the true one (`RG_SPIN`). In rain, a storm or
-    snow an overcast ceiling covers the sky: rings of a plane two kilometres up, darkest overhead, and soft darker rolls.
+  - **The stars in the world** (Ruby: "the starfield should be pretty static"; locked to the camera the whole ring seemed
+    to turn): the star field is a skybox, a cube round the eye whose faces are cut into patches and projected through the
+    ring's camera (`rgPanSky`, `RG_SKY_FACES`), so turning the camera turns past the stars as it does past the arch; only
+    the ring's spin moves them, kept to a sixth of the true one (`RG_SPIN`). In rain, a storm or snow an overcast ceiling
+    covers the sky, thin enough that the arch always shows: rings of a plane under two kilometres up, darkest overhead,
+    and soft darker rolls.
   - **The wild things** (Ruby: "wildlife still travel on short predictable paths and do not really move or scatter";
     wildKit.js, docs/prior-art/ringworld-wildlife.md). Each herd, flock or creature is a store record (`c: 'wild'`) at a
     home of its own; its members' places come from `wkAt` alone, by the group's seed and `rgMotionTime`, so a film can
@@ -460,7 +477,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     paints by a palette family the seed chose (`rgPaletteOf`); flat roofs gather their clutter (`pkRoofThings`). The
     Wilds' hills and woods hold lookouts, bothies, charcoal stacks, camps and hides; towns, fountains and bandstands.
   - **Clouds in the world** (Ruby: "distance, lod, parallaxing, transparency, blending, and to not clip with other
-    objects"): the heaps stand over the band at their own heights and are drawn among the ridges by their distance
+    objects"): the heaps stand over the band at their own heights and are drawn among the land by their distance
     (`paintHeap`), each on its own sheet laid at once so its billows never darken each other, every billow a gradient
     so its edges are soft; its billows grown each from one already there inside the heap's dome, so none floats free;
     a cauliflower's smaller billows on its outline as it nears; lit as one body (a gradient over the whole sheet,
@@ -470,8 +487,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     transition states"; the Wind Waker's, docs/prior-art/ringworld-time.md §4) they drift on their own slow clock
     (`rgCloudTime`), their billows breathe and roll, and each heap lives in stages: it gathers from scattered wisps,
     stands, thins and is gone, and a new shape gathers only from nothing; a heap swelling past half the frame as it
-    nears fades. Each heap's shadow lies on the land under it (`cloudShadeAt`): a soft sheet over each ridge's face,
-    laid before what stands on it, and the things themselves lit by the sun that reaches them (`cday`). The light on a
+    nears fades. Each heap's shadow lies on the land under it (`cloudShadeAt`): darkening each cell it falls on,
+    before what stands on it, and the things themselves lit by the sun that reaches them (`cday`). The light on a
     heap follows the sun's height: from above by day, from below at dawn and dusk (warm undersides, violet tops), and
     with the sun behind it a dark heart and a shining edge. High and far, the cirrus and the clear sky's low bands
     stay in the sky.
@@ -485,7 +502,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     kept back from a house"; docs/prior-art/ringworld-countryside.md): the store lays fields (`out.fields`) round each
     gathering of houses (the farms' hearts, where the houses gather as the buildings are placed), on each farm's own
     lines, thinning outward, never over a neighbour's; each a crop of its climate (`RG_CROPS`), hedged, walled or
-    bunded; on the steep, terraces stepped along the contour. The land paints them piece by piece with the ridges, as
+    bunded; on the steep, terraces stepped along the contour. The land paints them piece by piece in its order, as
     the ways (a wash near you, so the land's relief shows through). What a field holds is placed in its frame: bales,
     ricks, a flock (`pkSolidProp`'s sheep) and its shepherd droid, a scarecrow, hives, a harvester. Trees keep back from
     a house's walls and out of the fields, except along a hedge. On a town's shore, boats moored at their jetties (ways
@@ -505,9 +522,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     fields; the stones cleared off them lie in low heaps at their edges (`stonepile`). Traditional orchards and olive
     groves stand on their grids (`fruit`, `olive` trees, apples 9 m apart, cherries 20, olives 10 to 12), modern ones
     and hedgerow groves are rows painted as a crop. Now and then a field is half ploughed, the tractor on the line
-    between, the gulls (`gulls`) waiting level with it, a few in the air; the same gulls follow a harvester. Looked down
-    on, a ridge's lit band and its facets are painted thinner, and facets only where the land itself is steep, so
-    they no longer hang like panes.
+    between, the gulls (`gulls`) waiting level with it, a few in the air; the same gulls follow a harvester.
   - **Things in three dimensions** (`pkSpace`, `pkBox3`): the newest things are built of solids in their own frame and
     carried to the page as the eye sees them turned, a little from above (the sheep, the boats, the vehicles below,
     and the droids that walk or roll on tracks, `PK_BOTS3`).
@@ -540,7 +555,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     the sun's side (`pkFlip`). Trees are mirrored by the seed.
   - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow; heaps of
     cloud lit from the sun's side, rain in veils, lightning, a rainbow opposite a low sun, rays from a low or clouded
-    sun, the sun's glare low over the land, mist thickening between the ridges, rain and snow falling over it all. The
+    sun, the sun's glare low over the land, mist thickening with depth, rain and snow falling over it all. The
     air round the sun (docs/prior-art/ringworld-sky.md): the sky brightens toward the sun and the horizon under it glows,
     burning orange and red at dusk and lingering after the sun has gone; opposite it at dusk and dawn, the Belt of
     Venus over the blue-grey of the world's shadow. Cirrus combed into fine strands, some hooked (mares' tails). By day in clear weather
@@ -598,7 +613,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Small life** (`rgSmallLife`; Ruby: "insects, fairies, flowers, slime
     creatures … all subtle"): on some rings (`lively`, by the seed), finds are
     sown in the world as everything else is (more with Life), and drawn in their
-    place in the order, so a nearer ridge or thing covers them as it would
+    place in the order, so nearer land or a nearer thing covers them as it would
     anything; never where nearer land hides them. The kind is by the world (fairies in
     magic, slime in ruins); every mark has a floor in canonical pixels. Now and
     then someone flies a kite in the fields or a city's green: high and downwind by

@@ -96,11 +96,15 @@ if(canvasOK){
   { const W = 450, H = 800, caps = T.TEXTURE_CAPS.ringpaint, t6 = caps.tintDefaults || [], o = { seed: 1315108826, light: 166, lightTilt: 87, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: W/3072, camera: { turn: 8, view: 65, zoom: 100 } };
     T.paramsFor('ringpaint').forEach((p, j) => o['p' + (j + 1)] = String(p.def)); T.clearTextureCache();
     const d = T.getTextureCanvas('ringpaint', W, H, o).getContext('2d').getImageData(0, 0, W, H).data, top = H/5 | 0, seen = new Uint8Array(W*top);
-    const on = i => (d[i*4] + d[i*4 + 1] + d[i*4 + 2])/3 > 120; let free = 0;
-    for(let i0 = 0; i0 < W*top; i0++) if(on(i0) && !seen[i0]){ const st = [i0]; seen[i0] = 1; let n = 0, edge = false;
+    // (a mark hangs free when the sky round it is dark: a brighter stretch of the arch itself, between its darker
+    //  patches, is bordered by the arch, not by the night)
+    const lum = i => (d[i*4] + d[i*4 + 1] + d[i*4 + 2])/3, on = i => lum(i) > 120; let free = 0;
+    for(let i0 = 0; i0 < W*top; i0++) if(on(i0) && !seen[i0]){ const st = [i0], mine = new Set([i0]); seen[i0] = 1; let n = 0, edge = false;
       while(st.length){ const i = st.pop(), px = i % W, py = i/W | 0; n++; if(!px || !py || px === W - 1 || py === top - 1) edge = true;
-        for(const j of [px > 0 ? i - 1 : -1, px < W - 1 ? i + 1 : -1, py > 0 ? i - W : -1, py < top - 1 ? i + W : -1]) if(j >= 0 && !seen[j] && on(j)){ seen[j] = 1; st.push(j); } }
-      if(!edge) free = Math.max(free, n); }
+        for(const j of [px > 0 ? i - 1 : -1, px < W - 1 ? i + 1 : -1, py > 0 ? i - W : -1, py < top - 1 ? i + W : -1]) if(j >= 0 && !seen[j] && on(j)){ seen[j] = 1; mine.add(j); st.push(j); } }
+      if(edge) continue; let ring = 0, dark = 0;
+      for(const i of mine){ const px = i % W; for(const j of [px > 0 ? i - 1 : -1, px < W - 1 ? i + 1 : -1, i - W, i + W]) if(j >= 0 && j < W*top && !mine.has(j)){ ring++; if(lum(j) < 40) dark++; } }
+      if(dark >= ring*0.9) free = Math.max(free, n); }
     check(`the Ringworld's wall graffiti stays on its wall, not hanging in the sky (largest free mark ${free}px)`, free < 40); }
 }
 

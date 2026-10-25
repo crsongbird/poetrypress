@@ -12,6 +12,7 @@
  */
 import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
 import { WK_KINDS, WK_FLYERS, wkAt, wkCount, wkPaint, wkWander, wkNoise } from './wildKit.js';
+import { lkLand, LK_BIOMES, LK_FORESTED } from './landKit.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
 import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
@@ -30,11 +31,11 @@ export const RG_WORLDS = ['seed', 'wilds', 'cities', 'neon', 'builders', 'magic'
 //   standing stones · cr crystals · ci circles · pi pillars of light · do domes · br bridges of light · ca craters, smoke
 //   and fire · wr wrecks · sh ships · be small life · ro rocks · gr grass and flowers · cv how much of the land is city
 const RG_PROF = {
-  wilds:    { tr: 1,    de: 0.05, gt: 0,   to: 0,    sp: 0.05, sa: 0.12, mo: 0.35, cr: 0.12, ci: 0,   pi: 0,    do: 0,    br: 0,   ca: 0,   wr: 0.25, sh: 0.15, be: 1,    ro: 0.8,  gr: 1,    cv: 0 },
-  cities:   { tr: 0.45, de: 0,    gt: 0,   to: 1,    sp: 0.2,  sa: 0.25, mo: 0,    cr: 0,    ci: 0,   pi: 0,    do: 0.5,  br: 0.2, ca: 0,   wr: 0.1,  sh: 0.8,  be: 0.3,  ro: 0.15, gr: 0.5,  cv: 1 },
-  neon:     { tr: 0.12, de: 0,    gt: 0.15, to: 1,   sp: 0.3,  sa: 0.15, mo: 0,    cr: 0,    ci: 0,   pi: 0.1,  do: 0.2,  br: 0.6, ca: 0,   wr: 0.2,  sh: 1,    be: 0.2,  ro: 0.1,  gr: 0.15, cv: 0.9 },
-  builders: { tr: 0.45, de: 0,    gt: 0,   to: 0.2,  sp: 1,    sa: 0.9,  mo: 0.6,  cr: 0.2,  ci: 0,   pi: 0.15, do: 0.3,  br: 0.8, ca: 0,   wr: 0.12, sh: 0.6,  be: 0.3,  ro: 0.25, gr: 0.6,  cv: 0.2 },
-  magic:    { tr: 0.5,  de: 0,    gt: 0.7, to: 0.12, sp: 0.5,  sa: 0.6,  mo: 0.35, cr: 1,    ci: 0.8, pi: 0.25, do: 0.1,  br: 0.3, ca: 0,   wr: 0.08, sh: 0.2,  be: 0.9,  ro: 0.3,  gr: 1,    cv: 0.1 },
+  wilds:    { tr: 1,    de: 0.05, gt: 0,   to: 0,    sp: 0.05, sa: 0.12, mo: 0.35, cr: 0.12, ci: 0,   pi: 0,    do: 0,    br: 0,   ca: 0,   wr: 0.07, sh: 0.15, be: 1,    ro: 0.8,  gr: 1,    cv: 0 },
+  cities:   { tr: 0.45, de: 0,    gt: 0,   to: 1,    sp: 0.2,  sa: 0.25, mo: 0,    cr: 0,    ci: 0,   pi: 0,    do: 0.5,  br: 0.2, ca: 0,   wr: 0.04, sh: 0.8,  be: 0.3,  ro: 0.15, gr: 0.5,  cv: 1 },
+  neon:     { tr: 0.12, de: 0,    gt: 0.15, to: 1,   sp: 0.3,  sa: 0.15, mo: 0,    cr: 0,    ci: 0,   pi: 0.1,  do: 0.2,  br: 0.6, ca: 0,   wr: 0.08, sh: 1,    be: 0.2,  ro: 0.1,  gr: 0.15, cv: 0.9 },
+  builders: { tr: 0.45, de: 0,    gt: 0,   to: 0.2,  sp: 1,    sa: 0.9,  mo: 0.6,  cr: 0.2,  ci: 0,   pi: 0.15, do: 0.3,  br: 0.8, ca: 0,   wr: 0.05, sh: 0.6,  be: 0.3,  ro: 0.25, gr: 0.6,  cv: 0.2 },
+  magic:    { tr: 0.5,  de: 0,    gt: 0.7, to: 0.12, sp: 0.5,  sa: 0.6,  mo: 0.35, cr: 1,    ci: 0.8, pi: 0.25, do: 0.1,  br: 0.3, ca: 0,   wr: 0.04, sh: 0.2,  be: 0.9,  ro: 0.3,  gr: 1,    cv: 0.1 },
   ruins:    { tr: 0.15, de: 0.7,  gt: 0,   to: 0.6,  sp: 0.4,  sa: 0.6,  mo: 0.3,  cr: 0.1,  ci: 0,   pi: 0,    do: 0.2,  br: 0,   ca: 1,   wr: 0.9,  sh: 0.2,  be: 0.25, ro: 0.7,  gr: 0.3,  cv: 0.4 },
 };
 // the ground each world lays (mixed into the Land Hue), and its lights (null: the page's own accents)
@@ -54,23 +55,6 @@ export function rgWorldOf(seed, v){
   return { name: 'mixed', list: [a, b, c] };
 }
 
-// THE LAND'S HEIGHT at a point of the floor (along a, across z, in ring units; up is toward the axis): fractal, its
-// big octaves ridged (mountains), mountains piled at the walls' feet, flatter where cities stand, terraced by the
-// builders. One function for the arch, the ridges and the works, so they agree.
-function rgTerrain(W, Hw, seed, forms, world){
-  const s = seed | 0, flat = world.list.includes('cities') || world.list.includes('neon') ? 0.55 : 1, terrace = world.list.includes('builders') ? W*0.004 : 0;
-  const sea = -W*0.004*(0.4 + 1.6*mnHash(s, 3, 77))*(0.3 + forms), snow = W*0.03*(0.7 + 0.6*mnHash(s, 4, 77));
-  // (sm: the finest octave fades in over a narrow band of its size, so a zoom never adds or drops a whole octave at once:
-  //  the land as the ridges paint it; without, the octaves cut where they always were: the land as things are placed on it)
-  const raw = (a, z, fine, sm) => { let v = 0;
-    for(let k = 0; k < 11; k++){ const wl = W*Math.pow(0.5, k); if(wl < (sm ? fine*0.85 : fine)) break; const ow = !sm || wl >= fine*1.15 ? 1 : rsSmooth(fine*0.85, fine*1.15, wl);
-      const n = mnValue(a/wl + k*17.31, z/wl - k*9.17 + 40, s + k*101), r = 1 - Math.abs(2*n - 1);
-      v += ow*(k < 3 ? (r*r - 0.33)*wl*0.13*forms*flat : (n - 0.5)*wl*(k < 6 ? 0.16 : 0.12)*(0.4 + forms)); }
-    v += Hw*0.4*forms*rsSmooth(0.55, 1, Math.abs(z)*2/W)*(0.3 + 0.7*mnValue(a/(W*0.18), 2.7, s + 5));
-    if(terrace && v > 0){ const q = v/terrace, f = q - Math.floor(q); v = (Math.floor(q) + rsSmooth(0.7, 1, f))*terrace; }
-    return v; };
-  return { sea, snow, raw };
-}
 const rgClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
 // a stream of its own for each thing in the world (Ruby: "sweep the camera and see it not really change much"): seeded by
 // what the thing is and where it stands, never by what happened to be drawn before it
@@ -88,16 +72,16 @@ function rgView(E, n, ww, wh){
     // (which way round the dusk comes, by the light dial; in a film, held as it was at the first frame)
     daylight, air: 50, side: E.ctx.camera && E.ctx.camera.side ? E.ctx.camera.side : typeof from === 'number' && Math.cos((from*360 - 90)*Math.PI/180) < 0 ? -1 : 1 });
   const L = ringCamera(p), W = L.W, world = rgWorldOf(seed, num(n, 'world', 0)), forms = num(n, 'landforms', 50)/100;
-  const TR = rgTerrain(W, L.Hw, seed, forms, world);
-  // (the land about you is kept gentler, so you stand on it rather than in a hillside)
-  // (the land about you is kept gentle, so you stand on it rather than in a hillside; and as a painter does, the far
-  //  land's forms are drawn taller than they are, so the ranges along the arch's foot read at all)
-  const v0 = TR.raw(0, L.z0, W*0.001); TR.sea = Math.min(TR.sea, v0 - W*0.0015); TR.snow = Math.max(TR.snow, v0 + W*0.02);
+  // THE LAND (landKit.js; Ruby, 2026-10-25: "real landmasses and biomes by the seed … nothing morphing as the camera rises
+  // or turns"): its heights a pure function of the seed and the place, flatter where cities stand, stepped where the
+  // builders terraced it, kept gentle where the seed stands you; its biomes blending as widely as Detail asks
+  const detail = Math.max(0, Math.min(3, Math.floor(num(n, 'detail', 37)/25)));
+  const LK = lkLand(seed, { W, Hw: L.Hw, forms, flat: world.list.includes('cities') || world.list.includes('neon') ? 0.55 : 1, terrace: world.list.includes('builders') ? W*0.004 : 0, z0: L.z0, blend: [0.15, 0.45, 0.75, 1][detail] });
+  const TR = { sea: LK.sea, snow: LK.snowline, cloud: W*0.03*(0.7 + 0.6*mnHash(seed | 0, 4, 77)), raw: (a, z, fine) => LK.height(a, z, fine) };   // (cloud: the cumulus's base)
+  const v0 = LK.height(0, L.z0, W*0.001);
   // (the weather, by the seed or chosen; in snow the land lies white down to the ground you stand on)
   const wx = rgWeatherOf(seed, E.P(n, 'weather', 'by the seed'), world); if(wx === 'snow') TR.snow = v0 - W*0.004;
-  const T = (a, z, fine, sm) => { const v = TR.raw(a, z, fine, sm), d = Math.hypot(a, z - L.z0); return v0 + (v - v0)*(0.25 + 0.75*rsSmooth(0, W*0.03, d) + 2.2*rsSmooth(W*0.05, W*2, d)); };
-  // (the heights as they are, for the ground's colour: snow by its true height, not the painter's)
-  T.true = (a, z, fine, sm) => { const v = TR.raw(a, z, fine, sm), d = Math.hypot(a, z - L.z0); return v0 + (v - v0)*(0.25 + 0.75*rsSmooth(0, W*0.03, d)); };
+  const T = (a, z, fine) => LK.height(a, z, fine); T.true = T;
   L.Px = 1 - L.hc - v0;
   const unit = Math.min(ww, wh), F = L.f*unit, cx = ww/2, cy = wh/2;
   // THE PAINTER'S PERSPECTIVE: stereographic, not a pinhole's. A pinhole draws the arch (a great circle through the
@@ -112,8 +96,11 @@ function rgView(E, n, ww, wh){
   const land = rgb(input(n, 7), [111, 143, 85]), sky = rgb(input(n, 8), [134, 174, 220]), g1 = rgb(input(n, 9), [176, 48, 58]), g2 = rgb(input(n, 10), [201, 163, 58]);
   // the biomes, by world coordinates: dry land, forest, city; which world (Mixed), its lights
   const s = seed | 0, worldAt = (a, z) => world.list.length < 2 ? world.list[0] : world.list[Math.min(2, Math.floor(mnValue(a/(W*0.9) + 3.1, z/(W*0.9) + 8.3, s + 23)*3.3))];
-  const dryAt = (a, z) => mnValue(a/(W*0.6) + 11.7, z/(W*0.6) - 3.3, s + 13), forestAt = (a, z) => rsSmooth(0.38, 0.62, mnValue(a/(W*0.09) + 2.1, z/(W*0.09) + 5.9, s + 17));
-  const cityAt = (a, z, cv) => { if(cv <= 0) return 0; const t = 0.62 - 0.6*cv; return rsSmooth(t - 0.06, t + 0.06, mnValue(a/(W*0.22) + 7.7, z/(W*0.22) - 1.1, s + 19)); };
+  // (how dry a place is, and how wooded: from its climate and its biomes, the woods in patches with clearings in them)
+  const dryAt = (a, z) => rgClamp(1 - LK.climate(a, z, LK.height(a, z, W*0.05))[1]);
+  const forestAt = (a, z) => { const bw = LK.biomes(a, z, LK.height(a, z, W*0.05)); let f = 0; for(let i = 0; i < LK_BIOMES.length; i++) f += (LK_FORESTED[LK_BIOMES[i].name] || 0)*bw[i];
+    const th = 0.6 - 0.42*Math.min(1, f*1.15); return rsSmooth(th - 0.12, th + 0.12, mnValue(a/(W*0.09) + 2.1, z/(W*0.09) + 5.9, s + 17)); };
+  const cityAt = (a, z, cv, soft = 0.06) => { if(cv <= 0) return 0; const t = 0.62 - 0.6*cv; return rsSmooth(t - soft, t + soft, mnValue(a/(W*0.22) + 7.7, z/(W*0.22) - 1.1, s + 19)); };
   const lightsOf = w => RG_LIGHTS[w] || [g1.map(c => Math.min(255, c*1.15 + 30)), g2.map(c => Math.min(255, c*1.15 + 30))];
   // THE SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it, and the light on the land
   // comes from where it is): its way round the dial's, its height the dial's reach (overhead it is the ring's own star, on
@@ -123,10 +110,10 @@ function rgView(E, n, ww, wh){
   const sunAt = sunUp ? proj(L.Px + D[0], D[1], L.z0 + D[2]) : null;
   // (the land's facets and the painted things, lit from the sun's side of the screen, and from above as it rises)
   const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
-  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf, psi,
+  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, LK, detail, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf, psi,
     // (Flora is what grows, Fauna what lives and moves; Detail how far and how finely: Low, Medium, High, Ultra, as a
     //  reach on the things sown round the eye, Medium as it always was: RG_DETAIL)
-    life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[Math.max(0, Math.min(3, Math.floor(num(n, 'detail', 37)/25)))], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
+    life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
     // THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, and the time between its frames
     // (0 in a still, so a still draws as it always did); and the ring's slow spin under the stars since then
     // (in a film, its frame and the scene's mean seconds a frame, from which the scene's own clocks run evenly; and a
@@ -179,18 +166,66 @@ const rgGrowTime = V => rgClock(V, 4);
 // the wind, by the seed (docs/prior-art/ringworld-time.md: fair-weather cumulus drift at three to seven metres a second,
 // faster under a storm): its way and its speed
 const rgWind = V => { const WD = seedChoice(V.seed, 'wind'), ang = WD()*Math.PI*2; return [ang, 3 + 4*WD() + (V.weather === 'storm' ? 5 : 0)]; };
-// the ground's own colour at a point (before light, night and haze): the Land Hue as each world lays it, dry land,
-// forest, city, rock high up, snow on the tallest; the sea below its level
-function rgGround(V, a, z, e, coarse = 1){
-  const w = V.worldAt(a, z), P = RG_PROF[w], [gc, gk] = RG_GROUND[w];
+// THE GROUND'S COLOUR at a place of height e (ring units): its biomes' grounds mixed by their weights (landKit.js; each
+// a mix of the Land Hue toward its own ground, so the page's land hue still colours the land), its world's ground, a
+// forest's dark canopy from afar, a town's grey (its edge soft), bare rock where it is steep, sand at
+// the water's edge, scree and snow high up; under the water, the sea's colour. (coarse: the far arch's, read broadly;
+// slope: rise over run, where known; bw0: its biomes' weights, if already known)
+const RG_BIOME_GROUND = { ice: [[236, 240, 247], 1], tundra: [[150, 140, 112], 0.6], taiga: [[30, 52, 50], 0.55], meadow: [[0, 0, 0], 0], forest: [[20, 50, 30], 0.45],
+  steppe: [[196, 176, 112], 0.6], desert: [[222, 194, 140], 0.82], savanna: [[204, 178, 98], 0.55], jungle: [[20, 80, 36], 0.4], marsh: [[70, 92, 70], 0.5] };
+const RG_PATCH = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]];
+function rgGround(V, a, z, e, coarse = 1, slope = 0, bw0 = null){
+  const W = V.W, M = W*0.00025, w = V.worldAt(a, z), P = RG_PROF[w], [gc, gk] = RG_GROUND[w];
   if(e <= V.TR.sea + 1e-9) return rsMix([24, 58, 104], V.sky, 0.35);
-  let c = rsMix(V.land, gc, gk);
-  const dry = rsSmooth(0.55, 0.8, V.dryAt(a, z)); if(dry > 0) c = rsMix(c, w === 'ruins' ? [150, 116, 84] : [206, 178, 124], dry*0.8);
-  const fo = V.forestAt(a/coarse, z/coarse)*Math.min(1, V.life*1.6)*(P.tr + P.gt*0.5 + P.de*0.3); if(fo > 0) c = rsMix(c, w === 'magic' ? rsMix([30, 70, 64], V.g1, 0.25) : w === 'ruins' ? [70, 64, 50] : [34, 74, 46], Math.min(0.75, fo*0.7));
-  const ci = V.cityAt(a/Math.sqrt(coarse), z/Math.sqrt(coarse), P.cv*(0.3 + 0.9*V.works)); if(ci > 0) c = rsMix(c, w === 'neon' ? [40, 36, 58] : [150, 148, 146], ci*0.7);
-  const hi = rsSmooth(V.TR.snow*0.5, V.TR.snow, e); if(hi > 0) c = rsMix(c, [128, 122, 116], hi*0.5);
-  if(e > V.TR.snow) c = rsMix(c, [240, 243, 250], rsSmooth(V.TR.snow, V.TR.snow*1.25, e));
+  const bw = bw0 || V.LK.biomes(a, z, e); let c = [0, 0, 0];
+  for(let i = 0; i < LK_BIOMES.length; i++){ if(bw[i] < 0.004) continue; const [bc, bk] = RG_BIOME_GROUND[LK_BIOMES[i].name], g = rsMix(V.land, bc, bk); c[0] += g[0]*bw[i]; c[1] += g[1]*bw[i]; c[2] += g[2]*bw[i]; }
+  c = rsMix(c, gc, gk);
+  const fo = V.forestAt(a/coarse, z/coarse)*Math.min(1, V.life*1.6)*(P.tr + P.gt*0.5 + P.de*0.3); if(fo > 0) c = rsMix(c, w === 'magic' ? rsMix([30, 70, 64], V.g1, 0.25) : w === 'ruins' ? [70, 64, 50] : rsMix(V.land, [20, 46, 30], 0.6), Math.min(0.6, fo*0.6));
+  const ci = V.cityAt(a/Math.sqrt(coarse), z/Math.sqrt(coarse), P.cv*(0.3 + 0.9*V.works), 0.16); if(ci > 0) c = rsMix(c, w === 'neon' ? [40, 36, 58] : [150, 148, 146], ci*0.7);
+  const rock = rsSmooth(0.45, 0.95, slope); if(rock > 0) c = rsMix(c, rsMix([128, 120, 112], V.land, 0.12), rock*0.8);
+  const sand = (1 - rsSmooth(1.2*M, 3.5*M, e))*(1 - ci); if(sand > 0) c = rsMix(c, [222, 206, 164], sand*0.75);
+  const hi = rsSmooth(V.TR.snow*0.6, V.TR.snow, e); if(hi > 0) c = rsMix(c, [128, 122, 116], hi*0.4);
+  if(e > V.TR.snow) c = rsMix(c, [240, 243, 250], rsSmooth(V.TR.snow, V.TR.snow*1.15, e)*(1 - rsSmooth(0.8, 1.4, slope)));
   return c;
+}
+// THE PATCHWORK OF FIELDS far off (Ruby: "more detail in the distance … in the ground"): where people farm (open, low,
+// gentle land, not forest, not town), a far cell of the land takes its field's crop colour, the fields on a grid of the
+// world's own: [colour, how much] or null. (bw: the place's biomes' weights; dd: how far off it is seen)
+function rgFieldPatch(V, a, z, e, bw, slope, dd){ const W = V.W; if(dd <= W*0.3) return null; const w = V.worldAt(a, z); if(w !== 'wilds' && w !== 'cities' && w !== 'builders') return null;
+  let fo = 0; for(let i = 0; i < LK_BIOMES.length; i++) fo += (LK_FORESTED[LK_BIOMES[i].name] || 0)*bw[i];
+  const ci = V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works)), fa = (bw[3] + bw[5]*0.7 + bw[7]*0.4)*(1 - Math.min(1, fo*1.6))*(1 - ci)*(1 - rsSmooth(V.TR.snow*0.25, V.TR.snow*0.45, e))*rsSmooth(W*0.3, W*0.55, dd)*(1 - rsSmooth(0.12, 0.3, slope));
+  if(fa < 0.05) return null; const cs = W*0.012, hv = mnHash(Math.floor(a/cs), Math.floor(z/cs*1.6), (V.seed | 0) + 77); return hv > 0.22 ? [RG_PATCH[Math.min(4, Math.floor(hv*hv*5.6))], 0.45*fa] : null; }
+// GROUND TEXTURE (Ruby: "ground textures for each kind of terrain"; docs/prior-art/ringworld-terrain.md §6): a near cell of
+// the land carries marks of its ground, each placed by the cell's own place in the world (its ring, row and column), so
+// nothing swims as the camera moves: blades and clumps on grassland, sand ripples, cracks and pebbles on rock, sastrugi
+// on snow, lichen and stones on the tundra, tussocks and pools in the marsh, joints in a town's paving; tinted from the
+// cell's own colour, as many as its size on the page holds, none once it is small. (P: the cell's corners on the page;
+// q: { l, i, j, box }; kind; c: the cell's colour)
+const RG_GRASSY = { meadow: 1, forest: 1, taiga: 1, jungle: 1, savanna: 1, steppe: 1 };
+// (a path written down to be drawn later, on any canvas: moveTo, lineTo, quadraticCurveTo, arc, ellipse; play(ctx))
+const rgPathRec = () => { const ops = []; const r = { play(c){ c.beginPath(); for(const [f, a] of ops) c[f](...a); } };
+  for(const f of ['moveTo', 'lineTo', 'quadraticCurveTo', 'arc', 'ellipse']) r[f] = (...a) => { ops.push([f, a]); }; return r; };
+function rgGroundMarks(x, P, q, kind, c, px){
+  const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0, area = w*h*0.55; if(w < px(6) || h < px(2.5)) return;
+  const n = Math.min(9, Math.floor(area/(px(16)*px(16)))); if(n < 1) return;
+  const R = mulberry32((Math.imul(q.l + 1, 0x9E3779B1) ^ Math.imul(q.i, 0x85EBCA77) ^ Math.imul(q.j, 0xC2B2AE3D)) >>> 0);
+  const pt = (u, v) => { const ax = P[0][0] + (P[1][0] - P[0][0])*u, ay = P[0][1] + (P[1][1] - P[0][1])*u, bx = P[3][0] + (P[2][0] - P[3][0])*u, by = P[3][1] + (P[2][1] - P[3][1])*u; return [ax + (bx - ax)*v, ay + (by - ay)*v]; };
+  const lite = rsCss(rsMix(c, [255, 250, 232], 0.16), 0.75), dark = rsCss(rsMix(c, [0, 0, 0], 0.2), 0.7), s = Math.min(w, h*2.2)/Math.sqrt(n + 1);
+  const L = rgPathRec(), D = rgPathRec(); let any = false;
+  for(let k = 0; k < n; k++){ const [X, Y] = pt(0.1 + 0.8*R(), 0.1 + 0.8*R()), u = R(), r = s*(0.25 + 0.25*R()); any = true;
+    if(RG_GRASSY[kind]){ const lb = r*(kind === 'steppe' || kind === 'savanna' ? 0.9 : 0.7), Pq = u < 0.5 ? L : D, lean = (R() - 0.5)*lb*0.6;
+      Pq.moveTo(X - lb*0.25, Y); Pq.lineTo(X - lb*0.3 + lean, Y - lb); Pq.moveTo(X, Y); Pq.lineTo(X + lean*0.5, Y - lb*1.2); Pq.moveTo(X + lb*0.25, Y); Pq.lineTo(X + lb*0.35 + lean, Y - lb*0.9); }
+    else if(kind === 'sand' || kind === 'desert'){ const lw = r*1.6; D.moveTo(X - lw, Y); D.quadraticCurveTo(X, Y - r*0.35, X + lw, Y); L.moveTo(X - lw, Y - r*0.2); L.quadraticCurveTo(X, Y - r*0.55, X + lw, Y - r*0.2); }
+    else if(kind === 'rock'){ D.moveTo(X - r, Y - r*0.3); D.lineTo(X - r*0.2, Y + r*0.1); D.lineTo(X + r*0.3, Y - r*0.2); D.lineTo(X + r, Y + r*0.25); L.moveTo(X + r*0.4, Y + r*0.5); L.arc(X + r*0.3, Y + r*0.5, Math.max(px(0.5), r*0.12), 0, Math.PI*2); }
+    else if(kind === 'snow' || kind === 'ice'){ const lw = r*1.4; L.moveTo(X - lw, Y); L.lineTo(X + lw, Y - r*0.12); D.moveTo(X - lw*0.6, Y + r*0.18); D.lineTo(X + lw*0.7, Y + r*0.1); }
+    else if(kind === 'tundra'){ L.moveTo(X + r*0.3, Y); L.arc(X, Y, Math.max(px(0.5), r*0.3), 0, Math.PI*2); D.moveTo(X + r*0.9 + r*0.2, Y + r*0.3); D.arc(X + r*0.9, Y + r*0.3, Math.max(px(0.4), r*0.2), 0, Math.PI*2); }
+    else if(kind === 'marsh'){ if(u < 0.4){ D.moveTo(X + r, Y); D.ellipse(X, Y, r, r*0.3, 0, 0, Math.PI*2); } else { L.moveTo(X - r*0.3, Y); L.lineTo(X - r*0.4, Y - r*0.9); L.moveTo(X, Y); L.lineTo(X, Y - r*1.1); L.moveTo(X + r*0.3, Y); L.lineTo(X + r*0.45, Y - r*0.8); } }
+    else if(kind === 'paving'){ const lw = r*1.5; D.moveTo(X - lw, Y); D.lineTo(X + lw, Y); D.moveTo(X, Y - r*0.4); D.lineTo(X, Y + r*0.4); } }
+  if(!any) return;
+  x.lineWidth = Math.max(px(0.5), s*0.06); x.lineCap = 'round';
+  x.strokeStyle = dark; D.play(x); x.stroke(); x.strokeStyle = lite; L.play(x); x.stroke();
+  if(kind === 'marsh' || kind === 'rock' || kind === 'tundra'){ x.fillStyle = dark; D.play(x); x.fill(); }
+  x.lineCap = 'butt';
 }
 // light, night and air on a colour: lit by the star (by day), dark blue by night, hazed by the air between
 function rgLit(V, c, day, haze, air){ const n = rsMix(rsMix(c, [8, 12, 30], 0.82), c, 0.08); return rsMix(rsMix(n, c, day), air, haze); }
@@ -437,21 +472,35 @@ function rgPaintArch(x, mk, V){
   // lays them, its nights where the squares' shadows fall, hazed by the air low down and clear overhead
   const WALL0 = rsMix([96, 104, 124], S, 0.22), quads = [], hzOf = (zc, eS) => V.air*(1 - Math.exp(-zc/(W*1.6)))*(0.25 + 0.75*Math.exp(-Math.max(0, eS)/0.22));
   const elevOf = (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, l = Math.hypot(dx, dy, dz) || 1; return -dx/l; };
-  const steps = (a0, fine, coarse) => { const out = [a0]; let a = a0; while(a < Math.PI){ a = Math.min(Math.PI, a + Math.max(fine, Math.min(coarse, a*0.12))); out.push(a); } return out; };
-  const LN = 3, aF = steps(W*0.25, W*0.05, W*0.35);
+  const steps = (a0, fine, coarse, k = 0.05) => { const out = [a0]; let a = a0; while(a < Math.PI){ a = Math.min(Math.PI, a + Math.max(fine, Math.min(coarse, a*k))); out.push(a); } return out; };
+  // (Ruby: "the far land in regions, not a checkerboard"; docs/prior-art/ringworld-terrain.md §5: the arch overhead is
+  //  the land seen as a map): the far floor laid in patches a few pixels across wherever they fall, finer where it is
+  //  nearer (by its true distance from the eye, never by where it falls on the page, so a turn changes nothing), each on a
+  //  grid fixed in the world, of the land kit's broad regions where it lies and shaded by its relief (a hillshade), so
+  //  lakes, ranges, forests and fields read as shapes, not squares; from where the land's own mesh gives out, give or
+  //  take, to the far side
+  const AB = W*0.004, A0 = Math.floor(W*[3.2, 4, 4.6, 5.2][V.detail]*0.6/AB)*AB, TGT = Math.max(2, px(9));
+  const dist3 = (a, z) => Math.hypot(Math.cos(a) - L.Px, Math.sin(a), z - L.z0);
   // AN UNFINISHED STRETCH (Ruby: "unfinished sections of the ring with scaffolding"): on some rings, more often where
   // the builders are, a stretch of the far floor was never laid: the bare lattice of the ring's frame shows, scaffolding
   // stands along its edges, and cranes lean over it
   const UF = (() => { const R = rgRand(s, 812), p = V.world.list.includes('builders') ? 0.7 : V.world.list.includes('ruins') ? 0.45 : 0.22; if(R() > p) return null;
     const sg = R() < 0.5 ? 1 : -1, a0 = (0.7 + R()*1.6)*sg, len = W*(1 + 3*R())*sg; return { lo: Math.min(a0, a0 + len), hi: Math.max(a0, a0 + len), R }; })();
   const unfinished = a => UF && a >= UF.lo && a <= UF.hi;
-  for(const sg of [1, -1]) for(let i = 0; i + 1 < aF.length; i++){ const a0 = aF[i]*sg, a1 = aF[i + 1]*sg, am = (a0 + a1)/2, day = ringDay(L, am);
-    for(let j = 0; j < LN; j++){ const z0 = -W/2 + W*j/LN, z1 = -W/2 + W*(j + 1)/LN, zm = (z0 + z1)/2, q = [at(a0, z0, 0), at(a1, z0, 0), at(a1, z1, 0), at(a0, z1, 0)];
-      if(q.some(v => !v)) continue;
-      const e = V.TR.raw(am, zm, W*0.25), wet = rsSmooth(V.TR.sea + W*0.004, V.TR.sea - W*0.004, e), c = rsMix(rgGround(V, am, zm, Math.max(e, V.TR.sea + 1e-6), 4), rsMix([24, 58, 104], S, 0.35), wet), zc = (q[0][2] + q[2][2])/2, eS = elevOf(Math.cos(am), Math.sin(am), zm);
-      if(unfinished(am)){ quads.push([zc, q, rgLit(V, rsMix(WALL0, SPACE, 0.55), 0.3 + 0.7*day, hzOf(zc, eS)*0.55, AIR), null, 'frame', rgRand(s, 813, i*sg, j)]); continue; }
-      quads.push([zc, q, rgLit(V, rsMix(c, [255, 255, 255], 0.06), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 && V.cityAt(am, zm, RG_PROF[V.worldAt(am, zm)].cv*(0.3 + 0.9*V.works)) > 0.3 ? V.lightsOf(V.worldAt(am, zm))[0] : null, false, rgRand(s, 805, i*sg, j)]); } }
-  const Hw = L.Hw, WALL = rsMix([96, 104, 124], S, 0.22), aW = steps(0, W*0.012, W*0.4);
+  const SUN3 = V.sun.D;
+  for(const sg of [1, -1]) for(let a = A0, guard = 0; a < Math.PI && guard < 4000; guard++){ const dz0 = dist3(a, L.z0), k = Math.max(0, Math.min(7, Math.ceil(Math.log2(TGT*dz0/(F*AB))))), da = AB*Math.pow(2, k);
+    const aN = Math.min(Math.PI, (Math.floor(a/da + 1e-6) + 1)*da), i = Math.round(a/AB), a0 = a*sg, a1 = aN*sg, am = (a0 + a1)/2, day = ringDay(L, am); a = aN;
+    const LNa = Math.pow(2, Math.max(1, Math.min(5, Math.floor(Math.log2(F*W/(dz0*TGT)))))), ws = W*0.06;
+    for(let j = 0; j < LNa; j++){ const z0 = -W/2 + W*j/LNa, z1 = -W/2 + W*(j + 1)/LNa, zm = (z0 + z1)/2, q = [at(a0, z0, 0), at(a1, z0, 0), at(a1, z1, 0), at(a0, z1, 0)];
+      if(q.some(v => !v) || (q[0][0] < 0 && q[1][0] < 0 && q[2][0] < 0 && q[3][0] < 0) || (q[0][0] > ww && q[1][0] > ww && q[2][0] > ww && q[3][0] > ww) || (q[0][1] > wh && q[1][1] > wh && q[2][1] > wh && q[3][1] > wh) || (q[0][1] < 0 && q[1][1] < 0 && q[2][1] < 0 && q[3][1] < 0)) continue;
+      const e = V.TR.raw(am, zm, W*0.25), wet = rsSmooth(V.TR.sea + W*0.004, V.TR.sea - W*0.004, e); let c = rsMix(rgGround(V, am, zm, Math.max(e, V.TR.sea + 1e-6), 4), rsMix([24, 58, 104], S, 0.35), wet);
+      if(wet < 0.95){ const dA2 = (V.TR.raw(am + ws, zm, W*0.25) - e)/ws*2.5, dZ2 = (V.TR.raw(am, Math.max(-W/2, Math.min(W/2, zm + ws*0.5)), W*0.25) - e)/(ws*0.5)*2.5, ca3 = Math.cos(am), sa3 = Math.sin(am);
+        const nx = dA2*sa3 - ca3, ny = -dA2*ca3 - sa3, nz = -dZ2, nl = Math.hypot(nx, ny, nz), up3 = -(ca3*SUN3[0] + sa3*SUN3[1]), nd = (nx*SUN3[0] + ny*SUN3[1] + nz*SUN3[2])/nl, kk = up3 > 0.04 ? Math.max(0, Math.min(1.6, nd/Math.max(0.3, up3))) : 1;
+        c = kk < 1 ? rsMix(rsMix(c, [26, 34, 70], 0.3), c, kk) : rsMix(c, rsMix(c, [255, 244, 222], 0.2), (kk - 1)/0.6*0.5); }
+      const zc = (q[0][2] + q[2][2])/2, eS = elevOf(Math.cos(am), Math.sin(am), zm), jj = j*(32/LNa);
+      if(unfinished(am)){ quads.push([zc, q, rgLit(V, rsMix(WALL0, SPACE, 0.55), 0.3 + 0.7*day, hzOf(zc, eS)*0.55, AIR), null, 'frame', rgRand(s, 813, i*sg, jj)]); continue; }
+      quads.push([zc, q, rgLit(V, rsMix(c, [255, 255, 255], 0.06), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 && V.cityAt(am, zm, RG_PROF[V.worldAt(am, zm)].cv*(0.3 + 0.9*V.works)) > 0.3 ? V.lightsOf(V.worldAt(am, zm))[0] : null, false, rgRand(s, 805, i*sg, jj)]); } }
+  const Hw = L.Hw, WALL = rsMix([96, 104, 124], S, 0.22), aW = steps(0, W*0.012, W*0.4, 0.12);
   for(const zw of [-W/2, W/2]) for(const sg of [1, -1]) for(let i = 0; i + 1 < aW.length; i++){ const a0 = aW[i]*sg, a1 = aW[i + 1]*sg, am = (a0 + a1)/2, q = [at(a0, zw, 0), at(a1, zw, 0), at(a1, zw, Hw), at(a0, zw, Hw)];
     if(q.some(v => !v)) continue;
     const zc = (q[0][2] + q[2][2])/2, eS = elevOf((1 - Hw*0.5)*Math.cos(am), (1 - Hw*0.5)*Math.sin(am), zw), rib = i % 4 === 0 ? 0.12 : 0, day = ringDay(L, am);
@@ -462,7 +511,9 @@ function rgPaintArch(x, mk, V){
   // a point inside a quad (u along it, v up or across it)
   const inQ = (q, u, v) => [q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v + (q[2][0] - q[1][0] - q[3][0] + q[0][0])*u*v, q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v + (q[2][1] - q[1][1] - q[3][1] + q[0][1])*u*v];
   const line = (pts, col, wd) => { x.strokeStyle = col; x.lineWidth = wd; x.beginPath(); pts.forEach(([X, Y], k) => k ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.stroke(); };
-  for(const [, q, c, lights, wall, R, ww2, wday, footHaze] of quads){ rsPoly(x, q, rsCss(c)); rsPoly(mk, q, '#fff');
+  // (each patch pushed out half a pixel round its middle, so no seam of the sky shows between two)
+  const growQ = q => { const cx2 = (q[0][0] + q[1][0] + q[2][0] + q[3][0])/4, cy2 = (q[0][1] + q[1][1] + q[2][1] + q[3][1])/4; return q.map(p => { const dx2 = p[0] - cx2, dy2 = p[1] - cy2, ln = Math.hypot(dx2, dy2) || 1; return [p[0] + dx2/ln*0.6, p[1] + dy2/ln*0.6]; }); };
+  for(const [, q, c, lights, wall, R, ww2, wday, footHaze] of quads){ const qg = growQ(q); rsPoly(x, qg, rsCss(c)); rsPoly(mk, qg, '#fff');
     if(wall === true && footHaze){ const A = inQ(q, 0.5, 0), B = inQ(q, 0.5, 0.22), g = x.createLinearGradient(A[0], A[1], B[0], B[1]); g.addColorStop(0, rsCss(AIR, footHaze)); g.addColorStop(0.45, rsCss(AIR, footHaze*0.35)); g.addColorStop(1, rsCss(AIR, 0)); rsPoly(x, q, g); }
     if(wall === 'frame'){ // the ring's bare frame: its ribs across and along, lit on their edges
       const fc = rsCss(rsMix(c, [255, 255, 255], 0.3), 0.8), wd = Math.max(px(0.6), Math.abs(q[3][1] - q[0][1])*0.04);
@@ -915,6 +966,14 @@ function rgStore(V){
     for(let i = 0; i + 1 < P.length; i++){ const k = Math.floor(P[i].a/BIN) + ',' + Math.floor(P[i].z/BIN); if(!bins.has(k)) bins.set(k, []); bins.get(k).push([wy, i]); } };
   // (the main roads, walked from end to end of the view)
   rgRoadsOf(V).forEach((rd, ri) => { const R = rgRand(s, 1300, ri), step = 20*M, mat = { road: 'asphalt', neon: 'asphalt', path: 'light', broken: 'asphalt', ley: 'ley', trail: 'earth' }[rd.kind];
+    // (the neon world's main roads ride high (Ruby: the roads that floated, made highways): an elevated expressway on a
+    //  line of columns, straight on its own gentle curves over land and water alike, its deck some 12 m over the highest
+    //  ground beneath it, eased along; docs/prior-art/ringworld-terrain.md §10)
+    if(rd.kind === 'neon'){ const ph = R()*6.283, n = Math.ceil((rd.along ? W*0.64 : W*0.95)/step), pts = [];
+      for(let q = 0; q <= n; q++){ const u = q/n, mv = W*0.025*Math.sin(u*4.2 + ph); pts.push(rd.along ? [-W*0.32 + W*0.64*u, rd.at + mv] : [rd.at + mv, -W*0.46 + W*0.92*u]); }
+      addWay(pts, mat, rd.w, true, R); const wy = ways[ways.length - 1]; if(wy){ wy.high = true; const g = wy.pts.map(p => Math.max(TR.sea, T.true(p.a, p.z, W*0.002)));
+        const mx = g.map((_, q) => Math.max(...g.slice(Math.max(0, q - 3), q + 4))); wy.pts.forEach((p, q) => { let sm = 0, nn = 0; for(let r = Math.max(0, q - 3); r <= Math.min(g.length - 1, q + 3); r++){ sm += mx[r]; nn++; } p.e = sm/nn + (11 + 3*mnValue(p.u/(W*0.05), 0.5, s + 66))*M; }); }
+      return; }
     addWay(rd.along ? walk(-W*0.32, rd.at, 0, W*0.64, step, [W*0.32, rd.at], R) : walk(rd.at, -W*0.46, Math.PI/2, W*0.95, step, [rd.at, W*0.46], R), mat, rd.w, true, R); });
   // (the towns': from the heart of each town Works raises, two to five ways out, and one on to the nearest other town)
   const hubs = [], farms = []; { const C = W*0.05, Rr = W*0.25; for(let i = Math.floor(-Rr/C); i <= Math.ceil(Rr/C); i++) for(let j = Math.floor((L.z0 - Rr)/C); j <= Math.ceil((L.z0 + Rr)/C); j++){
@@ -1420,14 +1479,14 @@ export function ringStateOf(o, t = 0, env = {}){   // test hook: a thing's state
   if(o.c !== 'wild') return base;
   const n = wkCount(o.kind, o.rs), members = []; for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); members.push({ id: o.id + '#' + j, on: st.on, x: st.x, z: st.z, y: st.y, pose: st.pose, face: st.face }); }
   return { ...base, members }; }
+let RG_LAST_MESH = null;
+const RG_MESH_KEPT = new Map();   // (the land's mesh, its corners' heights and colours, for the last few worlds viewed)
+export const ringMeshOf = () => RG_LAST_MESH;   // test hook: the last view's mesh of the land (its rings and each corner's height)
 export const ringKeptStores = () => [...RG_KEPT_STORES.values()];   // test hook: the stores the views made, every thing in them with its id and tags
 
 // ---------------- THE LAND ----------------
 // the trees whose crown is a narrow spire or column: what they hide is narrow too
 const RG_NARROW_TREES = ['spruce', 'fir', 'cypress', 'poplar', 'pine', 'bamboo', 'saguaro'];
-// THE CUT'S SHAPE: each ridge a circle about the eye (true), so a turn of the camera never moves a ridge through the land;
-// or (false) straight across the view, bending round the eye past 55°, as the land was cut until Ursa Major
-const RG_ROUND_CUTS = true;
 // How it is painted (Ruby, from game development: "figure out what's in front, and what's occluding what … sort objects
 // … draw back to front, avoiding drawing things that are occluded and partially masking things that are part
 // occluded"):
@@ -1463,56 +1522,119 @@ function rgPaintLand(x, mk, dk, V){
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, BLACK = [0, 0, 0], s = V.seed | 0;
   const LT = V.sun.LT, sd = V.sun.sd, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
-  const K = 16, d0 = Math.max(L.hc*2.2, W*0.0012), d1 = W*4, dOf = k => d0*Math.pow(d1/d0, k/(K - 1));
+  const d0 = W*0.0012;
   // THE VIEW'S REACH (Ruby: "make the drawing script aware of the view frustum"): how far round from the heading the page
-  // sees, its corners included (the painter's perspective: a radius on the page of 2F·tan(θ/2)); every cut of the land
-  // runs that far round, so a wide lens never shows its ends. A cut is straight ahead, as Ruby likes the ridges, and
-  // bends round the eye as a circle past 55°, where a straight cut could never reach the page's sides
-  const half = Math.hypot(ww/2, wh/2)/unit/L.f, PHI = Math.min(2.55, 2*Math.atan(half/2)*1.06 + 0.06), C0 = Math.cos(55*Math.PI/180);
-  const smax = RG_ROUND_CUTS ? () => 1 : c => 0.5*(c + C0 + Math.sqrt((c - C0)*(c - C0) + 0.01)), Sof = d => d*Math.max(Math.tan(Math.min(PHI, 1.1)), PHI)*1.1 + W*0.002;
-  // a floor point's place in the cuts' terms: its angle from the heading, and the depth of the cut it lies on
-  const angOf = (a, z) => Math.atan2(-a*hz + (z - L.z0)*hx, a*hx + (z - L.z0)*hz), cutOf = (a, z) => Math.hypot(a, z - L.z0)*smax(Math.cos(angOf(a, z)));
-  // where the heading meets a wall (looking across): no ridge lies beyond it
-  const dWall = Math.abs(hz) > 1e-4 ? ((hz > 0 ? W/2 : -W/2) - L.z0)/hz : Infinity;
+  // sees, its corners included (the painter's perspective: a radius on the page of 2F·tan(θ/2)); the land is kept that
+  // far round, so a wide lens never shows its ends
+  const half = Math.hypot(ww/2, wh/2)/unit/L.f, PHI = Math.min(2.55, 2*Math.atan(half/2)*1.06 + 0.06);
+  // a floor point's angle from the heading, and how far off along the floor it lies (what sorts the land and the things,
+  // far to near)
+  const angOf = (a, z) => Math.atan2(-a*hz + (z - L.z0)*hx, a*hx + (z - L.z0)*hz), cutOf = (a, z) => Math.hypot(a, z - L.z0);
   const hazeOf = d => V.air*(1 - Math.exp(-d/(W*1.3)));
-  // a point of the floor in the view's terms: how far ahead, how far aside
-  const ahead = (a, z) => a*hx + (z - L.z0)*hz, aside = (a, z) => -a*hz + (z - L.z0)*hx;
-  // the land's own noise for a ridge's facets: smooth in the world, so a facet changes as the cut moves, never jumps
+  // a point of the floor in the view's terms: how far ahead
+  const ahead = (a, z) => a*hx + (z - L.z0)*hz;
+  // the land's own noise, smooth in the world (the water's glints)
   const wn = (a, z, ws, salt) => mnValue(a/ws + salt*3.17, z/ws - salt*1.93, s + 900 + salt);
 
-  // ---- 1. THE RIDGES ----
-  // (Ruby, 2026-10-24: "the ground distorts and transforms when you move the camera"; docs/prior-art/
-  //  ringworld-stability.md): each ridge is sampled at bearings fixed in the WORLD, a whole number of them round the eye,
-  //  so a turn slides the view over the samples, never the samples over the land: a facet, a field, a glint stays on its
-  //  own piece of land. Finer by halves as the lens narrows. Its terrain's finest octave follows the lens smoothly
-  const psi = Math.atan2(hz, hx), NB = 298*Math.pow(2, Math.max(0, Math.floor(Math.log2(1.468/PHI)))), Dl = 2*Math.PI/NB, MS = 96 + 44*rsSmooth(1.1, 1.3, PHI);
-  const vw = ph => Math.exp(-(ph/0.5)*(ph/0.5));   // (a ridge's whole-ridge values, read round the middle of the view, never at one sample)
-  const lay = [];
-  for(let k = K - 1; k >= 0; k--){
-    let d = dOf(k); if(!RG_ROUND_CUTS && d > dWall*1.02){ if(k === 0 || dOf(k - 1) <= dWall*1.02) d = dWall*0.995; else continue; }
-    const Sd = Sof(d), pts = [], fine = 2*Sd/MS*1.3, i0 = Math.floor((psi - PHI)/Dl), i1 = Math.ceil((psi + PHI)/Dl);
-    for(let i = i0; i <= i1; i++){ const ph = i*Dl - psi, r = d/smax(Math.cos(ph)), fw = r*Math.cos(ph), sl = r*Math.sin(ph), a = fw*hx - sl*hz, z0 = L.z0 + fw*hz + sl*hx, z = Math.max(-W*0.497, Math.min(W*0.497, z0)), er = T(a, z, fine, true), e = Math.max(er, TR.sea), p = at(a, z, e);
-      if(p) pts.push({ X: p[0], Y: p[1], zc: p[2], a, z, e, i, ph, wall: z !== z0, ec: er <= TR.sea ? TR.sea : Math.max(TR.sea + 1e-9, T.true(a, z, fine, true)), sea: er <= TR.sea }); }
-    if(pts.length < 2) continue;
-    if(pts[0].X > pts[pts.length - 1].X) pts.reverse();
-    lay.push({ k, d, Sd, pts, ws: 4*Sd/MS, fine });
-  }
-  // ---- 2. THE OCCLUSION HORIZON: each ridge's crest in columns of the screen, and the nearer crests' highest ----
-  const CW = Math.max(1, ww/320), NC = Math.ceil(ww/CW) + 1;
-  for(const l of lay){ const c = new Float32Array(NC).fill(Infinity), P = l.pts;
-    for(let q = 0; q + 1 < P.length; q++){ const A = P[q], B = P[q + 1], c0 = Math.max(0, Math.ceil(A.X/CW)), c1 = Math.min(NC - 1, Math.floor(B.X/CW));
-      for(let ci = c0; ci <= c1; ci++){ const t = (ci*CW - A.X)/((B.X - A.X) || 1); c[ci] = Math.min(c[ci], A.Y + (B.Y - A.Y)*t); } }
-    l.crest = c; }
-  for(let i = lay.length - 1, near = new Float32Array(NC).fill(Infinity); i >= 0; i--){ lay[i].near = near.slice(); const c = lay[i].crest; for(let ci = 0; ci < NC; ci++) near[ci] = Math.min(near[ci], c[ci]); }
-  const col = X => Math.max(0, Math.min(NC - 1, Math.round(X/CW)));
-  // which ridge a depth stands behind (the drawing order puts it after that ridge, before the next nearer)
-  const slot = dd => { let j = -1; for(let i = 0; i < lay.length; i++) if(lay[i].d >= dd) j = i; else break; return j; };
-  // is a thing from X0 to X1, its top at Yt, hidden by the ridges nearer than it? (all its columns covered)
+  // ---- 1. THE LAND, A MESH FIXED IN THE WORLD ----
+  // (Ruby, 2026-10-25: "nothing morphing as the camera rises or turns"; docs/prior-art/ringworld-terrain.md §4): the floor
+  // is a grid fixed in the world, in nested rings of square cells each twice the last (a geometry clipmap, Losasso and
+  // Hoppe), the finest round where you stand. Each corner's height is the land kit's at its own place, asked for detail
+  // down to its cell's size (landKit.js): nothing of the eye's but how far along the floor it stands, so rising,
+  // tilting, turning or zooming the camera changes how the grid is seen and never the grid. Each ring's outer part eases
+  // into the next coarser ring's shape (a geomorph by place), so where two rings meet they share their edge and no crack
+  // opens. Detail sets how fine the cells (some 16 to 7.5 pixels at the page's scale) and how far the land reaches.
+  const DI = V.detail, reach = W*[3.2, 4, 4.6, 5.2][DI], d1 = reach;
+  const NG = 2*Math.round(Math.max(8, Math.min(80, F/[16, 12, 9.5, 7.5][DI]))/2);   // (cells from a ring's middle to its edge)
+  // (the finest ring's cells a metre or two; and finer rings drawn only where their cells would show at all from the
+  //  eye's height, so looking down from a height costs no more than looking across. A ring so left out was finer than
+  //  a pixel: its land is the next ring's, the same land without detail no one could see)
+  let c0 = W*0.00025*[1.8, 1.3, 1, 0.8][DI]; while(c0*F/Math.max(L.hc, W*0.0004) < 1.2 && c0*NG*4 < reach) c0 *= 2;
+  const NLV = Math.max(1, Math.ceil(Math.log2(reach/(NG*c0))) + 1), cl = [], cz = [], ZMAX = W*0.497, SIDE = 2*NG + 1;
+  for(let l = 0; l < NLV; l++){ cl.push(c0*Math.pow(2, l)); cz.push(Math.round(L.z0/(2*cl[l]))*2*cl[l]); }
+  // (the corners' heights and ground colours kept between views of the same world, so a turn of the camera or a film's
+  //  frames, the eye standing where it stands, ask the land kit nothing twice)
+  const meshKey = [V.seed, W, V.forms, V.world.list.join(), V.detail, NG, c0, L.z0, L.Hw, TR.snow, V.life, V.works, V.land.join()].join('|');
+  let kept = RG_MESH_KEPT.get(meshKey); if(!kept){ kept = { vH: cl.map(() => new Float64Array(SIDE*SIDE).fill(NaN)), vC: cl.map(() => new Float32Array(SIDE*SIDE*3).fill(-1)) }; RG_MESH_KEPT.set(meshKey, kept); while(RG_MESH_KEPT.size > 3) RG_MESH_KEPT.delete(RG_MESH_KEPT.keys().next().value); }
+  const vH = kept.vH, vP = cl.map(() => new Array(SIDE*SIDE));
+  const zOf = (l, j) => Math.max(-ZMAX, Math.min(ZMAX, cz[l] + j*cl[l]));
+  const vC = kept.vC;
+  // a corner's height (each ring's middle at a = 0, where you stand along the ring), eased toward the coarser ring's
+  // shape over the ring's outer part, wholly its shape at the edge
+  // (and as a painter does, the far land drawn taller than it is, so the ranges along the arch's foot read at all: by how
+  //  far it lies along the floor from where you stand, so it too is the land's and not the camera's; never above the rim
+  //  walls (Ruby: "no mountain above the rim walls"); exf: how much taller, and its inverse for the land's true colours)
+  const exf = d => 1 + 2.2*rsSmooth(W*0.05, W*2, d), capD = L.Hw*0.9, capK = L.Hw*0.06;
+  const exH = (h, d) => { if(h <= 0) return h; const v = h*exf(d); return v < capD - capK*4 ? v : capD - capK*Math.log1p(Math.exp((capD - v)/capK)); };
+  let heightIn = null;
+  const vh = (l, i, j) => { const k = (j + NG)*SIDE + i + NG; let h = vH[l][k]; if(h === h) return h;
+    const a = i*cl[l], z = zOf(l, j); h = exH(V.LK.height(a, z, 2*cl[l]), Math.hypot(a, z - L.z0));
+    const al = l + 1 < NLV ? rsSmooth(0.7, 1, Math.max(Math.abs(i), Math.abs(j))/NG) : 0; if(al > 0) h += (heightIn(l + 1, a, z) - h)*al;
+    vH[l][k] = h; return h; };
+  heightIn = (l, a, z) => { const u = a/cl[l], v = (z - cz[l])/cl[l], i = Math.max(-NG, Math.min(NG - 1, Math.floor(u))), j = Math.max(-NG, Math.min(NG - 1, Math.floor(v))), fu = u - i, fv = v - j;
+    const h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h01 = vh(l, i, j + 1), h11 = vh(l, i + 1, j + 1); return h00 + (h10 - h00)*fu + (h01 - h00)*fv + (h00 - h10 - h01 + h11)*fu*fv; };
+  // THE LAND AS DRAWN at a place, and the cell it lies in (so a thing stands on the ground that is painted, never on
+  // one a little above or below it: Ruby, "objects embedded in the ground or growing from it, never floating")
+  const levelAt = (a, z) => { for(let l = 0; l < NLV; l++){ const R = (NG - 0.5)*cl[l]; if(Math.abs(a) < R && Math.abs(z - cz[l]) < R) return l; } return -1; };
+  const meshH = (a, z) => { const l = levelAt(a, z); return l < 0 ? V.LK.height(a, z, cl[NLV - 1]*2) : heightIn(l, a, z); };
+  const cellAt = (a, z) => { const l = levelAt(a, z); return l < 0 ? cl[NLV - 1]*2 : cl[l]; };
+  RG_LAST_MESH = { c0, NG, NLV, cz: cz.slice(), height: (l, i, j) => vh(l, i, j) };
+  // (each corner where it falls on the page, the water's at the sea's level)
+  const vp = (l, i, j) => { const k = (j + NG)*SIDE + i + NG; let p = vP[l][k]; if(p !== undefined) return p; p = at(i*cl[l], zOf(l, j), Math.max(TR.sea, vh(l, i, j))); vP[l][k] = p; return p; };
+  // the cells in view: each ring's, less the finer ring inside it, as far as the land reaches, within the view's reach
+  const quads = [];
+  for(let l = 0; l < NLV; l++){ const c = cl[l], hole = l > 0 ? [-NG/2, NG/2, (cz[l - 1] - cz[l])/c - NG/2, (cz[l - 1] - cz[l])/c + NG/2] : null;
+    for(let j = -NG; j < NG; j++){ const zA = cz[l] + j*c, zB = zA + c; if(zB < -ZMAX || zA > ZMAX) continue;
+      for(let i = -NG; i < NG; i++){ if(hole && i >= hole[0] && i + 1 <= hole[1] && j >= hole[2] && j + 1 <= hole[3]) continue;
+        const am = (i + 0.5)*c, zm = Math.max(-ZMAX, Math.min(ZMAX, (zA + zB)/2)), dd = Math.hypot(am, zm - L.z0); if(dd > reach) continue;
+        if(Math.abs(angOf(am, zm)) > PHI + Math.atan2(c*0.8, Math.max(dd, 1e-9)) + 0.02) continue;
+        quads.push({ l, i, j, dd, am, zm, c }); } } }
+  // which way round a cell facing you winds on the page (a flat cell straight ahead), so cells turned away, hidden behind
+  // the land in front of them, are never drawn
+  const ORI = (() => { const dq = W*0.02, a0 = dq*hx, z0 = L.z0 + dq*hz, e = Math.max(TR.sea, meshH(0, L.z0)), dl = W*0.001, P = [at(a0, z0, e), at(a0 + dl, z0, e), at(a0 + dl, z0 + dl, e), at(a0, z0 + dl, e)];
+    if(P.some(p => !p)) return 1; let A = 0; for(let q = 0; q < 4; q++){ const p = P[q], r = P[(q + 1) & 3]; A += p[0]*r[1] - r[0]*p[1]; } return A >= 0 ? 1 : -1; })();
+  const shown = [];
+  for(const q of quads){ const { l, i, j } = q, P = [vp(l, i, j), vp(l, i + 1, j), vp(l, i + 1, j + 1), vp(l, i, j + 1)]; if(P[0] === null || P[1] === null || P[2] === null || P[3] === null) continue;
+    let A = 0, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for(let k = 0; k < 4; k++){ const p = P[k], r = P[(k + 1) & 3]; A += p[0]*r[1] - r[0]*p[1]; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+    if(A*ORI < 0 || x1 < 0 || x0 > ww || y0 > wh) continue; q.P = P; q.box = [x0, x1, y0, y1]; shown.push(q); }
+
+  // ---- 2. WHAT THE LAND HIDES, AND ITS CRESTS ----
+  // (as the ridges were measured, now from the mesh itself: docs/prior-art/ringworld-stability.md) the cells are walked
+  // nearest first, and in each column of the page the highest land yet is kept (the occlusion horizon). Where a farther
+  // cell rises above it from behind it (its own nearer part hidden), the land below was a ridge's crest: Ruby's bands are
+  // kept there, where the land really drops away behind a crest (Ruby: "the bands kept to mark drops in elevation and
+  // sharp borders"), and not at distances fixed to the eye. A thing at some depth is hidden by the land nearer than it
+  const NCOL = Math.max(64, Math.min(1200, Math.round(ww))), CW = ww/NCOL, NC = NCOL;
+  const col = X => Math.max(0, Math.min(NCOL - 1, Math.round(X/CW)));
+  shown.sort((p, q) => p.dd - q.dd);
+  const NBK = 40, bkD = [], lay = []; { const dA = Math.max(d0, shown.length ? shown[0].dd : d0); for(let b = 0; b < NBK; b++) bkD.push(b ? dA*Math.pow(reach/dA, b/(NBK - 1)) : 0); }
+  const HY = new Float32Array(NCOL).fill(Infinity), HD = new Float32Array(NCOL), HQ = new Int32Array(NCOL).fill(-1), crests = Array.from({ length: NCOL }, () => []);
+  { let b = 0; const tY = new Float32Array(NCOL), bY = new Float32Array(NCOL);
+    for(let qi = 0; qi < shown.length; qi++){ const q = shown[qi];
+      while(b < NBK && bkD[b] <= q.dd){ lay.push({ k: b, d: bkD[b], near: HY.slice() }); b++; }
+      const P = q.P, c0 = Math.max(0, Math.ceil(q.box[0]/CW)), c1 = Math.min(NCOL - 1, Math.floor(q.box[1]/CW)); if(c1 < c0) continue;
+      for(let c = c0; c <= c1; c++){ tY[c] = Infinity; bY[c] = -Infinity; }
+      for(let k = 0; k < 4; k++){ const A = P[k], B = P[(k + 1) & 3], xa = Math.min(A[0], B[0]), xb = Math.max(A[0], B[0]);
+        for(let c = Math.max(c0, Math.ceil(xa/CW)), ce = Math.min(c1, Math.floor(xb/CW)); c <= ce; c++){ const X = c*CW, t = xb > xa ? (X - A[0])/(B[0] - A[0]) : 0, Y = A[1] + (B[1] - A[1])*t; if(Y < tY[c]) tY[c] = Y; if(Y > bY[c]) bY[c] = Y; } }
+      const tol = Math.max(px(1.5), 0.25*(q.box[3] - q.box[2]));
+      for(let c = c0; c <= c1; c++){ const t = tY[c]; if(!(t < HY[c] - px(0.3))) continue;
+        if(HY[c] < Infinity && bY[c] > HY[c] + tol) crests[c].push(HY[c], HD[c], HQ[c]);
+        HY[c] = t; HD[c] = q.dd; HQ[c] = qi; } }
+    while(b < NBK){ lay.push({ k: b, d: bkD[b], near: HY.slice() }); b++; }
+    for(let c = 0; c < NCOL; c++) if(HY[c] < Infinity) crests[c].push(HY[c], HD[c], HQ[c]); }
+  // (each crest's band as deep on the page as a ridge's lit face is at its distance, the near ones deeper)
+  const bandOf = d => Math.max(px(3), Math.min(px(44), F*0.045*Math.sqrt(W*0.05/Math.max(d, W*0.002))));
+  for(let c = 0; c < NCOL; c++){ const C = crests[c]; for(let k = 2; k < C.length; k += 3) if(C[k] >= 0) shown[C[k]].rim = true; }
+  // (how far below its crest a point on the page lies, in its crest's band: 0 on the crest, 1 a band down)
+  const bandAt = (X, Y) => { const C = crests[col(X)]; for(let k = 0; k < C.length; k += 3) if(C[k] <= Y + px(0.5)) return (Y - C[k])/bandOf(C[k + 1]); return 9; };
+  // which bucket of depth a thing stands in (what it is drawn after, and what land nearer than it hides)
+  const slot = dd => { let j = -1; for(let i = 0; i < lay.length; i++) if(lay[i].d <= dd) j = i; else break; return j; };
+  // is a thing from X0 to X1, its top at Yt, hidden by the land nearer than it? (all its columns covered)
   const hidden = (l, X0, X1, Yt) => { if(X1 < 0 || X0 > ww) return true; const n = l ? l.near : null; if(!n) return false;
     for(let ci = col(Math.max(0, X0)), c1 = col(Math.min(ww, X1)); ci <= c1; ci++) if(!(n[ci] <= Yt)) return false; return true; };
   // WHAT NEARER THINGS HIDE: first every thing is measured, nearest first, and the solid heart of each (a crown's
   // middle, a building's lower body, a boulder's) is laid in its columns; a farther thing wholly inside what is laid
-  // there, or below the nearer ridges, is never drawn. Then they are painted, farthest first (vis: measured, then told)
+  // there, or below the nearer land, is never drawn. Then they are painted, farthest first (vis: measured, then told)
   const covT = new Float32Array(NC).fill(Infinity), covB = new Float32Array(NC).fill(-Infinity); let painting = false, cur = null;
   const vis = (l, X0, X1, Yt, Yb, oc) => { if(painting) return cur.ok;
     let ok = false; if(!(X1 < 0 || X0 > ww || Yb < 0 || Yt > wh)){ const n = l ? l.near : null;
@@ -1522,8 +1644,8 @@ function rgPaintLand(x, mk, dk, V){
       if(covT[ci] === Infinity || (oc[2] <= covB[ci] && oc[3] >= covT[ci])){ covT[ci] = Math.min(covT[ci], oc[2]); covB[ci] = Math.max(covB[ci], oc[3]); }
       else if(oc[3] - oc[2] > covB[ci] - covT[ci]){ covT[ci] = oc[2]; covB[ci] = oc[3]; } }
     return false; };
-  // the ground that shows: never above the farther crest (between two cuts the land is painted as the farther one's face)
-  const stand = (l, X, Y) => { if(!l) return Y; const c = l.crest[col(X)]; return c < Infinity && Y < c ? c + px(0.5) : Y; };
+  // (a thing stands where the mesh puts it, on the ground that is painted)
+  const stand = (l, X, Y) => Y;
 
   // ---- 3. THE THINGS ----
   const things = []; // { dd, draw(l) }
@@ -1536,7 +1658,7 @@ function rgPaintLand(x, mk, dk, V){
   const cloudShadeAt = (a, z) => { if(!shades.length) return 0; let v = 1; for(const h of shades){ const dx = a - h.a, dz = z - h.z, q = (dx*dx + dz*dz)/(h.r*h.r); if(q > 1.9) continue;
     const th = Math.atan2(dz, dx), rr = 1 + 0.16*Math.sin(3*th + h.ph) + 0.09*Math.sin(5*th + 2*h.ph); v *= 1 - h.k*rsSmooth(1.08, 0.8, Math.sqrt(q)/rr); } return CSH*(1 - v); };
   // (a thing is kept while any of it can be in view: its angle within the view's reach by as much as its own width)
-  const keep = (a, z, w0 = 0) => { const r = Math.hypot(a, z - L.z0), ph = angOf(a, z), dd = r*smax(Math.cos(ph)); if(dd <= 0 || dd > dWall*1.02) return null;
+  const keep = (a, z, w0 = 0) => { const r = Math.hypot(a, z - L.z0), ph = angOf(a, z), dd = r; if(dd <= 0) return null;
     if(Math.abs(ph) > PHI + Math.atan2(w0 + W*0.0005, Math.max(r, 1e-9))) return null; return dd; };
   // (a building takes its region's palette (rgPaletteOf): its materials mixed toward the family the seed chose there)
   const colsOf = (w, day, haze, o = null) => { const lights = V.lightsOf(w), g = lights[0], g2 = lights[1], pal = o ? rgPaletteOf(V, o, w) : null;
@@ -1547,7 +1669,7 @@ function rgPaintLand(x, mk, dk, V){
     return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat }; };
   // where a world point meets the screen, standing on its ground: [X, Y, px per metre, distance]
   // (a thing stands on the land as finely as the ridges about it show it, so it stands on the ground that is painted)
-  const foot = (a, z) => { const e = Math.max(TR.sea, T(a, z, 2*Sof(Math.hypot(a, z - L.z0))/MS*1.3, true)), p = at(a, z, e); if(!p) return null; return [p[0], p[1], W*0.00025*F/p[2], e]; };
+  const foot = (a, z) => { const e = Math.max(TR.sea, meshH(a, z)), p = at(a, z, e); if(!p) return null; return [p[0], p[1], W*0.00025*F/p[2], e]; };
   // (a thing's DETAIL is read from its size at its true distance from the eye, not its size drawn: the painter's
   //  perspective draws a thing larger toward the frame's edges, and a turn must never change what a thing shows; lodOf:
   //  that size over the drawn size, ≤ 1, handed to the kit as its colours' lod)
@@ -1562,7 +1684,7 @@ function rgPaintLand(x, mk, dk, V){
   const store = rgStore(V); let loudOne = null, loudR = Infinity;
   for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
   const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
-  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
+  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: o.c === 'bldg' ? o.wM*0.6*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*0.5*W*0.00025 : 0, draw: l => rgPaintThing(o, l, dd) }); }
   // (Ruby: "don't clip objects until they are entirely out of frame": a thing near you is drawn however large it grows,
   //  until it is so large it would fill the frame from edge to edge, or wholly off it; vis() tests the frame itself)
   const nearCut = wh*3;
@@ -1774,27 +1896,28 @@ function rgPaintLand(x, mk, dk, V){
       if(dd == null || dd < d0*4 || dd > d1) continue;
       things.push({ dd, o: { d: Math.hypot(a, z - L.z0), a, z, kind: 'sh', w, h: mnHash(i, 4, s + 524), h2: mnHash(i, 6, s + 524), up: W*(0.006 + 0.05*mnHash(i, 5, s + 525)), R: rgRand(s, 521, i) } }); } }
   const drawWork = (o, l) => {
-    const e = Math.max(TR.sea, T(o.a, o.z, W*0.003)), b = at(o.a, o.z, e); if(!b) return;
+    const e = Math.max(TR.sea, meshH(o.a, o.z)), b = at(o.a, o.z, e); if(!b) return;
     const k = F/b[2], day = ringDay(L, o.a), big = { sp: 0.02 + 0.08*o.h, mo: 0.006 + 0.02*o.h, do: 0.006 + 0.016*o.h, to: 0.02 + 0.07*o.h, wr: 0.006 + 0.02*o.h, cr: 0.012 }[o.kind]; if(big && W*big/o.d > 0.4) return;
     const X = b[0], Y = o.kind === 'sh' || o.kind === 'sa' || o.kind === 'br' ? b[1] : stand(l, b[0], b[1]);
     if(big && hidden(l, X - W*big*k*0.3, X + W*big*k*0.3, Y - W*big*k)) return;
     const night = 1 - rsSmooth(0.3, 0.7, day), haze = hazeOf(o.d), c = colsOf(o.w, day, haze);
     rgWork(x, o, X, Y, k, c, night, o.R, V, e);
   };
-  // THE WAYS on the floor (the store's, walked across the land), each piece drawn with the ridge before it, so the hills
-  // hide it; near you a piece is cut finer, so the way lies on the ground between its points, not across the air
+  // THE WAYS on the floor (the store's, walked across the land), each run drawn just after the land under it, so the
+  // hills nearer hide it; near you a piece is cut finer, so the way lies on the ground between its points, not across the air
   const wayPieces = store.ways.map(wy => { const out2 = [];
     for(let i = 0; i + 1 < wy.pts.length; i++){ const p = wy.pts[i], q = wy.pts[i + 1], len = Math.hypot(q.a - p.a, q.z - p.z) || 1e-9, nx = -(q.z - p.z)/len, nz = (q.a - p.a)/len;
       const dist = Math.hypot((p.a + q.a)/2, (p.z + q.z)/2 - L.z0), n = Math.max(1, Math.min(8, Math.ceil(len/Math.max(W*0.0005, dist*0.06))));
-      for(let k = 0; k < n; k++){ const t0 = k/n, t1 = (k + 1)/n, P0 = { a: p.a + (q.a - p.a)*t0, z: p.z + (q.z - p.z)*t0, dec: p.dec + (q.dec - p.dec)*t0 }, P1 = { a: p.a + (q.a - p.a)*t1, z: p.z + (q.z - p.z)*t1, dec: p.dec + (q.dec - p.dec)*t1 };
-        out2.push({ p: P0, q: P1, nx, nz, dd: Math.min(cutOf(P0.a, P0.z), cutOf(P1.a, P1.z)) }); } }
+      for(let k = 0; k < n; k++){ const t0 = k/n, t1 = (k + 1)/n, P0 = { a: p.a + (q.a - p.a)*t0, z: p.z + (q.z - p.z)*t0, dec: p.dec + (q.dec - p.dec)*t0, u: p.u + (q.u - p.u)*t0, e: p.e === undefined ? undefined : p.e + (q.e - p.e)*t0 }, P1 = { a: p.a + (q.a - p.a)*t1, z: p.z + (q.z - p.z)*t1, dec: p.dec + (q.dec - p.dec)*t1, u: p.u + (q.u - p.u)*t1, e: p.e === undefined ? undefined : p.e + (q.e - p.e)*t1 };
+        out2.push({ p: P0, q: P1, nx, nz, dd: Math.min(cutOf(P0.a, P0.z), cutOf(P1.a, P1.z)) - wy.half }); } }
     return out2; });
-  const drawWays = (dn, df) => store.ways.forEach((wy, wi) => { let run = [], decs = [], keys = [];
-    const flush = () => { if(run.length >= 2) paintWay(wy, run, decs, keys); run = []; decs = []; keys = []; };
-    for(const pc of wayPieces[wi]){ if(!(pc.dd > dn && pc.dd <= df) || pc.p.dec > 0.8){ flush(); continue; }
-      for(const P of run.length ? [pc.q] : [pc.p, pc.q]){ const e = wy.deck ?? Math.max(TR.sea, T(P.a, P.z, W*0.002)) + W*0.00003, A = at(P.a - pc.nx*wy.half, P.z - pc.nz*wy.half, e), B = at(P.a + pc.nx*wy.half, P.z + pc.nz*wy.half, e);
-        if(!A || !B){ flush(); continue; } run.push([A, B]); decs.push(P.dec); keys.push(Math.imul(Math.round(P.a/W*20000), 73856093) ^ Math.imul(Math.round(P.z/W*20000), 19349663)); } }
-    flush(); });
+  const collectWays = (dn, df) => { const out = []; store.ways.forEach((wy, wi) => { let run = [], decs = [], keys = [], dmin = Infinity, gnd = [], pyl = [], lastU = null;
+    const flush = () => { if(run.length >= 2){ run.gnd = gnd; run.pyl = pyl; out.push({ wy, run, decs, keys, dd: dmin }); } run = []; decs = []; keys = []; dmin = Infinity; gnd = []; pyl = []; lastU = null; };
+    for(const pc of wayPieces[wi]){ if(!(pc.dd > dn && pc.dd <= df) || pc.p.dec > 0.8){ flush(); continue; } dmin = Math.min(dmin, pc.dd);
+      for(const P of run.length ? [pc.q] : [pc.p, pc.q]){ const e = P.e !== undefined ? exH(P.e, cutOf(P.a, P.z)) : wy.deck ?? Math.max(TR.sea, meshH(P.a, P.z)) + W*0.00003;
+        if(wy.high){ gnd.push(at(P.a, P.z, Math.max(TR.sea, meshH(P.a, P.z)))); const k2 = Math.floor(P.u/(42*W*0.00025)); pyl.push(lastU !== null && k2 !== lastU); lastU = k2; } const A = at(P.a - pc.nx*wy.half, P.z - pc.nz*wy.half, e), B = at(P.a + pc.nx*wy.half, P.z + pc.nz*wy.half, e);
+        if(!A || !B){ if(wy.high){ gnd.pop(); pyl.pop(); } flush(); continue; } run.push([A, B]); decs.push(P.dec); keys.push(Math.imul(Math.round(P.a/W*20000), 73856093) ^ Math.imul(Math.round(P.z/W*20000), 19349663)); } }
+    flush(); }); return out; };
   // A WAY'S PIECE PAINTED in its material: asphalt (a centre line on the main roads), cobbles, brick laid across,
   // gravel, packed earth with its two ruts, flagstones, stepping stones in moss, the builders' pale paths and paths of
   // light, a ley line's glow; worn where it is worn (cracks, potholes, weeds at its edges), and broken through where most
@@ -1803,6 +1926,10 @@ function rgPaintLand(x, mk, dk, V){
     const line = (pts, cl, wdt, dash) => { x.strokeStyle = cl; x.lineWidth = wdt; if(dash && x.setLineDash) x.setLineDash(dash); x.beginPath(); pts.forEach(([X, Y], q) => q ? x.lineTo(X, Y) : x.moveTo(X, Y)); x.stroke(); if(dash && x.setLineDash) x.setLineDash([]); };
     const ctr = L2.map((p, q) => [(p[0] + R2[q][0])/2, (p[1] + R2[q][1])/2]), wid = q => Math.hypot(L2[q][0] - R2[q][0], L2[q][1] - R2[q][1]), wpx = Math.min(px(3.5), Math.max(px(0.8), wid(0)*0.06)), mix = (q, t) => [L2[q][0] + (R2[q][0] - L2[q][0])*t, L2[q][1] + (R2[q][1] - L2[q][1])*t];
     const base = RG_WAYCOL[wy.mat] && (wy.mat === 'asphalt' && wy.w === 'neon' ? [34, 32, 44] : RG_WAYCOL[wy.mat]), Rq = (q, salt) => mulberry32((Math.imul(wy.i + 1, 7919) ^ keys[q] ^ salt) >>> 0);   // (its wear keyed to where each piece lies in the world, never to where it is drawn)
+    if(wy.high && run.gnd){ const conc = rsCss(lit([116, 112, 126])), concD = rsCss(lit([62, 58, 74])), th = q => Math.max(px(1), wid(q)*0.14);
+      for(let q = 0; q < run.length; q++){ const g = run.gnd[q]; if(!g || !run.pyl[q]) continue; const [X, Y] = ctr[q], pw = Math.max(px(1), wid(q)*0.16); if(g[1] - Y < px(1)) continue;
+        rsPoly(x, [[X - pw/2, Y], [X, Y], [g[0], g[1]], [g[0] - pw/2, g[1]]], conc); rsPoly(x, [[X, Y], [X + pw/2, Y], [g[0] + pw/2, g[1]], [g[0], g[1]]], concD); }
+      rsPoly(x, [...L2, ...L2.map((p, q) => [p[0], p[1] + th(q)]).reverse()], concD); rsPoly(x, [...R2, ...R2.map((p, q) => [p[0], p[1] + th(q)]).reverse()], concD); }
     if(base){ rsPoly(x, poly, rsCss(lit(base), wy.mat === 'earth' || wy.mat === 'moss' ? 0.82 : 1)); line(L2, rsCss(lit(rsMix(base, [0, 0, 0], 0.25)), 0.5), wpx); line(R2, rsCss(lit(rsMix(base, [0, 0, 0], 0.25)), 0.5), wpx); }
     const near = q => wid(q) > px(10);
     for(let q = 0; q < run.length; q++){ if(!near(q)) continue; const wq = wid(q);
@@ -1839,10 +1966,9 @@ function rgPaintLand(x, mk, dk, V){
       // (drawn with the ridge before its NEAREST corner, so no ridge it lies across paints over its near end)
       const cw = (u, v) => cutOf(f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux);
       fieldPieces.push({ f, u0, u1, v0, v1, dd: Math.min(cw(u0, v0), cw(u1, v0), cw(u0, v1), cw(u1, v1), cw(um, vm)) }); } }
-  const drawFields = (dn, df) => { for(const pc of fieldPieces) if(pc.dd > dn && pc.dd <= df) paintFieldPiece(pc); };
   const paintFieldPiece = ({ f, u0, u1, v0, v1 }) => {
     const wa = (u, v) => [f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux], M1 = W*0.00025, lift = W*0.00002;
-    const P = (u, v, up = 0) => { const [a, z] = wa(u, v); return at(a, z, Math.max(TR.sea, T(a, z, W*0.002)) + lift + up); };
+    const P = (u, v, up = 0) => { const [a, z] = wa(u, v); return at(a, z, Math.max(TR.sea, meshH(a, z)) + lift + up); };
     const q = [P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)]; if(q.some(p => !p)) return;
     const [am, zm] = wa((u0 + u1)/2, (v0 + v1)/2), day = ringDay(L, am), haze = hazeOf(Math.hypot(am, zm - L.z0)), lit = col => rgLit(V, col, day, haze, AIR), C = RG_CROPS[f.crop] || RG_CROPS.pasture;
     const n1 = mnValue(am/(W*0.004) + f.i*0.37, zm/(W*0.004), s + 83), ppm = W*0.00025*F/q[0][2];
@@ -1937,7 +2063,7 @@ function rgPaintLand(x, mk, dk, V){
         else { const st = rgStrike(s, rgFilmTime(V)); if(st){ strike = st.pick; sph = st.ph; sev = st.ev; } } }
       for(let k = 0; k < n; k++){ const R = rgRand(s, 851, k), rnd = (a, b) => a + (b - a)*R();
         const tc = rgCloudTime(V), u0 = R()*2 - 1, a = wrap(Math.sign(u0)*Math.pow(Math.abs(u0), 1.35)*A + Math.cos(wAng)*wSp*M1*tc, A), z = wrap((R()*2 - 1)*Zh + Math.sin(wAng)*wSp*M1*tc*0.3, Zh);
-        const eb = Math.max(TR.sea, TR.snow*rnd(0.7, 1.05)), wd0 = rnd(250, 900)*M1*(storm ? 1.4 : 1), ht0 = wd0*rnd(0.35, storm ? 1.3 : 0.7), seed0 = (R()*4294967296) >>> 0, rain = (wx === 'rain' || storm) && R() < 0.6;
+        const eb = Math.max(TR.sea, TR.cloud*rnd(0.7, 1.05)), wd0 = rnd(250, 900)*M1*(storm ? 1.4 : 1), ht0 = wd0*rnd(0.35, storm ? 1.3 : 0.7), seed0 = (R()*4294967296) >>> 0, rain = (wx === 'rain' || storm) && R() < 0.6;
         // (a cumulus lives a quarter of an hour or so, in clean stages (Ruby: "clouds should have clean transition states"):
         //  it GATHERS (its billows drawing in from wisps, a third of its life), stands, then THINS (fading and loosening as
         //  it spreads), and is gone a while before another of its own shape gathers in its place; a new shape only ever
@@ -2064,105 +2190,96 @@ function rgPaintLand(x, mk, dk, V){
             if(reach > 6){ const fk = pts[4]; x.moveTo(fk[0], fk[1]); x.lineTo(fk[0] + jag, fk[1] + drop*0.2); x.lineTo(fk[0] + jag*0.6, fk[1] + drop*0.35); }
             x.stroke(); if(creep >= 1) rgGlow(x, G[0], G[1], W0*0.2, [220, 220, 255], 0.35*lit); x.restore(); } } }; } }
 
-  // (the shadows on the ground, as a soft sheet over the land: each cell of it finds the ridge whose face it falls on and
-  //  how far down that face, so the point of the floor it shows, and darkens by the shade there, less in the haze; laid
-  //  on each ridge's face as it is painted, before what stands on it, so nothing nearer is ever darkened by a farther
-  //  shadow. A sheet 256 cells across at any size, so the shadows look the same small)
-  let SHC = null;
-  if(shades.length && lay.length){ const SW = 256, SH = Math.max(1, Math.round(SW*wh/ww)), cx0 = ww/SW, cy0 = wh/SH;
-    const cut = lay.map(l => { const P = l.pts, Yc = new Float32Array(SW).fill(Infinity), Ac = new Float32Array(SW), Zc = new Float32Array(SW); let j = 0;
-      for(let c = 0; c < SW; c++){ const X = (c + 0.5)*cx0; while(j + 2 < P.length && P[j + 1].X < X) j++; const A = P[j], B = P[j + 1]; if(!B || X < A.X || X > B.X) continue;
-        const t = (X - A.X)/((B.X - A.X) || 1); Yc[c] = A.Y + (B.Y - A.Y)*t; Ac[c] = A.a + (B.a - A.a)*t; Zc[c] = A.z + (B.z - A.z)*t; } return { Yc, Ac, Zc }; });
-    const [sc, sx] = kitCanvas(SW, SH), im = sx.createImageData(SW, SH), D8 = im.data; let any = false;
-    for(let c = 0; c < SW; c++) for(let r = 0, li = lay.length - 1; r < SH; r++){ const Y = (r + 0.5)*cy0;
-      li = lay.length - 1; while(li >= 0 && !(cut[li].Yc[c] <= Y)) li--; if(li < 0) continue;
-      const C = cut[li], dF = lay[li].d, near = li + 1 < lay.length, Yn = near && cut[li + 1].Yc[c] < Infinity ? cut[li + 1].Yc[c] : wh, dN = near ? lay[li + 1].d : dF*0.2;
-      const t = rgClamp((Y - C.Yc[c])/Math.max(1e-6, Yn - C.Yc[c])), dep = 1/((1 - t)/dF + t/dN), k = dep/dF, a = C.Ac[c]*k, z = L.z0 + (C.Zc[c] - L.z0)*k;
-      const v = cloudShadeAt(a, z)*rsSmooth(0.3, 0.7, ringDay(L, a))*(1 - 0.85*hazeOf(dep)); if(v < 0.004) continue;
-      const i = (r*SW + c)*4; D8[i] = 10; D8[i + 1] = 14; D8[i + 2] = 34; D8[i + 3] = Math.round(255*v); any = true; }
-    if(any){ sx.putImageData(im, 0, 0); SHC = sc; } }
   // ---- 4. BACK TO FRONT ----
-  const bySlot = lay.map(() => []);
-  for(const t of things){ const j = slot(t.dd); if(j >= 0){ t.l = lay[j]; bySlot[j].push(t); } }
+  // every cell of the land, every thing, every run of way and piece of field, sorted far to near and painted so; a thing
+  // just after the cells about its foot and those just in front of them, so the ground it stands on lies under it and
+  // only land truly nearer hides it
+  for(const t of things){ const j = slot(t.dd); if(j >= 0) t.l = lay[j]; }
   things.sort((p, q) => p.dd - q.dd); for(const t of things) if(t.l && t.draw){ cur = t; t.draw(t.l); }
   painting = true;
-  let prevY = null;
-  const MIST = { fog: 0.075, rain: 0.035, storm: 0.03, snow: 0.045 }[V.weather] || 0, MISTC = rsMix(AIR, [236, 238, 242], 0.35);
+  const cellNear = dd => { for(let l = 0; l < NLV; l++) if((NG - 0.5)*cl[l] > dd*1.05) return cl[l]; return cl[NLV - 1]; };
+  const items = [];
+  for(const q of shown) items.push({ dd: q.dd, q });
+  for(const t of things) if(t.l && (t.o || t.ok)) items.push({ dd: t.dd - (t.rad || 0) - 0.8*cellNear(t.dd), t });
+  for(let b = 1; b < lay.length; b++){ const dn = lay[b - 1].d, df = lay[b].d; for(const r of collectWays(dn, df)) items.push({ dd: r.dd - 0.8*cellNear(r.dd), r }); }
+  for(const pc of fieldPieces) items.push({ dd: pc.dd - 0.8*cellNear(pc.dd), pc });
+  // (in fog, rain or snow the air thickens with depth, so the far land sinks into it layer on layer)
+  const MIST = { fog: 0.075, rain: 0.035, storm: 0.03, snow: 0.045 }[V.weather] || 0, MISTC = rsMix(AIR, [236, 238, 242], 0.35), MISTB = 1 - Math.pow(1 - MIST, 16/NBK);
+  if(MIST) for(let b = 1; b < lay.length; b++) if(lay[b].d > W*0.012) items.push({ dd: lay[b].d, mist: 1 });
+  // (at dawn and dusk on a still day, mist lies in the low land, thicker the lower, breathing a little with the clock)
   const LOWMIST = (V.weather === 'clear' || V.weather === 'clouds') && seedChoice(V.seed, 'mist')() < 0.6 ? 0.22*rgClamp(1 - Math.abs(V.dayHere - 0.5)*3.5) : 0;
   const WT = rgWaterTime(V), WA = rgWind(V)[0];   // (the water's clock, and the way its glints drift)
-  lay.forEach((l, li) => {
-    const { k, d, pts } = l, haze = hazeOf(d);
-    // (the ridge's whole-ridge values: its day, its height, its ground's colour, read smoothly round the middle of the
-    //  view, never at the one sample that happens to stand there; its band as thick as the gap from the farther ridge at
-    //  their mean heights, straight ahead)
-    let sw = 0, sa = 0, se = 0, sE = 0; const gs = [0, 0, 0];
-    for(let q = 0; q < pts.length; q++){ const p = pts[q], w = vw(p.ph); if(w < 0.02) continue; sw += w; sa += w*p.a; se += w*p.ec; sE += w*p.e;
-      if(q % 3 === 0){ const g = rgGround(V, p.a, p.z, p.ec); gs[0] += w*g[0]; gs[1] += w*g[1]; gs[2] += w*g[2]; gs.w = (gs.w || 0) + w; } }
-    const mid = pts[pts.length >> 1]; if(!sw){ sw = 1; sa = mid.a; se = mid.ec; sE = mid.e; }
-    const day = ringDay(L, sa/sw), ecM = se/sw, eM = sE/sw, yP = at(d*hx, Math.max(-W*0.497, Math.min(W*0.497, L.z0 + d*hz)), eM), yC = yP ? yP[1] : mid.Y;
-    const depth = Math.max(px(6), prevY == null ? wh : Math.abs(yC - prevY)*1.4 + px(4)); prevY = yC;
-    const gm = gs.w ? gs.slice(0, 3).map(v => v/gs.w) : rgGround(V, mid.a, mid.z, mid.ec), base = rgLit(V, gm, day, haze, AIR), sil = [...pts.map(p => [p.X, p.Y]), [pts[pts.length - 1].X, wh + 4], [pts[0].X, wh + 4]];
-    // (Ruby, seen from a height: the ridges' lit bands and steep facets hung across the land like panes of glass. A ridge
-    //  is a painter's silhouette against the land behind; looked down on from above, the land is its face, not its
-    //  edge, so the more steeply you look down on a ridge the thinner its band and facets are painted)
-    const seam = 1 - 0.7*rsSmooth(0.06, 0.35, Math.max(0, (1 - ecM) - L.Px)/Math.max(1e-9, d));
-    // the ridge in one wash: lit along its crest, deepening below it (as a painter blocks a ridge), then its facets where
-    // it is steep (mountains, cliffs), a bright rim on its crest, water flat with a glint
-    { const yTop = Math.min(...pts.map(p => p.Y)), g = x.createLinearGradient(0, yTop, 0, yTop + depth*1.6 + px(4)), litC = rgLit(V, rsMix(gm, [255, 244, 222], 0.22), day, haze, AIR), darkC = rgLit(V, rsMix(gm, BLACK, 0.3), day, haze, AIR);
-      g.addColorStop(0, rsCss(rsMix(base, litC, 0.6))); g.addColorStop(1, rsCss(rsMix(base, darkC, 0.6))); rsPoly(x, sil, g); }
-    rsPoly(mk, sil, '#fff'); { const g = Math.round(255*k/(K - 1)); rsPoly(dk, sil, `rgb(${g},${g},${g})`); }
-    // (each facet a pair of samples whose first is even in the world's count, so a facet keeps its own piece of land)
-    for(let q = pts.findIndex(p => (p.i & 1) === 0); q >= 0 && q + 1 < pts.length; q += 2){ const p0 = pts[q], p1 = pts[Math.min(pts.length - 1, q + 2)], am = (p0.a + p1.a)/2, zm = (p0.z + p1.z)/2;
-      if(p0.wall && p1.wall) continue;   // (land past the wall's foot is only its foot: no band, no facet, no rim)
-      // (each facet's choices from the world's own smooth noise where it stands)
-      const n1 = wn(am, zm, l.ws, 1), n2 = wn(am, zm, l.ws, 2), n3 = wn(am, zm, l.ws, 3), n4 = wn(am, zm, l.ws, 4);
-      const jit = (c2, k2, nv) => { const v = (nv - 0.5)*2*k2; return v > 0 ? rsMix(c2, [255, 255, 255], v) : rsMix(c2, BLACK, -v); };
-      const gc = rgGround(V, am, zm, Math.max(p0.ec, p1.ec));
-      const cl = rgLit(V, gc, day, haze, AIR), lit = rgLit(V, rsMix(gc, [255, 244, 222], 0.3), day, haze, AIR), dark = rgLit(V, rsMix(gc, BLACK, 0.34), day, haze, AIR);
-      if(p0.sea && p1.sea){ rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], [p1.X, p1.Y + depth*0.5], [p0.X, p0.Y + depth*0.5]], rsCss(cl));
-        // (with the clock the glints move on the water: on the water's own gentle clock, drifting with the wind, each
-        //  rising and fading as it comes and goes, never on or off between frames (Ruby: "minor water / ocean
-        //  animations"; docs/prior-art/ringworld-life-and-views.md §4, §7))
-        const gv = V.time ? wn(am + WT*W*0.0000012*Math.cos(WA), zm + WT*W*0.0000012*Math.sin(WA), l.ws, 1) : n1, gk = rsSmooth(0.5, 0.38, gv);
-        if(gk > 0.02){ x.fillStyle = rsCss(rsMix(cl, [255, 255, 255], 0.3*day + 0.05), gk); x.fillRect(p0.X, p0.Y + depth*n2*0.25, (p1.X - p0.X)*(0.3 + 0.6*n3), Math.max(rgPx(1), depth*0.03)); }
-        // (and near, the swell coming in: a faint lighter line drawn across the water's strip and moving down it toward
-        //  you, one every eight to eleven seconds of the water's clock, fading in as it forms and out as it goes)
-        if(V.time && d < W*0.8 && depth > px(6)){ const sw = (WT/(8 + 3*n4) + n2) % 1, sa = Math.sin(Math.PI*sw)*0.16*(0.4 + 0.6*day)*(1 - haze);
-          if(sa > 0.01){ x.fillStyle = rsCss(rsMix(cl, [255, 255, 255], 0.5), sa); x.fillRect(p0.X, p0.Y + depth*0.5*sw, p1.X - p0.X, Math.max(rgPx(0.6), depth*0.012)); } }
-        continue; }
-      // (a facet only where the land itself is steep along the crest, not wherever the crest looks steep on the page, as
-      //  a gentle ridge running away from you does when you look down on it)
-      const face = rsFace(dark, lit, p1.Y - p0.Y, p0.X - p1.X, LT), slope = Math.abs(p1.Y - p0.Y)/Math.max(1, Math.abs(p1.X - p0.X)), gsl = Math.abs(p1.ec - p0.ec)/Math.max(1e-9, Math.hypot(p1.a - p0.a, p1.z - p0.z));
-      // (a facet where the land is steep along the crest; the lit band under a gentle one, its lower edge by the land's
-      //  own noise at each point, so it runs on without a step. Between the two, one shape grows into the other, its
-      //  lower corners sliding from the band's to the facet's, so a turn never flips a facet on or off)
-      const fw2 = rsSmooth(0.26, 0.38, slope)*rsSmooth(0.17, 0.23, gsl), bdOf = p => depth*seam*(0.1 + 0.14*wn(p.a, p.z, l.ws, 2)), lerp2 = (A, B) => [A[0] + (B[0] - A[0])*fw2, A[1] + (B[1] - A[1])*fw2];
-      { const q0 = lerp2([p0.X, p0.Y + bdOf(p0)], [p0.X + (p1.X - p0.X)*(n1 - 0.5)*0.3, p0.Y + depth*seam*(0.35 + 0.45*n2)]), q1 = lerp2([p1.X, p1.Y + bdOf(p1)], [p1.X, p1.Y + depth*seam*(0.35 + 0.45*n3)]);
-        const bandC = jit(rsMix(face, lit, 0.35), 0.02, n4);
-        rsPoly(x, [[p0.X, p0.Y], [p1.X, p1.Y], q0], rsCss(rsMix(bandC, jit(face, 0.03, n4), fw2))); rsPoly(x, [[p1.X, p1.Y], q1, q0], rsCss(rsMix(bandC, jit(rsMix(face, dark, 0.2), 0.03, n1), fw2))); }
-      if(fw2 < 0.999){
-        // FIELDS (Ruby: "more detail in the distance … in the ground"): where people farm (open, low, not forest, not
-        // town), the land below a crest is a mosaic of fields, each its crop's colour by where it lies (ripe, green,
-        // fallow, now and then in flower), hedged with a dark line; far off, at the scale a painter shows them
-        const fw = V.worldAt(am, zm);
-        if((fw === 'wilds' || fw === 'cities' || fw === 'builders') && d > W*0.5 && d < W*2.2 && p0.ec < TR.snow*0.4 && V.forestAt(am, zm) < 0.35 && V.cityAt(am, zm, RG_PROF[fw].cv*(0.3 + 0.9*V.works)) < 0.2 && V.dryAt(am, zm) < 0.68){
-          const CROPS = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]], cs = W*0.012, hedge = rsCss(rsMix(dark, BLACK, 0.2), 0.5*(1 - fw2));
-          for(let b = 0; b < 3; b++){ const v0 = 0.18 + b*0.26, v1 = v0 + 0.22, fi = Math.floor(am/cs), fj = Math.floor(zm/cs) + b*7, hv = mnHash(fi, fj, s + 77);
-            if(hv < 0.25) continue; const crop = CROPS[Math.min(4, Math.floor(hv*hv*5.6))], fc = rgLit(V, rsMix(gc, crop, 0.45), day, haze, AIR);
-            const A = [p0.X, p0.Y + depth*v0], B = [p1.X, p1.Y + depth*v0], C2 = [p1.X, p1.Y + depth*v1], D = [p0.X, p0.Y + depth*v1];
-            rsPoly(x, [A, B, C2, D], rsCss(fc, 0.75*(1 - fw2))); x.strokeStyle = hedge; x.lineWidth = Math.max(px(0.6), depth*0.012); x.beginPath(); x.moveTo(D[0], D[1]); x.lineTo(C2[0], C2[1]); x.stroke(); } } }
-      x.strokeStyle = rsCss(rsMix(lit, [255, 250, 236], 0.3*(1 - haze)), (0.7*day + 0.1)*(0.4 + 0.6*seam)); x.lineWidth = Math.max(px(1.2), depth*0.025*seam); x.beginPath(); x.moveTo(p0.X, p0.Y); x.lineTo(p1.X, p1.Y); x.stroke(); }
-    // then the roads and the things between this ridge and the next nearer one, far to near
-    const dn = li + 1 < lay.length ? lay[li + 1].d : 0; drawFields(dn, d); drawWays(dn, d);
-    if(SHC){ x.save(); x.beginPath(); sil.forEach(([p0, p1], q) => q ? x.lineTo(p0, p1) : x.moveTo(p0, p1)); x.closePath(); x.clip(); x.imageSmoothingEnabled = true; x.drawImage(SHC, 0, 0, ww, wh); x.restore(); }
-    bySlot[li].sort((p, q) => q.dd - p.dd); for(const t of bySlot[li]){ if(t.o) drawWork(t.o, l); else if(t.ok){ cur = t; t.draw(l); } }
-    // (in fog, rain or snow the air thickens between each ridge and the next, so the far ridges sink into it, layer on layer)
-    if(MIST && li < lay.length - 2){ x.fillStyle = rsCss(MISTC, MIST); x.fillRect(0, 0, ww, wh); }
-    // (at dawn and dusk on a still day, mist lies in the low land: a soft pale band along the foot of each low ridge, thicker
-    //  the lower it lies, breathing a little with the clock)
-    if(LOWMIST > 0 && d > W*0.01 && li < lay.length - 1){ const lowness = rsSmooth(TR.snow*0.25, TR.sea, mid.ec); if(lowness > 0.05){ const yB = yC + depth*0.5, a = LOWMIST*lowness*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + li));
-      const g = x.createLinearGradient(0, yC - depth*0.15, 0, yB); g.addColorStop(0, rsCss(MISTC, 0)); g.addColorStop(0.6, rsCss(MISTC, a)); g.addColorStop(1, rsCss(MISTC, 0)); x.fillStyle = g; x.fillRect(0, yC - depth*0.15, ww, depth*0.65); } }
-  });
+  const DKG = d => Math.round(255*rgClamp(Math.log(Math.max(d, d0)/d0)/Math.log(reach/d0))), dkPolys = new Map(), mkPath = [];
+  const SUN = V.sun.D, sunUp = V.sun.at !== null && V.sun.at !== undefined, M1 = W*0.00025;
+  const lerpP = (A, B, t) => [A[0] + (B[0] - A[0])*t, A[1] + (B[1] - A[1])*t];
+  // (a cell's polygon pushed out half a pixel round its middle, so no seam of the sky shows between two cells)
+  const grow = P => { const cx2 = (P[0][0] + P[1][0] + P[2][0] + P[3][0])/4, cy2 = (P[0][1] + P[1][1] + P[2][1] + P[3][1])/4, g = 0.55;
+    return P.map(p => { const dx2 = p[0] - cx2, dy2 = p[1] - cy2, ln = Math.hypot(dx2, dy2) || 1; return [p[0] + dx2/ln*g, p[1] + dy2/ln*g]; }); };
+  // THE LAND'S LIGHT on a cell (Ruby: "the scene lit with direction and purpose"): its slope facing the sun lit, facing
+  // away lit by the sky alone (bluer, darker), each against the level ground's light, so the sun low at dusk rakes the
+  // hills; the hollows a little darker (their sky half hidden: ambient occlusion); the crest's band lit along the top of
+  // each face that drops away behind it (Ruby's bands); cloud shadows sweeping over it; low mist at dawn and dusk; and
+  // the air between, by its distance
+  // (what a cell's ground is, for its marks: snow high up, bare rock where steep, sand by the water, a town's paving,
+  //  else its heaviest biome)
+  const groundKind = (h, slope, bw, a, z) => { if(h > TR.snow && slope < 1) return 'snow'; if(slope > 0.62) return 'rock'; if(h < 3.2*M1) return 'sand';
+    const w = V.worldAt(a, z); if(V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works)) > 0.45) return w === 'neon' ? 'paving' : 'paving';
+    let bi = 0; for(let k = 1; k < bw.length; k++) if(bw[k] > bw[bi]) bi = k; return LK_BIOMES[bi].name; };
+  // (each corner's ground colour, by its true height, kept: a cell takes its corners' colours, so a border between two
+  //  grounds runs smoothly across the cells, never in steps of them)
+  const vcol = (l, i, j) => { const k = ((j + NG)*SIDE + i + NG)*3, C = vC[l]; if(C[k] >= 0) return [C[k], C[k + 1], C[k + 2]];
+    const a = i*cl[l], z = zOf(l, j), g = rgGround(V, a, z, Math.max(vh(l, i, j)/exf(Math.hypot(a, z - L.z0)), TR.sea + M1*0.5)); C[k] = g[0]; C[k + 1] = g[1]; C[k + 2] = g[2]; return g; };
+  const paintCell = q => {
+    const { l, i, j, P, am, zm, dd, c } = q, h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h11 = vh(l, i + 1, j + 1), h01 = vh(l, i, j + 1), hm = (h00 + h10 + h01 + h11)/4, sea = TR.sea;
+    const day = ringDay(L, am), haze = hazeOf(dd), wet = [h00 < sea, h10 < sea, h11 < sea, h01 < sea], nWet = wet[0] + wet[1] + wet[2] + wet[3];
+    const dA = ((h10 - h00) + (h11 - h01))/(2*c), dZ = ((h01 - h00) + (h11 - h10))/(2*c), slope = Math.hypot(dA, dZ)/exf(dd);   // (its true steepness, for rock and snow)
+    const ca2 = Math.cos(am), sa2 = Math.sin(am), nx = dA*sa2 - ca2, ny = -dA*ca2 - sa2, nz = -dZ, nl = Math.hypot(nx, ny, nz);
+    const upS = -(ca2*SUN[0] + sa2*SUN[1]), ndl = (nx*SUN[0] + ny*SUN[1] + nz*SUN[2])/nl, kSun = upS > 0.04 ? ndl/Math.max(0.3, upS) : 1 + 0.4*(ndl - upS);
+    const cv = (vh(l, Math.max(-NG, i - 1), j) + vh(l, Math.min(NG, i + 2), j) + vh(l, i, Math.max(-NG, j - 1)) + vh(l, i, Math.min(NG, j + 2)))/4, hol = rgClamp((cv - hm)/(c*1.6))*0.3;
+    // (the crest's band, read at each corner on the page)
+    const tb = P.map(p => bandAt(p[0], p[1])), fl = t => (1 - rsSmooth(0, 1.1, t))*0.62, fd = t => rsSmooth(0.8, 1.8, t)*(1 - rsSmooth(1.8, 3.4, t))*0.2;
+    const shade = (g, t, sa = am, sz = zm) => { const kk = Math.max(0, Math.min(1.7, kSun)), dark = rsMix(g, [26, 34, 70], 0.42), lit = rsMix(g, [255, 244, 222], 0.3);
+      let cc = kk < 1 ? rsMix(dark, g, kk) : rsMix(g, lit, (kk - 1)/0.7*0.55); if(hol > 0.01) cc = rsMix(cc, dark, hol);
+      cc = rsMix(rsMix(cc, lit, fl(t)), dark, fd(t)); cc = rgLit(V, cc, day, haze, AIR);
+      const cs2 = cloudShadeAt(sa, sz)*rsSmooth(0.3, 0.7, day)*(1 - 0.85*haze); if(cs2 > 0.004) cc = rsMix(cc, [10, 14, 34], cs2);
+      if(LOWMIST > 0 && dd > W*0.01){ const lw = rsSmooth(TR.cloud*0.25, sea, hm); if(lw > 0.05) cc = rsMix(cc, MISTC, LOWMIST*lw*0.7*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + am*40))); }
+      return cc; };
+    const poly = grow(P), he = Math.max(hm/exf(dd), sea + M1*0.5), bw = nWet === 4 ? null : V.LK.biomes(am, zm, he); let g0 = null;
+    if(bw){ const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = rgFieldPatch(V, am, zm, he, bw, slope, dd), g4 = [vcol(l, i, j), vcol(l, i + 1, j), vcol(l, i + 1, j + 1), vcol(l, i, j + 1)];
+      g0 = [0, 1, 2].map(ch => (g4[0][ch] + g4[1][ch] + g4[2][ch] + g4[3][ch])/4);
+      const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], VA[k]*c, zOf(l, VZ[k])); });   // (each corner's own cloud shadow, so a shadow's edge runs smoothly)
+      let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
+      const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
+      if(dM > 30 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ const gr = x.createLinearGradient(P[pA][0], P[pA][1], P[pB][0], P[pB][1]); gr.addColorStop(0, rsCss(cs[pA])); gr.addColorStop(1, rsCss(cs[pB])); rsPoly(x, poly, gr); }
+      else rsPoly(x, poly, rsCss(cA));
+      if(nWet === 0) rgGroundMarks(x, P, q, groundKind(he, slope, bw, am, zm), cA, px); }
+    // WATER with its shore (docs/prior-art/ringworld-terrain.md §3): deep water dark and holding the sky the farther off
+    // and the more glancing it is seen, the shallows lighter; where the land meets it, the wet edge and a line of foam
+    if(nWet){ const hs = [h00, h10, h11, h01], wp = [], shore = [];
+      for(let k = 0; k < 4; k++){ const k2 = (k + 1) & 3; if(wet[k]) wp.push(nWet === 4 ? poly[k] : P[k]); if(wet[k] !== wet[k2]){ const t = (sea - hs[k])/(hs[k2] - hs[k]), pp = lerpP(P[k], P[k2], t); wp.push(pp); shore.push(pp); } }
+      const dep = Math.max(0, sea - Math.min(...hs.filter((_, k) => wet[k])))/M1, wbase = rsMix([24, 58, 104], V.sky, 0.35), wc0 = rsMix(wbase, [70, 150, 160], 0.4*(1 - rsSmooth(0, 9, dep)));
+      let wc = rgLit(V, rsMix(wc0, AIR, 0.3*rsSmooth(0, W*0.6, dd)), day, haze, AIR); const cs2 = cloudShadeAt(am, zm)*rsSmooth(0.3, 0.7, day)*(1 - 0.85*haze); if(cs2 > 0.004) wc = rsMix(wc, [10, 14, 34], cs2*0.8);
+      if(wp.length >= 3) rsPoly(x, wp, rsCss(wc));
+      if(shore.length >= 2){ x.strokeStyle = rsCss(rgLit(V, [236, 240, 238], day, haze, AIR), 0.55*(1 - haze*0.7)); x.lineWidth = Math.max(px(0.6), Math.min(px(3), c*F/Math.max(dd, 1e-9)*0.08)); x.beginPath(); x.moveTo(shore[0][0], shore[0][1]); x.lineTo(shore[1][0], shore[1][1]); if(shore.length === 4){ x.moveTo(shore[2][0], shore[2][1]); x.lineTo(shore[3][0], shore[3][1]); } x.stroke(); }
+      // (with the clock the glints move on the water: on the water's own gentle clock, drifting with the wind, each rising
+      //  and fading as it comes and goes, never on or off between frames; docs/prior-art/ringworld-life-and-views.md §4, §7)
+      if(nWet === 4 && dd < W*2.5){ const ws = Math.max(W*0.004, c*2), gv = V.time ? wn(am + WT*W*0.0000012*Math.cos(WA), zm + WT*W*0.0000012*Math.sin(WA), ws, 1) : wn(am, zm, ws, 1), gk = rsSmooth(0.5, 0.36, gv)*(0.3 + 0.7*day);
+        if(gk > 0.02){ const [bx0, bx1, by0, by1] = q.box, n3 = wn(am, zm, ws, 3); x.fillStyle = rsCss(rsMix(wc, [255, 255, 255], 0.35*day + 0.05), gk*(1 - haze)); x.fillRect(bx0 + (bx1 - bx0)*0.2*n3, (by0 + by1)/2, (bx1 - bx0)*(0.3 + 0.5*n3), Math.max(px(0.6), (by1 - by0)*0.08)); } } }
+    // (a crest's rim: a bright line along the top of the land that drops away behind it)
+    if(q.rim && g0){ let iL = 0, iR = 0; for(let k = 1; k < 4; k++){ if(P[k][0] < P[iL][0]) iL = k; if(P[k][0] > P[iR][0]) iR = k; }
+      const chain = (dir) => { const out = [P[iL]]; for(let k = iL; k !== iR;){ k = (k + dir + 4) & 3; out.push(P[k]); } return out; }, A1 = chain(1), A2 = chain(-1), my = ch => ch.reduce((s2, p) => s2 + p[1], 0)/ch.length, top = my(A1) <= my(A2) ? A1 : A2;
+      x.strokeStyle = rsCss(rsMix(rgLit(V, rsMix(g0, [255, 244, 222], 0.4), day, haze, AIR), [255, 250, 236], 0.3*(1 - haze)), (0.7*day + 0.15)*(1 - 0.5*haze)); x.lineWidth = Math.max(px(1.6), bandOf(dd)*0.08); x.beginPath(); top.forEach((p, k) => k ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke(); }
+    mkPath.push(poly); const g = DKG(dd); let dl = dkPolys.get(g); if(!dl){ dl = []; dkPolys.set(g, dl); } dl.push(poly); };
+  items.sort((p, q) => q.dd - p.dd);
+  for(const it of items){
+    if(it.q) paintCell(it.q);
+    else if(it.t){ const t = it.t; if(t.o) drawWork(t.o, t.l); else if(t.ok){ cur = t; t.draw(t.l); } }
+    else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys);
+    else if(it.pc) paintFieldPiece(it.pc);
+    else if(it.mist){ x.fillStyle = rsCss(MISTC, MISTB); x.fillRect(0, 0, ww, wh); } }
+  // the land's mask and its distance (white far, black near), for the parts after
+  mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
+  for(const g of [...dkPolys.keys()].sort((p, q) => q - p)){ dk.fillStyle = `rgb(${g},${g},${g})`; dk.beginPath(); for(const P of dkPolys.get(g)){ P.forEach((p, k) => k ? dk.lineTo(p[0], p[1]) : dk.moveTo(p[0], p[1])); dk.closePath(); } dk.fill(); }
   // ---- 5. THE AIR OVER IT ALL: the sun's glare low in the sky, and the weather falling ----
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(col, 0.22)); g.addColorStop(0.4, rsCss(col, 0.07)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }

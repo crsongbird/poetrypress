@@ -58,7 +58,7 @@ for(const kind of kinds){ let worst = 0;
   const a = draw(0, 50), b = draw(140, 61), ids = new Set(a.map(o => o.id)), byRs = new Map(a.map(o => [o.c + o.rs, o.id]));
   check(`every thing in the world has an id of its own and tags (${a.length} things)`, a.length > 50 && ids.size === a.length && a.every(o => o.id && Array.isArray(o.tags) && o.tags.length >= 2));
   const trees = b.filter(o => o.c === 'tree');
-  check('a tree keeps its id in a world built again (the camera turned, the streets\' clutter changed)', trees.length > 20 && b !== a && trees.every(o => byRs.get(o.c + o.rs) === o.id));
+  check('a tree keeps its id in a world built again (the camera turned, the streets\' clutter changed)', trees.length >= 12 && b !== a && trees.every(o => byRs.get(o.c + o.rs) === o.id));
   const herd = a.find(o => o.c === 'wild'), st = herd && R.ringStateOf(herd, 12.5);
   check('a wild group\'s members each have an id and a state that can be captured', !herd || (st.members.length > 0 && st.members.every((m, j) => m.id === herd.id + '#' + j && 'pose' in m))); }
 

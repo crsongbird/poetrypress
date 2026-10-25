@@ -4,6 +4,51 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Taygeta (2026-10-25)
+
+- The Ringworld's land is generated now, the same land however the camera looks at it. Each seed lays real landmasses:
+  continents and seas (some rings mostly land, some half water), plains and plateaus rising from the coasts, mountain
+  belts inland and the spill mountains at the walls' feet, hills folding one behind another, escarpments stepping up in
+  long cliffs, rivers winding across the lowlands to the sea, lakes, canyons cut stepwise through the dry uplands. How
+  rugged the land is changes from seed to seed, and no mountain rises above the rim walls.
+- Ten biomes by warmth and moisture (ice, tundra, taiga, meadow, forest, steppe, desert, savanna, jungle, marsh) fade
+  into one another over transition zones, patchy at their edges as real ones are. The land cools with height, so the
+  hills show their treelines and the high ranges stand white. The woods grow where the climate is wet enough, in patches
+  with clearings.
+- Raising, lowering, tilting or turning the camera no longer changes the land: the floor is a mesh fixed in the world,
+  finest round where you stand. The far ranges are still drawn taller than they are, as before, but by how far they lie
+  from where you stand, so they too stay put.
+- The lit bands are kept where the land really drops away behind a crest, each face lit along its top with a bright line
+  on the crest, and the land between is shaded by its slope against the sun, raking across the hills at dusk.
+- Water has clear shores: sand at the edge, lighter shallows, a line of foam, and the far water holding the sky.
+- Near, the ground carries the marks of its kind: grass blades, sand ripples, cracks and pebbles on rock, sastrugi on
+  snow, lichen on the tundra, tussocks and pools in the marsh, a town's paving.
+- The far floor on the arch overhead is laid as a map of its regions and shaded by its relief, so lakes and ranges read
+  as shapes, not a checkerboard.
+- In the neon world the main roads ride high as elevated highways on lines of columns.
+- Detail now sets how fine the land is drawn, how far it reaches, and how widely the biomes blend.
+- Fewer crashed ships lie about the countryside.
+- In the film window, From and To now set the light as well as the camera. On the Ringworld the light dial shows the
+  sun's arc over the film, a ring where it starts and a dot where it ends. As Time passes grows, the end turns round the
+  arc, and a light set To is carried there along the sun's own way, rising and setting. Length now reaches three minutes.
+
+### Under the hood
+- The land kit (landKit.js, `lkLand`) holds the heights, seas, climates and biomes as pure functions of the seed and a
+  place, its own periodic gradient noise (`lkNoise`) going round the ring. docs/prior-art/ringworld-terrain.md is the
+  research behind it.
+- The painter lays a geometry clipmap fixed in the world (`vh`, `meshH`). It finds the crests from the mesh's own
+  occlusion horizon (`bandAt`), and paints every cell, thing, way and field far to near, each thing after the cells
+  under its nearest edge.
+- A cell takes its corners' ground colours (`vcol`) and cloud shadows, so borders and shadows run smoothly across the
+  cells. The corners are kept between views of the same world, so turns and film frames ask nothing twice.
+- Reviewed the tests:
+  - test/land.test.mjs is new. It checks the land is a pure function and meets itself round the ring, nothing rises
+    above the walls, the sea's share comes from the seed, there is land where you stand, the biomes blend as Detail
+    asks, and the mesh keeps every corner however the camera rises, turns or tilts.
+  - The graffiti check now tells a mark hanging free in the night from a bright stretch of the arch.
+  - The tree-id check counts the trees this world grows.
+- The Ringworld's fingerprint updated (its land redrawn, intended).
+
 ## Pleiades–Merope (2026-10-25)
 
 - The Ringworld's stars are fixed to the sky now, as a skybox's are: turning the camera turns past them, the same way the
@@ -404,27 +449,3 @@ prints it).
   lantern (`lantern`). Research: docs/prior-art/ringworld-life-and-views.md. moving.test.mjs checks that the clouds'
   clock steps evenly forward through a day whose hours are spread unevenly, which the old one did not.
   Fingerprints: Painted Ringworld (people in by night, the water's glints fading rather than cut off).
-
-## Neptune–Laomedeia (2026-10-22)
-
-- The Moving Image's sheet, rewritten. Four groups in order: Move, Length, Size, Output. Every choice is a row of
-  buttons you can see at once (and move along with the arrow keys), with a line at the foot that says what the film
-  will be: "12 s · 30 fps · 360 frames · 1080 × 1920 · MP4, about 14 MB".
-- Time passes while the camera turns. On the Ringworld a Camera Round runs an hour by default, or real time, six
-  hours, a day or two days; the sun moves, the clouds drift and the lights come on as it turns. It can begin as lit,
-  or at dawn, midday, dusk or night. The foot line says how fast: "a day at 2 hours a second".
-- New choices for the move: a quarter, half or full turn; even or eased in and out; once through, or there and back
-  (which loops any move; with time passing, the sun returns the way it came). A full round goes evenly and a part turn
-  eases, until easing is chosen by hand.
-- Frame rates read 24, 30, 48 and 60 fps (24 is new), each with what it is for. Sizes say their shape and pixels
-  ("Tall · 9:16 · 1080 × 1920"); the page's own shows its pixels. Rows a move doesn't use stay in place, dimmed.
-- While a film is made, the note says how long is left once a few frames are done.
-
-### Under the hood
-- uiMoving.js reads radio groups (`movingPick`); `moveAlong` (moving.js) says how far along its move a frame is,
-  replacing `moveAt`; `SUN_DAY` is the sun's day, from which a film begins at a time of day. The research is in
-  docs/prior-art/film-export.md. The tree research landed too, in docs/prior-art/ringworld-trees.md.
-- Housekeeping: reviewed the tests: nothing checked the film's moves apart from an eased look, nor the sheet's markup.
-  moving.test.mjs now checks that a full round loops with no frame twice, a part turn ends on its last frame, there
-  and back returns, easing leaves and arrives slowly, every choice on the sheet has exactly one default, the rates
-  read in fps and in order, and the sheet reads every group it offers. No fingerprint changed.

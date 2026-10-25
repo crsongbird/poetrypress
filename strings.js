@@ -413,7 +413,7 @@ export const UI_STRINGS = {
   'moving.t_days2':                       "2 d",
   'moving.aspect':                        "Aspect",
   'moving.g_dials':                       "Camera and light",
-  'moving.cam':                           "The camera",
+  'moving.cam':                           "Camera and light",
   'moving.cam_from':                      "From",
   'moving.cam_from_c':                    "where it starts",
   'moving.cam_to':                        "To",

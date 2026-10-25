@@ -1495,6 +1495,10 @@ body.is-mobile .knob-dial{ width:40px; height:40px; flex-basis:40px; }
    dashed ring that shows only where the light can sink lower */
 .ld-centre{ fill:var(--text-dim); opacity:.35; pointer-events:none; }
 .ld-half{ fill:none; stroke:var(--text-dim); stroke-width:.8; opacity:.35; pointer-events:none; }
+/* the sun's arc over a film, in the film's window: a thin line from where it starts (a ring) to where it ends (a dot) */
+.ld-arc{ fill:none; stroke:var(--accent); stroke-width:1.1; stroke-dasharray:2.2 1.6; opacity:.8; pointer-events:none; }
+.ld-from{ fill:none; stroke:var(--accent); stroke-width:1.1; pointer-events:none; }
+.ld-to{ fill:var(--accent); pointer-events:none; }
 .ld-low{ fill:none; stroke:var(--accent); stroke-width:.9; stroke-dasharray:1.6 2.2; opacity:0; pointer-events:none; }
 .light-dial.low-ok .ld-low{ opacity:.45; }
 .light-dial.past-rim .ld-handle{ fill:var(--rose, var(--accent)); }

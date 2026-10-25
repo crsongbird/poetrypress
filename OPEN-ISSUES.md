@@ -14,9 +14,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   Works the grazing between farms stays open, at much the patchwork fills in. Is the balance right at the default?
 - SUNRISE SCROLL'S CURSED LAND: the petals drift down through its ash and lie on the dead ground, blighted at their
   edges. Enough of them?
-- THE RINGWORLD UNDER A MOVING CAMERA: the land cut round the eye, everything chosen by its true distance (the film
-  sent shows a slow turn before and after). In a turn of your own, does anything still swim, pop or jump? Zooming still
-  changes a tree's stage at a few sizes (fades between stages are the next step).
+- THE LAND GENERATED: a mesh fixed in the world on the land kit's continents, seas, mountain belts, hills, escarpments,
+  rivers, lakes and canyons; ten biomes blending as Detail asks; far ranges drawn taller as the painter did, never above
+  the walls; bands only where the land drops away behind a crest; ground marks near; the far floor on the arch as a map;
+  the neon world's main roads raised as highways. Is the drama back? Raising or turning the camera should change
+  nothing on the land; zooming in still adds finer cells.
 - DOORS: at dusk each walker goes to the nearest house with a door, within a quarter of a kilometre, and goes in.
 - CORNERS: windows 3px, buttons and fields 2px, small marks 1px; a group of choices blunted only on its outside corners
   (the radio rows, the film sheet's blocks, the Athanor's joined buttons); circles kept round. "Circles barely any" was
@@ -37,8 +39,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   the amounts feel right?
 - THE STARS IN THE WORLD: a skybox now, standing still as the camera turns past them; in rain, a storm or snow an overcast
   ceiling, the arch just showing through it.
-- THE FILM WINDOW: the camera and light dials in it, From and To on the same dial; Length and Time passes as sliders;
-  Aspect and Resolution (720p to 2160p, or your own width and height).
+- THE SUN'S ARC IN THE FILM WINDOW: on the light dial a dashed arc from where the sun starts (a ring) to where it ends (a
+  dot), rising and setting along its day; it turns round as Time passes grows; To on the dial sets where the light ends,
+  and the film carries it there along the arc. Length now reaches three minutes.
 - FLORA, FAUNA AND DETAIL: Life is Flora (what grows), Paint is gone and its slider is Fauna (what lives and moves, at 40
   by default, the flocks smaller), the Brush fader is Detail (Low, Medium, High, Ultra; Medium as it always was). Right
   amounts at the defaults?
@@ -46,15 +49,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
-  - THE FILM WINDOW, what is left: the sun's arc on the light dial (its noon and where it rises); a journey (the eye
-    carried along a seed's own interesting path, up to two days long, once the land is generated); clearer moves, more
-    of them; then keys on a reel (docs/prior-art/film-studio.md).
-  - THE LAND GENERATED AND DRAWN: real landmasses and biomes by the seed, rendered with intention, with transition zones;
-    water with clear shores; nothing morphing as the camera rises or turns; the bands kept to mark drops in elevation and
-    sharp borders; ground textures for each kind of terrain; ground meeting objects well; far land drawn far and well (the
-    distant ring no longer squares); floating islands, deep canyons, caves and undergrounds made possible; elevated
-    highways in the neon world (seed "Every hood that sang after Chiron" floats its roads); its districts not all one
-    color; draw distance and level of detail by Detail.
+  - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
+    now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
+  - THE LAND, what is left: ground meeting objects well (contact shadows, things sunk by the slope they stand on);
+    floating islands, caves and undergrounds (docs/prior-art/ringworld-terrain.md §9); the neon world's districts not
+    all one color; rain shadows behind the ranges; the bands at sharp borders between grounds as well as at drops.
   - LIGHT: shadows cast by the sun where it stands and by lights nearby; nearby lights lighting what is near them more;
     ambient occlusion; rocks of different stones.
   - PLANTS: more cacti; saguaros with more limbs as they grow taller, limb counts never identical, limbs shaded by
@@ -88,18 +87,17 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     the big glass domes remade (seed "Thread and eddy, calcined undone").
   - CITIES IN LAYERS: at very high Works, where the seed builds cities, neon or builders, a city on a city on a city, an
     ecumenopolis.
-  - THE LAND'S LIMITS: no mountain above the rim walls; windmills in the fields, wind farms in arrays on the hillsides where
-    the biome, seed or builders favor them; less farming in magic worlds, and never mundane farms there.
-  - DETAIL IN EARNEST: how far out detailed objects are drawn, how detailed they are, the quality and distance of
-    detailed terrain, how well biomes blend, not only how many small things.
+  - THE LAND'S LIMITS: windmills in the fields, wind farms in arrays on the hillsides where the biome, seed or builders
+    favor them; less farming in magic worlds, and never mundane farms there.
+  - DETAIL IN EARNEST, what is left: how far out detailed objects are drawn and how detailed they are, not only how many
+    small things.
   - WEATHER THAT TOUCHES THINGS: rain, snow, dust storms, meteor showers and more, their layers keeping depth and meeting
     the objects; what falls gathering on objects and the ground where it would (snow on fronds); fogs with fog lights and
     distortions.
   - A RARE REENACTMENT: one seed in 776 stages a Revolutionary War reenactment in the middle distance or the foreground (the
     South always losing badly), the test bed for a wide variety of people and animations: women, people of every color;
     where the seed has elves and other folk, it turns Tolkien or Star Trek.
-  - STABILITY: things on far or steep hills must not walk up and down or shimmer (precision); graffiti must not change its
-    kind or place.
+  - STABILITY: graffiti must not change its kind or place.
   - MAGIC BY ELEMENT: regions of earth, fire, water and air coloring the ground, trees and lights; glowing trees rare and of
     the region's colors, not everything red; cute slimes, chocobo-like birds and such (legally distinct).
   - WILDLIFE WIDER: insects, ground creatures, cats, middle predators and the rest, not birds in their place; water
@@ -108,8 +106,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     no longer look the same.
   - SIGNS AND WRITING: graffiti in many typefaces and colors, rival gangs where there are gangs, the odd vertical strokes in
     magic graffiti gone; more and funnier billboards; information signs in better type and art.
-  - THE WALLS AND THE FAR LAND: more kinds of rim-wall surface; the far land in regions, not a checkerboard; dirt, dust and
-    moss on walls and buildings where they would gather.
+  - THE WALLS: more kinds of rim-wall surface; dirt, dust and moss on walls and buildings where they would gather.
   - NEAR THINGS DRAWN WELL: large objects near the eye layered, blended and ordered properly, trees split into trunk,
     branches and leaves for it; objects embedded in the ground or growing from it, never floating or stuck on; crystals
     with ground contact, shading, shadows, more angles, better materials, some reflection or translucency.

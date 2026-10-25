@@ -2,6 +2,30 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Laomedeia (2026-10-22)
+
+- The Moving Image's sheet, rewritten. Four groups in order: Move, Length, Size, Output. Every choice is a row of
+  buttons you can see at once (and move along with the arrow keys), with a line at the foot that says what the film
+  will be: "12 s · 30 fps · 360 frames · 1080 × 1920 · MP4, about 14 MB".
+- Time passes while the camera turns. On the Ringworld a Camera Round runs an hour by default, or real time, six
+  hours, a day or two days; the sun moves, the clouds drift and the lights come on as it turns. It can begin as lit,
+  or at dawn, midday, dusk or night. The foot line says how fast: "a day at 2 hours a second".
+- New choices for the move: a quarter, half or full turn; even or eased in and out; once through, or there and back
+  (which loops any move; with time passing, the sun returns the way it came). A full round goes evenly and a part turn
+  eases, until easing is chosen by hand.
+- Frame rates read 24, 30, 48 and 60 fps (24 is new), each with what it is for. Sizes say their shape and pixels
+  ("Tall · 9:16 · 1080 × 1920"); the page's own shows its pixels. Rows a move doesn't use stay in place, dimmed.
+- While a film is made, the note says how long is left once a few frames are done.
+
+### Under the hood
+- uiMoving.js reads radio groups (`movingPick`); `moveAlong` (moving.js) says how far along its move a frame is,
+  replacing `moveAt`; `SUN_DAY` is the sun's day, from which a film begins at a time of day. The research is in
+  docs/prior-art/film-export.md. The tree research landed too, in docs/prior-art/ringworld-trees.md.
+- Housekeeping: reviewed the tests: nothing checked the film's moves apart from an eased look, nor the sheet's markup.
+  moving.test.mjs now checks that a full round loops with no frame twice, a part turn ends on its last frame, there
+  and back returns, easing leaves and arrives slowly, every choice on the sheet has exactly one default, the rates
+  read in fps and in order, and the sheet reads every group it offers. No fingerprint changed.
+
 ## Neptune–Sao (2026-10-22)
 
 - The trees, remade in the style of the rest. No two of a kind are alike now: each grows its own crown, wide or narrow

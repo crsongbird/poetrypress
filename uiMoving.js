@@ -19,7 +19,7 @@ import { draftTimer } from './uiSurface.js';
 import { generateFilenameBase } from './uiLayout.js';
 import { restoreSettings, serializeCurrentSettings } from './uiLook.js';
 import { historyHold, historyPutBack } from './uiHistory.js';
-import { cameraNow, putCamera } from './uiDials.js';
+import { DIAL_R, cameraNow, putCamera, setLight } from './uiDials.js';
 import { blendLooks, cameraAlso, markValue, shotAlong, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
 
 const MOVING_ASPECTS = { '9:16': 9/16, '4:5': 4/5, '1:1': 1, '16:9': 16/9 };
@@ -73,7 +73,7 @@ function movingWords(sec){ const n = v => String(v < 10 ? Math.round(v*10)/10 : 
 /** The film as chosen, in one line: its length, rate, frames, size and file, about how big; how fast time runs in it. */
 function movingSummary(){
   const el = $('movingSummary'); if(!el) return;
-  const fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, len = Math.min(60, +($('movingLength') || {}).value || 12), n = len*fps;
+  const fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, len = Math.min(180, +($('movingLength') || {}).value || 12), n = len*fps;
   const [w, h] = movingDims(movingPick('movingAspect', 'page'), movingPick('movingRes', '1080'), fmt), bytes = fmt === 'png' ? n*w*h*1.5 : movingBitrate(w, h, fps)*len/8;
   let text = MOVING.sum.replace('{len}', String(len)).replace('{fps}', String(fps)).replace('{frames}', String(n)).replace('{size}', `${w} × ${h}`)
     .replace('{fmt}', { mp4: 'MP4', webm: 'WebM', png: 'PNG' }[fmt] || fmt).replace('{mb}', bytes >= 1e9 ? (bytes/1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(bytes/1e6)) + ' MB');
@@ -156,11 +156,37 @@ function movingDials(open){ const slot = $('movingDials'); if(!slot) return;
   // (laid out as Materia lays them, the two side by side where the surface has a camera)
   { const tools = $('textureToolRow'); if(open && tools && tools.classList && slot.classList) for(const c of ['has-camera', 'has-seg']) slot.classList.toggle(c, tools.classList.contains(c)); }
   for(const id of ['lightRow', 'cameraRow']){ const row = $(id), home = $(id + 'Home'); if(!row || !home || !home.parentNode) continue;
-    if(open && row.parentNode !== slot) slot.appendChild(row); else if(!open && row.parentNode === slot) home.parentNode.insertBefore(row, home.nextSibling); } }
+    if(open && row.parentNode !== slot) slot.appendChild(row); else if(!open && row.parentNode === slot) home.parentNode.insertBefore(row, home.nextSibling); }
+  movingArc(); }
+// (the light the same way: To sets where the light, or the sun, ends; the film carries it there along the sun's own arc)
 function movingCamSwitch(to){ if(to === movingRun.camIs) return;
-  if(to === 'to'){ movingRun.camFrom = cameraNow(); const s = movingRun.shot || movingRun.camFrom; putCamera(s.turn, s.view, s.zoom); movingSet('movingMove', 'camera'); movingSet('movingTurn', 'shot'); }
-  else { movingRun.shot = cameraNow(); const f = movingRun.camFrom || movingRun.shot; putCamera(f.turn, f.view, f.zoom); }
-  movingRun.camIs = to; render(); }
+  if(to === 'to'){ movingRun.camFrom = cameraNow(); movingRun.lightFrom = pickedLight(); const s = movingRun.shot || movingRun.camFrom, lt = movingRun.lightTo || movingRun.lightFrom;
+    putCamera(s.turn, s.view, s.zoom); setLight(lt.deg, lt.tilt, false); movingSet('movingMove', 'camera'); movingSet('movingTurn', 'shot'); }
+  else { movingRun.shot = cameraNow(); movingRun.lightTo = pickedLight(); const f = movingRun.camFrom || movingRun.shot, lf = movingRun.lightFrom || movingRun.lightTo;
+    putCamera(f.turn, f.view, f.zoom); setLight(lf.deg, lf.tilt, false); }
+  movingRun.camIs = to; movingArc(); render(); }
+const pickedLight = () => { const t = parseFloat(($('textureLightTilt') || {}).value); return { deg: parseFloat(($('textureLight') || {}).value) || 0, tilt: isNaN(t) ? 100 : t }; };
+// THE SUN'S WAY THROUGH A FILM (Ruby: "camera and daylight from where it starts, where it ends, draw the arc the sun follows
+// in the sky and twist the two points based around the time so the sun rises and falls"): on a surface whose light dial
+// is the sun, while time passes it follows its day from where the film begins for as long as the film spans, so its end
+// turns round the arc as the span grows; on a Daylight Round, the whole day; and with a light set To, from where it
+// starts to the place on its arc nearest that, rising and setting on the way. { sun: hours → [deg, tilt], H } or null
+const movingDialAt = (deg, tilt) => { const k = Math.max(0, Math.min(130, tilt))/100, a = deg*Math.PI/180; return [Math.sin(a)*DIAL_R*k, -Math.cos(a)*DIAL_R*k]; };
+function movingHoursTo(sun, to){ const [tx, ty] = movingDialAt(to.deg, to.tilt); let best = 0.25, bd = Infinity;
+  for(let h = 0.25; h <= 24; h += 0.05){ const [d, tl] = sun(h), [x, y] = movingDialAt(d, tl), dd = Math.hypot(x - tx, y - ty); if(dd < bd){ bd = dd; best = h; } } return best; }
+function movingSunPlan(){ const caps = movingRun.caps || capsFor(($('textureType') || {}).value) || {}; if(caps.dial !== 'Daylight') return null;
+  const move = movingPick('movingMove', 'camera'), spanS = movingSpan(move), from = movingRun.camIs === 'to' ? (movingRun.lightFrom || pickedLight()) : pickedLight();
+  if(spanS > 0){ const off = MOVING_BEGIN[movingPick('movingBegin', 'lit')] ?? null, base = off === null ? sunPath(from.deg, from.tilt) : sunPath(from.deg, 100); return { sun: off === null ? base : h => base(h + off), H: spanS/3600 }; }
+  if(move === 'light') return { sun: sunPath(from.deg, from.tilt), H: 24 };
+  const to = movingRun.camIs === 'to' ? pickedLight() : movingRun.lightTo; if(!to || move !== 'camera') return null;
+  const [fx, fy] = movingDialAt(from.deg, from.tilt), [tx, ty] = movingDialAt(to.deg, to.tilt); if(Math.hypot(fx - tx, fy - ty) < 1.5) return null;
+  const sun = sunPath(from.deg, from.tilt); return { sun, H: movingHoursTo(sun, to) }; }
+/** The sun's arc on the light dial while the film's window holds it (the dial lays it each time it is drawn). */
+export function movingArc(){ const arc = $('lightArc'), fm = $('lightFromMark'), tm = $('lightToMark'), slot = $('movingDials'), row = $('lightRow'); if(!arc || !fm || !tm) return;
+  const plan = slot && row && row.parentNode === slot ? movingSunPlan() : null; for(const el of [arc, fm, tm]) el.hidden = !plan; if(!plan) return;
+  const N = Math.max(24, Math.min(240, Math.round(plan.H*8))), pts = []; for(let q = 0; q <= N; q++){ const [d, tl] = plan.sun(plan.H*q/N); pts.push(movingDialAt(d, tl)); }
+  arc.setAttribute('d', pts.map(([x, y], q) => (q ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2)).join(' '));
+  fm.setAttribute('cx', pts[0][0].toFixed(2)); fm.setAttribute('cy', pts[0][1].toFixed(2)); tm.setAttribute('cx', pts[N][0].toFixed(2)); tm.setAttribute('cy', pts[N][1].toFixed(2)); }
 /** The film's window left (closed, or another tab chosen on a desk): the shot kept, the page's camera back, the dials home. */
 export function movingLeave(){ if(movingPick('movingCam', 'from') === 'to'){ movingSet('movingCam', 'from'); movingCamSwitch('from'); } movingDials(false); }
 /** Is a film being made (the page asks before it is closed or left). */
@@ -191,7 +217,8 @@ export function paintMoving(e){
   //  evenly, so it loops, and a part turn or a move to a look eases in and out)
   { const sl = $('movingSpanSlider'); if(m === 'time' && sl && +sl.value <= 0) sl.value = '89'; }   // (a day)
   { const sl = $('movingSpanSlider'), rd = $('movingSpanRead'), s2 = movingSpanSecs(+((sl || {}).value) || 0); if(rd) rd.textContent = s2 ? movingWords(s2) : MOVING.realTime;
-    const ln = $('movingLength'), lr = $('movingLengthRead'); if(lr && ln) lr.textContent = fill(MOVING.lenSecs, String(+ln.value || 12)); }
+    const ln = $('movingLength'), lr = $('movingLengthRead'), ls = +((ln || {}).value) || 12; if(lr && ln) lr.textContent = ls < 60 ? fill(MOVING.lenSecs, String(ls)) : movingWords(ls); }
+  movingArc();
   if(!movingRun.eased) movingSet('movingEase', m === 'look' || (m === 'camera' && movingPick('movingTurn', '360') !== '360') ? 'ease' : 'even');
   const timeable = !!(caps.time || caps.dial === 'Daylight'), timed = movingSpan(m) > 0;
   // (the rest at the ends dimmed where the film loops round: a full round, a light round, time passing)
@@ -266,7 +293,8 @@ export async function makeMoving(){
     if(!movingRun.sure){ movingRun.sure = setTimeout(() => { movingRun.sure = 0; paintMoving(); }, 3500); paintMoving(); return; }
     clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
   if(movingPick('movingCam', 'from') === 'to'){ movingSet('movingCam', 'from'); movingCamSwitch('from'); }   // (the shot kept, the film starting from the page's camera)
-  const canvas = $('poemCanvas'), move = movingPick('movingMove', 'camera'), fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;   // (a minute at most)
+  const lightRun = movingSpan(movingPick('movingMove', 'camera')) > 0 || movingPick('movingMove', 'camera') === 'light' ? null : movingSunPlan();   // (the light carried To where it ends, along the sun's arc)
+  const canvas = $('poemCanvas'), move = movingPick('movingMove', 'camera'), fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, n = Math.min(180, +$('movingLength').value || 12)*fps;   // (three minutes at most)
   const [w, h] = movingDims(movingPick('movingAspect', 'page'), movingPick('movingRes', '1080'), fmt), back = movingPick('movingPlay', 'once') === 'back', ease = movingPick('movingEase', 'even'), eased = ease === 'even' ? false : ease;
   const tpick = movingPick('movingTurn', '360'), toShot = move === 'camera' && tpick === 'shot', turn = toShot ? 0 : +tpick || 360, spanS = movingSpan(move), timed = spanS > 0, begin = movingPick('movingBegin', 'lit');
   if(toShot && !movingRun.shot){ movingNote(MOVING.noShot); return; }
@@ -280,7 +308,7 @@ export async function makeMoving(){
   const fades = end ? wholeChanges(start, end, snap).filter(k => k !== 'lookName' && k !== 'spell') : [];
   const pw = canvas.width, ph = canvas.height, num = id => parseFloat(($(id) || {}).value) || 0, cam0 = num('cameraTurn'), light0 = num('textureLight'), tilt0 = num('textureLightTilt');
   // (the controls marked to move, each from where it stands; the light's left to the sun where it runs the film)
-  const sunOwns = move === 'light' || timed, marks = looked ? [] : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still' && !(sunOwns && (k.id === 'textureLight' || k.id === 'textureLightTilt')))
+  const sunOwns = move === 'light' || timed || !!lightRun, marks = looked ? [] : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still' && !(sunOwns && (k.id === 'textureLight' || k.id === 'textureLightTilt')))
     .map((k, q) => ({ ...k, ...movingRun.marks[k.key], el: $(k.id), v0: num(k.id), ph: 1.3 + q*2.17, step0: ($(k.id) || {}).step }));
   for(const mk of marks) if(mk.el && mk.el.step !== undefined) mk.el.step = 'any';   // (a range input rounds to its step: a sway would stair-step)
   const also = move === 'camera' && !toShot ? movingPick('movingAlso', 'hold') : 'hold', view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100, shot = toShot ? { ...movingRun.shot } : null;
@@ -311,6 +339,7 @@ export async function makeMoving(){
     else if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
       if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); } }
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); }
+    if(lightRun){ const [a, tl] = lightRun.sun(lightRun.H*u); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); }
     for(const mk of marks) if(mk.el) mk.el.value = String(markValue(mk, i/n)); };
   // FRAMES AHEAD (Ruby: the film kept a twentieth of the machine busy): the frames to come set up one by one, their
   // textures asked for on a worker per spare core, while this one is drawn and encoded. As many ahead as the workers,

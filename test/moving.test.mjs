@@ -133,7 +133,7 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   check('every choice on the film sheet is a radio group with exactly one chosen by default', names.every(nm => { const r = checkedOf(nm); return r.length >= 2 && r.filter(m => m[1]).length === 1; }));
   check('the frame rates read "24 fps" and so on, in order', /24 fps[\s\S]*30 fps[\s\S]*48 fps[\s\S]*60 fps/.test(sheet) && !/a second<\/option>/.test(sheet));
   check('the sheet is five groups, each under its legend (the camera and light, the move, the length, the size, the file)', (sheet.match(/<fieldset class="film-group"[^>]*><legend /g) || []).length === 5);
-  check('its length and the time that passes are sliders with their ticks named', /id="movingLength" min="2" max="60"/.test(sheet) && /id="movingSpanSlider"/.test(sheet) && (sheet.match(/class="film-ticks"/g) || []).length === 2);
+  check('its length and the time that passes are sliders with their ticks named', /id="movingLength" min="2" max="180"/.test(sheet) && /id="movingSpanSlider"/.test(sheet) && (sheet.match(/class="film-ticks"/g) || []).length === 2);
   check('the sheet reads every group it offers', names.every(nm => new RegExp(`'${nm}'`).test(readFileSync(new URL('../uiMoving.js', import.meta.url), 'utf8')))); }
 // ---- the scene's own clocks in a film run evenly and only forward (Ruby: "clouds should fade instead of jumping") ----
 { const { rgClock } = await import('../stepsRing.js'), f = sunPath(154, 100), c = filmHours(f, 24), n = 360;
