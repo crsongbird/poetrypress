@@ -4,6 +4,43 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Pleione (2026-10-25)
+
+- The Ringworld's floor is parted into regions, each about five kilometres along and two across, with borders that
+  wander as real ones do. Every region has a name drawn from the seed words and the old words for a country (the
+  Hollow Weald, Vale of Titan, Odin's Reach; a borough or a ward in the cities, a sector in the neon world).
+- Each region is held by a faction of a few neighbouring regions: a house, an order of Runists, a compact or a band,
+  with its own banner, a metal and a colour parted as heraldry parts a field.
+- A Mixed ring now shares its worlds out region by region, so a medieval march lies beside a robot-haunted waste with
+  a clear border between them, their grounds meeting over some twenty metres.
+- Borders are marked where the roads cross them. A boundary stone stands at the roadside with each side's rune cut on
+  the face toward it, and where two factions meet, each flies its banner a few metres into its own land. In the
+  cities, the neon world and the builders' world, a sign each way names the region you are entering. Towns have names
+  too, on a sign where their road leaves them (Titanwell, Rheaford, Port Vega).
+- Some towns in the wilds and the magic world are walled: a stone curtain six to ten metres high with merlons along
+  its top, round towers under cones of slate or tile every thirty-odd metres, and paired towers at each gate where the
+  roads go through. The walls stop at the water's edge. In the ruins the old walls stand broken, whole lengths fallen.
+  Nothing is built or grows on a wall.
+- Magic is ruled by element, region by region. Each magic region belongs to one of Runology's Primal Archetypes: Fire,
+  Wind, Water or Earth most often, Amber, Vitrum, Sound or Radio rarely. The element colours the region's ground, its
+  trees' leaves, its lights, its crystals and its mushrooms, so the magic world is no longer all red.
+- Glowing trees are rare now, and glow in their region's colours.
+
+### Under the hood
+- regionKit.js is new: `rkRegions` gives the region at any place (a Voronoi cell of a jittered grid, warped, round the
+  ring), with how far it lies inside its border and the region over it, and each region's name, world, element and
+  faction (`RK_ELEMENTS`, `RK_TINCTURES`, `RK_DIVISIONS`; `rkTownName`). The worker now carries seedWords.js for the
+  names.
+- Every thing in the Ringworld's store knows its region and holders (`region`, `held`, read by `ringStateOf`).
+- The store's `walls` hold each walled town's circuit, gates and towers; `paintWallPiece` draws them in the painter's
+  list. `onWall` keeps buildings, trees and props off them.
+- The rune painter moved into the paint kit as `pkRune`, shared by the rim walls' script and the boundary stones.
+- test/regions.test.mjs is new. It checks the regions are pure and go round the ring, every region is named and held,
+  Mixed rings share their worlds, magic regions have elements, borders are marked, walls stand only in the old worlds,
+  and no building stands on a wall.
+- docs/prior-art/ringworld-regions.md is the research (town walls, boundary stones and signs, heraldry, political
+  borders in map generators, place names).
+
 ## Pleiades–Alcyone (2026-10-25)
 
 - The Ringworld's people are every kind of person. Each one's age (a child, an adult, an elder with a stoop and now and
@@ -432,18 +469,3 @@ prints it).
 - Reviewed the tests that cover what this pass and the last touched (the Ringworld, the kit, the corners, the release
   names): nothing stale was found. A new suite, test/ringworldView.test.mjs, checks that a tree or a building drawn
   larger toward a frame's corner keeps the stage of detail its true distance gives it.
-
-## Ursa Major–Megrez (2026-10-24)
-
-- Corners are a little rounded, in steps: windows (cards, sheets, dialogs, menus, toasts, the color picker) 3 pixels,
-  buttons and fields 2, small marks (keys, code, swatches) 1; circles stay circles. A row of choices is one shape,
-  rounded only on its outside corners: the radio rows, the Moving Image's blocks, the Athanor's zoom and Keep buttons.
-  What runs to the screen's edge, a line or a picture stays square.
-- The thin lines down the left edge of the cards and of the groups inside them are gone.
-- A keyboard focus ring follows each control's own shape, and no longer changes it.
-
-### Under the hood
-- SHAPE: the corners' steps are tokens on the root (--r-0 to --r-3), in place of the block that squared everything;
-  radii that never drew are gone, and each rounded rule says its step (docs/prior-art/corner-radii.md). Pruned the
-  stylesheet with tools/css-prune.py.
-- New research notes: the Ringworld held still under a moving camera (docs/prior-art/ringworld-stability.md).

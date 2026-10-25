@@ -2,6 +2,21 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Ursa Major–Megrez (2026-10-24)
+
+- Corners are a little rounded, in steps: windows (cards, sheets, dialogs, menus, toasts, the color picker) 3 pixels,
+  buttons and fields 2, small marks (keys, code, swatches) 1; circles stay circles. A row of choices is one shape,
+  rounded only on its outside corners: the radio rows, the Moving Image's blocks, the Athanor's zoom and Keep buttons.
+  What runs to the screen's edge, a line or a picture stays square.
+- The thin lines down the left edge of the cards and of the groups inside them are gone.
+- A keyboard focus ring follows each control's own shape, and no longer changes it.
+
+### Under the hood
+- SHAPE: the corners' steps are tokens on the root (--r-0 to --r-3), in place of the block that squared everything;
+  radii that never drew are gone, and each rounded rule says its step (docs/prior-art/corner-radii.md). Pruned the
+  stylesheet with tools/css-prune.py.
+- New research notes: the Ringworld held still under a moving camera (docs/prior-art/ringworld-stability.md).
+
 ## Ursa Major–Merak (2026-10-24)
 
 - Painted Ringworld is sealed: it no longer opens in the Athanor. The Surface card's Edit in the Athanor button is

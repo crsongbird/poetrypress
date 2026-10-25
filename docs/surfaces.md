@@ -344,10 +344,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     3.2 times taller than it is (a painter's exaggeration, by how far along the floor it lies from where you stand, so
     still the land's and not the camera's: `exH`), never above the walls; its colours by its true height.
   - **World** (`RG_WORLDS`, `RG_PROF`): By the Seed, Wilds, Cities, Neon,
-    Builders, Magic, Ruins, Mixed (three, region by region). Each world's
+    Builders, Magic, Ruins, Mixed (three, region by region: `rkRegions`). Each world's
     weights say what it raises; its ground, its lights (the page's accents for
-    Neon and Magic, through two Accent parts: `ringpaint` is colorKeyed), its
-    air's tint.
+    Neon and Magic, through two Accent parts: `ringpaint` is colorKeyed; the magic
+    world's leaning to its regions' elements), its air's tint.
   - **The camera sweeps; the world stays** (Ruby: "we should be able to sweep
     the camera and see it not really change much but get a different
     perspective"). **The land is a mesh fixed in the world** (Ruby, 2026-10-25: "nothing morphing as the camera rises or
@@ -428,6 +428,25 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Highways** (the neon world's main roads; Ruby: the roads that floated, made highways): an elevated expressway on a
     line of columns some 42 m apart, its deck some 12 m over the highest ground beneath it, eased along, over land and
     water alike.
+  - **Regions** (Ruby: "eras side by side … with clear borders; factions holding regions; names from the seeds …";
+    docs/prior-art/ringworld-regions.md): the floor is parted into regions some five kilometres along and two across,
+    each the land nearest a point of a jittered grid round the ring, its border wandering (regionKit.js). Each has a
+    name from the seed banks and the old words for a country (a march, a weald, a fell; a ward, a sector), and is held
+    by a faction of a few neighbouring regions, its banner a metal and a colour parted as heraldry parts a field
+    (`RK_TINCTURES`, `RK_DIVISIONS`). On a Mixed ring each region is one world, so a march lies by a robot-haunted
+    waste, their grounds meeting over some twenty metres. Every thing in the store knows its region and its holders
+    (`region`, `held`). Where a way crosses a border: a boundary stone with each side's rune cut on the face toward it
+    (`pkRune`), the two factions' banners where they differ, and in the worlds of roads a sign each way naming the
+    region entered; a town's name (`rkTownName`) on a sign where its first way leaves it.
+  - **Magic by element** (Ruby: "regions of earth, fire, water and air coloring the ground, trees and lights; glowing
+    trees rare and of the region's colors"): each magic region is ruled by one of Runology's Primal Archetypes
+    (`RK_ELEMENTS`: Fire, Wind, Water and Earth most often, Amber, Vitrum, Sound and Radio rarely); its lights, its
+    ground, its trees' leaves, its crystals and the glow of its few glowing trees are the element's.
+  - **Town walls** (Ruby: "towns with walls"; docs/prior-art/ringworld-regions.md §1): round some towns of the wilds and
+    the magic world, a curtain six to ten metres high and two to three thick wandering round the town's heart, a round
+    tower every thirty-odd metres and a pair at each gate where the ways go through, stopping at the water; each
+    length drawn as a piece of the painter's list (far face, wall walk, near face, merlons along the outer edge when
+    near), each tower a drum under a cone of slate or tile; in the ruins, broken. Nothing is built or grown on them.
   - **Ways and Clutter** (Ruby: streets "related to works … destroyed … fairly uncommon … different materials … curved
     … follow the contour of the land"): the main roads and, from the heart of each town Works raises, a few ways out and
     one to the next town, each walked a step at a time toward the level and away from the steep (the store's `ways`);
@@ -519,7 +538,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     stay in the sky.
   - **Gas giants** (`rgGiant`, `RG_GIANTS`): The Arch's Gas Giant setting hangs Saturn (with Titan), Jupiter, Neptune or
     Uranus in the sky, by the seed, with their moons along their equators.
-  - **Runes on the walls** (`rgRune`): the builders' script on the rim walls is a band of runes between ruled lines;
+  - **Runes on the walls** (`pkRune`): the builders' script on the rim walls is a band of runes between ruled lines;
     graffiti at a wall's foot is runes too, thrown up outlined in the towns, scrawled in the ruins, paint running.
     Near, the walls show their plates' seams, weather run down them, hatches, lights along their tops for the ships.
   - **The surface near** (`pkGrain`): a painted face large on the page shows a faint mottle and streaks of its material.

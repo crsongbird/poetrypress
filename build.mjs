@@ -130,6 +130,7 @@ const ORDER = [
   'paintKit.js',          // the painted things: trees, buildings, rocks, the builders' works (Ringworld, Ring in the Sky, Night City)
   'wildKit.js',           // the wild things: herds, flocks and creatures, where each is by the clock and how it is painted
   'landKit.js',           // the land of a ring: heights, seas, climates and biomes, pure functions of the seed and a place
+  'regionKit.js',         // the regions of a ring: named, held by factions, each its world (Mixed) and element (magic)
   'texWhimsy.js',         // ♡ generators
   'texSharpness.js',      // √ generators
   'texChaos.js',          // ∆ generators
@@ -225,7 +226,7 @@ const css = readFileSync('poetrypress.css', 'utf8');
 // itself) whose text is also the worker's, with the worker's own few lines added (a Blob
 // worker, which works from file:// too, unlike a URL). The rest of the page follows it.
 const WORKER_ORDER = [ // which modules the worker needs (textureWorker.js is its own, the rest are shared)
-                      'tunables.js', 'webgl.js', 'symbolLore.js', 'spell.js', 'stitches.js', 'texCore.js', 'paintKit.js', 'wildKit.js', 'landKit.js', 'texWhimsy.js', 'texSharpness.js',
+                      'tunables.js', 'webgl.js', 'symbolLore.js', 'spell.js', 'seedWords.js', 'stitches.js', 'texCore.js', 'paintKit.js', 'wildKit.js', 'landKit.js', 'regionKit.js', 'texWhimsy.js', 'texSharpness.js',
                       'texChaos.js', 'texTouch.js', 'cartomancyTable.js', 'cartomancy.js', 'textureParams.js', 'stepsTouch.js', 'stepsGenerative.js', 'stepsWhimsy.js', 'stepsChaos.js', 'stepsLight.js', 'stepsSharpness.js', 'stepsRing.js', 'stepsCloth.js', 'stepsRoom.js', 'floraKit.js', 'stepsFlora.js', 'stepsSpecimen.js', 'stepsGrass.js', 'stepsPatterns.js', 'stepsNetwork.js', 'stepsStreamers.js', 'stepsScroll.js', 'stepsLens.js', 'stepsImprint.js', 'steps.js', 'athanorStudies.js', 'chains.js', 'athanor.js', 'textureGenerators.js', 'textureWorker.js'];
 // (in the page's order, which test/bundle.test.mjs checks against the imports; they import nothing that isn't shared)
 const SHARED = ORDER.filter(f => WORKER_ORDER.includes(f));

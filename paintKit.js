@@ -95,7 +95,7 @@ export const PK_SIZE = {
   kubo: [4, 6, 4, 6], elevator: [24, 32, 8, 12],
   helper: [1.0, 1.5], drone: [0.5, 1.0], crawler: [0.6, 1.0], sentry: [1.8, 2.8], walker: [2.5, 4.5], derelict: [10, 22],
   fence: [0.9, 1.2], lamp: [3, 4.6], bench: [0.8, 0.9], mailbox: [1.1, 1.2], barrel: [0.9, 1.0], crate: [0.5, 1.1], sign: [2.2, 2.8], bicycle: [0.95, 1.05], hydrant: [0.6, 0.8],
-  wall: [1.1, 1.5], hedge: [1.5, 2.6], gate: [1.2, 1.3], haybale: [1.2, 1.5], haystack: [3, 5], trough: [0.5, 0.6], pole: [10, 13], milestone: [0.6, 1], cairn: [0.6, 2], stonepile: [0.4, 0.7], gulls: [1, 1], scarecrow: [1.7, 1.9],
+  wall: [1.1, 1.5], hedge: [1.5, 2.6], gate: [1.2, 1.3], haybale: [1.2, 1.5], haystack: [3, 5], trough: [0.5, 0.6], pole: [10, 13], milestone: [0.6, 1], boundary: [0.7, 1.1], banner: [4.2, 5.6], welcome: [2.3, 2.9], cairn: [0.6, 2], stonepile: [0.4, 0.7], gulls: [1, 1], scarecrow: [1.7, 1.9],
   beehives: [0.6, 1.0], well: [2.3, 2.7], wishing: [2.3, 2.7], windpump: [9, 11], tractor: [2.5, 3], grainbin: [6, 10], shrine: [2, 3], busstop: [2.5, 2.7], phonebox: [2.4, 2.5], vending: [1.8, 1.9],
   signal: [3, 3.4], kiosk: [2.6, 3], cart: [2.1, 2.4], parked: [1.4, 1.6], hulk: [1.3, 1.4], scooter: [1.0, 1.2], rubble: [0.6, 2.4], column: [1.5, 4], statue: [1.6, 2.4], container: [2.59, 2.6], traps: [1.2, 1.4],
   camp: [1.8, 2.4], charcoal: [1.8, 3.2], hide: [3.5, 5], bothy: [3.5, 5], lookout: [9, 14], bandstand: [5, 7], fountain: [2.5, 4],
@@ -112,11 +112,11 @@ export function pkArchOf(style, u){ const arch = PK_ARCH[style] || PK_ARCH.city;
 
 // ---------------- TREES ----------------
 // which trees each kind of world grows (the caller picks one of these by its stream)
-export const PK_TREES = { wild: ['spruce', 'spruce', 'broadleaf', 'broadleaf', 'pine', 'poplar', 'birch'], magic: ['broadleaf', 'glow', 'glow', 'birch', 'willow', 'spruce'], ruins: ['dead', 'dead', 'spruce', 'broadleaf', 'pine'] };
+export const PK_TREES = { wild: ['spruce', 'spruce', 'broadleaf', 'broadleaf', 'pine', 'poplar', 'birch'], magic: ['broadleaf', 'broadleaf', 'birch', 'willow', 'spruce', 'poplar'], ruins: ['dead', 'dead', 'spruce', 'broadleaf', 'pine'] };
 // (and by the land's climate: dry country, warm country, jungle, and the fey places of magic worlds)
 export const PK_FLORA = { dry: ['saguaro', 'saguaro', 'saguaro', 'organpipe', 'barrel', 'barrel', 'pear', 'pear', 'cholla', 'cholla', 'ocotillo', 'agave', 'joshua', 'acacia', 'acacia', 'baobab', 'bush', 'dead'], warm: ['stonepine', 'stonepine', 'cypress', 'cypress', 'cedar', 'palm', 'broadleaf', 'cherry', 'bush'],
   jungle: ['palm', 'palm', 'fern', 'fern', 'bamboo', 'broadleaf', 'broadleaf', 'bush'], cold: ['fir', 'fir', 'spruce', 'spruce', 'birch', 'pine', 'bush'],
-  fey: ['mushroom', 'mushroom', 'crystal', 'cherry', 'fern', 'glow', 'bamboo', 'willow'] };
+  fey: ['mushroom', 'mushroom', 'crystal', 'cherry', 'fern', 'willow', 'bamboo', 'willow'] };
 // THE TREES (Ruby, 2026-10-22: "change the conifers … make sure all the trees match the current art style and none have
 // disconnected pieces … variations in size and form within species … not just colour … shape and branch variations …
 // shading on all trees … texture when close … leaf translucency … subsurface scattering"; docs/prior-art/ringworld-trees.md)
@@ -1404,9 +1404,9 @@ export function pkWires(x, A, B, h, c, px){ const d = Math.hypot(B[0] - A[0], B[
 // (a mirrored thing keeps its light where it is: its lit side swapped before it is drawn, so the mirror puts it back)
 export const pkFlip = c => ({ ...c, sd: -c.sd, L: c.L ? [-c.L[0], c.L[1]] : c.L });
 const PK_SIDE_NATIVE = ['scooter', 'bicycle', 'bench'];
-const PK_WRITTEN = ['sign', 'milestone'];
+const PK_WRITTEN = ['sign', 'milestone', 'welcome', 'boundary', 'banner'];
 // (those with a back of their own, drawn when the camera stands behind them: the plain backs of signs, of the vending machines)
-const PK_BACKED = ['sign', 'milestone', 'vending'];
+const PK_BACKED = ['sign', 'milestone', 'vending', 'welcome', 'boundary'];
 const PK_BOXLIKE = ['vending', 'phonebox', 'busstop', 'container', 'crate', 'cargo', 'mailbox', 'beehives', 'trough', 'shrine'];
 // (the boxlike things turned in depth as the buildings are (pkTurned), by their depth as a share of their width: a pair of
 // vending machines shallow, a phone box square, a mailbox long, a container a third as deep as it is long)
@@ -1650,7 +1650,7 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   const wheel = (wx, wy, r, m) => { pkDisc(x, wx, wy, r, pkCss(pkMix(PK_IRON, PK_BLACK, 0.4))); if(r > px(1.5)) pkDisc(x, wx + sd*r*0.08, wy - r*0.08, r*0.45, pkCss(m ? m.body : PK_STEEL)); };
   const wood = pkMat(c, PK_WOOD, 0.7), grey = pkMat(c, PK_GREYWOOD, 0.7), iron = pkMat(c, PK_IRON, 0.75), stone = pkMat(c, PK_STONE, 0.75), steel = pkMat(c, PK_STEEL, 0.65), rust = pkMat(c, PK_RUST, 0.7);
   const glowOn = night > 0.2, lamp = pkMix(c.glow, PK_WHITE, 0.55);
-  if(near && !['wisp', 'fairyring', 'pole', 'beacon', 'flower'].includes(kind)) pkCast(x, X - h*0.3, X + h*0.3, Y, h*0.6, c, 0.16);
+  if(near && !['wisp', 'fairyring', 'pole', 'beacon', 'flower', 'banner'].includes(kind)) pkCast(x, X - h*0.3, X + h*0.3, Y, h*0.6, c, 0.16);
   switch(kind){
   case 'fence': { // a run of pickets on two rails, painted or bare, a few leaning, one gone
     // (a piece of a run (c.runW, its width on the page): as many pickets as fill it)
@@ -1716,6 +1716,38 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     pkType(x, txt, X + dir*-w*0.08, by + bh*0.68, bh*0.42, w*0.65, pkMix(PK_WHITE, m.body, 0.1), px); ln([[X + dir*w*0.3, by + bh*0.5], [X + dir*w*0.42, by + bh*0.5]], pkCss(PK_WHITE, 0.85), bh*0.1); return; }
   case 'milestone': { const m = pkMat(c, [222, 218, 206], 0.7); pkShade(x, [[X - h*0.22, Y], [X - h*0.22, Y - h*0.75], [X, Y - h], [X + h*0.22, Y - h*0.75], [X + h*0.22, Y]], m.body, Y - h, Y, 0.2);
     if(!c.back) pkType(x, String(1 + Math.floor(R()*99)), X, Y - h*0.45, h*0.28, h*0.4, PK_BLACK, px); return; }
+  // BORDERS MARKED (docs/prior-art/ringworld-regions.md §2, §3): where a way crosses from one region into another.
+  // c.mark: { rune, rune2 (each side's, cut on the face toward it), ban (a faction: its field, charge, division, rune,
+  // tails), say (the name of the region entered) }
+  case 'boundary': { // a boundary stone: squat, dressed, its top rounded; on each face the rune of the side it faces
+    const m = pkMat(c, [210, 204, 190], 0.7), w = h*0.52, mk = c.mark || {};
+    pkShade(x, [[X - w/2, Y], [X - w/2, Y - h*0.78], [X - w*0.32, Y - h*0.96], [X, Y - h], [X + w*0.32, Y - h*0.96], [X + w/2, Y - h*0.78], [X + w/2, Y]], m.body, Y - h, Y, 0.25);
+    side(X - w/2, Y - h*0.78, w, h*0.78, w*0.35, m);
+    if(near){ const u = c.back ? mk.rune2 : mk.rune; x.strokeStyle = pkCss(m.dark, 0.9); x.lineWidth = Math.max(px(0.5), h*0.05); x.lineCap = 'round'; if(u != null) pkRune(x, X, Y - h*0.52, h*0.2, u);
+      if(fine){ x.strokeStyle = pkCss(m.dark, 0.6); x.lineWidth = Math.max(px(0.4), h*0.02); x.beginPath(); x.moveTo(X - w*0.35, Y - h*0.22); x.lineTo(X + w*0.35, Y - h*0.22); x.stroke(); } } return; }
+  case 'banner': { // a faction's banner on its pole, hung from a crossbar: its field parted as heraldry parts one, a rune
+    // on a plain field; swallow-tailed or square; stirring in the wind
+    const ban = (c.mark || {}).ban; if(!ban) return; const pw = Math.max(px(0.5), h*0.022), bw = h*0.26, bh = h*0.42, x0 = X + pw, y0 = Y - h*0.95, fl = c.flap || 0;
+    ln([[X, Y], [X, Y - h]], pkCss(wood.dark), pw*1.4); ln([[X - pw, y0], [x0 + bw + pw, y0]], pkCss(wood.body), pw);
+    const F = pkMat(c, ban.field, 1), C = pkMat(c, ban.charge, 1), wav = k => Math.sin(fl*2.1 + k*3.2)*bh*0.03;
+    const cloth = ban.tails ? [[x0, y0], [x0 + bw, y0], [x0 + bw + wav(1), y0 + bh], [x0 + bw*0.5 + wav(0.5), y0 + bh*0.72], [x0 + wav(0), y0 + bh]] : [[x0, y0], [x0 + bw, y0], [x0 + bw + wav(1), y0 + bh], [x0 + wav(0), y0 + bh]];
+    pkPoly(x, cloth, pkCss(F.body)); x.save(); x.beginPath(); cloth.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+    const cc = pkCss(C.body), mx = x0 + bw/2, my = y0 + bh/2, rc = (a, b, ww, hh) => { x.fillStyle = cc; x.fillRect(a, b, ww, hh); };
+    switch(ban.div){ case 'pale': rc(mx, y0, bw, bh*1.1); break; case 'fess': rc(x0, my, bw*1.1, bh); break;
+      case 'bend': pkPoly(x, [[x0, y0], [x0 + bw*0.35, y0], [x0 + bw*1.1, y0 + bh*0.8], [x0 + bw*1.1, y0 + bh*1.1], [x0 + bw*0.75, y0 + bh*1.1], [x0, y0 + bh*0.3]], cc); break;
+      case 'chevron': pkPoly(x, [[x0, y0 + bh*0.8], [mx, y0 + bh*0.35], [x0 + bw*1.1, y0 + bh*0.8], [x0 + bw*1.1, y0 + bh*1.05], [mx, y0 + bh*0.6], [x0, y0 + bh*1.05]], cc); break;
+      case 'cross': rc(mx - bw*0.11, y0, bw*0.22, bh*1.1); rc(x0, my - bw*0.11, bw*1.1, bw*0.22); break;
+      case 'saltire': ln([[x0, y0], [x0 + bw, y0 + bh]], cc, bw*0.22); ln([[x0 + bw, y0], [x0, y0 + bh]], cc, bw*0.22); break;
+      case 'quarterly': rc(mx, y0, bw, bh*0.5); rc(x0, my, bw*0.5, bh); break;
+      default: if(near){ x.strokeStyle = cc; x.lineWidth = Math.max(px(0.5), bw*0.08); x.lineCap = 'round'; pkRune(x, mx, y0 + bh*0.42, bh*0.22, ban.rune); } }
+    pkPoly(x, [[x0, y0], [x0 + bw*0.12, y0], [x0 + bw*0.12 + wav(0), y0 + bh], [x0 + wav(0), y0 + bh]], pkCss(F.dark, 0.25)); x.restore(); return; }
+  case 'welcome': { // a sign naming the region entered, on two posts, in its holders' colours (from behind, its bare back)
+    // (in the old worlds, of wood: its posts and its back)
+    const mk = c.mark || {}, ban = mk.ban, w = h*1.25, bh = h*0.34, by = Y - h, post = ['wilds', 'magic', 'ruins'].includes(c.w) ? wood : steel; for(const s of [-1, 1]) box(X + s*w*0.36 - h*0.02, by, h*0.04, h, post, 0.2);
+    if(c.back || !ban){ box(X - w/2, by, w, bh, post, 0.1); return; }
+    const F = pkMat(c, ban.field, 1), C = pkMat(c, ban.charge, 1); box(X - w/2, by, w, bh, F, 0.1);
+    x.strokeStyle = pkCss(C.body, 0.9); x.lineWidth = Math.max(px(0.3), bh*0.05); x.strokeRect(X - w/2 + bh*0.07, by + bh*0.07, w - bh*0.14, bh*0.86);
+    pkType(x, String(mk.say || '').toUpperCase(), X, by + bh*0.66, bh*0.4, w*0.86, C.body, px); return; }
   case 'stonepile': { // the stones cleared off a field, heaped at its edge: a low broad mound of them, 2 to 4 m across and
     // half a metre high, rounded, the top ones
     // catching the light, grass grown up round its foot (docs/prior-art/ringworld-countryside.md)
@@ -2509,6 +2541,19 @@ export function pkDome(x, X, Y, r, c, night, px){
   if(night > 0.2) pkGlow(x, X, Y - r*0.4, r*1.6, c.glow, 0.5*night);
 }
 // a cluster of crystals: prisms of two lights, faceted, their tips aglow
+// A RUNE (Ruby: "better rune graffiti"): a letter of a runic hand, as the old futhark is cut, straight strokes only (a
+// knife's or a brush's): a stave, and twigs from it (up or down, one side or both, from its top or its middle), now and
+// then a bow or a lozenge; the same seed always cuts the same letter. (X, Y) its middle, g half its height
+export function pkRune(x, X, Y, g, u){ const k = Math.floor(u*24), w = g*0.55, P = (a, b) => [X + a*w, Y + b*g];
+  const seg = (A, B) => { x.moveTo(...P(...A)); x.lineTo(...P(...B)); };
+  x.beginPath(); if(k % 6 !== 5) seg([0, -1], [0, 1]);   // the stave (all but the lozenges)
+  switch(k % 6){ case 0: seg([0, -1], [1, -0.4]); if(k & 8) seg([0, -0.3], [1, 0.3]); break;                    // twigs up and out, one or two
+    case 1: seg([0, -1], [-1, -0.4]); seg([0, -1], [1, -0.4]); break;                                             // twigs both ways from the top
+    case 2: seg([0, -1], [0.9, -0.5]); seg([0.9, -0.5], [0, 0]); if(k & 8) seg([0, 0], [0.9, 1]); break;            // a bow (and a leg)
+    case 3: seg([-0.9, -0.4], [0.9, 0.4]); if(k & 8) seg([-0.9, 0.4], [0.9, -0.4]); break;                        // a cross-stroke (or two)
+    case 4: seg([0, 0], [-0.9, 0.6]); seg([0, 0], [0.9, 0.6]); if(k & 8) seg([0, -1], [0.7, -0.6]); break;         // twigs down from the middle
+    default: seg([0, -1], [0.8, 0]); seg([0.8, 0], [0, 1]); seg([0, 1], [-0.8, 0]); seg([-0.8, 0], [0, -1]); if(k & 8){ seg([-0.8, 0], [-1, 0.8]); seg([0.8, 0], [1, 0.8]); } }
+  x.stroke(); }
 export function pkCrystals(x, X, Y, cs0, cols, c, n, R, px){
   for(let q = 0; q < n; q++){ const cs = cs0*(0.5 + R()), ang = (R() - 0.5)*0.9, ox = (R() - 0.5)*cs0*3, len = cs*(3 + 2*R()); if(cs < 1) continue;
     const tipX = X + ox + Math.sin(ang)*len, tipY = Y - Math.cos(ang)*len, nx = Math.cos(ang)*cs, ny = Math.sin(ang)*cs, sx = X + ox + Math.sin(ang)*len*0.75, sy = Y - Math.cos(ang)*len*0.75, cc = cols[q % cols.length];

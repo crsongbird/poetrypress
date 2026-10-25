@@ -5089,6 +5089,264 @@ const GLYPH_BY_NAME = {
 const GLYPH_FONT = '"Noto Sans Symbols", "Noto Sans Symbols 2", "Noto Sans Math", "Noto Sans Runic", "Noto Music", "Noto Sans Canadian Aboriginal", "Noto Sans Cherokee", "Segoe UI Symbol", sans-serif';
 
 
+/* ==== seedWords.js ==== */
+const ADJ = [
+  "quiet", "hollow", "silver", "gilded", "ashen", "amber", "velvet", "wandering", "sleeping", "waking", "drowned",
+  "burning", "frozen", "gentle", "feral", "tender", "bitter", "sweet", "distant", "primal", "hidden", "secret",
+  "open", "broken", "mended", "unfixable", "patient", "restless", "lucid", "dreaming", "fading", "rising",
+  "falling", "shining", "dim", "pale", "dark", "bright", "golden", "copper", "iron", "glass", "paper", "woven",
+  "folded", "torn", "stitched", "painted", "inked", "faint", "sapient", "soft", "sharp", "cosmological",
+  "slow", "swift", "still", "wild", "lonely", "twin", "first", "last", "lost", "found", "new", "old", "ancient",
+  "young", "ageless", "spectral", "ghostly", "hallowed", "holy", "profane", "sacred", "strange", "familiar",
+  "foreign", "calcined", "cruel", "honest", "crooked", "sublime", "curved", "spiral", "saturnine", "hexed",
+  "charmed", "cursed", "blessed", "feathered", "furred", "scaled", "thorned", "blooming", "wilted", "salted",
+  "sweetened", "smoky", "misty", "foggy", "rainy", "snowy", "windy", "stormy", "sunlit", "moonlit", "starlit",
+  "dusky", "dawning", "midnight", "vernal", "autumnal", "wintry", "summer", "hungry", "magnetic", "empowered",
+  "weary", "tireless", "brave", "shy", "bold", "humble", "proud", "gracious", "graceful", "precise", "nimble",
+  "occult", "vast", "hermetic", "endless", "short", "long", "deep", "shallow", "quicksilver", "distilled",
+  "red", "green", "blue", "yellow", "violet", "indigo", "azure", "cobalt", "teal", "jade", "emerald", "verdant",
+  "mossy", "rosy", "crimson", "scarlet", "vermilion", "ruby", "garnet", "coral", "peach", "ivory", "pearl",
+  "opal", "onyx", "obsidian", "ebon", "sable", "umber", "ochre", "sepia", "russet", "tawny", "bronze", "brass",
+  "pewter", "leaden", "mercurial", "sulfurous", "saline", "vitreous", "crystal", "liquid", "molten", "vapor",
+  "hazy", "clouded", "clear", "cloudless", "veiled", "bare", "robed", "crowned", "black", "masked", "silent",
+  "humming", "singing", "whispering", "howling", "purring", "weeping", "laughing", "smiling", "grieving",
+  "hopeful", "wistful", "mournful", "joyful", "gleeful", "fierce", "calm", "serene", "placid", "turbulent",
+  "chaotic", "orderly", "whimsical", "mythic", "fabled", "storied", "nameless", "purple", "pink", "brown",
+  "unbound", "bound", "tethered", "untethered", "orbiting", "lunar", "solar", "stellar", "astral", "cosmic",
+  "planetary", "nebular", "radiant", "luminous", "glowing", "gleaming", "glinting", "shimmering", "flickering",
+  "white", "kindled", "smoldering", "cinder", "candlelit", "twilit", "gloaming", "eclipsed", "waxing", "waning",
+  "gibbous", "crescent", "full",
+];
+const NOUN = [
+  "lantern", "tide", "ember", "moon", "star", "seed", "glyph", "vellum", "ink", "quill", "page", "poem",
+  "verse", "stanza", "rhyme", "spell", "rune", "sigil", "charm", "hex", "ward", "circle", "spiral", "orbit",
+  "comet", "meteor", "nebula", "galaxy", "void", "abyss", "well", "pool", "mirror", "window", "door", "threshold",
+  "gate", "key", "lock", "chain", "thread", "needle", "loom", "spindle", "shuttle", "weave", "knot", "braid",
+  "ribbon", "veil", "shroud", "cloak", "hood", "crown", "ring", "halo", "aura", "lotus", "petal", "thorn",
+  "rose", "lily", "iris", "violet", "fern", "moss", "lichen", "root", "branch", "leaf", "bough", "blossom",
+  "bud", "bolt", "acorn", "pine", "cedar", "willow", "birch", "oak", "ash", "rowan", "hazel", "yew", "elder",
+  "river", "stream", "lance", "arrow", "lake", "sea", "ocean", "wave", "current", "eddy", "whirlpool", "fountain",
+  "spring", "rain", "storm", "thunder", "lightning", "cloud", "mist", "fog", "frost", "snow", "hail", "ice",
+  "glacier", "mountain", "hill", "valley", "canyon", "cave", "grotto", "hollow", "meadow", "field", "garden",
+  "orchard", "grove", "forest", "wood", "beam", "blast", "wall", "tower", "spire", "volley", "bell", "chime",
+  "song", "hymn", "chant", "whisper", "echo", "silence", "shadow", "shade", "light", "flame", "fire", "smoke",
+  "cinder", "coal", "candle", "wick", "torch", "beacon", "lighthouse", "harbor", "shore", "island", "reef",
+  "shell", "pearl", "coral", "salt", "sulfur", "mercury", "gold", "silver", "copper", "iron", "glass", "prism",
+  "crystal", "geode", "quartz", "amethyst", "opal", "garnet", "jade", "amber", "obsidian", "onyx", "marble",
+  "stone", "pebble", "sand", "dune", "desert", "oasis", "compass", "map", "atlas", "chart", "clock", "dawn",
+  "dusk", "noon", "midnight", "eclipse", "equinox", "solstice", "season", "winter", "summer", "autumn", "harvest",
+  "feast", "fox", "kitsune", "familiar", "witch", "raven", "crow", "owl", "moth", "butterfly", "accent",
+  "spider", "bee", "wren", "robin", "sparrow", "heron", "crane", "swan", "dove", "hare", "stag", "wolf",
+  "serpent", "dragon", "wyrm", "phoenix", "koi", "archetype", "phase", "shimmer", "verdigris", "seal", "lodestone",
+  "cat", "chroma", "caduceus", "tincture", "feather", "wing", "claw", "tail", "runist", "scale", "fang",
+  "heart", "athanor", "eye", "crucible", "breath", "bone", "blood", "retort", "alembic", "voice",
+];
+const NAME = [
+  "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Ceres", "Eris",
+  "Pallas", "Juno", "Sedna", "Io", "Europa", "Ganymede", "Callisto", "Fire", "Wind", "Mimas", "Enceladus",
+  "Tethys", "Dione", "Rhea", "Titan", "Hyperion", "Iapetus", "Phoebe", "Janus", "Chiron", "Pandora", "Prometheus",
+  "Atlas", "Pan", "Water", "Amber", "Calypso", "Miranda", "Ariel", "Umbriel", "Titania", "Oberon", "Puck",
+  "Triton", "Vesta", "Proteus", "Vitrum", "Galatea", "Sound", "Charon", "Nix", "Hydra", "Radio", "Styx",
+  "Phobos", "Deimos", "Luna", "Sirius", "Vega", "Rigel", "Betelgeuse", "Altair", "Deneb", "Arcturus", "Capella",
+  "Aldebaran", "Spica", "Antares", "Polaris", "Canopus", "Procyon", "Contract", "Time", "Regulus", "Castor",
+  "Pollux", "Mira", "Quintessence", "Destruction", "Astral", "Planar", "Creation", "Hygiea", "Maia", "Merope",
+  "Taygeta", "Alcyone", "Proserpina", "Astraea", "Andromeda", "Cassiopeia", "Orion", "Lyra", "Cygnus", "Draco",
+  "Order", "Dyna", "Aether", "Chaos", "Materia", "Death", "Life", "Aquila", "Pegasus", "Perseus", "Sovereign",
+  "Gemini", "Hesperus", "Eos", "Selene", "Nyx", "Hecate", "Thoth", "Isis", "Osiris", "Brigid", "Morrigan",
+  "Freya", "Ophiuchus", "Odin", "Loki", "Ishtar", "Inanna", "Astarte", "Lilith", "Ostara", "Yule",
+];
+
+const VT = [
+  "kindle", "mend", "wake|woke|woken", "break|broke|broken", "fold", "open", "close", "gild", "glaze", "weave|wove|woven",
+  "spin|spun|spun", "braid", "bind|bound|bound", "loosen", "untie", "knot", "cast|cast|cast", "conjure",
+  "summon", "banish", "charm", "hex", "ward", "bless", "measure", "map", "chart", "write|wrote|written",
+  "ink", "read|read|read", "sketch", "paint", "shatter", "scatter", "gather", "harvest", "sow|sowed|sown",
+  "keep|kept|kept", "guard", "seek|sought|sought", "find|found|found", "lose|lost|lost", "name", "call",
+  "answer", "remember", "forget|forgot|forgotten", "hold|held|held", "release", "unlock", "carry", "bury",
+  "unearth", "plant", "feed|fed|fed", "heal", "light|lit|lit", "douse", "quench", "steal|stole|stolen", "borrow",
+  "mark", "seal", "sign", "stitch", "sew|sewed|sewn", "darn", "polish", "sharpen", "temper", "forge", "smelt",
+  "distill", "dissolve", "purify", "brew", "steep", "pour", "spill", "crown", "veil", "unveil", "mask", "hide|hid|hidden",
+  "reveal", "mirror", "follow", "lead|led|led", "cross", "climb", "haunt", "rouse", "lull", "hush", "tend",
+  "draw|drew|drawn", "tear|tore|torn", "shake|shook|shaken", "take|took|taken", "give|gave|given", "bring|brought|brought",
+  "teach|taught|taught", "catch|caught|caught", "sweep|swept|swept", "strike|struck|struck", "throw|threw|thrown",
+  "bear|bore|borne", "choose|chose|chosen", "dig|dug|dug", "spread|spread|spread", "send|sent|sent", "build|built|built",
+  "ring|rang|rung", "sing|sang|sung", "wind|wound|wound", "kiss", "cradle", "enchant", "transmute", "calcine",
+  "anoint", "invoke", "scry", "divine", "ferry", "lure", "tame", "unravel",
+];
+const VI = [
+  "drift", "fall|fell|fallen", "rise|rose|risen", "burn", "dream", "sleep|slept|slept", "wake|woke|woken",
+  "sing|sang|sung", "hum", "whisper", "weep|wept|wept", "laugh", "dance", "spin|spun|spun", "glow", "gleam",
+  "flicker", "smolder", "melt", "freeze|froze|frozen", "flow", "pool", "ripple", "wander", "roam", "fly|flew|flown",
+  "soar", "dive", "float", "sink|sank|sunk", "drown", "breathe", "echo", "orbit", "circle", "spiral", "tumble",
+  "roll", "climb", "linger", "rest", "shimmer", "return", "depart", "arrive", "stay", "wane", "wax", "bloom",
+  "wilt", "fade", "grow|grew|grown", "heal", "crack", "settle", "kneel|knelt|knelt", "pray", "listen", "wait",
+  "watch", "blaze", "flare", "gutter", "wither", "unfold", "open", "close", "turn", "shiver", "tremble",
+  "quiver", "sway", "bow", "sigh", "murmur", "rustle", "creak", "toll", "chime", "ring|rang|rung", "glimmer",
+  "glisten", "glitter", "sparkle", "bleed|bled|bled", "rust", "crumble", "thaw", "steam", "simmer", "bubble",
+  "surge", "ebb", "flood", "thunder", "shine|shone|shone", "vanish", "appear", "stir", "awaken", "slumber",
+  "stray", "falter", "stumble", "mourn", "grieve", "rejoice", "speak|spoke|spoken", "dwell|dwelt|dwelt",
+  "hunger", "ache", "hover", "glide", "perch", "nest", "roost", "prowl", "hunt", "molt", "hatch", "travel",
+  "wade", "shudder", "quake", "billow", "drip", "trickle", "seep",
+];
+const WHEN = [
+  "at dusk", "at dawn", "at noon", "at midnight", "at first light", "at moonrise", "at low tide", "at the equinox",
+  "at the solstice", "at the threshold", "before dawn", "before the rain", "before the frost", "before the harvest",
+  "after the rain", "after the storm", "after midnight", "after the eclipse", "in winter", "in springtime", "in autumn",
+  "in summer", "in the rain", "in the dark", "in the fog", "in the twilight", "in the long night", "in the deep",
+  "in a dream", "under a new moon", "under a full moon", "under the stars", "under the snow", "by candlelight",
+  "by moonlight", "by lamplight", "by starlight", "by firelight", "by the sea", "by the river", "on the tide",
+  "on the wind", "on the last day", "on the first night", "on the shore", "until dawn", "until daybreak",
+  "once again", "for a thousand years", "for a while", "for the last time", "for the first time", "through the night",
+  "through the snow", "through the mist", "beneath the ice", "beyond the veil", "between the stars", "while the city sleeps",
+  "while it rains", "as the bells toll", "as the tide turns", "when the moon is full", "when no one watched",
+];
+const TAG = [
+  "at last", "again", "anew", "aglow", "aflame", "afloat", "adrift", "awake", "asleep", "alone", "apart",
+  "aloud", "astray", "ajar", "unbroken", "undone", "untold", "unseen", "unnamed", "forever", "for now", "in secret",
+  "by heart", "in time", "in silence", "in pieces", "in bloom", "in flight", "in full", "in vain", "once",
+  "unasked",
+];
+const PREP = [
+  "over", "under", "beneath", "beyond", "within", "across", "toward", "against", "behind", "before", "after",
+  "around", "through", "above", "below", "beside",
+];
+const DET = ['the', 'a', 'every', 'no'];
+const OPENER = ['yet', 'and', 'still', 'so'];
+const ART = ['the', 'a'];
+
+
+
+const SW_DOUBLE = new Set(['hum', 'map', 'drip', 'nod', 'rot', 'plan', 'stop', 'spin', 'dig', 'swim', 'stir', 'sob', 'chat', 'trim', 'dip', 'grab', 'hug', 'step', 'tap', 'wrap', 'knot']);
+const SW_NOT_DOUBLE = new Set();
+function swForms(entry){
+  const [base, past0, part0] = entry.split('|');
+  const dbl = SW_DOUBLE.has(base) && !SW_NOT_DOUBLE.has(base);
+  const cy = /[^aeiou]y$/.test(base);
+  const ed = dbl ? base + base.slice(-1) + 'ed' : base.endsWith('e') ? base + 'd' : cy ? base.slice(0, -1) + 'ied' : base + 'ed';
+  const third = /(s|sh|ch|x|z|o)$/.test(base) ? base + 'es' : cy ? base.slice(0, -1) + 'ies' : base + 's';
+  const ing = base.endsWith('ie') ? base.slice(0, -2) + 'ying' : dbl ? base + base.slice(-1) + 'ing'
+    : (base.endsWith('e') && !/(ee|ye|oe)$/.test(base)) ? base.slice(0, -1) + 'ing' : base + 'ing';
+  return { base, past: past0 || ed, part: part0 || past0 || ed, third, ing };
+}
+const SW_VT_F = VT.map(swForms), SW_VI_F = VI.map(swForms);
+
+
+
+
+
+const SW_BANK = { N: NOUN, A: ADJ, M: NAME, T: SW_VT_F, I: SW_VI_F, W: WHEN, G: TAG, P: PREP, D: DET, O: OPENER, R: ART };
+const SW_SHAPES = [
+  ['M', 'T.past', 'the', 'N', 'W'],
+  ['to', 'T.base', 'the', 'N', 'of', 'M', 'W'],
+  ['where', 'D', 'N', 'I.third', 'P', 'M'],
+  ['the', 'A', 'N', 'I.past', 'G'],
+  ['M', "'s", 'N', ',', 'T.part', 'W'],
+  ['M', 'will', 'T.base', 'the', 'N', 'W'],
+  ['the', 'A', 'N', 'of', 'M', ',', 'G'],
+  ['N', 'and', 'N', ',', 'T.part', 'G'],
+  ['O', 'the', 'N', 'I.past', 'P', 'M'],
+  ['who', 'T.past', 'D', 'N', 'P', 'M', '?'],
+  ['M', ',', 'A', 'and', 'T.part', 'W'],
+  ['A', 'M', 'I.third', 'W'],
+  ['D', 'N', 'that', 'I.past', 'P', 'M'],
+  ['for', 'M', ':', 'the', 'A', 'N', ',', 'G'],
+  ['how', 'the', 'N', 'of', 'M', 'I.third', 'W'],
+  null,
+];
+const SW_SMALL = [
+  ['the', 'N', 'of', 'M', ',', 'T.part', 'G'],
+  ['D', 'N', 'P', 'M', ',', 'G'],
+  ['M', 'and', 'D', 'A', 'N'],
+  ['D', 'A', 'N', 'W'],
+  ['A', 'N', ',', 'I.ing'],
+  ['M', 'T.past', 'R', 'N'],
+];
+const swSlotOf = t => { const m = /^([NAMTIWGPDOR])(?:\.(\w+))?$/.exec(t); return m ? { b: m[1], f: m[2] } : null; };
+const swSizeOf = sh => sh.reduce((n, t) => { const s = swSlotOf(t); return s ? n*SW_BANK[s.b].length : n; }, 1);
+for(const sh of SW_SHAPES) if(sh && swSizeOf(sh) !== 2**28) throw new Error('seedWords: a shape is not 28 bits');
+if(SW_SMALL.reduce((n, sh) => n + swSizeOf(sh), 0) !== 2**28) throw new Error('seedWords: the small shapes do not fill a sixteenth');
+
+const MUL = 0x9E3779B1;
+
+const INV = (() => { let x = MUL; for(let i = 0; i < 5; i++) x = Math.imul(x, 2 - Math.imul(MUL, x)); return x >>> 0; })();
+const mix   = n => { let x = Math.imul(n >>> 0, MUL) >>> 0; x = (x ^ (x >>> 16)) >>> 0; return x; };
+const unmix = x => { x = (x ^ (x >>> 16)) >>> 0; return Math.imul(x, INV) >>> 0; };
+
+ 
+function swDecode(x){
+  let k = x >>> 28, r = x & 0x0FFFFFFF, shape = SW_SHAPES[k];
+  if(!shape){ for(const sh of SW_SMALL){ const z = swSizeOf(sh); if(r < z){ shape = sh; break; } r -= z; } }
+  const idx = [];
+  for(const t of shape){ const s = swSlotOf(t); if(!s) continue; const n = SW_BANK[s.b].length; idx.push(r % n); r = Math.floor(r / n); }
+  return [shape, idx];
+}
+function swEncode(shape, idx){
+  let r = 0, mul = 1, i = 0;
+  for(const t of shape){ const s = swSlotOf(t); if(!s) continue; r += idx[i++]*mul; mul *= SW_BANK[s.b].length; }
+  const k = SW_SHAPES.indexOf(shape);
+  if(k >= 0) return ((k << 28) >>> 0) + r;
+  let off = 0; for(const sh of SW_SMALL){ if(sh === shape) break; off += swSizeOf(sh); }
+  return ((15 << 28) >>> 0) + off + r;
+}
+function swRender(shape, idx){
+  let i = 0;
+  const words = shape.map(t => { const s = swSlotOf(t); if(!s) return t; const v = SW_BANK[s.b][idx[i++]]; return s.f ? v[s.f] : v; });
+  let out = words.join(' ').replace(/ ([,:?])/g, '$1').replace(/ 's\b/g, "'s");
+  out = out.replace(/\b([Aa]) (?=[aeiouAEIOU])/g, '$1n ');
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
+ 
+function seedPhrase(n){ const [sh, idx] = swDecode(mix(Math.trunc(+n || 0))); return swRender(sh, idx); }
+
+
+const swNorm = t => String(t || '').toLowerCase().replace(/[’`]/g, "'").replace(/'s\b/g, " 's").replace(/[.!?;:,—–]+/g, ' ').replace(/\s+/g, ' ').trim()
+  .replace(/\ban\b/g, 'a');
+
+const SW_LOOKUP = {};
+for(const [b, list] of Object.entries(SW_BANK)){
+  SW_LOOKUP[b] = {};
+  list.forEach((v, i) => { for(const f of (typeof v === 'string' ? [null] : ['base', 'past', 'part', 'third', 'ing'])){
+    const w = swNorm(f ? v[f] : v); ((SW_LOOKUP[b][f || ''] ||= new Map()).has(w)) || SW_LOOKUP[b][f || ''].set(w, i); } });
+}
+function swMatchShape(shape, toks){
+  const parts = shape.filter(t => !/^[,:?]$/.test(t));
+  const out = [];
+  const go = (pi, ti, idx) => {
+    if(pi === parts.length){ if(ti === toks.length) out.push(idx.slice()); return; }
+    const t = parts[pi], s = swSlotOf(t);
+    if(!s){ if(toks[ti] === swNorm(t)) go(pi + 1, ti + 1, idx); return; }
+    const map = SW_LOOKUP[s.b][s.f || ''];
+    for(let len = 1; len <= 7 && ti + len <= toks.length; len++){
+      const w = toks.slice(ti, ti + len).join(' '), i = map.get(w);
+      if(i !== undefined){ idx.push(i); go(pi + 1, ti + len, idx); idx.pop(); }
+    }
+  };
+  go(0, 0, []);
+  return out;
+}
+ 
+function phraseSeed(text){
+  const t = swNorm(text); if(!t) return null;
+  const toks = t.split(' ');
+  for(const shape of [...SW_SHAPES.filter(Boolean), ...SW_SMALL]){
+    for(const idx of swMatchShape(shape, toks)){
+      const n = unmix(swEncode(shape, idx) >>> 0);
+      if(swNorm(seedPhrase(n)) === t) return n;
+    }
+  }
+  return null;
+}
+ 
+function seedFromText(text){
+  const t = String(text == null ? '' : text).trim();
+  if(/^-?\d+$/.test(t)) return parseInt(t, 10);
+  const p = phraseSeed(t); if(p != null) return p;
+
+  let h = 0x811C9DC5; for(const ch of t.toLowerCase()){ h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h & 0x7FFFFFFF;
+}
+
+
 /* ==== texCore.js ==== */
 const CPU = { willReadFrequently: true };
 
@@ -6300,7 +6558,7 @@ const PK_SIZE = {
   kubo: [4, 6, 4, 6], elevator: [24, 32, 8, 12],
   helper: [1.0, 1.5], drone: [0.5, 1.0], crawler: [0.6, 1.0], sentry: [1.8, 2.8], walker: [2.5, 4.5], derelict: [10, 22],
   fence: [0.9, 1.2], lamp: [3, 4.6], bench: [0.8, 0.9], mailbox: [1.1, 1.2], barrel: [0.9, 1.0], crate: [0.5, 1.1], sign: [2.2, 2.8], bicycle: [0.95, 1.05], hydrant: [0.6, 0.8],
-  wall: [1.1, 1.5], hedge: [1.5, 2.6], gate: [1.2, 1.3], haybale: [1.2, 1.5], haystack: [3, 5], trough: [0.5, 0.6], pole: [10, 13], milestone: [0.6, 1], cairn: [0.6, 2], stonepile: [0.4, 0.7], gulls: [1, 1], scarecrow: [1.7, 1.9],
+  wall: [1.1, 1.5], hedge: [1.5, 2.6], gate: [1.2, 1.3], haybale: [1.2, 1.5], haystack: [3, 5], trough: [0.5, 0.6], pole: [10, 13], milestone: [0.6, 1], boundary: [0.7, 1.1], banner: [4.2, 5.6], welcome: [2.3, 2.9], cairn: [0.6, 2], stonepile: [0.4, 0.7], gulls: [1, 1], scarecrow: [1.7, 1.9],
   beehives: [0.6, 1.0], well: [2.3, 2.7], wishing: [2.3, 2.7], windpump: [9, 11], tractor: [2.5, 3], grainbin: [6, 10], shrine: [2, 3], busstop: [2.5, 2.7], phonebox: [2.4, 2.5], vending: [1.8, 1.9],
   signal: [3, 3.4], kiosk: [2.6, 3], cart: [2.1, 2.4], parked: [1.4, 1.6], hulk: [1.3, 1.4], scooter: [1.0, 1.2], rubble: [0.6, 2.4], column: [1.5, 4], statue: [1.6, 2.4], container: [2.59, 2.6], traps: [1.2, 1.4],
   camp: [1.8, 2.4], charcoal: [1.8, 3.2], hide: [3.5, 5], bothy: [3.5, 5], lookout: [9, 14], bandstand: [5, 7], fountain: [2.5, 4],
@@ -6317,11 +6575,11 @@ function pkArchOf(style, u){ const arch = PK_ARCH[style] || PK_ARCH.city; let to
 
 
 
-const PK_TREES = { wild: ['spruce', 'spruce', 'broadleaf', 'broadleaf', 'pine', 'poplar', 'birch'], magic: ['broadleaf', 'glow', 'glow', 'birch', 'willow', 'spruce'], ruins: ['dead', 'dead', 'spruce', 'broadleaf', 'pine'] };
+const PK_TREES = { wild: ['spruce', 'spruce', 'broadleaf', 'broadleaf', 'pine', 'poplar', 'birch'], magic: ['broadleaf', 'broadleaf', 'birch', 'willow', 'spruce', 'poplar'], ruins: ['dead', 'dead', 'spruce', 'broadleaf', 'pine'] };
 
 const PK_FLORA = { dry: ['saguaro', 'saguaro', 'saguaro', 'organpipe', 'barrel', 'barrel', 'pear', 'pear', 'cholla', 'cholla', 'ocotillo', 'agave', 'joshua', 'acacia', 'acacia', 'baobab', 'bush', 'dead'], warm: ['stonepine', 'stonepine', 'cypress', 'cypress', 'cedar', 'palm', 'broadleaf', 'cherry', 'bush'],
   jungle: ['palm', 'palm', 'fern', 'fern', 'bamboo', 'broadleaf', 'broadleaf', 'bush'], cold: ['fir', 'fir', 'spruce', 'spruce', 'birch', 'pine', 'bush'],
-  fey: ['mushroom', 'mushroom', 'crystal', 'cherry', 'fern', 'glow', 'bamboo', 'willow'] };
+  fey: ['mushroom', 'mushroom', 'crystal', 'cherry', 'fern', 'willow', 'bamboo', 'willow'] };
 
 
 
@@ -7609,9 +7867,9 @@ function pkWires(x, A, B, h, c, px){ const d = Math.hypot(B[0] - A[0], B[1] - A[
 
 const pkFlip = c => ({ ...c, sd: -c.sd, L: c.L ? [-c.L[0], c.L[1]] : c.L });
 const PK_SIDE_NATIVE = ['scooter', 'bicycle', 'bench'];
-const PK_WRITTEN = ['sign', 'milestone'];
+const PK_WRITTEN = ['sign', 'milestone', 'welcome', 'boundary', 'banner'];
 
-const PK_BACKED = ['sign', 'milestone', 'vending'];
+const PK_BACKED = ['sign', 'milestone', 'vending', 'welcome', 'boundary'];
 const PK_BOXLIKE = ['vending', 'phonebox', 'busstop', 'container', 'crate', 'cargo', 'mailbox', 'beehives', 'trough', 'shrine'];
 
 
@@ -7855,7 +8113,7 @@ function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   const wheel = (wx, wy, r, m) => { pkDisc(x, wx, wy, r, pkCss(pkMix(PK_IRON, PK_BLACK, 0.4))); if(r > px(1.5)) pkDisc(x, wx + sd*r*0.08, wy - r*0.08, r*0.45, pkCss(m ? m.body : PK_STEEL)); };
   const wood = pkMat(c, PK_WOOD, 0.7), grey = pkMat(c, PK_GREYWOOD, 0.7), iron = pkMat(c, PK_IRON, 0.75), stone = pkMat(c, PK_STONE, 0.75), steel = pkMat(c, PK_STEEL, 0.65), rust = pkMat(c, PK_RUST, 0.7);
   const glowOn = night > 0.2, lamp = pkMix(c.glow, PK_WHITE, 0.55);
-  if(near && !['wisp', 'fairyring', 'pole', 'beacon', 'flower'].includes(kind)) pkCast(x, X - h*0.3, X + h*0.3, Y, h*0.6, c, 0.16);
+  if(near && !['wisp', 'fairyring', 'pole', 'beacon', 'flower', 'banner'].includes(kind)) pkCast(x, X - h*0.3, X + h*0.3, Y, h*0.6, c, 0.16);
   switch(kind){
   case 'fence': {
 
@@ -7921,6 +8179,38 @@ function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     pkType(x, txt, X + dir*-w*0.08, by + bh*0.68, bh*0.42, w*0.65, pkMix(PK_WHITE, m.body, 0.1), px); ln([[X + dir*w*0.3, by + bh*0.5], [X + dir*w*0.42, by + bh*0.5]], pkCss(PK_WHITE, 0.85), bh*0.1); return; }
   case 'milestone': { const m = pkMat(c, [222, 218, 206], 0.7); pkShade(x, [[X - h*0.22, Y], [X - h*0.22, Y - h*0.75], [X, Y - h], [X + h*0.22, Y - h*0.75], [X + h*0.22, Y]], m.body, Y - h, Y, 0.2);
     if(!c.back) pkType(x, String(1 + Math.floor(R()*99)), X, Y - h*0.45, h*0.28, h*0.4, PK_BLACK, px); return; }
+
+
+
+  case 'boundary': {
+    const m = pkMat(c, [210, 204, 190], 0.7), w = h*0.52, mk = c.mark || {};
+    pkShade(x, [[X - w/2, Y], [X - w/2, Y - h*0.78], [X - w*0.32, Y - h*0.96], [X, Y - h], [X + w*0.32, Y - h*0.96], [X + w/2, Y - h*0.78], [X + w/2, Y]], m.body, Y - h, Y, 0.25);
+    side(X - w/2, Y - h*0.78, w, h*0.78, w*0.35, m);
+    if(near){ const u = c.back ? mk.rune2 : mk.rune; x.strokeStyle = pkCss(m.dark, 0.9); x.lineWidth = Math.max(px(0.5), h*0.05); x.lineCap = 'round'; if(u != null) pkRune(x, X, Y - h*0.52, h*0.2, u);
+      if(fine){ x.strokeStyle = pkCss(m.dark, 0.6); x.lineWidth = Math.max(px(0.4), h*0.02); x.beginPath(); x.moveTo(X - w*0.35, Y - h*0.22); x.lineTo(X + w*0.35, Y - h*0.22); x.stroke(); } } return; }
+  case 'banner': {
+
+    const ban = (c.mark || {}).ban; if(!ban) return; const pw = Math.max(px(0.5), h*0.022), bw = h*0.26, bh = h*0.42, x0 = X + pw, y0 = Y - h*0.95, fl = c.flap || 0;
+    ln([[X, Y], [X, Y - h]], pkCss(wood.dark), pw*1.4); ln([[X - pw, y0], [x0 + bw + pw, y0]], pkCss(wood.body), pw);
+    const F = pkMat(c, ban.field, 1), C = pkMat(c, ban.charge, 1), wav = k => Math.sin(fl*2.1 + k*3.2)*bh*0.03;
+    const cloth = ban.tails ? [[x0, y0], [x0 + bw, y0], [x0 + bw + wav(1), y0 + bh], [x0 + bw*0.5 + wav(0.5), y0 + bh*0.72], [x0 + wav(0), y0 + bh]] : [[x0, y0], [x0 + bw, y0], [x0 + bw + wav(1), y0 + bh], [x0 + wav(0), y0 + bh]];
+    pkPoly(x, cloth, pkCss(F.body)); x.save(); x.beginPath(); cloth.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+    const cc = pkCss(C.body), mx = x0 + bw/2, my = y0 + bh/2, rc = (a, b, ww, hh) => { x.fillStyle = cc; x.fillRect(a, b, ww, hh); };
+    switch(ban.div){ case 'pale': rc(mx, y0, bw, bh*1.1); break; case 'fess': rc(x0, my, bw*1.1, bh); break;
+      case 'bend': pkPoly(x, [[x0, y0], [x0 + bw*0.35, y0], [x0 + bw*1.1, y0 + bh*0.8], [x0 + bw*1.1, y0 + bh*1.1], [x0 + bw*0.75, y0 + bh*1.1], [x0, y0 + bh*0.3]], cc); break;
+      case 'chevron': pkPoly(x, [[x0, y0 + bh*0.8], [mx, y0 + bh*0.35], [x0 + bw*1.1, y0 + bh*0.8], [x0 + bw*1.1, y0 + bh*1.05], [mx, y0 + bh*0.6], [x0, y0 + bh*1.05]], cc); break;
+      case 'cross': rc(mx - bw*0.11, y0, bw*0.22, bh*1.1); rc(x0, my - bw*0.11, bw*1.1, bw*0.22); break;
+      case 'saltire': ln([[x0, y0], [x0 + bw, y0 + bh]], cc, bw*0.22); ln([[x0 + bw, y0], [x0, y0 + bh]], cc, bw*0.22); break;
+      case 'quarterly': rc(mx, y0, bw, bh*0.5); rc(x0, my, bw*0.5, bh); break;
+      default: if(near){ x.strokeStyle = cc; x.lineWidth = Math.max(px(0.5), bw*0.08); x.lineCap = 'round'; pkRune(x, mx, y0 + bh*0.42, bh*0.22, ban.rune); } }
+    pkPoly(x, [[x0, y0], [x0 + bw*0.12, y0], [x0 + bw*0.12 + wav(0), y0 + bh], [x0 + wav(0), y0 + bh]], pkCss(F.dark, 0.25)); x.restore(); return; }
+  case 'welcome': {
+
+    const mk = c.mark || {}, ban = mk.ban, w = h*1.25, bh = h*0.34, by = Y - h, post = ['wilds', 'magic', 'ruins'].includes(c.w) ? wood : steel; for(const s of [-1, 1]) box(X + s*w*0.36 - h*0.02, by, h*0.04, h, post, 0.2);
+    if(c.back || !ban){ box(X - w/2, by, w, bh, post, 0.1); return; }
+    const F = pkMat(c, ban.field, 1), C = pkMat(c, ban.charge, 1); box(X - w/2, by, w, bh, F, 0.1);
+    x.strokeStyle = pkCss(C.body, 0.9); x.lineWidth = Math.max(px(0.3), bh*0.05); x.strokeRect(X - w/2 + bh*0.07, by + bh*0.07, w - bh*0.14, bh*0.86);
+    pkType(x, String(mk.say || '').toUpperCase(), X, by + bh*0.66, bh*0.4, w*0.86, C.body, px); return; }
   case 'stonepile': {
 
 
@@ -8714,6 +9004,19 @@ function pkDome(x, X, Y, r, c, night, px){
   if(night > 0.2) pkGlow(x, X, Y - r*0.4, r*1.6, c.glow, 0.5*night);
 }
 
+
+
+
+function pkRune(x, X, Y, g, u){ const k = Math.floor(u*24), w = g*0.55, P = (a, b) => [X + a*w, Y + b*g];
+  const seg = (A, B) => { x.moveTo(...P(...A)); x.lineTo(...P(...B)); };
+  x.beginPath(); if(k % 6 !== 5) seg([0, -1], [0, 1]);
+  switch(k % 6){ case 0: seg([0, -1], [1, -0.4]); if(k & 8) seg([0, -0.3], [1, 0.3]); break;
+    case 1: seg([0, -1], [-1, -0.4]); seg([0, -1], [1, -0.4]); break;
+    case 2: seg([0, -1], [0.9, -0.5]); seg([0.9, -0.5], [0, 0]); if(k & 8) seg([0, 0], [0.9, 1]); break;
+    case 3: seg([-0.9, -0.4], [0.9, 0.4]); if(k & 8) seg([-0.9, 0.4], [0.9, -0.4]); break;
+    case 4: seg([0, 0], [-0.9, 0.6]); seg([0, 0], [0.9, 0.6]); if(k & 8) seg([0, -1], [0.7, -0.6]); break;
+    default: seg([0, -1], [0.8, 0]); seg([0.8, 0], [0, 1]); seg([0, 1], [-0.8, 0]); seg([-0.8, 0], [0, -1]); if(k & 8){ seg([-0.8, 0], [-1, 0.8]); seg([0.8, 0], [1, 0.8]); } }
+  x.stroke(); }
 function pkCrystals(x, X, Y, cs0, cols, c, n, R, px){
   for(let q = 0; q < n; q++){ const cs = cs0*(0.5 + R()), ang = (R() - 0.5)*0.9, ox = (R() - 0.5)*cs0*3, len = cs*(3 + 2*R()); if(cs < 1) continue;
     const tipX = X + ox + Math.sin(ang)*len, tipY = Y - Math.cos(ang)*len, nx = Math.cos(ang)*cs, ny = Math.sin(ang)*cs, sx = X + ox + Math.sin(ang)*len*0.75, sy = Y - Math.cos(ang)*len*0.75, cc = cols[q % cols.length];
@@ -9112,6 +9415,81 @@ function lkLand(seed, o){
 
   const snowline = Math.max(150, (warm + 0.06)/LAPSE)*M;
   return { M, sea: 0, height, climate, biomes, snowline, wet, warm, rug };
+}
+
+
+/* ==== regionKit.js ==== */
+const rkU = (x, y, s) => { let h = Math.imul(x | 0, 0x27D4EB2D) ^ Math.imul(y | 0, 0x165667B1) ^ Math.imul(s | 0, 0x9E3779B1); h = Math.imul(h ^ (h >>> 15), 0x85EBCA77); h = Math.imul(h ^ (h >>> 13), 0xC2B2AE3D); return ((h ^ (h >>> 16)) >>> 0)/4294967296; };
+const rkRand = (s, a, b) => { let t = (Math.imul(s | 0, 0x9E3779B1) ^ Math.imul(a | 0, 0x85EBCA77) ^ Math.imul(b | 0, 0xC2B2AE3D)) >>> 0;
+  return () => { t = (t + 0x6D2B79F5) >>> 0; let r = Math.imul(t ^ (t >>> 15), 1 | t); r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r; return ((r ^ (r >>> 14)) >>> 0)/4294967296; }; };
+const rkPick = (R, L) => L[Math.floor(R()*L.length)];
+const rkCap = w => w.charAt(0).toUpperCase() + w.slice(1);
+const rkPlural = w => /[^aeiou]y$/.test(w) ? w.slice(0, -1) + 'ies' : /(s|x|z|ch|sh|o)$/.test(w) ? w + 'es' : w + 's', rkOwn = N => N + (N.endsWith('s') ? '’' : '’s');
+
+const RK_ELEMENTS = [
+  { name: 'Fire',   wt: 1,    lights: [[255, 96, 54], [255, 186, 80]],   ground: [150, 84, 62],   leaf: [150, 72, 42] },
+  { name: 'Wind',   wt: 1,    lights: [[120, 255, 176], [214, 255, 236]], ground: [156, 190, 146], leaf: [116, 172, 112] },
+  { name: 'Water',  wt: 1,    lights: [[70, 166, 255], [150, 236, 255]],  ground: [82, 130, 146],  leaf: [38, 100, 112] },
+  { name: 'Earth',  wt: 1,    lights: [[255, 222, 96], [214, 168, 80]],   ground: [172, 142, 84],  leaf: [112, 112, 42] },
+  { name: 'Amber',  wt: 0.25, lights: [[255, 168, 40], [255, 224, 150]],  ground: [176, 128, 64],  leaf: [170, 112, 32] },
+  { name: 'Vitrum', wt: 0.25, lights: [[182, 112, 255], [232, 196, 255]], ground: [130, 104, 172], leaf: [92, 72, 132] },
+  { name: 'Sound',  wt: 0.25, lights: [[255, 122, 204], [255, 206, 232]], ground: [182, 124, 152], leaf: [160, 82, 122] },
+  { name: 'Radio',  wt: 0.25, lights: [[214, 140, 82], [255, 210, 160]],  ground: [132, 102, 80],  leaf: [112, 82, 52] },
+];
+
+const RK_TINCTURES = { metals: [[226, 184, 62], [236, 234, 226]], colours: [[176, 32, 40], [28, 72, 160], [26, 116, 58], [112, 44, 124], [30, 28, 32]] };
+const RK_DIVISIONS = ['plain', 'pale', 'fess', 'bend', 'chevron', 'cross', 'saltire', 'quarterly'];
+
+
+
+const RK_PLACES = {
+  wilds:    ['March', 'Marches', 'Reach', 'Weald', 'Fells', 'Downs', 'Vale', 'Moor', 'Wold', 'Fen', 'Heath', 'Holt', 'Dale', 'Shire'],
+  magic:    ['Marches', 'Reach', 'Glades', 'Demesne', 'Realm', 'Vale', 'Weald', 'Hollows', 'Mere', 'Wood'],
+  ruins:    ['Wastes', 'Barrens', 'Ashlands', 'Scar', 'Hollows', 'Reach', 'Breaks', 'Flats'],
+  cities:   ['District', 'Borough', 'Ward', 'Quarter', 'County', 'Heights', 'Park'],
+  neon:     ['Sector', 'Zone', 'Strip', 'Block', 'Grid', 'Sprawl', 'Loop'],
+  builders: ['Array', 'Works', 'Precinct', 'Terraces', 'Reach', 'Span'] };
+function rkName(R, world){ const P = RK_PLACES[world] || RK_PLACES.wilds, u = R(), N = rkPick(R, NAME), A = rkCap(rkPick(R, ADJ)), O = rkCap(rkPick(R, NOUN)), pl = rkPick(R, P);
+  if(world === 'ruins' && u < 0.25) return 'Old ' + N + ' ' + pl;
+  if(world === 'neon' && u < 0.3) return pl + ' ' + (1 + Math.floor(R()*99));
+  return u < 0.3 ? N + ' ' + pl : u < 0.5 ? 'The ' + A + ' ' + pl : u < 0.68 ? pl + ' of ' + N : u < 0.84 ? 'The ' + O + ' ' + pl : rkOwn(N) + ' ' + pl; }
+
+const RK_ENDS = ['ford', 'bury', 'wick', 'by', 'ham', 'stead', 'mouth', 'bridge', 'dale', 'hold', 'ton', 'mere', 'thorpe', 'well'];
+function rkTownName(R, world){ const N = rkPick(R, NAME), u = R();
+  if(world === 'cities' || world === 'neon' || world === 'builders') return u < 0.3 ? 'New ' + N : u < 0.5 ? 'Port ' + N : u < 0.7 ? N + ' City' : N;
+  const stem = N.length > 6 ? N.slice(0, 4 + Math.floor(R()*2)) : N; return stem + rkPick(R, RK_ENDS); }
+
+function rkFactionName(R, world){ const N = rkPick(R, NAME), A = rkCap(rkPick(R, ADJ)), O = rkCap(rkPick(R, NOUN)), u = R();
+  if(world === 'magic') return u < 0.4 ? 'The Runists of ' + N : u < 0.7 ? 'The Order of the ' + A + ' ' + O : 'The ' + O + ' Circle';
+  if(world === 'ruins') return u < 0.5 ? 'The ' + A + ' ' + rkPlural(O) : 'The ' + N + ' Band';
+  if(world === 'cities' || world === 'neon' || world === 'builders') return u < 0.4 ? 'The ' + N + ' Compact' : u < 0.7 ? N + ' ' + O + ' Holdings' : 'The ' + A + ' League';
+  return u < 0.5 ? 'House ' + N : u < 0.75 ? 'The ' + N + ' Clans' : 'The ' + A + ' ' + rkPlural(O); }
+
+function rkRegions(seed, o){
+  const s = seed | 0, W = o.W, worlds = o.worlds && o.worlds.length ? o.worlds : ['wilds'];
+  const NA = Math.max(3, Math.round(2*Math.PI/(W*1.3))), DA = 2*Math.PI/NA, DZ = W/2.3, NF = Math.max(2, Math.round(NA/3)), FA = 2*Math.PI/NF, FZ = W*1.1;
+  const wrap = (i, n) => ((i % n) + n) % n;
+  const out = { id: 0, id2: 0, b: 0 };
+  const at = (a, z) => {
+
+    const u = a/DA, v = z/DZ, wa = a + DA*(0.22*lkNoise(u*2, v*1.3, s + 821, NA*2) + 0.06*lkNoise(u*9, v*6, s + 822, NA*9)), wz = z + DZ*(0.22*lkNoise(u*2 + 7.3, v*1.3, s + 823, NA*2) + 0.06*lkNoise(u*9 + 3.1, v*6, s + 824, NA*9));
+    const i0 = Math.floor(wa/DA), j0 = Math.floor(wz/DZ); let d1 = Infinity, d2 = Infinity, a1 = 0, z1 = 0, a2 = 0, z2 = 0, id1 = 0, id2 = 0;
+    for(let di = -1; di <= 1; di++) for(let dj = -1; dj <= 1; dj++){ const i = i0 + di, j = j0 + dj, ii = wrap(i, NA), pa = (i + 0.12 + 0.76*rkU(ii, j, s + 811))*DA, pz = (j + 0.12 + 0.76*rkU(ii, j, s + 812))*DZ, d = (pa - wa)*(pa - wa) + (pz - wz)*(pz - wz);
+      if(d < d1){ d2 = d1; a2 = a1; z2 = z1; id2 = id1; d1 = d; a1 = pa; z1 = pz; id1 = ii*64 + j + 32; } else if(d < d2){ d2 = d; a2 = pa; z2 = pz; id2 = ii*64 + j + 32; } }
+    out.id = id1; out.id2 = id2; out.b = (d2 - d1)/(2*(Math.hypot(a2 - a1, z2 - z1) || 1)); return out; };
+
+  const factions = new Map(), faction = fid => { let f = factions.get(fid); if(f) return f; const R = rkRand(s, 840, fid), wo = worlds[Math.floor(R()*worlds.length)];
+    const metal = rkPick(R, RK_TINCTURES.metals), colour = rkPick(R, RK_TINCTURES.colours), onMetal = R() < 0.4;
+    f = { id: fid, name: rkFactionName(R, wo), field: onMetal ? metal : colour, charge: onMetal ? colour : metal, div: RK_DIVISIONS[Math.floor(R()*RK_DIVISIONS.length)], rune: R(), tails: R() < 0.35 };
+    factions.set(fid, f); return f; };
+  const kept = new Map(), info = id => { let r = kept.get(id); if(r) return r; const i = Math.floor(id/64), j = id % 64 - 32, R = rkRand(s, 830, id);
+    const pa = (i + 0.12 + 0.76*rkU(i, j, s + 811))*DA, pz = (j + 0.12 + 0.76*rkU(i, j, s + 812))*DZ, fi0 = Math.floor(pa/FA), fj0 = Math.floor(pz/FZ); let fd = Infinity, fid = 0;
+    for(let di = -1; di <= 1; di++) for(let dj = -1; dj <= 1; dj++){ const fi = fi0 + di, fj = fj0 + dj, ff = wrap(fi, NF), qa = (fi + 0.2 + 0.6*rkU(ff, fj, s + 841))*FA, qz = (fj + 0.2 + 0.6*rkU(ff, fj, s + 842))*FZ, d = (qa - pa)*(qa - pa) + (qz - pz)*(qz - pz);
+      if(d < fd){ fd = d; fid = ff*16 + fj + 8; } }
+    const world = worlds.length < 2 ? worlds[0] : worlds[Math.floor(R()*worlds.length)];
+    let element = null; if(world === 'magic'){ let tot = 0; for(const e of RK_ELEMENTS) tot += e.wt; let q = R()*tot; for(const e of RK_ELEMENTS){ q -= e.wt; if(q < 0){ element = e; break; } } element = element || RK_ELEMENTS[0]; }
+    r = { id, name: rkName(R, world), world, element, faction: faction(fid) }; if(kept.size > 4000) kept.clear(); kept.set(id, r); return r; };
+  return { at, info };
 }
 
 
@@ -19769,7 +20147,7 @@ const RG_PROF = {
   cities:   { tr: 0.45, de: 0,    gt: 0,   to: 1,    sp: 0.2,  sa: 0.25, mo: 0,    cr: 0,    ci: 0,   pi: 0,    do: 0.5,  br: 0.2, ca: 0,   wr: 0.04, sh: 0.8,  be: 0.3,  ro: 0.15, gr: 0.5,  cv: 1 },
   neon:     { tr: 0.12, de: 0,    gt: 0.06, to: 1,   sp: 0.3,  sa: 0.15, mo: 0,    cr: 0,    ci: 0,   pi: 0.1,  do: 0.2,  br: 0.6, ca: 0,   wr: 0.08, sh: 1,    be: 0.2,  ro: 0.1,  gr: 0.15, cv: 0.9 },
   builders: { tr: 0.45, de: 0,    gt: 0,   to: 0.2,  sp: 1,    sa: 0.9,  mo: 0.6,  cr: 0.2,  ci: 0,   pi: 0.15, do: 0.3,  br: 0.8, ca: 0,   wr: 0.05, sh: 0.6,  be: 0.3,  ro: 0.25, gr: 0.6,  cv: 0.2 },
-  magic:    { tr: 0.5,  de: 0,    gt: 0.7, to: 0.12, sp: 0.5,  sa: 0.6,  mo: 0.35, cr: 1,    ci: 0.8, pi: 0.25, do: 0.1,  br: 0.3, ca: 0,   wr: 0.04, sh: 0.2,  be: 0.9,  ro: 0.3,  gr: 1,    cv: 0.1 },
+  magic:    { tr: 1,    de: 0,    gt: 0.07, to: 0.12, sp: 0.5,  sa: 0.6,  mo: 0.35, cr: 1,    ci: 0.8, pi: 0.25, do: 0.1,  br: 0.3, ca: 0,   wr: 0.04, sh: 0.2,  be: 0.9,  ro: 0.3,  gr: 1,    cv: 0.1 },
   ruins:    { tr: 0.15, de: 0.7,  gt: 0,   to: 0.6,  sp: 0.4,  sa: 0.6,  mo: 0.3,  cr: 0.1,  ci: 0,   pi: 0,    do: 0.2,  br: 0,   ca: 1,   wr: 0.9,  sh: 0.2,  be: 0.25, ro: 0.7,  gr: 0.3,  cv: 0.4 },
 };
 
@@ -19830,7 +20208,12 @@ function rgView(E, n, ww, wh){
   const rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d;
   const land = rgb(input(n, 7), [111, 143, 85]), sky = rgb(input(n, 8), [134, 174, 220]), g1 = rgb(input(n, 9), [176, 48, 58]), g2 = rgb(input(n, 10), [201, 163, 58]);
 
-  const s = seed | 0, worldAt = (a, z) => world.list.length < 2 ? world.list[0] : world.list[Math.min(2, Math.floor(mnValue(a/(W*0.9) + 3.1, z/(W*0.9) + 8.3, s + 23)*3.3))];
+
+
+
+  const RG = rkRegions(seed, { W, worlds: world.list }), regionAt = (a, z) => RG.info(RG.at(a, z).id), s = seed | 0;
+  const worldAt = world.list.length < 2 ? () => world.list[0] : (a, z) => RG.info(RG.at(a, z).id).world;
+  const elementAt = (a, z) => RG.info(RG.at(a, z).id).element;
 
   const dryAt = (a, z) => rgClamp(1 - LK.climate(a, z, LK.height(a, z, W*0.05))[1]);
   const forestAt = (a, z) => { const bw = LK.biomes(a, z, LK.height(a, z, W*0.05)); let f = 0; for(let i = 0; i < LK_BIOMES.length; i++) f += (LK_FORESTED[LK_BIOMES[i].name] || 0)*bw[i];
@@ -19840,7 +20223,9 @@ function rgView(E, n, ww, wh){
 
 
   const districtAt = (a, z) => RG_NEON_DISTRICTS[Math.min(RG_NEON_DISTRICTS.length - 1, Math.floor(mnValue(a/(W*0.22) + 13.1, z/(W*0.22) - 4.4, s + 61)*RG_NEON_DISTRICTS.length*0.999))];
-  const lightsAt = (w, a, z) => { const L0 = lightsOf(w); if(w !== 'neon') return L0; const d = districtAt(a, z); return [rsMix(L0[0], d[0], 0.65), rsMix(L0[1], d[1], 0.65)]; };
+
+  const lightsAt = (w, a, z) => { const L0 = lightsOf(w); if(w === 'magic'){ const el = elementAt(a, z); return el ? [rsMix(L0[0], el.lights[0], 0.8), rsMix(L0[1], el.lights[1], 0.8)] : L0; }
+    if(w !== 'neon') return L0; const d = districtAt(a, z); return [rsMix(L0[0], d[0], 0.65), rsMix(L0[1], d[1], 0.65)]; };
 
 
 
@@ -19849,7 +20234,7 @@ function rgView(E, n, ww, wh){
   const sunAt = sunUp ? proj(L.Px + D[0], D[1], L.z0 + D[2]) : null;
 
   const sunSd = Math.abs(sunR) > 0.04 ? (sunR > 0 ? 1 : -1) : L.side, lt = [sunR, -Math.max(0.25, sunU + 0.35)], ll = Math.hypot(lt[0], lt[1]) || 1;
-  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, LK, detail, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf, lightsAt, districtAt, psi,
+  return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, LK, detail, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, regionAt, elementAt, regions: RG, dryAt, forestAt, cityAt, lightsOf, lightsAt, districtAt, psi,
 
 
     season: seedChoice(seed, 'season')(), life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
@@ -19914,13 +20299,19 @@ const RG_BIOME_GROUND = { ice: [[236, 240, 247], 1], tundra: [[150, 140, 112], 0
   steppe: [[196, 176, 112], 0.6], desert: [[222, 194, 140], 0.82], savanna: [[204, 178, 98], 0.55], jungle: [[20, 80, 36], 0.4], marsh: [[70, 92, 70], 0.5] };
 const RG_PATCH = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]];
 function rgGround(V, a, z, e, coarse = 1, slope = 0, bw0 = null){
-  const W = V.W, M = W*0.00025, w = V.worldAt(a, z), P = RG_PROF[w], [gc, gk] = RG_GROUND[w];
+  const W = V.W, M = W*0.00025;
   if(e <= V.TR.sea + 1e-9) return rsMix([24, 58, 104], V.sky, 0.35);
   const bw = bw0 || V.LK.biomes(a, z, e); let c = [0, 0, 0];
   for(let i = 0; i < LK_BIOMES.length; i++){ if(bw[i] < 0.004) continue; const [bc, bk] = RG_BIOME_GROUND[LK_BIOMES[i].name], g = rsMix(V.land, bc, bk); c[0] += g[0]*bw[i]; c[1] += g[1]*bw[i]; c[2] += g[2]*bw[i]; }
-  c = rsMix(c, gc, gk);
-  const fo = V.forestAt(a/coarse, z/coarse)*Math.min(1, V.life*1.6)*(P.tr + P.gt*0.5 + P.de*0.3); if(fo > 0) c = rsMix(c, w === 'magic' ? rsMix([30, 70, 64], V.g1, 0.25) : w === 'ruins' ? [70, 64, 50] : rsMix(V.land, [20, 46, 30], 0.6), Math.min(0.6, fo*0.6));
-  const ci = V.cityAt(a/Math.sqrt(coarse), z/Math.sqrt(coarse), P.cv*(0.3 + 0.9*V.works), 0.16); if(ci > 0) c = rsMix(c, w === 'neon' ? rsMix([40, 36, 58], V.districtAt(a, z)[0], 0.12) : [150, 148, 146], ci*0.7);
+
+
+  const tint = (w, el) => { const P = RG_PROF[w], [gc, gk] = el ? [el.ground, 0.24] : RG_GROUND[w]; let q = rsMix(c, gc, gk);
+    const fo = V.forestAt(a/coarse, z/coarse)*Math.min(1, V.life*1.6)*(P.tr + P.gt*0.5 + P.de*0.3); if(fo > 0) q = rsMix(q, w === 'magic' ? rsMix([30, 70, 64], el ? el.leaf : V.g1, 0.3) : w === 'ruins' ? [70, 64, 50] : rsMix(V.land, [20, 46, 30], 0.6), Math.min(0.6, fo*0.6));
+    const cq = V.cityAt(a/Math.sqrt(coarse), z/Math.sqrt(coarse), P.cv*(0.3 + 0.9*V.works), 0.16); if(cq > 0) q = rsMix(q, w === 'neon' ? rsMix([40, 36, 58], V.districtAt(a, z)[0], 0.12) : [150, 148, 146], cq*0.7); return [q, cq]; };
+  const r0 = V.regions.at(a, z), id = r0.id, id2 = r0.id2, b = r0.b, I = V.regions.info(id), I2 = V.regions.info(id2), BW = 20*M;
+  let [cw, ci] = tint(I.world, I.element);
+  if(b < BW && (I2.world !== I.world || I2.element !== I.element)){ const [c2, ci2] = tint(I2.world, I2.element), k = 0.5 - 0.5*b/BW; cw = rsMix(cw, c2, k); ci += (ci2 - ci)*k; }
+  c = cw;
   const rock = rsSmooth(0.45, 0.95, slope); if(rock > 0) c = rsMix(c, rsMix([128, 120, 112], V.land, 0.12), rock*0.8);
   const sand = (1 - rsSmooth(1.2*M, 3.5*M, e))*(1 - ci); if(sand > 0) c = rsMix(c, [222, 206, 164], sand*0.75);
   const hi = rsSmooth(V.TR.snow*0.6, V.TR.snow, e); if(hi > 0) c = rsMix(c, [128, 122, 116], hi*0.4);
@@ -20010,19 +20401,6 @@ function rgPanSky(c, x, V){
 function rgWeatherOf(seed, chosen, world){ if(chosen && chosen !== 'by the seed') return chosen; const u = mnHash(seed | 0, 77, 5);
 
   return u < 0.5 ? 'clear' : u < 0.82 ? 'clouds' : u < 0.9 ? 'fog' : u < 0.945 ? 'rain' : u < 0.97 ? 'storm' : world.list.includes('neon') ? 'rain' : 'snow'; }
-
-
-
-function rgRune(x, X, Y, g, u){ const k = Math.floor(u*24), w = g*0.55, P = (a, b) => [X + a*w, Y + b*g];
-  const seg = (A, B) => { x.moveTo(...P(...A)); x.lineTo(...P(...B)); };
-  x.beginPath(); if(k % 6 !== 5) seg([0, -1], [0, 1]);
-  switch(k % 6){ case 0: seg([0, -1], [1, -0.4]); if(k & 8) seg([0, -0.3], [1, 0.3]); break;
-    case 1: seg([0, -1], [-1, -0.4]); seg([0, -1], [1, -0.4]); break;
-    case 2: seg([0, -1], [0.9, -0.5]); seg([0.9, -0.5], [0, 0]); if(k & 8) seg([0, 0], [0.9, 1]); break;
-    case 3: seg([-0.9, -0.4], [0.9, 0.4]); if(k & 8) seg([-0.9, 0.4], [0.9, -0.4]); break;
-    case 4: seg([0, 0], [-0.9, 0.6]); seg([0, 0], [0.9, 0.6]); if(k & 8) seg([0, -1], [0.7, -0.6]); break;
-    default: seg([0, -1], [0.8, 0]); seg([0.8, 0], [0, 1]); seg([0, 1], [-0.8, 0]); seg([-0.8, 0], [0, -1]); if(k & 8){ seg([-0.8, 0], [-1, 0.8]); seg([0.8, 0], [1, 0.8]); } }
-  x.stroke(); }
 
 
 
@@ -20290,7 +20668,7 @@ function rgPaintArch(x, mk, V){
           x.strokeStyle = gc; x.lineWidth = Math.max(px(0.5), g*0.22); x.lineCap = 'round';
           line([inQ(q, 0, vR - 0.045), inQ(q, 1, vR - 0.045)], gc, Math.max(px(0.4), g*0.12)); line([inQ(q, 0, vR + 0.045), inQ(q, 1, vR + 0.045)], gc, Math.max(px(0.4), g*0.12));
           for(let k = 0; k < n; k++){ const [X, Y] = inQ(q, (k + 0.5)/n, vR), t = R(); x.strokeStyle = gc; x.lineWidth = Math.max(px(0.5), g*0.22);
-            if(t < 0.14){ x.fillStyle = gc; x.beginPath(); x.arc(X, Y, Math.max(px(0.5), g*0.18), 0, Math.PI*2); x.fill(); } else rgRune(x, X, Y, g, R()); }
+            if(t < 0.14){ x.fillStyle = gc; x.beginPath(); x.arc(X, Y, Math.max(px(0.5), g*0.18), 0, Math.PI*2); x.fill(); } else pkRune(x, X, Y, g, R()); }
           if(night > 0.3) rgGlow(x, ...inQ(q, 0.5, vR), Math.min(hp*0.3, wp*0.5), glowC, 0.12*night); }
         if((ww2 === 'cities' || ww2 === 'neon') && R() < 0.5){
           for(let k = 0, nS = 1 + Math.floor(R()*3); k < nS; k++){ const u0 = R()*0.8, v0 = 0.4 + R()*0.35, a = inQ(q, u0, v0), b = inQ(q, u0 + 0.12, v0 + 0.16);
@@ -20303,7 +20681,7 @@ function rgPaintArch(x, mk, V){
             const fill = cols[Math.floor(R()*3)], edge = cols[(Math.floor(R()*3) + 1) % 4], tilt = (R() - 0.5)*0.3, us = g*1.6/Math.max(1, wp), dv = g*1.6*tilt/Math.max(1, hp);
             for(let pass = ww2 === 'ruins' ? 1 : 0; pass < 2; pass++){ x.strokeStyle = rsCss(pass ? fill : edge, (pass ? 0.85 : 0.8)*fade); x.lineCap = 'round'; x.lineJoin = 'round';
               x.lineWidth = Math.max(px(0.6), g*(ww2 === 'ruins' ? 0.12 : pass ? 0.32 : 0.55));
-              const Rr = rgRand(s, 819, Math.round(u0*1e4), k); for(let c = 0; c < nL; c++){ const [X, Y] = inQ(q, u0 + c*us, v0 + c*dv); rgRune(x, X, Y - g, g, Rr()); } }
+              const Rr = rgRand(s, 819, Math.round(u0*1e4), k); for(let c = 0; c < nL; c++){ const [X, Y] = inQ(q, u0 + c*us, v0 + c*dv); pkRune(x, X, Y - g, g, Rr()); } }
             for(let d = 0; d < nL*2; d++) if(R() < 0.35){ const [X, Y] = inQ(q, u0 + R()*nL*us, v0); line([[X, Y - g*0.2], [X, Y + g*(0.6 + 1.6*R())]], rsCss(fill, 0.55*fade), Math.max(px(0.4), g*0.06)); } } }
         x.restore(); } }
     else if(lights){ const n = 2 + Math.floor(R()*3); for(let k = 0; k < n; k++){ const u = R(), v = R(), X = q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v, Y = q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v;
@@ -20664,7 +21042,8 @@ function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
   const key = [s, V.world.list.join('+'), V.forms, V.life, V.fauna, V.detailK, V.works, V.clutter, W.toFixed(6), L.z0.toFixed(6)].join('|');
   const kept = RG_KEPT_STORES.get(key); if(kept) return kept;
-  const out = [];
+  const out = []; let onWall = null;
+  const WALL_ROOM = { bldg: 1, tree: 1, prop: 1, rock: 1, board: 1, egg: 1, henge: 1 };
   const sow = (id, c0, B0, rMax, cap, fn) => {
     for(let m = 0; m < 12; m++){ const hi = Math.min(rMax, B0*Math.pow(2, m + 1)), c = c0*Math.pow(2, m);
       const i0 = Math.floor(-hi/c) - 1, i1 = Math.ceil(hi/c) + 1, j0 = Math.floor((L.z0 - hi)/c) - 1, j1 = Math.ceil((L.z0 + hi)/c) + 1;
@@ -20672,7 +21051,7 @@ function rgStore(V){
         const ac = (i + 0.5)*c, zc = (j + 0.5)*c; if(Math.hypot(ac, zc - L.z0) - c > hi) continue;
         for(let q = 0; q < cap; q++){ const R = rgRand(s, id*16 + m, i*2048 + q, j), a = (i + R())*c, z = (j + R())*c;
           if(Math.abs(z) > W*0.485) continue; const r = Math.hypot(a, z - L.z0); if(r >= hi) continue;
-          const o = fn(a, z, r, R); if(o){ o.a = a; o.z = z; o.r = r; o.rs = (R()*4294967296) >>> 0; out.push(o); } } }
+          const o = fn(a, z, r, R); if(o && !(onWall && WALL_ROOM[o.c] && onWall(a, z, ((o.wM || 2)*0.5 + 1.5)*V.W*0.00025))){ o.a = a; o.z = z; o.r = r; o.rs = (R()*4294967296) >>> 0; out.push(o); } } }
       if(hi >= rMax) break; } };
 
 
@@ -20734,7 +21113,8 @@ function rgStore(V){
     let top = true; for(const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const a2 = a + di*C, z2 = z + dj*C; if(villageAt(V.worldAt(a2, z2), a2, z2) > t){ top = false; break; } }
 
     if(top && w !== 'wilds' && T.true(a, z, W*0.003) > TR.sea) farms.push([a, z, w, Math.min(1, t*2)]); } }
-  hubs.forEach(([a, z, w, t], hi) => { const R = rgRand(s, 1310, hi), n = 2 + Math.floor(R()*(0.5 + 2.5*V.works)), mat = pickMat(w, R), step = (w === 'wilds' || w === 'magic' ? 14 : 12)*M;
+  const spokes = [];
+  hubs.forEach(([a, z, w, t], hi) => { const R = rgRand(s, 1310, hi), n = 2 + Math.floor(R()*(0.5 + 2.5*V.works)), mat = pickMat(w, R), step = (w === 'wilds' || w === 'magic' ? 14 : 12)*M; spokes[hi] = ways.length;
     for(let k = 0; k < n; k++) addWay(walk(a, z, k/n*Math.PI*2 + R()*0.8, (120 + 380*R()*t)*M, step, null, R), k === 0 || R() < 0.7 ? mat : pickMat(w, R), w, false, R);
     let near = null, nd = Infinity; hubs.forEach((h2, hj) => { if(hj <= hi) return; const d = Math.hypot(h2[0] - a, h2[1] - z); if(d < nd){ nd = d; near = h2; } });
     if(near && nd < 1400*M) addWay(walk(a, z, Math.atan2(near[1] - z, near[0] - a), nd*1.6, step*1.5, [near[0], near[1]], R), w === 'ruins' ? 'gravel' : w === 'cities' || w === 'neon' ? 'asphalt' : 'earth', w, false, R); });
@@ -20761,6 +21141,35 @@ function rgStore(V){
     while(i + 1 < P.length){ const p = P[i], q = P[i + 1], du = (q.u - p.u) || 1; if(q.u < next){ i++; continue; } const t = (next - p.u)/du;
       fn(p.a + (q.a - p.a)*t, p.z + (q.z - p.z)*t, -(q.z - p.z)/du, (q.a - p.a)/du, next, p.dec); next += step; } };
   out.ways = ways;
+
+
+
+
+
+
+  const walls = []; out.walls = walls; const WALLED = { wilds: 0.5, magic: 0.6, ruins: 0.3 };
+  hubs.forEach(([a0, z0, w, t], hi) => { const R = rgRand(s, 1340, hi); if(!WALLED[w] || R() > WALLED[w] || Math.hypot(a0, z0 - L.z0) > W*1.6) return;
+    const rr = (60 + 80*t)*M; if(walls.some(wl => Math.hypot(wl.a - a0, wl.z - z0) < (wl.rr + rr)*1.6)) return;
+    const p1 = R()*6.283, p2 = R()*6.283, rOf = th => rr*(1 + 0.09*Math.sin(3*th + p1) + 0.05*Math.sin(5*th + p2));
+    const n = Math.max(24, Math.min(160, Math.round(2*Math.PI*rr/(12*M)))), pts = [];
+    for(let k = 0; k < n; k++){ const th = k/n*2*Math.PI, r = rOf(th); pts.push([a0 + Math.cos(th)*r, z0 + Math.sin(th)*r]); }
+    const gap = new Uint8Array(n), tower = new Uint8Array(n), broke = w === 'ruins' ? new Float32Array(n) : null;
+    for(let k = 0; k < n; k++){ const A = pts[k], B = pts[(k + 1) % n]; if(Math.abs(A[1]) > W*0.47 || T.true(A[0], A[1], W*0.002) <= TR.sea + 0.5*M){ gap[k] = 1; gap[(k + n - 1) % n] = 1; continue; }
+      for(let q = 0; q <= 6; q++){ const u = q/6; if(wayGap(A[0] + (B[0] - A[0])*u, A[1] + (B[1] - A[1])*u) < 0.5*M){ gap[k] = 1; break; } } }
+    if(broke) for(let k = 0; k < n; k++){ if(mnValue(k*0.35, hi*1.7, s + 1341) < 0.36) gap[k] = 1; broke[k] = 0.3 + 0.7*mnValue(k*0.9, hi*2.3, s + 1342); }
+    const every = Math.max(2, Math.round(36*M/(2*Math.PI*rr/n)));
+    for(let k = 0; k < n; k++){ if(k % every === 0 || gap[k] !== gap[(k + n - 1) % n]) tower[k] = 1; if(gap[k] && gap[(k + n - 1) % n]) tower[k] = 0; }
+    walls.push({ a: a0, z: z0, w, rr, rOf, pts, n, gap, tower, broke, H: (6 + 4*R())*M, T: (2 + R())*M, roof: w !== 'ruins' && R() < 0.75, tile: R() < 0.4, i: hi }); });
+
+
+
+  { const named = []; hubs.forEach(([ha, hz, w, t], hi) => { const wy = ways[spokes[hi]]; if(!wy || wy.w !== w || named.some(([a2, z2]) => Math.hypot(a2 - ha, z2 - hz) < 320*M)) return;
+      const wl = walls.find(q => q.a === ha && q.z === hz), rT = wl ? wl.rr*1.18 + 8*M : (90 + 180*t)*0.7*M, P = wy.pts; let i = 1; while(i < P.length && Math.hypot(P[i].a - ha, P[i].z - hz) < rT) i++; if(i >= P.length) return;
+      const A = P[i - 1], B = P[i], dl = Math.hypot(B.a - A.a, B.z - A.z) || 1, nx = -(B.z - A.z)/dl, nz = (B.a - A.a)/dl, off = wy.half + 1.8*M, a = B.a + nx*off, z = B.z + nz*off; if(Math.abs(z) > W*0.47 || ground(a, z).wet) return;
+      named.push([ha, hz]); const I = V.regionAt(a, z), R = rgRand(s, 1350, hi);
+      out.push({ c: 'prop', w, kind: 'welcome', hM: pkMetres('welcome', R()), a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(B.z - A.z, B.a - A.a), mark: { say: rkTownName(R, w), ban: I.faction } }); }); }
+
+  if(walls.length) onWall = (a, z, room) => { for(const wl of walls){ const da = a - wl.a, dz = z - wl.z, d = Math.hypot(da, dz); if(d < wl.rr*1.2 + room && Math.abs(d - wl.rOf(Math.atan2(dz, da))) < room + wl.T) return true; } return false; };
 
 
 
@@ -20827,7 +21236,7 @@ function rgStore(V){
         let kind = null; for(let t = 0; t < 3 && !kind; t++){ const u = R(), k2 = !fam ? pkArchOf(PK_STYLE[w], u) : seat.hamlet ? pkVernacularOf(fam, u) : (k ? farm.out : farm.house)[Math.floor(u*(k ? farm.out : farm.house).length)];
           if(rgFits(k2, g, seat.hamlet ? 0.3 : 0.1)) kind = k2; } if(!kind) continue;
         const hM = pkMetres(kind, Math.pow(R(), 1.5)), wM = pkMetres(kind, R(), 1);
-        if(!offWay(a, z, wM*M*0.5 + 2*M) || placed.some(([pa, pz, pw]) => Math.hypot(a - pa, z - pz) < (pw + wM)*M*0.55 + 3*M)) continue;
+        if(!offWay(a, z, wM*M*0.5 + 2*M) || (onWall && onWall(a, z, (wM*0.5 + 1.5)*M)) || placed.some(([pa, pz, pw]) => Math.hypot(a - pa, z - pz) < (pw + wM)*M*0.55 + 3*M)) continue;
         const face = fc ?? Math.atan2(sz - z, sa - a), ft = footing(a, z, wM, face); if(!ft) continue;
         placed.push([a, z, wM]); out.push({ c: 'bldg', w, kind, hM, wM, face, a, z, r, rs: (R()*4294967296) >>> 0, ...ft }); }
 
@@ -20859,7 +21268,7 @@ function rgStore(V){
 
 
   { const CELL = 2600*M, span = W*2.2, i0 = Math.floor(-span/CELL), i1 = Math.ceil(span/CELL), j0 = Math.floor((L.z0 - span)/CELL), j1 = Math.ceil((L.z0 + span)/CELL);
-    const put = (o, a, z, R) => { if(Math.abs(z) > W*0.47 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M)) return; out.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0 }); };
+    const put = (o, a, z, R) => { if(Math.abs(z) > W*0.47 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M) || (onWall && onWall(a, z, 2*M))) return; out.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0 }); };
     for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
       const a0 = (i + 0.15 + 0.7*mnHash(i, j, s + 1501))*CELL, z0 = (j + 0.15 + 0.7*mnHash(i, j, s + 1502))*CELL; if(Math.abs(z0) > W*0.44 || Math.hypot(a0, z0 - L.z0) > span) continue;
       const w = V.worldAt(a0, z0); if(w !== 'wilds' && w !== 'magic') continue; if(mnHash(i, j, s + 1503) > (w === 'magic' ? 0.6 : 0.5)) continue;
@@ -20902,7 +21311,7 @@ function rgStore(V){
     if(kinds && RN() < 0.7) for(let k = 0, n = 2 + Math.floor(RN()*3); k < n; k++){ const an = RN()*Math.PI*2, d = (60 + 140*RN())*M, a = Math.cos(an)*d, z = L.z0 + Math.sin(an)*d, kind = kinds[Math.floor(RN()*kinds.length)], hu = RN(), wu = RN();
       if(Math.abs(z) > W*0.46 || V.worldAt(a, z) !== w0) continue; const g = ground(a, z); if(g.wet || g.slope > 0.35 || !rgFits(kind, g, 0.5)) continue;
       const hM = Math.min(kind === 'wizard' ? 36 : 28, pkMetres(kind, 0.3 + 0.4*hu)), wM = pkMetres(kind, wu, 1);
-      const face = Math.atan2(L.z0 - z, -a), ft = footing(a, z, wM, face); if(!ft) continue;
+      const face = Math.atan2(L.z0 - z, -a), ft = footing(a, z, wM, face); if(!ft || (onWall && onWall(a, z, (wM*0.5 + 2)*M))) continue;
       out.push({ c: 'bldg', w: w0, kind, hM, wM, face, near: true, a, z, r: d, rs: (RN()*4294967296) >>> 0, ...ft }); } }
 
 
@@ -21126,7 +21535,7 @@ function rgStore(V){
 
 
   for(const wy of ways){ if(wy.deck !== undefined) continue; const w = wy.w, R = rgRand(s, 1200, wy.i), kerb = wy.half + 1.6*M, side = () => R() < 0.5 ? 1 : -1;
-    const put = (kind, a, z, nx, nz, sd2, off = 0, extra = {}) => { const a2 = a + nx*sd2*(kerb + off), z2 = z + nz*sd2*(kerb + off); if(Math.abs(z2) > W*0.485 || ground(a2, z2).wet) return null;
+    const put = (kind, a, z, nx, nz, sd2, off = 0, extra = {}) => { const a2 = a + nx*sd2*(kerb + off), z2 = z + nz*sd2*(kerb + off); if(Math.abs(z2) > W*0.485 || ground(a2, z2).wet || (onWall && onWall(a2, z2, 1.5*M))) return null;
       const o = { c: 'prop', w, kind, hM: pkMetres(kind, R()), a: a2, z: z2, r: Math.hypot(a2, z2 - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nz*sd2, -nx*sd2), ...extra }; out.push(o); return o; };
     if(RG_LIT_WAYS.includes(wy.mat) && w !== 'wilds'){ let k = 0; along(wy, 25*M, (a, z, nx, nz, u, dec) => { k++; if(inTown(w, a, z) && dec < 0.7 && R() < Math.min(1, 0.3 + 1.4*V.clutter)){ put('lamp', a, z, nx, nz, k % 2 ? 1 : -1);
 
@@ -21156,6 +21565,25 @@ function rgStore(V){
       return { c: 'egg', w, kind: k, hM: pkMetres(k, R()) }; });
     sow(9, W*0.0015, W*0.004, W*0.03, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(!PK_EGGS.caps.worlds.includes(w) || R() > PK_EGGS.caps.q) return null;
       return { c: 'egg', w, kind: 'caps', hM: pkMetres('caps', R()) }; }); }
+
+
+
+
+
+
+  for(const wy of ways){ if(wy.deck !== undefined) continue; const P = wy.pts, RB = rgRand(s, 1290, wy.i); let r0 = V.regions.at(P[0].a, P[0].z).id, last = null;
+    for(let i = 1; i < P.length; i++){ const r1 = V.regions.at(P[i].a, P[i].z).id; if(r1 === r0) continue; const A = P[i - 1], B = P[i], from = r0; r0 = r1;
+
+      let lo = 0, hi = 1; for(let k = 0; k < 10; k++){ const m = (lo + hi)/2; if(V.regions.at(A.a + (B.a - A.a)*m, A.z + (B.z - A.z)*m).id === from) lo = m; else hi = m; }
+      const m = (lo + hi)/2, a = A.a + (B.a - A.a)*m, z = A.z + (B.z - A.z)*m; if(Math.abs(z) > W*0.47 || Math.hypot(a, z - L.z0) > W*1.2 || (last && Math.hypot(a - last[0], z - last[1]) < 250*M)) continue; last = [a, z];
+      const dl = Math.hypot(B.a - A.a, B.z - A.z) || 1, da = (B.a - A.a)/dl, dz = (B.z - A.z)/dl, nx = -dz, nz = da, IA = V.regions.info(from), IB = V.regions.info(r1), toA = Math.atan2(-dz, -da), toB = Math.atan2(dz, da);
+      const mark = (kind, w, sd, back, extra) => { const off = wy.half + (kind === 'banner' ? 3 : 1.6)*M, a2 = a + nx*sd*off + da*back*M, z2 = z + nz*sd*off + dz*back*M; if(ground(a2, z2).wet) return;
+        out.push({ c: 'prop', w, kind, hM: pkMetres(kind, RB()), a: a2, z: z2, r: Math.hypot(a2, z2 - L.z0), rs: (RB()*4294967296) >>> 0, ...extra }); };
+      const signs = I => I.world === 'cities' || I.world === 'neon' || I.world === 'builders';
+      if(signs(IB)) mark('welcome', IB.world, 1, 6, { face: toA, mark: { say: IB.name, ban: IB.faction } });
+      if(signs(IA)) mark('welcome', IA.world, -1, -6, { face: toB, mark: { say: IA.name, ban: IA.faction } });
+      if(!signs(IA) || !signs(IB)) mark('boundary', signs(IA) ? IB.world : IA.world, RB() < 0.5 ? 1 : -1, 0, { face: toA, mark: { rune: IA.faction.rune, rune2: IB.faction.rune } });
+      if(IA.faction !== IB.faction){ if(!signs(IB)) mark('banner', IB.world, -1, 4, { face: toA, mark: { ban: IB.faction } }); if(!signs(IA)) mark('banner', IA.world, 1, -4, { face: toB, mark: { ban: IA.faction } }); } } }
 
 
 
@@ -21207,7 +21635,9 @@ function rgStore(V){
 
 
   const seenIds = new Set();
-  for(const o of out){ let id = RG_ID_CLASS[o.c] + '-' + (o.kind || o.c) + '-' + (o.rs >>> 0).toString(36); while(seenIds.has(id)) id += "'"; seenIds.add(id); o.id = id; o.tags = rgTagsOf(o); }
+
+  for(const o of out){ let id = RG_ID_CLASS[o.c] + '-' + (o.kind || o.c) + '-' + (o.rs >>> 0).toString(36); while(seenIds.has(id)) id += "'"; seenIds.add(id); o.id = id; o.tags = rgTagsOf(o);
+    const I = V.regionAt(o.a, o.z); o.region = I.name; o.held = I.faction.name; }
   RG_KEPT_STORES.set(key, out); if(RG_KEPT_STORES.size > 4) RG_KEPT_STORES.delete(RG_KEPT_STORES.keys().next().value);
   return out;
 }
@@ -21222,7 +21652,7 @@ function rgTagsOf(o){ const t = [RG_ID_CLASS[o.c] || o.c, o.kind, o.w].filter(Bo
 
 
 function ringStateOf(o, t = 0, env = {}){
-  const base = { id: o.id, tags: o.tags, kind: o.kind, a: o.a, z: o.z };
+  const base = { id: o.id, tags: o.tags, kind: o.kind, a: o.a, z: o.z, region: o.region, held: o.held };
   if(o.c !== 'wild') return base;
   const n = wkCount(o.kind, o.rs), members = []; for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); members.push({ id: o.id + '#' + j, on: st.on, x: st.x, z: st.z, y: st.y, pose: st.pose, face: st.face }); }
   return { ...base, members }; }
@@ -21427,7 +21857,7 @@ function rgPaintLand(x, mk, dk, V){
   const keep = (a, z, w0 = 0) => { const r = Math.hypot(a, z - L.z0), ph = angOf(a, z), dd = r; if(dd <= 0) return null;
     if(Math.abs(ph) > PHI + Math.atan2(w0 + W*0.0005, Math.max(r, 1e-9))) return null; return dd; };
 
-  const colsOf = (w, day, haze, o = null) => { const lights = o ? V.lightsAt(w, o.a, o.z) : V.lightsOf(w), g = lights[0], g2 = lights[1], pal = o ? rgPaletteOf(V, o, w) : null;
+  const colsOf = (w, day, haze, o = null, pos = o) => { const lights = pos ? V.lightsAt(w, pos.a, pos.z) : V.lightsOf(w), g = lights[0], g2 = lights[1], pal = o ? rgPaletteOf(V, o, w) : null;
     const metal = w === 'ruins' ? [120, 108, 96] : w === 'neon' ? [44, 42, 60] : w === 'magic' ? rsMix([200, 196, 230], V.g1, 0.15) : [212, 216, 228];
     const lit = rgLit(V, rsMix(metal, [255, 246, 226], 0.15), day, haze, AIR), dark = rgLit(V, rsMix(metal, BLACK, 0.35), day, haze, AIR);
 
@@ -21529,7 +21959,7 @@ function rgPaintLand(x, mk, dk, V){
     return av >= 1 ? 1 : av <= 0 ? 0 : rsSmooth(q - 0.04, q + 0.04, av); };
   const rgPaintWild = (o, l, dd) => { const K = WK_KINDS[o.kind], wday = ringDay(L, o.a), night = 1 - rsSmooth(0.3, 0.7, wday), pres = rgWildHere(o, night); if(pres < 0.02) return;
     const haze = hazeOf(dd), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday))*(0.5 + 0.5*litAt(o.a, o.z, meshH(o.a, o.z) + 0.8*M1s)), n = wkCount(o.kind, o.rs), t = V.time ? MT : 0, step = V.frame !== null && V.time ? Math.min(2.5, rgStep(V)) : 0;
-    const env = { wind: rgWind(V) }, M1 = W*0.00025, fly = WK_FLYERS.includes(o.kind), c = { ...colsOf(o.w, cday, haze), flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, g, Math.max(0.4, wday), haze, AIR)) }, out2 = [];
+    const env = { wind: rgWind(V) }, M1 = W*0.00025, fly = WK_FLYERS.includes(o.kind), c = { ...colsOf(o.w, cday, haze, null, o), flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, g, Math.max(0.4, wday), haze, AIR)) }, out2 = [];
     for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); if(!st.on) continue;
       const a = o.a + st.x*M1, z = o.z + st.z*M1, f = foot(a, z); if(!f) continue; const m = f[2], sz = K.size*m*RG_WILD_LICENCE;
       if((sz < px(0.7) && !fly) || sz > wh*0.5 || (f[3] <= TR.sea && !o.afloat && !st.y)) continue;
@@ -21557,7 +21987,9 @@ function rgPaintLand(x, mk, dk, V){
       const hw = RG_NARROW_TREES.includes(o.kind) ? 0.045 : 0.13, X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || hl < px(4) ? null : [X - h*hw, X + h*hw, Y - h*0.8, Y - h*0.4])) return;
 
       const fadeIn = rgClamp((hl - px(1))/px(0.9)); if(fadeIn < 1) x.globalAlpha = fadeIn;
-      const green = o.kind === 'olive' ? [118, 134, 106] : RG_CACTI.includes(o.kind) ? rsMix([96, 128, 98], V.land, 0.2) : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, cday, haze);
+
+      const el = o.w === 'magic' ? V.elementAt(o.a, o.z) : null, green0 = o.kind === 'olive' ? [118, 134, 106] : RG_CACTI.includes(o.kind) ? rsMix([96, 128, 98], V.land, 0.2) : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35);
+      const green = el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, cday, haze, null, o);
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], cday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), cday, haze, AIR), body: rgLit(V, green, cday, haze, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), cday, haze, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], cday, haze, AIR) : null,
 
@@ -21597,11 +22029,11 @@ function rgPaintLand(x, mk, dk, V){
     if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h*lodOf(o, f) < px(o.kind === 'caps' ? 1.2 : 3) || h > nearCut) return;
       if(E.loud && o0 !== loudOne) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*(o.kind === 'warden' ? 4.2 : o.kind === 'spire' ? 1.1 : 1.8), Y)) return;
-      const c = colsOf(o.w, cday, haze), vw = viewOf(o); if(vw.sn < 0 && o.kind !== 'diner') mirrored(X, () => pkEgg(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
-    if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, cday, haze); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
+      const c = colsOf(o.w, cday, haze, null, o), vw = viewOf(o); if(vw.sn < 0 && o.kind !== 'diner') mirrored(X, () => pkEgg(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+    if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, cday, haze, null, o); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
     if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h*lodOf(o, f) < px(3) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - bw/2, X + bw/2, Y - h, Y)) return;
-      pkBoard(x, X, Y, m, { ...colsOf(o.w, cday, haze), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
+      pkBoard(x, X, Y, m, { ...colsOf(o.w, cday, haze, null, o), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
     if(o.c === 'glim'){ nightDot(o, f, l, wday, haze, o.big); return; }
     if(o.c === 'prop'){ const h = o.hM*f[2], hl = h*lodOf(o, f); if(hl < px(3)){ if(o.kind === 'lamp') nightDot(o, f, l, wday, haze, 0.8); return; } if(h > (RG_WIDE.includes(o.kind) ? wh*0.6 : nearCut)) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
@@ -21616,7 +22048,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
       const aim = o.kind === 'dish' ? rgDishAim(s, V.time > 0 ? FT : 0, ((o.rs >>> 5) % 1000)/1000*0.9) : null;
-      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0) + Math.min(0.12, slopeAt(o.a, o.z)*0.15)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(aim ? { ...o, face: aim[0] } : o, f), ...(aim ? { dishEl: aim[1], sun3: DSUN } : {}) };
+      const c = colsOf(o.w, cday, haze, null, o), sink = h*(0.025 + (o.sink || 0) + Math.min(0.12, slopeAt(o.a, o.z)*0.15)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(aim ? { ...o, face: aim[0] } : o, f), ...(aim ? { dishEl: aim[1], sun3: DSUN } : {}), ...(o.mark ? { mark: o.mark, flap: V.time ? ST : 0 } : {}) };
 
 
 
@@ -21639,7 +22071,7 @@ function rgPaintLand(x, mk, dk, V){
       if(o.next){ const f2 = foot(o.next[0], o.next[1]); if(f2) pkWires(x, [X, Y - h*0.95], [f2[0], f2[1] - o.hM*f2[2]*0.95], h, c, rgPx); } return; }
     if(o.c === 'bot'){ const h = o.hM*f[2]; if(h*lodOf(o, f) < px(3) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h, X + h, Y - h*(o.kind === 'drone' ? 3.4 : 1.1), Y)) return;
-      const c = { ...colsOf(o.w, cday, haze) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
+      const c = { ...colsOf(o.w, cday, haze, null, o) }; c.eye = c.glow; const nt = 1 - rsSmooth(0.3, 0.7, wday);
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;
       if(PK_BOTS3.includes(o.kind)){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
       const bob = V.time && o.kind === 'drone' ? Math.sin(ST*1.3 + (o.rs & 63))*h*0.12 : 0;
@@ -21647,7 +22079,7 @@ function rgPaintLand(x, mk, dk, V){
 
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.6) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y > wh + hh*0.2 || !vis(l, X - hh*4, X + hh*4, Y - hh*(o.kind === 'kite' ? 5 : 1.4), Y)) return;
-    const glow = colsOf(o.w, cday, haze).glow;
+    const glow = colsOf(o.w, cday, haze, null, o).glow;
     const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], cday, haze, AIR), lit: rgLit(V, [236, 240, 246], cday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
       slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR), weather: V.weather, wind: rgWind(V), seed: o.rs };
@@ -21676,7 +22108,7 @@ function rgPaintLand(x, mk, dk, V){
     const k = F/b[2], day = ringDay(L, o.a), big = { sp: 0.02 + 0.08*o.h, mo: 0.006 + 0.02*o.h, do: 0.006 + 0.016*o.h, to: 0.02 + 0.07*o.h, wr: 0.006 + 0.02*o.h, cr: 0.012 }[o.kind]; if(big && W*big/o.d > 0.4) return;
     const X = b[0], Y = o.kind === 'sh' || o.kind === 'sa' || o.kind === 'br' ? b[1] : stand(l, b[0], b[1]);
     if(big && hidden(l, X - W*big*k*0.3, X + W*big*k*0.3, Y - W*big*k)) return;
-    const night = 1 - rsSmooth(0.3, 0.7, day), haze = hazeOf(o.d), c = colsOf(o.w, day, haze);
+    const night = 1 - rsSmooth(0.3, 0.7, day), haze = hazeOf(o.d), c = colsOf(o.w, day, haze, null, o);
     rgWork(x, o, X, Y, k, c, night, o.R, V, e);
   };
 
@@ -21781,6 +22213,56 @@ function rgPaintLand(x, mk, dk, V){
         for(let k = 0; k < n; k++){ const t = (k + Rh())/n, X = A2[0] + (B2[0] - A2[0])*t, Y = A2[1] + (B2[1] - A2[1])*t;
           if(f.edge === 'hedge') rsPoly(x, [[X - hh*0.3, Y + hh*0.1], [X, Y - hh*(0.15 + 0.25*Rh())], [X + hh*0.3, Y + hh*0.1]], rsCss(lit(rsMix(col, Rh() < 0.5 ? [255, 246, 226] : [0, 0, 0], 0.15))));
           else { x.fillStyle = rsCss(lit(rsMix(col, Rh() < 0.5 ? [255, 246, 226] : [0, 0, 0], 0.18)), 0.8); x.fillRect(X - hh*0.25, Y + hh*(0.15 + 0.6*Rh()), hh*0.45, hh*0.2); } } } } };
+
+
+
+
+
+  const wallPieces = []; for(const wl of store.walls || []){ if(keep(wl.a, wl.z, wl.rr*1.3) == null || Math.hypot(wl.a, wl.z - L.z0) - wl.rr > W*0.9) continue;
+    for(let k = 0; k < wl.n; k++){ const A = wl.pts[k], B = wl.pts[(k + 1) % wl.n];
+      if(!wl.gap[k]) wallPieces.push({ wl, k, A, B, dd: Math.min(cutOf(A[0], A[1]), cutOf(B[0], B[1])) - wl.T });
+      if(wl.tower[k]) wallPieces.push({ wl, k, tw: true, A, dd: cutOf(A[0], A[1]) - 4.5*W*0.00025 }); } }
+  const paintWallPiece = ({ wl, k, A, B, tw }) => {
+    const M1 = W*0.00025, ca = Math.cos(A[0]), sa = Math.sin(A[0]), up = -(ca*SUN0[0] + sa*SUN0[1]), al = -sa*SUN0[0] + ca*SUN0[1], ac = SUN0[2], hl = Math.hypot(al, ac) || 1;
+    const e0 = Math.max(TR.sea, meshH(A[0], A[1])), day = ringDay(L, A[0])*(0.45 + 0.55*litAt(A[0], A[1], e0)), haze = hazeOf(cutOf(A[0], A[1]));
+    const el = wl.w === 'magic' ? V.elementAt(wl.a, wl.z) : null, stone = rsMix(wl.w === 'ruins' ? [150, 140, 124] : wl.w === 'magic' ? [196, 190, 206] : [182, 172, 152], el ? el.ground : V.land, 0.12);
+    const lit = (col, k2) => rgLit(V, col, day*k2, haze, AIR), faceK = (nA, nZ) => up <= 0 ? 0.8 : 0.62 + 0.38*Math.max(-0.4, (nA*al + nZ*ac)/(Math.hypot(nA, nZ)*hl)), topK = up <= 0 ? 0.85 : 0.75 + 0.3*Math.min(1, up*2);
+    const poly = (P, col) => rsPoly(x, P.map(p => [p[0], p[1]]), rsCss(col));
+    if(!tw){ const da = B[0] - A[0], dz = B[1] - A[1], ln = Math.hypot(da, dz) || 1, nA = -dz/ln*wl.T/2, nZ = da/ln*wl.T/2, mx = (A[0] + B[0])/2 - wl.a, mz = (A[1] + B[1])/2 - wl.z, out = nA*mx + nZ*mz > 0 ? 1 : -1;
+      const e1 = Math.max(TR.sea, meshH(B[0], B[1])), H = wl.H*(wl.broke ? wl.broke[k] : 1);
+      const P = (u, sd, h) => at(A[0] + da*u + nA*sd, A[1] + dz*u + nZ*sd, e0 + (e1 - e0)*u + h);
+      const oA = P(0, out, 0), oB = P(1, out, 0), oA2 = P(0, out, H), oB2 = P(1, out, H), iA = P(0, -out, 0), iB = P(1, -out, 0), iA2 = P(0, -out, H), iB2 = P(1, -out, H);
+      if(!oA || !oB || !oA2 || !oB2 || !iA || !iB || !iA2 || !iB2) return; const hp = Math.max(oA[1] - oA2[1], iA[1] - iA2[1]);
+      if(Math.abs(oB[0] - oA[0]) > ww*0.8 || hp > wh*0.8) return;
+      const cOut = lit(stone, faceK(nA*out, nZ*out)), cIn = lit(rsMix(stone, [0, 0, 0], 0.06), faceK(-nA*out, -nZ*out)), cTop = lit(rsMix(stone, [255, 248, 232], 0.08), topK);
+      if(hp < px(1.2)){ x.strokeStyle = rsCss(cOut); x.lineWidth = Math.max(px(0.6), hp); x.beginPath(); x.moveTo(oA2[0], oA2[1]); x.lineTo(oB2[0], oB2[1]); x.stroke(); return; }
+      const outNear = cutOf((A[0] + B[0])/2 + nA*out, (A[1] + B[1])/2 + nZ*out) < cutOf((A[0] + B[0])/2 - nA*out, (A[1] + B[1])/2 - nZ*out);
+
+      const merlons = () => { if(hp < px(18) || wl.broke) return; const nm = Math.max(1, Math.round(ln/(2.5*M1))), sdIn = out*(1 - 2*0.6*M1/wl.T);
+        for(let m = 0; m < nm; m++){ const u0 = (m + 0.2)/nm, u1 = (m + 0.75)/nm, sdF = outNear ? out : sdIn, Q = [P(u0, sdF, H), P(u1, sdF, H), P(u1, sdF, H + 1.2*M1), P(u0, sdF, H + 1.2*M1)]; if(Q.some(q => !q)) continue; poly(Q, outNear ? cOut : cIn); } };
+
+      const top = wl.broke ? (p, q, n) => { const T0 = []; for(let m = 0; m <= n; m++){ const u = m/n, j = (mnHash(wl.i*131 + k, m, s + 1343) - 0.5)*hp*0.5; T0.push([p[0] + (q[0] - p[0])*u, p[1] + (q[1] - p[1])*u + Math.abs(j)]); } return T0; } : (p, q) => [p, q];
+      if(outNear){ poly([iA, iB, ...top(iB2, iA2, 5)], cIn); if(!wl.broke) merlons(); poly([oA2, oB2, iB2, iA2], cTop); poly([oA, oB, ...top(oB2, oA2, 5)], cOut); merlons(); }
+      else { poly([oA, oB, ...top(oB2, oA2, 5)], cOut); merlons(); poly([oA2, oB2, iB2, iA2], cTop); poly([iA, iB, ...top(iB2, iA2, 5)], cIn); }
+
+      if(hp > px(10)){ const nc = Math.min(8, Math.floor(hp/px(5))), Fn = outNear ? [oA, oB, oA2, oB2] : [iA, iB, iA2, iB2]; x.strokeStyle = rsCss(rsMix(outNear ? cOut : cIn, [0, 0, 0], 0.18), 0.5); x.lineWidth = Math.max(px(0.4), hp*0.012); x.beginPath();
+        for(let c = 1; c < nc; c++){ const u = c/nc; x.moveTo(Fn[0][0] + (Fn[2][0] - Fn[0][0])*u, Fn[0][1] + (Fn[2][1] - Fn[0][1])*u); x.lineTo(Fn[1][0] + (Fn[3][0] - Fn[1][0])*u, Fn[1][1] + (Fn[3][1] - Fn[1][1])*u); } x.stroke(); }
+      return; }
+
+    const tr = (3.3 + 1.2*mnHash(wl.i, k, s + 1344))*M1, Ht = (wl.broke ? wl.H*(0.4 + 0.8*mnHash(wl.i, k, s + 1345)) : wl.H + 3.5*M1), b0 = at(A[0], A[1], e0), b1 = at(A[0], A[1], e0 + Ht); if(!b0 || !b1) return;
+    const rp = tr*F/b0[2], X = b0[0], Yb = b0[1], Yt = b1[1]; if(Yb - Yt < px(1.2) || rp > ww*0.3 || Yb - Yt > wh*0.9) return;
+
+    const ex = -A[0], ez = L.z0 - A[1], el2 = Math.hypot(ex, ez) || 1, tq = at(A[0] + ex/el2*tr, A[1] + ez/el2*tr, e0 + Ht), ry = tq ? Math.max(0, tq[1] - Yt) : 0;
+    const sdx = V.sun.LT[0] >= 0 ? 1 : -1, cLit = lit(stone, up <= 0 ? 0.8 : 0.98), cSh = lit(rsMix(stone, [0, 0, 0], 0.1), up <= 0 ? 0.8 : 0.66);
+    const g = x.createLinearGradient(X - rp, 0, X + rp, 0); g.addColorStop(0, rsCss(sdx < 0 ? cLit : cSh)); g.addColorStop(0.5, rsCss(rsMix(cLit, cSh, 0.4))); g.addColorStop(1, rsCss(sdx < 0 ? cSh : cLit));
+    x.fillStyle = g; x.beginPath(); x.moveTo(X - rp, Yt); x.lineTo(X - rp, Yb); x.ellipse(X, Yb, rp, Math.max(0.01, ry), 0, Math.PI, 0, true); x.lineTo(X + rp, Yt); x.closePath(); x.fill();
+    if(rp > px(3)){ x.fillStyle = rsCss(rsMix(cSh, [0, 0, 0], 0.45)); for(const u of [0.35, 0.68]){ const yy = Yt + (Yb - Yt)*u; x.fillRect(X - rp*0.06 - rp*0.25*sdx, yy, Math.max(px(0.6), rp*0.1), (Yb - Yt)*0.1); } }
+    if(wl.roof){ const rh = (Yb - Yt)*0.55 + rp*1.6, el3 = wl.w === 'magic' && el ? el.lights[0] : null, rc = el3 ? rsMix([74, 70, 96], el3, 0.25) : wl.tile ? [150, 76, 58] : [82, 86, 102], cR = lit(rc, 0.95), cR2 = lit(rsMix(rc, [0, 0, 0], 0.3), 0.8);
+      const g2 = x.createLinearGradient(X - rp, 0, X + rp, 0); g2.addColorStop(0, rsCss(sdx < 0 ? cR : cR2)); g2.addColorStop(1, rsCss(sdx < 0 ? cR2 : cR)); x.fillStyle = g2;
+      x.beginPath(); x.moveTo(X - rp*1.15, Yt); x.lineTo(X, Yt - rh); x.lineTo(X + rp*1.15, Yt); x.ellipse(X, Yt, rp*1.15, Math.max(0.01, ry*1.15), 0, 0, Math.PI); x.closePath(); x.fill(); return; }
+    x.fillStyle = rsCss(lit(rsMix(stone, [0, 0, 0], 0.25), 0.8)); x.beginPath(); x.ellipse(X, Yt, rp*0.9, Math.max(0.01, ry*0.9), 0, 0, Math.PI*2); x.fill();
+    if(rp > px(2.5)){ const nm = 6, mw = rp*0.22, mh = Math.max(px(0.8), rp*0.32); x.fillStyle = rsCss(rsMix(cLit, cSh, 0.3));
+      for(let m = 0; m < nm; m++){ const u = (m + 0.5)/nm, xx = X - rp + 2*rp*u, j = wl.broke ? mnHash(wl.i*7 + k, m, s + 1346) : 1; if(j < 0.35) continue; x.fillRect(xx - mw/2, Yt - mh*j + ry*Math.sqrt(Math.max(0, 1 - (2*u - 1)**2)), mw, mh*j); } } };
 
 
 
@@ -21983,6 +22465,7 @@ function rgPaintLand(x, mk, dk, V){
   for(const t of things) if(t.l && (t.o || t.ok)) items.push({ dd: t.dd - (t.rad || 0) - 0.8*cellNear(t.dd), t });
   for(let b = 1; b < lay.length; b++){ const dn = lay[b - 1].d, df = lay[b].d; for(const r of collectWays(dn, df)) items.push({ dd: r.dd - 0.8*cellNear(r.dd), r }); }
   for(const pc of fieldPieces) items.push({ dd: pc.dd - 0.8*cellNear(pc.dd), pc });
+  for(const wp of wallPieces) items.push({ dd: wp.dd - 0.8*cellNear(wp.dd), wp });
 
   const MIST = { fog: 0.075, rain: 0.035, storm: 0.03, snow: 0.045 }[V.weather] || 0, MISTC = rsMix(AIR, [236, 238, 242], 0.35), MISTB = 1 - Math.pow(1 - MIST, 16/NBK);
   if(MIST) for(let b = 1; b < lay.length; b++) if(lay[b].d > W*0.012) items.push({ dd: lay[b].d, mist: 1 });
@@ -22068,6 +22551,7 @@ function rgPaintLand(x, mk, dk, V){
     else if(it.t){ const t = it.t; if(t.o) drawWork(t.o, t.l); else if(t.ok){ cur = t; t.draw(t.l); } }
     else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys);
     else if(it.pc) paintFieldPiece(it.pc);
+    else if(it.wp) paintWallPiece(it.wp);
     else if(it.mist){ x.fillStyle = rsCss(MISTC, MISTB); x.fillRect(0, 0, ww, wh); } }
 
   mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
@@ -34513,264 +34997,6 @@ function moonGlyph(p, { size = 16, lit = 'currentColor', rim = 'currentColor', t
 }
 
 
-/* ==== seedWords.js ==== */
-const ADJ = [
-  "quiet", "hollow", "silver", "gilded", "ashen", "amber", "velvet", "wandering", "sleeping", "waking", "drowned",
-  "burning", "frozen", "gentle", "feral", "tender", "bitter", "sweet", "distant", "primal", "hidden", "secret",
-  "open", "broken", "mended", "unfixable", "patient", "restless", "lucid", "dreaming", "fading", "rising",
-  "falling", "shining", "dim", "pale", "dark", "bright", "golden", "copper", "iron", "glass", "paper", "woven",
-  "folded", "torn", "stitched", "painted", "inked", "faint", "sapient", "soft", "sharp", "cosmological",
-  "slow", "swift", "still", "wild", "lonely", "twin", "first", "last", "lost", "found", "new", "old", "ancient",
-  "young", "ageless", "spectral", "ghostly", "hallowed", "holy", "profane", "sacred", "strange", "familiar",
-  "foreign", "calcined", "cruel", "honest", "crooked", "sublime", "curved", "spiral", "saturnine", "hexed",
-  "charmed", "cursed", "blessed", "feathered", "furred", "scaled", "thorned", "blooming", "wilted", "salted",
-  "sweetened", "smoky", "misty", "foggy", "rainy", "snowy", "windy", "stormy", "sunlit", "moonlit", "starlit",
-  "dusky", "dawning", "midnight", "vernal", "autumnal", "wintry", "summer", "hungry", "magnetic", "empowered",
-  "weary", "tireless", "brave", "shy", "bold", "humble", "proud", "gracious", "graceful", "precise", "nimble",
-  "occult", "vast", "hermetic", "endless", "short", "long", "deep", "shallow", "quicksilver", "distilled",
-  "red", "green", "blue", "yellow", "violet", "indigo", "azure", "cobalt", "teal", "jade", "emerald", "verdant",
-  "mossy", "rosy", "crimson", "scarlet", "vermilion", "ruby", "garnet", "coral", "peach", "ivory", "pearl",
-  "opal", "onyx", "obsidian", "ebon", "sable", "umber", "ochre", "sepia", "russet", "tawny", "bronze", "brass",
-  "pewter", "leaden", "mercurial", "sulfurous", "saline", "vitreous", "crystal", "liquid", "molten", "vapor",
-  "hazy", "clouded", "clear", "cloudless", "veiled", "bare", "robed", "crowned", "black", "masked", "silent",
-  "humming", "singing", "whispering", "howling", "purring", "weeping", "laughing", "smiling", "grieving",
-  "hopeful", "wistful", "mournful", "joyful", "gleeful", "fierce", "calm", "serene", "placid", "turbulent",
-  "chaotic", "orderly", "whimsical", "mythic", "fabled", "storied", "nameless", "purple", "pink", "brown",
-  "unbound", "bound", "tethered", "untethered", "orbiting", "lunar", "solar", "stellar", "astral", "cosmic",
-  "planetary", "nebular", "radiant", "luminous", "glowing", "gleaming", "glinting", "shimmering", "flickering",
-  "white", "kindled", "smoldering", "cinder", "candlelit", "twilit", "gloaming", "eclipsed", "waxing", "waning",
-  "gibbous", "crescent", "full",
-];
-const NOUN = [
-  "lantern", "tide", "ember", "moon", "star", "seed", "glyph", "vellum", "ink", "quill", "page", "poem",
-  "verse", "stanza", "rhyme", "spell", "rune", "sigil", "charm", "hex", "ward", "circle", "spiral", "orbit",
-  "comet", "meteor", "nebula", "galaxy", "void", "abyss", "well", "pool", "mirror", "window", "door", "threshold",
-  "gate", "key", "lock", "chain", "thread", "needle", "loom", "spindle", "shuttle", "weave", "knot", "braid",
-  "ribbon", "veil", "shroud", "cloak", "hood", "crown", "ring", "halo", "aura", "lotus", "petal", "thorn",
-  "rose", "lily", "iris", "violet", "fern", "moss", "lichen", "root", "branch", "leaf", "bough", "blossom",
-  "bud", "bolt", "acorn", "pine", "cedar", "willow", "birch", "oak", "ash", "rowan", "hazel", "yew", "elder",
-  "river", "stream", "lance", "arrow", "lake", "sea", "ocean", "wave", "current", "eddy", "whirlpool", "fountain",
-  "spring", "rain", "storm", "thunder", "lightning", "cloud", "mist", "fog", "frost", "snow", "hail", "ice",
-  "glacier", "mountain", "hill", "valley", "canyon", "cave", "grotto", "hollow", "meadow", "field", "garden",
-  "orchard", "grove", "forest", "wood", "beam", "blast", "wall", "tower", "spire", "volley", "bell", "chime",
-  "song", "hymn", "chant", "whisper", "echo", "silence", "shadow", "shade", "light", "flame", "fire", "smoke",
-  "cinder", "coal", "candle", "wick", "torch", "beacon", "lighthouse", "harbor", "shore", "island", "reef",
-  "shell", "pearl", "coral", "salt", "sulfur", "mercury", "gold", "silver", "copper", "iron", "glass", "prism",
-  "crystal", "geode", "quartz", "amethyst", "opal", "garnet", "jade", "amber", "obsidian", "onyx", "marble",
-  "stone", "pebble", "sand", "dune", "desert", "oasis", "compass", "map", "atlas", "chart", "clock", "dawn",
-  "dusk", "noon", "midnight", "eclipse", "equinox", "solstice", "season", "winter", "summer", "autumn", "harvest",
-  "feast", "fox", "kitsune", "familiar", "witch", "raven", "crow", "owl", "moth", "butterfly", "accent",
-  "spider", "bee", "wren", "robin", "sparrow", "heron", "crane", "swan", "dove", "hare", "stag", "wolf",
-  "serpent", "dragon", "wyrm", "phoenix", "koi", "archetype", "phase", "shimmer", "verdigris", "seal", "lodestone",
-  "cat", "chroma", "caduceus", "tincture", "feather", "wing", "claw", "tail", "runist", "scale", "fang",
-  "heart", "athanor", "eye", "crucible", "breath", "bone", "blood", "retort", "alembic", "voice",
-];
-const NAME = [
-  "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Ceres", "Eris",
-  "Pallas", "Juno", "Sedna", "Io", "Europa", "Ganymede", "Callisto", "Fire", "Wind", "Mimas", "Enceladus",
-  "Tethys", "Dione", "Rhea", "Titan", "Hyperion", "Iapetus", "Phoebe", "Janus", "Chiron", "Pandora", "Prometheus",
-  "Atlas", "Pan", "Water", "Amber", "Calypso", "Miranda", "Ariel", "Umbriel", "Titania", "Oberon", "Puck",
-  "Triton", "Vesta", "Proteus", "Vitrum", "Galatea", "Sound", "Charon", "Nix", "Hydra", "Radio", "Styx",
-  "Phobos", "Deimos", "Luna", "Sirius", "Vega", "Rigel", "Betelgeuse", "Altair", "Deneb", "Arcturus", "Capella",
-  "Aldebaran", "Spica", "Antares", "Polaris", "Canopus", "Procyon", "Contract", "Time", "Regulus", "Castor",
-  "Pollux", "Mira", "Quintessence", "Destruction", "Astral", "Planar", "Creation", "Hygiea", "Maia", "Merope",
-  "Taygeta", "Alcyone", "Proserpina", "Astraea", "Andromeda", "Cassiopeia", "Orion", "Lyra", "Cygnus", "Draco",
-  "Order", "Dyna", "Aether", "Chaos", "Materia", "Death", "Life", "Aquila", "Pegasus", "Perseus", "Sovereign",
-  "Gemini", "Hesperus", "Eos", "Selene", "Nyx", "Hecate", "Thoth", "Isis", "Osiris", "Brigid", "Morrigan",
-  "Freya", "Ophiuchus", "Odin", "Loki", "Ishtar", "Inanna", "Astarte", "Lilith", "Ostara", "Yule",
-];
-
-const VT = [
-  "kindle", "mend", "wake|woke|woken", "break|broke|broken", "fold", "open", "close", "gild", "glaze", "weave|wove|woven",
-  "spin|spun|spun", "braid", "bind|bound|bound", "loosen", "untie", "knot", "cast|cast|cast", "conjure",
-  "summon", "banish", "charm", "hex", "ward", "bless", "measure", "map", "chart", "write|wrote|written",
-  "ink", "read|read|read", "sketch", "paint", "shatter", "scatter", "gather", "harvest", "sow|sowed|sown",
-  "keep|kept|kept", "guard", "seek|sought|sought", "find|found|found", "lose|lost|lost", "name", "call",
-  "answer", "remember", "forget|forgot|forgotten", "hold|held|held", "release", "unlock", "carry", "bury",
-  "unearth", "plant", "feed|fed|fed", "heal", "light|lit|lit", "douse", "quench", "steal|stole|stolen", "borrow",
-  "mark", "seal", "sign", "stitch", "sew|sewed|sewn", "darn", "polish", "sharpen", "temper", "forge", "smelt",
-  "distill", "dissolve", "purify", "brew", "steep", "pour", "spill", "crown", "veil", "unveil", "mask", "hide|hid|hidden",
-  "reveal", "mirror", "follow", "lead|led|led", "cross", "climb", "haunt", "rouse", "lull", "hush", "tend",
-  "draw|drew|drawn", "tear|tore|torn", "shake|shook|shaken", "take|took|taken", "give|gave|given", "bring|brought|brought",
-  "teach|taught|taught", "catch|caught|caught", "sweep|swept|swept", "strike|struck|struck", "throw|threw|thrown",
-  "bear|bore|borne", "choose|chose|chosen", "dig|dug|dug", "spread|spread|spread", "send|sent|sent", "build|built|built",
-  "ring|rang|rung", "sing|sang|sung", "wind|wound|wound", "kiss", "cradle", "enchant", "transmute", "calcine",
-  "anoint", "invoke", "scry", "divine", "ferry", "lure", "tame", "unravel",
-];
-const VI = [
-  "drift", "fall|fell|fallen", "rise|rose|risen", "burn", "dream", "sleep|slept|slept", "wake|woke|woken",
-  "sing|sang|sung", "hum", "whisper", "weep|wept|wept", "laugh", "dance", "spin|spun|spun", "glow", "gleam",
-  "flicker", "smolder", "melt", "freeze|froze|frozen", "flow", "pool", "ripple", "wander", "roam", "fly|flew|flown",
-  "soar", "dive", "float", "sink|sank|sunk", "drown", "breathe", "echo", "orbit", "circle", "spiral", "tumble",
-  "roll", "climb", "linger", "rest", "shimmer", "return", "depart", "arrive", "stay", "wane", "wax", "bloom",
-  "wilt", "fade", "grow|grew|grown", "heal", "crack", "settle", "kneel|knelt|knelt", "pray", "listen", "wait",
-  "watch", "blaze", "flare", "gutter", "wither", "unfold", "open", "close", "turn", "shiver", "tremble",
-  "quiver", "sway", "bow", "sigh", "murmur", "rustle", "creak", "toll", "chime", "ring|rang|rung", "glimmer",
-  "glisten", "glitter", "sparkle", "bleed|bled|bled", "rust", "crumble", "thaw", "steam", "simmer", "bubble",
-  "surge", "ebb", "flood", "thunder", "shine|shone|shone", "vanish", "appear", "stir", "awaken", "slumber",
-  "stray", "falter", "stumble", "mourn", "grieve", "rejoice", "speak|spoke|spoken", "dwell|dwelt|dwelt",
-  "hunger", "ache", "hover", "glide", "perch", "nest", "roost", "prowl", "hunt", "molt", "hatch", "travel",
-  "wade", "shudder", "quake", "billow", "drip", "trickle", "seep",
-];
-const WHEN = [
-  "at dusk", "at dawn", "at noon", "at midnight", "at first light", "at moonrise", "at low tide", "at the equinox",
-  "at the solstice", "at the threshold", "before dawn", "before the rain", "before the frost", "before the harvest",
-  "after the rain", "after the storm", "after midnight", "after the eclipse", "in winter", "in springtime", "in autumn",
-  "in summer", "in the rain", "in the dark", "in the fog", "in the twilight", "in the long night", "in the deep",
-  "in a dream", "under a new moon", "under a full moon", "under the stars", "under the snow", "by candlelight",
-  "by moonlight", "by lamplight", "by starlight", "by firelight", "by the sea", "by the river", "on the tide",
-  "on the wind", "on the last day", "on the first night", "on the shore", "until dawn", "until daybreak",
-  "once again", "for a thousand years", "for a while", "for the last time", "for the first time", "through the night",
-  "through the snow", "through the mist", "beneath the ice", "beyond the veil", "between the stars", "while the city sleeps",
-  "while it rains", "as the bells toll", "as the tide turns", "when the moon is full", "when no one watched",
-];
-const TAG = [
-  "at last", "again", "anew", "aglow", "aflame", "afloat", "adrift", "awake", "asleep", "alone", "apart",
-  "aloud", "astray", "ajar", "unbroken", "undone", "untold", "unseen", "unnamed", "forever", "for now", "in secret",
-  "by heart", "in time", "in silence", "in pieces", "in bloom", "in flight", "in full", "in vain", "once",
-  "unasked",
-];
-const PREP = [
-  "over", "under", "beneath", "beyond", "within", "across", "toward", "against", "behind", "before", "after",
-  "around", "through", "above", "below", "beside",
-];
-const DET = ['the', 'a', 'every', 'no'];
-const OPENER = ['yet', 'and', 'still', 'so'];
-const ART = ['the', 'a'];
-
-
-
-const SW_DOUBLE = new Set(['hum', 'map', 'drip', 'nod', 'rot', 'plan', 'stop', 'spin', 'dig', 'swim', 'stir', 'sob', 'chat', 'trim', 'dip', 'grab', 'hug', 'step', 'tap', 'wrap', 'knot']);
-const SW_NOT_DOUBLE = new Set();
-function swForms(entry){
-  const [base, past0, part0] = entry.split('|');
-  const dbl = SW_DOUBLE.has(base) && !SW_NOT_DOUBLE.has(base);
-  const cy = /[^aeiou]y$/.test(base);
-  const ed = dbl ? base + base.slice(-1) + 'ed' : base.endsWith('e') ? base + 'd' : cy ? base.slice(0, -1) + 'ied' : base + 'ed';
-  const third = /(s|sh|ch|x|z|o)$/.test(base) ? base + 'es' : cy ? base.slice(0, -1) + 'ies' : base + 's';
-  const ing = base.endsWith('ie') ? base.slice(0, -2) + 'ying' : dbl ? base + base.slice(-1) + 'ing'
-    : (base.endsWith('e') && !/(ee|ye|oe)$/.test(base)) ? base.slice(0, -1) + 'ing' : base + 'ing';
-  return { base, past: past0 || ed, part: part0 || past0 || ed, third, ing };
-}
-const SW_VT_F = VT.map(swForms), SW_VI_F = VI.map(swForms);
-
-
-
-
-
-const SW_BANK = { N: NOUN, A: ADJ, M: NAME, T: SW_VT_F, I: SW_VI_F, W: WHEN, G: TAG, P: PREP, D: DET, O: OPENER, R: ART };
-const SW_SHAPES = [
-  ['M', 'T.past', 'the', 'N', 'W'],
-  ['to', 'T.base', 'the', 'N', 'of', 'M', 'W'],
-  ['where', 'D', 'N', 'I.third', 'P', 'M'],
-  ['the', 'A', 'N', 'I.past', 'G'],
-  ['M', "'s", 'N', ',', 'T.part', 'W'],
-  ['M', 'will', 'T.base', 'the', 'N', 'W'],
-  ['the', 'A', 'N', 'of', 'M', ',', 'G'],
-  ['N', 'and', 'N', ',', 'T.part', 'G'],
-  ['O', 'the', 'N', 'I.past', 'P', 'M'],
-  ['who', 'T.past', 'D', 'N', 'P', 'M', '?'],
-  ['M', ',', 'A', 'and', 'T.part', 'W'],
-  ['A', 'M', 'I.third', 'W'],
-  ['D', 'N', 'that', 'I.past', 'P', 'M'],
-  ['for', 'M', ':', 'the', 'A', 'N', ',', 'G'],
-  ['how', 'the', 'N', 'of', 'M', 'I.third', 'W'],
-  null,
-];
-const SW_SMALL = [
-  ['the', 'N', 'of', 'M', ',', 'T.part', 'G'],
-  ['D', 'N', 'P', 'M', ',', 'G'],
-  ['M', 'and', 'D', 'A', 'N'],
-  ['D', 'A', 'N', 'W'],
-  ['A', 'N', ',', 'I.ing'],
-  ['M', 'T.past', 'R', 'N'],
-];
-const swSlotOf = t => { const m = /^([NAMTIWGPDOR])(?:\.(\w+))?$/.exec(t); return m ? { b: m[1], f: m[2] } : null; };
-const swSizeOf = sh => sh.reduce((n, t) => { const s = swSlotOf(t); return s ? n*SW_BANK[s.b].length : n; }, 1);
-for(const sh of SW_SHAPES) if(sh && swSizeOf(sh) !== 2**28) throw new Error('seedWords: a shape is not 28 bits');
-if(SW_SMALL.reduce((n, sh) => n + swSizeOf(sh), 0) !== 2**28) throw new Error('seedWords: the small shapes do not fill a sixteenth');
-
-const MUL = 0x9E3779B1;
-
-const INV = (() => { let x = MUL; for(let i = 0; i < 5; i++) x = Math.imul(x, 2 - Math.imul(MUL, x)); return x >>> 0; })();
-const mix   = n => { let x = Math.imul(n >>> 0, MUL) >>> 0; x = (x ^ (x >>> 16)) >>> 0; return x; };
-const unmix = x => { x = (x ^ (x >>> 16)) >>> 0; return Math.imul(x, INV) >>> 0; };
-
- 
-function swDecode(x){
-  let k = x >>> 28, r = x & 0x0FFFFFFF, shape = SW_SHAPES[k];
-  if(!shape){ for(const sh of SW_SMALL){ const z = swSizeOf(sh); if(r < z){ shape = sh; break; } r -= z; } }
-  const idx = [];
-  for(const t of shape){ const s = swSlotOf(t); if(!s) continue; const n = SW_BANK[s.b].length; idx.push(r % n); r = Math.floor(r / n); }
-  return [shape, idx];
-}
-function swEncode(shape, idx){
-  let r = 0, mul = 1, i = 0;
-  for(const t of shape){ const s = swSlotOf(t); if(!s) continue; r += idx[i++]*mul; mul *= SW_BANK[s.b].length; }
-  const k = SW_SHAPES.indexOf(shape);
-  if(k >= 0) return ((k << 28) >>> 0) + r;
-  let off = 0; for(const sh of SW_SMALL){ if(sh === shape) break; off += swSizeOf(sh); }
-  return ((15 << 28) >>> 0) + off + r;
-}
-function swRender(shape, idx){
-  let i = 0;
-  const words = shape.map(t => { const s = swSlotOf(t); if(!s) return t; const v = SW_BANK[s.b][idx[i++]]; return s.f ? v[s.f] : v; });
-  let out = words.join(' ').replace(/ ([,:?])/g, '$1').replace(/ 's\b/g, "'s");
-  out = out.replace(/\b([Aa]) (?=[aeiouAEIOU])/g, '$1n ');
-  return out.charAt(0).toUpperCase() + out.slice(1);
-}
- 
-function seedPhrase(n){ const [sh, idx] = swDecode(mix(Math.trunc(+n || 0))); return swRender(sh, idx); }
-
-
-const swNorm = t => String(t || '').toLowerCase().replace(/[’`]/g, "'").replace(/'s\b/g, " 's").replace(/[.!?;:,—–]+/g, ' ').replace(/\s+/g, ' ').trim()
-  .replace(/\ban\b/g, 'a');
-
-const SW_LOOKUP = {};
-for(const [b, list] of Object.entries(SW_BANK)){
-  SW_LOOKUP[b] = {};
-  list.forEach((v, i) => { for(const f of (typeof v === 'string' ? [null] : ['base', 'past', 'part', 'third', 'ing'])){
-    const w = swNorm(f ? v[f] : v); ((SW_LOOKUP[b][f || ''] ||= new Map()).has(w)) || SW_LOOKUP[b][f || ''].set(w, i); } });
-}
-function swMatchShape(shape, toks){
-  const parts = shape.filter(t => !/^[,:?]$/.test(t));
-  const out = [];
-  const go = (pi, ti, idx) => {
-    if(pi === parts.length){ if(ti === toks.length) out.push(idx.slice()); return; }
-    const t = parts[pi], s = swSlotOf(t);
-    if(!s){ if(toks[ti] === swNorm(t)) go(pi + 1, ti + 1, idx); return; }
-    const map = SW_LOOKUP[s.b][s.f || ''];
-    for(let len = 1; len <= 7 && ti + len <= toks.length; len++){
-      const w = toks.slice(ti, ti + len).join(' '), i = map.get(w);
-      if(i !== undefined){ idx.push(i); go(pi + 1, ti + len, idx); idx.pop(); }
-    }
-  };
-  go(0, 0, []);
-  return out;
-}
- 
-function phraseSeed(text){
-  const t = swNorm(text); if(!t) return null;
-  const toks = t.split(' ');
-  for(const shape of [...SW_SHAPES.filter(Boolean), ...SW_SMALL]){
-    for(const idx of swMatchShape(shape, toks)){
-      const n = unmix(swEncode(shape, idx) >>> 0);
-      if(swNorm(seedPhrase(n)) === t) return n;
-    }
-  }
-  return null;
-}
- 
-function seedFromText(text){
-  const t = String(text == null ? '' : text).trim();
-  if(/^-?\d+$/.test(t)) return parseInt(t, 10);
-  const p = phraseSeed(t); if(p != null) return p;
-
-  let h = 0x811C9DC5; for(const ch of t.toLowerCase()){ h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
-  return h & 0x7FFFFFFF;
-}
-
-
 /* ==== textureElements.js ==== */
 const PRIMAL_ELEMENTS = [
   { id: 'fire',  glyph: '🜂', name: 'Fire',  chroma: 'red'    },
@@ -35496,7 +35722,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Pleiades–Alcyone';
+const RELEASE = 'Pleiades–Pleione';
 
 const RELEASE_DATE = '2026-10-25';
 
@@ -36456,7 +36682,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-25 · 13c9c00";
+const STAMP = "2026-10-25 · a9c742c";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

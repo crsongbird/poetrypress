@@ -51,6 +51,13 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE SUN'S ARC IN THE FILM WINDOW: on the light dial a dashed arc from where the sun starts (a ring) to where it ends (a
   dot), rising and setting along its day; it turns round as Time passes grows; To on the dial sets where the light ends,
   and the film carries it there along the arc. Length now reaches three minutes.
+- REGIONS AND THEIR BORDERS: the floor parted into named regions, each held by a faction with its banner; a Mixed ring
+  shares its worlds out region by region with clear borders; boundary stones, banners and signs where the ways cross a
+  border, town names on signs. Do the borders read, and are the names right for the app's voice?
+- TOWN WALLS: curtain walls with round towers and gates round some towns of the wilds and the magic world, broken in the
+  ruins. Right height and how often?
+- MAGIC BY ELEMENT: each magic region ruled by an element (Fire, Wind, Water, Earth; rarely Amber, Vitrum, Sound, Radio)
+  colouring its ground, leaves, lights and crystals; glowing trees now rare. Enough variety, and the right colours?
 - FLORA, FAUNA AND DETAIL: Life is Flora (what grows), Paint is gone and its slider is Fauna (what lives and moves, at 40
   by default, the flocks smaller), the Brush fader is Detail (Low, Medium, High, Ultra; Medium as it always was). Right
   amounts at the defaults?
@@ -71,9 +78,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   - ANIMALS AND PEOPLE, what is left: personalities; more animations and the situations to use them (people sitting,
     talking in twos and threes, carrying things, working; animals drinking at water, playing); interactions and hunts
     between animals (a hawk stooping on a hare, a fox stalking the birds); their states tracked by id.
-  - THE WORLD'S REGIONS: towns with walls; eras side by side (a medieval town by a robot-infested ruin) with clear
-    borders; factions holding regions; names from the seeds and the app's own esoteric language; crystals of a color for
-    each magical element ruling a region; the sense that something deeper lies here; rare battles between factions.
+  - THE WORLD'S REGIONS, what is left: the sense that something deeper lies here; rare battles between factions; banners
+    on the walled towns' towers and gates; runner stones along the borders off the roads.
   - OVERHEAD: spacedocks, satellites, ships of many kinds, builder ships and drones watching one another.
   - THINGS IN THE ROUND: every object in at least 8 angles (16 or 32), large objects in horizontal slices, buildings that
     can be walked around and so any shape (or simple 3D models, as the land will be); everything existing in space.
@@ -107,8 +113,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     South always losing badly), the test bed for a wide variety of people and animations: women, people of every color;
     where the seed has elves and other folk, it turns Tolkien or Star Trek.
   - STABILITY: graffiti must not change its kind or place.
-  - MAGIC BY ELEMENT: regions of earth, fire, water and air coloring the ground, trees and lights; glowing trees rare and of
-    the region's colors, not everything red; cute slimes, chocobo-like birds and such (legally distinct).
+  - MAGIC BY ELEMENT, what is left: cute slimes, chocobo-like birds and such (legally distinct).
   - WILDLIFE WIDER: insects, ground creatures, cats, middle predators and the rest, not birds in their place; water
     creatures and better water animation.
   - PLANTS AND BUILDINGS WIDER: more kinds of trees, grasses and shrubs; the library of buildings kept growing until they
