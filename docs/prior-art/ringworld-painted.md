@@ -48,3 +48,19 @@ was opened and read; [est] is an estimate, a computation or a design judgment.
   the sun, gone with the sun at your back, and slides over the hills as the sun moves. Grass gleams least (0.35), rock
   more (to 0.85), sand and paving more, snow most. The lit lines along crests and shelf lips are gone; the soft bands
   below a crest stay, as they mark where the land drops away.
+
+## 4 · Things' own shadows by where the sun stands
+
+Ruby's order, LIGHT: "things' own shadows cast on the land by where the sun stands (not the screen's side)".
+
+- A shadow's length: "Object Height / tan θ = Shadow Length", θ the sun's altitude
+  [src](https://www.sciencing.com:443/determine-length-shadow-8767657).
+- A 2D game's cast shadow is the sprite stretched along a direction, and "the correct positioning must be managed using
+  the z-index": the shader casts it, the drawing order places it [src](https://godotshaders.com/shader/2d-cast-shadow/).
+- So in the painter [est]: at each thing's foot, a metre of its height carried along the ground away from the sun by one
+  over the tangent of its height (held to four times its height at dawn and dusk), and that point seen as the eye sees
+  the ground there, gives the shadow's way on the page for each pixel of height (`shadowOf`). The kit's cast shadows and
+  a tree's shadow lie that way (`pkShadowWay`), toward the eye with the sun behind the thing, sideways, or away. One
+  falling away is drawn with its thing, after what stands farther, so it is held short (an eighth of the thing's height
+  up the page, shortened along its own way) rather than lie over them. A tree's shadow is laid under its kept sheet,
+  never baked into it, with a tight contact shadow at its foot. By night the old shadow away from the screen's light.

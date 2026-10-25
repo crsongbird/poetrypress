@@ -6520,7 +6520,13 @@ function pkGrain(x, pts, col, fi){
   for(let q = 0, m = Math.min(24, Math.floor(h/18)); q < m; q++){ const yy = y0 + R()*h, xa = x0 + R()*w*0.6; x.moveTo(xa, yy); x.lineTo(xa + w*(0.1 + 0.3*R()), yy + (R() - 0.5)*2); } x.stroke();
   x.restore(); }
 
-const pkCast = (x, X0, X1, Y, h, c, a = 0.22) => { const dx = -c.sd*h*0.42, dy = h*0.07; pkPoly(x, [[X0, Y], [X1, Y], [X1 + dx, Y + dy], [X0 + dx, Y + dy]], pkCss(pkMix(c.dark, PK_BLACK, 0.5), a)); };
+
+
+
+
+const pkShadowWay = (c, h) => { if(!c.shv) return [-c.sd*h*0.42, h*0.07]; let dx = c.shv[0]*0.6, dy = c.shv[1]*0.6; const L = Math.hypot(dx, dy), k = Math.min(1, 1.2/(L || 1), dy < -0.12 ? 0.12/-dy : 1, dy > 0.9 ? 0.9/dy : 1);
+  return [dx*k*h, dy*k*h]; };
+const pkCast = (x, X0, X1, Y, h, c, a = 0.22) => { const [dx, dy] = pkShadowWay(c, h); pkPoly(x, [[X0, Y], [X1, Y], [X1 + dx, Y + dy], [X0 + dx, Y + dy]], pkCss(pkMix(c.dark, PK_BLACK, 0.5), a)); };
 
 const pkStreaks = (x, x0, top, w, ht, c, R, px, a = 0.16) => { if(ht*(c.lod || 1) < px(28) || w*(c.lod || 1) < px(6)) return;
   for(let k = 0, n = Math.min(14, 2 + Math.floor(w*(c.lod || 1)/px(9))); k < n; k++){ const sx = x0 + w*(0.04 + 0.92*R()), sy = top + ht*R()*0.7, len = ht*(0.06 + 0.22*R()), sw = Math.max(px(0.5), w*(0.005 + 0.012*R()));
@@ -6732,7 +6738,7 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small, sub){
   for(const f of [0.35, 0.7]){ const yy = sy + (top - sy)*f, ax = axis((Y - yy)/h), ww = sw*(1.1 - f*0.8); pkPoly(x, [[ax, yy - th*0.25], [ax + ww, yy + th*0.12], [ax, yy + th*0.05], [ax - ww, yy + th*0.12]], pkCss(c.dark));
     pkPoly(x, [[ax, yy - th*0.25], [ax + sd*ww, yy + th*0.1], [ax, yy + th*0.02]], pkCss(c.body)); } }
 
-const pkTreeFoot = (x, X, Y, h, c) => pkEll(x, X - c.sd*h*0.12, Y, h*0.26, h*0.055, pkCss(c.dark, 0.3));
+const pkTreeFoot = (x, X, Y, h, c) => { const [dx, dy] = pkShadowWay(c, h*0.3); pkEll(x, X + dx*0.5, Y + dy*0.3, h*0.26 + Math.abs(dx)*0.3, h*0.055 + Math.abs(dy)*0.25, pkCss(c.dark, 0.3)); };
 function pkTree(x, X, Y, h, c0, kind, R0, px){
 
 
@@ -6748,7 +6754,7 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
     pkPoly(x, [[X - w*2, Y + w*0.2], [X - w, Y - w*1.6], [X + lean - w*0.75, Y - top], [X + lean + w*0.75, Y - top], [X + w, Y - w*1.6], [X + w*2, Y + w*0.2]], pkCss(dk));
     pkPoly(x, [[X + sd*w*0.1, Y + w*0.2], [X + sd*w*0.2 + lean*0.05, Y - w*1.6], [X + lean + sd*w*0.15, Y - top], [X + lean + sd*w*0.75, Y - top], [X + sd*w, Y - w*1.6], [X + sd*w*1.8, Y + w*0.2]], pkCss(lt));
     pkDisc(x, X + lean, Y - top, w*0.75, pkCss(dk)); pkBark(x, X, Y, top, wd, lean, bark, c, sub(6), px); };
-  if(!small) pkTreeFoot(x, X, Y, h*F.wide*(kind === 'saguaro' || kind === 'organpipe' || kind === 'ocotillo' ? 0.4 : 1), c);
+  if(!small && !c0.nofoot) pkTreeFoot(x, X, Y, h*F.wide*(kind === 'saguaro' || kind === 'organpipe' || kind === 'ocotillo' ? 0.4 : 1), c);
 
   if(kind === 'spruce'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.3), n: 8 + Math.floor(R()*5), droop: 0.55, lift: 0.22, spire: 0.07, bare: rnd(0.03, 0.08) + F.age*0.06, bark: 'spruce' }, px, small, sub); return; }
   if(kind === 'fir'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.1, 0.15), n: 11 + Math.floor(R()*6), droop: 0.18, lift: 0.08, spire: 0.08, bare: rnd(0.02, 0.06), round: F.age > 0.7, bark: 'fir' }, px, small, sub); return; }
@@ -22084,7 +22090,17 @@ function rgPaintLand(x, mk, dk, V){
     const lightRaw = m => ({ body: rgLit(V, m, day, haze, AIR), lit: rgLit(V, rsMix(m, [255, 246, 226], 0.28), day, haze, AIR), dark: rgLit(V, rsMix(m, BLACK, 0.42), day, haze, AIR) }), mat = m0 => lightRaw(pal ? pal(m0) : m0);
 
     const raw = m0 => pal ? pal(m0) : m0, rawLit = rsMix(metal, [255, 246, 226], 0.15), rawDark = rsMix(metal, BLACK, 0.35);
-    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat, raw, lightRaw, rawBody: metal, rawLit, rawDark }; };
+    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat, raw, lightRaw, rawBody: metal, rawLit, rawDark, shv: pos && pos.a !== undefined ? shadowOf(pos.a, pos.z) : null }; };
+
+
+
+
+
+
+  const shadowOf = (a, z) => { const D = V.sun.D, ca = Math.cos(a), sa = Math.sin(a), up = -(ca*D[0] + sa*D[1]); if(!(up > 0.03)) return null;
+    const ta = -sa*D[0] + ca*D[1], k = Math.min(4, 1/up), hl = Math.hypot(ta, D[2]) || 1, ln = k*Math.sqrt(Math.max(0, 1 - up*up)), M0 = W*0.00025;
+    const e = Math.max(TR.sea, meshH(a, z)), p0 = at(a, z, e), p1 = at(a - ta/hl*ln*M0, z - D[2]/hl*ln*M0, e); if(!p0 || !p1) return null;
+    const ppm = M0*F/p0[2]; return [(p1[0] - p0[0])/ppm, (p1[1] - p0[1])/ppm]; };
 
 
   const foot = (a, z) => { const e = Math.max(TR.sea, meshH(a, z)), p = at(a, z, e); if(!p) return null; return [p[0], p[1], W*0.00025*F/p[2], e]; };
@@ -22217,7 +22233,12 @@ function rgPaintLand(x, mk, dk, V){
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], dq, hq, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), dq, hq, AIR), body: rgLit(V, green, dq, hq, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), dq, hq, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], dq, hq, AIR) : null,
 
-        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy };
+        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv };
+
+      if(c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
+        x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
+
+        x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.6), 0.3); x.beginPath(); x.ellipse(X, Y, wS*0.55, wS*0.16, 0, 0, Math.PI*2); x.fill(); }
 
       if(o.nurse){ const g2 = rsMix([118, 140, 70], V.land, 0.25), nc = { ...tc, hM: undefined, dark: rgLit(V, rsMix(g2, BLACK, 0.2), cday, haze, AIR), body: rgLit(V, g2, cday, haze, AIR), lit: rgLit(V, rsMix(g2, [255, 244, 222], 0.3), cday, haze, AIR) };
         pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx); }
@@ -22228,7 +22249,7 @@ function rgPaintLand(x, mk, dk, V){
       const Sres = rgStep2(h), Sdet = Math.min(Sres, rgStep2(Math.max(hl, px(8))));
       if(Sres > px(260)){ if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); x.globalAlpha = 1; return; }
       const Sd = Math.max(Sres, px(24)), sw = Math.ceil(Sd*2.4), sh = Math.ceil(Sd*1.4), ax = sw/2, ay = Math.ceil(Sd*1.22), AIRk = AIR.map(v => v >> 3).join('.');
-      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
+      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
       const sp = rgSprite(key, sw, sh, sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
         if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); });
       const k = h/Sd; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = 1; return; }
@@ -22775,7 +22796,7 @@ function rgPaintLand(x, mk, dk, V){
     const tb = P.map(p => bandAt(p[0], p[1])), fl = t => (1 - rsSmooth(0, 1.1, t))*0.62, fd = t => rsSmooth(0.8, 1.8, t)*(1 - rsSmooth(1.8, 3.4, t))*0.2;
     const shade = (g, t, sa = am, sz = zm, sl = 1, ks = kSun, sp = 0) => { const kk = Math.max(0, Math.min(1.7, ks))*sl, dark = rsMix(g, [26, 34, 70], 0.42), lit = rsMix(g, [255, 244, 222], 0.3);
       let cc = kk < 1 ? rsMix(dark, g, kk) : rsMix(g, lit, (kk - 1)/0.7*0.55); if(hol > 0.01) cc = rsMix(cc, dark, hol);
-      cc = rsMix(rsMix(cc, lit, fl(t)), dark, fd(t)); if(sp > 0.004) cc = rsMix(cc, [255, 246, 226], Math.min(0.75, sp*gloss*1.6)); cc = rgLit(V, cc, day, haze, AIR);
+      cc = rsMix(rsMix(cc, lit, fl(t)), dark, fd(t)); if(sp > 0.004) cc = rsMix(cc, [255, 246, 226], Math.min(0.55, sp*gloss*1.4)); cc = rgLit(V, cc, day, haze, AIR);
       const cs2 = cloudShadeAt(sa, sz)*rsSmooth(0.3, 0.7, day)*(1 - 0.85*haze); if(cs2 > 0.004) cc = rsMix(cc, [10, 14, 34], cs2);
       if(LOWMIST > 0 && dd > W*0.01){ const lw = rsSmooth(TR.cloud*0.25, sea, hm); if(lw > 0.05) cc = rsMix(cc, MISTC, LOWMIST*lw*0.7*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + am*40))); }
       return cc; };
@@ -35981,11 +36002,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Lupus–Uridim';
+const RELEASE = 'Lupus–Pipirima';
 
 const RELEASE_DATE = '2026-10-25';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"usiLGKHa","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"kPxbnAAu","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -36941,7 +36962,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-25 · 377f541";
+const STAMP = "2026-10-25 · fd48e0f";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

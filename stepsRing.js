@@ -16,7 +16,7 @@ import { lkLand, LK_BIOMES, LK_FORESTED } from './landKit.js';
 import { rkRegions, rkTownName } from './regionKit.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
-import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, PK_STONES, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkRune, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
+import { PK_TREES, pkTree, pkShadowWay, PK_STYLE, pkBuilding, pkRock, PK_STONES, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkRune, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // DETAIL (Ruby: "longer view distance with higher detail (low, medium, high, ultra) … The current values represent
@@ -1869,7 +1869,17 @@ function rgPaintLand(x, mk, dk, V){
     const lightRaw = m => ({ body: rgLit(V, m, day, haze, AIR), lit: rgLit(V, rsMix(m, [255, 246, 226], 0.28), day, haze, AIR), dark: rgLit(V, rsMix(m, BLACK, 0.42), day, haze, AIR) }), mat = m0 => lightRaw(pal ? pal(m0) : m0);
     // (and the same unlit, for what is read once from a thing and lit wherever it is used: paintKit's proofs)
     const raw = m0 => pal ? pal(m0) : m0, rawLit = rsMix(metal, [255, 246, 226], 0.15), rawDark = rsMix(metal, BLACK, 0.35);
-    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat, raw, lightRaw, rawBody: metal, rawLit, rawDark }; };
+    return { body: rgLit(V, metal, day, haze, AIR), lit, dark, glow: rsMix(g, AIR, haze*0.4), glow2: rsMix(g2, AIR, haze*0.4), sd: sd > 0 ? 1 : -1, L: LT, air: AIR, haze, w, mat, raw, lightRaw, rawBody: metal, rawLit, rawDark, shv: pos && pos.a !== undefined ? shadowOf(pos.a, pos.z) : null }; };
+  // THINGS' OWN SHADOWS BY WHERE THE SUN STANDS (Ruby's order, LIGHT: "things' own shadows cast on the land by where the
+  //  sun stands (not the screen's side)"): the way a thing's shadow falls on the page, in pixels across and down for each
+  //  pixel of its height: a metre's height carried along the ground away from the sun by one over the tangent of its
+  //  height (long at dawn and dusk, held to four times the thing's height), from the thing's foot, and seen as the eye
+  //  sees the ground there; so a shadow falls toward you with the sun behind the thing, away from you with the sun at your
+  //  back, and turns with the sun. Null by night (the kit then falls back to its old screen-side shadow)
+  const shadowOf = (a, z) => { const D = V.sun.D, ca = Math.cos(a), sa = Math.sin(a), up = -(ca*D[0] + sa*D[1]); if(!(up > 0.03)) return null;
+    const ta = -sa*D[0] + ca*D[1], k = Math.min(4, 1/up), hl = Math.hypot(ta, D[2]) || 1, ln = k*Math.sqrt(Math.max(0, 1 - up*up)), M0 = W*0.00025;
+    const e = Math.max(TR.sea, meshH(a, z)), p0 = at(a, z, e), p1 = at(a - ta/hl*ln*M0, z - D[2]/hl*ln*M0, e); if(!p0 || !p1) return null;
+    const ppm = M0*F/p0[2]; return [(p1[0] - p0[0])/ppm, (p1[1] - p0[1])/ppm]; };
   // where a world point meets the screen, standing on its ground: [X, Y, px per metre, distance]
   // (a thing stands on the land as finely as the ridges about it show it, so it stands on the ground that is painted)
   const foot = (a, z) => { const e = Math.max(TR.sea, meshH(a, z)), p = at(a, z, e); if(!p) return null; return [p[0], p[1], W*0.00025*F/p[2], e]; };
@@ -2002,7 +2012,12 @@ function rgPaintLand(x, mk, dk, V){
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], dq, hq, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), dq, hq, AIR), body: rgLit(V, green, dq, hq, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), dq, hq, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], dq, hq, AIR) : null,
         // (the sun behind it, low: the light through its leaves; less as it hazes into the distance)
-        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy };
+        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv };
+      // (its shadow laid on the land by where the sun stands, under its sheet and never baked into it: colsOf's shv)
+      if(c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
+        x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
+        // (and its contact shadow, tight at its foot whatever the sun: the ground under it out of the sky's light)
+        x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.6), 0.3); x.beginPath(); x.ellipse(X, Y, wS*0.55, wS*0.16, 0, 0, Math.PI*2); x.fill(); }
       // (a young saguaro in the shade of its nurse tree, a palo verde, as they grow in the desert: the nurse first, behind)
       if(o.nurse){ const g2 = rsMix([118, 140, 70], V.land, 0.25), nc = { ...tc, hM: undefined, dark: rgLit(V, rsMix(g2, BLACK, 0.2), cday, haze, AIR), body: rgLit(V, g2, cday, haze, AIR), lit: rgLit(V, rsMix(g2, [255, 244, 222], 0.3), cday, haze, AIR) };
         pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx); }
@@ -2013,7 +2028,7 @@ function rgPaintLand(x, mk, dk, V){
       const Sres = rgStep2(h), Sdet = Math.min(Sres, rgStep2(Math.max(hl, px(8))));
       if(Sres > px(260)){ if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); x.globalAlpha = 1; return; }
       const Sd = Math.max(Sres, px(24)), sw = Math.ceil(Sd*2.4), sh = Math.ceil(Sd*1.4), ax = sw/2, ay = Math.ceil(Sd*1.22), AIRk = AIR.map(v => v >> 3).join('.');
-      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
+      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
       const sp = rgSprite(key, sw, sh, sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
         if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); });
       const k = h/Sd; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = 1; return; }
@@ -2560,7 +2575,7 @@ function rgPaintLand(x, mk, dk, V){
     const tb = P.map(p => bandAt(p[0], p[1])), fl = t => (1 - rsSmooth(0, 1.1, t))*0.62, fd = t => rsSmooth(0.8, 1.8, t)*(1 - rsSmooth(1.8, 3.4, t))*0.2;
     const shade = (g, t, sa = am, sz = zm, sl = 1, ks = kSun, sp = 0) => { const kk = Math.max(0, Math.min(1.7, ks))*sl, dark = rsMix(g, [26, 34, 70], 0.42), lit = rsMix(g, [255, 244, 222], 0.3);
       let cc = kk < 1 ? rsMix(dark, g, kk) : rsMix(g, lit, (kk - 1)/0.7*0.55); if(hol > 0.01) cc = rsMix(cc, dark, hol);
-      cc = rsMix(rsMix(cc, lit, fl(t)), dark, fd(t)); if(sp > 0.004) cc = rsMix(cc, [255, 246, 226], Math.min(0.75, sp*gloss*1.6)); cc = rgLit(V, cc, day, haze, AIR);
+      cc = rsMix(rsMix(cc, lit, fl(t)), dark, fd(t)); if(sp > 0.004) cc = rsMix(cc, [255, 246, 226], Math.min(0.55, sp*gloss*1.4)); cc = rgLit(V, cc, day, haze, AIR);
       const cs2 = cloudShadeAt(sa, sz)*rsSmooth(0.3, 0.7, day)*(1 - 0.85*haze); if(cs2 > 0.004) cc = rsMix(cc, [10, 14, 34], cs2);
       if(LOWMIST > 0 && dd > W*0.01){ const lw = rsSmooth(TR.cloud*0.25, sea, hm); if(lw > 0.05) cc = rsMix(cc, MISTC, LOWMIST*lw*0.7*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + am*40))); }
       return cc; };

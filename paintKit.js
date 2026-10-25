@@ -57,7 +57,13 @@ function pkGrain(x, pts, col, fi){
   for(let q = 0, m = Math.min(24, Math.floor(h/18)); q < m; q++){ const yy = y0 + R()*h, xa = x0 + R()*w*0.6; x.moveTo(xa, yy); x.lineTo(xa + w*(0.1 + 0.3*R()), yy + (R() - 0.5)*2); } x.stroke();
   x.restore(); }
 // the shadow a thing from X0 to X1, h tall, throws on the ground away from the light, foreshortened
-const pkCast = (x, X0, X1, Y, h, c, a = 0.22) => { const dx = -c.sd*h*0.42, dy = h*0.07; pkPoly(x, [[X0, Y], [X1, Y], [X1 + dx, Y + dy], [X0 + dx, Y + dy]], pkCss(pkMix(c.dark, PK_BLACK, 0.5), a)); };
+// (c.shv, where the caller knows where the sun stands: the shadow's way on the page for each pixel of height, toward or
+//  away from the eye as the sun falls; otherwise down the side from the light, a little toward the eye)
+//  (a shadow falling away from the eye is held short, up the page no more than an eighth of the height, shortened along
+//  its own way: it is drawn with its thing, after what stands farther, and a long one would lie over them)
+export const pkShadowWay = (c, h) => { if(!c.shv) return [-c.sd*h*0.42, h*0.07]; let dx = c.shv[0]*0.6, dy = c.shv[1]*0.6; const L = Math.hypot(dx, dy), k = Math.min(1, 1.2/(L || 1), dy < -0.12 ? 0.12/-dy : 1, dy > 0.9 ? 0.9/dy : 1);
+  return [dx*k*h, dy*k*h]; };
+const pkCast = (x, X0, X1, Y, h, c, a = 0.22) => { const [dx, dy] = pkShadowWay(c, h); pkPoly(x, [[X0, Y], [X1, Y], [X1 + dx, Y + dy], [X0 + dx, Y + dy]], pkCss(pkMix(c.dark, PK_BLACK, 0.5), a)); };
 // streaks of weather down a wall from x0..x0+w, top..top+ht (only where large enough to carry them)
 const pkStreaks = (x, x0, top, w, ht, c, R, px, a = 0.16) => { if(ht*(c.lod || 1) < px(28) || w*(c.lod || 1) < px(6)) return;
   for(let k = 0, n = Math.min(14, 2 + Math.floor(w*(c.lod || 1)/px(9))); k < n; k++){ const sx = x0 + w*(0.04 + 0.92*R()), sy = top + ht*R()*0.7, len = ht*(0.06 + 0.22*R()), sw = Math.max(px(0.5), w*(0.005 + 0.012*R()));
@@ -269,7 +275,7 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small, sub){
   for(const f of [0.35, 0.7]){ const yy = sy + (top - sy)*f, ax = axis((Y - yy)/h), ww = sw*(1.1 - f*0.8); pkPoly(x, [[ax, yy - th*0.25], [ax + ww, yy + th*0.12], [ax, yy + th*0.05], [ax - ww, yy + th*0.12]], pkCss(c.dark));
     pkPoly(x, [[ax, yy - th*0.25], [ax + sd*ww, yy + th*0.1], [ax, yy + th*0.02]], pkCss(c.body)); } }
 // a tree's foot: the shadow it casts, longer the lower the light
-const pkTreeFoot = (x, X, Y, h, c) => pkEll(x, X - c.sd*h*0.12, Y, h*0.26, h*0.055, pkCss(c.dark, 0.3));
+const pkTreeFoot = (x, X, Y, h, c) => { const [dx, dy] = pkShadowWay(c, h*0.3); pkEll(x, X + dx*0.5, Y + dy*0.3, h*0.26 + Math.abs(dx)*0.3, h*0.055 + Math.abs(dy)*0.25, pkCss(c.dark, 0.3)); };
 export function pkTree(x, X, Y, h, c0, kind, R0, px){
   // (hd: the tree's height as its detail reads it, at its true distance (c0.lod: that over the drawn height), so a turn of
   //  the camera never changes its stage; every number drawn only at some sizes on a stream of its own (sub 6 on), so a
@@ -285,7 +291,7 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     pkPoly(x, [[X - w*2, Y + w*0.2], [X - w, Y - w*1.6], [X + lean - w*0.75, Y - top], [X + lean + w*0.75, Y - top], [X + w, Y - w*1.6], [X + w*2, Y + w*0.2]], pkCss(dk));
     pkPoly(x, [[X + sd*w*0.1, Y + w*0.2], [X + sd*w*0.2 + lean*0.05, Y - w*1.6], [X + lean + sd*w*0.15, Y - top], [X + lean + sd*w*0.75, Y - top], [X + sd*w, Y - w*1.6], [X + sd*w*1.8, Y + w*0.2]], pkCss(lt));
     pkDisc(x, X + lean, Y - top, w*0.75, pkCss(dk)); pkBark(x, X, Y, top, wd, lean, bark, c, sub(6), px); };
-  if(!small) pkTreeFoot(x, X, Y, h*F.wide*(kind === 'saguaro' || kind === 'organpipe' || kind === 'ocotillo' ? 0.4 : 1), c);
+  if(!small && !c0.nofoot) pkTreeFoot(x, X, Y, h*F.wide*(kind === 'saguaro' || kind === 'organpipe' || kind === 'ocotillo' ? 0.4 : 1), c);
   // ---- the conifers ----
   if(kind === 'spruce'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.3), n: 8 + Math.floor(R()*5), droop: 0.55, lift: 0.22, spire: 0.07, bare: rnd(0.03, 0.08) + F.age*0.06, bark: 'spruce' }, px, small, sub); return; }
   if(kind === 'fir'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.1, 0.15), n: 11 + Math.floor(R()*6), droop: 0.18, lift: 0.08, spire: 0.08, bare: rnd(0.02, 0.06), round: F.age > 0.7, bark: 'fir' }, px, small, sub); return; }

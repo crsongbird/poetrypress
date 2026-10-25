@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Lupus–Pipirima (2026-10-25)
+
+- Shadows follow the sun. Every tree, building, rock and small thing in the Ringworld now casts its shadow the way the
+  sun throws it where it stands, rather than always to one side of the screen. Shadows are long at dawn and dusk and
+  short at noon. They fall toward you when the sun is behind a thing, sideways when the sun is to the side, and turn as
+  the sun moves through a film. A shadow falling away from you is kept short, so it never lies over things farther off.
+- Trees have a small dark contact shadow at their foot, so they sit on the ground.
+- The land's gleam toward the sun is a little softer.
+
+### Under the hood
+- `shadowOf` works out each thing's shadow direction on the page from the sun's height and bearing at its place, and
+  `pkShadowWay` lays the kit's cast shadows along it. A tree's shadow is drawn under its kept sheet, never baked into it.
+- A new check in the Ringworld suite covers shadow direction: shadows toward you, away from you, to the side, and the
+  fallback by night.
+
 ## Lupus–Uridim (2026-10-25)
 
 - Buildings stand on the ground. Each kind of building has a steepest slope it can be built on (a row of houses or a
@@ -438,38 +453,3 @@ prints it).
 - Seven new kinds in the kit (`pkProp`: camp, charcoal, hide, bothy, lookout, bandstand, fountain), each sized in
   `PK_SIZE`; the Wilds' places chosen by weight among those whose ground fits. docs/prior-art/ringworld-motion-and-
   variety.md §8 item 19 begun.
-
-## Hyades–Lembu (2026-10-24)
-
-- Farms belong to the cities now: farmsteads, hamlets and their fields stand in the countryside round a city's edge,
-  and the Wilds are wild. In their place the Wilds have places of their own: sacred groves (a ring of great trees round
-  a greater one, a standing stone among them, lights in them where there is magic), stone rows across the open moors
-  with a cairn at one end, holy wells at a wood's edge under their tree, and the columns of an older people standing in
-  the grass.
-- More colour by the seed: each region of a ring paints by one rule, as real towns do. Some are Burano's strong colours
-  house by house, some Jaipur's rose, the whitewash of the Cyclades, Roussillon's ochres, Falu red, or the dark wood of
-  Kyoto's streets, and some keep their own colours.
-- Flat roofs gather aerials, dishes and the boxes of their plant, each building its own.
-- The comet travels across the sky in a film, about half a degree a second, as well as turning with the stars. Its
-  ion tail points straight away from the star, blue and thin; its dust tail is broad and white-gold, curving back
-  along its way; a faint green coma hangs round its head.
-- Shooting stars live their second in a real-time film: the head runs across the sky, the streak grows behind it and
-  fades from its tail, and a faint train lingers.
-- The aurora is coloured by height: a pink hem on a strong night, its body in its hue, its tops reddening as they
-  fade, with fine rays up it. It drifts and breathes slowly, and now and then hangs over any world, not only magic and
-  the builders'.
-- Warning lights on masts, needles, glass towers and turbines pulse calmly together, twenty-five times a minute. A
-  lighthouse has a character of its own: its beams sweep round once in four to fifteen seconds, alone or in groups of
-  two or three, and its lantern blazes up as a beam turns toward you. Turbines and windmills turn. A pylon's line of
-  light carries a bright spot climbing it, and the glows of pylons, arches, circles and pillars of light breathe.
-- Rain falls at its own pace in a time-lapse, so the curtain slides instead of flickering; snow drifts gently; the low
-  mist breathes on the clouds' clock. Fireflies swell and fade instead of blinking.
-- The rim walls rise out of a haze along their foot and stand crisper above it, for a little more sense of their size.
-
-### Under the hood
-- docs/prior-art/ringworld-motion-and-variety.md §8: items 8 to 13 built, and the first of 15 to 18. The kit's
-  `pkBeacon`, `pkBreathe`, `PK_LIGHTS` and `pkRoofThings`; the Ringworld's `beltAt` (farmsteads where a city meets the
-  country), the wild places, `RG_PALETTES` and `rgPaletteOf`. The Ringworld's fingerprints moved for all of this; no
-  other surface's did.
-- Reviewed the tests the Ringworld's motion leans on (test/moving.test.mjs, test/ringworldView.test.mjs and the
-  fingerprints) and swept 90 scenes across seeds, worlds, hours and films for any part that fails: none did.

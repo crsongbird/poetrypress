@@ -441,7 +441,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     limestone, slate, each its own shape and marks), set into the slope they lie on (`slopeAt`). The neon world's
     districts each have their own pair of neons (`RG_NEON_DISTRICTS`), the ground faintly of their hue; glowing trees
     keep their glow close. With the sun behind a tree, its crown's edge glows thin and bright, laid on as light, the bloom
-    spilling past its outline (never a band of colour inside it).
+    spilling past its outline (never a band of colour inside it). Each thing's own shadow falls the way the sun throws it
+    where the thing stands (`shadowOf`, `pkShadowWay`; docs/prior-art/ringworld-painted.md §4): long at dawn and dusk,
+    toward the eye with the sun behind the thing, held short when it falls away; a tree's under its kept sheet, with a
+    contact shadow at its foot.
   - **The desert's plants** (Ruby: "saguaros with more limbs as they grow taller … blooming only in their season; growth
     stages"; docs/prior-art/ringworld-desert-plants.md): every plant's stage comes from its own height (`hM` handed to
     the kit), regular for its kind. A saguaro keeps its true width at any height, arms from some 3.3 m, about one more

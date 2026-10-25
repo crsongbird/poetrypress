@@ -11,6 +11,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE LAND IN STEPS, NOW WITHOUT LINES: shelves closer to the first painted ring's ridge-behind-ridge look, fewer in
   the city worlds; the lit lines along crests and shelf lips are gone, and the land gleams where it turns between the
   sun and the eye instead, brightest looking into the sun. Is the gleam strong enough, and on the right ground?
+- SHADOWS BY THE SUN: every thing's shadow now falls the way the sun throws it, long at dawn and dusk, toward you when
+  the sun is behind it, held short when it falls away from you; trees with a contact shadow at their foot. Do the
+  shadows read, and is the held-short shadow away from you acceptable?
 - PAINTED, NOT PRINTED: broad strokes of five shared tints over the near ground, soft long strokes in the sky, strokes
   along a gas giant's bands, a near town wall's damp foot and streaks, roofs laid in courses, cacti with a spine rim and
   a corky foot. Painted enough, or push further?
@@ -85,11 +88,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     a film frame's time is mostly the land's cells, its ground marks and the arch drawn as canvas polygons; next, the
     land's mesh and the arch drawn by WebGL (per-corner colours, the shading and shadow done there) and the kept
     sprites stamped as instanced quads, the canvas keeping what only it draws.
-  - THE LAND, what is left: contact shadows at things' feet; floating islands, caves and undergrounds
+  - THE LAND, what is left: floating islands, caves and undergrounds
     (docs/prior-art/ringworld-terrain.md §9); rain shadows behind the ranges; the bands at sharp borders between grounds
     as well as at drops.
-  - LIGHT, what is left: things' own shadows cast on the land by where the sun stands (not the screen's side) and by
-    lights nearby; windows and fires lighting what is near them as the lamps do.
+  - LIGHT, what is left: things' shadows cast by lights nearby; windows and fires lighting what is near them as the lamps
+    do; a building's cast shadow shaped by its outline, not a slab.
   - PLANTS, what is left: blooming and turning in their seasons for the other trees (blossom, autumn colour, bare
     branches, snow on them); more plants that meet each other (moss on the shaded side, flowers at trees' feet, vines on
     ruins); their art styles made one.

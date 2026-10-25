@@ -10,7 +10,7 @@
 import { check, done } from './harness.mjs';
 import { installCanvasMock, makeMockContext } from './canvasMock.mjs';
 installCanvasMock();
-const { pkTree, pkBuilding } = await import('../paintKit.js');
+const { pkTree, pkBuilding, pkShadowWay } = await import('../paintKit.js');
 const { mulberry32 } = await import('../texCore.js');
 
 const px = v => v, cols = { dark: [40, 60, 40], body: [60, 90, 60], lit: [120, 160, 100], trunk: [70, 52, 40], glow: [255, 200, 120], glow2: [120, 200, 255], sd: 1, L: [0.6, -0.8] };
@@ -54,5 +54,14 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   check(`…by the seed, about one ring in four orbits Saturn (${saturnine.length} of 24), the others exactly as never`, saturnine.length >= 2 && saturnine.length <= 12
     && saturnine.every(s => drawn('by the seed', s) === drawn('always', s)));
   globalThis.document = doc; }
+
+// THINGS' SHADOWS BY THE SUN: a shadow falls the way the sun throws it on the page (toward the eye, sideways), and one
+// falling away from the eye is held short, never lying up the page over what stands farther; with no sun known, the old
+// shadow down the side away from the light
+{ const h = 100, toward = pkShadowWay({ shv: [0.3, 1.2] }, h), away = pkShadowWay({ shv: [0.8, -3] }, h), side = pkShadowWay({ shv: [-1.5, 0.1] }, h), none = pkShadowWay({ sd: 1 }, h);
+  check(`a shadow toward the eye falls down the page (${toward.map(Math.round)})`, toward[1] > 30 && toward[1] <= 90);
+  check(`a shadow away from the eye is held short, up the page by an eighth of the height at most, along its own way (${away.map(Math.round)})`, away[1] < 0 && away[1] >= -12.01 && away[0] > 0 && Math.abs(away[0]/away[1] - 0.8/-3) < 1e-6);
+  check(`a shadow to the side falls to that side (${side.map(Math.round)})`, side[0] < -50);
+  check('with no sun known, the old shadow away from the light', none[0] < 0 && none[1] > 0); }
 
 done();
