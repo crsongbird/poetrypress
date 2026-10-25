@@ -45,8 +45,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   axle in the yoke's arms, the turntable on its pedestal, all joined and lit from the sun.
 - A FEW BUILDINGS NEAR THE EYE: now and then a row house, cottage, chapel, motel, observatory or wizard's tower stands
   close, facing you, fading out before it could fill the frame.
-- KINESIS ON A DESK: the film's choices as a tab after Materia (☿), the stage beside it showing each frame as it is
-  drawn; the rest of the page faded and still while a film is made. Is the glyph right, and the place?
+- KINESIS: on a desk the film's choices as a tab after Materia (☿), the stage beside it showing each frame as it is
+  drawn; on a phone the sheet the whole screen, a preview at its top (the page, the frames as they are made, then the
+  film looping); Esoterica's Make a film of the page…. Is the glyph right, and the place?
 
 ## 2 · Ruby's notes to act on
 - RUBY'S AFTERNOON NOTES (2026-10-24), what is left: cloud lighting with depth and faked subsurface scattering; a
@@ -57,8 +58,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   galaxies; the generators kept fast and portable for a game; gem walkers and other constructs in magic worlds, elves
   and fae in place of people in the wilds, demonic and eldritch things, truly weird rare worlds (a candy world first);
   Martian, Venusian and Enceladian rings as extremely rare seeds with their own buildings, plants and animals; the
-  Kinesis tab, begun on a desk (docs/prior-art/film-studio.md, What to build first: next the phone's full-screen sheet
-  with its preview box and a Moving Image… row in Esoterica, then the two cameras, the sun's arc, and keys on a reel).
+  Kinesis tab, begun: the desk's tab and the phone's full-screen sheet with its preview (docs/prior-art/film-studio.md,
+  What to build first: next the hint's surface ability and the chooser's ☿ mark, then the two cameras, the sun's arc,
+  and keys on a reel).
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
   Next: marking controls on the page itself (a ∿ in each lock's place) and during To another look; the seed drifting.
   An hour of time passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).

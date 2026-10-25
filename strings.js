@@ -345,6 +345,9 @@ export const UI_STRINGS = {
   'kept.keep':                             "Keep",
   // ---- the Moving Image sheet (a long press or a right-click on Save image) ----
   'moving.title':                          "Moving Image",
+  'card.moving':                           "Moving Image",
+  'moving.eso_hint':                       "The page as a short film: its camera turning, its light or its day going round, or one look easing into another. Holding Save image opens it too.",
+  'moving.eso_open':                       "Make a film of the page…",
   'moving.hint':                           "The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.",
   'moving.g_move':                        "Move",
   'moving.camera':                        "Camera round",

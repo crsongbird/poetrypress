@@ -4,6 +4,21 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Crux–Matza (2026-10-24)
+
+- On a phone the Moving Image is the whole screen now, the page hidden behind it, with a preview at its top that always
+  keeps its height: the page before a film, each frame as it is made with a thin line along its foot for how far the
+  film has come, and once it is made, the film itself playing over and over until the sheet is closed. What the film
+  will be and Make the film stay held at the bottom as the choices scroll under them; on a desktop they stay at the
+  foot of the Kinesis column.
+- Esoterica has a Moving Image card: Make a film of the page… opens it (the sheet on a phone, the Kinesis tab on a
+  desktop), so holding Save image is no longer the only way in.
+
+### Under the hood
+- The preview box is drawn from the page's canvas after each frame is handed to the encoder (`movingShow`), and the
+  film made plays from its own file in a video beside it, its address let go when the sheet closes. A stray Python
+  cache that slipped into the last release is gone, and ignored from now on.
+
 ## Crux–Hadar (2026-10-24)
 
 - Kinesis, a new tab on a desktop after Materia (its glyph ☿, the messenger's mark): the Moving Image's choices as a
@@ -411,28 +426,3 @@ prints it).
   paintKit.js: the `stonepile` prop, `fruit` and `olive` trees; `gulls` in the small life. The research is in
   docs/prior-art/ringworld-countryside.md §12–17. A large ring takes about a tenth longer. Fingerprints: Painted
   Ringworld's only.
-
-## Neptune–Nereid (2026-10-21)
-
-- Painted Landscape's countries each have their own marks now, sized by how near the ground under them is, so the near
-  part of a band is worked large and its far part small. Fields are a patchwork seen in perspective: parcels in tiers
-  down the hills, bounded by lines running back to one point of the horizon, sown in converging rows, level strips or
-  pasture, with hedges along the bounds. Grassland has patches where the wind bends the grass, drifts of flowers
-  (a soft mass far off, single blooms near), now and then a strip field, and tufts leaning with the wind. Forests are
-  crowns massed in rows with a few large masses and a clearing, the far forest's edge spiky; jungles have emergent
-  trees and a low mist. Mountains have cracks dipping one way and aprons of scree; a volcano's cone has gullies
-  converging on its summit (an old cone deeply cut) and a lava tongue, blocky or lobed. Mesas show their beds, cliff
-  and bench, under a light caprock. Deserts have sinuous dune crests over their slip faces, ripples near and scrub.
-  Tundra has its patterned ground, ponds and heath. Coasts have wet sand and lines of surf.
-- One wind blows through each painting: the grass leans with it, dunes put their slip faces on its lee, the volcano's
-  plume leans on it, and it writes on the water.
-- Water has more moods: a mirror, scales of ripple, glassy wavelets, then white horses a few, frequent or many. Wind
-  lines cut through the reflections on quiet water, a lake keeps a mirror strip under its far shore, gusts lie dark on
-  it, and on a light steady wind lines of foam run back along the wind; rough water has pointed waves, larger near,
-  and the sea one great swell at your feet.
-
-### Under the hood
-- `landMarks` and `waterMarks` (stepsWhimsy.js), each on its own seeded stream so nothing else in a painting moves;
-  `landScene` gives the seed's `wind`. The research is in docs/prior-art/painted-landscape.md. The fields' parcels are
-  drawn as their own shapes rather than clipped, which kept them cheap; a full-size landscape takes about 3 s now.
-  Fingerprints: Painted Landscape's only.

@@ -519,6 +519,8 @@ let showKinesis = null;
     save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave && !(showKinesis && showKinesis())) openMoving(); });
   }
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
+  // (and Esoterica's Make a film of the page…, the way in a person can see)
+  if($('movingOpenBtn') && $('movingOpenBtn').addEventListener) $('movingOpenBtn').addEventListener('click', () => { if(!(showKinesis && showKinesis())) openMoving(); });
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
   if($('movingSetNow') && $('movingSetNow').addEventListener) $('movingSetNow').addEventListener('click', () => movingSetNow('look'));
   if($('movingSetShot') && $('movingSetShot').addEventListener) $('movingSetShot').addEventListener('click', () => movingSetNow('shot'));

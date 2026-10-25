@@ -1826,6 +1826,20 @@ body .tab-btn[data-tab="film"]{ display:none; }
 @media (min-width: 900px){ body:not(.is-mobile) .tab-btn[data-tab="film"]{ display:flex; } }
 .kinesis-card > .moving-sheet{ width:auto; max-width:none; max-height:none; overflow:visible; padding:0; border:0; background:none; box-shadow:none; }
 .kinesis-card #movingClose{ display:none; }
+/* THE PREVIEW BOX (the phone's sheet): a third of the screen high and always so, the frame letterboxed in it, the film
+   itself over it once made, a thin rule along its foot for how far a film has come; held at the sheet's top as the
+   cards scroll under it. On a desk the stage does this, so the Kinesis card has none */
+.moving-preview{ position:sticky; top:0; z-index:2; height:calc(var(--vvh, 100vh) * 0.3); margin:0 0 10px; background:color-mix(in srgb, var(--bg-panel) 70%, #000); border-radius:var(--r-1); overflow:hidden; }
+.moving-preview canvas, .moving-preview video{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+.moving-preview video[hidden]{ display:none; }
+.moving-progress{ position:absolute; left:0; right:0; bottom:0; height:2px; background:var(--accent); transform:scaleX(0); transform-origin:left center; }
+.kinesis-card .moving-preview{ display:none; }
+/* its foot (the summary, the note, Make the film) held at the bottom of the sheet, and of the column in the tab */
+.moving-foot{ position:sticky; bottom:0; z-index:2; background:var(--bg-panel); padding:4px 0 2px; }
+.kinesis-card .moving-foot{ background:var(--bg-card, var(--bg-panel)); }
+/* on a phone the sheet is the whole screen: the page behind it hidden, no veil, no height cap */
+body.is-mobile #movingSheet{ background:var(--bg-panel); align-items:stretch; }
+body.is-mobile #movingSheet > .moving-sheet{ width:100%; max-width:none; height:var(--vvh, 100vh); max-height:none; border:0; border-radius:0; box-shadow:none; padding:12px 14px 0; }
 /* while a film is made, what can't be touched is faded (uiMoving.js, movingInert) */
 body.film-making .tabbar, body.film-making #esoDrawer, body.film-making .history-btn, body.film-making #filmBtn, body.film-making #filmstrip, body.film-making #resetViewBtn{ opacity:.4; transition:opacity .3s; }
 /* THE FILM'S GROUPS (docs/prior-art/film-export.md §5): each a fieldset under a thin rule, its legend small; a row's label
@@ -3926,6 +3940,12 @@ but bear with me, dear}]/jitter:200
     <div class="card kinesis-card" data-tab="film" id="kinesisPanel"></div>
 
     <!-- what this tab holds, in a line (Ruby approved, from the usability review) -->
+    <!-- the visible way to the Moving Image (Apple: a hidden gesture needs a visible way too), as well as holding Save -->
+    <details class="card" data-tab="more" open>
+      <summary class="card-title" data-str="card.moving">Moving Image</summary>
+      <p class="hint" data-str="moving.eso_hint">The page as a short film: its camera turning, its light or its day going round, or one look easing into another. Holding Save image opens it too.</p>
+      <button class="ghost" id="movingOpenBtn" type="button" data-str="moving.eso_open">Make a film of the page…</button>
+    </details>
     <details class="card" data-tab="more">
       <summary class="card-title" data-str="card.appearance">Interface</summary>
       <div class="field full">
@@ -4119,6 +4139,10 @@ but bear with me, dear}]/jitter:200
   <div class="sheet-veil" id="movingSheet" hidden>
     <div class="sheet moving-sheet" id="movingBody" role="dialog" aria-labelledby="movingTitle">
       <div class="sheet-title" id="movingTitle" data-str="moving.title">Moving Image</div>
+      <!-- THE PREVIEW BOX (the phone's sheet; docs/prior-art/film-studio.md, The phone): the page as the film's first frame
+           with the film's frame marked on it, then each frame as it is made, then the film itself, looping; held at the
+           sheet's top, always the same height, so nothing moves. On a desk the stage beside the Kinesis tab does this -->
+      <div class="moving-preview" id="movingPreview" aria-hidden="true"><canvas id="movingPreviewCanvas" width="2" height="2"></canvas><video id="movingPreviewVideo" muted loop playsinline hidden></video><i class="moving-progress" id="movingProgress"></i></div>
       <p class="hint" data-str="moving.hint">The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.</p>
       <!-- (FOUR GROUPS, picture first: what moves, how long, how big, what file; docs/prior-art/film-export.md §5. Rows
            that do not apply to the chosen move stay where they are, dimmed, so nothing moves under the hand) -->
@@ -4163,11 +4187,14 @@ but bear with me, dear}]/jitter:200
       <fieldset class="film-group"><legend data-str="moving.g_output">Output</legend>
         <div class="film-seg film-pick"><label><input type="radio" name="movingFormat" value="mp4" checked><span class="radio-btn"><b data-str="moving.mp4">MP4</b><small data-str="moving.mp4_c">H.264</small></span></label><label><input type="radio" name="movingFormat" value="webm"><span class="radio-btn"><b data-str="moving.webm">WebM</b><small data-str="moving.webm_c">VP9</small></span></label><label><input type="radio" name="movingFormat" value="png"><span class="radio-btn"><b data-str="moving.png">PNG frames</b><small data-str="moving.png_c">zip</small></span></label></div>
       </fieldset>
+      <!-- (its foot, held at the bottom: what the film will be, how it goes, and Make the film) -->
+      <div class="moving-foot">
       <p class="hint film-summary" id="movingSummary" aria-live="polite"></p>
       <p class="hint moving-note" id="movingNote" aria-live="polite"></p>
       <div class="btn-row">
         <button class="btn-major" id="movingMake" type="button" data-str="moving.make">Make the film</button>
         <button class="ghost" id="movingClose" type="button" data-str="moving.close">Close</button>
+      </div>
       </div>
     </div>
   </div>
@@ -31693,6 +31720,9 @@ const UI_STRINGS = {
   'kept.keep':                             "Keep",
 
   'moving.title':                          "Moving Image",
+  'card.moving':                           "Moving Image",
+  'moving.eso_hint':                       "The page as a short film: its camera turning, its light or its day going round, or one look easing into another. Holding Save image opens it too.",
+  'moving.eso_open':                       "Make a film of the page…",
   'moving.hint':                           "The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.",
   'moving.g_move':                        "Move",
   'moving.camera':                        "Camera round",
@@ -34894,7 +34924,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Crux–Hadar';
+const RELEASE = 'Crux–Matza';
 
 const RELEASE_DATE = '2026-10-25';
 
@@ -35854,7 +35884,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-25 · 5f6d5d3";
+const STAMP = "2026-10-25 · 332424e";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -46740,10 +46770,11 @@ function openMoving(){
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
 
   const body = $('movingBody'); if(!body || body.parentNode === sheet) sheet.hidden = false;
+  movingPlaybackOff(); movingShow($('poemCanvas'));
 }
 
 
-function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; movingPlaybackOff(); }
 
 
 
@@ -46757,6 +46788,20 @@ function movingSetEnd(keep){ const f = movingRun.setFrom; if(!f) return; movingR
   if(keep && movingRun.setMode === 'shot'){ movingSet('movingMove', 'camera'); movingSet('movingTurn', 'shot'); }
   const t = $('movingTuck'); if(t) t.hidden = true; if(document.body && document.body.classList) document.body.classList.remove('moving-tucked');
   historyPutBack(f); openMoving(); }
+
+
+
+const movingInSheet = () => { const b = $('movingBody'), s = $('movingSheet'); return !!(b && s && b.parentNode === s); };
+function movingShow(src, along = null){ const cv = $('movingPreviewCanvas'), box = $('movingPreview'); if(!cv || !box || !movingInSheet() || !src || !src.width || !cv.getContext) return;
+  const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1, W = Math.max(2, Math.round((box.clientWidth || 300)*dpr)), H = Math.max(2, Math.round((box.clientHeight || 200)*dpr));
+  if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+  const x = cv.getContext('2d'), k = Math.min(W/src.width, H/src.height), w = src.width*k, h = src.height*k; x.clearRect(0, 0, W, H); x.drawImage(src, (W - w)/2, (H - h)/2, w, h);
+  const pr = $('movingProgress'); if(pr && pr.style) pr.style.transform = `scaleX(${along === null ? 0 : Math.max(0, Math.min(1, along))})`; }
+
+function movingPlayback(blob){ const v = $('movingPreviewVideo'); if(!v) return; movingPlaybackOff();
+  if(!blob || !movingInSheet() || !/video/.test(blob.type || '')) return; movingRun.playUrl = URL.createObjectURL(blob); v.src = movingRun.playUrl; v.hidden = false; const p = v.play && v.play(); if(p && p.catch) p.catch(() => {}); }
+function movingPlaybackOff(){ const v = $('movingPreviewVideo'); if(v){ if(v.pause) v.pause(); v.hidden = true; if(v.removeAttribute) v.removeAttribute('src'); }
+  if(movingRun.playUrl){ URL.revokeObjectURL(movingRun.playUrl); movingRun.playUrl = null; } }
  
 const movingBusy = () => movingRun.busy;
 
@@ -46923,11 +46968,11 @@ async function makeMoving(){
           restoreSettings(blendLooks(start, end, t, 1, snap)); await movingFrame();
           const u = (t - MOVING_FADE[0])/(MOVING_FADE[1] - MOVING_FADE[0]), x = canvas.getContext('2d');
           x.save(); x.globalAlpha = 1 - u*u*(3 - 2*u); x.drawImage(spare, 0, 0); x.restore();
-          await sink.add(canvas, i); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`) + eta(i)); continue;
+          await sink.add(canvas, i); movingShow(canvas, (i + 1)/n); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`) + eta(i)); continue;
         }
         restoreSettings(blendLooks(start, end, t, t < 0.5 ? 0 : 1, snap));
       }
-      await movingFrame(); await sink.add(canvas, i);
+      await movingFrame(); await sink.add(canvas, i); movingShow(canvas, (i + 1)/n);
       movingNote((aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`)) + eta(i));
     }
     if(!movingRun.stop){ movingNote(MOVING.finishing); made = await sink.done(); }
@@ -46949,7 +46994,7 @@ async function makeMoving(){
   const link = document.createElement('a'), url = URL.createObjectURL(made);
   link.download = `poetrypress-${generateFilenameBase()}-${Math.floor(Date.now()/1000)}.${fmt === 'png' ? 'zip' : fmt}`; link.href = url; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
-  movingNote(fill(MOVING.made, (made.size/1e6).toFixed(1) + ' MB'));
+  movingNote(fill(MOVING.made, (made.size/1e6).toFixed(1) + ' MB')); movingPlayback(made);
 }
 
 
@@ -47401,6 +47446,8 @@ let showKinesis = null;
     save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave && !(showKinesis && showKinesis())) openMoving(); });
   }
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
+
+  if($('movingOpenBtn') && $('movingOpenBtn').addEventListener) $('movingOpenBtn').addEventListener('click', () => { if(!(showKinesis && showKinesis())) openMoving(); });
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
   if($('movingSetNow') && $('movingSetNow').addEventListener) $('movingSetNow').addEventListener('click', () => movingSetNow('look'));
   if($('movingSetShot') && $('movingSetShot').addEventListener) $('movingSetShot').addEventListener('click', () => movingSetNow('shot'));

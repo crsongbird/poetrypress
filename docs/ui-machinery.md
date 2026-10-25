@@ -4,8 +4,10 @@ How the interface works: the tabs and the phone layout, the preview, locks and d
 
 - **Kinesis** (docs/prior-art/film-studio.md): on a desk the Moving Image's cards (`#movingBody`) move from their sheet
   into the Kinesis tab (`placeKinesis`, appEvents.js), so the stage beside them shows the page and then each frame as it
-  is drawn; a held or right-clicked Save opens the tab there (`showKinesis`). On a phone, or a window too narrow for the
-  Esoterica drawer, the tab isn't shown and the cards stay in the sheet. While a film is made the rest of the page is
+  is drawn; a held or right-clicked Save, or Esoterica's Make a film of the page…, opens the tab there (`showKinesis`).
+  On a phone, or a window too narrow for the Esoterica drawer, the tab isn't shown and the cards stay in the sheet,
+  which fills the screen, a preview box held at its top (`movingShow`: the page, each frame as it is made, then the
+  film looping) and its foot held at the bottom. While a film is made the rest of the page is
   inert and faded (`movingInert`, body.film-making), the tabs don't change and no shortcut runs, and the preview's
   scale holds (`applyPreviewScale`).
 - **`refreshUi()`** is THE refresh: every view of a value made to match it.

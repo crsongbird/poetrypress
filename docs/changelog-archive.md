@@ -2,6 +2,31 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Nereid (2026-10-21)
+
+- Painted Landscape's countries each have their own marks now, sized by how near the ground under them is, so the near
+  part of a band is worked large and its far part small. Fields are a patchwork seen in perspective: parcels in tiers
+  down the hills, bounded by lines running back to one point of the horizon, sown in converging rows, level strips or
+  pasture, with hedges along the bounds. Grassland has patches where the wind bends the grass, drifts of flowers
+  (a soft mass far off, single blooms near), now and then a strip field, and tufts leaning with the wind. Forests are
+  crowns massed in rows with a few large masses and a clearing, the far forest's edge spiky; jungles have emergent
+  trees and a low mist. Mountains have cracks dipping one way and aprons of scree; a volcano's cone has gullies
+  converging on its summit (an old cone deeply cut) and a lava tongue, blocky or lobed. Mesas show their beds, cliff
+  and bench, under a light caprock. Deserts have sinuous dune crests over their slip faces, ripples near and scrub.
+  Tundra has its patterned ground, ponds and heath. Coasts have wet sand and lines of surf.
+- One wind blows through each painting: the grass leans with it, dunes put their slip faces on its lee, the volcano's
+  plume leans on it, and it writes on the water.
+- Water has more moods: a mirror, scales of ripple, glassy wavelets, then white horses a few, frequent or many. Wind
+  lines cut through the reflections on quiet water, a lake keeps a mirror strip under its far shore, gusts lie dark on
+  it, and on a light steady wind lines of foam run back along the wind; rough water has pointed waves, larger near,
+  and the sea one great swell at your feet.
+
+### Under the hood
+- `landMarks` and `waterMarks` (stepsWhimsy.js), each on its own seeded stream so nothing else in a painting moves;
+  `landScene` gives the seed's `wind`. The research is in docs/prior-art/painted-landscape.md. The fields' parcels are
+  drawn as their own shapes rather than clipped, which kept them cheap; a full-size landscape takes about 3 s now.
+  Fingerprints: Painted Landscape's only.
+
 ## Neptune–Triton (2026-10-21)
 
 - Sunrise Scroll paints many lands now, by the seed or by its new Land knob: the scroll as it was (Peaks), Misty

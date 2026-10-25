@@ -108,10 +108,11 @@ export function openMoving(){
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
   // (on a desktop its cards are in the Kinesis tab, not the sheet: appEvents.js, placeKinesis)
   const body = $('movingBody'); if(!body || body.parentNode === sheet) sheet.hidden = false;
+  movingPlaybackOff(); movingShow($('poemCanvas'));
 }
 // (while a film is being made, closing the sheet, Escape, a tap outside it: a soft no, the film goes on; only Stop, tapped
 //  twice, ends it. The page under the sheet stays as it is, since every frame is drawn from it)
-export function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; }
+export function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; movingPlaybackOff(); }
 // SET IT NOW (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe"): the sheet
 // tucks away and the page itself is changed, anything at all; Done keeps that as the look the film moves to, Cancel
 // drops it, and either way the page goes back to how it was and the changes leave the history
@@ -125,6 +126,20 @@ export function movingSetEnd(keep){ const f = movingRun.setFrom; if(!f) return; 
   if(keep && movingRun.setMode === 'shot'){ movingSet('movingMove', 'camera'); movingSet('movingTurn', 'shot'); }
   const t = $('movingTuck'); if(t) t.hidden = true; if(document.body && document.body.classList) document.body.classList.remove('moving-tucked');
   historyPutBack(f); openMoving(); }
+// THE PREVIEW BOX (the phone's sheet; docs/prior-art/film-studio.md, The phone): the page before a film, each frame as it
+// is made (with a thin rule of how far along), then the film itself looping, from the file just made; only while the
+// cards are in the sheet (on a desk the stage beside the Kinesis tab shows all this)
+const movingInSheet = () => { const b = $('movingBody'), s = $('movingSheet'); return !!(b && s && b.parentNode === s); };
+function movingShow(src, along = null){ const cv = $('movingPreviewCanvas'), box = $('movingPreview'); if(!cv || !box || !movingInSheet() || !src || !src.width || !cv.getContext) return;
+  const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1, W = Math.max(2, Math.round((box.clientWidth || 300)*dpr)), H = Math.max(2, Math.round((box.clientHeight || 200)*dpr));
+  if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+  const x = cv.getContext('2d'), k = Math.min(W/src.width, H/src.height), w = src.width*k, h = src.height*k; x.clearRect(0, 0, W, H); x.drawImage(src, (W - w)/2, (H - h)/2, w, h);
+  const pr = $('movingProgress'); if(pr && pr.style) pr.style.transform = `scaleX(${along === null ? 0 : Math.max(0, Math.min(1, along))})`; }
+// (the film made, playing in the box until the sheet closes or another is begun; its address let go then)
+function movingPlayback(blob){ const v = $('movingPreviewVideo'); if(!v) return; movingPlaybackOff();
+  if(!blob || !movingInSheet() || !/video/.test(blob.type || '')) return; movingRun.playUrl = URL.createObjectURL(blob); v.src = movingRun.playUrl; v.hidden = false; const p = v.play && v.play(); if(p && p.catch) p.catch(() => {}); }
+function movingPlaybackOff(){ const v = $('movingPreviewVideo'); if(v){ if(v.pause) v.pause(); v.hidden = true; if(v.removeAttribute) v.removeAttribute('src'); }
+  if(movingRun.playUrl){ URL.revokeObjectURL(movingRun.playUrl); movingRun.playUrl = null; } }
 /** Is a film being made (the page asks before it is closed or left). */
 export const movingBusy = () => movingRun.busy;
 // WHILE A FILM IS MADE the rest of the page takes no touch (docs/prior-art/film-studio.md, While a film is made): the
@@ -291,11 +306,11 @@ export async function makeMoving(){
           restoreSettings(blendLooks(start, end, t, 1, snap)); await movingFrame();
           const u = (t - MOVING_FADE[0])/(MOVING_FADE[1] - MOVING_FADE[0]), x = canvas.getContext('2d');
           x.save(); x.globalAlpha = 1 - u*u*(3 - 2*u); x.drawImage(spare, 0, 0); x.restore();
-          await sink.add(canvas, i); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`) + eta(i)); continue;
+          await sink.add(canvas, i); movingShow(canvas, (i + 1)/n); movingNote(fill(MOVING.frame, `${i + 1} / ${n}`) + eta(i)); continue;
         }
         restoreSettings(blendLooks(start, end, t, t < 0.5 ? 0 : 1, snap));
       }
-      await movingFrame(); await sink.add(canvas, i);
+      await movingFrame(); await sink.add(canvas, i); movingShow(canvas, (i + 1)/n);
       movingNote((aheadN ? fill(MOVING.frameAhead, `${i + 1} / ${n}`).replace('{count}', String(Math.min(pending.size, n - i - 1))) : fill(MOVING.frame, `${i + 1} / ${n}`)) + eta(i));
     }
     if(!movingRun.stop){ movingNote(MOVING.finishing); made = await sink.done(); }
@@ -317,5 +332,5 @@ export async function makeMoving(){
   const link = document.createElement('a'), url = URL.createObjectURL(made);
   link.download = `poetrypress-${generateFilenameBase()}-${Math.floor(Date.now()/1000)}.${fmt === 'png' ? 'zip' : fmt}`; link.href = url; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
-  movingNote(fill(MOVING.made, (made.size/1e6).toFixed(1) + ' MB'));
+  movingNote(fill(MOVING.made, (made.size/1e6).toFixed(1) + ' MB')); movingPlayback(made);
 }
