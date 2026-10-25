@@ -1786,6 +1786,15 @@ body.is-mobile .shortcut-btn{ display:none; }
 .sheet-title{ font-family:var(--ui-display); font-variation-settings:var(--ui-soft); font-size:18px; letter-spacing:0.04em; margin-bottom:10px; color:var(--accent); }
 /* the Moving Image sheet: a label and its choice to a row */
 .moving-sheet{ width:min(460px, 94vw); }
+/* KINESIS on a desk (docs/prior-art/film-studio.md): the Moving Image's cards in the left column as a tab of their own,
+   after Materia; on a phone, and in a window too narrow for the drawer, the tab is not there and they stay in the sheet.
+   In the tab the sheet is a card like the rest: no frame of its own, no Close (the tabs are the way out) */
+body .tab-btn[data-tab="film"]{ display:none; }
+@media (min-width: 900px){ body:not(.is-mobile) .tab-btn[data-tab="film"]{ display:flex; } }
+.kinesis-card > .moving-sheet{ width:auto; max-width:none; max-height:none; overflow:visible; padding:0; border:0; background:none; box-shadow:none; }
+.kinesis-card #movingClose{ display:none; }
+/* while a film is made, what can't be touched is faded (uiMoving.js, movingInert) */
+body.film-making .tabbar, body.film-making #esoDrawer, body.film-making .history-btn, body.film-making #filmBtn, body.film-making #filmstrip, body.film-making #resetViewBtn{ opacity:.4; transition:opacity .3s; }
 /* THE FILM'S GROUPS (docs/prior-art/film-export.md §5): each a fieldset under a thin rule, its legend small; a row's label
    left, its choice right; native radios drawn as the app's segments (a choice's caption small beneath it) */
 .film-group{ border:0; border-top:1px solid var(--line); margin:10px 0 0; padding:6px 0 0; min-width:0; }

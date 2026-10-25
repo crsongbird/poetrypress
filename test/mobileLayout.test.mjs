@@ -23,7 +23,7 @@ check('body gets the is-mobile class', bodyClasses.has('is-mobile'));
 // 16 = Inscription 2, Rituals 3, Thoughtforms 2, Materia 5, Esoterica 4
 // (Esoterica gained the Appearance card; the Athanor's card went, it opens from the top bar; Materia the Inset Box; Rituals Custom Presets)
 check('every card was found as a tab panel', panels.length === 16);
-check('all five tab buttons were found', buttons.length === 5);
+check('all six tab buttons were found (Kinesis among them, shown on a desk only)', buttons.length === 6);
 check('preset grid still populated on mobile', registry['presetGrid'].children.length > 0);
 
 // Write is the landing tab
@@ -40,7 +40,8 @@ check('only one tab button is active at a time', buttons.filter(b => b.classList
 
 // every tab must own at least one panel, or it would open to an empty screen
 const tabsWithPanels = new Set(panels.map(p => p.dataset.tab));
-const orphans = buttons.map(b => b.dataset.tab).filter(t => !tabsWithPanels.has(t));
+// (Kinesis is a desk's tab: on a phone it isn't shown, and its cards stay in the Moving Image sheet)
+const orphans = buttons.map(b => b.dataset.tab).filter(t => t !== 'film' && !tabsWithPanels.has(t));
 check('no tab button opens to an empty screen', orphans.length === 0);
 if(orphans.length) console.log('  orphan tabs:', orphans);
 

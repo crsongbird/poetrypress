@@ -865,7 +865,8 @@ competing.
     standing still.
   - The lock is a drawn padlock in the same hand, never an emoji.
 - **Tabs:** Inscription ⌘ (the Bowen knot) · Rituals (an inverted
-  pentagram) · Thoughtforms (Ruby's glyph) · Materia ◈ · Esoterica ⌬.
+  pentagram) · Thoughtforms (Ruby's glyph) · Materia ◈ · Kinesis ☿ (a desk's
+  only: the Moving Image's cards) · Esoterica ⌬.
 - **Runology** (runology.js): Ruby's Runes of Power, as Symbology carries
   them.
   - Archetypes head the preset groups, the texture groups and the Athanor's

@@ -2,6 +2,26 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Triton (2026-10-21)
+
+- Sunrise Scroll paints many lands now, by the seed or by its new Land knob: the scroll as it was (Peaks), Misty
+  Peaks (towers standing out of the mist, washed darkest at their tops and gone to paper at their feet, pines on top),
+  a Coast (the sea in rows of arcs, a great wave curling in from one side with its claws of foam, a small wave behind,
+  boats), the Snowy North (snow left bare under every crest, the sky dark down to the hills, flakes, laden pines), a
+  Bamboo grove (three depths, jointed stalks, leaves in twos, threes and fives), a Village (houses on a hillside, a
+  gate, now and then a pagoda, a cloud band across it), a Great Tree over terraced fields (its rope and paper
+  streamers, a crown of blossom or evergreen) and, rarely, a Cursed land under a miasma rising from the ground. The
+  land's things stand on the scroll's own ridges, paler the farther they stand and hidden by the ridges in front of
+  them, with one tiny walker or boat for the scale. Their colours are the scroll's own hues. Its readings: Indigo
+  Print now shows the coast and its wave, Bare Ink a bamboo grove; Vermilion Dusk and Spring Scroll keep the seed's land.
+
+### Under the hood
+- `scrolllands` (stepsScroll.js, `SCROLL_STEPS`), one process part: the five band masks in, each band's crest read off
+  them; ink, wash, water, paper, accent and bloom maps out, laid by six Blends between the near ridge's ink and the
+  petals. Knob 9, Land (`scrollLandOf`). The research is in docs/prior-art/scroll-lands.md; scrollLands.test.mjs
+  checks the odds, the setting, each land's maps and that a far band's things are hidden. Fingerprints: Sunrise
+  Scroll's only.
+
 ## Neptune–Proteus (2026-10-21)
 
 - Loading a look or a preset puts everything back to that look's own: a third or fourth gradient stop it doesn't use

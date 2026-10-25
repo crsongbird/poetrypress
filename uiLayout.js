@@ -53,7 +53,9 @@ function previewScale(){
 // step the scale down and back up, regenerating every texture each time.
 export function applyPreviewScale(allowDown = true){
   // never while Save image is rendering the full export
-  if(!state.page.exportW || state.ui.saving) return;
+  // (nor while a film is made, body.film-making: its frames are drawn at the film's own size, and the stage beside
+  //  Kinesis must not resize the canvas between two of them)
+  if(!state.page.exportW || state.ui.saving || (typeof document !== 'undefined' && document.body && document.body.classList && document.body.classList.contains('film-making'))) return;
   let S = previewScale();
   if(S === null) return;                                       // try again once the layout settles
   // The FIRST real measurement may always step down: at launch the box can't

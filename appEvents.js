@@ -508,22 +508,25 @@ $('downloadBtn').addEventListener('click', async ()=>{
   offerAltText(state.ui.lastAlt);
 });
 
-// THE MOVING IMAGE (uiMoving.js): Save held, or right-clicked, opens its sheet; nothing on the page moves for it
+// THE MOVING IMAGE (uiMoving.js): Save held, or right-clicked, opens its sheet (on a desk, the Kinesis tab: showKinesis,
+// set where the tabs are, below); nothing on the page moves for it
+let showKinesis = null;
 { const save = $('downloadBtn'); let timer = 0;
   if(save && save.addEventListener){
     save.addEventListener('pointerdown', () => { state.ui.heldSave = false; clearTimeout(timer);
-      timer = setTimeout(() => { state.ui.heldSave = true; haptic('drawer'); openMoving(); }, 550); });
+      timer = setTimeout(() => { state.ui.heldSave = true; haptic('drawer'); if(!(showKinesis && showKinesis())) openMoving(); }, 550); });
     for(const ev of ['pointerup', 'pointercancel', 'pointerleave']) save.addEventListener(ev, () => clearTimeout(timer));
-    save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave) openMoving(); });
+    save.addEventListener('contextmenu', e => { e.preventDefault(); clearTimeout(timer); if(!state.ui.heldSave && !(showKinesis && showKinesis())) openMoving(); });
   }
   if($('movingMake') && $('movingMake').addEventListener) $('movingMake').addEventListener('click', makeMoving);
   if($('movingClose') && $('movingClose').addEventListener) $('movingClose').addEventListener('click', closeMoving);
   if($('movingSetNow') && $('movingSetNow').addEventListener) $('movingSetNow').addEventListener('click', () => movingSetNow('look'));
   if($('movingSetShot') && $('movingSetShot').addEventListener) $('movingSetShot').addEventListener('click', () => movingSetNow('shot'));
-  if($('movingTuckDone') && $('movingTuckDone').addEventListener) $('movingTuckDone').addEventListener('click', () => movingSetEnd(true));
-  if($('movingTuckCancel') && $('movingTuckCancel').addEventListener) $('movingTuckCancel').addEventListener('click', () => movingSetEnd(false));
+  if($('movingTuckDone') && $('movingTuckDone').addEventListener) $('movingTuckDone').addEventListener('click', () => { movingSetEnd(true); if(showKinesis) showKinesis(); });
+  if($('movingTuckCancel') && $('movingTuckCancel').addEventListener) $('movingTuckCancel').addEventListener('click', () => { movingSetEnd(false); if(showKinesis) showKinesis(); });
   if($('movingSheet') && $('movingSheet').addEventListener){
-    $('movingSheet').addEventListener('change', paintMoving);   // (any choice on the sheet: its rows and its summary line)
+    // (any choice among its cards: their rows and the summary line; on the cards themselves, which move to the Kinesis tab)
+    if($('movingBody') && $('movingBody').addEventListener) $('movingBody').addEventListener('change', paintMoving);
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
     $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
   }
@@ -685,13 +688,23 @@ if(typeof document.querySelectorAll === 'function'){
       more.forEach(p => { if(p.parentNode !== drawer) drawer.appendChild(p); });
     } else if(drawer) more.forEach(p => { if(p.parentNode !== ctl) ctl.appendChild(p); });   // a narrowed window: back in the panel
   };
-  function activateTab(name){
+  // KINESIS ON A DESK (Ruby: "a new tab, new button on desktop that fits in with the current theme and naming
+  // conventions, setting it to the left, and building this menu like we have built all the other menus";
+  // docs/prior-art/film-studio.md): the Moving Image's cards move from their sheet into the Kinesis tab, so the stage
+  // beside them shows the page, and each frame as it is drawn; on a phone (or a narrowed window) they stay in the sheet,
+  // opened by holding Save. Moved, never copied, as Esoterica's are
+  const placeKinesis = () => { const body = $('movingBody'), tab = $('kinesisPanel'), veil = $('movingSheet'); if(!body || !tab || !veil || !body.setAttribute) return;
+    if(desktopNow()){ if(body.parentNode !== tab){ tab.appendChild(body); body.setAttribute('role', 'region'); veil.hidden = true; } }
+    else if(body.parentNode !== veil){ veil.appendChild(body); body.setAttribute('role', 'dialog'); if(current === 'film') activateTab(before === 'film' ? 'write' : before); } };
+  function activateTab(name, quiet = false){
+    if(movingBusy() && name !== current) return;   // (while a film is made the tabs stay where they are)
     // Esoterica is the options menu: on a desktop it opens as a drawer, and
     // choosing it again closes it, back to whatever was open before
     if(name === 'more' && current === 'more') name = before;
-    if(name !== current){ before = current; current = name; }
+    const was = current; if(name !== current){ before = current; current = name; }
     const desk = desktopNow();
     if(name === 'more') placeEsoterica();
+    if(name === 'film') placeKinesis();
     if(document.body && document.body.classList){
       document.body.classList.toggle('more-open', name === 'more');
       const bar = document.getElementById && document.getElementById('tabBar');
@@ -705,7 +718,9 @@ if(typeof document.querySelectorAll === 'function'){
     if(typeof window !== 'undefined' && window.scrollTo) window.scrollTo({top:0, behavior:'instant'});
     const ctl = document.querySelector && document.querySelector('.controls'); if(ctl && name !== 'more') ctl.scrollTop = 0;
     if(drawer && name === 'more') drawer.scrollTop = 0;
+    if(name === 'film' && was !== 'film' && !quiet) openMoving();   // (its moves and looks as this surface allows)
   }
+  showKinesis = () => { if(desktopNow()){ activateTab('film', true); openMoving(); return true; } return false; };
   tabBtns.forEach((b, i) => b.addEventListener('click', () => { if(!b.classList.contains('active')){ murmur.play('tab', { index: i }); haptic('tab'); } activateTab(b.dataset.tab); }));
   // (a light touch on the phone as a drawer or section opens or folds: Ruby)
   document.addEventListener('toggle', e => { if(e.target && e.target.tagName === 'DETAILS' && e.isTrusted !== false) haptic('drawer'); }, true);
@@ -718,7 +733,7 @@ if(typeof document.querySelectorAll === 'function'){
     if(e.target.closest('#esoDrawer, .tab-btn[data-tab="more"], #clr-picker, .modal-veil, .sheet-veil, .forge-veil, .toast, [role="dialog"]')) return;
     activateTab(before);
   }, true);
-  document.addEventListener('vellum-layout', () => { if(current === 'more') activateTab(before); placeEsoterica(); });
+  document.addEventListener('vellum-layout', () => { if(current === 'more') activateTab(before); placeEsoterica(); if(current === 'film' || !desktopNow()) placeKinesis(); });
   // THE SIDEBAR'S WIDTH: its right edge drags (desktop); remembered in this
   // browser — it is how the person likes the room, not part of a look
   const app = document.querySelector && document.querySelector('.app');
@@ -1521,11 +1536,12 @@ for(const type of ['input', 'change']){
 }
 document.addEventListener('click', (e)=>{
   const t = e.target && e.target.closest ? e.target.closest('button, .preset-btn, .radio-btn') : null;
-  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet, #movingTuck'))) commitSoon();   // (a film's frames are not history)
+  if(t && t.id !== 'undoBtn' && t.id !== 'redoBtn' && !(t.closest && t.closest('#movingSheet, #movingBody, #movingTuck'))) commitSoon();   // (a film's frames are not history)
 }, true);
 if($('shortcutBtn') && $('shortcutBtn').addEventListener) $('shortcutBtn').addEventListener('click', () => showShortcuts(true));
 if($('shortcutSheet') && $('shortcutSheet').addEventListener) $('shortcutSheet').addEventListener('click', (e) => { if(e.target === $('shortcutSheet')) showShortcuts(false); });
 document.addEventListener('keydown', (e)=>{
+  if(movingBusy()) return;   // (no shortcut changes the page while a film is drawn from it)
   const ae = document.activeElement, tag = (ae && ae.tagName) || '';
   if(tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || (ae && ae.isContentEditable)) return;
   const k = (e.key || '').toLowerCase();

@@ -123,8 +123,8 @@ check('controls padding does not double-count the keyboard either',
 
 // --- the structure the phone layout relies on ---
 const tabs = [...html.matchAll(/class="tab-btn[^"]*" data-tab="(\w+)"[^>]*>([\s\S]*?)<\/button>/g)];
-check('all five tabs carry a drawn SVG icon, not an emoji',
-  tabs.length === 5 && tabs.every(t => t[2].includes('<svg') && !/[\u{1F300}-\u{1FAFF}]/u.test(t[2])));
+check('all six tabs carry a drawn SVG icon, not an emoji',
+  tabs.length === 6 && tabs.every(t => t[2].includes('<svg') && !/[\u{1F300}-\u{1FAFF}]/u.test(t[2])));
 check('every tab icon is drawn scratchy — each stroke gone over more than once',
   tabs.every(t => (t[2].match(/<path|<circle/g) || []).length >= 3));
 // (Ruby: "the same size, and everything lined up"): each glyph is fitted to its own square box, its line weight scaled

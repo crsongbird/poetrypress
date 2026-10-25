@@ -79,6 +79,8 @@ NAV = {
   'type':  [('path', 'M4.4 4.6H19.6L12 15.9Z'), ('path', 'M12 7.4V12.4'),
             ('path', 'M2.4 16.1H21.6'), ('ring', (12, 20, 2.25))],
   'page':  [('path', 'M12 2.7 21.3 12 12 21.3 2.7 12Z'), ('fill', 'M12 7.9 16.1 12 12 16.1 7.9 12Z')],
+  # Kinesis: ☿, Mercury's mark, the messenger's (horns, head, and the cross under it)
+  'film':  [('path', 'M7.9 2.6A4.1 4.1 0 0 0 16.1 2.6'), ('ring', (12, 10.3, 3.7)), ('path', 'M12 14V21.6'), ('path', 'M8.7 18.1H15.3')],
   'more':  [('path', 'M12 2.9 19.9 7.5v9L12 21.1 4.1 16.5v-9Z'), ('path', 'M12 2.9v2.2M12 18.9v2.2'),
             ('ring', (12, 12, 3.3))],
 }

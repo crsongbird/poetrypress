@@ -4,6 +4,22 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Crux–Hadar (2026-10-24)
+
+- Kinesis, a new tab on a desktop after Materia (its glyph ☿, the messenger's mark): the Moving Image's choices as a
+  card in the left column, with the page beside them on the stage. While a film is made the stage shows each frame as
+  it is drawn, at the film's own shape, so you watch it come together. Holding or right-clicking Save image on a
+  desktop opens the tab; on a phone it stays the sheet it was. Set it now… and Set the shot… come back to the tab.
+- While a film is made, nothing else on the page can be touched: the tabs, the other cards, undo and redo, the
+  filmstrip and the keyboard's shortcuts wait, faded, until it is done or stopped, so no change can slip in between two
+  frames.
+
+### Under the hood
+- The film's cards (`#movingBody`) move between the sheet and the Kinesis tab with the layout (`placeKinesis`), as
+  Esoterica's do; their choices are listened to on the cards themselves. `movingInert` makes the rest of the page inert
+  while a film is made, and the preview's scale holds then (`applyPreviewScale`), so the canvas never resizes between
+  frames.
+
 ## Crux–Acrux (2026-10-24)
 
 - The Ringworld has wild things now, and they move as wild things do. Deer and elk at the edge of the woods graze, lift
@@ -420,23 +436,3 @@ prints it).
   `landScene` gives the seed's `wind`. The research is in docs/prior-art/painted-landscape.md. The fields' parcels are
   drawn as their own shapes rather than clipped, which kept them cheap; a full-size landscape takes about 3 s now.
   Fingerprints: Painted Landscape's only.
-
-## Neptune–Triton (2026-10-21)
-
-- Sunrise Scroll paints many lands now, by the seed or by its new Land knob: the scroll as it was (Peaks), Misty
-  Peaks (towers standing out of the mist, washed darkest at their tops and gone to paper at their feet, pines on top),
-  a Coast (the sea in rows of arcs, a great wave curling in from one side with its claws of foam, a small wave behind,
-  boats), the Snowy North (snow left bare under every crest, the sky dark down to the hills, flakes, laden pines), a
-  Bamboo grove (three depths, jointed stalks, leaves in twos, threes and fives), a Village (houses on a hillside, a
-  gate, now and then a pagoda, a cloud band across it), a Great Tree over terraced fields (its rope and paper
-  streamers, a crown of blossom or evergreen) and, rarely, a Cursed land under a miasma rising from the ground. The
-  land's things stand on the scroll's own ridges, paler the farther they stand and hidden by the ridges in front of
-  them, with one tiny walker or boat for the scale. Their colours are the scroll's own hues. Its readings: Indigo
-  Print now shows the coast and its wave, Bare Ink a bamboo grove; Vermilion Dusk and Spring Scroll keep the seed's land.
-
-### Under the hood
-- `scrolllands` (stepsScroll.js, `SCROLL_STEPS`), one process part: the five band masks in, each band's crest read off
-  them; ink, wash, water, paper, accent and bloom maps out, laid by six Blends between the near ridge's ink and the
-  petals. Knob 9, Land (`scrollLandOf`). The research is in docs/prior-art/scroll-lands.md; scrollLands.test.mjs
-  checks the odds, the setting, each land's maps and that a far band's things are hidden. Fingerprints: Sunrise
-  Scroll's only.

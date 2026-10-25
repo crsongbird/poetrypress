@@ -21,6 +21,7 @@ export const UI_STRINGS = {
   'tab.rituals':                           "Rituals",
   'tab.thoughtforms':                      "Thoughtforms",
   'tab.materia':                           "Materia",
+  'tab.kinesis':                           "Kinesis",
   'tab.esoterica':                         "Esoterica",
   'tab.close':                                 "Close",
   'tab.pml':                                   "PML",

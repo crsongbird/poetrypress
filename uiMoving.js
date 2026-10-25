@@ -106,7 +106,8 @@ export function openMoving(){
   const coded = typeof VideoEncoder !== 'undefined'; if(!coded) movingSet('movingFormat', 'png');
   const pp = $('movingPagePx'), cv = $('poemCanvas') || {}; if(pp) pp.textContent = `${state.page.exportW || cv.width} × ${state.page.exportH || cv.height}`;
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
-  sheet.hidden = false;
+  // (on a desktop its cards are in the Kinesis tab, not the sheet: appEvents.js, placeKinesis)
+  const body = $('movingBody'); if(!body || body.parentNode === sheet) sheet.hidden = false;
 }
 // (while a film is being made, closing the sheet, Escape, a tap outside it: a soft no, the film goes on; only Stop, tapped
 //  twice, ends it. The page under the sheet stays as it is, since every frame is drawn from it)
@@ -126,6 +127,14 @@ export function movingSetEnd(keep){ const f = movingRun.setFrom; if(!f) return; 
   historyPutBack(f); openMoving(); }
 /** Is a film being made (the page asks before it is closed or left). */
 export const movingBusy = () => movingRun.busy;
+// WHILE A FILM IS MADE the rest of the page takes no touch (docs/prior-art/film-studio.md, While a film is made): the
+// tabs, the other cards, the stage's undo, redo and filmstrip, Save and the Esoterica drawer are made inert and faded
+// (body.film-making), so on a desktop, where the stage stands open beside the Kinesis tab, nothing changes the page
+// between two frames; on a phone the sheet covers them anyway
+const MOVING_INERT = '#tabBar, .controls > .card:not(#kinesisPanel), #esoDrawer, #undoBtn, #redoBtn, #filmBtn, #filmstrip, #resetViewBtn, #downloadBtn, #dragHandle';
+export function movingInert(on){ if(typeof document === 'undefined' || !document.querySelectorAll) return;
+  for(const el of document.querySelectorAll(MOVING_INERT)){ if(on) el.setAttribute('inert', ''); else el.removeAttribute('inert'); }
+  if(document.body && document.body.classList) document.body.classList.toggle('film-making', !!on); }
 // KEEP THE SCREEN AWAKE while a film is made (the Screen Wake Lock: a sleeping device stops the page): asked for at the
 // start, asked for again when the page is shown again (the browser lets it go when the page is hidden), let go at the end
 export async function movingWake(){
@@ -262,7 +271,7 @@ export async function makeMoving(){
   // and as memory allows at this size; none for a move between looks (each frame's look is a whole restore)
   const workers = looked ? 0 : setFilmPool(true), aheadN = looked ? 0 : Math.max(0, Math.min(workers*2, Math.floor(6e8/(w*h*4)))), pending = new Map();
   const queue = j => { if(j >= n || pending.has(j)) return; place(j); pending.set(j, surfaceRequests(w, h).map(r => prefetchTexture(r.type, r.w, r.h, r.opts))); };
-  movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving'); movingWake();
+  movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving'); movingWake(); movingInert(true);
   if(document.body && document.body.classList) document.body.classList.add('saving');
   try {
     canvas.width = w; canvas.height = h; setDrafting(false); clearTimeout(draftTimer); setRenderScale(1, [w, h]);
@@ -301,7 +310,7 @@ export async function makeMoving(){
     for(const mk of marks) if(mk.el){ if(mk.step0 !== undefined) mk.el.step = mk.step0; mk.el.value = String(mk.v0); }
     canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);
     if(document.body && document.body.classList) document.body.classList.remove('saving');
-    const stopped = movingRun.stop; movingRun.busy = false; movingRun.stop = false; setWorking(null); paintMoving(); render();
+    const stopped = movingRun.stop; movingRun.busy = false; movingRun.stop = false; movingInert(false); setWorking(null); paintMoving(); render();
     if(stopped && !made){ sink.drop(); movingNote(MOVING.stopped); }
   }
   if(!made) return;
