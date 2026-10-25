@@ -4,6 +4,34 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Celaeno (2026-10-25)
+
+- The Ringworld's land is laid in steps again, closer to the first painted ring's ridge-behind-ridge look. The land
+  rises in shelves, each a broad level ending in a short rise to the next, and each shelf's lip is drawn as a lit line.
+  Some regions are more stepped than others, the highest crags keep their own ridges, and Landforms makes the steps
+  taller.
+- Films hold still. Each tree is drawn once and reused, whole at every size, so trees no longer change shape or size
+  as the camera zooms or the ring turns. Each building's shape is read once, so buildings no longer flash as the camera
+  pans. The land is kept corner by corner as it is first worked out, so turning, zooming or rising never makes the ring
+  work it out again. Later frames of a film draw faster.
+- Hills are shaded smoothly from corner to corner instead of in rows of flat facets, and a slope no longer shades
+  itself in stripes when the sun glances across it.
+- The bright line along a crest is one clean line again, not a row of stitches.
+- In rain the overcast now covers the whole sky; some seeds had a hole in it straight overhead.
+- The far land on the arch is laid in finer patches, so it no longer looks like a checkerboard when zoomed in on.
+- With the sun behind a tree, the crown's edge now glows thin and bright, the light spilling past it, instead of a
+  yellow band inside its outline.
+
+### Under the hood
+- `rgSprite` keeps each tree's sheet by its id, kind, sizes and light; `rgStep2` steps sizes by the square root of two.
+- paintKit's proofs are drawn at one size and unlit (`raw`, `lightRaw` from the colours), keyed by the building
+  alone, and lit where they are used.
+- The mesh keeps each ring's corners by world place (`rawH`, its step `stepQ`, its colour and sunlight), however many
+  cells the camera draws; `kSunAt` gives each corner its own turn to the sun; `litAt` begins past the corner's cell.
+- `lkLand` lays its steps and tells each place's step (`stepQ`); `RG_ARCH_KEPT` keeps the arch's patches.
+- docs/prior-art/ringworld-terrain.md §12 is the research (terraces in libnoise and Gaea, shadow acne and its bias,
+  Gouraud shading, impostors).
+
 ## Pleiades–Asterope (2026-10-25)
 
 - The magic world has creatures of its own. Slimes are low, see-through mounds of jelly with a darker heart inside and
@@ -447,18 +475,3 @@ prints it).
 - `moveAlong` takes a shape (`'in'`, `'out'`, `'ease'`) where it took a yes or no; `cameraAlso` gives the view and zoom
   for a camera round's second move, its amounts in `FILM_CAMERA`; the history is held and put back whole around Set it
   now (`historyHold`, `historyPutBack`). docs/prior-art/film-animation.md says what was built and what is still to come.
-
-## Ursa Major–Alioth (2026-10-24)
-
-- See Through: a glass surface laid over another now bends the surface beneath it. Under Glass refracts what is behind
-  each pane by the pane's own slope (its seams and bubbles turn the lines beneath), Broken Glass offsets the picture
-  under each shard by that shard's tilt, and Crystal Leaf and Poured Wax bend it by their relief. The switch sits with
-  the surface's tools when it can see through: on for a new page; a look saved before keeps its old picture, and
-  saving a look keeps the choice.
-
-### Under the hood
-- A surface that can see through hands its lens to the page under its picture: the Light Engine keeps the height it lit
-  (`ltLensed`), the glass pane and the shards keep their own offsets, and the texture stacks the lens, as offsets and
-  coverage, below the picture (`seeLens`, `seeStack`, reaching `SEE_REACH` canonical pixels). The page bends what is
-  already drawn through it before the layer is laid (`bendBeneath`); a look without a version turns it on
-  (`seeByDefault`). No fingerprint moved: a surface draws its lens only when asked.

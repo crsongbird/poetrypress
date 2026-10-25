@@ -8,6 +8,11 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
+- THE LAND IN STEPS: shelves with lit lips, closer to the first painted ring's ridge-behind-ridge look. Enough steps,
+  and tall enough? (Landforms makes them taller.)
+- FILMS THAT HOLD STILL: trees drawn once and stamped, buildings' shapes read once, the land's corners kept by place,
+  so nothing should flash or change size as the camera pans or zooms; smooth shading without stripes; no stitches on
+  the crests; no hole in the overcast; the arch's patches finer; the leaves' backlight a thin glow. Still any flashing?
 - THE RINGWORLD, SEALED AND FASTER: it no longer opens in the Athanor (the Surface card's button greyed, its parts in no
   menu); stills about a third faster, a film's frames more so (PERFORMANCE-AUDIT.md). Does it feel quicker on the phone?
 - THE COUNTRYSIDE BY WORKS: each farmstead now farms its own fields round its yard, as many as Works raises: at a little
@@ -69,6 +74,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   production). In the order they are being built:
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
+  - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path"):
+    a film frame's time is mostly the land's cells, its ground marks and the arch drawn as canvas polygons; next, the
+    land's mesh and the arch drawn by WebGL (per-corner colours, the shading and shadow done there) and the kept
+    sprites stamped as instanced quads, the canvas keeping what only it draws.
   - THE LAND, what is left: contact shadows at things' feet; floating islands, caves and undergrounds
     (docs/prior-art/ringworld-terrain.md §9); rain shadows behind the ranges; the bands at sharp borders between grounds
     as well as at drops.

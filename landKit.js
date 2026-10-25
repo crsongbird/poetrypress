@@ -70,11 +70,14 @@ export function lkLand(seed, o){
   // (how wet the seed's ring is on the whole: some rings green, some dry country and desert)
   const arid = 0.5*(lkHash(s, 14, 4041)/4294967296) - 0.25;
   const capM = Hwm*0.86;   // (no mountain above the rim walls: peaks eased under this)
+  // (how tall the land's steps stand: some rings in low shelves, some in tall ones, taller where Landforms is high)
+  const stepM = (13 + 15*(lkHash(s, 15, 4041)/4294967296))*(0.6 + 0.8*F);
   // (the lapse rate: warmth lost a metre up, so strong that a ring's hills show their zones, woods giving way to tundra,
   //  and the high ranges stand white over the plains: the snowline some 250 to 800 m up by the seed's warmth)
   const LAPSE = 1.15/1000;
   // (the raw land in metres, and the parts the climate and the colours read: s, how far inland; dryness of the region)
-  const raw = (u, v, fineM) => {
+  let lastQ = NaN;   // (the last place's step: its shelf's number and how far up it, its lip where it is whole: stepQ)
+  const raw = (u, v, fineM) => { lastQ = NaN;
     const wu = 1800*fbm(u, v, 7000, 2, 1), wv = 1800*fbm(u, v, 7000, 2, 2);
     let C = fbm(u + wu, v + wv, 11000, 4, 3); const dl = Math.hypot(u - Cm*Math.round(u/Cm), v - z0m)/1400; C += 0.1*Math.exp(-dl*dl);
     const sc = C - t0;
@@ -102,6 +105,13 @@ export function lkLand(seed, o){
     if(low > 0.002 && sc > -0.02){ const r = 1 - Math.abs(N(u + wu*1.3, v + wv*1.3, 6000, 10)), vf = lkSmooth(0.9, 0.99, r)*Math.min(1, low*1.5);
       if(vf > 0){ h -= Math.min(Math.max(0, h)*0.6, 30)*vf; const rv = lkSmooth(0.972, 0.992, r)*lkSmooth(0.45, 0.85, low); if(rv > 0) h += (-2.5 - h)*rv; } }
     if(low > 0.002 && dryR < 0.5){ const lk = lkSmooth(0.5, 0.62, 0.5 + 0.5*N(u, v, 2400, 11))*low*lkSmooth(0.5, 0.35, dryR); if(lk > 0) h += (-4 - h)*lk; }
+    // STEPS (Ruby, 2026-10-25: "more steps and ridgelines so we can kinda nail the look of the original, even if that is
+    // sort of 'unrealistic' terrain"): the land laid in shelves, each a broad level ending in a short rise to the next, as
+    // the first painted ring stood ridge behind ridge; the shelves' edges wandering, some regions more stepped than
+    // others, the highest crags left to their own ridges; and read only as finely as the land is asked for, so a far
+    // coarse ring never aliases them into noise
+    if(h > 2){ const St = stepM*(0.75 + 0.5*(0.5 + 0.5*N(u, v, 14000, 33))), tm = (0.55 + 0.45*lkSmooth(-0.25, 0.25, fbm(u, v, 9000, 2, 31)))*lkSmooth(2, 12, h)*(1 - 0.6*lkSmooth(350, 1000, h))*(1 - lkSmooth(St*3, St*14, fineM));
+      if(tm > 0.01){ const J = St*0.45*N(u + wv, v + wu, 700, 32), q = (h + J)/St, f = q - Math.floor(q); h += ((Math.floor(q) + lkSmooth(0.82, 1, f))*St - J - h)*tm; if(tm > 0.3) lastQ = q; } }
     // (no mountain above the walls: a soft ceiling)
     if(h > capM - 200){ const k2 = 80; h = capM - k2*Math.log1p(Math.exp((capM - h)/k2)); }
     return h;
@@ -130,5 +140,7 @@ export function lkLand(seed, o){
     for(let i = 0; i < w.length; i++) w[i] /= n || 1; return w; };
   // the snowline: where warmth falls under freezing (ice's own warmth plus a little)
   const snowline = Math.max(150, (warm + 0.06)/LAPSE)*M;
-  return { M, sea: 0, height, climate, biomes, snowline, wet, warm, rug };
+  // (stepQ: the step of the place last asked for its height, NaN where its land is not stepped: a shelf's lip where it
+  //  passes a whole number, so a painter can draw the lip of each shelf)
+  return { M, sea: 0, height, climate, biomes, snowline, wet, warm, rug, stepQ: () => lastQ };
 }

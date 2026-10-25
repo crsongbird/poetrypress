@@ -331,6 +331,33 @@
 29. Elevated highways in the neon world follow contour-hugging splines, decks 10 to 16 m up on single columns about 40 m apart, 4.3 m a lane, ramps 6 to 11 m wide peeling off in pairs, junctions of two to four decks, over rivers and canals where present; at night two lamp lines, a dark underside and neon on the deck [est].
 30. Everything above is one world shared by the arch and the land at the eye's feet, so a coast seen overhead is the same coast walked to [est].
 
+## 12. Steps, smooth shading and things drawn once (Ruby, 2026-10-25)
+
+Ruby: "terrain generator should generate more steps and ridgelines so we can kinda nail the look of the original, even
+if that is sort of 'unrealistic' terrain"; "horizontal lines on the terrain and shadow acne are common"; "tree trunks
+and stuff change size every few frames … write once, read many".
+
+- libnoise's Terrace module maps heights onto a curve whose control points each "resets the slope to zero", so each
+  makes a flat step, the slope rising smoothly between them; it is "often used to generate terrain features such as
+  your stereotypical desert canyon" [src](https://libnoise.sourceforge.net/docs/classnoise_1_1module_1_1Terrace.html).
+- Gaea's Terrace node "adds even stratification to the terrain", set by its number of terraces, their uniformity and
+  their steepness [src](https://docs.quadspinner.com/Reference/Profile/Terrace.html).
+- Shadow acne "is a surface shadowing itself from depth-map error", worst at grazing angles; the cure is a bias that
+  grows with the surface's angle to the light, not a large flat one, which detaches shadows from what casts them
+  [src](https://bugnet.io/blog/how-to-fix-shadow-acne-on-large-flat-surfaces).
+- Gouraud shading gives each vertex the average of its faces' normals, lights each vertex, and interpolates the
+  intensities across the polygon, which removes the sharp changes at polygon edges
+  [src](https://education.siggraph.hosting.acm.org/static/HyperGraph/scanline/shade_models/shadgou.htm).
+- An impostor replaces a model with billboards: rendered from one or several views into textures, for what is seen
+  from a distance, and for vegetation above all [src](https://documentation.simplygon.com/overview/concepts/impostor.html).
+- So in the painter [est]: the land laid in shelves of a seed's own height (some 8 to 40 m by Landforms), each a broad
+  level and a short rise in its last fifth, their edges wandering on noise, some regions more stepped, the highest crags
+  left to their ridges and the steps faded where the land is read coarsely; each shelf's lip drawn lit where a cell of
+  the mesh crosses it. Each corner of the mesh shaded by its own slope, read from its neighbours, the cells between
+  graded from corner to corner; the walk toward the sun begun past the corner's own cell, a little above the ground.
+  Each tree drawn once onto its own sheet, whole whatever its size, and stamped after; each building's shape read once,
+  at one size and unlit, and lit wherever it is used.
+
 ### Gaps
 - Strugar's CDLOD paper could not be opened from here (its PDF links were refused); its claims above come from the project's README, a demo's README and a forum thread [est].
 - No source was found for Firewatch's fog specifics or for vanilla Minecraft's biome-blend radius; those rules rest on Sable's account and the Better Biome Blend mod [est].

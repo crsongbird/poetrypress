@@ -128,7 +128,7 @@ function pkTreeForm(R){ return { wide: 0.78 + 0.5*R(), tall: 0.9 + 0.2*R(), lean
 //  it, the light through its leaves: the side you see in shade, its edges glowing yellow-green, its shade lifted a
 //  little by the light scattered in the leaves)
 function pkTreeTint(c, F){ const k = 1 + F.val*0.05, t = col => [Math.min(255, col[0]*k*(1 + F.hue*0.04)), Math.min(255, col[1]*k), Math.min(255, col[2]*k*(1 - F.hue*0.05))];
-  const back = Math.max(0, Math.min(1, c.back || 0)), tr = pkMix(pkMix(t(c.lit), [214, 232, 96], 0.55), c.sun || PK_WHITE, 0.15);
+  const back = Math.max(0, Math.min(1, c.back || 0)), tr = pkMix(pkMix(t(c.lit), [176, 222, 120], 0.42), c.sun || PK_WHITE, 0.2);
   return { ...c, dark: pkMix(t(c.dark), tr, back*0.16), body: pkMix(t(c.body), t(c.dark), back*0.22), lit: pkMix(t(c.lit), t(c.body), back*0.45), trans: tr, back }; }
 // A CROWN GROWN, NOT SCATTERED: each lobe set against one already there (overlapping it), so the crown is one body and
 // nothing floats; inside an envelope (rx, ry about cx, cy) leaning toward the tree's side
@@ -173,7 +173,9 @@ function pkLobes(x, lobes, c, R, cx, cy, rr, px){
   pkBacklit(x, lobes, c, RBk, true);
 }
 // THE LIGHT THROUGH THE LEAVES (the sun behind the tree, c.back): where a lobe lies on the crown's outline the leaves are
-// thin against the light and glow yellow-green, brightest at the very edge; near, a soft bloom of it
+// thin against the light and glow, brightest at the very edge; near, a soft bloom of it spilling past the outline into
+// the air (Ruby: the band it was, inside the edge, "looks like a yellow coffee stain"): laid on as light (screen), so it
+// brightens what it falls on and never paints a band of its own colour
 function pkBacklit(x, lobes, c, R, big){ const back = c.back || 0; if(back < 0.05) return; const tr = c.trans || c.lit; x.lineCap = 'round';
   // (along each lobe's arc wherever it is the crown's outline: a wide soft glow, then the bright thin edge)
   // (the outline only: a point of the arc not under another lobe, open air just beyond it, and facing out of the crown,
@@ -184,8 +186,10 @@ function pkBacklit(x, lobes, c, R, big){ const back = c.back || 0; if(back < 0.0
       out.push(open(X + ca*r*0.92, Y + sa*r*0.92, L1) && open(X + ca*r*1.6, Y + sa*r*1.6, L1) && (ca*ox + sa*oy)/od > -0.35); }
     for(let q = 0; q < n;){ if(!out[q]){ q++; continue; } let e = q; while(e < n && out[e + 1]) e++; const a0 = q/n*Math.PI*2 - 0.1, a1 = (e + 1)/n*Math.PI*2 + 0.1;
       // (the thin edge broken where leaves stand out against the light, as a backlit crown's edge is)
-      for(const [w, al, rk] of big ? [[0.26, 0.16, 0.82], [0.07, 0.55, 0.92]] : [[0.18, 0.5, 0.86]]){ x.strokeStyle = pkCss(tr, Math.min(0.85, back*al)); x.lineWidth = r*w; if(big && w < 0.2 && x.setLineDash){ const d = []; for(let k = 0; k < 8; k++) d.push(r*(k % 2 ? 0.03 + 0.1*R() : 0.06 + 0.3*R())); x.setLineDash(d); }
+      const gco = x.globalCompositeOperation; x.globalCompositeOperation = 'screen';
+      for(const [w, al, rk] of big ? [[0.2, 0.1, 1.02], [0.05, 0.42, 0.96]] : [[0.12, 0.34, 0.97]]){ x.strokeStyle = pkCss(tr, Math.min(0.7, back*al)); x.lineWidth = r*w; if(big && w < 0.1 && x.setLineDash){ const d = []; for(let k = 0; k < 8; k++) d.push(r*(k % 2 ? 0.03 + 0.08*R() : 0.1 + 0.3*R())); x.setLineDash(d); }
         x.beginPath(); x.arc(X, Y, r*rk, a0, a1); x.stroke(); if(x.setLineDash) x.setLineDash([]); }
+      x.globalCompositeOperation = gco;
       q = e + 1; } } }
 // A FROND (a palm's, a tree fern's): a thin midrib arching out and down, and its leaflets from both sides of it, longest
 // at its middle, so it reads as a feather and not a band; a palm's leaflets hang, a fern's spread flat (spread 0 to 1); far,
@@ -1076,18 +1080,21 @@ const PK_BOX3 = { brick: [0.9, 0], glass: [0.9, 0], slab: [0.45, 0], deco: [0.8,
 // (kept: a film draws the same buildings frame after frame, the camera turning or the hours passing; a proof is read
 //  back from a canvas the CPU keeps, never one the GPU must hand back)
 const PK_PROOFS = new Map();
-function pkFaceProof(face, c, R0, h, wdt, eave, id){
-  // (keyed by everything the face is drawn from but the clock, which only lights its windows: by the hour)
-  // (its size in steps of about a tenth, so a film whose camera moves reads the same proof frame after frame, and the
-  //  building keeps its shape instead of shifting a pixel each frame)
-  const key = id ? id + '|' + Math.round(Math.log2(Math.max(1, h))*8) + '|' + Math.round(Math.log2(Math.max(1, wdt))*8) + '|' + eave + '|' + JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'ft' || k === 'view' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*1000)/1000 : v) + '|' + (c.t ? Math.floor(c.t/3600) : 0) : null;
+// (Ruby, 2026-10-25: buildings flashing as the camera panned, "shouldn't this stuff all be tagged data": a proof is the
+//  building's own, read ONCE: drawn at one size whatever size it shows (its readings are shares of its height and width),
+//  by daylight in its own unlit colours (c.raw, its palette's; lit again where they are used: c.lightRaw), so neither a
+//  film's moving camera nor its passing hours ever read it again or read it differently)
+function pkFaceProof(face, c, R0, h, wdt, eave, id, px){
+  const H0 = px ? px(140) : 140, W0 = H0*wdt/Math.max(1e-6, h), raw = !!c.raw;
+  const key = id ? id + '|' + Math.round(wdt/Math.max(1e-6, h)*24) + '|' + eave + '|' + (raw ? 'raw' : JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'ft' || k === 'view' || k === 'windX' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*100)/100 : v)) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
-  const out = pkFaceProofOf(face, c, R0, h, wdt, eave);
+  const cP = raw ? { ...c, mat: m0 => { const m = c.raw(m0); return { body: m, lit: pkMix(m, PK_WHITE, 0.28), dark: pkMix(m, PK_BLACK, 0.42) }; }, body: c.rawBody || c.body, lit: c.rawLit || c.lit, dark: c.rawDark || c.dark } : c;
+  const out = pkFaceProofOf(face, cP, R0, H0, W0, eave);
   if(key){ if(PK_PROOFS.size > 3000) PK_PROOFS.clear(); PK_PROOFS.set(key, out); }
   return out; }
 function pkFaceProofOf(face, c, R0, h, wdt, eave){ const out = {};
   try { const N = 96, cv = document.createElement('canvas'); cv.width = N; cv.height = N; const q = cv.getContext('2d', { willReadFrequently: true }), kx = (N - 6)/(wdt*2), ky = (N - 6)/(h*1.4);
-    q.save(); q.translate(N/2, N - 3); q.scale(kx, ky); face(q, { ...c, view: null, vdep: 1e-6, nocast: true, unlit: true }, R0); q.restore();
+    q.save(); q.translate(N/2, N - 3); q.scale(kx, ky); face(q, { ...c, view: null, vdep: 1e-6, nocast: true, unlit: true }, R0, h, wdt, 0); q.restore();
     const d = q.getImageData(0, 0, N, N).data, op = (i, j) => i >= 0 && i < N && j >= 0 && j < N && d[(j*N + i)*4 + 3] > 160;
     const J = fy => Math.round(N - 3 - fy*h*ky), I = fx => Math.round(N/2 + fx*wdt*kx), at = (fx, fy) => { const i = (J(fy)*N + I(fx))*4; return d[i + 3] > 200 ? [d[i], d[i + 1], d[i + 2]] : null; };
     // (a row's half-width, out from the middle both ways and the narrower kept; a column's top, down from the sky)
@@ -1123,11 +1130,12 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   const GA = x.globalAlpha;   // (drawn faint as a whole when its caller lays it faint)
   const { kind, dk, eave: eave0, roofM, at: crownAt = 1, rim = 0.035, face } = o, S = pkSpace(X, Y, 1, c.view), sd = c.sd, mpx = c.mpx || wdt/10;
   // (the same thing every way: its stream taken once, and its shape and colours read back from a small proof of its face)
-  const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0, o.id && o.id + '|' + v0 + '|' + Math.round(night*20) + '|' + px(100).toFixed(3)); R0 = R1;
+  const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0, o.id && o.id + '|' + v0 + '|' + px(100).toFixed(3), px); R0 = R1;
   if(o.plain && !pr.a) return false; // (a small thing whose face can't be read: squeezed as before)
   const w2 = (pr.a || 0.5)*wdt, D = w2*2*dk, eave = eave0 ? ((!o.ends && pr.eave) || eave0) : 0, ridge = h*((!o.ends && pr.ridge) || 1), Hs = h*eave;
   const tiers = eave ? [{ z: eave, a: w2/wdt }] : (pr.tiers || [{ z: 0.97, a: w2/wdt }]);
-  if(pr.wall) c = { ...c, body: pr.wall, lit: pkMix(pr.wall, PK_WHITE, 0.25), dark: pkMix(pr.wall, PK_BLACK, 0.4) };
+  const litOf = m => c.lightRaw ? c.lightRaw(m) : { body: m, lit: pkMix(m, PK_WHITE, 0.25), dark: pkMix(m, PK_BLACK, 0.4) };
+  if(pr.wall) c = { ...c, ...litOf(pr.wall) };
   const shadeOf = (nu, nv, m = c) => { const k = S.light(nu, nv, sd); return k > 0 ? pkMix(m.body, m.lit, k*0.85) : pkMix(m.body, m.dark, -k*0.85); };
   const wall = (pts, nu, nv, m = c) => pkShade(x, pts.map(p => S.P(...p)), shadeOf(nu, nv, m), Math.min(...pts.map(p => S.P(...p)[1])), Math.max(...pts.map(p => S.P(...p)[1])), 0.1);
   // windows on a face from (ua, va) to (ub, vb), between heights z0 and z1: a storey every three metres or so, a bay
@@ -1163,9 +1171,9 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   if(!front) crown();
   tiers.forEach((T, i) => { const a = T.a*wdt, Dt = D*T.a*wdt/w2, zt = h*T.z, sv = sideN*a, fu = (front ? 1 : -1)*Dt/2, last = i === tiers.length - 1;
     if(glassy) x.globalAlpha = GA*0.6;
-    { const ew = o.ends && pr[sideN], ec = ew ? { body: ew, lit: pkMix(ew, PK_WHITE, 0.25), dark: pkMix(ew, PK_BLACK, 0.4) } : c;
+    { const ew = o.ends && pr[sideN], ec = ew ? litOf(ew) : c;
       if(side){ wall([[-Dt/2, sv, z0], [Dt/2, sv, z0], [Dt/2, sv, zt], [-Dt/2, sv, zt]], 0, sideN, ec); windows(-Dt/2 + Dt*0.08, sv, Dt/2 - Dt*0.08, sv, z0 + (zt - z0)*0.05, zt*0.97, Rw); }
-      if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof || rm.body, o = wdt*0.04;
+      if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof ? litOf(pr.roof).body : rm.body, o = wdt*0.04;
         // both slopes, the far one first: seen nearly end-on, from a little above, the far one shows beside the near
         for(const sg of [-sideN, sideN]){ const up = S.light(0, sg, sd)*0.5 + 0.25, sv2 = sg*a;
           pkPoly(x, [S.P(-Dt/2 - o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, 0, ridge), S.P(-Dt/2 - o, 0, ridge)], pkCss(up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45))); }
@@ -1207,7 +1215,7 @@ export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
   if(c.view && kind0 === 'mosque'){ pkMosque3(x, X, Y, h, wdt, { ...c, ...pkMat(c, [226, 214, 196], 0.4) }, night, R0, px); return; }
   if(c.view && PK_ROUND.includes(kind0)) c = { ...c, view: null, turn: c.view }; // (round: the same from every side; turn kept for what isn't, a mill's sails)
   if(c.view && kind0 && PK_BOX3[kind0]){ const [dk, eave, roofM, at, rim] = PK_BOX3[kind0];
-    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, id: 'b|' + kind0 + '|' + style, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R) => pkBuilding(q, 0, 0, h, wdt, cc, style, night, R, px, kind0) }); return; }
+    pkTurned(x, X, Y, h, wdt, c, R0, px, night, { kind: kind0, id: 'b|' + kind0 + '|' + style, dk, eave, roofM, at, rim, ends: kind0 === 'row', battlements: kind0 === 'castle', face: (q, cc, R, hh = h, ww = wdt, nt = night) => pkBuilding(q, 0, 0, hh, ww, cc, style, nt, R, px, kind0) }); return; }
   if(c.view && (kind0 === 'torii' || kind0 === 'arch')){ // (a gate is a frame in its own plane: edge on, a post and a beam's end)
     const k = Math.max(kind0 === 'arch' ? 0.28 : 0.1, Math.abs(c.view.cs)); x.save(); x.translate(X, 0); x.scale(k, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, { ...c, view: null }, style, night, R0, px, kind0); x.restore(); return; }
   if(c.view){ const sn = c.view.sn; if(sn < 0){ x.save(); x.translate(X, 0); x.scale(-1, 1); x.translate(-X, 0); pkBuilding(x, X, Y, h, wdt, pkFlip({ ...c, view: null }), style, night, R0, px, kind0); x.restore(); return; } c = { ...c, view: null }; }
@@ -1637,7 +1645,7 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(kind === 'dish'){ pkDish(x, X, Y, h, c, px); return; }
   if(c.view && PK_PROP3[kind]){ const v0 = R0(), R1 = () => v0;
     if(pkTurned(x, X, Y, h, h, c, R1, px, night, { kind, id: 'p|' + kind, dk: PK_PROP3[kind], eave: 0, plain: true, back: PK_BACKED.includes(kind), ends: kind === 'vending', post: kind === 'mailbox',
-      face: (q, cc, R) => pkProp(q, 0, 0, h, cc, kind, R, px, night) })) return; R0 = R1; }
+      face: (q, cc, R, hh = h, ww, nt = night) => pkProp(q, 0, 0, hh, cc, kind, R, px, nt) })) return; R0 = R1; }
   if(c.view){ const { cs, sn } = c.view, cc = { ...c, view: null };
     if(PK_SIDE_NATIVE.includes(kind)){ if(Math.abs(sn) < 0.38){ pkPropEnd(x, X, Y, h, cc, kind, R0, px, night, cs >= 0); return; }
       x.save(); x.translate(X, 0); x.scale((sn >= 0 ? 1 : -1)*(0.45 + 0.55*Math.abs(sn)), 1); x.translate(-X, 0); pkProp(x, X, Y, h, sn >= 0 ? cc : pkFlip(cc), kind, R0, px, night); x.restore(); return; }

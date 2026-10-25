@@ -336,7 +336,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     walls (Ruby: "no mountain above the rim walls"); hills crested and folded where erosion has not worn them flat;
     escarpments stepping up in long cliffs; rivers winding across the lowlands to the sea, lakes in the wet ones, canyons
     cut stepwise through the dry uplands; how rugged the land is by the seed (`rug`); a landing where the seed stands
-    you, kept gentle and clear of the water. Climate: warmth by the seed and region, cooled with height; moisture by
+    you, kept gentle and clear of the water. And it is laid in **steps** (Ruby: "more steps and ridgelines so we can kinda
+    nail the look of the original"; docs/prior-art/ringworld-terrain.md §12): shelves of the seed's own height, each a broad
+    level and a short rise, their edges wandering, the highest crags left to their ridges, read only as finely as the
+    land is asked for; each shelf's lip drawn lit where a cell crosses it (`stepQ`). Climate: warmth by the seed and region, cooled with height; moisture by
     region, wetter by the coasts; ten biomes by both on Whittaker's diagram (`LK_BIOMES`), each a weight fading into the
     next over a transition as wide as Detail asks. The ground's colour (`rgGround`) mixes the biomes' grounds (each the
     Land Hue leaning toward its own, `RG_BIOME_GROUND`), the forest's dark canopy, a town's grey, rock where it is steep,
@@ -354,6 +357,15 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     turns"; docs/prior-art/ringworld-terrain.md §4): nested rings of square cells, each ring's twice the last (a geometry
     clipmap), the finest round where you stand, each corner's height the land kit's at its own place asked for detail
     down to its cell's size (`vh`); each ring's outer part eases into the next coarser ring's shape, so their edges meet.
+    Every corner's height, ground colour and sunlight is kept by its place and its ring's cell size (`rawH`), so a turn,
+    a zoom, a rise or a film's frames ask the land kit nothing twice (Ruby: "during animations the ring is continuously
+    regenerated"). Each corner is shaded by its own slope (`kSunAt`), the cells between graded from corner to corner, so
+    a hill never shows rows of facets; the walk toward the sun for its shadow begins past its own cell, so a slope never
+    shades itself in stripes (shadow acne). **Things drawn once** (Ruby: "write once, read many"): each tree is drawn
+    whole onto its own sheet, at a step of the square root of two above the size it shows and in the light of the moment
+    kept to a few steps, and the sheet stamped after (`rgSprite`), so its shape never changes as it shrinks into the
+    distance; each building's shape is read once from a proof drawn at one size and unlit (paintKit's proofs), lit
+    wherever it is used, so a panning camera never redraws it differently.
     Rising, tilting, turning or zooming the camera changes how the grid is seen, never the grid; finer rings are left out
     only where their cells would be smaller than a pixel from the eye's height. Detail sets the cells' size on the page
     (some 16 to 7.5 pixels) and how far the land reaches. Things are ordered by
@@ -397,9 +409,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **The view's reach** (Ruby: "make the drawing script aware of the view frustum"): the land is kept as far round as
     the page sees, its corners included (`PHI`); fields and ways are drawn after the land under their nearest edge, so
     no cell they lie on paints over them; a thing is kept while any of it can be in view; the lens is held under 118°
-    (`ringParams`). The far floor on the arch is laid as a map (`rgPaintArch`): patches a few pixels across by their
-    true distance, on a grid of the world's, each of the land kit's broad regions where it lies and shaded by its
-    relief, so lakes and ranges read as shapes, not squares.
+    (`ringParams`). The far floor on the arch is laid as a map (`rgPaintArch`): patches some four pixels across by their
+    true distance, up to 128 across the band, on a grid of the world's, each of the land kit's broad regions where it lies
+    and shaded by its relief, so lakes and ranges read as shapes, not squares; each patch's ground kept with its world.
+    A crest's rim is the far edge of each cell along it, so it is one line, never a row of stitches. In rain the
+    overcast closes over the zenith too.
   - **Light on the land** (Ruby: "shadows cast by the sun where it stands … nearby lights lighting what is near them
     more … rocks of different stones"): each corner of the land, each thing and each field looks toward the sun over the
     land as it is drawn (`litAt`): where a hill or a rim wall stands above the line, it lies in its shadow, softer the
@@ -409,7 +423,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     ground about it. A region's boulders are of one stone (`rgStoneOf`, `PK_STONES`: granite, sandstone, basalt,
     limestone, slate, each its own shape and marks), set into the slope they lie on (`slopeAt`). The neon world's
     districts each have their own pair of neons (`RG_NEON_DISTRICTS`), the ground faintly of their hue; glowing trees
-    keep their glow close.
+    keep their glow close. With the sun behind a tree, its crown's edge glows thin and bright, laid on as light, the bloom
+    spilling past its outline (never a band of colour inside it).
   - **The desert's plants** (Ruby: "saguaros with more limbs as they grow taller … blooming only in their season; growth
     stages"; docs/prior-art/ringworld-desert-plants.md): every plant's stage comes from its own height (`hM` handed to
     the kit), regular for its kind. A saguaro keeps its true width at any height, arms from some 3.3 m, about one more
