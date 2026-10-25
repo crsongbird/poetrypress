@@ -410,6 +410,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     limestone, slate, each its own shape and marks), set into the slope they lie on (`slopeAt`). The neon world's
     districts each have their own pair of neons (`RG_NEON_DISTRICTS`), the ground faintly of their hue; glowing trees
     keep their glow close.
+  - **The desert's plants** (Ruby: "saguaros with more limbs as they grow taller … blooming only in their season; growth
+    stages"; docs/prior-art/ringworld-desert-plants.md): every plant's stage comes from its own height (`hM` handed to
+    the kit), regular for its kind. A saguaro keeps its true width at any height, arms from some 3.3 m, about one more
+    for every 1.7 m, never the same count twice, each at its own bearing round the column, those behind drawn first and
+    in its shade; flowers on its crowns from late April to mid June, red fruit after, by the seed's season (`season`).
+    Organ pipes, barrel cacti, prickly pears, chollas, ocotillos and agaves grow in the dry country with it (`RG_CACTI`),
+    each blooming in its own months; a young saguaro stands beside its nurse tree, and ivy climbs some old trunks in the
+    wet woods.
   - **Highways** (the neon world's main roads; Ruby: the roads that floated, made highways): an elevated expressway on a
     line of columns some 42 m apart, its deck some 12 m over the highest ground beneath it, eased along, over land and
     water alike.

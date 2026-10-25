@@ -2,6 +2,27 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Neso (2026-10-22)
+
+- Painted Ringworld's buildings stand on the land. None is built on the water or at its very edge (each keeps two
+  metres back from a shore), and none where the ground falls too steeply across it. On a slope a building stands
+  level on a stone plinth that reaches down to the ground at its lowest corner, so no corner hangs in the air.
+- The pagoda and the mosque turn with the camera now, through every angle, as the other buildings do: a pagoda's
+  square tiers and the four slopes of each roof, a mosque's hall under its domes with a minaret at each corner, the
+  far ones behind it and the near ones before it. Before, they were drawn the same from every side, so they seemed to
+  turn with you.
+- Walls, hedgerows and fences are runs of short pieces laid along their own line, each standing where it stands, so
+  a long wall recedes into the distance and turns as the camera goes round it, instead of always facing you.
+
+### Under the hood
+- stepsRing.js: `footing` samples a building's footprint (its corners two metres out and its middle) and keeps how far
+  its ground rises and falls across it; the painter lifts it to its uphill corner on a plinth. Runs are split into
+  pieces at the end of `rgStore`, each with its own place, axis and length. paintKit.js: `pkPagoda3`, `pkMosque3`
+  (built with `pkSpace` and `pkBox3`), `pkBuilding`'s `plinth`, `pkProp`'s `runW` for a piece of a wall, hedge or
+  fence. About a tenth fewer buildings stand on steep or shore ground. turned.test.mjs checks that a pagoda and a
+  mosque are wider on their corner than face on, and that a plinth reaches the ground. Fingerprints: Painted
+  Ringworld (buildings off the shores and steeps, on plinths; the runs in pieces).
+
 ## Neptune–Psamathe (2026-10-22)
 
 - Painted Ringworld's people walk now: up and down the street or lane beside them, at their own pace, stopping now and

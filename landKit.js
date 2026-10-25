@@ -67,6 +67,8 @@ export function lkLand(seed, o){
   const wet = 0.08 + 0.4*(lkHash(s, 11, 4041)/4294967296), t0 = (wet - 0.5)*0.75, warm = 0.22 + 0.62*(lkHash(s, 12, 4041)/4294967296);
   // (how rugged the seed's land is: some rings rolling, some all crags and cliffs)
   const rug = 0.6 + 1.0*(lkHash(s, 13, 4041)/4294967296);
+  // (how wet the seed's ring is on the whole: some rings green, some dry country and desert)
+  const arid = 0.5*(lkHash(s, 14, 4041)/4294967296) - 0.25;
   const capM = Hwm*0.86;   // (no mountain above the rim walls: peaks eased under this)
   // (the lapse rate: warmth lost a metre up, so strong that a ring's hills show their zones, woods giving way to tundra,
   //  and the high ranges stand white over the plains: the snowline some 250 to 800 m up by the seed's warmth)
@@ -117,7 +119,7 @@ export function lkLand(seed, o){
   const climate = (a, z, h) => { const u = a/M, v = z/M, hm = h/M;
     const t = warm + 0.2*fbm(u, v, 40000, 2, 21) + 0.05*N(u, v, 2300, 23) - LAPSE*Math.max(0, hm);
     const coast = hm < 40 ? 0.18*(1 - lkSmooth(0, 40, hm)) : 0;
-    const m = 0.5 + 0.42*fbm(u, v, 18000, 2, 12) + 0.06*N(u, v, 1900, 24) + coast;
+    const m = 0.5 + arid + 1.7*fbm(u, v, 18000, 2, 12) + 0.06*N(u, v, 1900, 24) + coast;
     return [t, Math.max(0, Math.min(1, m))]; };
   // THE BIOMES' WEIGHTS at a place (summing to 1): near on the diagram, heavier; the transition as wide as blend asks
   const sg = 0.06 + 0.07*(o.blend ?? 0.5);

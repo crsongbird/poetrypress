@@ -4,6 +4,33 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Atlas (2026-10-25)
+
+- Saguaros grow as saguaros do. Each keeps its true slender width at any height and has no arms until it is over 3 m
+  tall. After that it gains about one arm for every 1.7 m of height, never the same count twice, and now and then one
+  never arms at all. Each arm goes out at its own bearing round the column: the arms behind are drawn in the column's
+  shade, the arms in front in the light. Old saguaros' arms sometimes droop before they turn up, and now and then an arm
+  grows from an arm.
+- Each ring has its season, by the seed. From late April to mid June saguaros wear white flowers with yellow hearts on
+  every crown, then red fruit into July.
+- More of the desert grows in the dry country:
+  - clumps of organ pipes;
+  - barrel cacti leaning south, ringed with yellow and orange flowers in summer;
+  - prickly pears of flat pads, yellow-flowered, then purple-red with fruit;
+  - teddy-bear chollas, their silvery spines catching the light;
+  - ocotillos, bare grey canes in leaf after the rains and red-tipped in spring;
+  - agaves, a few old ones sending up their one tall flower stalk.
+- Plants meet: a young saguaro grows beside its nurse tree, and ivy climbs some old trunks in the wet woods.
+- Every plant's form follows its size, so a small one is young and a tall one old, regular for its kind.
+- Some rings are drier on the whole than others, so dry country and its plants turn up more often.
+
+### Under the hood
+- `pkTree` takes the plant's height in metres (`hM`) and the season from its caller.
+- docs/prior-art/ringworld-desert-plants.md is the research (the Park Service's saguaro growth, arms and flowering pages,
+  and the other cacti's).
+- The land kit's moisture spreads wider, each seed with its own aridity.
+- The Ringworld's fingerprint updated (its plants, intended).
+
 ## Pleiades–Electra (2026-10-25)
 
 - The Ringworld's sun casts the land's shadows now: hills and the rim walls shade what lies behind them from the sun, the
@@ -427,24 +454,3 @@ prints it).
 - The first release named for a star: the §Build test reads a star cluster and its member as well as a planet and its
   moon. New research notes for what comes next: corner radii, surfaces that bend the one beneath, and films with any
   setting (docs/prior-art/).
-
-## Neptune–Neso (2026-10-22)
-
-- Painted Ringworld's buildings stand on the land. None is built on the water or at its very edge (each keeps two
-  metres back from a shore), and none where the ground falls too steeply across it. On a slope a building stands
-  level on a stone plinth that reaches down to the ground at its lowest corner, so no corner hangs in the air.
-- The pagoda and the mosque turn with the camera now, through every angle, as the other buildings do: a pagoda's
-  square tiers and the four slopes of each roof, a mosque's hall under its domes with a minaret at each corner, the
-  far ones behind it and the near ones before it. Before, they were drawn the same from every side, so they seemed to
-  turn with you.
-- Walls, hedgerows and fences are runs of short pieces laid along their own line, each standing where it stands, so
-  a long wall recedes into the distance and turns as the camera goes round it, instead of always facing you.
-
-### Under the hood
-- stepsRing.js: `footing` samples a building's footprint (its corners two metres out and its middle) and keeps how far
-  its ground rises and falls across it; the painter lifts it to its uphill corner on a plinth. Runs are split into
-  pieces at the end of `rgStore`, each with its own place, axis and length. paintKit.js: `pkPagoda3`, `pkMosque3`
-  (built with `pkSpace` and `pkBox3`), `pkBuilding`'s `plinth`, `pkProp`'s `runW` for a piece of a wall, hedge or
-  fence. About a tenth fewer buildings stand on steep or shore ground. turned.test.mjs checks that a pagoda and a
-  mosque are wider on their corner than face on, and that a plinth reaches the ground. Fingerprints: Painted
-  Ringworld (buildings off the shores and steeps, on plinths; the runs in pieces).

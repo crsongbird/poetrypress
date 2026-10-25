@@ -82,7 +82,7 @@ const PK_WOOD = [124, 92, 64], PK_GREYWOOD = [138, 130, 118], PK_IRON = [58, 62,
 // stand in their true proportion at any distance. Heights [lo, hi]; buildings also their width. A thing larger than
 // the view is culled by the caller, never shrunk.
 export const PK_SIZE = {
-  spruce: [18, 35], fir: [20, 45], stonepine: [12, 22], cedar: [20, 30], cypress: [12, 25], palm: [15, 28], baobab: [10, 22], acacia: [6, 14], saguaro: [5, 14],
+  spruce: [18, 35], fir: [20, 45], stonepine: [12, 22], cedar: [20, 30], cypress: [12, 25], palm: [15, 28], baobab: [10, 22], acacia: [6, 14], saguaro: [2.2, 14], organpipe: [2.5, 7], barrel: [0.5, 1.8], pear: [0.6, 2.2], cholla: [0.6, 1.6], ocotillo: [2.5, 6], agave: [0.5, 1.3],
   joshua: [5, 9], bamboo: [8, 20], fern: [3, 7], mushroom: [4, 20], crystal: [6, 20], cherry: [8, 12], fruit: [4, 6.5], olive: [3.5, 6], bush: [1, 3], broadleaf: [12, 22], pine: [12, 20], poplar: [15, 25], birch: [10, 22], willow: [9, 15], dead: [8, 18], glow: [8, 18],
   brick: [9, 32, 12, 26], glass: [45, 220, 20, 45], deco: [70, 300, 30, 60], slab: [18, 55, 22, 45], dome: [16, 45, 18, 40], needle: [150, 450, 18, 30],
   pylon: [60, 400, 10, 30], arch: [30, 120, 30, 70], wizard: [22, 60, 8, 14], onion: [18, 50, 14, 30],
@@ -114,7 +114,7 @@ export function pkArchOf(style, u){ const arch = PK_ARCH[style] || PK_ARCH.city;
 // which trees each kind of world grows (the caller picks one of these by its stream)
 export const PK_TREES = { wild: ['spruce', 'spruce', 'broadleaf', 'broadleaf', 'pine', 'poplar', 'birch'], magic: ['broadleaf', 'glow', 'glow', 'birch', 'willow', 'spruce'], ruins: ['dead', 'dead', 'spruce', 'broadleaf', 'pine'] };
 // (and by the land's climate: dry country, warm country, jungle, and the fey places of magic worlds)
-export const PK_FLORA = { dry: ['saguaro', 'saguaro', 'joshua', 'acacia', 'acacia', 'baobab', 'bush', 'dead'], warm: ['stonepine', 'stonepine', 'cypress', 'cypress', 'cedar', 'palm', 'broadleaf', 'cherry', 'bush'],
+export const PK_FLORA = { dry: ['saguaro', 'saguaro', 'saguaro', 'organpipe', 'barrel', 'barrel', 'pear', 'pear', 'cholla', 'cholla', 'ocotillo', 'agave', 'joshua', 'acacia', 'acacia', 'baobab', 'bush', 'dead'], warm: ['stonepine', 'stonepine', 'cypress', 'cypress', 'cedar', 'palm', 'broadleaf', 'cherry', 'bush'],
   jungle: ['palm', 'palm', 'fern', 'fern', 'bamboo', 'broadleaf', 'broadleaf', 'bush'], cold: ['fir', 'fir', 'spruce', 'spruce', 'birch', 'pine', 'bush'],
   fey: ['mushroom', 'mushroom', 'crystal', 'cherry', 'fern', 'glow', 'bamboo', 'willow'] };
 // THE TREES (Ruby, 2026-10-22: "change the conifers … make sure all the trees match the current art style and none have
@@ -271,6 +271,9 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
   //  the camera never changes its stage; every number drawn only at some sizes on a stream of its own (sub 6 on), so a
   //  stage gained or lost moves nothing else on the tree)
   const sub = pkSub(R0), R = sub(1), RL = sub(2), F = pkTreeForm(sub(5)), c = pkTreeTint(c0, F), sd = c.sd, rnd = (a, b) => a + (b - a)*R(), small = h*(c0.lod || 1) < px(7);
+  // (its STAGE from its size, where its caller knows its height in metres (c0.hM): a small one young, a tall one old, so a
+  //  plant's form is regular for its kind and size; a little of its own chance kept, so no two of a size are alike)
+  if(c0.hM !== undefined && PK_SIZE[kind]){ const [lo, hi] = PK_SIZE[kind]; F.age = 0.7*Math.max(0, Math.min(1, (c0.hM - lo)/((hi - lo) || 1))) + 0.3*F.age; }
   h *= F.tall; const hd = h*(c0.lod || 1), nR = R();
   const trunk = (top, wd, lean = 0, bark = kind) => { if(wd*(c0.lod || 1) < px(2.5)){ x.strokeStyle = pkCss(c.trunk); x.lineWidth = Math.max(px(0.6), wd); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + lean, Y - top); x.stroke(); return; }
     // (near: a trunk that flares into its roots, darker on its shadow side, its bark marked)
@@ -278,7 +281,7 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     pkPoly(x, [[X - w*2, Y + w*0.2], [X - w, Y - w*1.6], [X + lean - w*0.75, Y - top], [X + lean + w*0.75, Y - top], [X + w, Y - w*1.6], [X + w*2, Y + w*0.2]], pkCss(dk));
     pkPoly(x, [[X + sd*w*0.1, Y + w*0.2], [X + sd*w*0.2 + lean*0.05, Y - w*1.6], [X + lean + sd*w*0.15, Y - top], [X + lean + sd*w*0.75, Y - top], [X + sd*w, Y - w*1.6], [X + sd*w*1.8, Y + w*0.2]], pkCss(lt));
     pkDisc(x, X + lean, Y - top, w*0.75, pkCss(dk)); pkBark(x, X, Y, top, wd, lean, bark, c, sub(6), px); };
-  if(!small) pkTreeFoot(x, X, Y, h*F.wide, c);
+  if(!small) pkTreeFoot(x, X, Y, h*F.wide*(kind === 'saguaro' || kind === 'organpipe' || kind === 'ocotillo' ? 0.4 : 1), c);
   // ---- the conifers ----
   if(kind === 'spruce'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.2, 0.3), n: 8 + Math.floor(R()*5), droop: 0.55, lift: 0.22, spire: 0.07, bare: rnd(0.03, 0.08) + F.age*0.06, bark: 'spruce' }, px, small, sub); return; }
   if(kind === 'fir'){ pkConifer(x, X, Y, h, c, R, F, { bw: rnd(0.1, 0.15), n: 11 + Math.floor(R()*6), droop: 0.18, lift: 0.08, spire: 0.08, bare: rnd(0.02, 0.06), round: F.age > 0.7, bark: 'fir' }, px, small, sub); return; }
@@ -410,19 +413,113 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     pkPoly(x, [[X - cw*0.85, cy - h*0.02], [X - cw*0.7, cy - h*0.11], [X + cw*0.75, cy - h*0.12], [X + cw*0.9, cy - h*0.02]], pkCss(c.body));
     if(!small) pkPoly(x, [[X + (sd > 0 ? 0 : -cw*0.7), cy - h*0.11], [X + (sd > 0 ? cw*0.72 : 0), cy - h*0.12], [X + (sd > 0 ? cw*0.6 : -cw*0.1), cy - h*0.07], [X + (sd > 0 ? 0.05*cw : -cw*0.6), cy - h*0.07]], pkCss(c.lit));
     return; }
+  // THE DESERT'S PLANTS (Ruby: "more cacti; saguaros with more limbs as they grow taller, limb counts never identical,
+  // limbs shaded by position and direction, blooming only in their season; growth stages"; docs/prior-art/
+  // ringworld-desert-plants.md). (bloom: c0.season, the year's turn 0..1 from January; each blooms and fruits in its
+  // own months, else none)
+  const inSeason = (a2, b2) => c0.season !== undefined && c0.season >= a2 && c0.season <= b2;
+  // (a ribbed green column, shaded round: its shadow side, its body, its lit flank and rim, its ribs near; w: half width)
+  const column = (x0, y0, x1, y1, w, tone = 1) => { const dk = pkMix(c.dark, PK_BLACK, 0.1*(1 - tone)), bd = pkMix(c.body, c.dark, 1 - tone), lt = pkMix(c.lit, c.body, 1 - tone);
+    x.lineCap = 'round'; x.strokeStyle = pkCss(dk); x.lineWidth = w*2; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
+    x.strokeStyle = pkCss(bd); x.lineWidth = w*1.3; x.beginPath(); x.moveTo(x0 + sd*w*0.25, y0); x.lineTo(x1 + sd*w*0.25, y1); x.stroke();
+    x.strokeStyle = pkCss(lt, 0.8); x.lineWidth = Math.max(px(0.4), w*0.35); x.beginPath(); x.moveTo(x0 + sd*w*0.55, y0); x.lineTo(x1 + sd*w*0.55, y1 + w*0.4); x.stroke();
+    if(w*(c0.lod || 1) > px(4)){ x.strokeStyle = pkCss(pkMix(dk, PK_BLACK, 0.3), 0.5); x.lineWidth = Math.max(px(0.3), w*0.06); x.lineCap = 'butt';
+      for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } x.lineCap = 'round'; } };
+  // (a crown's flowers or fruit, in their season: white flowers with yellow hearts, or the red fruit after)
+  const crown = (cx2, cy2, w, flower, fruit) => { if(small || hd < px(30)) return; const RC = sub(11);
+    if(inSeason(...flower)) for(let k = 0; k < 6; k++){ const fx2 = cx2 + (RC()*2 - 1)*w*0.8, fy2 = cy2 + (RC() - 0.2)*w*0.6; pkDisc(x, fx2, fy2, w*0.3, pkCss([246, 242, 228], 0.95)); pkDisc(x, fx2, fy2, w*0.11, pkCss([236, 196, 80])); }
+    else if(inSeason(...fruit)) for(let k = 0; k < 5; k++) pkDisc(x, cx2 + (RC()*2 - 1)*w*0.7, cy2 + (RC() - 0.2)*w*0.5, w*0.18, pkCss([184, 36, 52], 0.95)); };
   if(kind === 'saguaro'){
-    // a saguaro: a ribbed column, rounded at its top; arms (none on a young one, up to five on an old one) going out and
-    // turning up at a rounded elbow; shaded round as a column is, its ribs showing near
-    const wd = h*rnd(0.075, 0.1)*(0.85 + F.wide*0.2), arms = small || hd < px(14) ? 0 : Math.round(F.age*4.5 + nR*0.6), body = (x0, y0, x1, y1, w) => {
-      x.lineCap = 'round'; x.strokeStyle = pkCss(c.dark); x.lineWidth = w*2; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
-      x.strokeStyle = pkCss(c.body); x.lineWidth = w*1.3; x.beginPath(); x.moveTo(x0 + sd*w*0.25, y0); x.lineTo(x1 + sd*w*0.25, y1); x.stroke();
-      x.strokeStyle = pkCss(c.lit, 0.8); x.lineWidth = Math.max(px(0.4), w*0.35); x.beginPath(); x.moveTo(x0 + sd*w*0.55, y0); x.lineTo(x1 + sd*w*0.55, y1 + w*0.4); x.stroke();
-      if(w*(c0.lod || 1) > px(4)){ x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3), 0.55); x.lineWidth = Math.max(px(0.3), w*0.06); for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } } };
-    for(let q = 0; q < arms; q++){ const s = q % 2 ? 1 : -1, at = rnd(0.35, 0.65), out = h*rnd(0.07, 0.14), up = h*rnd(0.12, 0.3)*(1 - at*0.5), aw = wd*rnd(0.6, 0.8), ax = X + s*(wd + out), ay = Y - h*at;
-      x.lineCap = 'round'; x.strokeStyle = pkCss(c.dark); x.lineWidth = aw*2; x.beginPath(); x.moveTo(X, ay); x.quadraticCurveTo(ax, ay, ax, ay - up*0.35); x.lineTo(ax, ay - up); x.stroke();
-      x.strokeStyle = pkCss(s === sd ? c.body : pkMix(c.body, c.dark, 0.4)); x.lineWidth = aw*1.2; x.beginPath(); x.moveTo(X + s*wd*0.5, ay - aw*0.2); x.quadraticCurveTo(ax + sd*aw*0.2, ay - aw*0.2, ax + sd*aw*0.2, ay - up*0.35); x.lineTo(ax + sd*aw*0.2, ay - up); x.stroke(); }
-    body(X, Y, X + F.lean*h*0.1, Y - h + wd, wd);
-    if(!small && hd > px(50)){ const R = sub(9), rnd = (a, b) => a + (b - a)*R(); x.fillStyle = pkCss([236, 226, 196], 0.85); for(let k = 0; k < 5; k++) pkDisc(x, X + F.lean*h*0.1 + rnd(-0.6, 0.6)*wd, Y - h + wd*0.4 + rnd(0, 0.5)*wd, wd*0.12, pkCss([240, 232, 206], 0.8)); }
+    // a saguaro (NPS: its first arm at some 3 to 6 m, "around 50 to 70 years", some never; many arms on an old one): a
+    // ribbed column rounded at its top; its arms by its height, never the same count twice, each going out round the
+    // column at its own bearing and turning up at a rounded elbow; the arms behind it drawn first and in its shade, those
+    // before it after and in the light, each lit by the side it stands on; an old one's arms drooping before they turn
+    // up, now and then an arm on an arm; white flowers on each crown from late April to mid June, red fruit after
+    const hM = c0.hM ?? (PK_SIZE.saguaro[0] + F.age*(PK_SIZE.saguaro[1] - PK_SIZE.saguaro[0])), wd = h/hM*rnd(0.27, 0.34)*(0.9 + F.wide*0.15);   // (some 0.6 m across at any height, as a saguaro is)
+    const nA = small || hd < px(14) || hM < 3.3 ? 0 : Math.max(0, Math.round((hM - 3.3)/1.7 + (nR - 0.5)*1.8 - (F.hue > 0.85 ? 3 : 0)));
+    const tx = X + F.lean*h*0.1, ty = Y - h + wd, RA = sub(12), arms = [];
+    for(let q = 0; q < nA; q++){ const az = (q === 0 ? 2.6 : q === 1 ? 0.4 : RA()*Math.PI*2) + (RA() - 0.5)*0.9, at = 0.32 + 0.33*RA(), out = h*(0.07 + 0.07*RA()), up = h*(0.12 + 0.2*RA())*(1 - at*0.5), aw = wd*(0.58 + 0.22*RA()), droop = F.age > 0.75 && RA() < 0.4;
+      arms.push({ az, at, out, up, aw, droop, sub2: F.age > 0.8 && RA() < 0.25 }); }
+    const drawArm = A => { const s = Math.sin(A.az), front = Math.cos(A.az) > 0, ox = s*(wd + A.out), ay = Y - h*A.at, ax = X + ox, tone = front ? (s*sd > 0 ? 1 : 0.75) : 0.45 + 0.2*(s*sd > 0 ? 1 : 0), dy = A.droop ? A.out*0.6 : 0;
+      x.lineCap = 'round'; const P2 = [X + s*wd*0.4, ay], E = [ax, ay + dy], T2 = [ax, ay - A.up];
+      x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.1)); x.lineWidth = A.aw*2; x.beginPath(); x.moveTo(P2[0], P2[1]); x.quadraticCurveTo(ax, ay + dy*1.4, E[0], E[1] - A.up*0.25); x.lineTo(T2[0], T2[1]); x.stroke();
+      x.strokeStyle = pkCss(pkMix(c.body, c.dark, 1 - tone)); x.lineWidth = A.aw*1.2; x.beginPath(); x.moveTo(P2[0], P2[1] - A.aw*0.2); x.quadraticCurveTo(ax + sd*A.aw*0.2, ay + dy*1.4 - A.aw*0.2, E[0] + sd*A.aw*0.2, E[1] - A.up*0.25); x.lineTo(T2[0] + sd*A.aw*0.2, T2[1]); x.stroke();
+      if(tone > 0.7){ x.strokeStyle = pkCss(c.lit, 0.7); x.lineWidth = Math.max(px(0.4), A.aw*0.3); x.beginPath(); x.moveTo(E[0] + sd*A.aw*0.55, E[1] - A.up*0.25); x.lineTo(T2[0] + sd*A.aw*0.55, T2[1] + A.aw*0.4); x.stroke(); }
+      if(A.sub2){ const s2 = -Math.sign(s || 1), bx = ax, by = ay - A.up*0.55; x.strokeStyle = pkCss(pkMix(c.body, c.dark, 1 - tone)); x.lineWidth = A.aw*1.1; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + s2*A.out*0.6, by, bx + s2*A.out*0.6, by - A.up*0.35); x.stroke(); }
+      crown(T2[0], T2[1], A.aw, [0.31, 0.45], [0.47, 0.55]); };
+    for(const A of arms) if(Math.cos(A.az) <= 0) drawArm(A);
+    column(X, Y, tx, ty, wd);
+    for(const A of arms) if(Math.cos(A.az) > 0) drawArm(A);
+    crown(tx, ty, wd, [0.31, 0.45], [0.47, 0.55]);
+    return; }
+  if(kind === 'organpipe'){
+    // an organ pipe (many stems from its foot, ribbed, to some 7 m here; night flowers pale pink at its tips in May and June)
+    const n = small ? 3 : 5 + Math.floor(F.age*9 + nR*3), spread = h*0.28*(0.7 + F.wide*0.4), w = c0.hM ? h/c0.hM*0.1 : h*0.045, RO = sub(12), st = [];
+    for(let q = 0; q < n; q++){ const u = (q + 0.5)/n - 0.5, hh = h*(0.55 + 0.45*RO())*(1 - Math.abs(u)*0.5), bx = X + u*spread*0.25, tx2 = X + u*spread + (RO() - 0.5)*w*2; st.push({ u, hh, bx, tx2, d: RO() }); }
+    st.sort((p, q) => p.d - q.d);
+    for(const S of st){ const tone = S.d < 0.5 ? 0.6 : (S.u*sd > 0 ? 1 : 0.8); x.lineCap = 'round'; x.strokeStyle = pkCss(c.dark); x.lineWidth = w*2; x.beginPath(); x.moveTo(S.bx, Y); x.quadraticCurveTo(S.bx + (S.tx2 - S.bx)*0.9, Y - S.hh*0.25, S.tx2, Y - S.hh); x.stroke();
+      x.strokeStyle = pkCss(pkMix(c.body, c.dark, 1 - tone)); x.lineWidth = w*1.2; x.beginPath(); x.moveTo(S.bx + sd*w*0.25, Y); x.quadraticCurveTo(S.bx + (S.tx2 - S.bx)*0.9 + sd*w*0.25, Y - S.hh*0.25, S.tx2 + sd*w*0.25, Y - S.hh); x.stroke();
+      crown(S.tx2, Y - S.hh, w, [0.36, 0.48], [0.52, 0.62]); }
+    return; }
+  if(kind === 'barrel'){
+    // a barrel cactus (to 1.8 m here: a ball growing into a squat column, leaning south, "15–28 ribs", hooked spines; its
+    // crown ringed with yellow-to-orange flowers through the summer, its yellow fruit kept a year after)
+    const w = h*(0.42 - 0.12*F.age), lean = (F.side*0.6 + 0.15)*h*0.25, cx2 = X + lean*0.5, top = Y - h;
+    pkEll(x, X - sd*w*0.6, Y, w*1.2, w*0.25, pkCss(c.dark, 0.3));
+    x.beginPath(); x.moveTo(X - w, Y); x.bezierCurveTo(X - w*1.1, Y - h*0.6, cx2 - w*0.9, top, cx2, top); x.bezierCurveTo(cx2 + w*0.9, top, X + w*1.1, Y - h*0.6, X + w, Y); x.closePath(); x.fillStyle = pkCss(c.dark); x.fill();
+    x.beginPath(); x.moveTo(X + sd*w*0.05, Y); x.bezierCurveTo(X + sd*w*0.2, Y - h*0.6, cx2 + sd*w*0.1, top + h*0.04, cx2 + sd*w*0.15, top + h*0.03); x.bezierCurveTo(cx2 + sd*w*0.85, top + h*0.05, X + sd*w*1.05, Y - h*0.55, X + sd*w, Y); x.closePath(); x.fillStyle = pkCss(c.body); x.fill();
+    if(!small){ x.strokeStyle = pkCss(pkMix(c.dark, PK_BLACK, 0.3), 0.6); x.lineWidth = Math.max(px(0.3), w*0.05); for(const f of [-0.66, -0.33, 0, 0.33, 0.66]){ x.beginPath(); x.moveTo(X + f*w, Y); x.quadraticCurveTo(X + f*w*1.08 + lean*0.3, Y - h*0.6, cx2 + f*w*0.45, top + h*0.08); x.stroke(); }
+      if(hd > px(14)){ x.strokeStyle = pkCss([214, 160, 120], 0.75); x.lineWidth = Math.max(px(0.3), w*0.03); const RB2 = sub(13); for(let k = 0; k < 18; k++){ const f = RB2()*2 - 1, yy = Y - h*(0.1 + 0.8*RB2()), xx = X + f*w*(1 - Math.abs(yy - Y + h*0.5)/h*0.5); x.beginPath(); x.moveTo(xx, yy); x.lineTo(xx + w*0.12, yy - w*0.05); x.stroke(); } } }
+    if(!small && hd > px(10)){ const RF = sub(14); if(inSeason(0.45, 0.72)) for(let k = 0; k < 7; k++) pkDisc(x, cx2 + (k/6 - 0.5)*w*1.1, top + h*0.05 + Math.abs(k/6 - 0.5)*h*0.06, w*0.14, pkCss(RF() < 0.5 ? [236, 176, 52] : [226, 106, 46]));
+      else for(let k = 0; k < 5; k++) pkDisc(x, cx2 + (k/4 - 0.5)*w*0.9, top + h*0.05, w*0.1, pkCss([218, 196, 72], 0.9)); }
+    return; }
+  if(kind === 'pear'){
+    // a prickly pear: flat oval pads, each grown from the edge of the last, in a sprawling clump; yellow flowers on the
+    // pads' rims in May and June, purple-red fruit (tunas) through July and August
+    const RP = sub(12), pads = [], n = small ? 4 : 6 + Math.floor(F.age*10 + nR*3), pw = h*0.22, ph = h*0.3;
+    const grow = (x0, y0, ang, depth) => { if(pads.length >= n || depth > 4) return; const cx2 = x0 + Math.sin(ang)*ph*0.42, cy2 = y0 - Math.cos(ang)*ph*0.42; pads.push({ cx: cx2, cy: cy2, ang, d: RP(), t: depth });
+      const kids = depth === 0 ? 3 : RP() < 0.6 ? 2 : 1; for(let k = 0; k < kids; k++) grow(cx2 + Math.sin(ang)*ph*0.42, cy2 - Math.cos(ang)*ph*0.42, ang + (RP() - 0.5)*1.6, depth + 1); };
+    grow(X, Y + ph*0.1, (RP() - 0.5)*0.4, 0);
+    pkEll(x, X - sd*pw*0.6, Y, pw*1.8, pw*0.3, pkCss(c.dark, 0.3));
+    pads.sort((p, q) => p.d - q.d);
+    for(const P of pads){ const tone = P.d < 0.4 ? 0.65 : (Math.sin(P.ang)*sd > 0 ? 1 : 0.85); x.save(); x.translate(P.cx, P.cy); x.rotate(P.ang);
+      x.beginPath(); x.ellipse(0, 0, pw*0.5, ph*0.5, 0, 0, Math.PI*2); x.fillStyle = pkCss(pkMix(c.body, c.dark, 1 - tone)); x.fill();
+      x.beginPath(); x.ellipse(sd*pw*0.1, -ph*0.05, pw*0.34, ph*0.38, 0, 0, Math.PI*2); x.fillStyle = pkCss(pkMix(c.lit, c.body, 1 - tone*0.6), 0.55); x.fill();
+      if(!small && hd > px(16)){ x.fillStyle = pkCss([236, 228, 196], 0.7); for(let k = 0; k < 5; k++) x.fillRect((RP() - 0.5)*pw*0.7, (RP() - 0.5)*ph*0.7, Math.max(px(0.4), pw*0.03), Math.max(px(0.4), pw*0.03)); }
+      if(!small && hd > px(12) && P.t >= 1){ if(inSeason(0.36, 0.47)) pkDisc(x, (RP() - 0.5)*pw*0.5, -ph*0.5, pw*0.16, pkCss([246, 214, 74])); else if(inSeason(0.52, 0.68) && RP() < 0.7) pkDisc(x, (RP() - 0.5)*pw*0.5, -ph*0.48, pw*0.1, pkCss([150, 34, 70])); }
+      x.restore(); }
+    return; }
+  if(kind === 'cholla'){
+    // a teddy-bear cholla: a dark trunk, its lower limbs gone, short limbs nearly level at its top furred with silvery
+    // spines that catch the light, brightest with the sun behind; greenish-yellow flowers at their tips in May and June
+    const RC2 = sub(12), tw = h*0.06, top = Y - h*0.55, spine = pkMix(PK_WHITE, c.lit, 0.25), glow = 0.55 + 0.45*(c0.back || 0);
+    x.strokeStyle = pkCss(pkMix(c.trunk, PK_BLACK, 0.3)); x.lineWidth = tw*2; x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X + F.lean*h*0.2, top); x.stroke();
+    const n = small ? 4 : 7 + Math.floor(F.age*8);
+    for(let q = 0; q < n; q++){ const a2 = (RC2() - 0.5)*2.6, len = h*(0.16 + 0.14*RC2()), y0 = top - RC2()*h*0.3, x0 = X + F.lean*h*0.2, x1 = x0 + Math.sin(a2)*len, y1 = y0 - Math.cos(a2)*len*0.5 - h*0.05;
+      x.strokeStyle = pkCss(pkMix(c.body, c.dark, 0.3)); x.lineWidth = tw*2.6; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x1, y1); x.stroke();
+      x.strokeStyle = pkCss(spine, 0.6*glow); x.lineWidth = tw*1.6; x.beginPath(); x.moveTo(x0 + sd*tw*0.4, y0 - tw*0.4); x.lineTo(x1 + sd*tw*0.4, y1 - tw*0.4); x.stroke();
+      if(!small && inSeason(0.36, 0.47) && RC2() < 0.5) pkDisc(x, x1, y1 - tw, tw*0.9, pkCss([214, 214, 110])); }
+    return; }
+  if(kind === 'ocotillo'){
+    // an ocotillo: long unbranched spiny canes fanning up from a short base, bare grey most of the year, in small leaves
+    // after the rains, red flower clusters at their tips from March to June
+    const RO2 = sub(12), n = small ? 6 : 12 + Math.floor(F.age*14), leaf = inSeason(0.62, 0.78) || inSeason(0.12, 0.3), bloom = inSeason(0.18, 0.45);
+    x.lineCap = 'round';
+    for(let q = 0; q < n; q++){ const a2 = (q/(n - 1) - 0.5)*1.1 + (RO2() - 0.5)*0.25 + F.lean, len = h*(0.7 + 0.3*RO2()), x1 = X + Math.sin(a2)*len, y1 = Y - Math.cos(a2)*len, bend = (RO2() - 0.5)*h*0.08;
+      x.strokeStyle = pkCss(leaf ? pkMix(c.body, c.lit, a2*sd > 0 ? 0.4 : 0) : pkMix([128, 116, 104], c.trunk, 0.3)); x.lineWidth = Math.max(px(0.5), h*0.012); x.beginPath(); x.moveTo(X + Math.sin(a2)*h*0.02, Y); x.quadraticCurveTo(X + Math.sin(a2)*len*0.5 + bend, Y - Math.cos(a2)*len*0.5, x1, y1); x.stroke();
+      if(bloom && !small){ x.strokeStyle = pkCss([214, 50, 40]); x.lineWidth = Math.max(px(0.8), h*0.022); x.beginPath(); x.moveTo(x1, y1); x.lineTo(x1 + Math.sin(a2)*h*0.06, y1 - Math.cos(a2)*h*0.06); x.stroke(); } }
+    return; }
+  if(kind === 'agave'){
+    // an agave: a rosette of thick grey-green leaves pointed and edged, the outer ones splaying; now and then an old one
+    // has sent up its one tall flower stalk, branched with yellow flowers at its top, before it dies
+    const RG2 = sub(12), n = small ? 6 : 12 + Math.floor(F.age*8), r = h*0.95, gray = pkMix(c.body, [150, 170, 160], 0.45);
+    const leaves = []; for(let q = 0; q < n; q++){ const a2 = (q/n - 0.5)*Math.PI*1.15 + (RG2() - 0.5)*0.2, len = r*(0.55 + 0.45*RG2())*(1 - Math.abs(a2)*0.18); leaves.push({ a2, len, d: Math.cos(a2*2)*0.5 + RG2()*0.5 }); }
+    leaves.sort((p, q) => p.d - q.d);
+    for(const Lf of leaves){ const tipX = X + Math.sin(Lf.a2)*Lf.len, tipY = Y - Math.cos(Lf.a2)*Lf.len*0.8, wB = h*0.08, nx2 = Math.cos(Lf.a2), ny2 = Math.sin(Lf.a2)*0.8;
+      pkPoly(x, [[X - nx2*wB, Y - ny2*wB], [tipX, tipY], [X + nx2*wB, Y + ny2*wB]], pkCss(Lf.a2*sd > 0 ? pkMix(gray, c.lit, 0.35) : pkMix(gray, c.dark, 0.3)));
+      if(!small && hd > px(16)){ x.strokeStyle = pkCss(pkMix(gray, PK_BLACK, 0.4), 0.6); x.lineWidth = Math.max(px(0.3), h*0.01); x.beginPath(); x.moveTo(X, Y); x.lineTo(tipX, tipY); x.stroke(); } }
+    if(F.age > 0.85 && nR < 0.35 && !small){ const sx = X + h*0.05, sh = h*4.5; x.strokeStyle = pkCss(pkMix(c.trunk, [150, 140, 100], 0.4)); x.lineWidth = Math.max(px(0.6), h*0.05); x.beginPath(); x.moveTo(X, Y - h*0.2); x.lineTo(sx, Y - sh); x.stroke();
+      for(let k = 0; k < 6; k++){ const yy = Y - sh*(0.6 + k*0.07), bl = h*(0.4 - k*0.04); x.lineWidth = Math.max(px(0.4), h*0.02); x.beginPath(); x.moveTo(sx, yy); x.lineTo(sx + (k % 2 ? 1 : -1)*bl, yy - h*0.1); x.stroke(); pkDisc(x, sx + (k % 2 ? 1 : -1)*bl, yy - h*0.12, h*0.09, pkCss([214, 186, 70])); } }
     return; }
   if(kind === 'joshua'){
     // a Joshua tree: a shaggy trunk, crooked arms forking, each ending in a spiky ball
@@ -488,6 +585,9 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
   // a broadleaf (and the glowing trees): a trunk forking into limbs under a domed crown grown lobe on lobe: tall and narrow
   // where it grew among others, broad where it grew alone, leaning a little and fuller on the side it grew toward
   const lean = F.lean*h*0.4, fork = h*rnd(0.36, 0.5); trunk(fork, h*0.06*(0.8 + 0.4*F.age), lean, kind === 'glow' ? 'beech' : 'broadleaf');
+  // (plants that meet each other: now and then ivy climbing the trunk of an old tree in the wet woods, c0.ivy)
+  if(c0.ivy && hd > px(36)){ const RI = sub(15), tw = h*0.06*(0.8 + 0.4*F.age); for(let k = 0; k < 26; k++){ const u = k/26, wob = Math.sin(u*9 + RI()*0.5)*tw*0.45;
+    pkDisc(x, X + lean*u + wob + (RI() - 0.5)*tw*0.3, Y - fork*u*0.92, Math.max(px(0.6), tw*(0.18 + 0.1*RI())), pkCss(RI() < 0.4 ? pkMix(c.dark, PK_BLACK, 0.25) : pkMix(c.body, c.dark, 0.4), 0.95)); } }
   const cx = X + lean + F.side*h*0.06, cy = Y - h*0.6, rr = h*0.34*F.wide, n = small ? 3 : 8 + Math.floor(nR*5), RG = sub(3);
   const lobes = pkGrow(n, cx, cy, rr*1.05, h*0.32, rr*0.46, R, F); if(!small) for(const s of [-1, 1]) lobes.push(...pkGrow(2, cx + s*rr*0.5, cy + h*0.12, rr*0.5, h*0.1, rr*0.36, R, F));
   if(!small){ const R = sub(7); for(const [lx2, ly2] of lobes.slice(1).sort((p, q) => q[1] - p[1]).slice(0, 2 + Math.floor(R()*2))) pkLimb(x, X + lean, Y - fork, lx2, ly2, h*0.045, c.trunk, px, (R() - 0.5)*0.4, c.lod); }

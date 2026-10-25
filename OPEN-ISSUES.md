@@ -39,6 +39,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   the amounts feel right?
 - THE STARS IN THE WORLD: a skybox now, standing still as the camera turns past them; in rain, a storm or snow an overcast
   ceiling, the arch just showing through it.
+- THE DESERT'S PLANTS: saguaros arming as they grow taller, organ pipes, barrel cacti, prickly pears, chollas,
+  ocotillos and agaves in the dry country, each flowering in its months by the seed's season; nurse trees, ivy; some
+  rings drier on the whole. Right amounts of each?
 - LIGHT ON THE LAND: the sun's shadows from hills and the rim walls (long at dawn and dusk), the lamps' pools by night,
   boulders of five stones by region, the neon world's districts each in its own neons, the glowing trees' glow kept
   close. Are the shadows dark enough, and the pools bright enough?
@@ -59,9 +62,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     as well as at drops.
   - LIGHT, what is left: things' own shadows cast on the land by where the sun stands (not the screen's side) and by
     lights nearby; windows and fires lighting what is near them as the lamps do.
-  - PLANTS: more cacti; saguaros with more limbs as they grow taller, limb counts never identical, limbs shaded by
-    position and direction, blooming only in their season; growth stages; sizes regular for their kind and stage; color
-    variations; plants that meet each other; their art styles made one.
+  - PLANTS, what is left: blooming and turning in their seasons for the other trees (blossom, autumn colour, bare
+    branches, snow on them); more plants that meet each other (moss on the shaded side, flowers at trees' feet, vines on
+    ruins); their art styles made one.
   - ANIMALS AND PEOPLE: fewer, better, more alive: personalities, many animations and the situations to use them (a deer
     not always eating), birds hopping and flapping, flocks, interactions, hunts between animals; people of all genders
     and types, humanoid species; their states tracked by id (begun: every thing has an id and tags).

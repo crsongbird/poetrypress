@@ -118,7 +118,7 @@ function rgView(E, n, ww, wh){
   return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, LK, detail, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, dryAt, forestAt, cityAt, lightsOf, lightsAt, districtAt, psi,
     // (Flora is what grows, Fauna what lives and moves; Detail how far and how finely: Low, Medium, High, Ultra, as a
     //  reach on the things sown round the eye, Medium as it always was: RG_DETAIL)
-    life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
+    season: seedChoice(seed, 'season')(), life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
     // THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, and the time between its frames
     // (0 in a still, so a still draws as it always did); and the ring's slow spin under the stars since then
     // (in a film, its frame and the scene's mean seconds a frame, from which the scene's own clocks run evenly; and a
@@ -1320,7 +1320,7 @@ function rgStore(V){
     const u = R()*tot, kind = u < P.de ? 'dead' : u < P.de + P.gt ? 'glow' : (T2 => T2[Math.floor(R()*T2.length)])(floraAt(w, a, z)), hM = pkMetres(kind, R());
     // (kept back from a house: its crown clear of the walls, by a few metres)
     if(nearBldg(a, z, (3 + hM*0.22)*M)) return null;
-    return { c: 'tree', w, kind, hM }; });
+    return { c: 'tree', w, kind, hM, ...(kind === 'saguaro' && hM < 4.5 && R() < 0.7 ? { nurse: true } : {}), ...(kind === 'broadleaf' && V.dryAt(a, z) < 0.4 && R() < 0.3 ? { ivy: true } : {}) }; });
   // ROCKS: boulders where the land is rough
   // (boulders gather where the land is steep, as scree under a slope)
   // (never in a field: a farmer clears the stones off it, and they lie in heaps at its edge, below)
@@ -1499,7 +1499,9 @@ export const ringKeptStores = () => [...RG_KEPT_STORES.values()];   // test hook
 
 // ---------------- THE LAND ----------------
 // the trees whose crown is a narrow spire or column: what they hide is narrow too
-const RG_NARROW_TREES = ['spruce', 'fir', 'cypress', 'poplar', 'pine', 'bamboo', 'saguaro'];
+const RG_NARROW_TREES = ['spruce', 'fir', 'cypress', 'poplar', 'pine', 'bamboo', 'saguaro', 'organpipe', 'ocotillo'];
+// (the desert's plants, of a cactus green)
+const RG_CACTI = ['saguaro', 'organpipe', 'barrel', 'pear', 'cholla', 'ocotillo', 'agave'];
 // How it is painted (Ruby, from game development: "figure out what's in front, and what's occluding what … sort objects
 // … draw back to front, avoiding drawing things that are occluded and partially masking things that are part
 // occluded"):
@@ -1821,11 +1823,14 @@ function rgPaintLand(x, mk, dk, V){
       const hw = RG_NARROW_TREES.includes(o.kind) ? 0.045 : 0.13, X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || hl < px(4) ? null : [X - h*hw, X + h*hw, Y - h*0.8, Y - h*0.4])) return;
       // (and the smallest fade in as they grow, never popping on at the size they are first drawn)
       const fadeIn = rgClamp((hl - px(1))/px(0.9)); if(fadeIn < 1) x.globalAlpha = fadeIn;
-      const green = o.kind === 'olive' ? [118, 134, 106] : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, cday, haze);
+      const green = o.kind === 'olive' ? [118, 134, 106] : RG_CACTI.includes(o.kind) ? rsMix([96, 128, 98], V.land, 0.2) : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35), c = colsOf(o.w, cday, haze);
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], cday, haze, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), cday, haze, AIR), body: rgLit(V, green, cday, haze, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), cday, haze, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], cday, haze, AIR) : null,
         // (the sun behind it, low: the light through its leaves; less as it hazes into the distance)
-        back: V.sun.back*rsSmooth(0.35, 0.7, cday)*(1 - haze), sun: rgLit(V, [255, 236, 196], cday, haze, AIR) };
+        back: V.sun.back*rsSmooth(0.35, 0.7, cday)*(1 - haze), sun: rgLit(V, [255, 236, 196], cday, haze, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy };
+      // (a young saguaro in the shade of its nurse tree, a palo verde, as they grow in the desert: the nurse first, behind)
+      if(o.nurse){ const g2 = rsMix([118, 140, 70], V.land, 0.25), nc = { ...tc, hM: undefined, dark: rgLit(V, rsMix(g2, BLACK, 0.2), cday, haze, AIR), body: rgLit(V, g2, cday, haze, AIR), lit: rgLit(V, rsMix(g2, [255, 244, 222], 0.3), cday, haze, AIR) };
+        pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx); }
       // (a tree has no front: half of them are drawn mirrored, their light kept where it is)
       if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); x.globalAlpha = 1; return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1.2)){ nightDot(o, f, l, wday, haze, hl > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
