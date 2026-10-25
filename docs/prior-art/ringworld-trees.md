@@ -175,3 +175,23 @@ Trunks are "not just brown": look for warm grey, cool grey and blue-grey [src](h
 7. Keep the silhouette against the sky dark: the nearest leaves between light and eye are darkest [src](https://interconnected.org/more/davinci/433.html).
 
 **Gaps in this research.** Several pages could not be fetched: James Gurney's foliage post, the Monterey cypress Wikipedia page, Guerrilla's Horizon placement slides, and Frostbite's translucency slides (only the abstract opened). The web-search budget also ran out before Scots pine and beech dimension pages could be found. Their numbers above are [est].
+
+## 7. The trees' seasons
+
+Ruby's order, PLANTS: "blooming and turning in their seasons for the other trees (blossom, autumn colour, bare
+branches, snow on them)".
+
+- Budburst in Belgian saplings: birch "around mid April", oak "in early May", beech "in mid May"; individuals of one
+  species spread over some 45 days, birch the narrowest [src](https://pmc.ncbi.nlm.nih.gov/articles/PMC3468505).
+- Carotenoids are in the leaf all season and show as the chlorophyll breaks down, "yellow, orange, and brown colors";
+  "Most anthocyanins are produced in the autumn, in response to bright light and excess plant sugars within leaf
+  cells", the reds. Oak turns red, brown or russet, hickory golden bronze, aspen golden yellow, beech light tan; red
+  maple scarlet, sugar maple orange-red. The timing is "primarily regulated by the calendar, that is, the increasing
+  length of night"; in New England colour starts in late September [src](https://www.mass.gov/doc/why-leaves-change-color/download).
+- So in the painter [est]: the broadleaf trees, birches, poplars, willows and the orchards' trees go by the year's turn
+  (`rgSeasonOf`, `RG_DECIDUOUS`), each on its own few days and birch a little first. Through March to May a fresher,
+  yellower green, the orchards in blossom (cherry pink, the others white, `pkBlossom`); from late September the leaves
+  turn, birch, poplar and willow gold, a broadleaf scarlet, orange or russet by its own draw; from late November bare
+  (`pkBareCrown`): the crown a purplish-brown haze of twigs with its last forks drawn in, a willow's curtain its thin
+  yellow whips, snow along the twigs in a snowy world. The grassy ground goes straw and dun through the winter and a
+  little gold in the autumn (`rgWinter`), and the meadow flowers close.

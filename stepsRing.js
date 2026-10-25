@@ -187,11 +187,18 @@ const rgWind = V => { const WD = seedChoice(V.seed, 'wind'), ang = WD()*Math.PI*
 const RG_BIOME_GROUND = { ice: [[236, 240, 247], 1], tundra: [[150, 140, 112], 0.6], taiga: [[30, 52, 50], 0.55], meadow: [[0, 0, 0], 0], forest: [[20, 50, 30], 0.45],
   steppe: [[196, 176, 112], 0.6], desert: [[222, 194, 140], 0.82], savanna: [[204, 178, 98], 0.55], jungle: [[20, 80, 36], 0.4], marsh: [[70, 92, 70], 0.5] };
 const RG_PATCH = [[206, 176, 92], [104, 140, 66], [138, 106, 72], [176, 190, 98], [150, 122, 170]];
+// (how wintry the year's turn is, 0 to 1 (and how autumnal, the same scale to 0.4, for the grass's gold): winter from
+//  December through February, easing in through November and out through March)
+const RG_WINTER_GRASS = ['meadow', 'forest', 'steppe', 'tundra', 'savanna'];
+const rgWinter = V => { const s = V.season; if(s === undefined) return 0; const w = Math.max(rsSmooth(0.84, 0.94, s), 1 - rsSmooth(0.1, 0.2, s)); return w > 0.01 ? w : rsSmooth(0.72, 0.84, s)*0.4; };
 function rgGround(V, a, z, e, coarse = 1, slope = 0, bw0 = null){
   const W = V.W, M = W*0.00025;
   if(e <= V.TR.sea + 1e-9) return rsMix([24, 58, 104], V.sky, 0.35);
   const bw = bw0 || V.LK.biomes(a, z, e); let c = [0, 0, 0];
   for(let i = 0; i < LK_BIOMES.length; i++){ if(bw[i] < 0.004) continue; const [bc, bk] = RG_BIOME_GROUND[LK_BIOMES[i].name], g = rsMix(V.land, bc, bk); c[0] += g[0]*bw[i]; c[1] += g[1]*bw[i]; c[2] += g[2]*bw[i]; }
+  // (the grass by the year's turn: straw and dun through the winter, a little gold in the autumn, on the grassy biomes;
+  //  Ruby's order, PLANTS: "blooming and turning in their seasons")
+  { const ws = rgWinter(V); if(ws > 0.01){ let gr = 0; for(let i = 0; i < LK_BIOMES.length; i++) if(RG_WINTER_GRASS.includes(LK_BIOMES[i].name)) gr += bw[i]; if(gr > 0.01) c = rsMix(c, ws > 0 && V.season > 0.5 && V.season < 0.9 ? [170, 150, 84] : [164, 150, 112], Math.abs(ws)*0.32*gr); } }
   // (its world's ground (in the magic world its element's), its woods and its town; where two regions of different
   //  worlds or elements meet, the two grounds met over some twenty metres: a clear border, not a saw's edge)
   const tint = (w, el) => { const P = RG_PROF[w], [gc, gk] = el ? [el.ground, 0.24] : RG_GROUND[w]; let q = rsMix(c, gc, gk);
@@ -908,7 +915,7 @@ const RG_KEPT_STORES = new Map();
 // most its ground may fall across its footprint, as a share of its width (a house about a fifth, some 11°; what is
 // built into a hillside, a pueblo, a stave church, a castle, more); where it is built the land is levelled under it to
 // its middle's height and eased back to the slope round it (rgPads), so it stands on level ground and its door meets it
-const RG_FALL = { house: 0.2, pueblo: 0.45, castle: 0.35, stave: 0.3, chapel: 0.25, row: 0.12, factory: 0.12, megablock: 0.1, greenhouse: 0.1, cathedral: 0.15, gasstation: 0.08, motel: 0.1 };
+export const RG_FALL = { house: 0.2, pueblo: 0.45, castle: 0.35, stave: 0.3, chapel: 0.25, row: 0.12, factory: 0.12, megablock: 0.1, greenhouse: 0.1, cathedral: 0.15, gasstation: 0.08, motel: 0.1 };
 const RG_PLACE = { lighthouse: { coast: true }, windmill: { rise: 0.4 }, turbine: { rise: 0.6 }, castle: { rise: 0.3 }, observatory: { rise: 0.6 },
   barn: { edge: 0.35 }, silo: { edge: 0.35 }, watertower: { heart: 0.25 }, cathedral: { heart: 0.7 }, mosque: { heart: 0.7 }, clock: { heart: 0.6 }, geodome: { flat: 0.25 }, pagoda: { rise: 0 },
   radiomast: { rise: 0.5 }, gasstation: { edge: 0.4, flat: 0.3 }, motel: { edge: 0.45 }, elevator: { edge: 0.5 }, greenhouse: { flat: 0.25 }, chapel: { rise: 0 } };
@@ -1654,15 +1661,29 @@ export const ringKeptStores = () => [...RG_KEPT_STORES.values()];   // test hook
 
 // ---------------- THE LAND ----------------
 // the trees whose crown is a narrow spire or column: what they hide is narrow too
+// THE TREES' SEASONS (Ruby's order, PLANTS; docs/prior-art/ringworld-trees.md §7): the broadleaf trees, birches,
+//  poplars, willows and the orchards' trees go by the year's turn (V.season, 0 to 1 from January). Birch leafs first, in
+//  spring a fresher, yellower green; the orchards blossom (cherry pink, the others white); from late September the
+//  leaves turn, each tree on its own few days (birch, poplar and willow gold, a broadleaf scarlet, orange or russet by its
+//  own draw), and fall; through the winter they stand bare, snow on their twigs in a snowy world. Each tree's own stage
+//  by its record, so a film never sees one change
+const RG_DECIDUOUS = { broadleaf: [[196, 70, 40], [214, 130, 44], [150, 96, 52]], birch: [[222, 184, 64]], poplar: [[214, 178, 60]], willow: [[196, 176, 80]], cherry: [[200, 80, 50]], fruit: [[200, 150, 60]] };
+export function rgSeasonOf(V, o){ const A = RG_DECIDUOUS[o.kind], s = V.season; if(!A || s === undefined || o.w === 'magic' && o.kind === 'cherry') return { k: 0, key: '' };
+  const ph = ((o.rs >>> 7) % 1000)/1000, d = (ph - 0.5)*0.05 + (o.kind === 'birch' ? -0.02 : 0), stg = Math.round;
+  if(s > 0.9 + d || s < 0.14 + d) return { k: 0, bare: true, key: 'b' };
+  if(s < 0.33 + d){ const fr = rsSmooth(0.14 + d, 0.2 + d, s)*(1 - rsSmooth(0.28 + d, 0.36 + d, s)), bl = (o.kind === 'cherry' || o.kind === 'fruit') && s > 0.2 + d && s < 0.3 + d;
+    return { k: 0.35*fr, leaf: [138, 182, 74], blossom: bl ? (o.kind === 'cherry' ? [246, 196, 214] : [248, 246, 236]) : null, key: 's' + stg(fr*4) + (bl ? 'b' : '') }; }
+  if(s > 0.7 + d){ const k = rsSmooth(0.7 + d, 0.82 + d, s); return { k: 0.85*k, leaf: A[Math.floor(ph*997) % A.length], key: 'a' + stg(k*6) }; }
+  return { k: 0, key: '' }; }
 const RG_NARROW_TREES = ['spruce', 'fir', 'cypress', 'poplar', 'pine', 'bamboo', 'saguaro', 'organpipe', 'ocotillo'];
 // (the desert's plants, of a cactus green)
 // the trees and shrubs each biome grows (floraAt), and the kinds that hold to a steep slope
-const RG_BIOME_FLORA = { ice: [], tundra: ['bush', 'bush', 'bush', 'birch', 'fir'], taiga: ['spruce', 'spruce', 'fir', 'fir', 'pine', 'birch'],
+export const RG_BIOME_FLORA = { ice: [], tundra: ['bush', 'bush', 'bush', 'birch', 'fir'], taiga: ['spruce', 'spruce', 'fir', 'fir', 'pine', 'birch'],
   meadow: ['broadleaf', 'broadleaf', 'birch', 'poplar', 'bush', 'bush'], forest: ['broadleaf', 'broadleaf', 'broadleaf', 'birch', 'poplar', 'spruce', 'pine'],
   steppe: ['bush', 'bush', 'bush', 'bush', 'pear', 'agave', 'acacia', 'dead'], desert: ['saguaro', 'saguaro', 'organpipe', 'barrel', 'barrel', 'pear', 'cholla', 'cholla', 'ocotillo', 'agave', 'joshua', 'bush'],
   savanna: ['acacia', 'acacia', 'acacia', 'baobab', 'bush', 'bush', 'bush', 'bush', 'bush'], jungle: ['palm', 'palm', 'fern', 'fern', 'bamboo', 'broadleaf', 'broadleaf'], marsh: ['willow', 'willow', 'poplar', 'bush'] };
 const RG_STEEP_OK = ['spruce', 'fir', 'pine', 'bush', 'birch', 'cedar', 'stonepine', 'dead'];
-const RG_CACTI = ['saguaro', 'organpipe', 'barrel', 'pear', 'cholla', 'ocotillo', 'agave'];
+export const RG_CACTI = ['saguaro', 'organpipe', 'barrel', 'pear', 'cholla', 'ocotillo', 'agave'];
 // How it is painted (Ruby, from game development: "figure out what's in front, and what's occluding what … sort objects
 // … draw back to front, avoiding drawing things that are occluded and partially masking things that are part
 // occluded"):
@@ -2008,11 +2029,11 @@ function rgPaintLand(x, mk, dk, V){
       // (its light kept to steps, so its kept sheet serves frame after frame: rgSprite)
       const dq = Math.round(cday*24)/24, hq = Math.round(haze*16)/16, bq = Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
       const el = o.w === 'magic' ? V.elementAt(o.a, o.z) : null, green0 = o.kind === 'olive' ? [118, 134, 106] : RG_CACTI.includes(o.kind) ? rsMix([96, 128, 98], V.land, 0.2) : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35);
-      const green = el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, dq, hq, null, o);
+      const SZ = rgSeasonOf(V, o), green = SZ.leaf ? rsMix(el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, SZ.leaf, SZ.k) : el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, dq, hq, null, o);
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], dq, hq, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), dq, hq, AIR), body: rgLit(V, green, dq, hq, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), dq, hq, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], dq, hq, AIR) : null,
         // (the sun behind it, low: the light through its leaves; less as it hazes into the distance)
-        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv };
+        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv, bare: SZ.bare, snow: SZ.bare && V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
       // (its shadow laid on the land by where the sun stands, under its sheet and never baked into it: colsOf's shv)
       if(c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
         x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
@@ -2028,7 +2049,7 @@ function rgPaintLand(x, mk, dk, V){
       const Sres = rgStep2(h), Sdet = Math.min(Sres, rgStep2(Math.max(hl, px(8))));
       if(Sres > px(260)){ if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); x.globalAlpha = 1; return; }
       const Sd = Math.max(Sres, px(24)), sw = Math.ceil(Sd*2.4), sh = Math.ceil(Sd*1.4), ax = sw/2, ay = Math.ceil(Sd*1.22), AIRk = AIR.map(v => v >> 3).join('.');
-      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
+      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
       const sp = rgSprite(key, sw, sh, sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
         if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); });
       const k = h/Sd; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = 1; return; }
@@ -2053,11 +2074,11 @@ function rgPaintLand(x, mk, dk, V){
       const st = rgStoneOf(V, o.a, o.z, f[3]); pkRock(x, X, Y, rr, rgLit(V, rsMix(PK_STONES[st], V.land, 0.08), cday, haze, AIR), LT, R, rgPx, st); return; }
     if(o.c === 'grass'){ const gH = o.hM*f[2]; if(gH < px(2.5) || gH > wh*0.4) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - gH, X + gH, Y - gH*1.4, Y)) return;
-      const gc2 = rgLit(V, rsMix([40, 88, 54], V.land, 0.45), cday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
+      const gc2 = rgLit(V, rsMix(rsMix([40, 88, 54], V.land, 0.45), [164, 150, 112], rgWinter(V)*0.4), cday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
       // (with the clock the tufts sway: gusts travelling over the field, each blade's top leaning and coming back)
       const sway = V.time ? gH*(0.16*Math.sin(ST*1.7 - o.a/(W*0.002) + (o.rs & 7)) + 0.08*Math.sin(ST*2.3 + (o.rs & 31))) : 0;
       for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4 + sway*(1 + 0.15*b), Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
-      if(R() < 0.25*RG_PROF[o.w].gr){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
+      if(R() < 0.25*RG_PROF[o.w].gr && !(rgWinter(V) > 0.3 && o.w !== 'magic')){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
     if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h*lodOf(o, f) < px(o.kind === 'caps' ? 1.2 : 3) || h > nearCut) return;
       if(E.loud && o0 !== loudOne) return;

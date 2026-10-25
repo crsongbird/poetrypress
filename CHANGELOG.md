@@ -4,6 +4,25 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Lupus–Xamidimura (2026-10-25)
+
+- The Ringworld's trees keep their seasons. Each seed's season now reaches its broadleaf trees, birches, poplars,
+  willows and orchards:
+  - Spring brings a fresher green and pink or white orchard blossom.
+  - From late September the leaves turn: birches, poplars and willows go gold, and broadleaf trees go scarlet, orange
+    or russet, each tree on its own few days.
+  - Through the winter they stand bare: a purplish-brown haze of twigs, a willow's curtain of thin yellow whips, and
+    snow along the twigs when it snows.
+- The grass goes straw-coloured in winter and a little gold in autumn, and the meadow flowers close for the winter.
+
+### Under the hood
+- `rgSeasonOf` gives each tree its stage from the year's turn and its own record. `pkBareCrown` and `pkBlossom` paint
+  bare and blossoming crowns, and `rgWinter` tints the grassy ground. The tree sheets are kept per stage, so a film
+  never sees a tree change.
+- The Ringworld's fingerprint did not change: its test picture shows no tree in a season that changes it.
+- Reviewed the tests: the regions suite now also checks that every building stands where its ground falls no more
+  than its kind allows, that no cactus grows in the green or cold biomes, and how the trees' seasons go.
+
 ## Lupus–Pipirima (2026-10-25)
 
 - Shadows follow the sun. Every tree, building, rock and small thing in the Ringworld now casts its shadow the way the
@@ -439,17 +458,3 @@ prints it).
 ### Under the hood
 - `moveAlong` takes a rest; `shotAlong` gives the camera between two shots; Set it now takes a mode, so the same tuck
   sets a look or a shot. test/moving.test.mjs checks both.
-
-## Hyades–Ain (2026-10-24)
-
-- New things in the Wilds, each where it belongs: a fire lookout on a high place, its cabin lit by night; a bothy of
-  rough stone in the open hills, slate- or turf-roofed, its chimney smoking now and then and its window lit; charcoal
-  stacks smoking in the woods, glowing red at the vent by night; a wild camp by a wood, a ridge tent and a ring of
-  stones with its fire coming up at dusk; a raised hunting hide at a wood's edge. Groves now stand in open country as
-  well as by a wood, so they are the commonest of the Wilds' places.
-- In town, a fountain in a square and a bandstand on the green.
-
-### Under the hood
-- Seven new kinds in the kit (`pkProp`: camp, charcoal, hide, bothy, lookout, bandstand, fountain), each sized in
-  `PK_SIZE`; the Wilds' places chosen by weight among those whose ground fits. docs/prior-art/ringworld-motion-and-
-  variety.md §8 item 19 begun.

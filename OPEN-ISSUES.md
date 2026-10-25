@@ -11,6 +11,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE LAND IN STEPS, NOW WITHOUT LINES: shelves closer to the first painted ring's ridge-behind-ridge look, fewer in
   the city worlds; the lit lines along crests and shelf lips are gone, and the land gleams where it turns between the
   sun and the eye instead, brightest looking into the sun. Is the gleam strong enough, and on the right ground?
+- THE TREES' SEASONS: by the seed's season the broadleaf trees, birches, poplars, willows and orchards leaf fresh and
+  blossom in spring, turn gold, scarlet and russet in autumn and stand bare in winter; the grass goes straw in winter.
+  Do the bare trees read as trees, and is autumn bright enough?
 - SHADOWS BY THE SUN: every thing's shadow now falls the way the sun throws it, long at dawn and dusk, toward you when
   the sun is behind it, held short when it falls away from you; trees with a contact shadow at their foot. Do the
   shadows read, and is the held-short shadow away from you acceptable?
@@ -93,8 +96,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     as well as at drops.
   - LIGHT, what is left: things' shadows cast by lights nearby; windows and fires lighting what is near them as the lamps
     do; a building's cast shadow shaped by its outline, not a slab.
-  - PLANTS, what is left: blooming and turning in their seasons for the other trees (blossom, autumn colour, bare
-    branches, snow on them); more plants that meet each other (moss on the shaded side, flowers at trees' feet, vines on
+  - PLANTS, what is left: more plants that meet each other (moss on the shaded side, flowers at trees' feet, vines on
     ruins); their art styles made one.
   - ANIMALS AND PEOPLE, what is left: personalities; more animations and the situations to use them (people sitting,
     talking in twos and threes, carrying things, working; animals drinking at water, playing); interactions and hunts

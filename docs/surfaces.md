@@ -426,6 +426,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   - **Plants by the land** (Ruby: "trees and small shrubs that obey moisture, aridity, soil angle rules"): each tree
     is chosen from its place's biomes (`floraAt`, `RG_BIOME_FLORA`), so a saguaro grows only in desert, an acacia and
     a baobab on the savanna, birches and firs in the tundra; on a steep slope only what holds there (`RG_STEEP_OK`).
+    The broadleaf trees go by the seed's season (`rgSeasonOf`; docs/prior-art/ringworld-trees.md §7): fresh green and
+    orchard blossom in spring, gold, scarlet and russet in autumn, bare twigs in winter (snow on them in a snowy world),
+    the grass straw in winter and the meadow flowers closed.
   - **Buildings on level ground** (Ruby: "buildings should never spawn in the air … terrain should flatten around
     them"; docs/prior-art/ringworld-buildings-ground.md): each kind says how far its footprint may fall (`RG_FALL`: a
     row of houses or a factory hardly at all, a pueblo or a castle on its hill much more); the land under a building is

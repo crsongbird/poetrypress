@@ -12,7 +12,7 @@
  */
 // planet and moon (or cluster and star) joined by an en dash: a slash would be read as a PML
 // directive inside a segment (<…/right>), dropping the moon's name
-export const RELEASE = 'Lupus–Pipirima';
+export const RELEASE = 'Lupus–Xamidimura';
 // the day this release was named (`node build.mjs --next` sets it): the Grimoire's first poem is dated it
 export const RELEASE_DATE = '2026-10-25';
 // each surface's thumbnail stamp (build.mjs, from its fingerprints): a tile is painted again only when it changes

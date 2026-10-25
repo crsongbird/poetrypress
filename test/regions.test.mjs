@@ -4,7 +4,8 @@
  * factions holding regions; names from the seeds …; crystals of a color for each magical element ruling a region".
  * The regions are a pure function of the seed and the place and go round the ring; a Mixed ring shares its worlds out
  * region by region; every magic region has its element; where a way crosses a border it is marked; walls stand round
- * towns of the old worlds only, and nothing is built on them.
+ * towns of the old worlds only, and nothing is built on them. And what stands on the land by the land: every building
+ * where its ground falls no more than its kind allows, plants by their biome, the broadleaf trees by the season.
  *
  * Run: node test/regions.test.mjs
  */
@@ -51,14 +52,35 @@ const W = 0.0566, M = W*0.00025;
   const T = await import('../textureGenerators.js'), SR = await import('../stepsRing.js'), defs = T.paramsFor('ringpaint'), t6 = T.TEXTURE_CAPS.ringpaint.tintDefaults || [];
   const store = (seed, world) => { const o = { seed, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 200/3072, camera: { view: 100, zoom: 100 } };
     defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); o.p3 = String(world); T.clearTextureCache(); T.getTextureCanvas('ringpaint', 200, 120, o); return SR.ringKeptStores().pop(); };
-  let marks = 0, signs = 0, named = 0, walls = 0, onWall = 0, wrongWorld = 0, region = 0, things = 0;
+  let marks = 0, signs = 0, named = 0, walls = 0, onWall = 0, wrongWorld = 0, region = 0, things = 0, bldgs = 0, tooSteep = 0;
   for(const [seed, world] of [[15, 14], [26, 28], [5, 71], [4, 71], [7, 86]]){ const st = store(seed, world); if(!st) continue;
+    // (Ruby: "buildings should never spawn in the air": each stands where its ground falls no more than its kind allows)
+    for(const o of st) if(o.c === 'bldg' && o.up !== undefined){ bldgs++; if((o.up + o.down) > o.wM*(SR.RG_FALL[o.kind] ?? SR.RG_FALL.house) + 1e-6) tooSteep++; }
     for(const o of st){ things++; if(o.region) region++; if(['boundary', 'banner', 'welcome'].includes(o.kind)){ marks++; if(o.kind === 'welcome'){ signs++; if(o.mark && o.mark.say) named++; } } }
     for(const wl of st.walls || []){ walls++; if(!['wilds', 'magic', 'ruins'].includes(wl.w)) wrongWorld++;
       for(const o of st) if(o.c === 'bldg'){ const d = Math.hypot(o.a - wl.a, o.z - wl.z); if(Math.abs(d - wl.rOf(Math.atan2(o.z - wl.z, o.a - wl.a))) < (o.wM*0.5)*M + wl.T*0.5) onWall++; } } }
   check(`where the ways cross a border it is marked: stones, banners, signs (${marks}), every sign naming where it stands (${named} of ${signs})`, marks > 0 && signs > 0 && named === signs);
   check(`every thing knows the region it stands in (${region} of ${things})`, things > 0 && region === things);
   check(`walls round some towns, and only the old worlds' (${walls}, ${wrongWorld} elsewhere)`, walls > 0 && wrongWorld === 0);
-  check(`no building stands on a wall (${onWall})`, onWall === 0); }
+  check(`no building stands on a wall (${onWall})`, onWall === 0);
+  check(`every building stands where its ground falls no more than its kind allows (${tooSteep} of ${bldgs} too steep)`, bldgs > 20 && tooSteep === 0); }
+
+// PLANTS BY THE LAND (Ruby: "shouldn't be saguaros here … trees and small shrubs that obey moisture, aridity, soil
+// angle rules"): no cactus in the green or cold biomes; every biome but ice grows something
+{ const { RG_BIOME_FLORA, RG_CACTI } = await import('../stepsRing.js'), green = ['tundra', 'taiga', 'meadow', 'forest', 'jungle', 'marsh'];
+  check('no cactus grows in the green or cold biomes', green.every(b => (RG_BIOME_FLORA[b] || []).every(k => !RG_CACTI.includes(k))));
+  check('saguaros only in the desert', Object.entries(RG_BIOME_FLORA).every(([b, L]) => b === 'desert' || !L.includes('saguaro')));
+  check('every biome but ice grows something', Object.entries(RG_BIOME_FLORA).every(([b, L]) => b === 'ice' ? L.length === 0 : L.length > 0)); }
+
+// THE TREES' SEASONS: a broadleaf bare in winter, turned in autumn, fresh in spring, green in summer; an orchard in
+// blossom in spring; a conifer the same all year; each tree's stage a function of its record and the year's turn
+{ const { rgSeasonOf } = await import('../stepsRing.js'), at = (season, kind, rs = 12345, w = 'wilds') => rgSeasonOf({ season }, { kind, rs, w });
+  check('a broadleaf stands bare in January and December', at(0.03, 'broadleaf').bare && at(0.97, 'broadleaf').bare);
+  check('a broadleaf has turned by late October', !at(0.82, 'broadleaf').bare && at(0.82, 'broadleaf').k > 0.5 && !!at(0.82, 'broadleaf').leaf);
+  check('a broadleaf is green in July', !at(0.55, 'broadleaf').bare && at(0.55, 'broadleaf').k === 0);
+  check('a cherry blossoms in late March', !!at(0.25, 'cherry').blossom);
+  check('a spruce is the same all year', [0.03, 0.25, 0.55, 0.82].every(s => at(s, 'spruce').k === 0 && !at(s, 'spruce').bare));
+  check('trees turn on their own days: some broadleaves turned while others are still turning', new Set(Array.from({ length: 40 }, (_, i) => at(0.76, 'broadleaf', i*7919).key)).size > 1);
+  check('a tree\'s stage is the same each time it is asked', JSON.stringify(at(0.8, 'birch', 99)) === JSON.stringify(at(0.8, 'birch', 99))); }
 
 done();

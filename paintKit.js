@@ -145,7 +145,24 @@ function pkGrow(n, cx, cy, rx, ry, r0, R, F){ const lobes = [[cx, cy, r0]];
   return lobes; }
 // a crown of lobes (a broadleaf, a willow's, a poplar's): every lobe in shadow first, then each again smaller and
 // toward the light in the body's colour, then a few small lit lobes on the lit side of the crown's top
+// THE TREES' SEASONS (Ruby's order, PLANTS: "blooming and turning in their seasons for the other trees (blossom, autumn
+//  colour, bare branches, snow on them)"; docs/prior-art/ringworld-trees.md §7): a bare crown is its twigs, a fine dark
+//  haze in the crown's shape with the limbs' last forks drawn into it, the sky through; a crown in blossom is dotted
+//  over with its flowers, more toward the light. (c.bare, c.blossom: set by the caller from the year's turn)
+function pkBareCrown(x, lobes, c, R, cx, cy, rr, px){ const tw = pkMix(c.trunk || c.dark, c.dark, 0.3), hz = pkMix(pkMix(tw, [128, 98, 104], 0.4), c.air || c.lit, 0.3);
+  // (winter twigs read from afar as a purplish-brown haze, denser at the crown's heart)
+  for(const [X, Y, r] of lobes){ pkDisc(x, X, Y, r*0.92, pkCss(hz, 0.22)); pkDisc(x, X, Y + r*0.15, r*0.55, pkCss(hz, 0.22)); }
+  x.lineCap = 'round'; x.strokeStyle = pkCss(tw, 0.75);
+  for(const [X, Y, r] of lobes){ const n = px && r*(c.lod || 1) > px(6) ? 9 : 3; for(let q = 0; q < n; q++){ const a = -Math.PI/2 + (R() - 0.5)*2.4, l = r*(0.6 + 0.4*R()), bx = X + (cx - X)*0.35, by = Y + r*0.5;
+    x.lineWidth = Math.max(px ? px(0.35) : 0.35, r*0.035); x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(X, Y, X + Math.cos(a)*l, Y + Math.sin(a)*l); x.stroke(); } }
+  if(c.snow) for(const [X, Y, r] of lobes) pkEll(x, X, Y - r*0.35, r*0.55, r*0.12, pkCss([242, 244, 250], 0.7)); }
+function pkBlossom(x, lobes, c, R, px){ const RB = mulberry32((R()*4294967296) >>> 0), n = Math.min(160, lobes.length*(px && lobes[0] && lobes[0][2]*(c.lod || 1) > px(8) ? 9 : 3));
+  for(let q = 0; q < n; q++){ const [X, Y, r] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = r*0.8*Math.sqrt(RB()), lt = Math.cos(a)*c.L[0] + Math.sin(a)*c.L[1];
+    pkDisc(x, X + Math.cos(a)*d, Y + Math.sin(a)*d, Math.max(px ? px(0.5) : 0.5, r*(0.07 + 0.05*RB())), pkCss(lt > 0 ? pkMix(c.blossom, PK_WHITE, 0.25) : pkMix(c.blossom, c.dark, 0.25), 0.9)); } }
 function pkLobes(x, lobes, c, R, cx, cy, rr, px){
+  if(c.bare) return pkBareCrown(x, lobes, c, R, cx, cy, rr, px);
+  pkLobesOf(x, lobes, c, R, cx, cy, rr, px); if(c.blossom) pkBlossom(x, lobes, c, R, px); }
+function pkLobesOf(x, lobes, c, R, cx, cy, rr, px){
   // (rd: the crown's size as its detail reads it, at its true distance, so a turn never changes its stage; and the
   //  leaves and the backlit dashes each on a stream of their own, so a leaf more moves nothing else)
   const lx = c.L[0], ly = c.L[1], rd = rr*(c.lod || 1), big = px && rd > px(10), RLf = mulberry32((R()*4294967296) >>> 0), RBk = mulberry32((R()*4294967296) >>> 0);
@@ -365,7 +382,9 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     if(!small){ const n = hd > px(30) ? 34 : 9; x.lineCap = 'round';
       // (the curtain: many long falls of leaves from the crown's edge, the ones toward the light lit, swaying a little)
       for(const pass of [0, 1]) for(let q = 0; q < n; q++){ const u = q/(n - 1) - 0.5, sx = cx + u*rw*2.4 + rnd(-1, 1)*h*0.01, len = h*rnd(0.28, 0.55)*(1 - Math.abs(u)*0.5), sw = rnd(-1, 1)*h*0.03, lit = u*sd > 0.05;
-        if(pass === 0 ? lit : !lit) continue; x.strokeStyle = pkCss(lit ? (R() < 0.4 ? c.lit : c.body) : (R() < 0.5 ? c.dark : c.body)); x.lineWidth = Math.max(px(0.5), h*(n > 9 ? 0.016 : 0.025));
+        if(pass === 0 ? lit : !lit) continue; const pick = R() < 0.4, pick2 = R() < 0.5;
+        // (bare in winter: a weeping willow's curtain is its long whips, yellow to orange, thin, the sky between)
+        x.strokeStyle = c.bare ? pkCss(pkMix([206, 158, 70], lit ? c.lit : c.dark, pick ? 0.15 : 0.4), 0.85) : pkCss(lit ? (pick ? c.lit : c.body) : (pick2 ? c.dark : c.body)); x.lineWidth = Math.max(px(0.5), h*(n > 9 ? 0.016 : 0.025)*(c.bare ? 0.35 : 1));
         x.beginPath(); x.moveTo(sx, cy - h*0.04); x.quadraticCurveTo(sx + u*h*0.08, cy + len*0.5, sx + u*h*0.12 + sw, cy + len); x.stroke();
         if(c.back > 0.05 && R() < 0.5){ x.strokeStyle = pkCss(c.trans, c.back*0.6); x.lineWidth = Math.max(px(0.4), h*0.006); x.stroke(); } } }
     return; }

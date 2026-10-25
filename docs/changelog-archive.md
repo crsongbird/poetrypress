@@ -2,6 +2,20 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Hyades–Ain (2026-10-24)
+
+- New things in the Wilds, each where it belongs: a fire lookout on a high place, its cabin lit by night; a bothy of
+  rough stone in the open hills, slate- or turf-roofed, its chimney smoking now and then and its window lit; charcoal
+  stacks smoking in the woods, glowing red at the vent by night; a wild camp by a wood, a ridge tent and a ring of
+  stones with its fire coming up at dusk; a raised hunting hide at a wood's edge. Groves now stand in open country as
+  well as by a wood, so they are the commonest of the Wilds' places.
+- In town, a fountain in a square and a bandstand on the green.
+
+### Under the hood
+- Seven new kinds in the kit (`pkProp`: camp, charcoal, hide, bothy, lookout, bandstand, fountain), each sized in
+  `PK_SIZE`; the Wilds' places chosen by weight among those whose ground fits. docs/prior-art/ringworld-motion-and-
+  variety.md §8 item 19 begun.
+
 ## Hyades–Lembu (2026-10-24)
 
 - Farms belong to the cities now: farmsteads, hamlets and their fields stand in the countryside round a city's edge,
