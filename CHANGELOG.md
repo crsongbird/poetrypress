@@ -4,6 +4,20 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Lupus–Heng (2026-10-25)
+
+- Films draw faster again. Each cell of the land keeps its biomes, its far field colour and the kind of ground it shows
+  once they are worked out. The small marks on the ground make no waste from frame to frame, and the stars are drawn
+  once per sky instead of once per frame.
+- In the rain a rainbow now appears only where the overcast breaks, about one rainy ring in three. The brightening
+  inside a rainbow eases away at its edge instead of ending in a hard circle.
+
+### Under the hood
+- The ground marks' path lists are flat lists of numbers, reused cell after cell (`rgPathRec`).
+- The Starfield part keeps its stars by seed, size and colours (`WHIM_STARS`). Aurora Sky's fingerprint changed only
+  because its stars now come from that store; its picture is the same.
+- Tree sheets are kept to about ten million pixels per worker, so a film's several workers stay light on memory.
+
 ## Pleiades–Celaeno (2026-10-25)
 
 - The Ringworld's land is laid in steps again, closer to the first painted ring's ridge-behind-ridge look. The land
@@ -458,20 +472,3 @@ prints it).
   a heap's life; the heap's billows are dealt from a fixed list of 64; a large heap is drawn on a smaller sheet instead
   of left out. `rgStrike` times a storm's strikes, and test/moving.test.mjs now checks their timing at every seed and
   the scene's light per tenth of the frame. Its fingerprints held.
-
-## Ursa Major–Mizar (2026-10-24)
-
-- The Moving Image's easing has four shapes: Even, Ease in (setting off slowly), Ease out (arriving slowly), and In
-  and out.
-- A Camera round can do something else as it turns, chosen under Also: Push in, Pull back, Tilt (across the view and
-  back, so a full round still loops) or Spiral out (pulling back and leaning as it goes). The camera goes back to where
-  it was when the film is done, and the summary line says when a film ends where it goes rather than looping.
-- To another look can now be any look at all: Set it now… tucks the sheet into a bar at the foot of the page, and the
-  page itself is changed, anything on it, the Athanor too. Done keeps that as the look the film moves to (listed as
-  "The look you set") and puts the page back as it was; Cancel just puts it back. The changes leave no steps in the
-  undo history.
-
-### Under the hood
-- `moveAlong` takes a shape (`'in'`, `'out'`, `'ease'`) where it took a yes or no; `cameraAlso` gives the view and zoom
-  for a camera round's second move, its amounts in `FILM_CAMERA`; the history is held and put back whole around Set it
-  now (`historyHold`, `historyPutBack`). docs/prior-art/film-animation.md says what was built and what is still to come.

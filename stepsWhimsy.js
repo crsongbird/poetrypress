@@ -30,6 +30,7 @@ import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, pageSunAt
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh, genFeathers } from './texWhimsy.js';
 import { skyRingFrame } from './stepsGenerative.js';
 import { pkTree, pkSpire, pkMonolith, pkCrystals } from './paintKit.js';
+const WHIM_STARS = new Map();   // (the Starfield's stars, kept for the last few seeds and sizes)
 
 const WHIM_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 /** The birds the Feathers part draws (its Bird setting, in fifths). */
@@ -1375,7 +1376,9 @@ export const WHIMSY_STEPS = {
     // Deep Field's stars (texWhimsy genAstralStars): each a soft glow by its brightness, coloured by temperature, the brightest spiked
     fresh: true,
     paint(E, n){ const { ww: w, wh: h } = E, a = E.input(n, 2), b = E.input(n, 3), seed = ((E.ctx.seed >>> 0) + Math.round(E.num(n, 'variant', 0))*7919 + 977) >>> 0;
-      const c = withSeed(seed, () => genAstralStars(w, h, Array.isArray(a) ? whimHex(a) : '#D9C8E8', Array.isArray(b) ? whimHex(b) : '#9FB8E8', E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null));
+      // (the same stars for the same seed, size and colours: drawn once and kept, so a film's frames draw them once)
+      const ha = Array.isArray(a) ? whimHex(a) : '#D9C8E8', hb = Array.isArray(b) ? whimHex(b) : '#9FB8E8', sk = [w, h, ha, hb, E.num(n, 'amount', 100), E.num(n, 'atmosphere', 20), seed].join('|');
+      let c = WHIM_STARS.get(sk); if(!c){ c = withSeed(seed, () => genAstralStars(w, h, ha, hb, E.num(n, 'amount', 100)/100, 1, E.num(n, 'atmosphere', 20)/100, null)); WHIM_STARS.set(sk, c); while(WHIM_STARS.size > 2) WHIM_STARS.delete(WHIM_STARS.keys().next().value); }
       const [pc, x] = kitOwn(E, n, 1, w, h, 0); x.drawImage(c, 0, 0);
       // (Ruby's favorite planet, very rarely among the stars, about one sky in thirty-six: a small Saturn, an Easter egg;
       //  from a stream of its own, so every other sky is as it was. Seen through an atmosphere (an Earth sky, the

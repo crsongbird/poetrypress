@@ -222,15 +222,21 @@ function rgFieldPatch(V, a, z, e, bw, slope, dd){ const W = V.W; if(dd <= W*0.3)
 // q: { l, i, j, box }; kind; c: the cell's colour)
 const RG_GRASSY = { meadow: 1, forest: 1, taiga: 1, jungle: 1, savanna: 1, steppe: 1 };
 // (a path written down to be drawn later, on any canvas: moveTo, lineTo, quadraticCurveTo, arc, ellipse; play(ctx))
-const rgPathRec = () => { const ops = []; const r = { play(c){ c.beginPath(); for(const [f, a] of ops) c[f](...a); } };
-  for(const f of ['moveTo', 'lineTo', 'quadraticCurveTo', 'arc', 'ellipse']) r[f] = (...a) => { ops.push([f, a]); }; return r; };
+// (kept as one flat list of numbers, a code and its arguments, and reused cell after cell, so a frame's thousands of
+//  marks make no garbage to collect)
+const rgPathRec = () => { const o = []; let n = 0; const put = (k, a) => { o[n++] = k; for(let q = 0; q < a.length; q++) o[n++] = a[q]; };
+  return { reset(){ n = 0; return this; }, moveTo(...a){ put(0, a); }, lineTo(...a){ put(1, a); }, quadraticCurveTo(...a){ put(2, a); }, arc(...a){ put(3, a); }, ellipse(...a){ put(4, a); },
+    play(c){ c.beginPath(); for(let q = 0; q < n;){ const k = o[q++];
+      if(k === 0){ c.moveTo(o[q], o[q + 1]); q += 2; } else if(k === 1){ c.lineTo(o[q], o[q + 1]); q += 2; } else if(k === 2){ c.quadraticCurveTo(o[q], o[q + 1], o[q + 2], o[q + 3]); q += 4; }
+      else if(k === 3){ c.arc(o[q], o[q + 1], o[q + 2], o[q + 3], o[q + 4]); q += 5; } else { c.ellipse(o[q], o[q + 1], o[q + 2], o[q + 3], o[q + 4], o[q + 5], o[q + 6]); q += 7; } } } }; };
+const RG_MARKS_L = rgPathRec(), RG_MARKS_D = rgPathRec();
 function rgGroundMarks(x, P, q, kind, c, px){
   const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0, area = w*h*0.55; if(w < px(6) || h < px(2.5)) return;
   const n = Math.min(9, Math.floor(area/(px(16)*px(16)))); if(n < 1) return;
   const R = mulberry32((Math.imul(q.l + 1, 0x9E3779B1) ^ Math.imul(q.i, 0x85EBCA77) ^ Math.imul(q.j, 0xC2B2AE3D)) >>> 0);
   const pt = (u, v) => { const ax = P[0][0] + (P[1][0] - P[0][0])*u, ay = P[0][1] + (P[1][1] - P[0][1])*u, bx = P[3][0] + (P[2][0] - P[3][0])*u, by = P[3][1] + (P[2][1] - P[3][1])*u; return [ax + (bx - ax)*v, ay + (by - ay)*v]; };
   const lite = rsCss(rsMix(c, [255, 250, 232], 0.16), 0.75), dark = rsCss(rsMix(c, [0, 0, 0], 0.2), 0.7), s = Math.min(w, h*2.2)/Math.sqrt(n + 1);
-  const L = rgPathRec(), D = rgPathRec(); let any = false;
+  const L = RG_MARKS_L.reset(), D = RG_MARKS_D.reset(); let any = false;
   for(let k = 0; k < n; k++){ const [X, Y] = pt(0.1 + 0.8*R(), 0.1 + 0.8*R()), u = R(), r = s*(0.25 + 0.25*R()); any = true;
     if(RG_GRASSY[kind]){ const lb = r*(kind === 'steppe' || kind === 'savanna' ? 0.9 : 0.7), Pq = u < 0.5 ? L : D, lean = (R() - 0.5)*lb*0.6;
       Pq.moveTo(X - lb*0.25, Y); Pq.lineTo(X - lb*0.3 + lean, Y - lb); Pq.moveTo(X, Y); Pq.lineTo(X + lean*0.5, Y - lb*1.2); Pq.moveTo(X + lb*0.25, Y); Pq.lineTo(X + lb*0.35 + lean, Y - lb*0.9); }
@@ -716,12 +722,13 @@ function rgPaintArch(x, mk, V){
       g.addColorStop(0, rsCss(col, str)); g.addColorStop(0.35, rsCss(col, str*0.45)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
       for(const k2 of [1, 0.55, 0.25]){ x.beginPath(); x.moveTo(sp[0], sp[1]); x.arc(sp[0], sp[1], Lr, a - wa*k2*1.6, a + wa*k2*1.6); x.closePath(); x.fill(); } } x.restore(); }
   // a RAINBOW after the rain, opposite the sun, when the sun is low behind you: its bands round the point opposite it
-  if((wx === 'rain' || (wx === 'clouds' && R0() < 0.15)) && V.sun.D && -V.sun.D[0] < 0.6 && -V.sun.D[0] > -0.05){ const D = V.sun.D, A = proj(L.Px - D[0], -D[1], L.z0 - D[2]);
+  if(((wx === 'rain' && mnHash(s, 78, 5) < 0.3) || (wx === 'clouds' && R0() < 0.15)) && V.sun.D && -V.sun.D[0] < 0.6 && -V.sun.D[0] > -0.05){ const D = V.sun.D, A = proj(L.Px - D[0], -D[1], L.z0 - D[2]);
     if(A){ const r0 = 2*F*Math.tan(21*Math.PI/180), BOW = [[220, 60, 60], [240, 150, 50], [240, 230, 80], [80, 200, 90], [70, 120, 230], [140, 80, 200]]; x.save(); x.globalCompositeOperation = 'screen'; x.lineWidth = r0*0.018;
       BOW.forEach((cb, k) => { x.strokeStyle = rsCss(cb, 0.16*(0.4 + 0.6*kday)); x.beginPath(); x.arc(A[0], A[1], r0*(1.0 - k*0.018), Math.PI, 0); x.stroke(); });
       // (as a bow is (docs/prior-art/ringworld-sky.md §9): the sky inside it brighter, a fainter second bow at 51° with its
-      //  colours the other way round, and the band between them darker)
-      const k0 = 0.4 + 0.6*kday, g = x.createRadialGradient(A[0], A[1], 0, A[0], A[1], r0*0.9); g.addColorStop(0, rsCss(cWhite, 0)); g.addColorStop(0.7, rsCss(cWhite, 0.03*k0)); g.addColorStop(1, rsCss(cWhite, 0.07*k0)); x.fillStyle = g; x.beginPath(); x.arc(A[0], A[1], r0*0.9, Math.PI, 0); x.fill();
+      //  colours the other way round, and the band between them darker; the brightening eased away at its rim, so no hard
+      //  circle stands in the sky; in rain only where the overcast breaks, a ring in three)
+      const k0 = 0.4 + 0.6*kday, g = x.createRadialGradient(A[0], A[1], 0, A[0], A[1], r0*0.9); g.addColorStop(0, rsCss(cWhite, 0)); g.addColorStop(0.6, rsCss(cWhite, 0.03*k0)); g.addColorStop(0.88, rsCss(cWhite, 0.06*k0)); g.addColorStop(1, rsCss(cWhite, 0)); x.fillStyle = g; x.beginPath(); x.arc(A[0], A[1], r0*0.9, Math.PI, 0); x.fill();
       const r2 = 2*F*Math.tan(25.5*Math.PI/180); x.lineWidth = r2*0.022; BOW.forEach((cb, k) => { x.strokeStyle = rsCss(cb, 0.07*k0); x.beginPath(); x.arc(A[0], A[1], r2*(1.0 - (5 - k)*0.02), Math.PI, 0); x.stroke(); });
       x.globalCompositeOperation = 'source-over'; x.lineWidth = r2 - r0*1.02; x.strokeStyle = rsCss(rsMix(cGrey, [20, 24, 40], 0.3), 0.06*k0); x.beginPath(); x.arc(A[0], A[1], (r0*1.02 + r2*0.88)/2, Math.PI, 0); x.stroke(); x.restore(); } }
   // FOG and SNOW: the sky pale and low, the far things fading into it
@@ -1573,7 +1580,7 @@ const RG_MESH_KEPT = new Map(), RG_NG_MAX = 80, RG_ARCH_KEPT = new Map();   // (
 const RG_SPRITES = new Map(); let RG_SPRITE_PX = 0;
 const rgSprite = (key, w, h, draw) => { let sp = RG_SPRITES.get(key); if(sp){ RG_SPRITES.delete(key); RG_SPRITES.set(key, sp); return sp; }
   const [c, x] = kitCanvas(w, h); draw(x); sp = c; RG_SPRITES.set(key, sp); RG_SPRITE_PX += w*h;
-  while(RG_SPRITE_PX > 3.2e7 && RG_SPRITES.size > 1){ const [k0, c0] = RG_SPRITES.entries().next().value; RG_SPRITES.delete(k0); RG_SPRITE_PX -= c0.width*c0.height; } return sp; };
+  while(RG_SPRITE_PX > 1e7 && RG_SPRITES.size > 1){ const [k0, c0] = RG_SPRITES.entries().next().value; RG_SPRITES.delete(k0); RG_SPRITE_PX -= c0.width*c0.height; } return sp; };
 // (a size kept to steps of the square root of two, so a tree's sheet serves every size it shows within a step)
 const rgStep2 = v => Math.pow(2, Math.ceil(Math.log2(Math.max(1e-6, v))*2)/2);
 export const ringMeshOf = () => RG_LAST_MESH;   // test hook: the last view's mesh of the land (its rings and each corner's height)
@@ -2467,15 +2474,18 @@ function rgPaintLand(x, mk, dk, V){
       const cs2 = cloudShadeAt(sa, sz)*rsSmooth(0.3, 0.7, day)*(1 - 0.85*haze); if(cs2 > 0.004) cc = rsMix(cc, [10, 14, 34], cs2);
       if(LOWMIST > 0 && dd > W*0.01){ const lw = rsSmooth(TR.cloud*0.25, sea, hm); if(lw > 0.05) cc = rsMix(cc, MISTC, LOWMIST*lw*0.7*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + am*40))); }
       return cc; };
-    const poly = grow(P), he = Math.max(hm/exf(dd), sea + M1*0.5), bw = nWet === 4 ? null : V.LK.biomes(am, zm, he); let g0 = null;
-    if(bw){ const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = rgFieldPatch(V, am, zm, he, bw, slope, dd), g4 = [vcol(l, i, j), vcol(l, i + 1, j), vcol(l, i + 1, j + 1), vcol(l, i, j + 1)];
+    // (a cell's biomes, its far field and its ground's kind worked out once and kept with its ring: write once, read many)
+    const poly = grow(P), he = Math.max(hm/exf(dd), sea + M1*0.5), CI = RINGS[l].cells || (RINGS[l].cells = []), ck = kAt(i, j);
+    let ci0 = CI[ck]; if(!ci0 && nWet !== 4){ const bw0 = V.LK.biomes(am, zm, he); ci0 = CI[ck] = { bw: bw0, fp: rgFieldPatch(V, am, zm, he, bw0, slope, dd), gk: groundKind(he, slope, bw0, am, zm) }; }
+    const bw = nWet === 4 ? null : ci0.bw; let g0 = null;
+    if(bw){ const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = ci0.fp, g4 = [vcol(l, i, j), vcol(l, i + 1, j), vcol(l, i + 1, j + 1), vcol(l, i, j + 1)];
       g0 = [0, 1, 2].map(ch => (g4[0][ch] + g4[1][ch] + g4[2][ch] + g4[3][ch])/4);
       const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], VA[k]*c, zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k])); });   // (each corner's own cloud shadow, so a shadow's edge runs smoothly)
       let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
       const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
       if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
       else rsPoly(x, poly, rsCss(cA));
-      if(nWet === 0) rgGroundMarks(x, P, q, groundKind(he, slope, bw, am, zm), cA, px); }
+      if(nWet === 0) rgGroundMarks(x, P, q, ci0.gk, cA, px); }
     // WATER with its shore (docs/prior-art/ringworld-terrain.md §3): deep water dark and holding the sky the farther off
     // and the more glancing it is seen, the shallows lighter; where the land meets it, the wet edge and a line of foam
     if(nWet){ const hs = [h00, h10, h11, h01], wp = [], shore = [];

@@ -2,6 +2,23 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Ursa Major–Mizar (2026-10-24)
+
+- The Moving Image's easing has four shapes: Even, Ease in (setting off slowly), Ease out (arriving slowly), and In
+  and out.
+- A Camera round can do something else as it turns, chosen under Also: Push in, Pull back, Tilt (across the view and
+  back, so a full round still loops) or Spiral out (pulling back and leaning as it goes). The camera goes back to where
+  it was when the film is done, and the summary line says when a film ends where it goes rather than looping.
+- To another look can now be any look at all: Set it now… tucks the sheet into a bar at the foot of the page, and the
+  page itself is changed, anything on it, the Athanor too. Done keeps that as the look the film moves to (listed as
+  "The look you set") and puts the page back as it was; Cancel just puts it back. The changes leave no steps in the
+  undo history.
+
+### Under the hood
+- `moveAlong` takes a shape (`'in'`, `'out'`, `'ease'`) where it took a yes or no; `cameraAlso` gives the view and zoom
+  for a camera round's second move, its amounts in `FILM_CAMERA`; the history is held and put back whole around Set it
+  now (`historyHold`, `historyPutBack`). docs/prior-art/film-animation.md says what was built and what is still to come.
+
 ## Ursa Major–Alioth (2026-10-24)
 
 - See Through: a glass surface laid over another now bends the surface beneath it. Under Glass refracts what is behind
