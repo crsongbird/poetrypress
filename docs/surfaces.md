@@ -400,6 +400,16 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     (`ringParams`). The far floor on the arch is laid as a map (`rgPaintArch`): patches a few pixels across by their
     true distance, on a grid of the world's, each of the land kit's broad regions where it lies and shaded by its
     relief, so lakes and ranges read as shapes, not squares.
+  - **Light on the land** (Ruby: "shadows cast by the sun where it stands … nearby lights lighting what is near them
+    more … rocks of different stones"): each corner of the land, each thing and each field looks toward the sun over the
+    land as it is drawn (`litAt`): where a hill or a rim wall stands above the line, it lies in its shadow, softer the
+    farther the hill, so a low sun throws the hills' and the walls' shadows across the band. A cell whose corners differ
+    is drawn as two triangles, each shaded smoothly between its corners (`fillTri`), so a shadow's or a border's edge
+    never steps; the cells at your feet are a fraction of a metre. By night a street lamp lays its pool of light on the
+    ground about it. A region's boulders are of one stone (`rgStoneOf`, `PK_STONES`: granite, sandstone, basalt,
+    limestone, slate, each its own shape and marks), set into the slope they lie on (`slopeAt`). The neon world's
+    districts each have their own pair of neons (`RG_NEON_DISTRICTS`), the ground faintly of their hue; glowing trees
+    keep their glow close.
   - **Highways** (the neon world's main roads; Ruby: the roads that floated, made highways): an elevated expressway on a
     line of columns some 42 m apart, its deck some 12 m over the highest ground beneath it, eased along, over land and
     water alike.

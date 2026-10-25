@@ -494,7 +494,8 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
   pkLobes(x, lobes, c, RL, cx, cy, rr, px);
   if(kind === 'cherry' && !small){ const RB = sub(4); for(let q = 0, nb = hd > px(30) ? 90 : 26; q < nb; q++){ const [lx, ly, lr] = lobes[Math.floor(RB()*lobes.length)], a = RB()*Math.PI*2, d = lr*Math.sqrt(RB())*0.9;
       pkDisc(x, lx + Math.cos(a)*d, ly + Math.sin(a)*d, Math.max(px(0.6), lr*(hd > px(30) ? 0.08 : 0.14)), pkCss(pkMix([248, 214, 226], c.lit, 0.25), 0.9)); } }
-  if(kind === 'glow'){ pkGlow(x, cx, cy, rr*2.2, c.glow, 0.4);
+  // (Ruby: "fewer large glowing regions": its glow kept close about its crown, soft)
+  if(kind === 'glow'){ pkGlow(x, cx, cy, rr*1.35, c.glow, 0.24);
     for(let q = 0; q < (small ? 2 : 7); q++) pkDisc(x, cx + (RG()*1.6 - 0.8)*rr, cy + (RG()*1.3 - 0.6)*rr, Math.max(px(0.6), h*0.014), pkCss(pkMix(c.glow, PK_WHITE, 0.4), 0.95)); }
 }
 
@@ -2260,21 +2261,43 @@ export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
   for(let q = 0; q < 5; q++) pkEll(x, X + (R() - 0.5)*h*0.5, Y - h*(0.3 + R()*0.5), h*0.06, h*0.03, pkCss(moss, 0.8));
 }
 
-export function pkRock(x, X, Y, r, col, L, R, px){
-  // a boulder: an irregular outline of eight to eleven points, flatter on its underside; split into facets (its top
-  // catching the light, a lit side, a shadow side, a darker underside), lit from the light's side; near, a crack or two,
-  // lichen in patches, grass grown up at its foot (docs/prior-art/ringworld-sprites.md: no pure primitives)
-  const sd = L[0] > 0 ? 1 : -1, n = 8 + Math.floor(R()*4), pts = [], ap = [X + sd*r*0.15 + (R() - 0.5)*r*0.3, Y - r*(0.75 + 0.3*R())], near = px && r > px(12);
-  for(let q = 0; q <= n; q++){ const t = Math.PI + q/n*Math.PI, k = 0.75 + 0.35*R(); pts.push([X + Math.cos(t)*r*k*(1 + 0.15*Math.sin(t*3)), Y + Math.sin(t)*r*(0.5 + 0.4*R())*k]); }
+// THE STONES (Ruby: "rocks of different stones"; docs/prior-art/ringworld-terrain.md): what each is made of and how it
+// breaks, so a boulder reads as its stone: granite rounded by weather and speckled, sandstone blocky with its beds laid
+// level, basalt in dark columns, limestone pale and pitted, slate in tilted slabs; its colour before the light
+export const PK_STONES = { granite: [150, 142, 138], sandstone: [190, 140, 100], basalt: [72, 74, 82], limestone: [198, 192, 174], slate: [98, 106, 118] };
+export function pkRock(x, X, Y, r, col, L, R, px, kind = 'granite'){
+  // a boulder: an irregular outline, flatter on its underside, its shape its stone's (round, blocky, columnar, slabbed);
+  // split into facets (its top catching the light, a lit side, a shadow side, a darker underside), lit from the light's
+  // side; near, its stone's own marks, lichen in patches, grass grown up at its foot (docs/prior-art/ringworld-sprites.md)
+  const sd = L[0] > 0 ? 1 : -1, n = 8 + Math.floor(R()*4), pts = [], near = px && r > px(12);
+  const round = kind === 'granite' || kind === 'limestone', block = kind === 'sandstone', col3 = kind === 'basalt', slab = kind === 'slate';
+  const hk = block ? 0.62 : col3 ? 1.05 : slab ? 0.42 : 0.7; let ap = [X + sd*r*0.15 + (R() - 0.5)*r*0.3, Y - r*(block ? 0.55 + 0.1*R() : col3 ? 0.95 + 0.2*R() : slab ? 0.4 + 0.1*R() : 0.6)];
+  for(let q = 0; q <= n; q++){ const t = Math.PI + q/n*Math.PI, k = 0.75 + 0.35*R();
+    let dx2 = Math.cos(t), dy2 = Math.sin(t);
+    if(block){ const m = Math.max(Math.abs(dx2), Math.abs(dy2)*1.4); dx2 /= m; dy2 /= m*1.4; }   // (squared off: a block)
+    else if(col3){ dx2 *= 0.62; }
+    pts.push([X + dx2*r*k*(round ? 1 : 1 + 0.15*Math.sin(t*3)), Y + dy2*r*(hk - 0.15 + 0.3*R())*k]); }
+  const mid = Math.floor(n/2); if(round) ap = [pts[mid][0] + sd*r*0.12, pts[mid][1] + r*0.08];   // (a rounded stone has no peak: its top is its outline's)
   pkEll(x, X - sd*r*0.45, Y + r*0.04, r*1.3, r*0.22, pkCss(pkMix(col, PK_BLACK, 0.6), 0.32));
-  pkPoly(x, [...pts, [X + r*0.9, Y + r*0.06], [X - r*0.9, Y + r*0.06]], pkCss(pkMix(col, [20, 26, 44], 0.45)));
-  const mid = Math.floor(n/2), litSide = sd > 0 ? pts.slice(mid) : pts.slice(0, mid + 1);
+  const outline = [...pts, [X + r*0.9, Y + r*0.06], [X - r*0.9, Y + r*0.06]]; pkPoly(x, outline, pkCss(pkMix(col, [20, 26, 44], 0.45)));
+  const litSide = sd > 0 ? pts.slice(mid) : pts.slice(0, mid + 1);
   pkPoly(x, [[X + sd*r*0.05, Y], ...litSide, ap], pkCss(col));
-  pkPoly(x, [ap, pts[mid - 1], pts[mid], pts[mid + 1]], pkCss(pkMix(col, [255, 244, 220], 0.22)));
+  pkPoly(x, [ap, pts[mid - 1], pts[mid], pts[mid + 1]], pkCss(pkMix(col, [255, 244, 220], round ? 0.16 : 0.22)));
   const q2 = sd > 0 ? mid + 2 : mid - 2; if(pts[q2]) pkPoly(x, [ap, pts[q2], [X + sd*r*0.5, Y - r*0.2]], pkCss(pkMix(col, [255, 244, 220], 0.1)));
-  if(near){ x.strokeStyle = pkCss(pkMix(col, PK_BLACK, 0.55), 0.6); x.lineWidth = Math.max(px(0.4), r*0.02); x.beginPath(); let cx = ap[0] + (R() - 0.5)*r*0.4, cy = ap[1] + r*0.15; x.moveTo(cx, cy); for(let k = 0; k < 3; k++){ cx += (R() - 0.5)*r*0.3; cy += r*0.15; x.lineTo(cx, cy); } x.stroke();
-    for(let k = 0; k < 3; k++){ const lx = X + (R() - 0.5)*r, ly = Y - r*(0.3 + 0.4*R()), lc = R() < 0.6 ? [180, 186, 140] : [184, 120, 64]; for(let q = 0; q < 6; q++) pkEll(x, lx + (R() - 0.5)*r*0.15, ly + (R() - 0.5)*r*0.08, r*0.03, r*0.02, pkCss(pkMix(col, lc, 0.5), 0.6)); }
-    x.fillStyle = pkCss(pkMix(col, [50, 90, 50], 0.7), 0.85); for(let k = 0; k < 9; k++){ const gx = X + (R() - 0.5)*r*1.8, gh = r*(0.06 + 0.1*R()); x.beginPath(); x.moveTo(gx - gh*0.3, Y + r*0.05); x.lineTo(gx + (R() - 0.5)*gh*0.6, Y - gh); x.lineTo(gx + gh*0.3, Y + r*0.05); x.fill(); } }
+  if(px && r > px(6)){ const dk = pkCss(pkMix(col, PK_BLACK, 0.5), 0.55), lw = Math.max(px(0.4), r*0.02); x.save(); x.beginPath(); outline.forEach(([px2, py2], q) => q ? x.lineTo(px2, py2) : x.moveTo(px2, py2)); x.closePath(); x.clip();
+    x.strokeStyle = dk; x.lineWidth = lw; x.beginPath();
+    // (its stone's marks: beds, columns' joints, slabs' cleavage; a granite's speckle and a limestone's pits drawn below)
+    if(block) for(let k = 1; k < 4; k++){ const yy = Y - r*hk*k/4.2; x.moveTo(X - r*0.85, yy + (R() - 0.5)*r*0.04); x.lineTo(X + r*0.85, yy + (R() - 0.5)*r*0.04); }
+    else if(col3) for(let k = -2; k <= 2; k++){ const xx = X + k*r*0.22; x.moveTo(xx, Y); x.lineTo(xx + (R() - 0.5)*r*0.05, Y - r*(0.6 + 0.3*R())); }
+    else if(slab) for(let k = 1; k < 4; k++){ const yy = Y - r*0.12*k; x.moveTo(X - r*0.85, yy + r*0.12); x.lineTo(X + r*0.85, yy - r*0.1); }
+    else { let cx = ap[0] + (R() - 0.5)*r*0.4, cy = ap[1] + r*0.15; x.moveTo(cx, cy); for(let k = 0; k < 3; k++){ cx += (R() - 0.5)*r*0.3; cy += r*0.15; x.lineTo(cx, cy); } }
+    x.stroke();
+    if(round && near){ const sp = kind === 'granite' ? [[30, 28, 30], [236, 222, 214]] : [[120, 112, 96], [120, 112, 96]]; for(let k = 0; k < 14; k++){ const a2 = R()*Math.PI*2, rr2 = R()*0.7;
+      pkEll(x, X + Math.cos(a2)*r*rr2*0.8, Y - r*0.3 + Math.sin(a2)*r*rr2*0.35, r*(kind === 'granite' ? 0.018 : 0.035), r*(kind === 'granite' ? 0.014 : 0.025), pkCss(pkMix(col, sp[k & 1], 0.45), 0.6)); } }
+    x.restore(); }
+  if(near){
+    for(let k = 0; k < 3; k++){ const lx = X + (R() - 0.5)*r, ly = Y - r*(0.3 + 0.4*R())*hk/0.7, lc = R() < 0.6 ? [180, 186, 140] : [184, 120, 64]; for(let q = 0; q < 6; q++) pkEll(x, lx + (R() - 0.5)*r*0.15, ly + (R() - 0.5)*r*0.08, r*0.03, r*0.02, pkCss(pkMix(col, lc, 0.5), 0.7)); }
+    x.fillStyle = pkCss(pkMix(col, [50, 90, 50], 0.7), 0.85); for(let k = 0; k < 9; k++){ const gx = X + (R() - 0.5)*r*1.8, gh = r*(0.06 + 0.1*R()); x.beginPath(); x.moveTo(gx - gh*0.3, Y + r*0.05); x.lineTo(gx + (R() - 0.5)*gh*0.6, Y + r*0.05 - gh); x.lineTo(gx + gh*0.3, Y + r*0.05); x.fill(); } }
 }
 // a spire of the builders: a tapering needle on a plinth, banded, a ring of light about it and its tip alight
 export function pkSpire(x, X, Y, hh, c, broken, R, px){

@@ -2,6 +2,30 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Psamathe (2026-10-22)
+
+- Painted Ringworld's people walk now: up and down the street or lane beside them, at their own pace, stopping now and
+  then, their legs moving as they go. By the hour they go in: by day nearly everyone is out, at night about one in
+  twelve, the night watch carrying a lantern. Each goes in at their own point of the dusk and comes out at their own
+  of the dawn, fading over many frames. A neon city's people stay out at all hours.
+- Nothing moves in circles any more. Every moving thing keeps a timetable of stops round its home, each chosen afresh,
+  so its path never closes into a loop: a drone flies short straight legs between hovers, a harvester goes up and down
+  its rows, a sheep takes a step or two as it grazes.
+- The clouds no longer jump about in a film of time passing. The scene's clocks ran unevenly, now and then backward,
+  when a film gave dawn and dusk more frames than noon; they now run evenly from frame to frame. And in a film where
+  the sun's bearing passed straight ahead or behind, the whole land's day and night flipped between two frames; the
+  Ringworld now keeps its dusk coming the same way round for the whole film.
+- The sea moves a little: its glints drift with the wind and rise and fade as they come and go instead of blinking,
+  and near you a faint line of swell comes in every eight to eleven seconds.
+
+### Under the hood
+- stepsRing.js: `rgClock` (each clock from the frame times the film's mean step, held to its cap), `rgWaterTime`;
+  `RG_MOVES` as timetables of stops (no sines); people by the hour in the prop painter; `setSceneTime` takes the
+  frame, the mean step and the dusk's side, keyed with the camera. paintKit.js: a person's stride (`stride`) and
+  lantern (`lantern`). Research: docs/prior-art/ringworld-life-and-views.md. moving.test.mjs checks that the clouds'
+  clock steps evenly forward through a day whose hours are spread unevenly, which the old one did not.
+  Fingerprints: Painted Ringworld (people in by night, the water's glints fading rather than cut off).
+
 ## Neptune–Laomedeia (2026-10-22)
 
 - The Moving Image's sheet, rewritten. Four groups in order: Move, Length, Size, Output. Every choice is a row of

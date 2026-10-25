@@ -39,6 +39,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   the amounts feel right?
 - THE STARS IN THE WORLD: a skybox now, standing still as the camera turns past them; in rain, a storm or snow an overcast
   ceiling, the arch just showing through it.
+- LIGHT ON THE LAND: the sun's shadows from hills and the rim walls (long at dawn and dusk), the lamps' pools by night,
+  boulders of five stones by region, the neon world's districts each in its own neons, the glowing trees' glow kept
+  close. Are the shadows dark enough, and the pools bright enough?
 - THE SUN'S ARC IN THE FILM WINDOW: on the light dial a dashed arc from where the sun starts (a ring) to where it ends (a
   dot), rising and setting along its day; it turns round as Time passes grows; To on the dial sets where the light ends,
   and the film carries it there along the arc. Length now reaches three minutes.
@@ -51,11 +54,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   production). In the order they are being built:
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
-  - THE LAND, what is left: ground meeting objects well (contact shadows, things sunk by the slope they stand on);
-    floating islands, caves and undergrounds (docs/prior-art/ringworld-terrain.md §9); the neon world's districts not
-    all one color; rain shadows behind the ranges; the bands at sharp borders between grounds as well as at drops.
-  - LIGHT: shadows cast by the sun where it stands and by lights nearby; nearby lights lighting what is near them more;
-    ambient occlusion; rocks of different stones.
+  - THE LAND, what is left: contact shadows at things' feet; floating islands, caves and undergrounds
+    (docs/prior-art/ringworld-terrain.md §9); rain shadows behind the ranges; the bands at sharp borders between grounds
+    as well as at drops.
+  - LIGHT, what is left: things' own shadows cast on the land by where the sun stands (not the screen's side) and by
+    lights nearby; windows and fires lighting what is near them as the lamps do.
   - PLANTS: more cacti; saguaros with more limbs as they grow taller, limb counts never identical, limbs shaded by
     position and direction, blooming only in their season; growth stages; sizes regular for their kind and stage; color
     variations; plants that meet each other; their art styles made one.

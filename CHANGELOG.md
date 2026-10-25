@@ -4,6 +4,29 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Electra (2026-10-25)
+
+- The Ringworld's sun casts the land's shadows now: hills and the rim walls shade what lies behind them from the sun, the
+  shadows long and soft-edged at dawn and dusk, sweeping across the band as the sun goes down. Trees, creatures,
+  buildings and fields standing in a hill's shadow are darkened with it.
+- A shadow's edge, a forest's edge or a field's runs smoothly over the land, never in steps; the ground at your feet is
+  drawn far more finely.
+- By night street lamps lay pools of light on the ground about them.
+- Boulders are of five stones, one to a region: rounded, speckled granite; blocky sandstone with its beds laid level;
+  dark basalt in columns; pale, pitted limestone; slate in tilted slabs. A boulder on a slope is set into it.
+- In the neon world each district has its own pair of neons, and its ground leans faintly to their hue.
+- Glowing trees keep their glow close about their crowns, and there are fewer of them in the neon world.
+
+### Under the hood
+- `litAt` walks toward the sun over the drawn land from each corner, thing and field. A corner's light is kept with the
+  mesh for that sun.
+- `fillTri` shades a triangle exactly between its corners' colours with one linear gradient laid along the way the
+  colour changes. A cell whose corners differ is drawn as two of them, and so is a field's wash.
+- `rgStoneOf` chooses a region's stone; `pkRock` takes the stone (`PK_STONES`) and shapes and marks the boulder by it,
+  its marks clipped to its outline. `slopeAt` sets things into slopes.
+- `RG_NEON_DISTRICTS` and `lightsAt` give the neon world its districts' lights.
+- The Ringworld's fingerprint updated (its light and stones, intended).
+
 ## Pleiades–Taygeta (2026-10-25)
 
 - The Ringworld's land is generated now, the same land however the camera looks at it. Each seed lays real landmasses:
@@ -425,27 +448,3 @@ prints it).
   fence. About a tenth fewer buildings stand on steep or shore ground. turned.test.mjs checks that a pagoda and a
   mosque are wider on their corner than face on, and that a plinth reaches the ground. Fingerprints: Painted
   Ringworld (buildings off the shores and steeps, on plinths; the runs in pieces).
-
-## Neptune–Psamathe (2026-10-22)
-
-- Painted Ringworld's people walk now: up and down the street or lane beside them, at their own pace, stopping now and
-  then, their legs moving as they go. By the hour they go in: by day nearly everyone is out, at night about one in
-  twelve, the night watch carrying a lantern. Each goes in at their own point of the dusk and comes out at their own
-  of the dawn, fading over many frames. A neon city's people stay out at all hours.
-- Nothing moves in circles any more. Every moving thing keeps a timetable of stops round its home, each chosen afresh,
-  so its path never closes into a loop: a drone flies short straight legs between hovers, a harvester goes up and down
-  its rows, a sheep takes a step or two as it grazes.
-- The clouds no longer jump about in a film of time passing. The scene's clocks ran unevenly, now and then backward,
-  when a film gave dawn and dusk more frames than noon; they now run evenly from frame to frame. And in a film where
-  the sun's bearing passed straight ahead or behind, the whole land's day and night flipped between two frames; the
-  Ringworld now keeps its dusk coming the same way round for the whole film.
-- The sea moves a little: its glints drift with the wind and rise and fade as they come and go instead of blinking,
-  and near you a faint line of swell comes in every eight to eleven seconds.
-
-### Under the hood
-- stepsRing.js: `rgClock` (each clock from the frame times the film's mean step, held to its cap), `rgWaterTime`;
-  `RG_MOVES` as timetables of stops (no sines); people by the hour in the prop painter; `setSceneTime` takes the
-  frame, the mean step and the dusk's side, keyed with the camera. paintKit.js: a person's stride (`stride`) and
-  lantern (`lantern`). Research: docs/prior-art/ringworld-life-and-views.md. moving.test.mjs checks that the clouds'
-  clock steps evenly forward through a day whose hours are spread unevenly, which the old one did not.
-  Fingerprints: Painted Ringworld (people in by night, the water's glints fading rather than cut off).
