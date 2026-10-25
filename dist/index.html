@@ -7047,9 +7047,10 @@ const PK_BUILT = {
 
 function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, tm = c.smt ?? c.mt ?? c.t, run = tm ? (tm*0.12) % 1 : 0, col = pkCss(pkMix(c.lit, c.air || c.lit, 0.45));
   const up = step*(1 - 0.55*Math.min(1, Math.abs(wx)))*Math.cbrt(n), ph = (X*0.013 + Y*0.007) % 6.28;
-  for(let k = 0; k < n; k++){ const f = k + run, a = a0*(1 - f/n)*(tm ? pkSs(0, 0.8, f) : 1); if(a <= 0.01) continue; x.globalAlpha = a;
+  const GA = x.globalAlpha;
+  for(let k = 0; k < n; k++){ const f = k + run, a = a0*(1 - f/n)*(tm ? pkSs(0, 0.8, f) : 1); if(a <= 0.01) continue; x.globalAlpha = GA*a;
     pkDisc(x, X + f*wd*0.07*wx*1.4 + Math.sin(f*1.3 + ph)*wd*0.012*f, Y - up*Math.pow(f, 2/3), wd*(0.04 + f*0.024), col); }
-  x.globalAlpha = 1; }
+  x.globalAlpha = GA; }
 const PK_ROUND = ['windmill', 'yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle', 'silo', 'lighthouse', 'watertower', 'geodome',
   'observatory', 'wizard', 'onion'];
 
@@ -7147,6 +7148,7 @@ function pkFaceProofOf(face, c, R0, h, wdt, eave){ const out = {};
 
 
 function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
+  const GA = x.globalAlpha;
   const { kind, dk, eave: eave0, roofM, at: crownAt = 1, rim = 0.035, face } = o, S = pkSpace(X, Y, 1, c.view), sd = c.sd, mpx = c.mpx || wdt/10;
 
   const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0, o.id && o.id + '|' + v0 + '|' + Math.round(night*20) + '|' + px(100).toFixed(3)); R0 = R1;
@@ -7188,7 +7190,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
     face(x, { ...c, view: null, vside: sideN === 1 ? -1 : 1, vdep: 1e-6, nocast: true }, R0); x.restore(); };
   if(!front) crown();
   tiers.forEach((T, i) => { const a = T.a*wdt, Dt = D*T.a*wdt/w2, zt = h*T.z, sv = sideN*a, fu = (front ? 1 : -1)*Dt/2, last = i === tiers.length - 1;
-    if(glassy) x.globalAlpha = 0.6;
+    if(glassy) x.globalAlpha = GA*0.6;
     { const ew = o.ends && pr[sideN], ec = ew ? { body: ew, lit: pkMix(ew, PK_WHITE, 0.25), dark: pkMix(ew, PK_BLACK, 0.4) } : c;
       if(side){ wall([[-Dt/2, sv, z0], [Dt/2, sv, z0], [Dt/2, sv, zt], [-Dt/2, sv, zt]], 0, sideN, ec); windows(-Dt/2 + Dt*0.08, sv, Dt/2 - Dt*0.08, sv, z0 + (zt - z0)*0.05, zt*0.97, Rw); }
       if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof || rm.body, o = wdt*0.04;
@@ -7207,9 +7209,9 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
     if(!front && o.back){
       faceOn(fu, i ? z0 : -h, last ? zTop : zt, a, { ...c, view: null, back: true, vdep: 1e-6, nocast: true }); }
     else if(!front){
-      if(glassy) x.globalAlpha = 0.6; wall([[fu, a, z0], [fu, -a, z0], [fu, -a, zt], [fu, a, zt]], -1, 0); if(eave) pkPoly(x, [S.P(fu, a, Hs), S.P(fu, -a, Hs), S.P(fu, 0, ridge)], pkCss(shadeOf(-1, 0)));
-      windows(fu, a*0.85, fu, -a*0.85, z0 + (zt - z0)*0.08, zt*0.95, Rw); x.globalAlpha = 1; }
-    else { x.globalAlpha = 1;
+      if(glassy) x.globalAlpha = GA*0.6; wall([[fu, a, z0], [fu, -a, z0], [fu, -a, zt], [fu, a, zt]], -1, 0); if(eave) pkPoly(x, [S.P(fu, a, Hs), S.P(fu, -a, Hs), S.P(fu, 0, ridge)], pkCss(shadeOf(-1, 0)));
+      windows(fu, a*0.85, fu, -a*0.85, z0 + (zt - z0)*0.08, zt*0.95, Rw); x.globalAlpha = GA; }
+    else { x.globalAlpha = GA;
 
       faceOn(fu, i ? z0 : -h, last ? zTop : zt, a, { ...c, view: null, vside: sideN === 1 ? -1 : 1, vdep: 1e-6, nocast: true }); }
     z0 = zt; });
@@ -7604,17 +7606,60 @@ function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
 
 
 
+
+
+
 function pkDish(x, X, Y, h, c, px){
-  const m = pkMat(c, [228, 228, 224], 0.5), steel = pkMat(c, PK_STEEL, 0.65), r = h*0.45, el = c.dishEl ?? 0.9, cs = c.view ? c.view.cs : 0.75, sn = c.view ? c.view.sn : -0.66*c.sd;
-  const ns = Math.cos(el)*sn, nu = Math.sin(el), nt = Math.cos(el)*cs, ang = Math.atan2(-nu, ns) + Math.PI/2, k = Math.max(0.06, Math.abs(nt)), cy = Y - h*0.55;
-  pkPoly(x, [[X - h*0.15, Y], [X - h*0.05, Y - h*0.45], [X + h*0.05, Y - h*0.45], [X + h*0.15, Y]], pkCss(steel.dark));
-  const feed = () => { x.strokeStyle = pkCss(steel.dark); x.lineWidth = Math.max(px(0.4), r*0.02); x.beginPath(); const fx = X + ns*r*0.75, fy = cy - nu*r*0.75;
-    for(const s of [-0.7, 0, 0.7]){ const ex = X + Math.cos(ang)*s*r, ey = cy + Math.sin(ang)*s*r; x.moveTo(ex, ey); x.lineTo(fx, fy); } x.stroke(); pkDisc(x, fx, fy, r*0.05, pkCss(steel.dark)); };
-  if(nt < 0) feed();
-  x.save(); x.translate(X, cy); x.rotate(ang); x.fillStyle = pkCss(nt >= 0 ? m.dark : pkMix(m.dark, PK_BLACK, 0.15)); x.beginPath(); x.ellipse(0, 0, r, r*k, 0, 0, Math.PI*2); x.fill();
-  if(nt >= 0){ x.fillStyle = pkCss(m.body); x.beginPath(); x.ellipse(0, r*k*0.08, r*0.92, r*k*0.86, 0, 0, Math.PI*2); x.fill(); }
-  else if(h > px(14)){ x.strokeStyle = pkCss(steel.dark, 0.6); x.lineWidth = Math.max(px(0.3), r*0.012); x.beginPath(); for(let q = 0; q < 6; q++){ const a = q/6*Math.PI*2; x.moveTo(0, 0); x.lineTo(Math.cos(a)*r*0.95, Math.sin(a)*r*k*0.95); } x.stroke(); }
-  x.restore(); if(nt >= 0) feed(); }
+  const el = c.dishEl ?? 0.9, cs = c.view ? c.view.cs : 0.75, sn = c.view ? c.view.sn : -0.66*c.sd;
+  const paint = pkMat(c, [234, 234, 230], 0.55), backing = pkMat(c, [168, 172, 176], 0.6), steel = pkMat(c, PK_STEEL, 0.65);
+  const S0 = c.sun3 || [c.sd*0.6, 0.65, 0.4], Sl = Math.hypot(S0[0], S0[1], S0[2]) || 1, S = [S0[0]/Sl, S0[1]/Sl, S0[2]/Sl];
+  const tone = (m, k) => k < 0.5 ? pkMix(m.dark, m.body, k*2) : pkMix(m.body, m.lit, Math.min(1, (k - 0.5)*2));
+  const lam = N => 0.22 + 0.78*Math.max(0, N[0]*S[0] + N[1]*S[1] + N[2]*S[2]);
+
+  const TL = 0.17, ct = Math.cos(TL), st = Math.sin(TL), P = p => [X + p[0]*h, Y - (p[1]*ct - p[2]*st)*h, p[2]*ct + p[1]*st], faces = N => N[2]*ct + N[1]*st;
+  const add = (a, b, k) => [a[0] + b[0]*k, a[1] + b[1]*k, a[2] + b[2]*k], unit = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+
+  const n = [Math.cos(el)*sn, Math.sin(el), Math.cos(el)*cs], u = [cs, 0, -sn], v = [n[1]*u[2], n[2]*u[0] - n[0]*u[2], -n[1]*u[0]];
+  const Rd = 0.4, dp = Rd*0.3125, A = [0, 0.5, 0], C = add(A, n, 0.07 + dp), F = add(C, n, Rd*0.4875);
+  const er = th => add(add([0, 0, 0], u, Math.cos(th)), v, Math.sin(th)), bowl = (rho, th) => add(add(C, er(th), Rd*rho), n, -dp*(1 - rho*rho));
+  const inward = (rho, th) => unit(add(n, er(th), -2*dp*rho/Rd));
+  const big = h > px(30), mid = h > px(9), NR = big ? 4 : mid ? 2 : 1, NT = big ? 24 : mid ? 14 : 8, items = [], wmin = Math.max(px(0.4), h*0.004), fn = faces(n);
+
+
+  let gb = 0; const MOUNT = fn > 0.15 ? -1 : fn < -0.15 ? 1 : 0, FEED = -MOUNT;
+  const line = (a, b, col, wd, bias = 0) => { const p = P(a), q = P(b); items.push([(p[2] + q[2])/2 + bias + gb, () => { x.strokeStyle = col; x.lineWidth = Math.max(wmin, wd*h); x.beginPath(); x.moveTo(p[0], p[1]); x.lineTo(q[0], q[1]); x.stroke(); }]); };
+  const rod = (a, b, col, wd, k = 3, bias = 0) => { for(let i = 0; i < k; i++) line(add(a, add(b, a, -1), i/k), add(a, add(b, a, -1), (i + 1)/k), col, wd, bias); };
+
+  for(let i = 0; i < NR; i++) for(let j = 0; j < NT; j++){ const r0 = i/NR, r1 = (i + 1)/NR, t0 = j/NT*Math.PI*2, t1 = (j + 1)/NT*Math.PI*2, rm = (r0 + r1)/2, tm = (t0 + t1)/2;
+    const q = [bowl(r0, t0), bowl(r1, t0), bowl(r1, t1), bowl(r0, t1)].map(P), N = inward(rm, tm), inside = faces(N) >= 0;
+    const col = pkCss(inside ? tone(paint, lam(N)*(0.8 + 0.2*rm)) : tone(backing, lam([-N[0], -N[1], -N[2]])*0.92));
+    items.push([(q[0][2] + q[1][2] + q[2][2] + q[3][2])/4, () => { x.fillStyle = col; x.strokeStyle = col; x.lineWidth = wmin; x.beginPath(); q.forEach(([a, b], w) => w ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); x.stroke(); }]); }
+
+  const lip = pkCss(tone(paint, 0.85)), rib = pkCss(tone(backing, 0.25));
+  for(let j = 0; j < NT; j++) line(bowl(1, j/NT*Math.PI*2), bowl(1, (j + 1)/NT*Math.PI*2), lip, 0.011, 0.002);
+  if(mid){ const back = faces(n) < 0.35; if(back){ for(let k = 0; k < 8; k++){ const th = (k + 0.5)/8*Math.PI*2; for(let i = 0; i < 3; i++){ const a = add(bowl(0.12 + i*0.29, th), n, -0.008), b = add(bowl(0.12 + (i + 1)*0.29, th), n, -0.008); if(faces(inward(0.3 + i*0.3, th)) < 0) line(a, b, rib, 0.009); } }
+    for(let j = 0; j < NT; j++){ const th = (j + 0.5)/NT*Math.PI*2; if(faces(inward(0.62, th)) < 0) line(add(bowl(0.62, j/NT*Math.PI*2), n, -0.008), add(bowl(0.62, (j + 1)/NT*Math.PI*2), n, -0.008), rib, 0.008); } } }
+  gb = FEED;
+
+  const legs = pkCss(tone(steel, 0.45)), horn = pkCss(tone(steel, 0.6));
+  if(mid) for(let k = 0; k < 4; k++) rod(bowl(1, Math.PI/4 + k*Math.PI/2), F, legs, 0.012, 3, 0.003*Math.sign(faces(n) || 1));
+  rod(add(F, n, -0.035), add(F, n, 0.04), horn, 0.07, 1, 0.004*Math.sign(faces(n) || 1));
+  if(mid){ const mouth = P(add(F, n, -0.036)); items.push([mouth[2] + 0.005*Math.sign(faces(n) || 1) + gb, () => { if(faces(n) > 0.05) pkDisc(x, mouth[0], mouth[1], Math.max(px(0.4), h*0.03), pkCss(tone(steel, 0.12))); }]); }
+  gb = MOUNT;
+
+  const metal = pkCss(tone(steel, 0.55)), dark = pkCss(tone(steel, 0.3)), lightU = lam(u) > lam(u.map(w => -w)) ? 1 : -1;
+  rod(A, add(A, n, 0.064), metal, 0.1, 2);
+  if(mid && faces(n) < 0.2) for(let k = 0; k < 4; k++) rod(add(A, n, 0.04), add(bowl(0.6, k*Math.PI/2), n, -0.01), dark, 0.014, 2);
+  rod(add(A, u, -0.19), add(A, u, 0.19), metal, 0.045, 4);
+  for(const sgn of [-1, 1]){ const B = add(A, u, sgn*0.17), foot = add([0, 0.31, 0], u, sgn*0.1), col = pkCss(tone(steel, lam(u.map(w => w*sgn))));
+    rod(foot, B, col, 0.05, 3); const b = P(add(A, u, sgn*0.2)); items.push([b[2] + gb, () => pkDisc(x, b[0], b[1], Math.max(px(0.5), h*0.034), pkCss(tone(steel, sgn === lightU ? 0.8 : 0.35)))]); }
+  rod(add([0, 0.31, 0], u, -0.13), add([0, 0.31, 0], u, 0.13), metal, 0.045, 2);
+
+  items.push([gb, () => { const b0 = 0.09*h, b1 = 0.064*h, yt = Y - 0.29*ct*h, g = x.createLinearGradient(X - b0, 0, X + b0, 0), L0 = tone(steel, S[0] > 0 ? 0.25 : 0.75), L1 = tone(steel, S[0] > 0 ? 0.75 : 0.25);
+    g.addColorStop(0, pkCss(L0)); g.addColorStop(1, pkCss(L1)); x.fillStyle = g; x.beginPath(); x.moveTo(X - b0, Y); x.lineTo(X - b1, yt); x.lineTo(X + b1, yt); x.lineTo(X + b0, Y); x.closePath(); x.fill();
+    const tr = 0.12*h, ty = Y - 0.31*ct*h; x.fillStyle = g; x.fillRect(X - tr, ty, tr*2, 0.025*h); pkEll(x, X, ty, tr, Math.max(px(0.3), tr*st), pkCss(tone(steel, 0.7))); }]);
+  if(h > px(14)) pkCast(x, X - h*0.32, X + h*0.32, Y, h*0.5, c, 0.16);
+  items.sort((a, b) => a[0] - b[0]); x.lineCap = 'round'; for(const [, draw] of items) draw(); x.lineCap = 'butt'; }
 function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(PK_SOLIDS.includes(kind)){ pkSolidProp(x, X, Y, h, c, kind, R0, px, night); return; }
   if(kind === 'dish'){ pkDish(x, X, Y, h, c, px); return; }
@@ -8467,6 +8512,245 @@ function pkSilhouette(x, X0, ground, bw, bh, kind, R, px, clip = false){
   if(clip){ x.clip(); return; }
   x.fill();
   if(kind === 'spire'){ x.fillRect(X0 + bw/2 - Math.max(px(0.5), bw*0.02), top - bh*0.18, Math.max(px(1), bw*0.04), bh*0.18); x.beginPath(); x.moveTo(X0 + bw*0.2, top); x.lineTo(X0 + bw/2, top - bh*0.1); x.lineTo(X0 + bw*0.8, top); x.fill(); }
+}
+
+
+/* ==== wildKit.js ==== */
+const wkHash = (a, b, s) => { let h = Math.imul(a | 0, 0x27d4eb2d) ^ Math.imul((b | 0) + 0x632be5ab, 0x165667b1) ^ Math.imul(s | 0, 0x9e3779b1);
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); return ((h ^ (h >>> 16)) >>> 0)/4294967296; };
+
+
+const wkNoise = (s, t) => { const i = Math.floor(t), f = t - i, u = f*f*f*(f*(f*6 - 15) + 10), a = wkHash(i, 7, s); return 2*(a + (wkHash(i + 1, 7, s) - a)*u) - 1; };
+
+const wkWander = (s, t, tau) => { let x = 0, z = 0, a = 1, k = 1, n = 0;
+  for(let o = 0; o < 3; o++){ x += a*wkNoise(s + o*101, t*k/tau); z += a*wkNoise(s + o*101 + 53, t*k/tau); n += a; a *= 0.5; k *= 2.3; } return [1.6*x/n, 1.6*z/n]; };
+
+const wkStart = (s, k, P) => k*P + (wkHash(k, 3, s) - 0.5)*0.5*P;
+const wkEra = (s, t, P) => { let k = Math.floor(t/P); if(t < wkStart(s, k, P)) k--; else if(t >= wkStart(s, k + 1, P)) k++; const t0 = wkStart(s, k, P); return { k, t0, d: wkStart(s, k + 1, P) - t0 }; };
+const wkSmooth = p => p <= 0 ? 0 : p >= 1 ? 1 : p*p*(3 - 2*p);
+
+
+
+const WK_KINDS = {
+
+
+  deer:      { way: 'walk', n: [3, 8], P: 170, range: 45, spread: 4, walk: 1.2, run: 9, bolt: 0.4, wander: 3, tau: 32, size: 1.6, stride: 4.2, coat: [146, 98, 60] },
+  elk:       { way: 'walk', n: [2, 6], P: 220, range: 60, spread: 6, walk: 1.1, run: 8, bolt: 0.3, wander: 3, tau: 40, size: 2.3, stride: 4.6, coat: [118, 84, 58] },
+  hare:      { way: 'hop', n: [1, 3], P: 24, range: 6, spread: 5, walk: 2.4, run: 10, bolt: 0.18, wander: 0.5, tau: 9, size: 0.55, stride: 1.1, coat: [152, 124, 90] },
+  fox:       { way: 'prowl', n: [1, 1], P: 80, range: 35, spread: 0, walk: 2.1, run: 9, bolt: 0.08, wander: 0.8, tau: 14, size: 0.75, stride: 1.4, coat: [196, 98, 44] },
+
+  rooks:     { way: 'flock', n: [7, 20], P: 55, range: 28, spread: 8, fly: 9, wander: 1.3, tau: 7, size: 0.85, hgt: [5, 14], coat: [30, 30, 36], body: 0.46 },
+  pigeons:   { way: 'flock', n: [6, 16], P: 40, range: 20, spread: 5, fly: 10, wander: 1.0, tau: 6, size: 0.65, hgt: [4, 11], coat: [128, 132, 146], body: 0.33 },
+  starlings: { way: 'flock', n: [10, 28], P: 34, range: 22, spread: 6, fly: 10, wander: 1.2, tau: 5, size: 0.4, hgt: [3, 9], coat: [44, 46, 54], body: 0.21 },
+  sparrows:  { way: 'flock', n: [4, 10], P: 26, range: 14, spread: 2.5, fly: 6, wander: 0.7, tau: 4, size: 0.24, hgt: [1.5, 4], coat: [134, 104, 76], body: 0.15 },
+
+  ducks:     { way: 'paddle', n: [2, 7], spread: 3, wander: 5, tau: 38, size: 0.55, coat: [116, 96, 74], head: [40, 88, 60] },
+  swans:     { way: 'paddle', n: [1, 3], spread: 4, wander: 7, tau: 55, size: 1.4, coat: [240, 238, 232], head: [240, 238, 232] },
+
+  heron:     { way: 'wade', n: [1, 1], P: 90, range: 6, fly: 9, flyOff: 45, flies: 0.22, size: 0.95, coat: [150, 156, 164] },
+
+  raptor:    { way: 'soar', n: [1, 2], P: 160, size: 1.3, speed: 9, coat: [96, 72, 52] },
+  swallows:  { way: 'hawk', n: [4, 10], tau: 10, amp: 18, hgt: [1.2, 9], size: 0.32, flap: 5, coat: [36, 40, 64] },
+  swifts:    { way: 'hawk', n: [5, 14], tau: 14, amp: 40, hgt: [22, 65], size: 0.42, flap: 6, coat: [42, 40, 40] },
+  bats:      { way: 'hawk', n: [3, 8], tau: 6, amp: 7, hgt: [3, 14], size: 0.28, flap: 6, coat: [44, 36, 34] },
+  butterflies: { way: 'hawk', n: [1, 3], tau: 3, amp: 2, hgt: [0.3, 1.6], size: 0.07, flap: 5, coat: [230, 200, 90] },
+  dragonflies: { way: 'dart', n: [1, 3], P: 2.6, range: 2, hgt: [0.4, 1.4], size: 0.09, coat: [70, 140, 170] },
+
+  geese:     { way: 'skein', n: [7, 15], P: 520, speed: 16, hgt: [120, 240], size: 1.6, coat: [110, 104, 96] },
+};
+const WK_FLYERS = ['raptor', 'swallows', 'swifts', 'bats', 'geese', 'butterflies', 'dragonflies'];
+const wkCount = (kind, s) => { const K = WK_KINDS[kind]; return K.n[0] + Math.floor(wkHash(s, 1, 5)*(K.n[1] - K.n[0] + 1)); };
+
+
+const wkLeg = (K, s, j, k, n) => { const t0 = wkStart(s, k, K.P), q = k*61 + j, home = [K.range*(2*wkHash(k, 21, s) - 1), K.range*0.8*(2*wkHash(k, 22, s) - 1)];
+  const an = wkHash(q, 23, s)*Math.PI*2, rd = K.spread*Math.sqrt(wkHash(q, 24, s)*n), p1 = [home[0] + Math.cos(an)*rd, home[1] + Math.sin(an)*rd];
+  const bolt = K.way === 'flock' || wkHash(k, 25, s) < K.bolt, sp = (K.way === 'flock' ? K.fly : bolt ? K.run : K.walk)*(0.85 + 0.3*wkHash(q, 26, s));
+  const dep = t0 + (K.way === 'flock' ? 0.7 : bolt ? 0.9 : 10)*wkHash(q, 27, s) + (bolt && K.way !== 'flock' ? 0.7 : 0);
+  return { t0, p1, bolt, sp, dep, q }; };
+
+
+const wkSpan = (K, s, j, k, n) => { const L = wkLeg(K, s, j, k, n), P = wkLeg(K, s, j, k - 1, n), dist = Math.hypot(L.p1[0] - P.p1[0], L.p1[1] - P.p1[1]), loop = K.way === 'flock' ? 2*Math.PI*(5 + 9*wkHash(k, 29, s)) : 0;
+  return { L, P, dist, T: Math.min((dist + loop)/L.sp + (K.way === 'flock' ? 1.5 : 0.4), wkStart(s, k + 1, K.P) - L.dep - 0.5) }; };
+
+const wkGraze = (K, s, j, L, T, t) => { const w = wkWander(s + j*97, t, K.tau), w0 = wkWander(s + j*97, L.dep + T, K.tau); return [L.p1[0] + (w[0] - w0[0])*K.wander, L.p1[1] + (w[1] - w0[1])*K.wander]; };
+
+
+
+function wkAt(kind, s, j, t, env = {}){
+  const K = WK_KINDS[kind], n = wkCount(kind, s), tt = t + (K.P ? wkHash(s, 2, 9)*K.P*30 : wkHash(s, 4, 9)*500);
+  switch(K.way){
+  case 'walk': case 'hop': case 'prowl': case 'flock': {
+    const e = wkEra(s, tt, K.P), { L, P, dist, T } = wkSpan(K, s, j, e.k, n), Pp = wkSpan(K, s, j, e.k - 1, n);
+    const alertBy = wkSmooth((wkNoise(s + j*17, tt/7) - 0.15)/0.35), grazeFace = (LL, TT, ux, uz) => Math.atan2(uz, ux) + 1.3*(wkNoise(s + j*5, tt/40) - wkNoise(s + j*5, (LL.dep + TT)/40));
+    if(tt < L.dep || dist < 1e-6){ const LL = tt < L.dep ? P : L, TT = tt < L.dep ? Pp.T : T, g = wkGraze(K, s, j, LL, TT, tt), ux = LL.p1[0] - (tt < L.dep ? Pp.P : P).p1[0], uz = LL.p1[1] - (tt < L.dep ? Pp.P : P).p1[1];
+      const warn = L.bolt && K.way !== 'flock' ? wkSmooth((tt - (L.dep - 1.2))/0.6) : 0;
+      return { x: g[0], z: g[1], y: 0, face: grazeFace(LL, TT, ux, uz), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*(K.way === 'flock' ? 0.9 : 0.12) + j*0.37, head: Math.max(warn, alertBy*(K.way === 'hop' ? 1 : 0.7)), on: 1 }; }
+    const from = wkGraze(K, s, j, P, Pp.T, L.dep), p = Math.min(1, (tt - L.dep)/T);
+    if(p >= 1){ const g = wkGraze(K, s, j, L, T, tt); return { x: g[0], z: g[1], y: 0, face: grazeFace(L, T, L.p1[0] - from[0], L.p1[1] - from[1]), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*0.9 + j*0.37, head: alertBy*0.7, on: 1 }; }
+    const dx = L.p1[0] - from[0], dz = L.p1[1] - from[1], dl = Math.hypot(dx, dz) || 1e-6, nx = -dz/dl, nz = dx/dl;
+
+
+    const ea = wkSmooth(p), spread = (wkHash(L.q, 28, s) - 0.5)*2;
+    let x = from[0] + dx*ea, z = from[1] + dz*ea, y = 0;
+    if(K.way === 'flock'){ const wr = 5 + 9*wkHash(e.k, 29, s), sg = wkHash(e.k, 30, s) < 0.5 ? 1 : -1, th0 = Math.atan2(dz, dx) - Math.PI/2*sg;
+      const fl = pp => { const ep = wkSmooth(pp), th = th0 + Math.PI*2*sg*ep, sp2 = spread*4*Math.sin(Math.PI*pp); return [from[0] + dx*ep + wr*(Math.cos(th) - Math.cos(th0)) + nx*sp2, from[1] + dz*ep + wr*(Math.sin(th) - Math.sin(th0)) + nz*sp2]; };
+      const [fx, fz] = fl(p), [gx, gz] = fl(Math.min(1, p + 0.02));
+      return { x: fx, z: fz, y: (K.hgt[0] + (K.hgt[1] - K.hgt[0])*wkHash(e.k, 31, s))*wkSmooth(p/0.3)*wkSmooth((1 - p)/0.35), face: Math.atan2(gz - fz, gx - fx), pose: 'fly', ph: (tt - L.dep)*4.5 + j*0.31, head: 1, on: 1 }; }
+
+    const lat = L.bolt ? spread*dl*0.22*Math.sin(Math.PI*ea) : spread*0.6*Math.sin(Math.PI*ea); x += nx*lat; z += nz*lat;
+    const gone = ea*dl;
+    if(K.way === 'hop'){ const hops = gone/(L.bolt ? 2.6 : 0.8); y = Math.abs(Math.sin(Math.PI*hops))*(L.bolt ? 0.35 : 0.18); }
+
+    if(K.way === 'prowl' && !L.bolt && wkHash(e.k, 32, s) < 0.35){ const q = (gone - (dl - 1.6))/1.6; if(q > 0) y = 0.5*Math.sin(Math.PI*Math.min(1, q)); if(q > 0) return { x, z, y, face: Math.atan2(dz, dx), pose: 'pounce', ph: q, head: 0.5, on: 1 }; }
+    return { x, z, y, face: Math.atan2(dz + nz*0.001, dx + nx*0.001), pose: L.bolt ? 'run' : 'walk', ph: gone/K.stride, head: L.bolt ? 0.8 : 0.45, on: 1 }; }
+  case 'paddle': { const an = wkHash(j, 33, s)*Math.PI*2, rd = K.spread*Math.sqrt(wkHash(j, 34, s)*n), w = wkWander(s + j*91, tt, K.tau), w2 = wkWander(s + j*91, tt + 1, K.tau);
+    const x = Math.cos(an)*rd + w[0]*K.wander, z = Math.sin(an)*rd + w[1]*K.wander, vx = (w2[0] - w[0])*K.wander, vz = (w2[1] - w[1])*K.wander;
+    return { x, z, y: 0, face: Math.atan2(vz, vx), pose: 'swim', ph: Math.min(1, Math.hypot(vx, vz)/0.4), head: 1 - wkSmooth((wkNoise(s + j*9, tt/9) - 0.45)/0.25), on: 1 }; }
+  case 'wade': { const e = wkEra(s, tt, K.P), spot = k => [K.flyOff*(2*wkHash(k, 35, s) - 1)*(wkHash(k, 36, s) < K.flies ? 1 : 0.08), K.range*(2*wkHash(k, 37, s) - 1)];
+
+    const cum = k => { let x = 0, z = 0; for(let q = k - 3; q <= k; q++){ const p = spot(q); x += p[0]; z += p[1]*0.3; } return [x, z]; };
+    const a = cum(e.k - 1), b = cum(e.k), fly = wkHash(e.k, 36, s) < K.flies, dl = Math.hypot(b[0] - a[0], b[1] - a[1]), T = Math.min(fly ? dl/K.fly + 3 : dl/0.25 + 1, e.d - 5), p = (tt - e.t0 - 4)/T;
+    if(p <= 0 || p >= 1){ const at = p <= 0 ? a : b; return { x: at[0], z: at[1], y: 0, face: Math.atan2(b[1] - a[1], b[0] - a[0]) + 0.8*wkNoise(s, tt/50), pose: 'stand', ph: 0, head: wkSmooth((wkNoise(s + 3, tt/5) - 0.55)/0.2), on: 1 }; }
+    const ea = wkSmooth(p); return { x: a[0] + (b[0] - a[0])*ea, z: a[1] + (b[1] - a[1])*ea, y: fly ? 7*wkSmooth(p/0.25)*wkSmooth((1 - p)/0.3) : 0, face: Math.atan2(b[1] - a[1], b[0] - a[0]), pose: fly ? 'fly' : 'wade', ph: fly ? (tt - e.t0)*1.4 : ea*dl/0.6, head: 0.6, on: 1 }; }
+  case 'soar': { const e = wkEra(s, tt, K.P), [wa, ws] = env.wind || [0, 3], drift = Math.min(2, ws*0.25), sgn = wkHash(s + j, 38, 1) < 0.5 ? 1 : -1;
+    const circ = k => { const R0 = 22 + 16*wkHash(k*7 + j, 39, s); return { c: [160*(2*wkHash(k*7 + j, 40, s) - 1), 160*(2*wkHash(k*7 + j, 41, s) - 1)], r: R0, th: wkHash(k*7 + j, 42, s)*Math.PI*2, h0: 30 + 20*wkHash(k*7 + j, 43, s) }; };
+    const at = (C, k, t0, u) => { const th = C.th + sgn*u*K.speed/C.r; return [C.c[0] + Math.cos(wa)*drift*u + C.r*Math.cos(th), C.c[1] + Math.sin(wa)*drift*u + C.r*Math.sin(th), C.h0 + 0.9*u, th]; };
+    const C = circ(e.k), up = e.d*0.78, u = tt - e.t0;
+    if(u < up){ const [x, z, y, th] = at(C, e.k, e.t0, u); return { x, z, y, face: th + sgn*Math.PI/2, pose: 'soar', ph: u*0.6, head: 1, on: 1 }; }
+    const [x0, z0, y0] = at(C, e.k, e.t0, up), C1 = circ(e.k + 1), x1 = C1.c[0] + C1.r*Math.cos(C1.th), z1 = C1.c[1] + C1.r*Math.sin(C1.th), q = wkSmooth((u - up)/(e.d - up));
+    return { x: x0 + (x1 - x0)*q, z: z0 + (z1 - z0)*q, y: y0 + (C1.h0 - y0)*q, face: Math.atan2(z1 - z0, x1 - x0), pose: 'glide', ph: u*0.6, head: 1, on: 1 }; }
+  case 'hawk': { const an = wkHash(j, 44, s)*Math.PI*2, rd = K.amp*0.3*Math.sqrt(wkHash(j, 45, s)), w = wkWander(s + j*131, tt, K.tau), w2 = wkWander(s + j*131, tt + 0.08, K.tau), hy = wkNoise(s + j*7 + 1, tt/(K.tau*0.8));
+    return { x: Math.cos(an)*rd + w[0]*K.amp, z: Math.sin(an)*rd + w[1]*K.amp, y: K.hgt[0] + (K.hgt[1] - K.hgt[0])*(0.5 + 0.5*hy), face: Math.atan2(w2[1] - w[1], w2[0] - w[0]), pose: 'fly', ph: tt*K.flap + j*0.4, head: 1, on: 1 }; }
+  case 'dart': { const e = wkEra(s + j*29, tt, K.P), sp = k => [K.range*(2*wkHash(k, 46, s + j) - 1), K.range*(2*wkHash(k, 47, s + j) - 1), K.hgt[0] + (K.hgt[1] - K.hgt[0])*wkHash(k, 48, s + j)];
+    const a = sp(e.k - 1), b = sp(e.k), p = wkSmooth((tt - e.t0)/0.5), jit = wkWander(s + j*7, tt, 0.6);
+    return { x: a[0] + (b[0] - a[0])*p + jit[0]*0.08, z: a[1] + (b[1] - a[1])*p + jit[1]*0.08, y: a[2] + (b[2] - a[2])*p, face: Math.atan2(b[1] - a[1], b[0] - a[0]), pose: p < 1 ? 'dart' : 'hover', ph: tt*9 + j, head: 1, on: 1 }; }
+  case 'skein': { const e = wkEra(s, tt, K.P), [wa] = env.wind || [0, 3], hd = wa + Math.PI + (wkHash(e.k, 49, s) - 0.5)*1.4, Lh = 1100, Dp = 2*Lh/K.speed;
+    if(wkHash(e.k, 50, s) > 0.75) return { on: 0 }; const ts = e.t0 + wkHash(e.k, 51, s)*Math.max(0, e.d - Dp), u = (tt - ts)*K.speed - Lh; if(u < -Lh || u > Lh) return { on: 0 };
+    const ca = Math.cos(hd), sa = Math.sin(hd), off = 160*(2*wkHash(e.k, 52, s) - 1), r = Math.ceil(j/2), side = j % 2 ? -1 : 1, wob = wkWander(s + j*3, tt, 9);
+    const back = r*3.4 + wob[0]*0.6, lat = side*r*2.3 + wob[1]*0.5, H = K.hgt[0] + (K.hgt[1] - K.hgt[0])*wkHash(e.k, 53, s);
+    return { x: ca*(u - back) - sa*(off + lat), z: sa*(u - back) + ca*(off + lat), y: H + wob[1]*2, face: hd, pose: 'fly', ph: tt*3 + j*0.7, head: 1, on: Math.min(1, (Lh - Math.abs(u))/(Lh*0.2)) }; }
+  }
+  return { on: 0 };
+}
+
+
+const wkCss = (c, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`;
+const wkMix = (a, b, t) => [a[0] + (b[0] - a[0])*t, a[1] + (b[1] - a[1])*t, a[2] + (b[2] - a[2])*t];
+const wkLine = (x, pts, col, w) => { x.strokeStyle = col; x.lineWidth = w; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+const wkEll = (x, cx, cy, rx, ry, rot, col) => { if(!(rx > 0 && ry > 0)) return; x.fillStyle = col; x.beginPath(); x.ellipse(cx, cy, rx, ry, rot, 0, Math.PI*2); x.fill(); };
+const wkPolyF = (x, pts, col) => { x.fillStyle = col; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); };
+
+
+
+
+function wkQuad(x, X, Y, m, kind, st, c, px){
+  if(kind === 'hare') return wkHare(x, X, Y, m, st, c, px);
+  const K = WK_KINDS[kind], d = st.dir, sk = Math.max(0.3, st.side), L = K.size*m, coat = c.mat(K.coat), cervid = kind !== 'fox';
+  const lift = st.y*m, run = st.pose === 'run' || st.pose === 'pounce', q = u => X + d*u*sk, fill = wkCss(coat.body), lw = Math.max(px(0.4), L*(cervid ? 0.034 : 0.05));
+
+  const back = L*(cervid ? 0.66 : 0.5), deep = L*(cervid ? 0.27 : 0.24), by = Y - lift - back + deep*0.5, ph = st.ph*Math.PI*2;
+  const legs = [[0.3, 0], [0.24, Math.PI], [-0.3, Math.PI*0.5], [-0.36, Math.PI*1.5]];
+  if(L > px(3)) legs.forEach(([u, o], i) => { const far = i % 2 === 1, hind = i >= 2, sw = run ? (hind ? -1 : 1)*Math.sin(ph)*0.7 : st.pose === 'walk' ? Math.sin(ph + o)*0.36 : 0;
+    const top = [q(u*L), by + deep*0.25], len = Math.max(L*0.05, Y - lift - top[1]), knee = [top[0] + d*(Math.sin(sw)*0.5 + (hind ? -0.08 : 0.04))*len, top[1] + len*0.5], ft = [top[0] + d*Math.sin(sw)*len, top[1] + Math.cos(sw)*len];
+    const col = wkCss(far ? wkMix(coat.dark, [0, 0, 0], 0.3) : coat.dark); wkLine(x, [top, knee, ft], col, lw); if(L > px(10)) wkLine(x, [ft, [ft[0] + d*lw*1.2, ft[1]]], wkCss([24, 20, 18]), lw*1.2); });
+
+  wkEll(x, X, by, L*0.36*sk, deep*0.42, 0, fill); wkEll(x, q(L*0.2), by - deep*0.04, L*0.2*sk, deep*0.52, 0, fill); wkEll(x, q(-L*0.22), by - deep*0.06, L*0.18*sk, deep*0.5, 0, fill);
+  if(L > px(5)) wkEll(x, q(-L*0.02), by - deep*0.3, L*0.36*sk, deep*0.16, 0, wkCss(coat.lit, 0.5));
+  if(cervid) wkEll(x, q(-L*0.37), by - deep*0.12, L*0.06*sk, deep*0.3, 0, wkCss(wkMix(coat.lit, [255, 255, 255], 0.65)));
+  else { const tb = [q(-L*0.38), by - deep*0.1], tt = [q(-L*0.85), by + deep*0.35 - (run ? deep*0.6 : 0)]; wkLine(x, [tb, [q(-L*0.62), by + deep*0.15], tt], fill, Math.max(px(0.6), L*0.13));
+    wkEll(x, tt[0], tt[1], Math.max(px(0.4), L*0.07), Math.max(px(0.4), L*0.05), 0, wkCss([238, 232, 222])); }
+
+  const hu = run ? 0.3 : st.head, na = run ? 0.35 : -1.25 + 2.35*hu, nl = L*(cervid ? 0.4 : 0.18), nb = [q(L*0.3), by - deep*0.25];
+  const ne = [nb[0] + d*Math.cos(na)*nl, nb[1] - Math.sin(na)*nl], nw = L*(cervid ? 0.09 : 0.1), px2 = -Math.sin(na), pz2 = -Math.cos(na), mane = kind === 'elk' ? wkCss(wkMix(coat.body, coat.dark, 0.6)) : fill;
+  wkPolyF(x, [[nb[0] - d*px2*nw*1.4, nb[1] - pz2*nw*1.4 + deep*0.3], [nb[0] + d*px2*nw, nb[1] + pz2*nw], [ne[0] + d*px2*nw*0.55, ne[1] + pz2*nw*0.55], [ne[0] - d*px2*nw*0.55, ne[1] - pz2*nw*0.55]], mane);
+
+  const ha = hu < 0.35 ? -1.2 : run ? 0.1 : -0.35, hl = L*(cervid ? 0.2 : 0.17), nose = [ne[0] + d*Math.cos(ha)*hl, ne[1] - Math.sin(ha)*hl];
+  wkPolyF(x, [[ne[0] - d*hl*0.12, ne[1] - hl*0.28], [ne[0] + d*hl*0.15, ne[1] - hl*0.3], nose, [ne[0], ne[1] + hl*0.25]], mane);
+  if(!cervid && L > px(4)) wkEll(x, (ne[0] + nose[0])/2 + d*hl*0.15, (ne[1] + nose[1])/2 + hl*0.1, hl*0.25, hl*0.12, 0, wkCss([238, 232, 222]));
+  if(L > px(5)) for(const e of [0, 1]) wkPolyF(x, [[ne[0] - d*hl*0.05*e, ne[1] - hl*0.22], [ne[0] - d*hl*(0.35 + 0.1*e), ne[1] - hl*(cervid ? 0.62 : 0.55)], [ne[0] + d*hl*0.08, ne[1] - hl*0.3]], wkCss(e ? coat.dark : coat.body));
+
+  if(cervid && st.stag && L > px(6)){ const ab = [ne[0], ne[1] - hl*0.3], aw = Math.max(px(0.4), L*0.02), col = wkCss(wkMix(coat.lit, [230, 220, 196], 0.5)), sz = kind === 'elk' ? 1.4 : 1;
+    const tip = [ab[0] - d*L*0.16*sz, ab[1] - L*0.36*sz]; wkLine(x, [ab, [ab[0] - d*L*0.05*sz, ab[1] - L*0.18*sz], tip], col, aw);
+    for(const k of [0.3, 0.55, 0.8]){ const p = [ab[0] + (tip[0] - ab[0])*k, ab[1] + (tip[1] - ab[1])*k]; wkLine(x, [p, [p[0] + d*L*0.09*sz, p[1] - L*0.06*sz]], col, aw*0.8); } } }
+
+
+
+function wkHare(x, X, Y, m, st, c, px){
+  const K = WK_KINDS.hare, d = st.dir, sk = Math.max(0.35, st.side), L = K.size*m, coat = c.mat(K.coat), fill = wkCss(coat.body), q = u => X + d*u*sk, y0 = Y - st.y*m;
+  const run = st.pose === 'run' || st.pose === 'walk', s = run ? Math.sin(st.ph*Math.PI*2) : 0, ink = wkCss(coat.dark), lw = Math.max(px(0.4), L*0.045);
+  if(run){ wkLine(x, [[q(-L*0.2), y0 - L*0.16], [q(-L*0.32 - L*0.22*(0.5 + 0.5*s)), y0 - L*0.02]], ink, lw*1.3); wkLine(x, [[q(L*0.16), y0 - L*0.16], [q(L*0.26 + L*0.18*(0.5 - 0.5*s)), y0]], ink, lw);
+    wkEll(x, X, y0 - L*0.22, L*0.36*sk, L*0.12, -d*0.08, fill); wkEll(x, q(L*0.36), y0 - L*0.3, L*0.1*sk, L*0.075, -d*0.2, fill);
+    wkEll(x, q(L*0.18), y0 - L*0.36, L*0.17*sk, L*0.03, d*0.25, wkCss(coat.dark)); return; }
+  const up = st.head;
+  wkLine(x, [[q(-L*0.1), y0 - L*0.02], [q(L*0.12), y0]], ink, lw*1.2);
+  wkEll(x, q(-L*0.12), y0 - L*0.17, L*0.18*sk, L*0.17, 0, fill); wkEll(x, q(L*0.05), y0 - L*(0.2 + 0.06*up), L*0.2*sk, L*0.13, -d*(0.2 + 0.3*up), fill);
+  wkLine(x, [[q(L*0.18), y0 - L*0.18], [q(L*0.2), y0]], ink, lw);
+  const hx = q(L*(0.24 + 0.04*up)), hy = y0 - L*(0.12 + 0.24*up); wkEll(x, hx, hy, L*0.1*sk, L*0.075, -d*0.3, fill);
+  if(L > px(3)) for(const e of [0, 1]) wkEll(x, hx - d*L*(0.06 + 0.2*(1 - up)) - d*e*L*0.02, hy - L*(0.08 + 0.14*up), L*(0.03 + 0.13*(1 - up)), L*(0.03 + 0.12*up), -d*(0.25 - 0.1*e), wkCss(e ? coat.dark : coat.body));
+  wkEll(x, q(-L*0.29), y0 - L*0.14, L*0.04, L*0.035, 0, wkCss([236, 232, 226])); }
+
+
+
+
+function wkBird(x, X, Y, m, kind, st, c, px){
+  const K = WK_KINDS[kind], d = st.dir, S = K.size*m, col = c.mat(K.coat), y = Y - st.y*m, ink = wkCss(col.dark), w = Math.max(px(0.5), S*0.07);
+  if(S < px(1.1)){ x.fillStyle = ink; x.fillRect(X - px(0.5), y - px(0.5), px(1), px(1)); return; }
+  if(st.pose === 'peck' || st.pose === 'stand' || st.pose === 'wade'){ const b = (K.body || 0.4)*m, bob = st.pose === 'peck' ? Math.max(0, Math.sin(st.ph*Math.PI*2))*0.6 : 0;
+    if(kind === 'heron'){ const hgt = 0.95*m, by = Y - hgt*0.62; wkLine(x, [[X - d*b*0.05, Y], [X, by]], ink, Math.max(px(0.4), hgt*0.02)); wkLine(x, [[X + d*b*0.08, Y], [X + d*b*0.02, by]], ink, Math.max(px(0.4), hgt*0.02));
+      wkEll(x, X, by - hgt*0.08, hgt*0.17, hgt*0.1, -d*0.5, wkCss(col.body)); const strike = st.head, nk = [[X + d*hgt*0.1, by - hgt*0.12], [X + d*hgt*(0.04 + 0.22*strike), by - hgt*(0.3 - 0.05*strike)], [X + d*hgt*(0.12 + 0.3*strike), by - hgt*(0.36 - 0.1*strike)]];
+      wkLine(x, nk, wkCss(col.lit), Math.max(px(0.5), hgt*0.04)); const hx = nk[2][0], hy = nk[2][1]; wkLine(x, [[hx, hy], [hx + d*hgt*0.16, hy + hgt*0.02*(1 + strike)]], wkCss([196, 168, 80]), Math.max(px(0.4), hgt*0.022));
+      if(hgt > px(14)) wkLine(x, [[hx - d*hgt*0.02, hy - hgt*0.01], [hx - d*hgt*0.12, hy - hgt*0.01]], ink, Math.max(px(0.3), hgt*0.012)); return; }
+    const by = Y - b*0.55; wkEll(x, X, by, b*0.5, b*0.26, -d*0.25, wkCss(col.body)); wkLine(x, [[X - d*b*0.42, by + b*0.04], [X - d*b*0.8, by + b*0.12]], wkCss(col.body), Math.max(px(0.4), b*0.14));
+    wkEll(x, X + d*b*0.42, by - b*0.2 + bob*b*0.5, b*0.16, b*0.14, 0, wkCss(col.body)); if(b > px(5)) wkLine(x, [[X + d*b*0.56, by - b*0.2 + bob*b*0.5], [X + d*b*0.72, by - b*0.16 + bob*b*0.6]], ink, Math.max(px(0.3), b*0.06));
+    if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, Y]], ink, Math.max(px(0.3), b*0.04)); return; }
+
+  if(kind === 'raptor' || (kind === 'heron' && st.pose === 'fly')){ const span = (kind === 'heron' ? 1.7 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
+
+    const ws = span*0.5, cw = span*0.09, tip = sg => [X + sg*ws, y - span*fl*0.6];
+    wkPolyF(x, [[X - cw*0.6, y - cw*0.2], tip(-1), [X - ws*0.95, y + cw*0.5], [X, y + cw*0.7], [X + ws*0.95, y + cw*0.5], tip(1), [X + cw*0.6, y - cw*0.2]], wkCss(kind === 'heron' ? col.body : col.dark));
+    if(kind === 'raptor'){ wkPolyF(x, [[X - cw*0.3, y + cw*0.4], [X - cw*0.8, y + cw*2.2], [X + cw*0.8, y + cw*2.2], [X + cw*0.3, y + cw*0.4]], wkCss(col.dark));
+      if(span > px(14)) for(const sg of [-1, 1]) for(let f = 0; f < 4; f++) wkLine(x, [[X + sg*ws*0.9, y - span*fl*0.55 + cw*(f*0.25 - 0.2)], [X + sg*ws*1.04, y - span*fl*0.6 + cw*(f*0.3 - 0.35)]], wkCss(col.dark), Math.max(px(0.3), cw*0.18)); }
+    else { wkLine(x, [[X + d*cw*0.6, y - cw*0.1], [X + d*cw*1.4, y - cw*0.8], [X + d*cw*2.0, y - cw*0.3]], wkCss(col.body), Math.max(px(0.4), cw*0.5)); wkLine(x, [[X - d*cw*0.6, y + cw*0.4], [X - d*cw*3.2, y + cw*0.9]], ink, Math.max(px(0.3), cw*0.18)); }
+    return; }
+  if(kind === 'geese'){ const fl = Math.sin(st.ph*Math.PI*2), sp = S*0.5, bw = Math.max(px(0.5), S*0.06);
+    wkLine(x, [[X - d*S*0.2, y], [X + d*S*0.28, y - S*0.03]], wkCss(col.body), Math.max(px(0.6), S*0.1)); wkLine(x, [[X + d*S*0.28, y - S*0.03], [X + d*S*0.5, y - S*0.05]], wkCss(wkMix(col.dark, [0, 0, 0], 0.4)), Math.max(px(0.4), S*0.05));
+    wkLine(x, [[X - sp*0.9, y - sp*fl*0.5], [X - sp*0.3, y - sp*(0.2 + fl*0.25)], [X, y]], ink, bw); wkLine(x, [[X, y], [X + sp*0.3*0.6, y - sp*(0.2 + fl*0.25)*0.7], [X + sp*0.55, y - sp*fl*0.35]], ink, bw); return; }
+  if(kind === 'butterflies' || kind === 'dragonflies'){ const sz = Math.max(px(1.6), S), op = kind === 'butterflies' ? 0.25 + 0.75*Math.abs(Math.sin(st.ph*Math.PI)) : 1;
+    if(kind === 'dragonflies'){ wkLine(x, [[X - d*sz*0.9, y + sz*0.05], [X + d*sz*0.4, y]], wkCss(col.body), Math.max(px(0.4), sz*0.12));
+      for(const k of [-1, 1]) wkEll(x, X + d*sz*0.1, y - k*sz*0.2 - sz*0.05, sz*0.5, sz*0.12, k*0.3, wkCss(wkMix(col.lit, [255, 255, 255], 0.6), 0.45)); return; }
+    const wc = c.flowers ? c.flowers[(st.hue || 0) % c.flowers.length] : col.body; for(const k of [-1, 1]) wkEll(x, X + k*sz*0.32*op, y - sz*0.15, sz*0.32*op, sz*0.42, k*0.4, wkCss(wc, 0.92));
+    wkLine(x, [[X, y - sz*0.45], [X, y + sz*0.2]], wkCss(col.dark), Math.max(px(0.3), sz*0.08)); return; }
+
+  const fl = Math.sin(st.ph*Math.PI*2), sp = S*0.5;
+  if(kind === 'bats'){ const k = 0.5 + 0.5*fl; for(const sg of [-1, 1]) wkPolyF(x, [[X, y], [X + sg*sp*0.4, y - sp*0.35*k], [X + sg*sp, y - sp*(0.5*k - 0.1)], [X + sg*sp*0.75, y + sp*0.05], [X + sg*sp*0.45, y - sp*0.02], [X + sg*sp*0.2, y + sp*0.12]], ink);
+    wkEll(x, X, y + sp*0.05, sp*0.12, sp*0.18, 0, ink); return; }
+  if(kind === 'swallows' || kind === 'swifts'){ const sw = kind === 'swifts' ? 0.45 : 0.3, k = 0.3 + 0.7*Math.abs(fl);
+    for(const sg of [-1, 1]) wkPolyF(x, [[X, y - sp*0.06], [X + sg*sp*0.55, y - sp*0.3*k], [X + sg*sp, y - sp*(sw*k - 0.05)], [X + sg*sp*0.5, y - sp*0.05*k], [X, y + sp*0.08]], ink);
+    if(kind === 'swallows' && S > px(5)) wkLine(x, [[X - px(0.3), y + sp*0.05], [X - sp*0.12, y + sp*0.4]], ink, Math.max(px(0.3), sp*0.04)), wkLine(x, [[X + px(0.3), y + sp*0.05], [X + sp*0.12, y + sp*0.4]], ink, Math.max(px(0.3), sp*0.04));
+    return; }
+
+  const under = kind === 'pigeons' ? wkCss(col.lit) : ink; wkEll(x, X, y, sp*0.22, sp*0.11, -d*0.2, wkCss(col.body));
+  wkLine(x, [[X - sp, y - sp*fl*0.7], [X - sp*0.45, y - sp*(0.25 + fl*0.35)], [X, y]], under, w); wkLine(x, [[X, y], [X + sp*0.45, y - sp*(0.25 + fl*0.35)], [X + sp, y - sp*fl*0.7]], ink, w);
+}
+
+
+
+function wkSwimmer(x, X, Y, m, kind, st, c, px){
+  const K = WK_KINDS[kind], d = st.dir, S = K.size*m, col = c.mat(K.coat), head = c.mat(K.head || K.coat), w = Math.max(px(0.4), S*0.04);
+  if(st.ph > 0.05 && S > px(3)){ const wl = S*(1 + 3*st.ph); wkLine(x, [[X - d*S*0.4, Y + S*0.02], [X - d*(S*0.4 + wl), Y - S*0.06*st.ph]], wkCss(c.lit, 0.5*st.ph), w); wkLine(x, [[X - d*S*0.4, Y + S*0.02], [X - d*(S*0.4 + wl), Y + S*0.16*st.ph]], wkCss(c.lit, 0.4*st.ph), w); }
+  const up = 1 - st.head;
+  if(up > 0.6){ wkPolyF(x, [[X - S*0.18, Y], [X - d*S*0.05, Y - S*0.32], [X + S*0.18, Y]], wkCss(col.body)); return; }
+  x.save(); x.beginPath(); x.rect(X - S*2, Y - S*2, S*4, S*2); x.clip(); wkEll(x, X, Y, S*0.5, S*0.24, 0, wkCss(col.body)); if(S > px(4)) wkEll(x, X - d*S*0.05, Y - S*0.12, S*0.32, S*0.08, 0, wkCss(col.lit, 0.6)); x.restore();
+  const swan = kind === 'swans', nb = [X + d*S*0.3, Y - S*0.1], hd = swan ? [X + d*S*0.36, Y - S*0.62] : [X + d*S*0.4, Y - S*0.3];
+  if(swan) wkLine(x, [nb, [X + d*S*0.5, Y - S*0.32], hd], wkCss(col.body), Math.max(px(0.5), S*0.07)); else wkLine(x, [nb, hd], wkCss(head.body), Math.max(px(0.5), S*0.12));
+  wkEll(x, hd[0], hd[1], S*(swan ? 0.08 : 0.13), S*(swan ? 0.06 : 0.1), 0, wkCss(swan ? col.body : head.body)); wkLine(x, [[hd[0] + d*S*0.06, hd[1]], [hd[0] + d*S*0.2, hd[1] + S*0.04]], wkCss(swan ? [220, 110, 40] : [200, 170, 60]), Math.max(px(0.4), S*0.05)); }
+
+
+function wkPaint(x, X, Y, m, kind, st, c, px){
+  const K = WK_KINDS[kind]; if(!K) return;
+  if(K.way === 'paddle') return wkSwimmer(x, X, Y, m, kind, st, c, px);
+  if(K.way === 'walk' || K.way === 'hop' || K.way === 'prowl'){ const L = K.size*m; if(L < px(1.4)){ x.fillStyle = wkCss(c.mat(K.coat).dark); x.fillRect(X - px(0.7), Y - st.y*m - px(1.2), px(1.4), px(1)); return; } return wkQuad(x, X, Y, m, kind, st, c, px); }
+  return wkBird(x, X, Y, m, kind, st, c, px);
 }
 
 
@@ -19756,7 +20040,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
   const rnd = (a, b) => a + (b - a)*R(), dot = (cx, cy, r, lo, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(rgPx(lo), r), 0, Math.PI*2); x.fill(); };
   if(kind === 'insects'){
     const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
-    for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4 + (t ? Math.sin(t*(2.1 + q*0.7) + q*2.3 + X*0.01)*h*0.35 : 0), iy = cy + (R() - 0.5)*h*0.6 + (t ? Math.sin(t*(2.9 + q*0.5) + q*1.7)*h*0.18 : 0); dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));
+    for(let q = 0; q < n; q++){ const wv = t ? wkWander((c.seed || 0) + q*131, t, 1.1) : [0, 0], ix = X + (R() - 0.5)*h*1.4 + wv[0]*h*0.35, iy = cy + (R() - 0.5)*h*0.6 + wv[1]*h*0.18; dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));
 
 
 
@@ -19768,8 +20052,11 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     if((c.night || 0) > 0.5) return;
     const n = 8 + Math.floor(R()*12), body = rsMix(c.lit, [255, 255, 255], 0.2), back = rsMix(c.lit, [120, 128, 140], 0.45);
 
-    for(let q = 0; q < n; q++){ const air = R() < 0.22, gx = X + (R() - 0.5)*h*6 + (t && air ? Math.sin(t*0.5 + q*1.9)*h*0.8 : 0), gy = air ? Y - h*rnd(0.7, 2.1) + (t ? Math.sin(t*0.8 + q)*h*0.15 : 0) : Y - h*0.05 + (R() - 0.5)*h*0.3, s2 = h*rnd(0.1, 0.14);
-      if(air){ const flap = t ? Math.sin(t*3 + q*2.3)*0.45 : (R() - 0.5)*0.6; x.strokeStyle = rsCss(body, 0.95); x.lineWidth = Math.max(rgPx(0.8), s2*0.28); x.lineCap = 'round'; x.beginPath();
+
+    for(let q = 0; q < n; q++){ const ra = R(), bx = (R() - 0.5)*h*6, by2 = (R() - 0.5)*h*0.3, ah = rnd(0.7, 2.1), s2 = h*rnd(0.1, 0.14), f0 = (R() - 0.5)*0.6, sd = (c.seed || 0) + q*977;
+      const up = t ? rsSmooth(0.15, 0.55, wkNoise(sd + 5, t/8)) : ra < 0.22 ? 1 : 0, wv = t ? wkWander(sd, t, 5) : [0, 0], air = up > 0.15;
+      const gx = X + bx + wv[0]*h*0.9*up, gy = Y - h*0.05 + by2*(1 - up) - h*ah*up + wv[1]*h*0.15*up;
+      if(air){ const flap = t ? Math.sin(t*3 + q*2.3)*0.45 : f0; x.strokeStyle = rsCss(body, 0.95); x.lineWidth = Math.max(rgPx(0.8), s2*0.28); x.lineCap = 'round'; x.beginPath();
         x.moveTo(gx - s2*1.8, gy - s2*flap*1.6); x.quadraticCurveTo(gx - s2*0.7, gy - s2*(0.5 + flap), gx, gy); x.quadraticCurveTo(gx + s2*0.7, gy - s2*(0.5 + flap), gx + s2*1.8, gy - s2*flap*1.6); x.stroke();
         dot(gx - s2*1.7, gy - s2*flap*1.6, s2*0.18, 0.4, rsCss(c.dark, 0.8)); dot(gx + s2*1.7, gy - s2*flap*1.6, s2*0.18, 0.4, rsCss(c.dark, 0.8)); }
       else { x.fillStyle = rsCss(body, 0.95); x.beginPath(); x.ellipse(gx, gy - s2*0.5, s2*0.9, s2*0.45, 0, 0, Math.PI*2); x.fill(); x.fillStyle = rsCss(back, 0.95); x.beginPath(); x.ellipse(gx + s2*0.15, gy - s2*0.6, s2*0.6, s2*0.25, 0, 0, Math.PI*2); x.fill();
@@ -19777,7 +20064,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     return; }
   if(kind === 'fairies'){
     const n = 1 + Math.floor(R()*3);
-    for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2 + (t ? Math.sin(t*0.45 + q*2.1)*h*0.6 : 0), fy = Y - h*rnd(0.4, 1.4) + (t ? Math.sin(t*0.7 + q)*h*0.2 : 0), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);
+    for(let q = 0; q < n; q++){ const wv = t ? wkWander((c.seed || 0) + q*211, t, 6) : [0, 0], fx = X + (R() - 0.5)*h*2 + wv[0]*h*0.6, fy = Y - h*rnd(0.4, 1.4) + wv[1]*h*0.25, dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);
       rgGlow(x, fx, fy, Math.max(rgPx(12), h*0.32), c.glow, 0.4);
       for(let t = 1; t <= 3; t++) dot(fx - dx*t, fy + dx*0.15*t*t*Math.sign(dx), h*0.025*(1 - t*0.22), 1 - t*0.2, rsCss(c.glow, 0.32/t));
       dot(fx, fy, h*0.04, 2.2, rsCss(rsMix(c.glow, [255, 255, 255], 0.6), 0.85)); }
@@ -19786,7 +20073,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
 
     if((c.night || 0) > 0.4 || /rain|storm|snow|fog/.test(c.weather || '')) return;
     const [wa, ws] = c.wind || [0, 5], dir = Math.cos(wa) < 0 ? -1 : 1, lift = Math.min(1, ws/8), ph = X*0.017;
-    const hx = X + dir*h*0.12, hy = Y - h*0.48, bobX = t ? Math.sin(t*0.6 + ph)*h*0.5 : 0, bobY = t ? Math.sin(t*1.1 + ph*1.7)*h*0.3 : 0;
+    const hx = X + dir*h*0.12, hy = Y - h*0.48, bobX = t ? wkNoise((c.seed || 0) + 3, t/2.5)*h*0.6 : 0, bobY = t ? wkNoise((c.seed || 0) + 9, t/1.7)*h*0.35 : 0;
     const kx = X + dir*h*rnd(2.2, 3.6)*(0.6 + 0.4*lift) + bobX, ky = Y - h*rnd(3, 4.6)*(0.5 + 0.5*lift) + bobY, ks = h*rnd(0.22, 0.32), tilt = (t ? Math.sin(t*1.7 + ph)*0.25 : 0) + dir*0.3;
 
     x.strokeStyle = rsCss(c.dark, 0.9); x.lineWidth = Math.max(rgPx(1), h*0.07); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.42); x.moveTo(X, Y - h*0.38); x.lineTo(hx, hy); x.stroke();
@@ -19895,6 +20182,8 @@ const RG_CROPS = { wheat: { c: [214, 184, 100] }, barley: { c: [200, 190, 128] }
   garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, orchard: { c: [112, 150, 74] }, olives: { c: [176, 160, 118] }, 'orchard rows': { c: [126, 150, 86], row: [3.4, [50, 90, 46]] }, 'olive rows': { c: [176, 160, 118], row: [4, [100, 118, 92]] }, moonflower: { c: [150, 166, 186], row: [2, [128, 140, 176]], glow: true }, fallow: { c: [146, 136, 94] } };
 const RG_STREET_KINDS = ['lamp', 'hydrant', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'scooter'];
 const RG_DOORLESS = ['arch', 'needle', 'pylon', 'torii', 'turbine', 'radiomast', 'watertower', 'windmill', 'silo', 'elevator'];
+
+const RG_NEAR_KINDS = { cities: ['row', 'brick', 'chapel', 'cottage'], neon: ['motel', 'capsule'], builders: ['observatory', 'geodome', 'dome'], magic: ['wizard', 'chapel', 'cottage'], ruins: ['castle', 'chapel'] };
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
@@ -20120,6 +20409,17 @@ function rgStore(V){
         if(R() < 0.5) put({ c: 'prop', w, kind: 'dolmen', hM: pkMetres('dolmen', R()), face: th }, a0 - sn*8*M, z0 + ca*8*M, R); } } }
 
 
+
+
+
+  { const RN = rgRand(s, 1720), w0 = V.worldAt(0, L.z0), kinds = RG_NEAR_KINDS[w0];
+    if(kinds && RN() < 0.7) for(let k = 0, n = 2 + Math.floor(RN()*3); k < n; k++){ const an = RN()*Math.PI*2, d = (60 + 140*RN())*M, a = Math.cos(an)*d, z = L.z0 + Math.sin(an)*d, kind = kinds[Math.floor(RN()*kinds.length)], hu = RN(), wu = RN();
+      if(Math.abs(z) > W*0.46 || V.worldAt(a, z) !== w0) continue; const g = ground(a, z); if(g.wet || g.slope > 0.35 || !rgFits(kind, g, 0.5)) continue;
+      const hM = Math.min(kind === 'wizard' ? 36 : 28, pkMetres(kind, 0.3 + 0.4*hu)), wM = pkMetres(kind, wu, 1);
+      const face = Math.atan2(L.z0 - z, -a), ft = footing(a, z, wM, face); if(!ft) continue;
+      out.push({ c: 'bldg', w: w0, kind, hM, wM, face, near: true, a, z, r: d, rs: (RN()*4294967296) >>> 0, ...ft }); } }
+
+
   sow(14, W*0.005, W*0.03, W*2.5, 2, (a, z, r, R) => { const w = V.worldAt(a, z), ci = w === 'wilds' ? V.cityAt(a, z, 0.12) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
     if(ci < 0.1 || R() > ci*(w === 'ruins' ? 0.12 : 0.9) || T.true(a, z, W*0.004) <= TR.sea) return null;
 
@@ -20290,6 +20590,30 @@ function rgStore(V){
       const g = ground(a, z); if(g.wet || g.slope > 1.2) return null; const L2 = PK_BOTS[w] || PK_BOTS.cities, kind = L2[Math.floor(R()*L2.length)];
       if(kind === 'derelict' && R() > 0.2) return null;
       return { c: 'bot', w, kind, hM: pkMetres(kind, R()) }; }); }
+
+
+
+
+
+
+
+  { const LIFE = V.life, wildish = w => ({ wilds: 1, magic: 0.85, ruins: 0.75, cities: 0.55, builders: 0.4, neon: 0.12 })[w] ?? 0.5, wild = (kind, w, x2 = {}) => ({ c: 'wild', kind, w, ...x2 });
+    sow(17, W*0.02, W*0.04, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.5*LIFE*wildish(w)) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+      if(g.wet || g.slope > 0.7 || fo < 0.1 || fo > 0.62 || inTown(w, a, z)) return null; return wild(T.true(a, z, W*0.01) > TR.snow*0.3 || R() < 0.2 ? 'elk' : 'deer', w); });
+    sow(18, W*0.008, W*0.02, W*0.25, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.24*LIFE*wildish(w)) return null; const g = ground(a, z);
+      if(g.wet || g.slope > 0.6 || V.forestAt(a, z) > 0.5 || inTown(w, a, z)) return null; return wild(R() < 0.3 ? 'fox' : 'hare', w); });
+    sow(19, W*0.012, W*0.03, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.38*LIFE) return null; const g = ground(a, z); if(g.wet || V.forestAt(a, z) > 0.45) return null;
+      const u = R(); return wild(inTown(w, a, z) ? (u < 0.6 ? 'pigeons' : 'sparrows') : w === 'ruins' || w === 'magic' ? (u < 0.7 ? 'rooks' : 'starlings') : u < 0.45 ? 'rooks' : u < 0.8 ? 'starlings' : 'sparrows', w); });
+    sow(20, W*0.012, W*0.03, W*0.5, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE) return null; const g = ground(a, z); if(!g.coast) return null;
+      if(g.wet) return wild(R() < 0.25 ? 'swans' : 'ducks', w, { afloat: true }); return R() < 0.5 ? wild('heron', w) : null; });
+    sow(21, W*0.06, W*0.12, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE*(w === 'neon' ? 0.25 : 1)) return null; const u = R();
+      return wild(inTown(w, a, z) ? (u < 0.7 ? 'swifts' : 'raptor') : u < 0.4 ? 'raptor' : u < 0.8 ? 'swallows' : 'swifts', w); });
+    sow(22, W*0.015, W*0.04, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE) return null; const g = ground(a, z); if((g.wet && !g.coast) || (!g.coast && V.forestAt(a, z) < 0.3)) return null; return wild('bats', w); });
+    sow(24, W*0.004, W*0.008, W*0.04, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet && !g.coast) return null; return wild(g.coast ? 'dragonflies' : 'butterflies', w); });
+
+    sow(25, W*0.005, W*0.012, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.5*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
+      const u = R(), town = inTown(w, a, z), fo = V.forestAt(a, z); return wild(town ? (u < 0.5 ? 'sparrows' : u < 0.8 ? 'pigeons' : 'swifts') : fo > 0.5 ? (u < 0.5 ? 'butterflies' : 'sparrows') : u < 0.3 ? 'hare' : u < 0.4 ? 'fox' : u < 0.6 ? 'swallows' : u < 0.8 ? 'starlings' : 'rooks', w); });
+    sow(23, W*0.4, W*0.8, W*2.4, 1, (a, z, r, R) => R() < 0.35*LIFE ? wild('geese', V.worldAt(a, z)) : null); }
 
 
 
@@ -20535,7 +20859,7 @@ function rgPaintLand(x, mk, dk, V){
 
   const store = rgStore(V); let loudOne = null, loudR = Infinity;
   for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
-  const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : W*0.0004;
+  const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
 
 
@@ -20575,15 +20899,18 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const MT = rgMotionTime(V), ST = rgSwayTime(V), FT = rgFilmTime(V);
+  const MT = rgMotionTime(V), ST = rgSwayTime(V), FT = rgFilmTime(V), DSUN = [V.sun.screen[0], -V.sun.screen[1], -(V.sun.D[0]*L.fx + V.sun.D[1]*L.fy + V.sun.D[2]*L.fz)];
   const RG_MOVES = { helper: [14, 14, 1.0], drone: [12, 12, 4], crawler: [8, 8, 0.4], walker: [24, 24, 1.5], harvester: [40, 5, 1.6], shepherd: [16, 16, 1.0], crab: [5, 5, 0.3],
-    lamplighter: [16, 3, 1.0], sheep: [2, 2, 0.15], figure: [18, 1.5, 1.25] };
+    lamplighter: [16, 3, 1.0], figure: [18, 1.5, 1.25] };
 
 
   const toDoor = (o, p) => { const q = ((o.rs >>> 10) % 1000)/1000; if(!o.door || q < 0.1) return p;
     const out = 0.08 + 0.92*rsSmooth(0.15, 0.65, ringDay(L, o.a)), k = rsSmooth(q + 0.14, q + 0.03, out); if(k <= 0) return p;
     const da = o.door.a - p.a, dz = o.door.z - p.z; return { ...p, a: p.a + da*k, z: p.z + dz*k, ...(k < 1 && Math.hypot(da, dz) > W*0.0001 ? { face: Math.atan2(dz, da), walking: 1 } : { walking: 0 }) }; };
-  const moved = (o, mt = MT) => o.door ? toDoor(o, movedRound(o, mt)) : movedRound(o, mt);
+
+  const grazed = (o, mt) => { const w = wkWander(o.rs, mt, 50), w2 = wkWander(o.rs, mt + 2, 50), M1 = W*0.00025, A = 5, v = Math.hypot(w2[0] - w[0], w2[1] - w[1])*A/2;
+    return { ...o, a: o.a + w[0]*A*M1, z: o.z + w[1]*A*M1, face: v > 0.004 ? Math.atan2(w2[1] - w[1], w2[0] - w[0]) : o.face, walking: Math.min(1, v/0.25) }; };
+  const moved = (o, mt = MT) => o.kind === 'sheep' ? (V.time ? grazed(o, mt) : o) : o.door ? toDoor(o, movedRound(o, mt)) : movedRound(o, mt);
   const movedRound = (o, mt) => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, R = mulberry32(o.rs ^ 0x6d6f7665), ax = o.walk ?? o.face ?? (o.rs % 62832)/10000;
     const ca = Math.cos(ax), sa = Math.sin(ax), pace = mv[2]*(0.8 + 0.35*R()), T = 2*Math.hypot(mv[0], mv[1])/pace/0.95 + 2 + 8*R(), t = mt + R()*T*40;
 
@@ -20601,12 +20928,38 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
+
+
+
+
+
+  const RG_WILD_LICENCE = 1.5, rgWildHere = (o, night) => { const k = o.kind, q = ((o.rs >>> 8) % 1000)/1000, wet = /rain|storm/.test(V.weather), cold = /snow/.test(V.weather);
+    const av = k === 'bats' ? (cold ? 0 : rsSmooth(0.2, 0.5, night)) : ['swallows', 'swifts', 'butterflies', 'dragonflies', 'raptor'].includes(k) ? (1 - rsSmooth(0.25, 0.6, night))*(cold ? 0 : wet ? (k === 'swallows' ? 0.7 : 0) : 1)
+      : ['rooks', 'pigeons', 'starlings', 'sparrows'].includes(k) ? (1 - rsSmooth(0.35, 0.7, night))*(V.weather === 'storm' ? 0.3 : 1) : k === 'fox' ? 0.35 + 0.65*rsSmooth(0.15, 0.45, night) : 1;
+    return av >= 1 ? 1 : av <= 0 ? 0 : rsSmooth(q - 0.04, q + 0.04, av); };
+  const rgPaintWild = (o, l, dd) => { const K = WK_KINDS[o.kind], wday = ringDay(L, o.a), night = 1 - rsSmooth(0.3, 0.7, wday), pres = rgWildHere(o, night); if(pres < 0.02) return;
+    const haze = hazeOf(dd), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday)), n = wkCount(o.kind, o.rs), t = V.time ? MT : 0, step = V.frame !== null && V.time ? Math.min(2.5, rgStep(V)) : 0;
+    const env = { wind: rgWind(V) }, M1 = W*0.00025, fly = WK_FLYERS.includes(o.kind), c = { ...colsOf(o.w, cday, haze), flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, g, Math.max(0.4, wday), haze, AIR)) }, out2 = [];
+    for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); if(!st.on) continue;
+      const a = o.a + st.x*M1, z = o.z + st.z*M1, f = foot(a, z); if(!f) continue; const m = f[2], sz = K.size*m*RG_WILD_LICENCE;
+      if((sz < px(0.7) && !fly) || sz > wh*0.5 || (f[3] <= TR.sea && !o.afloat && !st.y)) continue;
+      const X = f[0], Y = fly || st.y ? f[1] : stand(l, X, f[1]), yy = Y - st.y*m; if(!vis(l, X - sz, X + sz, yy - sz, yy + sz*0.3)) continue;
+
+      const g2 = foot(a + Math.cos(st.face)*M1*3, z + Math.sin(st.face)*M1*3), side = Math.abs(Math.sin(st.face - Math.atan2(L.z0 - z, -a)));
+      let al = pres*st.on; if(step > 0.2){ const p = wkAt(o.kind, o.rs, j, t - step, env), fp = p.on ? foot(o.a + p.x*M1, o.z + p.z*M1) : null;
+        if(fp) al *= rsSmooth(Math.max(px(2), sz)*2.5, Math.max(px(2), sz)*0.9, Math.hypot(fp[0] - X, fp[1] - p.y*fp[2] - yy)); }
+      if(al < 0.03) continue;
+      out2.push([m, () => { x.globalAlpha = al; wkPaint(x, X, Y, m*RG_WILD_LICENCE, o.kind, { ...st, y: st.y/RG_WILD_LICENCE, dir: !g2 || g2[0] >= X ? 1 : -1, side, stag: j === 0 && (o.rs & 4), hue: j }, c, rgPx); x.globalAlpha = 1; }]); }
+    out2.sort((p, q) => p[0] - q[0]); for(const [, d] of out2) d(); };
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
+
+    if(o0.near){ const f1 = foot(o0.a, o0.z); if(!f1) return; const nf = rsSmooth(ww*0.8, ww*0.45, o0.wM*f1[2]*1.6)*rsSmooth(wh*1.05, wh*0.65, o0.hM*f1[2]); if(nf < 0.03) return;
+      if(nf < 0.97){ x.save(); x.globalAlpha = nf; rgPaintThing0(o0, l, dd, o0); x.restore(); return; } }
     if(V.frame === null || o === o0) return rgPaintThing0(o, l, dd, o0);
     const p = moved(o0, MT - Math.min(2.5, rgStep(V))), f1 = foot(o.a, o.z), f0 = foot(p.a, p.z); if(!f1 || !f0) return rgPaintThing0(o, l, dd, o0);
     const sz = Math.max(px(2), (o.hM || 1.7)*f1[2]), gh = rsSmooth(sz*2.5, sz*0.9, Math.hypot(f1[0] - f0[0], f1[1] - f0[1]));
     if(gh >= 0.97) return rgPaintThing0(o, l, dd, o0); if(gh < 0.03) return; x.save(); x.globalAlpha = gh; rgPaintThing0(o, l, dd, o0); x.restore(); };
-  const rgPaintThing0 = (o, l, dd, o0) => {
+  const rgPaintThing0 = (o, l, dd, o0) => { if(o.c === 'wild') return rgPaintWild(o, l, dd);
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));
     if(o.c === 'tree'){ const h = o.hM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1) || h > nearCut) return;
@@ -20661,8 +21014,9 @@ function rgPaintLand(x, mk, dk, V){
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
 
 
+
       const aim = o.kind === 'dish' ? rgDishAim(s, V.time > 0 ? FT : 0, ((o.rs >>> 5) % 1000)/1000*0.9) : null;
-      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(aim ? { ...o, face: aim[0] } : o, f), ...(aim ? { dishEl: aim[1] } : {}) };
+      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(aim ? { ...o, face: aim[0] } : o, f), ...(aim ? { dishEl: aim[1], sun3: DSUN } : {}) };
 
 
 
@@ -20696,7 +21050,7 @@ function rgPaintLand(x, mk, dk, V){
     const glow = colsOf(o.w, cday, haze).glow;
     const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], cday, haze, AIR), lit: rgLit(V, [236, 240, 246], cday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
-      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR), weather: V.weather, wind: rgWind(V) };
+      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR), weather: V.weather, wind: rgWind(V), seed: o.rs };
     rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, ST);
   };
 
@@ -29225,7 +29579,7 @@ const TEXTURE_CHAINS = {
 
 
 
-  ringpaint: { label: 'Ringworld', canvas: true, sealed: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills, their shadows lying on the land under them; by day over dry country a dust devil may whirl, and at dusk a murmuration of starlings wheels over the fields. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog; the sky glows round the sun, burning low at dusk, with the pink Belt of Venus opposite. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+  ringpaint: { label: 'Ringworld', canvas: true, sealed: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. World says who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region). Life is its trees, grass and flowers, its wild things (deer at the woods\' edge, hares and now and then a fox in the open, rooks and starlings that lift all at once and settle somewhere else, pigeons in the towns, ducks, swans and a heron at the water, a hawk circling on the rising air, swallows over the fields, bats at dusk, and sometimes a skein of geese going over), and now and then something small to find (insects, fairies, slime); Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills, their shadows lying on the land under them; by day over dry country a dust devil may whirl, and at dusk a murmuration of starlings wheels over the fields. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog; the sky glows round the sun, burning low at dusk, with the pink Belt of Venus opposite. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Paint lays Oil Paint over it all with the Brush you choose; at 0 the shapes stay flat. Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 120],
       ['knob', { slot: '3' }, 40, 200],
@@ -34526,9 +34880,9 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Crux–Imai';
+const RELEASE = 'Crux–Acrux';
 
-const RELEASE_DATE = '2026-10-24';
+const RELEASE_DATE = '2026-10-25';
 
 const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"MVgybw1m","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"jicBmWEE","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
@@ -35486,7 +35840,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-24 · 3bacd57";
+const STAMP = "2026-10-25 · 1fad879";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

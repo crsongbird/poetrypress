@@ -35,11 +35,21 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   ends; To a shot (Set the shot… on the dial); four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral
   out); Set it now… for the look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do
   the amounts feel right?
+- THE WILD THINGS: deer and elk at the woods' edge that graze, look up, walk on and now and then bolt and fan out; hares
+  and a fox (its mousing pounce); rooks, starlings, sparrows and pigeons that lift all together and wheel down
+  elsewhere; ducks and swans drifting and up-ending, a heron still at the edge; a hawk circling up a thermal and gliding
+  on; swallows and swifts hawking, bats at dusk, butterflies and dragonflies near you, geese going over against the
+  wind. The sheep, gulls, insects and fairies drift on noise now, never a loop. Drawn half again their size so they are
+  found: enough of them, and big enough?
+- THE DISH IN THE ROUND: a bowl a third of its radius deep, its rim, the feed on four legs at the focus, the hub, the
+  axle in the yoke's arms, the turntable on its pedestal, all joined and lit from the sun.
+- A FEW BUILDINGS NEAR THE EYE: now and then a row house, cottage, chapel, motel, observatory or wizard's tower stands
+  close, facing you, fading out before it could fill the frame.
 
 ## 2 · Ruby's notes to act on
 - RUBY'S AFTERNOON NOTES (2026-10-24), what is left: cloud lighting with depth and faked subsurface scattering; a
   depth pass over all the drawings; clouds more dramatic in the rain and storms that look like storms; wind on trees in
-  the rain that shows its strength and way; a few good buildings near the eye where they don't block the view; planets
+  the rain that shows its strength and way; planets
   and moons with more variety, the ring's distance from its planet by the seed, the star's light on them (color,
   Rayleigh scattering, their air); fictional star systems, other light colors, an accurate Milky Way, skies from other
   galaxies; the generators kept fast and portable for a game; gem walkers and other constructs in magic worlds, elves
@@ -82,7 +92,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 
 ## 5 · Long horizon
 - A GAME, IN ITS OWN REPO SOMEDAY (Ruby, the extreme long term): a fork that explores the ringworlds, finds the idyllic
-  places and has quests, around a story Ruby will write. It means some of these scenes must one day draw in (semi)
+  places and has quests, around a story Ruby will write: "remaking Elder Scrolls Arena basically and setting it on a
+  ringworld (also with transporters to other places like mars and other lands)". Every generator is built toward it:
+  pure functions of seed and clock (the wild things already are), places named and kept, towns a person could walk; the order, each step
+  improving the paintings as well: docs/prior-art/arena-on-a-ringworld.md §5.3. It means some of these scenes must one day draw in (semi)
   real time at phone sizes: the node graphs go, their parts compiled into small fast blocks drawn at once, and world
   state machines added. Prior art: docs/prior-art/realtime-game.md. Keep it in mind when a scene's speed is chosen.
 - THE SATURN RELEASE (Ruby): once every texture is taken apart into parts, a
@@ -114,6 +127,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   laptop or a tablet.
 
 ## 6 · Next (no input needed)
+- TOWARD THE RING'S ARENA (docs/prior-art/arena-on-a-ringworld.md §5.3): a Where on the Ring knob (one seed, a whole
+  ring of views; a film dollying along the band), then regions as arcs with their own world, tradition and ruler, then
+  their names on the milestones and the town boards.
 - SMALLER AND SIMPLER, continued (ROADMAP S): one record per surface (the menu built from the groups); the texture
   suites' one sweep (measured: it would save about a minute of the three); persistenceCoverage on behaviour, not
   slices of the source; AGENTS.md from ~920 lines to ~600 (each rule said once).

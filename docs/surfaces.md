@@ -422,6 +422,14 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     early summer, days of fourteen hours (`SUN_DAY`), long dusks. Time passes in a Camera Round too (Ruby: "time
     should pass during the camera pan"), as much as the sheet says, from the light as it is or from dawn, midday, dusk
     or night.
+  - **The wild things** (Ruby: "wildlife still travel on short predictable paths and do not really move or scatter";
+    wildKit.js, docs/prior-art/ringworld-wildlife.md). Each herd, flock or creature is a store record (`c: 'wild'`) at a
+    home of its own; its members' places come from `wkAt` alone, by the group's seed and `rgMotionTime`, so a film can
+    start anywhere and nothing is remembered. A group lives in eras ending in a move (a herd walking on or bolting and
+    fanning out, a flock flushed together and wheeling down elsewhere, a heron's long flight down the shore), each leg
+    held inside its era so it never jumps at the turn; between moves each member drifts on noise (`wkWander`). Groups come
+    and go one by one with their hours and weather (`rgWildHere`), and are drawn half again their size
+    (`RG_WILD_LICENCE`) so they are found at all; the sheep, gulls, insects, fairies and kites drift on the same noise.
   - **Motion without flicker** (Ruby: "clouds and smoke should follow the wind and never flicker";
     docs/prior-art/ringworld-motion-and-variety.md). The bands and the cirrus ride the wind along chords wide enough that
     they fade in and out low over the horizon, never leaping across the sky; the cirrus is combed along the wind as the

@@ -2,6 +2,21 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Proteus (2026-10-21)
+
+- Loading a look or a preset puts everything back to that look's own: a third or fourth gradient stop it doesn't use
+  goes back to the page's own colour, and a surface's third to sixth hues to that surface's defaults, never the last
+  look's colours left behind (you'd have met them on adding a stop, or on an older look whose surface has more hues).
+
+### Under the hood
+- Housekeeping: reviewed the tests. persistenceCoverage.test no longer slices the app's functions out of its source:
+  on the booted page it changes every control in index.html as a person would, saves the look, loads another, loads
+  the saved one, and reads the control back; it also checks that loading a look never leaves the last look's value
+  behind (which found the stops and hues above) and never moves the page's shape. poem.test's two checks that read
+  the renderer's source are now behaviour in textRender.test: the layout the page records (a run per line, in
+  fractions of the page) and Text Clearing's mask taken out of a surface (`clearedSurface`, exported for it). The DOM
+  mock's inputs carry their `defaultValue`, as a browser's do.
+
 ## Neptune–Hippocamp (2026-10-21)
 
 - Painted Landscape's river is remade. It is one river winding down its valley, seen in perspective: broad bends

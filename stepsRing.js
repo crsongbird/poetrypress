@@ -11,6 +11,7 @@
  * and the land at your feet are the same ring.
  */
 import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
+import { WK_KINDS, WK_FLYERS, wkAt, wkCount, wkPaint, wkWander, wkNoise } from './wildKit.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
 import { PK_TREES, pkTree, PK_STYLE, pkBuilding, pkRock, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
@@ -665,7 +666,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
   const rnd = (a, b) => a + (b - a)*R(), dot = (cx, cy, r, lo, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(rgPx(lo), r), 0, Math.PI*2); x.fill(); };
   if(kind === 'insects'){ // a small cloud of specks over the grass, a pair of wings catching the light on the nearer
     const n = 3 + Math.floor(R()*5), cy = Y - h*rnd(0.5, 1.2);
-    for(let q = 0; q < n; q++){ const ix = X + (R() - 0.5)*h*1.4 + (t ? Math.sin(t*(2.1 + q*0.7) + q*2.3 + X*0.01)*h*0.35 : 0), iy = cy + (R() - 0.5)*h*0.6 + (t ? Math.sin(t*(2.9 + q*0.5) + q*1.7)*h*0.18 : 0); dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));   // (with the clock, a swarm's dance)
+    for(let q = 0; q < n; q++){ const wv = t ? wkWander((c.seed || 0) + q*131, t, 1.1) : [0, 0], ix = X + (R() - 0.5)*h*1.4 + wv[0]*h*0.35, iy = cy + (R() - 0.5)*h*0.6 + wv[1]*h*0.18; dot(ix, iy, h*0.04, 1.9, rsCss(c.dark, 0.8));   // (with the clock, a swarm's dance, never the same twice)
       // (at dusk and by night they are fireflies: each a cold yellow-green light, flashing for most of a second every five
       //  or six, each in its own time)
       //  (each flash swelling and fading, never on in one frame)
@@ -677,8 +678,11 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     if((c.night || 0) > 0.5) return;
     const n = 8 + Math.floor(R()*12), body = rsMix(c.lit, [255, 255, 255], 0.2), back = rsMix(c.lit, [120, 128, 140], 0.45);
     // (most wait on the ground, a few in the air at any moment, two to six metres up; §16)
-    for(let q = 0; q < n; q++){ const air = R() < 0.22, gx = X + (R() - 0.5)*h*6 + (t && air ? Math.sin(t*0.5 + q*1.9)*h*0.8 : 0), gy = air ? Y - h*rnd(0.7, 2.1) + (t ? Math.sin(t*0.8 + q)*h*0.15 : 0) : Y - h*0.05 + (R() - 0.5)*h*0.3, s2 = h*rnd(0.1, 0.14);
-      if(air){ const flap = t ? Math.sin(t*3 + q*2.3)*0.45 : (R() - 0.5)*0.6; x.strokeStyle = rsCss(body, 0.95); x.lineWidth = Math.max(rgPx(0.8), s2*0.28); x.lineCap = 'round'; x.beginPath();
+    // (each bird its own: down in the furrow, then up for a while and wheeling, then down again, on noise of its own)
+    for(let q = 0; q < n; q++){ const ra = R(), bx = (R() - 0.5)*h*6, by2 = (R() - 0.5)*h*0.3, ah = rnd(0.7, 2.1), s2 = h*rnd(0.1, 0.14), f0 = (R() - 0.5)*0.6, sd = (c.seed || 0) + q*977;
+      const up = t ? rsSmooth(0.15, 0.55, wkNoise(sd + 5, t/8)) : ra < 0.22 ? 1 : 0, wv = t ? wkWander(sd, t, 5) : [0, 0], air = up > 0.15;
+      const gx = X + bx + wv[0]*h*0.9*up, gy = Y - h*0.05 + by2*(1 - up) - h*ah*up + wv[1]*h*0.15*up;
+      if(air){ const flap = t ? Math.sin(t*3 + q*2.3)*0.45 : f0; x.strokeStyle = rsCss(body, 0.95); x.lineWidth = Math.max(rgPx(0.8), s2*0.28); x.lineCap = 'round'; x.beginPath();
         x.moveTo(gx - s2*1.8, gy - s2*flap*1.6); x.quadraticCurveTo(gx - s2*0.7, gy - s2*(0.5 + flap), gx, gy); x.quadraticCurveTo(gx + s2*0.7, gy - s2*(0.5 + flap), gx + s2*1.8, gy - s2*flap*1.6); x.stroke();
         dot(gx - s2*1.7, gy - s2*flap*1.6, s2*0.18, 0.4, rsCss(c.dark, 0.8)); dot(gx + s2*1.7, gy - s2*flap*1.6, s2*0.18, 0.4, rsCss(c.dark, 0.8)); }
       else { x.fillStyle = rsCss(body, 0.95); x.beginPath(); x.ellipse(gx, gy - s2*0.5, s2*0.9, s2*0.45, 0, 0, Math.PI*2); x.fill(); x.fillStyle = rsCss(back, 0.95); x.beginPath(); x.ellipse(gx + s2*0.15, gy - s2*0.6, s2*0.6, s2*0.25, 0, 0, Math.PI*2); x.fill();
@@ -686,7 +690,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     return; }
   if(kind === 'fairies'){ // a few points of light drifting low, each with a faint trail behind it
     const n = 1 + Math.floor(R()*3);
-    for(let q = 0; q < n; q++){ const fx = X + (R() - 0.5)*h*2 + (t ? Math.sin(t*0.45 + q*2.1)*h*0.6 : 0), fy = Y - h*rnd(0.4, 1.4) + (t ? Math.sin(t*0.7 + q)*h*0.2 : 0), dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);   // (drifting, with the clock)
+    for(let q = 0; q < n; q++){ const wv = t ? wkWander((c.seed || 0) + q*211, t, 6) : [0, 0], fx = X + (R() - 0.5)*h*2 + wv[0]*h*0.6, fy = Y - h*rnd(0.4, 1.4) + wv[1]*h*0.25, dx = (R() < 0.5 ? -1 : 1)*Math.max(rgPx(4), h*0.18);   // (drifting where it will, with the clock)
       rgGlow(x, fx, fy, Math.max(rgPx(12), h*0.32), c.glow, 0.4);
       for(let t = 1; t <= 3; t++) dot(fx - dx*t, fy + dx*0.15*t*t*Math.sign(dx), h*0.025*(1 - t*0.22), 1 - t*0.2, rsCss(c.glow, 0.32/t));
       dot(fx, fy, h*0.04, 2.2, rsCss(rsMix(c.glow, [255, 255, 255], 0.6), 0.85)); }
@@ -695,7 +699,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     // on its string (with the clock), its tail of bows streaming and waving; put away by dusk and in rain or snow
     if((c.night || 0) > 0.4 || /rain|storm|snow|fog/.test(c.weather || '')) return;
     const [wa, ws] = c.wind || [0, 5], dir = Math.cos(wa) < 0 ? -1 : 1, lift = Math.min(1, ws/8), ph = X*0.017;
-    const hx = X + dir*h*0.12, hy = Y - h*0.48, bobX = t ? Math.sin(t*0.6 + ph)*h*0.5 : 0, bobY = t ? Math.sin(t*1.1 + ph*1.7)*h*0.3 : 0;
+    const hx = X + dir*h*0.12, hy = Y - h*0.48, bobX = t ? wkNoise((c.seed || 0) + 3, t/2.5)*h*0.6 : 0, bobY = t ? wkNoise((c.seed || 0) + 9, t/1.7)*h*0.35 : 0;
     const kx = X + dir*h*rnd(2.2, 3.6)*(0.6 + 0.4*lift) + bobX, ky = Y - h*rnd(3, 4.6)*(0.5 + 0.5*lift) + bobY, ks = h*rnd(0.22, 0.32), tilt = (t ? Math.sin(t*1.7 + ph)*0.25 : 0) + dir*0.3;
     // (the flyer: a small dark figure, an arm up to the string)
     x.strokeStyle = rsCss(c.dark, 0.9); x.lineWidth = Math.max(rgPx(1), h*0.07); x.lineCap = 'round'; x.beginPath(); x.moveTo(X, Y); x.lineTo(X, Y - h*0.42); x.moveTo(X, Y - h*0.38); x.lineTo(hx, hy); x.stroke();
@@ -804,6 +808,8 @@ const RG_CROPS = { wheat: { c: [214, 184, 100] }, barley: { c: [200, 190, 128] }
   garden: { c: [150, 190, 140], row: [2, [106, 158, 108]] }, orchard: { c: [112, 150, 74] }, olives: { c: [176, 160, 118] }, 'orchard rows': { c: [126, 150, 86], row: [3.4, [50, 90, 46]] }, 'olive rows': { c: [176, 160, 118], row: [4, [100, 118, 92]] }, moonflower: { c: [150, 166, 186], row: [2, [128, 140, 176]], glow: true }, fallow: { c: [146, 136, 94] } };
 const RG_STREET_KINDS = ['lamp', 'hydrant', 'busstop', 'phonebox', 'vending', 'signal', 'kiosk', 'cart', 'parked', 'scooter'];
 const RG_DOORLESS = ['arch', 'needle', 'pylon', 'torii', 'turbine', 'radiomast', 'watertower', 'windmill', 'silo', 'elevator'];   // (what no one goes in at)
+// (the kinds drawn best, that may stand near the eye, by world)
+const RG_NEAR_KINDS = { cities: ['row', 'brick', 'chapel', 'cottage'], neon: ['motel', 'capsule'], builders: ['observatory', 'geodome', 'dome'], magic: ['wizard', 'chapel', 'cottage'], ruins: ['castle', 'chapel'] };
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
@@ -1027,6 +1033,17 @@ function rgStore(V){
       else {   // the old ones' ruin
         const n = 2 + Math.floor(R()*4); for(let k = 0; k < n; k++){ const t = (k - (n - 1)/2)*(4 + 2*R())*M; put({ c: 'prop', w, kind: 'column', hM: pkMetres('column', R()) }, a0 + ca*t, z0 + sn*t, R); }
         if(R() < 0.5) put({ c: 'prop', w, kind: 'dolmen', hM: pkMetres('dolmen', R()), face: th }, a0 - sn*8*M, z0 + ca*8*M, R); } } }
+  // A FEW GOOD BUILDINGS NEAR THE EYE (Ruby: "Buildings sparsely can be generated close to the starting position, but
+  // only in a way that makes sense where building doesn't obstruct entire view, and only good looking building
+  // models"): now and then, one to three of a world's finest kinds stand sixty to two hundred metres off, on good
+  // ground, off the ways, turned to face the eye; never in the Wilds, which keep their own places. Drawn faint as one
+  // grows to fill the frame (rgPaintThing0), so none ever blocks the whole view
+  { const RN = rgRand(s, 1720), w0 = V.worldAt(0, L.z0), kinds = RG_NEAR_KINDS[w0];
+    if(kinds && RN() < 0.7) for(let k = 0, n = 2 + Math.floor(RN()*3); k < n; k++){ const an = RN()*Math.PI*2, d = (60 + 140*RN())*M, a = Math.cos(an)*d, z = L.z0 + Math.sin(an)*d, kind = kinds[Math.floor(RN()*kinds.length)], hu = RN(), wu = RN();
+      if(Math.abs(z) > W*0.46 || V.worldAt(a, z) !== w0) continue; const g = ground(a, z); if(g.wet || g.slope > 0.35 || !rgFits(kind, g, 0.5)) continue;
+      const hM = Math.min(kind === 'wizard' ? 36 : 28, pkMetres(kind, 0.3 + 0.4*hu)), wM = pkMetres(kind, wu, 1);   // (never a tower over the eye) if(!offWay(a, z, wM*M*0.5 + 4*M)) continue;
+      const face = Math.atan2(L.z0 - z, -a), ft = footing(a, z, wM, face); if(!ft) continue;
+      out.push({ c: 'bldg', w: w0, kind, hM, wM, face, near: true, a, z, r: d, rs: (RN()*4294967296) >>> 0, ...ft }); } }
   // (a town's lights by night, between its houses: streets, yards, windows too small to be houses, out to the far
   //  side of the land; few in the ruins, a fire here and there)
   sow(14, W*0.005, W*0.03, W*2.5, 2, (a, z, r, R) => { const w = V.worldAt(a, z), ci = w === 'wilds' ? V.cityAt(a, z, 0.12) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
@@ -1199,6 +1216,30 @@ function rgStore(V){
       const g = ground(a, z); if(g.wet || g.slope > 1.2) return null; const L2 = PK_BOTS[w] || PK_BOTS.cities, kind = L2[Math.floor(R()*L2.length)];
       if(kind === 'derelict' && R() > 0.2) return null;
       return { c: 'bot', w, kind, hM: pkMetres(kind, R()) }; }); }
+  // THE WILD THINGS (Ruby: "wildlife still travel on short predictable paths and do not really move or scatter, we
+  // should probably have more wildlife in general (birds, small things)"; docs/prior-art/ringworld-wildlife.md): herds,
+  // flocks and single creatures, each group at a home of its own and moving by wildKit's clock. Which kind, by the world
+  // and the ground: deer and elk where wood meets open land, hares and a fox in the open; rooks, starlings and sparrows
+  // on open ground, pigeons and sparrows in town; ducks and swans on the water by its edge, a heron at the edge; over
+  // the land a raptor circling and swallows and swifts hawking, bats round the trees and water at dusk, butterflies and
+  // dragonflies near you, and now and then a skein of geese going over
+  { const LIFE = V.life, wildish = w => ({ wilds: 1, magic: 0.85, ruins: 0.75, cities: 0.55, builders: 0.4, neon: 0.12 })[w] ?? 0.5, wild = (kind, w, x2 = {}) => ({ c: 'wild', kind, w, ...x2 });
+    sow(17, W*0.02, W*0.04, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.5*LIFE*wildish(w)) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+      if(g.wet || g.slope > 0.7 || fo < 0.1 || fo > 0.62 || inTown(w, a, z)) return null; return wild(T.true(a, z, W*0.01) > TR.snow*0.3 || R() < 0.2 ? 'elk' : 'deer', w); });
+    sow(18, W*0.008, W*0.02, W*0.25, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.24*LIFE*wildish(w)) return null; const g = ground(a, z);
+      if(g.wet || g.slope > 0.6 || V.forestAt(a, z) > 0.5 || inTown(w, a, z)) return null; return wild(R() < 0.3 ? 'fox' : 'hare', w); });
+    sow(19, W*0.012, W*0.03, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.38*LIFE) return null; const g = ground(a, z); if(g.wet || V.forestAt(a, z) > 0.45) return null;
+      const u = R(); return wild(inTown(w, a, z) ? (u < 0.6 ? 'pigeons' : 'sparrows') : w === 'ruins' || w === 'magic' ? (u < 0.7 ? 'rooks' : 'starlings') : u < 0.45 ? 'rooks' : u < 0.8 ? 'starlings' : 'sparrows', w); });
+    sow(20, W*0.012, W*0.03, W*0.5, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE) return null; const g = ground(a, z); if(!g.coast) return null;
+      if(g.wet) return wild(R() < 0.25 ? 'swans' : 'ducks', w, { afloat: true }); return R() < 0.5 ? wild('heron', w) : null; });
+    sow(21, W*0.06, W*0.12, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE*(w === 'neon' ? 0.25 : 1)) return null; const u = R();
+      return wild(inTown(w, a, z) ? (u < 0.7 ? 'swifts' : 'raptor') : u < 0.4 ? 'raptor' : u < 0.8 ? 'swallows' : 'swifts', w); });
+    sow(22, W*0.015, W*0.04, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE) return null; const g = ground(a, z); if((g.wet && !g.coast) || (!g.coast && V.forestAt(a, z) < 0.3)) return null; return wild('bats', w); });
+    sow(24, W*0.004, W*0.008, W*0.04, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet && !g.coast) return null; return wild(g.coast ? 'dragonflies' : 'butterflies', w); });
+    // (and near you, where they are seen best: a hare or two, a fox, a few birds on the grass, swallows over it)
+    sow(25, W*0.005, W*0.012, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.5*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
+      const u = R(), town = inTown(w, a, z), fo = V.forestAt(a, z); return wild(town ? (u < 0.5 ? 'sparrows' : u < 0.8 ? 'pigeons' : 'swifts') : fo > 0.5 ? (u < 0.5 ? 'butterflies' : 'sparrows') : u < 0.3 ? 'hare' : u < 0.4 ? 'fox' : u < 0.6 ? 'swallows' : u < 0.8 ? 'starlings' : 'rooks', w); });
+    sow(23, W*0.4, W*0.8, W*2.4, 1, (a, z, r, R) => R() < 0.35*LIFE ? wild('geese', V.worldAt(a, z)) : null); }
   // SMALL THINGS near you (Ruby: "small things that get found closer to the player"): fences and mailboxes in the wilds,
   // lamps, benches and bicycles in town, barrels and crates in the ruins, now and then a person, for scale
   // (each where it belongs: hay, a scarecrow, a tractor in the open fields; a well, a shrine, a mailbox by a village; a
@@ -1444,7 +1485,7 @@ function rgPaintLand(x, mk, dk, V){
   //  a turn never swaps one for another)
   const store = rgStore(V); let loudOne = null, loudR = Infinity;
   for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
-  const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : W*0.0004;
+  const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, draw: l => rgPaintThing(o, l, dd) }); }
   // (Ruby: "don't clip objects until they are entirely out of frame": a thing near you is drawn however large it grows,
   //  until it is so large it would fill the frame from edge to edge, or wholly off it; vis() tests the frame itself)
@@ -1482,17 +1523,20 @@ function rgPaintLand(x, mk, dk, V){
   // the last, so its path never closes into a loop and nothing need be remembered from frame to frame; it walks from
   // one stop to the next at its own pace, setting off and arriving gently, faces the way it walks, and waits at the
   // stop until that leg's time is up. [metres it ranges along its way, across it, its pace in metres a second] by kind:
-  // a person along the street or lane it is beside, a drone in quick straight legs between hovers, a sheep a step or
-  // two as it grazes, a harvester and a lamplighter along their rows and rounds
-  const MT = rgMotionTime(V), ST = rgSwayTime(V), FT = rgFilmTime(V);
+  // a person along the street or lane it is beside, a drone in quick straight legs between hovers, a harvester and a
+  // lamplighter along their rows and rounds (the wild things and the grazing sheep go by wildKit's clock instead)
+  const MT = rgMotionTime(V), ST = rgSwayTime(V), FT = rgFilmTime(V), DSUN = [V.sun.screen[0], -V.sun.screen[1], -(V.sun.D[0]*L.fx + V.sun.D[1]*L.fy + V.sun.D[2]*L.fz)];
   const RG_MOVES = { helper: [14, 14, 1.0], drone: [12, 12, 4], crawler: [8, 8, 0.4], walker: [24, 24, 1.5], harvester: [40, 5, 1.6], shepherd: [16, 16, 1.0], crab: [5, 5, 0.3],
-    lamplighter: [16, 3, 1.0], sheep: [2, 2, 0.15], figure: [18, 1.5, 1.25] };
+    lamplighter: [16, 3, 1.0], figure: [18, 1.5, 1.25] };
   // (a walker with a door, at its going-in: from wherever its round has it, along the way to its door, in at the door; and
   //  out again at its dawn. Where along it, by how far the dusk has come where it stands, so nothing need be remembered)
   const toDoor = (o, p) => { const q = ((o.rs >>> 10) % 1000)/1000; if(!o.door || q < 0.1) return p;
     const out = 0.08 + 0.92*rsSmooth(0.15, 0.65, ringDay(L, o.a)), k = rsSmooth(q + 0.14, q + 0.03, out); if(k <= 0) return p;
     const da = o.door.a - p.a, dz = o.door.z - p.z; return { ...p, a: p.a + da*k, z: p.z + dz*k, ...(k < 1 && Math.hypot(da, dz) > W*0.0001 ? { face: Math.atan2(dz, da), walking: 1 } : { walking: 0 }) }; };
-  const moved = (o, mt = MT) => o.door ? toDoor(o, movedRound(o, mt)) : movedRound(o, mt);
+  // (a sheep grazes on a drift of its own, a few metres this way and that, never round a loop)
+  const grazed = (o, mt) => { const w = wkWander(o.rs, mt, 50), w2 = wkWander(o.rs, mt + 2, 50), M1 = W*0.00025, A = 5, v = Math.hypot(w2[0] - w[0], w2[1] - w[1])*A/2;
+    return { ...o, a: o.a + w[0]*A*M1, z: o.z + w[1]*A*M1, face: v > 0.004 ? Math.atan2(w2[1] - w[1], w2[0] - w[0]) : o.face, walking: Math.min(1, v/0.25) }; };
+  const moved = (o, mt = MT) => o.kind === 'sheep' ? (V.time ? grazed(o, mt) : o) : o.door ? toDoor(o, movedRound(o, mt)) : movedRound(o, mt);
   const movedRound = (o, mt) => { const mv = V.time && RG_MOVES[o.kind]; if(!mv) return o; const M1 = W*0.00025, R = mulberry32(o.rs ^ 0x6d6f7665), ax = o.walk ?? o.face ?? (o.rs % 62832)/10000;
     const ca = Math.cos(ax), sa = Math.sin(ax), pace = mv[2]*(0.8 + 0.35*R()), T = 2*Math.hypot(mv[0], mv[1])/pace/0.95 + 2 + 8*R(), t = mt + R()*T*40;
     // (a person, a harvester and a lamplighter go up and down their street, row or round, each stop at its own distance
@@ -1510,12 +1554,38 @@ function rgPaintLand(x, mk, dk, V){
   // (a thing that moves farther in one of a film's frames than its own size (a time-lapse's drone, or a walker near the
   //  eye) is seen as a long exposure sees it: faint while it goes, whole where it stops, so it never flicks from place to
   //  place, there one frame and gone the next)
+  // THE WILD THINGS painted (wildKit.js): each member where its clock has it, on the ground or up in the air over it,
+  // facing the way it goes as the eye sees it; a group comes and goes with its hours and weather, one group at a time
+  // (bats at dusk, the day's birds to roost, swallows down and raptors grounded in rain); in a time-lapse a member that
+  // crosses more than its size in a frame is drawn faint, as a long exposure sees it
+  // (drawn half again their size, as a painter does the creatures in a landscape so that they are found at all)
+  const RG_WILD_LICENCE = 1.5, rgWildHere = (o, night) => { const k = o.kind, q = ((o.rs >>> 8) % 1000)/1000, wet = /rain|storm/.test(V.weather), cold = /snow/.test(V.weather);
+    const av = k === 'bats' ? (cold ? 0 : rsSmooth(0.2, 0.5, night)) : ['swallows', 'swifts', 'butterflies', 'dragonflies', 'raptor'].includes(k) ? (1 - rsSmooth(0.25, 0.6, night))*(cold ? 0 : wet ? (k === 'swallows' ? 0.7 : 0) : 1)
+      : ['rooks', 'pigeons', 'starlings', 'sparrows'].includes(k) ? (1 - rsSmooth(0.35, 0.7, night))*(V.weather === 'storm' ? 0.3 : 1) : k === 'fox' ? 0.35 + 0.65*rsSmooth(0.15, 0.45, night) : 1;
+    return av >= 1 ? 1 : av <= 0 ? 0 : rsSmooth(q - 0.04, q + 0.04, av); };
+  const rgPaintWild = (o, l, dd) => { const K = WK_KINDS[o.kind], wday = ringDay(L, o.a), night = 1 - rsSmooth(0.3, 0.7, wday), pres = rgWildHere(o, night); if(pres < 0.02) return;
+    const haze = hazeOf(dd), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday)), n = wkCount(o.kind, o.rs), t = V.time ? MT : 0, step = V.frame !== null && V.time ? Math.min(2.5, rgStep(V)) : 0;
+    const env = { wind: rgWind(V) }, M1 = W*0.00025, fly = WK_FLYERS.includes(o.kind), c = { ...colsOf(o.w, cday, haze), flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, g, Math.max(0.4, wday), haze, AIR)) }, out2 = [];
+    for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); if(!st.on) continue;
+      const a = o.a + st.x*M1, z = o.z + st.z*M1, f = foot(a, z); if(!f) continue; const m = f[2], sz = K.size*m*RG_WILD_LICENCE;
+      if((sz < px(0.7) && !fly) || sz > wh*0.5 || (f[3] <= TR.sea && !o.afloat && !st.y)) continue;
+      const X = f[0], Y = fly || st.y ? f[1] : stand(l, X, f[1]), yy = Y - st.y*m; if(!vis(l, X - sz, X + sz, yy - sz, yy + sz*0.3)) continue;
+      // (its heading a step along, seen: which way it faces on the page, and how side-on)
+      const g2 = foot(a + Math.cos(st.face)*M1*3, z + Math.sin(st.face)*M1*3), side = Math.abs(Math.sin(st.face - Math.atan2(L.z0 - z, -a)));
+      let al = pres*st.on; if(step > 0.2){ const p = wkAt(o.kind, o.rs, j, t - step, env), fp = p.on ? foot(o.a + p.x*M1, o.z + p.z*M1) : null;
+        if(fp) al *= rsSmooth(Math.max(px(2), sz)*2.5, Math.max(px(2), sz)*0.9, Math.hypot(fp[0] - X, fp[1] - p.y*fp[2] - yy)); }
+      if(al < 0.03) continue;
+      out2.push([m, () => { x.globalAlpha = al; wkPaint(x, X, Y, m*RG_WILD_LICENCE, o.kind, { ...st, y: st.y/RG_WILD_LICENCE, dir: !g2 || g2[0] >= X ? 1 : -1, side, stag: j === 0 && (o.rs & 4), hue: j }, c, rgPx); x.globalAlpha = 1; }]); }
+    out2.sort((p, q) => p[0] - q[0]); for(const [, d] of out2) d(); };
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
+    // (a building standing near the eye is drawn faint as it grows to fill the frame, gone before it could block it)
+    if(o0.near){ const f1 = foot(o0.a, o0.z); if(!f1) return; const nf = rsSmooth(ww*0.8, ww*0.45, o0.wM*f1[2]*1.6)*rsSmooth(wh*1.05, wh*0.65, o0.hM*f1[2]); if(nf < 0.03) return;
+      if(nf < 0.97){ x.save(); x.globalAlpha = nf; rgPaintThing0(o0, l, dd, o0); x.restore(); return; } }
     if(V.frame === null || o === o0) return rgPaintThing0(o, l, dd, o0);
     const p = moved(o0, MT - Math.min(2.5, rgStep(V))), f1 = foot(o.a, o.z), f0 = foot(p.a, p.z); if(!f1 || !f0) return rgPaintThing0(o, l, dd, o0);
     const sz = Math.max(px(2), (o.hM || 1.7)*f1[2]), gh = rsSmooth(sz*2.5, sz*0.9, Math.hypot(f1[0] - f0[0], f1[1] - f0[1]));
     if(gh >= 0.97) return rgPaintThing0(o, l, dd, o0); if(gh < 0.03) return; x.save(); x.globalAlpha = gh; rgPaintThing0(o, l, dd, o0); x.restore(); };
-  const rgPaintThing0 = (o, l, dd, o0) => {
+  const rgPaintThing0 = (o, l, dd, o0) => { if(o.c === 'wild') return rgPaintWild(o, l, dd);
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));   // (its colours by the sun that reaches it, under a cloud's shadow or not; its nights by the hour)
     if(o.c === 'tree'){ const h = o.hM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1) || h > nearCut) return;   // (Ruby: "trees … culled too early": kept down to a speck)
@@ -1570,8 +1640,9 @@ function rgPaintLand(x, mk, dk, V){
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*1.1, Y)) return;
       // (set into the ground a little, always; the ruins' wrecks and bikes half buried, clipped where the ground meets them)
       // (a dish turned to where the array listens now, its own moment late: rgDishAim)
+      // (and lit, piece by piece, from where the sun is: its way across the screen, up it, and toward the eye)
       const aim = o.kind === 'dish' ? rgDishAim(s, V.time > 0 ? FT : 0, ((o.rs >>> 5) % 1000)/1000*0.9) : null;
-      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(aim ? { ...o, face: aim[0] } : o, f), ...(aim ? { dishEl: aim[1] } : {}) };
+      const c = colsOf(o.w, cday, haze), sink = h*(0.025 + (o.sink || 0)), cc = { ...c, noWires: !!o.next, view: o.kind === 'pole' ? null : seen(aim ? { ...o, face: aim[0] } : o, f), ...(aim ? { dishEl: aim[1], sun3: DSUN } : {}) };
       // PEOPLE BY THE HOUR (Ruby: "humans … should mostly try to go inside at night"; docs/prior-art/ringworld-life-and-
       // views.md §1, §7): by day nearly everyone is out, by night about one in twelve (§1's counts: from 23:00 to 05:00 some
       // 8% of noon's), the night watch with a lantern and a late walker; each goes in at its own point of the dusk and out
@@ -1605,7 +1676,7 @@ function rgPaintLand(x, mk, dk, V){
     const glow = colsOf(o.w, cday, haze).glow;
     const lc = { night: 1 - rsSmooth(0.3, 0.7, wday), dark: rgLit(V, [34, 30, 28], cday, haze, AIR), lit: rgLit(V, [236, 240, 246], cday, haze, AIR), glow,
       flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, rsMix(g, [0, 0, 0], 0.1), Math.max(0.4, wday), haze, AIR)),
-      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR), weather: V.weather, wind: rgWind(V) };
+      slime: rgLit(V, rsMix(V.g2, [120, 200, 150], 0.45), Math.max(0.4, wday), haze, AIR), weather: V.weather, wind: rgWind(V), seed: o.rs };
     rgSmallLife(x, X, Y, hh*(0.8 + 0.4*R()), o.kind, lc, R, ST);
   };
   // THE WORKS, standing in the world: spires, monoliths, domes, circles, pillars, craters, wrecks, towers, crystals

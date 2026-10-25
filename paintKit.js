@@ -918,9 +918,10 @@ const PK_BUILT = {
 // vanishes whole, and the train runs on a gentle clock (at most a quarter second a frame: c.smt), never strobing
 function pkSmoke(x, X, Y, wd, step, c, n, a0){ const wx = c.windX ?? -c.sd*0.6, tm = c.smt ?? c.mt ?? c.t, run = tm ? (tm*0.12) % 1 : 0, col = pkCss(pkMix(c.lit, c.air || c.lit, 0.45));
   const up = step*(1 - 0.55*Math.min(1, Math.abs(wx)))*Math.cbrt(n), ph = (X*0.013 + Y*0.007) % 6.28;
-  for(let k = 0; k < n; k++){ const f = k + run, a = a0*(1 - f/n)*(tm ? pkSs(0, 0.8, f) : 1); if(a <= 0.01) continue; x.globalAlpha = a;
+  const GA = x.globalAlpha;   // (laid at whatever the thing it rises from is laid at)
+  for(let k = 0; k < n; k++){ const f = k + run, a = a0*(1 - f/n)*(tm ? pkSs(0, 0.8, f) : 1); if(a <= 0.01) continue; x.globalAlpha = GA*a;
     pkDisc(x, X + f*wd*0.07*wx*1.4 + Math.sin(f*1.3 + ph)*wd*0.012*f, Y - up*Math.pow(f, 2/3), wd*(0.04 + f*0.024), col); }
-  x.globalAlpha = 1; }
+  x.globalAlpha = GA; }
 const PK_ROUND = ['windmill', 'yurt', 'rondavel', 'trullo', 'dome', 'oast', 'dovecote', 'radiomast', 'elevator', 'needle', 'silo', 'lighthouse', 'watertower', 'geodome',
   'observatory', 'wizard', 'onion']; // (round: the same from every side)
 // SQUARE AND ALIKE ON FOUR SIDES (Ruby: "definitely up to 16 points of rotation for buildings"): a pagoda and a mosque
@@ -1018,6 +1019,7 @@ function pkFaceProofOf(face, c, R0, h, wdt, eave){ const out = {};
 // the thing's own face at a context's origin), back (it has a back of its own to draw), ends (its sides each the colour
 // of its own end), plain (no windows, no cast shadow: a small thing) }
 function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
+  const GA = x.globalAlpha;   // (drawn faint as a whole when its caller lays it faint)
   const { kind, dk, eave: eave0, roofM, at: crownAt = 1, rim = 0.035, face } = o, S = pkSpace(X, Y, 1, c.view), sd = c.sd, mpx = c.mpx || wdt/10;
   // (the same thing every way: its stream taken once, and its shape and colours read back from a small proof of its face)
   const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0, o.id && o.id + '|' + v0 + '|' + Math.round(night*20) + '|' + px(100).toFixed(3)); R0 = R1;
@@ -1059,7 +1061,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
     face(x, { ...c, view: null, vside: sideN === 1 ? -1 : 1, vdep: 1e-6, nocast: true }, R0); x.restore(); };
   if(!front) crown();
   tiers.forEach((T, i) => { const a = T.a*wdt, Dt = D*T.a*wdt/w2, zt = h*T.z, sv = sideN*a, fu = (front ? 1 : -1)*Dt/2, last = i === tiers.length - 1;
-    if(glassy) x.globalAlpha = 0.6;
+    if(glassy) x.globalAlpha = GA*0.6;
     { const ew = o.ends && pr[sideN], ec = ew ? { body: ew, lit: pkMix(ew, PK_WHITE, 0.25), dark: pkMix(ew, PK_BLACK, 0.4) } : c;
       if(side){ wall([[-Dt/2, sv, z0], [Dt/2, sv, z0], [Dt/2, sv, zt], [-Dt/2, sv, zt]], 0, sideN, ec); windows(-Dt/2 + Dt*0.08, sv, Dt/2 - Dt*0.08, sv, z0 + (zt - z0)*0.05, zt*0.97, Rw); }
       if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof || rm.body, o = wdt*0.04;
@@ -1078,9 +1080,9 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
     if(!front && o.back){ // from behind, a thing with a back of its own (a vending machine's): that, on the back plane
       faceOn(fu, i ? z0 : -h, last ? zTop : zt, a, { ...c, view: null, back: true, vdep: 1e-6, nocast: true }); }
     else if(!front){ // from behind: its back wall and gable, its windows
-      if(glassy) x.globalAlpha = 0.6; wall([[fu, a, z0], [fu, -a, z0], [fu, -a, zt], [fu, a, zt]], -1, 0); if(eave) pkPoly(x, [S.P(fu, a, Hs), S.P(fu, -a, Hs), S.P(fu, 0, ridge)], pkCss(shadeOf(-1, 0)));
-      windows(fu, a*0.85, fu, -a*0.85, z0 + (zt - z0)*0.08, zt*0.95, Rw); x.globalAlpha = 1; }
-    else { x.globalAlpha = 1; // the front: the building's own face, this step's band of it, laid on this step's plane (narrowed by the turn,
+      if(glassy) x.globalAlpha = GA*0.6; wall([[fu, a, z0], [fu, -a, z0], [fu, -a, zt], [fu, a, zt]], -1, 0); if(eave) pkPoly(x, [S.P(fu, a, Hs), S.P(fu, -a, Hs), S.P(fu, 0, ridge)], pkCss(shadeOf(-1, 0)));
+      windows(fu, a*0.85, fu, -a*0.85, z0 + (zt - z0)*0.08, zt*0.95, Rw); x.globalAlpha = GA; }
+    else { x.globalAlpha = GA; // the front: the building's own face, this step's band of it, laid on this step's plane (narrowed by the turn,
       // sheared back into depth); the top step keeps all above it (a spire, a crown, a chimney)
       faceOn(fu, i ? z0 : -h, last ? zTop : zt, a, { ...c, view: null, vside: sideN === 1 ? -1 : 1, vdep: 1e-6, nocast: true }); }
     z0 = zt; });
@@ -1471,21 +1473,64 @@ function pkSolidProp(x, X, Y, h, c, kind, R0, px, night){
     else { x.strokeStyle = pkCss(pkMat(c, [236, 228, 210], 0.8).body); x.lineWidth = Math.max(px(0.6), h*0.1); x.beginPath(); x.moveTo(mx, my - h*0.38); x.lineTo(bx, by - h*0.05); x.stroke(); } }
   if(night > 0.3 && type !== 'row') pkGlow(x, ...S.P(L*0.1, 0, H + 0.8), h*0.6, c.glow, 0.4*night);
 }
-// AN ANTENNA DISH, turned in the round (Ruby: dishes that "point in sync at the same targets"): its pedestal, and the
-// dish on its yoke turned to a bearing (c.view: how that bearing stands to the eye) and tipped up to a height in the
-// sky (c.dishEl, radians): the disc drawn as the eye sees it, its bowl when it faces you and its ribbed back when it
-// faces away, the feed on its struts out along its axis. Without a view, tipped toward the light as it always was
+// AN ANTENNA DISH, built in the round (Ruby: dishes that "point in sync at the same targets"; then "the satellite dish
+// definitely needs depth and the bits need to connect to each other"): a bowl a third of its radius deep (a paraboloid
+// of focal ratio 0.4, as most big dishes are), its feed held at the focus on four legs from the rim, its back braced to
+// a hub, the hub on an elevation axle between the yoke's two arms, the yoke turning on the pedestal's head. Every piece
+// is a point in the dish's own space, turned to its aim (c.view: how its bearing stands to the eye; c.dishEl: its height
+// in the sky, radians), seen a little from above, and painted far to near, so each piece meets the next however it is
+// turned; each face lit from the sun's way (c.sun3: right, up, toward the eye). Without a view, turned toward the light
 function pkDish(x, X, Y, h, c, px){
-  const m = pkMat(c, [228, 228, 224], 0.5), steel = pkMat(c, PK_STEEL, 0.65), r = h*0.45, el = c.dishEl ?? 0.9, cs = c.view ? c.view.cs : 0.75, sn = c.view ? c.view.sn : -0.66*c.sd;
-  const ns = Math.cos(el)*sn, nu = Math.sin(el), nt = Math.cos(el)*cs, ang = Math.atan2(-nu, ns) + Math.PI/2, k = Math.max(0.06, Math.abs(nt)), cy = Y - h*0.55;
-  pkPoly(x, [[X - h*0.15, Y], [X - h*0.05, Y - h*0.45], [X + h*0.05, Y - h*0.45], [X + h*0.15, Y]], pkCss(steel.dark));
-  const feed = () => { x.strokeStyle = pkCss(steel.dark); x.lineWidth = Math.max(px(0.4), r*0.02); x.beginPath(); const fx = X + ns*r*0.75, fy = cy - nu*r*0.75;
-    for(const s of [-0.7, 0, 0.7]){ const ex = X + Math.cos(ang)*s*r, ey = cy + Math.sin(ang)*s*r; x.moveTo(ex, ey); x.lineTo(fx, fy); } x.stroke(); pkDisc(x, fx, fy, r*0.05, pkCss(steel.dark)); };
-  if(nt < 0) feed();   // (facing away: the feed behind the dish)
-  x.save(); x.translate(X, cy); x.rotate(ang); x.fillStyle = pkCss(nt >= 0 ? m.dark : pkMix(m.dark, PK_BLACK, 0.15)); x.beginPath(); x.ellipse(0, 0, r, r*k, 0, 0, Math.PI*2); x.fill();
-  if(nt >= 0){ x.fillStyle = pkCss(m.body); x.beginPath(); x.ellipse(0, r*k*0.08, r*0.92, r*k*0.86, 0, 0, Math.PI*2); x.fill(); }
-  else if(h > px(14)){ x.strokeStyle = pkCss(steel.dark, 0.6); x.lineWidth = Math.max(px(0.3), r*0.012); x.beginPath(); for(let q = 0; q < 6; q++){ const a = q/6*Math.PI*2; x.moveTo(0, 0); x.lineTo(Math.cos(a)*r*0.95, Math.sin(a)*r*k*0.95); } x.stroke(); }
-  x.restore(); if(nt >= 0) feed(); }
+  const el = c.dishEl ?? 0.9, cs = c.view ? c.view.cs : 0.75, sn = c.view ? c.view.sn : -0.66*c.sd;
+  const paint = pkMat(c, [234, 234, 230], 0.55), backing = pkMat(c, [168, 172, 176], 0.6), steel = pkMat(c, PK_STEEL, 0.65);
+  const S0 = c.sun3 || [c.sd*0.6, 0.65, 0.4], Sl = Math.hypot(S0[0], S0[1], S0[2]) || 1, S = [S0[0]/Sl, S0[1]/Sl, S0[2]/Sl];
+  const tone = (m, k) => k < 0.5 ? pkMix(m.dark, m.body, k*2) : pkMix(m.body, m.lit, Math.min(1, (k - 0.5)*2));
+  const lam = N => 0.22 + 0.78*Math.max(0, N[0]*S[0] + N[1]*S[1] + N[2]*S[2]);
+  // (the eye a little above: y up and z toward the eye, tipped down by TL, so the turntable shows its top)
+  const TL = 0.17, ct = Math.cos(TL), st = Math.sin(TL), P = p => [X + p[0]*h, Y - (p[1]*ct - p[2]*st)*h, p[2]*ct + p[1]*st], faces = N => N[2]*ct + N[1]*st;
+  const add = (a, b, k) => [a[0] + b[0]*k, a[1] + b[1]*k, a[2] + b[2]*k], unit = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; };
+  // its frame: n the way it looks, u its axle (level, across its bearing), v up its face
+  const n = [Math.cos(el)*sn, Math.sin(el), Math.cos(el)*cs], u = [cs, 0, -sn], v = [n[1]*u[2], n[2]*u[0] - n[0]*u[2], -n[1]*u[0]];
+  const Rd = 0.4, dp = Rd*0.3125, A = [0, 0.5, 0], C = add(A, n, 0.07 + dp), F = add(C, n, Rd*0.4875);
+  const er = th => add(add([0, 0, 0], u, Math.cos(th)), v, Math.sin(th)), bowl = (rho, th) => add(add(C, er(th), Rd*rho), n, -dp*(1 - rho*rho));
+  const inward = (rho, th) => unit(add(n, er(th), -2*dp*rho/Rd));   // (the bowl's inner normal: toward the focus)
+  const big = h > px(30), mid = h > px(9), NR = big ? 4 : mid ? 2 : 1, NT = big ? 24 : mid ? 14 : 8, items = [], wmin = Math.max(px(0.4), h*0.004), fn = faces(n);
+  // (each piece is painted by its nearness, but a long piece behind a hollow bowl would show through it: so the mount is
+  //  always behind the bowl while the bowl faces the eye, and in front while it faces away, and the feed the other way)
+  let gb = 0; const MOUNT = fn > 0.15 ? -1 : fn < -0.15 ? 1 : 0, FEED = -MOUNT;
+  const line = (a, b, col, wd, bias = 0) => { const p = P(a), q = P(b); items.push([(p[2] + q[2])/2 + bias + gb, () => { x.strokeStyle = col; x.lineWidth = Math.max(wmin, wd*h); x.beginPath(); x.moveTo(p[0], p[1]); x.lineTo(q[0], q[1]); x.stroke(); }]); };
+  const rod = (a, b, col, wd, k = 3, bias = 0) => { for(let i = 0; i < k; i++) line(add(a, add(b, a, -1), i/k), add(a, add(b, a, -1), (i + 1)/k), col, wd, bias); };
+  // the bowl, ring by ring: its inside where it faces the eye, its painted back where not
+  for(let i = 0; i < NR; i++) for(let j = 0; j < NT; j++){ const r0 = i/NR, r1 = (i + 1)/NR, t0 = j/NT*Math.PI*2, t1 = (j + 1)/NT*Math.PI*2, rm = (r0 + r1)/2, tm = (t0 + t1)/2;
+    const q = [bowl(r0, t0), bowl(r1, t0), bowl(r1, t1), bowl(r0, t1)].map(P), N = inward(rm, tm), inside = faces(N) >= 0;
+    const col = pkCss(inside ? tone(paint, lam(N)*(0.8 + 0.2*rm)) : tone(backing, lam([-N[0], -N[1], -N[2]])*0.92));
+    items.push([(q[0][2] + q[1][2] + q[2][2] + q[3][2])/4, () => { x.fillStyle = col; x.strokeStyle = col; x.lineWidth = wmin; x.beginPath(); q.forEach(([a, b], w) => w ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); x.stroke(); }]); }
+  // its rim, a lip catching the light; and on its back the ribs and the ring that stiffen it
+  const lip = pkCss(tone(paint, 0.85)), rib = pkCss(tone(backing, 0.25));
+  for(let j = 0; j < NT; j++) line(bowl(1, j/NT*Math.PI*2), bowl(1, (j + 1)/NT*Math.PI*2), lip, 0.011, 0.002);
+  if(mid){ const back = faces(n) < 0.35; if(back){ for(let k = 0; k < 8; k++){ const th = (k + 0.5)/8*Math.PI*2; for(let i = 0; i < 3; i++){ const a = add(bowl(0.12 + i*0.29, th), n, -0.008), b = add(bowl(0.12 + (i + 1)*0.29, th), n, -0.008); if(faces(inward(0.3 + i*0.3, th)) < 0) line(a, b, rib, 0.009); } }
+    for(let j = 0; j < NT; j++){ const th = (j + 0.5)/NT*Math.PI*2; if(faces(inward(0.62, th)) < 0) line(add(bowl(0.62, j/NT*Math.PI*2), n, -0.008), add(bowl(0.62, (j + 1)/NT*Math.PI*2), n, -0.008), rib, 0.008); } } }
+  gb = FEED;
+  // the feed at the focus on its four legs from the rim, its horn's mouth to the bowl
+  const legs = pkCss(tone(steel, 0.45)), horn = pkCss(tone(steel, 0.6));
+  if(mid) for(let k = 0; k < 4; k++) rod(bowl(1, Math.PI/4 + k*Math.PI/2), F, legs, 0.012, 3, 0.003*Math.sign(faces(n) || 1));
+  rod(add(F, n, -0.035), add(F, n, 0.04), horn, 0.07, 1, 0.004*Math.sign(faces(n) || 1));
+  if(mid){ const mouth = P(add(F, n, -0.036)); items.push([mouth[2] + 0.005*Math.sign(faces(n) || 1) + gb, () => { if(faces(n) > 0.05) pkDisc(x, mouth[0], mouth[1], Math.max(px(0.4), h*0.03), pkCss(tone(steel, 0.12))); }]); }
+  gb = MOUNT;
+  // behind it, the hub and four struts out to its back; the hub on the axle, the axle in the yoke's two arms
+  const metal = pkCss(tone(steel, 0.55)), dark = pkCss(tone(steel, 0.3)), lightU = lam(u) > lam(u.map(w => -w)) ? 1 : -1;
+  rod(A, add(A, n, 0.064), metal, 0.1, 2);
+  if(mid && faces(n) < 0.2) for(let k = 0; k < 4; k++) rod(add(A, n, 0.04), add(bowl(0.6, k*Math.PI/2), n, -0.01), dark, 0.014, 2);   // (hidden behind the bowl when it faces the eye)
+  rod(add(A, u, -0.19), add(A, u, 0.19), metal, 0.045, 4);
+  for(const sgn of [-1, 1]){ const B = add(A, u, sgn*0.17), foot = add([0, 0.31, 0], u, sgn*0.1), col = pkCss(tone(steel, lam(u.map(w => w*sgn))));
+    rod(foot, B, col, 0.05, 3); const b = P(add(A, u, sgn*0.2)); items.push([b[2] + gb, () => pkDisc(x, b[0], b[1], Math.max(px(0.5), h*0.034), pkCss(tone(steel, sgn === lightU ? 0.8 : 0.35)))]); }
+  rod(add([0, 0.31, 0], u, -0.13), add([0, 0.31, 0], u, 0.13), metal, 0.045, 2);
+  // the pedestal and its turntable, lit from the sun's side
+  items.push([gb, () => { const b0 = 0.09*h, b1 = 0.064*h, yt = Y - 0.29*ct*h, g = x.createLinearGradient(X - b0, 0, X + b0, 0), L0 = tone(steel, S[0] > 0 ? 0.25 : 0.75), L1 = tone(steel, S[0] > 0 ? 0.75 : 0.25);
+    g.addColorStop(0, pkCss(L0)); g.addColorStop(1, pkCss(L1)); x.fillStyle = g; x.beginPath(); x.moveTo(X - b0, Y); x.lineTo(X - b1, yt); x.lineTo(X + b1, yt); x.lineTo(X + b0, Y); x.closePath(); x.fill();
+    const tr = 0.12*h, ty = Y - 0.31*ct*h; x.fillStyle = g; x.fillRect(X - tr, ty, tr*2, 0.025*h); pkEll(x, X, ty, tr, Math.max(px(0.3), tr*st), pkCss(tone(steel, 0.7))); }]);
+  if(h > px(14)) pkCast(x, X - h*0.32, X + h*0.32, Y, h*0.5, c, 0.16);
+  items.sort((a, b) => a[0] - b[0]); x.lineCap = 'round'; for(const [, draw] of items) draw(); x.lineCap = 'butt'; }
 export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
   if(PK_SOLIDS.includes(kind)){ pkSolidProp(x, X, Y, h, c, kind, R0, px, night); return; }
   if(kind === 'dish'){ pkDish(x, X, Y, h, c, px); return; }
