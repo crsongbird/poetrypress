@@ -339,7 +339,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     you, kept gentle and clear of the water. And it is laid in **steps** (Ruby: "more steps and ridgelines so we can kinda
     nail the look of the original"; docs/prior-art/ringworld-terrain.md §12): shelves of the seed's own height, each a broad
     level and a short rise, their edges wandering, the highest crags left to their ridges, read only as finely as the
-    land is asked for; each shelf's lip drawn lit where a cell crosses it (`stepQ`). Climate: warmth by the seed and region, cooled with height; moisture by
+    land is asked for; no line is drawn at a shelf's lip (Ruby: "the terrain crest contour lines can be removed"): the
+    sun's gleam picks out its rise instead. Climate: warmth by the seed and region, cooled with height; moisture by
     region, wetter by the coasts; ten biomes by both on Whittaker's diagram (`LK_BIOMES`), each a weight fading into the
     next over a transition as wide as Detail asks. The ground's colour (`rgGround`) mixes the biomes' grounds (each the
     Land Hue leaning toward its own, `RG_BIOME_GROUND`), the forest's dark canopy, a town's grey, rock where it is steep,
@@ -383,7 +384,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     each column of the page the highest land yet is kept (the occlusion horizon), snapshotted at forty depths. Where a
     farther cell rises above it from behind it, the land below was a crest: Ruby's bands are kept there (Ruby: "the
     bands kept to mark drops in elevation and sharp borders"), each face lit along its top and deepening a band below
-    (`bandAt`), its crest a bright line. Then every thing is measured nearest first, the solid heart of each laid in its
+    (`bandAt`); no line along it. Then every thing is measured nearest first, the solid heart of each laid in its
     columns; a thing wholly below the nearer land, or wholly inside what nearer things cover, is never drawn (`vis`).
     Then every cell, thing, run of way and piece of field is painted far to near, a thing just after the cells under its
     nearest edge. A cell takes its corners' colours (`vcol`), so a border between two grounds runs smoothly across the
@@ -412,8 +413,24 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     (`ringParams`). The far floor on the arch is laid as a map (`rgPaintArch`): patches some four pixels across by their
     true distance, up to 128 across the band, on a grid of the world's, each of the land kit's broad regions where it lies
     and shaded by its relief, so lakes and ranges read as shapes, not squares; each patch's ground kept with its world.
-    A crest's rim is the far edge of each cell along it, so it is one line, never a row of stitches. In rain the
-    overcast closes over the zenith too.
+    In rain the overcast closes over the zenith too.
+  - **The land's gleam** (Ruby: "specular highlights that respond to the sun", in place of the crest lines): each
+    corner's slope against the half-way vector between the sun and the eye (`specAt`, Blinn's), so the land shines
+    where it turns toward that, brightest looking into the sun and gone with it behind you, sliding over the hills as
+    the sun moves; grass dull, rock brighter, sand and paving more, snow most.
+  - **Painted, not printed** (Ruby: "make the terrain and other textures themselves seem.. painted on (include skyboxes,
+    planets, etc)"; docs/prior-art/ringworld-painted.md): near ground cells carry one to four broad strokes of a tint
+    beside their colour (`rgBrush`, `RG_BRUSH_TINTS`); the sky a few soft long strokes; a gas giant strokes along its
+    bands; a near town wall its damp foot, stones warmer or colder, rain streaks; a turned roof its courses and
+    weathered patches; a cactus its pale-gold spine rim, corky foot and long yellower and bluer patches.
+  - **Plants by the land** (Ruby: "trees and small shrubs that obey moisture, aridity, soil angle rules"): each tree
+    is chosen from its place's biomes (`floraAt`, `RG_BIOME_FLORA`), so a saguaro grows only in desert, an acacia and
+    a baobab on the savanna, birches and firs in the tundra; on a steep slope only what holds there (`RG_STEEP_OK`).
+  - **Buildings on level ground** (Ruby: "buildings should never spawn in the air … terrain should flatten around
+    them"; docs/prior-art/ringworld-buildings-ground.md): each kind says how far its footprint may fall (`RG_FALL`: a
+    row of houses or a factory hardly at all, a pueblo or a castle on its hill much more); the land under a building is
+    levelled to its middle's height and eased back over a skirt (`rgPads`), so its door meets the ground. A field
+    whose corners fall more than one in four (a terrace seven in ten) is not sown.
   - **Light on the land** (Ruby: "shadows cast by the sun where it stands … nearby lights lighting what is near them
     more … rocks of different stones"): each corner of the land, each thing and each field looks toward the sun over the
     land as it is drawn (`litAt`): where a hill or a rim wall stands above the line, it lies in its shadow, softer the

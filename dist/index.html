@@ -6891,7 +6891,18 @@ function pkTree(x, X, Y, h, c0, kind, R0, px){
     x.strokeStyle = pkCss(bd); x.lineWidth = w*1.3; x.beginPath(); x.moveTo(x0 + sd*w*0.25, y0); x.lineTo(x1 + sd*w*0.25, y1); x.stroke();
     x.strokeStyle = pkCss(lt, 0.8); x.lineWidth = Math.max(px(0.4), w*0.35); x.beginPath(); x.moveTo(x0 + sd*w*0.55, y0); x.lineTo(x1 + sd*w*0.55, y1 + w*0.4); x.stroke();
     if(w*(c0.lod || 1) > px(4)){ x.strokeStyle = pkCss(pkMix(dk, PK_BLACK, 0.3), 0.5); x.lineWidth = Math.max(px(0.3), w*0.06); x.lineCap = 'butt';
-      for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } x.lineCap = 'round'; } };
+      for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } x.lineCap = 'round'; }
+
+
+
+
+    if(w > px(0.9)){ const L = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0)/L, uy = (y1 - y0)/L, at = f => [x0 + (x1 - x0)*f, y0 + (y1 - y0)*f];
+      x.strokeStyle = pkCss(pkMix(lt, [236, 214, 150], 0.55), 0.55*tone); x.lineWidth = Math.max(px(0.3), w*0.18); x.beginPath(); x.moveTo(x0 + sd*w*0.95, y0); x.lineTo(x1 + sd*w*0.9, y1 + w*0.5); x.stroke();
+      const cork = Math.min(0.22, w*3/L); if(cork > 0.03){ const [cx3, cy3] = at(cork); x.strokeStyle = pkCss(pkMix(dk, [120, 100, 80], 0.6), 0.85); x.lineWidth = w*1.9; x.lineCap = 'butt'; x.beginPath(); x.moveTo(x0, y0); x.lineTo(cx3, cy3); x.stroke(); x.lineCap = 'round'; }
+      let hs = (Math.round(x0*7 + y0*13) & 0xffff) || 1; const rr = () => ((hs = (hs*16807) % 2147483647)/2147483647);
+      for(let k = 0; k < 3; k++){ const f0 = 0.15 + 0.6*rr(), f1 = Math.min(0.95, f0 + 0.1 + 0.2*rr()), [ax2, ay2] = at(f0), [bx2, by2] = at(f1), side = (rr() - 0.5)*w*0.9;
+        x.strokeStyle = pkCss(pkMix(bd, rr() < 0.5 ? [170, 176, 90] : [80, 120, 120], 0.35), 0.5); x.lineWidth = w*0.5; x.beginPath(); x.moveTo(ax2 - uy*side, ay2 + ux*side); x.lineTo(bx2 - uy*side, by2 + ux*side); x.stroke(); }
+      pkDisc(x, x1, y1 + w*0.15, w*0.55, pkCss(pkMix(lt, [210, 190, 150], 0.5), 0.75)); } };
 
   const crown = (cx2, cy2, w, flower, fruit) => { if(small || hd < px(30)) return; const RC = sub(11);
     if(inSeason(...flower)) for(let k = 0; k < 6; k++){ const fx2 = cx2 + (RC()*2 - 1)*w*0.8, fy2 = cy2 + (RC() - 0.2)*w*0.6; pkDisc(x, fx2, fy2, w*0.3, pkCss([246, 242, 228], 0.95)); pkDisc(x, fx2, fy2, w*0.11, pkCss([236, 196, 80])); }
@@ -7248,7 +7259,7 @@ const PK_BUILT = {
 
     const n = 3 + Math.floor(o.R()*3), hw = wd/n, M = [[150, 76, 58], [210, 196, 168], [150, 150, 146], [196, 120, 96], [110, 130, 150], [176, 168, 120]];
     for(let q = 0; q < n; q++){ const hx = X - wd/2 + hw*(q + 0.5), hh = h*(0.75 + 0.25*o.R()), wc = pkMat(c, M[Math.floor(o.R()*M.length)], 0.6), ye = Y - hh*0.75;
-      pkShade(x, [[hx - hw/2, Y], [hx - hw/2, ye], [hx + hw/2, ye], [hx + hw/2, Y]], wc.body, ye, Y, 0.14); pkGable(x, hx - hw/2, hx + hw/2, ye, Y - hh, pkMat(c, PK_SLATE, 0.5), 0);
+      pkShade(x, [[hx - hw/2, Y], [hx - hw/2, ye], [hx + hw/2, ye], [hx + hw/2, Y]], wc.body, ye, Y, 0.14); pkGable(x, hx - hw/2, hx + hw/2, ye, Y - hh, pkMat(c, [PK_SLATE, [150, 84, 64], [118, 108, 100], [92, 98, 112]][(q*3 + n) % 4], 0.55), 0);
       const sx = hx + hw/2 - hw*0.08, st = pkMat(c, PK_BRICK, 0.6); pkShade(x, [[sx, Y - hh*0.86], [sx, Y - hh*1.04], [sx + hw*0.16, Y - hh*1.04], [sx + hw*0.16, Y - hh*0.86]], st.body, Y - hh*1.04, Y - hh*0.86);
       if(o.detail){ for(let k = 0; k < 3; k++) pkBar(x, sx + hw*(0.015 + k*0.05), Y - hh*1.09, hw*0.03, hh*0.05, PK_TERRA, o.px);
         const dx = hx - hw*0.22, dh = (Y - ye)*0.4; pkShade(x, [[dx - dh*0.22, Y - (Y - ye)*0.05], [dx - dh*0.22, Y - dh], [dx + dh*0.22, Y - dh], [dx + dh*0.22, Y - (Y - ye)*0.05]], pkMat(c, [[40, 50, 70], [110, 30, 34], [30, 70, 60]][q % 3], 0.7).body, Y - dh, Y);
@@ -7639,7 +7650,18 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
       if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof ? litOf(pr.roof).body : rm.body, o = wdt*0.04;
 
         for(const sg of [-sideN, sideN]){ const up = S.light(0, sg, sd)*0.5 + 0.25, sv2 = sg*a;
-          pkPoly(x, [S.P(-Dt/2 - o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, 0, ridge), S.P(-Dt/2 - o, 0, ridge)], pkCss(up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45))); }
+          const rc = up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45), Q = (u, f) => S.P(u, sv2*1.08*(1 - f), Hs - h*0.02 + (ridge - Hs + h*0.02)*f);
+          pkPoly(x, [Q(-Dt/2 - o, 0), Q(Dt/2 + o, 0), Q(Dt/2 + o, 1), Q(-Dt/2 - o, 1)], pkCss(rc));
+
+
+
+          if(Math.abs(ridge - Hs) > px(4)){ const n = Math.max(3, Math.min(14, Math.round(Math.abs(ridge - Hs)/px(2.2)))), lw = Math.max(px(0.35), Math.abs(ridge - Hs)/n*0.22);
+            x.strokeStyle = pkCss(pkMix(rc, PK_BLACK, 0.35), 0.4); x.lineWidth = lw; x.beginPath();
+            for(let k = 1; k < n; k++){ const f = k/n; x.moveTo(...Q(-Dt/2 - o, f)); x.lineTo(...Q(Dt/2 + o, f)); } x.stroke();
+            let hs = (v0*1e6 | 0) ^ (sg > 0 ? 0x5bd1 : 0x2c9f); const rr = () => ((hs = (hs*1103515245 + 12345) & 0x7fffffff)/0x7fffffff);
+            x.lineCap = 'round'; for(let k = 0; k < 5; k++){ const f = 0.1 + 0.8*rr(), u0 = (rr() - 0.5)*Dt, len = Dt*(0.15 + 0.3*rr()), tint = rr() < 0.5 ? [150, 120, 70] : [96, 120, 70];
+              x.strokeStyle = pkCss(pkMix(rc, tint, 0.3), 0.45); x.lineWidth = lw*2.5; x.beginPath(); x.moveTo(...Q(u0, f)); x.lineTo(...Q(Math.min(Dt/2, u0 + len), f + (rr() - 0.5)*0.05)); x.stroke(); }
+            x.lineCap = 'butt'; } }
         x.strokeStyle = pkCss(rm.dark, 0.5); x.lineWidth = Math.max(px(0.4), h*0.006); x.beginPath(); x.moveTo(...S.P(-Dt/2 - o, 0, ridge)); x.lineTo(...S.P(Dt/2 + o, 0, ridge)); x.stroke(); }
       else if(S.tilt(zt) > 0){
         pkPoly(x, [S.P(-Dt/2, -a, zt), S.P(Dt/2, -a, zt), S.P(Dt/2, a, zt), S.P(-Dt/2, a, zt)], pkCss(pkMix(pkMix(c.body, c.lit, 0.55), PK_CONCRETE, 0.25), glassy ? 0.6 : 1)); }
@@ -9405,7 +9427,7 @@ const LK_BIOMES = [
   { name: 'jungle',  t: 0.86,  m: 0.88 },
   { name: 'marsh',   t: 0.55,  m: 1.0 },
 ];
-const LK_FORESTED = { taiga: 1, forest: 1, jungle: 1, savanna: 0.3, marsh: 0.35, meadow: 0.12 };
+const LK_FORESTED = { taiga: 1, forest: 1, jungle: 1, savanna: 0.16, marsh: 0.35, meadow: 0.12 };
 
 
 
@@ -9429,8 +9451,7 @@ function lkLand(seed, o){
 
   const LAPSE = 1.15/1000;
 
-  let lastQ = NaN;
-  const raw = (u, v, fineM) => { lastQ = NaN;
+  const raw = (u, v, fineM) => {
     const wu = 1800*fbm(u, v, 7000, 2, 1), wv = 1800*fbm(u, v, 7000, 2, 2);
     let C = fbm(u + wu, v + wv, 11000, 4, 3); const dl = Math.hypot(u - Cm*Math.round(u/Cm), v - z0m)/1400; C += 0.1*Math.exp(-dl*dl);
     const sc = C - t0;
@@ -9463,8 +9484,8 @@ function lkLand(seed, o){
 
 
 
-    if(h > 2){ const St = stepM*(0.75 + 0.5*(0.5 + 0.5*N(u, v, 14000, 33))), tm = (0.55 + 0.45*lkSmooth(-0.25, 0.25, fbm(u, v, 9000, 2, 31)))*lkSmooth(2, 12, h)*(1 - 0.6*lkSmooth(350, 1000, h))*(1 - lkSmooth(St*3, St*14, fineM));
-      if(tm > 0.01){ const J = St*0.45*N(u + wv, v + wu, 700, 32), q = (h + J)/St, f = q - Math.floor(q); h += ((Math.floor(q) + lkSmooth(0.82, 1, f))*St - J - h)*tm; if(tm > 0.3) lastQ = q; } }
+    if(h > 2){ const St = stepM*(0.75 + 0.5*(0.5 + 0.5*N(u, v, 14000, 33))), tm = (0.55 + 0.45*lkSmooth(-0.25, 0.25, fbm(u, v, 9000, 2, 31)))*lkSmooth(2, 12, h)*(1 - 0.6*lkSmooth(350, 1000, h))*(1 - lkSmooth(St*3, St*14, fineM))*flat;
+      if(tm > 0.01){ const J = St*0.45*N(u + wv, v + wu, 700, 32), q = (h + J)/St, f = q - Math.floor(q); h += ((Math.floor(q) + lkSmooth(0.82, 1, f))*St - J - h)*tm; } }
 
     if(h > capM - 200){ const k2 = 80; h = capM - k2*Math.log1p(Math.exp((capM - h)/k2)); }
     return h;
@@ -9493,9 +9514,7 @@ function lkLand(seed, o){
     for(let i = 0; i < w.length; i++) w[i] /= n || 1; return w; };
 
   const snowline = Math.max(150, (warm + 0.06)/LAPSE)*M;
-
-
-  return { M, sea: 0, height, climate, biomes, snowline, wet, warm, rug, stepQ: () => lastQ };
+  return { M, sea: 0, height, climate, biomes, snowline, wet, warm, rug };
 }
 
 
@@ -20426,9 +20445,26 @@ const rgPathRec = () => { const o = []; let n = 0; const put = (k, a) => { o[n++
       if(k === 0){ c.moveTo(o[q], o[q + 1]); q += 2; } else if(k === 1){ c.lineTo(o[q], o[q + 1]); q += 2; } else if(k === 2){ c.quadraticCurveTo(o[q], o[q + 1], o[q + 2], o[q + 3]); q += 4; }
       else if(k === 3){ c.arc(o[q], o[q + 1], o[q + 2], o[q + 3], o[q + 4]); q += 5; } else { c.ellipse(o[q], o[q + 1], o[q + 2], o[q + 3], o[q + 4], o[q + 5], o[q + 6]); q += 7; } } } }; };
 const RG_MARKS_L = rgPathRec(), RG_MARKS_D = rgPathRec();
+
+
+
+
+
+const RG_BRUSH_TINTS = [[214, 186, 120], [96, 128, 150], [255, 248, 228], [40, 46, 52], [150, 170, 96]];
+function rgBrush(x, P, q, c, px, s){
+  const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0; if(w < px(5) || h < px(2)) return;
+  const busy = mnValue(q.i*0.21 + q.l*7.1, q.j*0.21, s + 941); if(busy < 0.3) return;
+  const R = mulberry32((Math.imul(q.l + 7, 0x27D4EB2D) ^ Math.imul(q.i, 0x165667B1) ^ Math.imul(q.j, 0x9E3779B1) ^ 0x51ED) >>> 0), n = 1 + Math.floor((busy - 0.3)*5*R());
+  const pt = (u, v) => { const ax = P[0][0] + (P[1][0] - P[0][0])*u, ay = P[0][1] + (P[1][1] - P[0][1])*u, bx = P[3][0] + (P[2][0] - P[3][0])*u, by = P[3][1] + (P[2][1] - P[3][1])*u; return [ax + (bx - ax)*v, ay + (by - ay)*v]; };
+  x.lineCap = 'round';
+  for(let k = 0; k < n; k++){ const u0 = 0.1 + 0.5*R(), v0 = 0.15 + 0.7*R(), len = 0.3 + 0.5*R(), tint = RG_BRUSH_TINTS[Math.floor(R()*RG_BRUSH_TINTS.length)];
+    const A = pt(u0, v0), B = pt(Math.min(1, u0 + len), Math.max(0, Math.min(1, v0 + (R() - 0.5)*0.3))), C = pt(u0 + len*0.5, v0 + (R() - 0.5)*0.25);
+    x.strokeStyle = rsCss(rsMix(c, tint, 0.2 + 0.14*R()), 0.62); x.lineWidth = Math.max(px(1.2), Math.min(w, h*2.2)*(0.2 + 0.2*R()));
+    x.beginPath(); x.moveTo(A[0], A[1]); x.quadraticCurveTo(C[0], C[1] - h*0.08, B[0], B[1]); x.stroke(); }
+  x.lineCap = 'butt'; }
 function rgGroundMarks(x, P, q, kind, c, px){
   const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0, area = w*h*0.55; if(w < px(6) || h < px(2.5)) return;
-  const n = Math.min(9, Math.floor(area/(px(16)*px(16)))); if(n < 1) return;
+  const n = Math.min(5, Math.floor(area/(px(22)*px(22)))); if(n < 1) return;
   const R = mulberry32((Math.imul(q.l + 1, 0x9E3779B1) ^ Math.imul(q.i, 0x85EBCA77) ^ Math.imul(q.j, 0xC2B2AE3D)) >>> 0);
   const pt = (u, v) => { const ax = P[0][0] + (P[1][0] - P[0][0])*u, ay = P[0][1] + (P[1][1] - P[0][1])*u, bx = P[3][0] + (P[2][0] - P[3][0])*u, by = P[3][1] + (P[2][1] - P[3][1])*u; return [ax + (bx - ax)*v, ay + (by - ay)*v]; };
   const lite = rsCss(rsMix(c, [255, 250, 232], 0.16), 0.75), dark = rsCss(rsMix(c, [0, 0, 0], 0.2), 0.7), s = Math.min(w, h*2.2)/Math.sqrt(n + 1);
@@ -20529,6 +20565,11 @@ function rgGiant(x, X, Y, r, kind, o){
   for(let i = 0; y < r*0.92; i++){ const hh = r*(0.08 + 0.12*R()), c = tint(G.bands[i % G.bands.length]); x.fillStyle = rsCss(c, a); x.beginPath(); x.moveTo(-r, y);
     for(let q = 0; q <= 24; q++){ const u = -r + 2*r*q/24; x.lineTo(u, y + Math.sin(q*1.7 + i*2.3)*r*wav); }
     for(let q = 24; q >= 0; q--){ const u = -r + 2*r*q/24; x.lineTo(u, y + hh + Math.sin(q*1.9 + i*1.3)*r*wav); } x.closePath(); x.fill(); y += hh; }
+
+  if(r > px(9)){ const RB = mulberry32(kind.length*7919 + 13); x.lineCap = 'round';
+    for(let k = 0; k < 18; k++){ const yy = (RB()*2 - 1)*r*0.9, x0 = (RB()*2 - 1)*r, len = r*(0.3 + 0.8*RB()), c = tint(rsMix(G.bands[k % G.bands.length], RB() < 0.5 ? [255, 250, 236] : [20, 18, 30], 0.18));
+      x.strokeStyle = rsCss(c, 0.35*a); x.lineWidth = r*(0.02 + 0.05*RB()); x.beginPath(); x.moveTo(x0, yy); x.quadraticCurveTo(x0 + len*0.5, yy + (RB() - 0.5)*r*0.05, x0 + len, yy + (RB() - 0.5)*r*0.03); x.stroke(); }
+    x.lineCap = 'butt'; }
   x.fillStyle = rsCss(tint(G.poles), 0.5*a); x.fillRect(-r, -r, 2*r, r*0.16); x.fillRect(-r, r*0.84, 2*r, r*0.16);
   if(kind === 'jupiter'){
     const gx = (R() - 0.5)*r*0.8, gy = r*0.36; x.fillStyle = rsCss(tint([236, 222, 200]), 0.8*a); x.beginPath(); x.ellipse(gx, gy, r*0.2, r*0.1, 0, 0, Math.PI*2); x.fill();
@@ -20570,6 +20611,13 @@ function rgPaintArch(x, mk, V){
         for(const [y, deg, al] of st){ const hi = deg/90, c = rsMix(AIR, rsMix(S, SPACE, 0.55 + 0.4*hi), rsSmooth(0, 0.35, hi)), a = al*(0.18 + 0.82*kday) + dusk*0.25*(1 - hi);
           g.addColorStop((y - y0)/(y1 - y0), rsCss(c, Math.min(1, a))); }
         x.fillStyle = g; x.fillRect(0, 0, ww, wh); x.fillStyle = rsCss(AIR, 0.95*(0.3 + 0.7*kday)); x.fillRect(0, y1, ww, wh - y1); } } }
+
+
+  { const RB = rgRand(s, 802); x.save(); x.lineCap = 'round';
+    for(let k = 0; k < 14; k++){ const az = RB()*Math.PI*2, el = 0.02 + 0.5*Math.pow(RB(), 1.5), len = 0.25 + 0.5*RB(), p0 = skyAt(az, el), p1 = skyAt(az + len, el + (RB() - 0.5)*0.06), pm = skyAt(az + len*0.5, el + 0.02 + (RB() - 0.5)*0.05); if(!p0 || !p1 || !pm) { RB(); RB(); continue; }
+      const tint = RB() < 0.5 ? rsMix(AIR, [255, 226, 196], 0.35) : rsMix(AIR, [120, 140, 200], 0.35), wd = F*(0.06 + 0.1*RB())*(1 - el), al = 0.035*kday*(1 - 0.5*el); if(al < 0.004) continue;
+      for(const [kw, ka] of [[1, 0.5], [0.6, 0.8], [0.3, 1]]){ x.strokeStyle = rsCss(tint, al*ka); x.lineWidth = wd*kw; x.beginPath(); x.moveTo(p0[0], p0[1]); x.quadraticCurveTo(pm[0], pm[1], p1[0], p1[1]); x.stroke(); } }
+    x.restore(); }
 
   x.save(); x.globalCompositeOperation = 'screen';
   const nebA = 0.2*(1 - 0.65*kday);
@@ -20724,14 +20772,15 @@ function rgPaintArch(x, mk, V){
         c = kk < 1 ? rsMix(rsMix(c, [26, 34, 70], 0.3), c, kk) : rsMix(c, rsMix(c, [255, 244, 222], 0.2), (kk - 1)/0.6*0.5); }
       const zc = (q[0][2] + q[2][2])/2, eS = elevOf(Math.cos(am), Math.sin(am), zm), jj = j*(32/LNa);
       if(unfinished(am)){ quads.push([zc, q, rgLit(V, rsMix(WALL0, SPACE, 0.55), 0.3 + 0.7*day, hzOf(zc, eS)*0.55, AIR), null, 'frame', rgRand(s, 813, i*sg, jj)]); continue; }
-      quads.push([zc, q, rgLit(V, rsMix(c, [255, 255, 255], 0.06), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 ? PK.city : null, false, rgRand(s, 805, i*sg, jj)]); } }
+
+      const bh = mnHash(i*sg, jj, s + 944); quads.push([zc, q, rgLit(V, rsMix(rsMix(c, [255, 255, 255], 0.06), RG_BRUSH_TINTS[Math.floor(bh*5)], 0.07*mnHash(jj, i*sg, s + 945)), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 ? PK.city : null, false, rgRand(s, 805, i*sg, jj)]); } }
   const Hw = L.Hw, WALL = rsMix([96, 104, 124], S, 0.22), aW = steps(0, W*0.012, W*0.4, 0.12);
   for(const zw of [-W/2, W/2]) for(const sg of [1, -1]) for(let i = 0; i + 1 < aW.length; i++){ const a0 = aW[i]*sg, a1 = aW[i + 1]*sg, am = (a0 + a1)/2, q = [at(a0, zw, 0), at(a1, zw, 0), at(a1, zw, Hw), at(a0, zw, Hw)];
     if(q.some(v => !v)) continue;
     const zc = (q[0][2] + q[2][2])/2, eS = elevOf((1 - Hw*0.5)*Math.cos(am), (1 - Hw*0.5)*Math.sin(am), zw), rib = i % 4 === 0 ? 0.12 : 0, day = ringDay(L, am);
 
 
-    quads.push([zc, q, rgLit(V, rsMix(WALL, [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.32*V.air + hzOf(zc, eS)*0.5), AIR), null, true, rgRand(s, 810, i*sg, zw > 0 ? 1 : 0), V.worldAt(am, zw*0.96), day, Math.min(0.9, 0.35 + 0.6*V.air)]); }
+    quads.push([zc, q, rgLit(V, rsMix(rsMix(WALL, RG_BRUSH_TINTS[(i*7 + (zw > 0 ? 3 : 0)) % 5], 0.05 + 0.07*mnHash(i, zw > 0 ? 1 : 2, s + 943)), [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.32*V.air + hzOf(zc, eS)*0.5), AIR), null, true, rgRand(s, 810, i*sg, zw > 0 ? 1 : 0), V.worldAt(am, zw*0.96), day, Math.min(0.9, 0.35 + 0.6*V.air)]); }
   quads.sort((p, q) => q[0] - p[0]);
 
   const inQ = (q, u, v) => [q[0][0] + (q[1][0] - q[0][0])*u + (q[3][0] - q[0][0])*v + (q[2][0] - q[1][0] - q[3][0] + q[0][0])*u*v, q[0][1] + (q[1][1] - q[0][1])*u + (q[3][1] - q[0][1])*v + (q[2][1] - q[1][1] - q[3][1] + q[0][1])*u*v];
@@ -21068,6 +21117,13 @@ const RG_KEPT_STORES = new Map();
 
 
 
+
+
+
+
+
+
+const RG_FALL = { house: 0.2, pueblo: 0.45, castle: 0.35, stave: 0.3, chapel: 0.25, row: 0.12, factory: 0.12, megablock: 0.1, greenhouse: 0.1, cathedral: 0.15, gasstation: 0.08, motel: 0.1 };
 const RG_PLACE = { lighthouse: { coast: true }, windmill: { rise: 0.4 }, turbine: { rise: 0.6 }, castle: { rise: 0.3 }, observatory: { rise: 0.6 },
   barn: { edge: 0.35 }, silo: { edge: 0.35 }, watertower: { heart: 0.25 }, cathedral: { heart: 0.7 }, mosque: { heart: 0.7 }, clock: { heart: 0.6 }, geodome: { flat: 0.25 }, pagoda: { rise: 0 },
   radiomast: { rise: 0.5 }, gasstation: { edge: 0.4, flat: 0.3 }, motel: { edge: 0.45 }, elevator: { edge: 0.5 }, greenhouse: { flat: 0.25 }, chapel: { rise: 0 } };
@@ -21169,11 +21225,21 @@ function rgStore(V){
     let rise; return { e, slope, wet, coast, get rise(){ if(rise === undefined){ for(let q = 0; q < 6; q++){ const an = q/6*Math.PI*2; ring += T.true(a + Math.cos(an)*W*0.03, z + Math.sin(an)*W*0.03, W*0.01); } rise = (e - ring/6)/(W*0.002); } return rise; } }; };
 
 
-  const floraAt = (w, a, z) => { if(w === 'ruins') return PK_TREES.ruins;
-    if(w === 'magic') return mnValue(a/(W*0.25) + 4.4, z/(W*0.25) - 2.2, s + 37) > 0.5 ? PK_FLORA.fey : PK_TREES.magic;
-    const dr = V.dryAt(a, z), e = T.true(a, z, W*0.01);
-    if(e > TR.snow*0.45) return PK_FLORA.cold; if(dr > 0.6) return PK_FLORA.dry; if(dr > 0.5) return PK_FLORA.warm;
-    return mnValue(a/(W*0.5) + 9.1, z/(W*0.5) + 1.7, s + 31) > 0.64 ? PK_FLORA.jungle : PK_TREES.wild; };
+
+
+
+
+
+
+  const floraAt = (w, a, z, R) => { if(w === 'ruins') return PK_TREES.ruins[Math.floor(R()*PK_TREES.ruins.length)];
+    if(w === 'magic'){ const L2 = mnValue(a/(W*0.25) + 4.4, z/(W*0.25) - 2.2, s + 37) > 0.5 ? PK_FLORA.fey : PK_TREES.magic; return L2[Math.floor(R()*L2.length)]; }
+
+    const e = T.true(a, z, W*0.004), bw = V.LK.biomes(a, z, Math.max(e, TR.sea)); let sum = 0; for(const v of bw) sum += v*v*v*v; let u = R()*sum, bi = 0; for(; bi < bw.length - 1; bi++){ u -= bw[bi]**4; if(u < 0) break; }
+    const bn = LK_BIOMES[bi].name, d = W*0.002, slope = Math.hypot(T.true(a + d, z, d) - e, T.true(a, z + d, d) - e)/d;
+    let L2 = RG_BIOME_FLORA[bn] || PK_TREES.wild; if((bn === 'meadow' || bn === 'steppe') && V.LK.climate(a, z, e)[0] > 0.66) L2 = PK_FLORA.warm;
+    if(!L2.length) return null; let k = L2[Math.floor(R()*L2.length)];
+    if(slope > 0.55 && !RG_STEEP_OK.includes(k)) k = RG_CACTI.includes(k) || bn === 'savanna' || bn === 'steppe' ? 'bush' : R() < 0.6 ? 'spruce' : 'bush';
+    return k; };
 
 
 
@@ -21237,9 +21303,9 @@ function rgStore(V){
 
 
 
-  const footing = (a, z, wM, face) => { const hw = (wM*0.5 + 2)*M, ca = Math.cos(face), sa = Math.sin(face), e0 = T.true(a, z, W*0.002); let lo = e0, hi = e0;
+  const footing = (a, z, wM, face, kind0) => { const hw = (wM*0.5 + 2)*M, ca = Math.cos(face), sa = Math.sin(face), e0 = T.true(a, z, W*0.002); let lo = e0, hi = e0;
     for(const [u, v] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]){ const e = T.true(a + (ca*u - sa*v)*hw, z + (sa*u + ca*v)*hw, W*0.002); if(e <= TR.sea + 0.3*M) return null; lo = Math.min(lo, e); hi = Math.max(hi, e); }
-    if(e0 <= TR.sea + 0.3*M || (hi - lo)/M > wM*0.7) return null; return { up: (hi - e0)/M, down: (e0 - lo)/M }; };
+    if(e0 <= TR.sea + 0.3*M || (hi - lo)/M > wM*(RG_FALL[kind0] ?? RG_FALL.house)) return null; return { up: (hi - e0)/M, down: (e0 - lo)/M }; };
 
   const along = (wy, step, fn, start = step/2) => { const P = wy.pts; let next = start, i = 0;
     while(i + 1 < P.length){ const p = P[i], q = P[i + 1], du = (q.u - p.u) || 1; if(q.u < next){ i++; continue; } const t = (next - p.u)/du;
@@ -21304,7 +21370,7 @@ function rgStore(V){
 
     if(hM > 24 + 420*rsSmooth(W*0.03, W*0.45, r)) return null;
     if(!offWay(a, z, wM*M*0.5 + 2*M)) return null;
-    const face = faceOf(a, z, R()), ft = footing(a, z, wM, face); if(!ft) return null;
+    const face = faceOf(a, z, R()), ft = footing(a, z, wM, face, kind); if(!ft) return null;
     return { c: 'bldg', w, kind, hM, wM, face, ...ft }; });
 
 
@@ -21341,7 +21407,7 @@ function rgStore(V){
           if(rgFits(k2, g, seat.hamlet ? 0.3 : 0.1)) kind = k2; } if(!kind) continue;
         const hM = pkMetres(kind, Math.pow(R(), 1.5)), wM = pkMetres(kind, R(), 1);
         if(!offWay(a, z, wM*M*0.5 + 2*M) || (onWall && onWall(a, z, (wM*0.5 + 1.5)*M)) || placed.some(([pa, pz, pw]) => Math.hypot(a - pa, z - pz) < (pw + wM)*M*0.55 + 3*M)) continue;
-        const face = fc ?? Math.atan2(sz - z, sa - a), ft = footing(a, z, wM, face); if(!ft) continue;
+        const face = fc ?? Math.atan2(sz - z, sa - a), ft = footing(a, z, wM, face, kind); if(!ft) continue;
         placed.push([a, z, wM]); out.push({ c: 'bldg', w, kind, hM, wM, face, a, z, r, rs: (R()*4294967296) >>> 0, ...ft }); }
 
       if(!seat.hamlet && (fam === 'north' || fam === 'galicia') && placed.length && R() < 0.6){ const kind = fam === 'north' ? 'birch' : 'broadleaf'; out.push({ c: 'tree', w, kind, hM: pkMetres(kind, R()), a: sa, z: sz, r: rs0, rs: (R()*4294967296) >>> 0 }); }
@@ -21415,7 +21481,7 @@ function rgStore(V){
     if(kinds && RN() < 0.7) for(let k = 0, n = 2 + Math.floor(RN()*3); k < n; k++){ const an = RN()*Math.PI*2, d = (60 + 140*RN())*M, a = Math.cos(an)*d, z = L.z0 + Math.sin(an)*d, kind = kinds[Math.floor(RN()*kinds.length)], hu = RN(), wu = RN();
       if(Math.abs(z) > W*0.46 || V.worldAt(a, z) !== w0) continue; const g = ground(a, z); if(g.wet || g.slope > 0.35 || !rgFits(kind, g, 0.5)) continue;
       const hM = Math.min(kind === 'wizard' ? 36 : 28, pkMetres(kind, 0.3 + 0.4*hu)), wM = pkMetres(kind, wu, 1);
-      const face = Math.atan2(L.z0 - z, -a), ft = footing(a, z, wM, face); if(!ft || (onWall && onWall(a, z, (wM*0.5 + 2)*M))) continue;
+      const face = Math.atan2(L.z0 - z, -a), ft = footing(a, z, wM, face, kind); if(!ft || (onWall && onWall(a, z, (wM*0.5 + 2)*M))) continue;
       out.push({ c: 'bldg', w: w0, kind, hM, wM, face, near: true, a, z, r: d, rs: (RN()*4294967296) >>> 0, ...ft }); } }
 
 
@@ -21477,14 +21543,20 @@ function rgStore(V){
       if((w !== 'wilds' && w !== 'magic' && villageAt(w, a, z) > 0.4) || V.forestAt(a, z) > 0.55) continue; const g = ground(a, z); if(g.wet || g.coast) continue;
       const hl = cu*(0.4 + 0.08*R()), hw = cv*(0.36 + 0.1*R());
       let f;
-      if(g.slope < 0.28) f = { a, z, ux, uz, hl, hw, w, crop: cropOf(w, a, z, g.e, R), step: 0 };
+      if(g.slope < 0.2) f = { a, z, ux, uz, hl, hw, w, crop: cropOf(w, a, z, g.e, R), step: 0 };
 
 
 
-      else if(g.slope < 1.1 && g.slope > 0.4 && w !== 'builders' && w !== 'ruins' && mnValue(a/(W*0.4) + 3.3, z/(W*0.4) - 7.7, s + 87) > 0.45){
+      else if(g.slope < 0.47 && g.slope > 0.2 && w !== 'builders' && w !== 'ruins' && mnValue(a/(W*0.4) + 3.3, z/(W*0.4) - 7.7, s + 87) > 0.45){
         const d = W*0.003, ex = T.true(a + d, z, d) - T.true(a - d, z, d), ez = T.true(a, z + d, d) - T.true(a, z - d, d), gl = Math.hypot(ex, ez) || 1, dr = V.dryAt(a, z), warm = mnValue(a/(W*0.5) + 9.1, z/(W*0.5) + 1.7, s + 31) > 0.5;
         f = { a, z, ux: -ez/gl, uz: ex/gl, hl: hl*0.8, hw: hw*0.8, w, crop: dr < 0.38 && warm ? 'rice' : dr > 0.55 ? 'vines' : 'tea', step: (3 + 3*R())*M/Math.max(0.6, g.slope) }; }
       else continue;
+
+
+
+
+      { const cs = [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([p, q]) => T.true(a + f.ux*f.hl*p - f.uz*f.hw*q, z + f.uz*f.hl*p + f.ux*f.hw*q, W*0.003));
+        if((Math.max(...cs) - Math.min(...cs))/(2*Math.hypot(f.hl, f.hw)) > (f.step ? 0.47 : 0.2)) continue; }
 
 
 
@@ -21564,7 +21636,7 @@ function rgStore(V){
 
     const town = V.cityAt(a, z, P.cv*(0.3 + 0.9*V.works)); if(T.true(a, z, W*0.004) <= TR.sea || !offWay(a, z, 2*M) || inField(a, z, -2*M)) return null;
     if(R() > Math.min(1, V.forestAt(a, z)*V.life*1.25*tot)*(r < W*0.01 ? 0.35 : 1)*(1 - 0.85*town)) return null;
-    const u = R()*tot, kind = u < P.de ? 'dead' : u < P.de + P.gt ? 'glow' : (T2 => T2[Math.floor(R()*T2.length)])(floraAt(w, a, z)), hM = pkMetres(kind, R());
+    const u = R()*tot, kind = u < P.de ? 'dead' : u < P.de + P.gt ? 'glow' : floraAt(w, a, z, R); if(!kind) return null; const hM = pkMetres(kind, R());
 
     if(nearBldg(a, z, (3 + hM*0.22)*M)) return null;
     return { c: 'tree', w, kind, hM, ...(kind === 'saguaro' && hM < 4.5 && R() < 0.7 ? { nurse: true } : {}), ...(kind === 'broadleaf' && V.dryAt(a, z) < 0.4 && R() < 0.3 ? { ivy: true } : {}) }; });
@@ -21752,6 +21824,19 @@ function rgStore(V){
   return out;
 }
 
+
+
+
+function rgPads(store, V){ if(store.pads) return store.pads; const W = V.W, M = W*0.00025, BIN = 80*M, bins = new Map(), pads = [];
+  for(const o of store) if(o.c === 'bldg'){ const half = (o.wM*0.5 + 2)*M, skirt = (4 + o.wM*0.35)*M, f = o.face ?? 0;
+    const p = { a: o.a, z: o.z, ca: Math.cos(f), sa: Math.sin(f), half, skirt, h: V.LK.height(o.a, o.z, W*0.002) }; pads.push(p); const R2 = half*1.42 + skirt;
+    for(let i = Math.floor((o.a - R2)/BIN); i <= Math.floor((o.a + R2)/BIN); i++) for(let j = Math.floor((o.z - R2)/BIN); j <= Math.floor((o.z + R2)/BIN); j++){ const k = i + ',' + j; if(!bins.has(k)) bins.set(k, []); bins.get(k).push(p); } }
+  store.pads = (a, z, h) => { const L2 = bins.get(Math.floor(a/BIN) + ',' + Math.floor(z/BIN)); if(!L2) return h; let best = 0, ph = h;
+    for(const p of L2){ const da = a - p.a, dz = z - p.z, u = Math.abs(da*p.ca + dz*p.sa) - p.half, v = Math.abs(-da*p.sa + dz*p.ca) - p.half, d = Math.max(u, v, 0); if(d >= p.skirt) continue;
+      const wgt = 1 - rsSmooth(0, p.skirt, d); if(wgt > best){ best = wgt; ph = p.h; } }
+    return best > 0 ? h + (ph - h)*best : h; };
+  return store.pads; }
+
 const RG_ID_CLASS = { tree: 'plant', grass: 'plant', bldg: 'building', prop: 'thing', bot: 'droid', life: 'life', wild: 'animal', rock: 'stone', board: 'board', glim: 'light', henge: 'stones', egg: 'find' };
 const RG_ANIMALS = ['sheep', 'gulls', 'crab'], RG_PEOPLE = ['figure', 'shepherd', 'lamplighter', 'harvester'];
 function rgTagsOf(o){ const t = [RG_ID_CLASS[o.c] || o.c, o.kind, o.w].filter(Boolean);
@@ -21786,6 +21871,12 @@ const ringKeptStores = () => [...RG_KEPT_STORES.values()];
 
 const RG_NARROW_TREES = ['spruce', 'fir', 'cypress', 'poplar', 'pine', 'bamboo', 'saguaro', 'organpipe', 'ocotillo'];
 
+
+const RG_BIOME_FLORA = { ice: [], tundra: ['bush', 'bush', 'bush', 'birch', 'fir'], taiga: ['spruce', 'spruce', 'fir', 'fir', 'pine', 'birch'],
+  meadow: ['broadleaf', 'broadleaf', 'birch', 'poplar', 'bush', 'bush'], forest: ['broadleaf', 'broadleaf', 'broadleaf', 'birch', 'poplar', 'spruce', 'pine'],
+  steppe: ['bush', 'bush', 'bush', 'bush', 'pear', 'agave', 'acacia', 'dead'], desert: ['saguaro', 'saguaro', 'organpipe', 'barrel', 'barrel', 'pear', 'cholla', 'cholla', 'ocotillo', 'agave', 'joshua', 'bush'],
+  savanna: ['acacia', 'acacia', 'acacia', 'baobab', 'bush', 'bush', 'bush', 'bush', 'bush'], jungle: ['palm', 'palm', 'fern', 'fern', 'bamboo', 'broadleaf', 'broadleaf'], marsh: ['willow', 'willow', 'poplar', 'bush'] };
+const RG_STEEP_OK = ['spruce', 'fir', 'pine', 'bush', 'birch', 'cedar', 'stonepine', 'dead'];
 const RG_CACTI = ['saguaro', 'organpipe', 'barrel', 'pear', 'cholla', 'ocotillo', 'agave'];
 
 
@@ -21837,6 +21928,8 @@ function rgPaintLand(x, mk, dk, V){
   const wn = (a, z, ws, salt) => mnValue(a/ws + salt*3.17, z/ws - salt*1.93, s + 900 + salt);
 
 
+  const store = rgStore(V), PADS = rgPads(store, V);
+
 
 
 
@@ -21858,7 +21951,7 @@ function rgPaintLand(x, mk, dk, V){
 
   const meshKey = [V.seed, W, V.forms, V.world.list.join(), V.detail, L.z0, L.Hw, TR.snow, V.life, V.works, V.land.join()].join('|');
   let kept = RG_MESH_KEPT.get(meshKey); if(!kept){ kept = { rings: new Map() }; RG_MESH_KEPT.set(meshKey, kept); while(RG_MESH_KEPT.size > 3) RG_MESH_KEPT.delete(RG_MESH_KEPT.keys().next().value); }
-  const SM = 2*RG_NG_MAX + 1, ringOf = cs => { const k = cs.toPrecision(9); let r = kept.rings.get(k); if(!r){ r = { raw: new Float64Array(SM*SM).fill(NaN), q: new Float32Array(SM*SM).fill(NaN), col: new Float32Array(SM*SM*3).fill(-1), lit: null, litKey: null }; kept.rings.set(k, r); } return r; };
+  const SM = 2*RG_NG_MAX + 1, ringOf = cs => { const k = cs.toPrecision(9); let r = kept.rings.get(k); if(!r){ r = { raw: new Float64Array(SM*SM).fill(NaN), col: new Float32Array(SM*SM*3).fill(-1), lit: null, litKey: null }; kept.rings.set(k, r); } return r; };
   const RINGS = cl.map(ringOf), kAt = (i, j) => (j + RG_NG_MAX)*SM + i + RG_NG_MAX;
   const vH = cl.map(() => new Float64Array(SIDE*SIDE).fill(NaN)), vP = cl.map(() => new Array(SIDE*SIDE));
   const zOf = (l, j) => Math.max(-ZMAX, Math.min(ZMAX, cz[l] + j*cl[l]));
@@ -21871,9 +21964,7 @@ function rgPaintLand(x, mk, dk, V){
   const exH = (h, d) => { if(h <= 0) return h; const v = h*exf(d); return v < capD - capK*4 ? v : capD - capK*Math.log1p(Math.exp((capD - v)/capK)); };
   let heightIn = null;
 
-  const rawH = (l, i, j) => { const A = RINGS[l].raw, k = kAt(i, j); let h = A[k]; if(h === h) return h; const a = i*cl[l], z = zOf(l, j); h = exH(V.LK.height(a, z, 2*cl[l]), Math.hypot(a, z - L.z0)); A[k] = h; RINGS[l].q[k] = V.LK.stepQ(); return h; };
-
-  const stepQ = (l, i, j) => { rawH(l, i, j); return RINGS[l].q[kAt(i, j)]; };
+  const rawH = (l, i, j) => { const A = RINGS[l].raw, k = kAt(i, j); let h = A[k]; if(h === h) return h; const a = i*cl[l], z = zOf(l, j); h = exH(PADS(a, z, V.LK.height(a, z, 2*cl[l])), Math.hypot(a, z - L.z0)); A[k] = h; return h; };
   const vh = (l, i, j) => { const k = (j + NG)*SIDE + i + NG; let h = vH[l][k]; if(h === h) return h;
     const a = i*cl[l], z = zOf(l, j); h = rawH(l, i, j);
     const al = l + 1 < NLV ? rsSmooth(0.7, 1, Math.max(Math.abs(i), Math.abs(j))/NG) : 0; if(al > 0) h += (heightIn(l + 1, a, z) - h)*al;
@@ -21950,7 +22041,6 @@ function rgPaintLand(x, mk, dk, V){
     for(let c = 0; c < NCOL; c++) if(HY[c] < Infinity) crests[c].push(HY[c], HD[c], HQ[c]); }
 
   const bandOf = d => Math.max(px(3), Math.min(px(44), F*0.045*Math.sqrt(W*0.05/Math.max(d, W*0.002))));
-  for(let c = 0; c < NCOL; c++){ const C = crests[c]; for(let k = 2; k < C.length; k += 3) if(C[k] >= 0) shown[C[k]].rim = true; }
 
   const bandAt = (X, Y) => { const C = crests[col(X)]; for(let k = 0; k < C.length; k += 3) if(C[k] <= Y + px(0.5)) return (Y - C[k])/bandOf(C[k + 1]); return 9; };
 
@@ -22009,7 +22099,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const store = rgStore(V); let loudOne = null, loudR = Infinity;
+  let loudOne = null, loudR = Infinity;
   for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
   const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
   for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: o.c === 'bldg' ? o.wM*0.6*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*0.5*W*0.00025 : 0, draw: l => rgPaintThing(o, l, dd) }); }
@@ -22389,7 +22479,17 @@ function rgPaintLand(x, mk, dk, V){
       else { poly([oA, oB, ...top(oB2, oA2, 5)], cOut); merlons(); poly([oA2, oB2, iB2, iA2], cTop); poly([iA, iB, ...top(iB2, iA2, 5)], cIn); }
 
       if(hp > px(10)){ const nc = Math.min(8, Math.floor(hp/px(5))), Fn = outNear ? [oA, oB, oA2, oB2] : [iA, iB, iA2, iB2]; x.strokeStyle = rsCss(rsMix(outNear ? cOut : cIn, [0, 0, 0], 0.18), 0.5); x.lineWidth = Math.max(px(0.4), hp*0.012); x.beginPath();
-        for(let c = 1; c < nc; c++){ const u = c/nc; x.moveTo(Fn[0][0] + (Fn[2][0] - Fn[0][0])*u, Fn[0][1] + (Fn[2][1] - Fn[0][1])*u); x.lineTo(Fn[1][0] + (Fn[3][0] - Fn[1][0])*u, Fn[1][1] + (Fn[3][1] - Fn[1][1])*u); } x.stroke(); }
+        for(let c = 1; c < nc; c++){ const u = c/nc; x.moveTo(Fn[0][0] + (Fn[2][0] - Fn[0][0])*u, Fn[0][1] + (Fn[2][1] - Fn[0][1])*u); x.lineTo(Fn[1][0] + (Fn[3][0] - Fn[1][0])*u, Fn[1][1] + (Fn[3][1] - Fn[1][1])*u); } x.stroke();
+
+
+
+        const Fq = (u, v) => [Fn[0][0] + (Fn[1][0] - Fn[0][0])*u + (Fn[2][0] - Fn[0][0])*v + (Fn[3][0] - Fn[1][0] - Fn[2][0] + Fn[0][0])*u*v, Fn[0][1] + (Fn[1][1] - Fn[0][1])*u + (Fn[2][1] - Fn[0][1])*v + (Fn[3][1] - Fn[1][1] - Fn[2][1] + Fn[0][1])*u*v];
+        const cF = outNear ? cOut : cIn, hh = (j, q) => mnHash(wl.i*977 + k, j*7 + q, s + 1350);
+        rsPoly(x, [Fq(0, 0), Fq(1, 0), Fq(1, 0.08 + 0.1*hh(0, 1)), Fq(0.5, 0.14 + 0.08*hh(0, 2)), Fq(0, 0.06 + 0.12*hh(0, 3))], rsCss(rsMix(cF, [70, 92, 60], 0.45), 0.5));
+        for(let j = 1; j <= 6; j++){ const u0 = hh(j, 0)*0.85, v0 = 0.15 + 0.7*hh(j, 1), du = 0.06 + 0.12*hh(j, 2), dv = 1/Math.max(2, nc);
+          rsPoly(x, [Fq(u0, v0), Fq(u0 + du, v0), Fq(u0 + du, v0 + dv), Fq(u0, v0 + dv)], rsCss(rsMix(cF, hh(j, 3) < 0.5 ? [214, 190, 150] : [120, 128, 146], 0.22), 0.6)); }
+        x.lineCap = 'round'; for(let j = 7; j <= 10; j++){ const u0 = hh(j, 0), [ax, ay] = Fq(u0, 0.98), [bx, by] = Fq(u0 + (hh(j, 1) - 0.5)*0.01, 0.55 + 0.3*hh(j, 2));
+          x.strokeStyle = rsCss(rsMix(cF, [40, 40, 44], 0.3), 0.3); x.lineWidth = Math.max(px(0.5), hp*0.02); x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx, by); x.stroke(); } x.lineCap = 'butt'; }
       return; }
 
     const tr = (3.3 + 1.2*mnHash(wl.i, k, s + 1344))*M1, Ht = (wl.broke ? wl.H*(0.4 + 0.8*mnHash(wl.i, k, s + 1345)) : wl.H + 3.5*M1), b0 = at(A[0], A[1], e0), b1 = at(A[0], A[1], e0 + Ht); if(!b0 || !b1) return;
@@ -22654,7 +22754,16 @@ function rgPaintLand(x, mk, dk, V){
     const i0 = Math.max(-RG_NG_MAX, i - 1), i1 = Math.min(RG_NG_MAX, i + 1), j0 = Math.max(-RG_NG_MAX, j - 1), j1 = Math.min(RG_NG_MAX, j + 1);
     const dA = (rawH(l, i1, j) - rawH(l, i0, j))/((i1 - i0)*c), dZ = (rawH(l, i, j1) - rawH(l, i, j0))/((j1 - j0)*c), a = i*c, ca2 = Math.cos(a), sa2 = Math.sin(a);
     const nx = dA*sa2 - ca2, ny = -dA*ca2 - sa2, nz = -dZ, nl = Math.hypot(nx, ny, nz), upS = -(ca2*SUN[0] + sa2*SUN[1]), ndl = (nx*SUN[0] + ny*SUN[1] + nz*SUN[2])/nl;
-    v = upS > 0.04 ? ndl/Math.max(0.3, upS) : 1 + 0.4*(ndl - upS); A[k] = v; return v; };
+    v = upS > 0.04 ? ndl/Math.max(0.3, upS) : 1 + 0.4*(ndl - upS); A[k] = v;
+
+
+
+
+    { const r0 = 1 - rawH(l, i, j), vx = L.Px - r0*ca2, vy = -r0*sa2, vz = L.z0 - zOf(l, j), vl = Math.hypot(vx, vy, vz) || 1, hx = SUN[0] + vx/vl, hy = SUN[1] + vy/vl, hz = SUN[2] + vz/vl, hl2 = Math.hypot(hx, hy, hz) || 1;
+      const nh = Math.max(0, (nx*hx + ny*hy + nz*hz)/(nl*hl2)); vSP[l][k] = upS > 0 ? Math.pow(nh, 36)*rsSmooth(0, 0.25, upS)*rsSmooth(-0.05, 0.25, ndl) : 0; }
+    return v; };
+  const vSP = cl.map(() => new Float32Array(SIDE*SIDE));
+  const specAt = (l, i, j) => { kSunAt(l, i, j); return vSP[l][(j + NG)*SIDE + i + NG]; };
   const paintCell = q => {
     const { l, i, j, P, am, zm, dd, c } = q, h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h11 = vh(l, i + 1, j + 1), h01 = vh(l, i, j + 1), hm = (h00 + h10 + h01 + h11)/4, sea = TR.sea;
     const day = ringDay(L, am), haze = hazeOf(dd), wet = [h00 < sea, h10 < sea, h11 < sea, h01 < sea], nWet = wet[0] + wet[1] + wet[2] + wet[3];
@@ -22664,24 +22773,24 @@ function rgPaintLand(x, mk, dk, V){
     const cv = (vh(l, Math.max(-NG, i - 1), j) + vh(l, Math.min(NG, i + 2), j) + vh(l, i, Math.max(-NG, j - 1)) + vh(l, i, Math.min(NG, j + 2)))/4, hol = rgClamp((cv - hm)/(c*1.6))*0.3;
 
     const tb = P.map(p => bandAt(p[0], p[1])), fl = t => (1 - rsSmooth(0, 1.1, t))*0.62, fd = t => rsSmooth(0.8, 1.8, t)*(1 - rsSmooth(1.8, 3.4, t))*0.2;
-    const shade = (g, t, sa = am, sz = zm, sl = 1, ks = kSun) => { const kk = Math.max(0, Math.min(1.7, ks))*sl, dark = rsMix(g, [26, 34, 70], 0.42), lit = rsMix(g, [255, 244, 222], 0.3);
+    const shade = (g, t, sa = am, sz = zm, sl = 1, ks = kSun, sp = 0) => { const kk = Math.max(0, Math.min(1.7, ks))*sl, dark = rsMix(g, [26, 34, 70], 0.42), lit = rsMix(g, [255, 244, 222], 0.3);
       let cc = kk < 1 ? rsMix(dark, g, kk) : rsMix(g, lit, (kk - 1)/0.7*0.55); if(hol > 0.01) cc = rsMix(cc, dark, hol);
-      cc = rsMix(rsMix(cc, lit, fl(t)), dark, fd(t)); cc = rgLit(V, cc, day, haze, AIR);
+      cc = rsMix(rsMix(cc, lit, fl(t)), dark, fd(t)); if(sp > 0.004) cc = rsMix(cc, [255, 246, 226], Math.min(0.75, sp*gloss*1.6)); cc = rgLit(V, cc, day, haze, AIR);
       const cs2 = cloudShadeAt(sa, sz)*rsSmooth(0.3, 0.7, day)*(1 - 0.85*haze); if(cs2 > 0.004) cc = rsMix(cc, [10, 14, 34], cs2);
       if(LOWMIST > 0 && dd > W*0.01){ const lw = rsSmooth(TR.cloud*0.25, sea, hm); if(lw > 0.05) cc = rsMix(cc, MISTC, LOWMIST*lw*0.7*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + am*40))); }
       return cc; };
 
     const poly = grow(P), he = Math.max(hm/exf(dd), sea + M1*0.5), CI = RINGS[l].cells || (RINGS[l].cells = []), ck = kAt(i, j);
     let ci0 = CI[ck]; if(!ci0 && nWet !== 4){ const bw0 = V.LK.biomes(am, zm, he); ci0 = CI[ck] = { bw: bw0, fp: rgFieldPatch(V, am, zm, he, bw0, slope, dd), gk: groundKind(he, slope, bw0, am, zm) }; }
-    const bw = nWet === 4 ? null : ci0.bw; let g0 = null;
-    if(bw){ const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = ci0.fp, g4 = [vcol(l, i, j), vcol(l, i + 1, j), vcol(l, i + 1, j + 1), vcol(l, i, j + 1)];
+    const bw = nWet === 4 ? null : ci0.bw; let g0 = null, gloss = 0.35;
+    if(bw){ gloss = 0.35 + 0.5*rsSmooth(0.45, 0.95, slope) + (ci0.gk === 'snow' ? 0.6 : ci0.gk === 'sand' ? 0.3 : ci0.gk === 'paving' ? 0.25 : 0); const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = ci0.fp, g4 = [vcol(l, i, j), vcol(l, i + 1, j), vcol(l, i + 1, j + 1), vcol(l, i, j + 1)];
       g0 = [0, 1, 2].map(ch => (g4[0][ch] + g4[1][ch] + g4[2][ch] + g4[3][ch])/4);
-      const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], VA[k]*c, zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k])); });
+      const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], VA[k]*c, zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k]), specAt(l, VA[k], VZ[k])); });
       let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
       const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
       if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
       else rsPoly(x, poly, rsCss(cA));
-      if(nWet === 0) rgGroundMarks(x, P, q, ci0.gk, cA, px); }
+      if(nWet === 0){ rgBrush(x, P, q, cA, px, s); rgGroundMarks(x, P, q, ci0.gk, cA, px); } }
 
 
     if(nWet){ const hs = [h00, h10, h11, h01], wp = [], shore = [];
@@ -22694,21 +22803,6 @@ function rgPaintLand(x, mk, dk, V){
 
       if(nWet === 4 && dd < W*2.5){ const ws = Math.max(W*0.004, c*2), gv = V.time ? wn(am + WT*W*0.0000012*Math.cos(WA), zm + WT*W*0.0000012*Math.sin(WA), ws, 1) : wn(am, zm, ws, 1), gk = rsSmooth(0.5, 0.36, gv)*(0.3 + 0.7*day);
         if(gk > 0.02){ const [bx0, bx1, by0, by1] = q.box, n3 = wn(am, zm, ws, 3); x.fillStyle = rsCss(rsMix(wc, [255, 255, 255], 0.35*day + 0.05), gk*(1 - haze)); x.fillRect(bx0 + (bx1 - bx0)*0.2*n3, (by0 + by1)/2, (bx1 - bx0)*(0.3 + 0.5*n3), Math.max(px(0.6), (by1 - by0)*0.08)); } } }
-
-
-    if(g0 && nWet === 0){ const Q = [stepQ(l, i, j), stepQ(l, i + 1, j), stepQ(l, i + 1, j + 1), stepQ(l, i, j + 1)];
-      if(Q[0] === Q[0] && Q[1] === Q[1] && Q[2] === Q[2] && Q[3] === Q[3]){ const lo = Math.floor(Math.min(...Q)), hi = Math.floor(Math.max(...Q));
-        if(hi > lo && hi - lo < 4){ x.strokeStyle = rsCss(rsMix(rgLit(V, rsMix(g0, [255, 244, 222], 0.38), day, haze, AIR), [255, 250, 236], 0.2*(1 - haze)), (0.7*day + 0.15)*(1 - 0.6*haze)); x.lineWidth = Math.max(px(1.2), bandOf(dd)*0.065); x.lineCap = 'round'; x.beginPath();
-          for(let n = lo + 1; n <= hi; n++){ const cut = []; for(let k = 0; k < 4; k++){ const k2 = (k + 1) & 3; if((Q[k] - n)*(Q[k2] - n) < 0) cut.push(lerpP(P[k], P[k2], (n - Q[k])/(Q[k2] - Q[k]))); }
-            for(let k = 0; k + 1 < cut.length; k += 2){ x.moveTo(cut[k][0], cut[k][1]); x.lineTo(cut[k + 1][0], cut[k + 1][1]); } } x.stroke(); } } }
-
-
-
-    if(q.rim && g0){ const EA = [i, i + 1, i + 1, i], EZ = [j, j, j + 1, j + 1]; let eB = 0, dB = -1;
-      for(let k = 0; k < 4; k++){ const k2 = (k + 1) & 3, dm = Math.hypot((EA[k] + EA[k2])*c/2, (zOf(l, EZ[k]) + zOf(l, EZ[k2]))/2 - L.z0); if(dm > dB){ dB = dm; eB = k; } }
-      const A = P[eB], B = P[(eB + 1) & 3];
-      x.strokeStyle = rsCss(rsMix(rgLit(V, rsMix(g0, [255, 244, 222], 0.4), day, haze, AIR), [255, 250, 236], 0.3*(1 - haze)), (0.7*day + 0.15)*(1 - 0.5*haze)); x.lineWidth = Math.max(px(1.6), bandOf(dd)*0.08); x.lineCap = 'round';
-      x.beginPath(); x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke(); }
     mkPath.push(poly); const g = DKG(dd); let dl = dkPolys.get(g); if(!dl){ dl = []; dkPolys.set(g, dl); } dl.push(poly); };
   items.sort((p, q) => q.dd - p.dd);
   for(const it of items){
@@ -35887,11 +35981,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Lupus–Heng';
+const RELEASE = 'Lupus–Uridim';
 
 const RELEASE_DATE = '2026-10-25';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"QikbUYiE","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"usiLGKHa","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -36847,7 +36941,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-25 · 368b3b4";
+const STAMP = "2026-10-25 · 377f541";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

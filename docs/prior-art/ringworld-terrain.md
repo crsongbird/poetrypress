@@ -352,8 +352,9 @@ and stuff change size every few frames … write once, read many".
   from a distance, and for vegetation above all [src](https://documentation.simplygon.com/overview/concepts/impostor.html).
 - So in the painter [est]: the land laid in shelves of a seed's own height (some 8 to 40 m by Landforms), each a broad
   level and a short rise in its last fifth, their edges wandering on noise, some regions more stepped, the highest crags
-  left to their ridges and the steps faded where the land is read coarsely; each shelf's lip drawn lit where a cell of
-  the mesh crosses it. Each corner of the mesh shaded by its own slope, read from its neighbours, the cells between
+  left to their ridges and the steps faded where the land is read coarsely; no line drawn at a shelf's lip (Ruby, later
+  the same day: "the terrain crest contour lines can be removed"; the land's gleam in their place,
+  docs/prior-art/ringworld-painted.md §3). Each corner of the mesh shaded by its own slope, read from its neighbours, the cells between
   graded from corner to corner; the walk toward the sun begun past the corner's own cell, a little above the ground.
   Each tree drawn once onto its own sheet, whole whatever its size, and stamped after; each building's shape read once,
   at one size and unlit, and lit wherever it is used.

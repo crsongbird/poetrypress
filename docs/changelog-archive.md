@@ -2,6 +2,33 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Ursa Major–Phecda (2026-10-24)
+
+- The Ringworld's sky no longer flickers in a film. The cirrus and the long low bands used to leap across the sky at a
+  film's first frame and pop in and out later; now they drift on the wind and fade in and out low over the horizon,
+  and the cirrus is combed along the way the wind blows.
+- Clouds build. In a time-lapse a heap of cumulus grows billow by billow, its top climbing, then thins and is gone, in
+  seconds of film while the wind barely moves it. A heap drifting nearer gains billows one at a time instead of
+  reshuffling.
+- Smoke follows the wind: each chimney's plume leans the way the wind crosses the page there, bends over as it rises,
+  and its puffs are born faint, so none pops out of the pot.
+- Lights live gently. Windows, far lights and signs fade on and off over a moment instead of switching in one frame,
+  a town's lights come up through the dusk rather than all at once, and what pulses (the lights on the rim walls, a
+  flickering lamp) runs at the same calm pace at any frame rate and any speed of time passing.
+- Lightning lights the scene: while a bolt burns, the land takes a cold, hard light from its side and the far side
+  falls darker. It is held by measure under the photosensitivity limit, rises over a quarter of a second, never comes in
+  a film's first second and a half, and never twice within two and a half seconds.
+- In a fast time-lapse, a drone or a walker that would jump across the page from frame to frame is drawn faint while it
+  moves, as a long exposure shows it.
+
+### Under the hood
+- The cloud drift's chord now holds its start well inside it (docs/prior-art/ringworld-motion-and-variety.md §1.2). A
+  film's frame rate reaches the surface (`setSceneTime`, the camera's `fps`) for `rgFilmTime`; `rgStep` gives a
+  real-time film its true step. `pkLit` returns a level; `pkDm` eases the kit's dusk lights in films; `rgGrowTime` runs
+  a heap's life; the heap's billows are dealt from a fixed list of 64; a large heap is drawn on a smaller sheet instead
+  of left out. `rgStrike` times a storm's strikes, and test/moving.test.mjs now checks their timing at every seed and
+  the scene's light per tenth of the frame. Its fingerprints held.
+
 ## Ursa Major–Mizar (2026-10-24)
 
 - The Moving Image's easing has four shapes: Even, Ease in (setting off slowly), Ease out (arriving slowly), and In

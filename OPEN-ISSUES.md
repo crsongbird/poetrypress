@@ -8,8 +8,15 @@ Recommendations".
 
 ## 1 · Ruby to judge
 Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes in the same pass.
-- THE LAND IN STEPS: shelves with lit lips, closer to the first painted ring's ridge-behind-ridge look. Enough steps,
-  and tall enough? (Landforms makes them taller.)
+- THE LAND IN STEPS, NOW WITHOUT LINES: shelves closer to the first painted ring's ridge-behind-ridge look, fewer in
+  the city worlds; the lit lines along crests and shelf lips are gone, and the land gleams where it turns between the
+  sun and the eye instead, brightest looking into the sun. Is the gleam strong enough, and on the right ground?
+- PAINTED, NOT PRINTED: broad strokes of five shared tints over the near ground, soft long strokes in the sky, strokes
+  along a gas giant's bands, a near town wall's damp foot and streaks, roofs laid in courses, cacti with a spine rim and
+  a corky foot. Painted enough, or push further?
+- ON THE GROUND THEY NEED: buildings only where their kind allows the slope, the land levelled under each; fields only
+  on gentle ground (terraces to 47 in a hundred); trees by their biome, no saguaros in green country, shrubs and
+  spruce on steep ground. Anything still floating, or anything growing where it shouldn't?
 - FILMS THAT HOLD STILL: trees drawn once and stamped, buildings' shapes read once, the land's corners kept by place,
   so nothing should flash or change size as the camera pans or zooms; smooth shading without stripes; no stitches on
   the crests; no hole in the overcast; the arch's patches finer; the leaves' backlight a thin glow. Still any flashing?

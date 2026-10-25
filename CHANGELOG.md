@@ -4,6 +4,34 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Lupus–Uridim (2026-10-25)
+
+- Buildings stand on the ground. Each kind of building has a steepest slope it can be built on (a row of houses or a
+  factory only on nearly level ground, a pueblo or a castle on its hill much steeper), and the land under each is
+  levelled and eased back to the slope around it, so no building floats and every door meets the ground. Fields are
+  sown only on gentle ground, terraces only up to a moderate slope, and a field whose corners fall too far is left as
+  grazing.
+- Trees and shrubs grow by the land's moisture, warmth and steepness: saguaros and Joshua trees only in desert,
+  acacias, baobabs and shrubs on the savanna, birches and firs on the tundra, warm-country trees only where it is warm.
+  On steep slopes only spruces and shrubs hold on.
+- The Ringworld looks painted. The near ground carries broad strokes of a few shared colours, the sky has soft long
+  strokes, the gas giants are stroked along their bands, near town walls are damp at the foot and streaked by rain,
+  roofs are laid in courses with weathered patches, and each house in a row has its own slate or tile. Cacti carry a
+  pale-gold rim of spines, a corky foot and patches of yellower and bluer green.
+- The lit lines along the land's crests and shelves are gone. In their place the land gleams where it turns toward the
+  sun, brightest when looking into the sun, and the gleam slides over the hills as the sun moves. Rock, sand and snow
+  gleam more than grass.
+- In the city worlds the land is less stepped.
+
+### Under the hood
+- `floraAt` picks a tree from the biomes at its place (`RG_BIOME_FLORA`, `RG_STEEP_OK`). `RG_FALL` holds each
+  building's steepest ground, and `rgPads` levels the land under the buildings it allows.
+- The land's gleam is Blinn's half-way term at each corner (`specAt`), kept by place for the frame. The land kit no
+  longer reports its steps (the lips it served are gone).
+- New research notes: docs/prior-art/ringworld-painted.md (Dishonored's painted textures, Blinn's highlight) and
+  docs/prior-art/ringworld-buildings-ground.md (levelling under buildings, FAO's slope limits for fields and terraces,
+  plants by biome).
+
 ## Lupus–Heng (2026-10-25)
 
 - Films draw faster again. Each cell of the land keeps its biomes, its far field colour and the kind of ground it shows
@@ -445,30 +473,3 @@ prints it).
   other surface's did.
 - Reviewed the tests the Ringworld's motion leans on (test/moving.test.mjs, test/ringworldView.test.mjs and the
   fingerprints) and swept 90 scenes across seeds, worlds, hours and films for any part that fails: none did.
-
-## Ursa Major–Phecda (2026-10-24)
-
-- The Ringworld's sky no longer flickers in a film. The cirrus and the long low bands used to leap across the sky at a
-  film's first frame and pop in and out later; now they drift on the wind and fade in and out low over the horizon,
-  and the cirrus is combed along the way the wind blows.
-- Clouds build. In a time-lapse a heap of cumulus grows billow by billow, its top climbing, then thins and is gone, in
-  seconds of film while the wind barely moves it. A heap drifting nearer gains billows one at a time instead of
-  reshuffling.
-- Smoke follows the wind: each chimney's plume leans the way the wind crosses the page there, bends over as it rises,
-  and its puffs are born faint, so none pops out of the pot.
-- Lights live gently. Windows, far lights and signs fade on and off over a moment instead of switching in one frame,
-  a town's lights come up through the dusk rather than all at once, and what pulses (the lights on the rim walls, a
-  flickering lamp) runs at the same calm pace at any frame rate and any speed of time passing.
-- Lightning lights the scene: while a bolt burns, the land takes a cold, hard light from its side and the far side
-  falls darker. It is held by measure under the photosensitivity limit, rises over a quarter of a second, never comes in
-  a film's first second and a half, and never twice within two and a half seconds.
-- In a fast time-lapse, a drone or a walker that would jump across the page from frame to frame is drawn faint while it
-  moves, as a long exposure shows it.
-
-### Under the hood
-- The cloud drift's chord now holds its start well inside it (docs/prior-art/ringworld-motion-and-variety.md §1.2). A
-  film's frame rate reaches the surface (`setSceneTime`, the camera's `fps`) for `rgFilmTime`; `rgStep` gives a
-  real-time film its true step. `pkLit` returns a level; `pkDm` eases the kit's dusk lights in films; `rgGrowTime` runs
-  a heap's life; the heap's billows are dealt from a fixed list of 64; a large heap is drawn on a smaller sheet instead
-  of left out. `rgStrike` times a storm's strikes, and test/moving.test.mjs now checks their timing at every seed and
-  the scene's light per tenth of the frame. Its fingerprints held.

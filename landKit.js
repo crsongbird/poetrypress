@@ -52,7 +52,7 @@ export const LK_BIOMES = [
   { name: 'jungle',  t: 0.86,  m: 0.88 },
   { name: 'marsh',   t: 0.55,  m: 1.0 },
 ];
-export const LK_FORESTED = { taiga: 1, forest: 1, jungle: 1, savanna: 0.3, marsh: 0.35, meadow: 0.12 };
+export const LK_FORESTED = { taiga: 1, forest: 1, jungle: 1, savanna: 0.16, marsh: 0.35, meadow: 0.12 };
 
 /** THE LAND OF ONE RING. seed; o: { W, Hw (the rim walls' height), forms (Landforms 0..1), flat (relief kept in cities,
  *  0..1), terrace (the builders' step, ring units, 0 none), z0 (where across the band the seed stands you), blend (how
@@ -76,8 +76,7 @@ export function lkLand(seed, o){
   //  and the high ranges stand white over the plains: the snowline some 250 to 800 m up by the seed's warmth)
   const LAPSE = 1.15/1000;
   // (the raw land in metres, and the parts the climate and the colours read: s, how far inland; dryness of the region)
-  let lastQ = NaN;   // (the last place's step: its shelf's number and how far up it, its lip where it is whole: stepQ)
-  const raw = (u, v, fineM) => { lastQ = NaN;
+  const raw = (u, v, fineM) => {
     const wu = 1800*fbm(u, v, 7000, 2, 1), wv = 1800*fbm(u, v, 7000, 2, 2);
     let C = fbm(u + wu, v + wv, 11000, 4, 3); const dl = Math.hypot(u - Cm*Math.round(u/Cm), v - z0m)/1400; C += 0.1*Math.exp(-dl*dl);
     const sc = C - t0;
@@ -110,8 +109,8 @@ export function lkLand(seed, o){
     // the first painted ring stood ridge behind ridge; the shelves' edges wandering, some regions more stepped than
     // others, the highest crags left to their own ridges; and read only as finely as the land is asked for, so a far
     // coarse ring never aliases them into noise
-    if(h > 2){ const St = stepM*(0.75 + 0.5*(0.5 + 0.5*N(u, v, 14000, 33))), tm = (0.55 + 0.45*lkSmooth(-0.25, 0.25, fbm(u, v, 9000, 2, 31)))*lkSmooth(2, 12, h)*(1 - 0.6*lkSmooth(350, 1000, h))*(1 - lkSmooth(St*3, St*14, fineM));
-      if(tm > 0.01){ const J = St*0.45*N(u + wv, v + wu, 700, 32), q = (h + J)/St, f = q - Math.floor(q); h += ((Math.floor(q) + lkSmooth(0.82, 1, f))*St - J - h)*tm; if(tm > 0.3) lastQ = q; } }
+    if(h > 2){ const St = stepM*(0.75 + 0.5*(0.5 + 0.5*N(u, v, 14000, 33))), tm = (0.55 + 0.45*lkSmooth(-0.25, 0.25, fbm(u, v, 9000, 2, 31)))*lkSmooth(2, 12, h)*(1 - 0.6*lkSmooth(350, 1000, h))*(1 - lkSmooth(St*3, St*14, fineM))*flat;
+      if(tm > 0.01){ const J = St*0.45*N(u + wv, v + wu, 700, 32), q = (h + J)/St, f = q - Math.floor(q); h += ((Math.floor(q) + lkSmooth(0.82, 1, f))*St - J - h)*tm; } }
     // (no mountain above the walls: a soft ceiling)
     if(h > capM - 200){ const k2 = 80; h = capM - k2*Math.log1p(Math.exp((capM - h)/k2)); }
     return h;
@@ -140,7 +139,5 @@ export function lkLand(seed, o){
     for(let i = 0; i < w.length; i++) w[i] /= n || 1; return w; };
   // the snowline: where warmth falls under freezing (ice's own warmth plus a little)
   const snowline = Math.max(150, (warm + 0.06)/LAPSE)*M;
-  // (stepQ: the step of the place last asked for its height, NaN where its land is not stepped: a shelf's lip where it
-  //  passes a whole number, so a painter can draw the lip of each shelf)
-  return { M, sea: 0, height, climate, biomes, snowline, wet, warm, rug, stepQ: () => lastQ };
+  return { M, sea: 0, height, climate, biomes, snowline, wet, warm, rug };
 }

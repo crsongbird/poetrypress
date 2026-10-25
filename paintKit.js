@@ -428,7 +428,18 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     x.strokeStyle = pkCss(bd); x.lineWidth = w*1.3; x.beginPath(); x.moveTo(x0 + sd*w*0.25, y0); x.lineTo(x1 + sd*w*0.25, y1); x.stroke();
     x.strokeStyle = pkCss(lt, 0.8); x.lineWidth = Math.max(px(0.4), w*0.35); x.beginPath(); x.moveTo(x0 + sd*w*0.55, y0); x.lineTo(x1 + sd*w*0.55, y1 + w*0.4); x.stroke();
     if(w*(c0.lod || 1) > px(4)){ x.strokeStyle = pkCss(pkMix(dk, PK_BLACK, 0.3), 0.5); x.lineWidth = Math.max(px(0.3), w*0.06); x.lineCap = 'butt';
-      for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } x.lineCap = 'round'; } };
+      for(const f of [-0.6, -0.2, 0.2, 0.6]){ x.beginPath(); x.moveTo(x0 + f*w, y0); x.lineTo(x1 + f*w, y1 + w*0.3); x.stroke(); } x.lineCap = 'round'; }
+    // (Ruby: "which tree is that which is just a green stick? There should always be more color and texture": a cactus
+    //  is never one green. Its spines catch the light as a pale gold rim along its lit edge; its foot is corky, grey and
+    //  brown where it has aged; its skin goes yellower and bluer in long patches; its crown is woolly and tan. NPS and
+    //  the desert-plants notes, docs/prior-art/ringworld-desert-plants.md)
+    if(w > px(0.9)){ const L = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0)/L, uy = (y1 - y0)/L, at = f => [x0 + (x1 - x0)*f, y0 + (y1 - y0)*f];
+      x.strokeStyle = pkCss(pkMix(lt, [236, 214, 150], 0.55), 0.55*tone); x.lineWidth = Math.max(px(0.3), w*0.18); x.beginPath(); x.moveTo(x0 + sd*w*0.95, y0); x.lineTo(x1 + sd*w*0.9, y1 + w*0.5); x.stroke();
+      const cork = Math.min(0.22, w*3/L); if(cork > 0.03){ const [cx3, cy3] = at(cork); x.strokeStyle = pkCss(pkMix(dk, [120, 100, 80], 0.6), 0.85); x.lineWidth = w*1.9; x.lineCap = 'butt'; x.beginPath(); x.moveTo(x0, y0); x.lineTo(cx3, cy3); x.stroke(); x.lineCap = 'round'; }
+      let hs = (Math.round(x0*7 + y0*13) & 0xffff) || 1; const rr = () => ((hs = (hs*16807) % 2147483647)/2147483647);
+      for(let k = 0; k < 3; k++){ const f0 = 0.15 + 0.6*rr(), f1 = Math.min(0.95, f0 + 0.1 + 0.2*rr()), [ax2, ay2] = at(f0), [bx2, by2] = at(f1), side = (rr() - 0.5)*w*0.9;
+        x.strokeStyle = pkCss(pkMix(bd, rr() < 0.5 ? [170, 176, 90] : [80, 120, 120], 0.35), 0.5); x.lineWidth = w*0.5; x.beginPath(); x.moveTo(ax2 - uy*side, ay2 + ux*side); x.lineTo(bx2 - uy*side, by2 + ux*side); x.stroke(); }
+      pkDisc(x, x1, y1 + w*0.15, w*0.55, pkCss(pkMix(lt, [210, 190, 150], 0.5), 0.75)); } };
   // (a crown's flowers or fruit, in their season: white flowers with yellow hearts, or the red fruit after)
   const crown = (cx2, cy2, w, flower, fruit) => { if(small || hd < px(30)) return; const RC = sub(11);
     if(inSeason(...flower)) for(let k = 0; k < 6; k++){ const fx2 = cx2 + (RC()*2 - 1)*w*0.8, fy2 = cy2 + (RC() - 0.2)*w*0.6; pkDisc(x, fx2, fy2, w*0.3, pkCss([246, 242, 228], 0.95)); pkDisc(x, fx2, fy2, w*0.11, pkCss([236, 196, 80])); }
@@ -785,7 +796,7 @@ const PK_BUILT = {
     // windows with frames, a bay window now and then, steps to the door, chimney stacks with their pots
     const n = 3 + Math.floor(o.R()*3), hw = wd/n, M = [[150, 76, 58], [210, 196, 168], [150, 150, 146], [196, 120, 96], [110, 130, 150], [176, 168, 120]];
     for(let q = 0; q < n; q++){ const hx = X - wd/2 + hw*(q + 0.5), hh = h*(0.75 + 0.25*o.R()), wc = pkMat(c, M[Math.floor(o.R()*M.length)], 0.6), ye = Y - hh*0.75;
-      pkShade(x, [[hx - hw/2, Y], [hx - hw/2, ye], [hx + hw/2, ye], [hx + hw/2, Y]], wc.body, ye, Y, 0.14); pkGable(x, hx - hw/2, hx + hw/2, ye, Y - hh, pkMat(c, PK_SLATE, 0.5), 0);
+      pkShade(x, [[hx - hw/2, Y], [hx - hw/2, ye], [hx + hw/2, ye], [hx + hw/2, Y]], wc.body, ye, Y, 0.14); pkGable(x, hx - hw/2, hx + hw/2, ye, Y - hh, pkMat(c, [PK_SLATE, [150, 84, 64], [118, 108, 100], [92, 98, 112]][(q*3 + n) % 4], 0.55), 0);   // (each house its own slate or tile, never one dark comb along the row)
       const sx = hx + hw/2 - hw*0.08, st = pkMat(c, PK_BRICK, 0.6); pkShade(x, [[sx, Y - hh*0.86], [sx, Y - hh*1.04], [sx + hw*0.16, Y - hh*1.04], [sx + hw*0.16, Y - hh*0.86]], st.body, Y - hh*1.04, Y - hh*0.86);
       if(o.detail){ for(let k = 0; k < 3; k++) pkBar(x, sx + hw*(0.015 + k*0.05), Y - hh*1.09, hw*0.03, hh*0.05, PK_TERRA, o.px);
         const dx = hx - hw*0.22, dh = (Y - ye)*0.4; pkShade(x, [[dx - dh*0.22, Y - (Y - ye)*0.05], [dx - dh*0.22, Y - dh], [dx + dh*0.22, Y - dh], [dx + dh*0.22, Y - (Y - ye)*0.05]], pkMat(c, [[40, 50, 70], [110, 30, 34], [30, 70, 60]][q % 3], 0.7).body, Y - dh, Y);
@@ -1176,7 +1187,18 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
       if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof ? litOf(pr.roof).body : rm.body, o = wdt*0.04;
         // both slopes, the far one first: seen nearly end-on, from a little above, the far one shows beside the near
         for(const sg of [-sideN, sideN]){ const up = S.light(0, sg, sd)*0.5 + 0.25, sv2 = sg*a;
-          pkPoly(x, [S.P(-Dt/2 - o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, sv2*1.08, Hs - h*0.02), S.P(Dt/2 + o, 0, ridge), S.P(-Dt/2 - o, 0, ridge)], pkCss(up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45))); }
+          const rc = up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45), Q = (u, f) => S.P(u, sv2*1.08*(1 - f), Hs - h*0.02 + (ridge - Hs + h*0.02)*f);
+          pkPoly(x, [Q(-Dt/2 - o, 0), Q(Dt/2 + o, 0), Q(Dt/2 + o, 1), Q(-Dt/2 - o, 1)], pkCss(rc));
+          // (Ruby: "weird giant dark roofs … there should always be more color and texture": a roof is laid in courses of
+          //  tile or slate, each a hair lighter at its lower edge, and weathered in patches, a few long strokes of a
+          //  warmer or greener colour along the courses, as a painter lays a roof in, never one flat plane)
+          if(Math.abs(ridge - Hs) > px(4)){ const n = Math.max(3, Math.min(14, Math.round(Math.abs(ridge - Hs)/px(2.2)))), lw = Math.max(px(0.35), Math.abs(ridge - Hs)/n*0.22);
+            x.strokeStyle = pkCss(pkMix(rc, PK_BLACK, 0.35), 0.4); x.lineWidth = lw; x.beginPath();
+            for(let k = 1; k < n; k++){ const f = k/n; x.moveTo(...Q(-Dt/2 - o, f)); x.lineTo(...Q(Dt/2 + o, f)); } x.stroke();
+            let hs = (v0*1e6 | 0) ^ (sg > 0 ? 0x5bd1 : 0x2c9f); const rr = () => ((hs = (hs*1103515245 + 12345) & 0x7fffffff)/0x7fffffff);
+            x.lineCap = 'round'; for(let k = 0; k < 5; k++){ const f = 0.1 + 0.8*rr(), u0 = (rr() - 0.5)*Dt, len = Dt*(0.15 + 0.3*rr()), tint = rr() < 0.5 ? [150, 120, 70] : [96, 120, 70];
+              x.strokeStyle = pkCss(pkMix(rc, tint, 0.3), 0.45); x.lineWidth = lw*2.5; x.beginPath(); x.moveTo(...Q(u0, f)); x.lineTo(...Q(Math.min(Dt/2, u0 + len), f + (rr() - 0.5)*0.05)); x.stroke(); }
+            x.lineCap = 'butt'; } }
         x.strokeStyle = pkCss(rm.dark, 0.5); x.lineWidth = Math.max(px(0.4), h*0.006); x.beginPath(); x.moveTo(...S.P(-Dt/2 - o, 0, ridge)); x.lineTo(...S.P(Dt/2 + o, 0, ridge)); x.stroke(); }
       else if(S.tilt(zt) > 0){ // a flat top, seen from a little above (never from under it): the roof's own plane
         pkPoly(x, [S.P(-Dt/2, -a, zt), S.P(Dt/2, -a, zt), S.P(Dt/2, a, zt), S.P(-Dt/2, a, zt)], pkCss(pkMix(pkMix(c.body, c.lit, 0.55), PK_CONCRETE, 0.25), glassy ? 0.6 : 1)); }
