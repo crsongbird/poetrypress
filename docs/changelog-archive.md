@@ -2,6 +2,29 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Neptune–Sao (2026-10-22)
+
+- The trees, remade in the style of the rest. No two of a kind are alike now: each grows its own crown, wide or narrow
+  for its height, leaning, fuller on one side, open or dense, young and pointed or old and broad, with a touch of its
+  own green. A crown is grown lobe on lobe, so no piece of a tree floats, and its limbs leave the trunk and end
+  inside the clumps they hold.
+- Every tree is shaded: its lower inside darkest, the sky through it here and there, and close by, small leaves of its
+  own shape. With the sun behind a tree, its leaves glow: the shade lifts toward yellow-green and the crown's outline
+  is lit from behind.
+- The conifers: a spruce's drooping tiers and a fir's narrow spire, each side of each tier its own width, the lower
+  boughs dead on an old one. A young pine is a rough cone; a mature pine is a tall trunk with clumps of needles at
+  their own heights on their own limbs. A cedar's shelves sit on limbs that reach them.
+- Palms and tree ferns have feathered fronds, the palm's leaflets hanging and the fern's spread flat; a palm keeps a
+  dead frond or two and its coconuts. A baobab's branches are thick and stubby with leaves at their ends; an acacia
+  forks low into limbs that hold its flat crown; an olive is silver-grey and open.
+
+### Under the hood
+- paintKit.js: `pkTreeForm` (a tree's own form from its stream), `pkTreeTint`, `pkGrow` (crowns grown, not
+  scattered), `pkLobes` near and far, `pkBacklit` (only the arcs of the crown's true outline), `pkLimb` as one
+  tapering shape, `pkConifer`, `pkFrond`. stepsRing.js gives the trees the sun's `back` (how far the camera looks
+  toward it). Research for the next passes (people, water, clouds, turning and grounding things) is in
+  docs/prior-art/ringworld-life-and-views.md. No fingerprint changed.
+
 ## Neptune–Halimede (2026-10-21)
 
 - Painted Ringworld's countryside, seen from a little height, reads as farmland now. Fields no longer lie over one

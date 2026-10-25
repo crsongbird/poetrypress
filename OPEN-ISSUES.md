@@ -35,9 +35,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   ends; To a shot (Set the shot… on the dial); four easings; Also under Camera round (Push in, Pull back, Tilt, Spiral
   out); Set it now… for the look a film moves to, set on the page itself with the sheet tucked to a bar at the foot. Do
   the amounts feel right?
-- THE SKY AS A BACKDROP: the stars stand still behind everything as the camera turns, tilts and zooms, drifting only a
-  little with the ring's spin (a sixth of what it was); in rain, a storm or snow an overcast ceiling covers the sky,
-  mottled with the darker bases of its rolls, and rain is rarer (a seed in twenty-two).
+- THE STARS IN THE WORLD: a skybox now, standing still as the camera turns past them; in rain, a storm or snow an overcast
+  ceiling, the arch just showing through it.
+- THE FILM WINDOW: the camera and light dials in it, From and To on the same dial; Length and Time passes as sliders;
+  Aspect and Resolution (720p to 2160p, or your own width and height).
 - FLORA, FAUNA AND DETAIL: Life is Flora (what grows), Paint is gone and its slider is Fauna (what lives and moves, at 40
   by default, the flocks smaller), the Brush fader is Detail (Low, Medium, High, Ultra; Medium as it always was). Right
   amounts at the defaults?
@@ -45,10 +46,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
-  - THE FILM WINDOW: length a slider with ticks; aspect a radio; resolution a radio (720p, 1080p, 1440p, 2160p, or a
-    custom width and height); the two cameras and the sun's arc in the window itself for the surfaces that have them;
-    a journey (the eye carried along a seed's own interesting path, up to two days long); clearer moves, more of them;
-    then keys on a reel (docs/prior-art/film-studio.md).
+  - THE FILM WINDOW, what is left: the sun's arc on the light dial (its noon and where it rises); a journey (the eye
+    carried along a seed's own interesting path, up to two days long, once the land is generated); clearer moves, more
+    of them; then keys on a reel (docs/prior-art/film-studio.md).
   - THE LAND GENERATED AND DRAWN: real landmasses and biomes by the seed, rendered with intention, with transition zones;
     water with clear shores; nothing morphing as the camera rises or turns; the bands kept to mark drops in elevation and
     sharp borders; ground textures for each kind of terrain; ground meeting objects well; far land drawn far and well (the
@@ -78,6 +78,44 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     their own sharing the ring's code and rules, so all of it ports to a game engine together; gem walkers, elves and fae,
     demonic and eldritch things.
   - A BETTER SENSE OF SCALE throughout; a wider variety of life; the depth pass over every drawing.
+- RUBY'S ORDERS (2026-10-25, the second list; added to the list above, nothing taken from it):
+  - THE BUILDERS' WORKS: satellite dishes in fenced groups under Works, and now and then as clutter fixed to other things;
+    dishes varying by era; clutter placed with intent, beside the buildings it belongs to or in clusters, by what each
+    thing is (its tags); light bridges that connect to something and never cross; bridges, arches and spans periodic,
+    going all the way round the ring, with near levels of detail; computer cores; giant walker robots made well; a wider
+    variety of builders' artifacts.
+  - DOMES: far fewer, and many kinds: observatories with open slits and moving telescopes, odd shapes, strange entrances;
+    the big glass domes remade (seed "Thread and eddy, calcined undone").
+  - CITIES IN LAYERS: at very high Works, where the seed builds cities, neon or builders, a city on a city on a city, an
+    ecumenopolis.
+  - THE LAND'S LIMITS: no mountain above the rim walls; windmills in the fields, wind farms in arrays on the hillsides where
+    the biome, seed or builders favor them; less farming in magic worlds, and never mundane farms there.
+  - DETAIL IN EARNEST: how far out detailed objects are drawn, how detailed they are, the quality and distance of
+    detailed terrain, how well biomes blend, not only how many small things.
+  - WEATHER THAT TOUCHES THINGS: rain, snow, dust storms, meteor showers and more, their layers keeping depth and meeting
+    the objects; what falls gathering on objects and the ground where it would (snow on fronds); fogs with fog lights and
+    distortions.
+  - A RARE REENACTMENT: one seed in 776 stages a Revolutionary War reenactment in the middle distance or the foreground (the
+    South always losing badly), the test bed for a wide variety of people and animations: women, people of every color;
+    where the seed has elves and other folk, it turns Tolkien or Star Trek.
+  - STABILITY: things on far or steep hills must not walk up and down or shimmer (precision); graffiti must not change its
+    kind or place.
+  - MAGIC BY ELEMENT: regions of earth, fire, water and air coloring the ground, trees and lights; glowing trees rare and of
+    the region's colors, not everything red; cute slimes, chocobo-like birds and such (legally distinct).
+  - WILDLIFE WIDER: insects, ground creatures, cats, middle predators and the rest, not birds in their place; water
+    creatures and better water animation.
+  - PLANTS AND BUILDINGS WIDER: more kinds of trees, grasses and shrubs; the library of buildings kept growing until they
+    no longer look the same.
+  - SIGNS AND WRITING: graffiti in many typefaces and colors, rival gangs where there are gangs, the odd vertical strokes in
+    magic graffiti gone; more and funnier billboards; information signs in better type and art.
+  - THE WALLS AND THE FAR LAND: more kinds of rim-wall surface; the far land in regions, not a checkerboard; dirt, dust and
+    moss on walls and buildings where they would gather.
+  - NEAR THINGS DRAWN WELL: large objects near the eye layered, blended and ordered properly, trees split into trunk,
+    branches and leaves for it; objects embedded in the ground or growing from it, never floating or stuck on; crystals
+    with ground contact, shading, shadows, more angles, better materials, some reflection or translucency.
+  - LIGHT WITH INTENT: the scene lit with direction and purpose (ground, buildings, trees; the faked scattering is close);
+    fewer large glowing regions unless their glow moves gently and varies in color.
+  - EVERY FEATURE IN MANY ANGLES AND VARIATIONS, rare ones too (crashes, mushrooms).
 - THE FILM, ANY SETTING (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe").
   Next: marking controls on the page itself (a ∿ in each lock's place) and during To another look; the seed drifting.
   An hour of time passing during a pan is the right default. A film's motion stays out of looks and spells (the draft keeps it).

@@ -35,7 +35,7 @@ const EXEMPT = {
   advancedJson: 'the Workbench JSON box IS the saved look',
   modalInput:   'the text field of a dialog',
   // (the Moving Image sheet: how a film is made, not part of the look)
-  ...Object.fromEntries(['movingLook', 'movingLength', 'movingMarkCtl', 'movingMarkHow', 'movingMarkAmt', 'movingMarkTimes'].map(id => [id, 'the Moving Image sheet: how a film is made, not part of the look'])),
+  ...Object.fromEntries(['movingLook', 'movingLength', 'movingSpanSlider', 'movingCustomW', 'movingCustomH', 'movingMarkCtl', 'movingMarkHow', 'movingMarkAmt', 'movingMarkTimes'].map(id => [id, 'the Moving Image sheet: how a film is made, not part of the look'])),
   cameraZoomSlider: 'a view of the camera\'s zoom (cameraZoom, saved with the layer)',
   modalRangeA:  'a dialog\'s low handle (a wire\'s range, kept in the graph)',
   modalRangeB:  'a dialog\'s high handle (a wire\'s range, kept in the graph)',

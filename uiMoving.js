@@ -19,10 +19,10 @@ import { draftTimer } from './uiSurface.js';
 import { generateFilenameBase } from './uiLayout.js';
 import { restoreSettings, serializeCurrentSettings } from './uiLook.js';
 import { historyHold, historyPutBack } from './uiHistory.js';
-import { cameraNow } from './uiDials.js';
+import { cameraNow, putCamera } from './uiDials.js';
 import { blendLooks, cameraAlso, markValue, shotAlong, crc32, filmHours, moveAlong, mp4Parts, SUN_DAY, sunPath, webmBytes, wholeChanges, zipParts } from './moving.js';
 
-const MOVING_SIZES = { wide: [1920, 1080], tall: [1080, 1920], square: [1080, 1080] };
+const MOVING_ASPECTS = { '9:16': 9/16, '4:5': 4/5, '1:1': 1, '16:9': 16/9 };
 // (where a look's kind changes, the film fades across this middle stretch of the move)
 const MOVING_FADE = [0.38, 0.62];
 const movingRun = { busy: false, stop: false, sure: 0, wake: null, caps: {}, able: {}, eased: false, setFrom: null, setLook: null, pickSet: false, setMode: 'look', shot: null, marks: {} };
@@ -54,8 +54,13 @@ const movingPick = (name, d) => { const r = movingRadios(name).find(q => q.check
 const movingSet = (name, v) => { for(const r of movingRadios(name)) r.checked = r.value === v; };
 // (a film's size in pixels: a chosen frame, or the page's own; a video's held to 4K's area, past which the encoders'
 //  levels end, and its sides even, as H.264 and VP9 take)
-function movingDims(size, fmt){ const cv = $('poemCanvas') || {};
-  let [w, h] = MOVING_SIZES[size] || [state.page.exportW || cv.width || 1080, state.page.exportH || cv.height || 1350];
+// THE FILM'S SIZE (Ruby: "Aspect Ratio as a radio button; Resolution as a radio button 720p, 1080p, 1440p, 2160p (best guess
+// for off ratios) or custom w/h (overrides aspect)"): the resolution is the short side, the aspect the shape (the page's
+// own, or a screen's); a custom size is taken as it is
+function movingDims(aspect, res, fmt){ const cv = $('poemCanvas') || {}, num = id => Math.round(parseFloat(($(id) || {}).value) || 0);
+  let w, h; if(res === 'custom'){ w = Math.max(64, Math.min(7680, num('movingCustomW') || 1080)); h = Math.max(64, Math.min(7680, num('movingCustomH') || 1350)); }
+  else { const pw = state.page.exportW || cv.width || 1080, ph = state.page.exportH || cv.height || 1350, ar = MOVING_ASPECTS[aspect] || pw/ph, N = +res || 1080;
+    if(ar >= 1){ h = N; w = Math.round(N*ar); } else { w = N; h = Math.round(N/ar); } }
   if(fmt !== 'png'){ const k = Math.min(1, Math.sqrt(3840*2160/(w*h))); w = Math.round(w*k); h = Math.round(h*k); w -= w % 2; h -= h % 2; }
   return [w, h]; }
 const movingBitrate = (w, h, fps) => Math.round(Math.min(40e6, Math.max(4e6, w*h*fps*0.15)));
@@ -69,7 +74,7 @@ function movingWords(sec){ const n = v => String(v < 10 ? Math.round(v*10)/10 : 
 function movingSummary(){
   const el = $('movingSummary'); if(!el) return;
   const fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, len = Math.min(60, +($('movingLength') || {}).value || 12), n = len*fps;
-  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), bytes = fmt === 'png' ? n*w*h*1.5 : movingBitrate(w, h, fps)*len/8;
+  const [w, h] = movingDims(movingPick('movingAspect', 'page'), movingPick('movingRes', '1080'), fmt), bytes = fmt === 'png' ? n*w*h*1.5 : movingBitrate(w, h, fps)*len/8;
   let text = MOVING.sum.replace('{len}', String(len)).replace('{fps}', String(fps)).replace('{frames}', String(n)).replace('{size}', `${w} × ${h}`)
     .replace('{fmt}', { mp4: 'MP4', webm: 'WebM', png: 'PNG' }[fmt] || fmt).replace('{mb}', bytes >= 1e9 ? (bytes/1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(bytes/1e6)) + ' MB');
   const span = movingSpan(movingPick('movingMove', 'camera'));
@@ -81,8 +86,10 @@ function movingSummary(){
   if(nm) text += ' · ' + (nm === 1 ? MOVING.marksCount1 : MOVING.marksCount.replace('{n}', String(nm)));
   el.textContent = text; }
 // (how much time passes in the film, in seconds: none in real time; Time Passing always some)
+// (time passing, from its slider: 0 is real time, then five minutes to two days spread by how long it feels, as a log)
+const movingSpanSecs = v => v <= 0 ? 0 : Math.round(300*Math.pow(172800/300, (Math.min(100, v) - 1)/99));
 function movingSpan(move){ const caps = movingRun.caps || {}, timeable = !!(caps.time || caps.dial === 'Daylight');
-  if(!timeable || (move !== 'camera' && move !== 'time')) return 0; const v = +movingPick('movingSpan', '0') || 0; return move === 'time' ? v || 86400 : v; }
+  if(!timeable || (move !== 'camera' && move !== 'time')) return 0; const v = movingSpanSecs(+(($('movingSpanSlider') || {}).value) || 0); return move === 'time' ? v || 86400 : v; }
 /** The other looks a film can move to: the spells kept in this browser, and the look before the last change. */
 function movingLooks(){
   const out = [];
@@ -108,17 +115,17 @@ export function openMoving(){
   paintMoving(); movingNote(coded ? '' : MOVING.noEncoder);
   // (on a desktop its cards are in the Kinesis tab, not the sheet: appEvents.js, placeKinesis)
   const body = $('movingBody'); if(!body || body.parentNode === sheet) sheet.hidden = false;
-  movingPlaybackOff(); movingShow($('poemCanvas'));
+  movingPlaybackOff(); movingShow($('poemCanvas')); movingDials(true); movingRun.camIs = movingPick('movingCam', 'from');
 }
 // (while a film is being made, closing the sheet, Escape, a tap outside it: a soft no, the film goes on; only Stop, tapped
 //  twice, ends it. The page under the sheet stays as it is, since every frame is drawn from it)
-export function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; movingPlaybackOff(); }
+export function closeMoving(){ if(movingRun.busy){ movingNote(MOVING.stillMaking); return; } const s = $('movingSheet'); if(s) s.hidden = true; movingPlaybackOff(); movingLeave(); }
 // SET IT NOW (Ruby: "more settings so we can do a wider variety of animations, arbitrary settings maybe"): the sheet
 // tucks away and the page itself is changed, anything at all; Done keeps that as the look the film moves to, Cancel
 // drops it, and either way the page goes back to how it was and the changes leave the history
 // (and To a shot's Set the shot: the same, but only the camera kept, the film then easing from the camera as it is to
 //  the shot set: docs/prior-art/film-animation.md §C)
-export function movingSetNow(mode = 'look'){ if(movingRun.busy) return; movingRun.setFrom = historyHold(); movingRun.setMode = mode === 'shot' ? 'shot' : 'look';
+export function movingSetNow(mode = 'look'){ if(movingRun.busy) return; movingLeave(); movingRun.setFrom = historyHold(); movingRun.setMode = mode === 'shot' ? 'shot' : 'look';
   const s = $('movingSheet'), t = $('movingTuck'), tx = $('movingTuckText'); if(s) s.hidden = true; if(t) t.hidden = false; if(tx) tx.textContent = movingRun.setMode === 'shot' ? MOVING.tuckShot : MOVING.tuckLook;
   if(document.body && document.body.classList) document.body.classList.add('moving-tucked'); }
 export function movingSetEnd(keep){ const f = movingRun.setFrom; if(!f) return; movingRun.setFrom = null;
@@ -140,6 +147,22 @@ function movingPlayback(blob){ const v = $('movingPreviewVideo'); if(!v) return;
   if(!blob || !movingInSheet() || !/video/.test(blob.type || '')) return; movingRun.playUrl = URL.createObjectURL(blob); v.src = movingRun.playUrl; v.hidden = false; const p = v.play && v.play(); if(p && p.catch) p.catch(() => {}); }
 function movingPlaybackOff(){ const v = $('movingPreviewVideo'); if(v){ if(v.pause) v.pause(); v.hidden = true; if(v.removeAttribute) v.removeAttribute('src'); }
   if(movingRun.playUrl){ URL.revokeObjectURL(movingRun.playUrl); movingRun.playUrl = null; } }
+// THE DIALS IN THE FILM'S WINDOW (Ruby: "camera and sun controls right in the animation window for compatible viewers/
+// surfaces/generators"): the page's light and camera dials move into its Camera and Light card while it is open and go
+// back to Materia when it closes, moved, never copied. FROM is the page's camera; TO is the shot the film moves to, set on
+// the same dial: choosing To shows the shot on the page (or the page's camera, the first time), choosing From keeps it and
+// puts the page's camera back; and the film then turns To a shot
+function movingDials(open){ const slot = $('movingDials'); if(!slot) return;
+  // (laid out as Materia lays them, the two side by side where the surface has a camera)
+  { const tools = $('textureToolRow'); if(open && tools && tools.classList && slot.classList) for(const c of ['has-camera', 'has-seg']) slot.classList.toggle(c, tools.classList.contains(c)); }
+  for(const id of ['lightRow', 'cameraRow']){ const row = $(id), home = $(id + 'Home'); if(!row || !home || !home.parentNode) continue;
+    if(open && row.parentNode !== slot) slot.appendChild(row); else if(!open && row.parentNode === slot) home.parentNode.insertBefore(row, home.nextSibling); } }
+function movingCamSwitch(to){ if(to === movingRun.camIs) return;
+  if(to === 'to'){ movingRun.camFrom = cameraNow(); const s = movingRun.shot || movingRun.camFrom; putCamera(s.turn, s.view, s.zoom); movingSet('movingMove', 'camera'); movingSet('movingTurn', 'shot'); }
+  else { movingRun.shot = cameraNow(); const f = movingRun.camFrom || movingRun.shot; putCamera(f.turn, f.view, f.zoom); }
+  movingRun.camIs = to; render(); }
+/** The film's window left (closed, or another tab chosen on a desk): the shot kept, the page's camera back, the dials home. */
+export function movingLeave(){ if(movingPick('movingCam', 'from') === 'to'){ movingSet('movingCam', 'from'); movingCamSwitch('from'); } movingDials(false); }
 /** Is a film being made (the page asks before it is closed or left). */
 export const movingBusy = () => movingRun.busy;
 // WHILE A FILM IS MADE the rest of the page takes no touch (docs/prior-art/film-studio.md, While a film is made): the
@@ -160,12 +183,15 @@ export async function movingWake(){
 export function paintMoving(e){
   const t = e && e.target, busy = movingRun.busy, caps = movingRun.caps || {}, able = movingRun.able || {};
   if(t && t.name === 'movingEase') movingRun.eased = true;   // (chosen by hand: kept)
+  if(t && t.name === 'movingCam') movingCamSwitch(t.value);
   if(t && (t.id === 'movingMarkHow' || t.id === 'movingMarkAmt' || t.id === 'movingMarkTimes')) setMark();
   if(t && t.id && t.id.startsWith('movingMark')) paintMarks();
   let m = movingPick('movingMove', 'camera');
   // (Time Passing never runs in real time; and, until easing is chosen by hand, a full round or a light round goes
   //  evenly, so it loops, and a part turn or a move to a look eases in and out)
-  if(m === 'time' && movingPick('movingSpan', '0') === '0') movingSet('movingSpan', '86400');
+  { const sl = $('movingSpanSlider'); if(m === 'time' && sl && +sl.value <= 0) sl.value = '89'; }   // (a day)
+  { const sl = $('movingSpanSlider'), rd = $('movingSpanRead'), s2 = movingSpanSecs(+((sl || {}).value) || 0); if(rd) rd.textContent = s2 ? movingWords(s2) : MOVING.realTime;
+    const ln = $('movingLength'), lr = $('movingLengthRead'); if(lr && ln) lr.textContent = fill(MOVING.lenSecs, String(+ln.value || 12)); }
   if(!movingRun.eased) movingSet('movingEase', m === 'look' || (m === 'camera' && movingPick('movingTurn', '360') !== '360') ? 'ease' : 'even');
   const timeable = !!(caps.time || caps.dial === 'Daylight'), timed = movingSpan(m) > 0;
   // (the rest at the ends dimmed where the film loops round: a full round, a light round, time passing)
@@ -173,11 +199,15 @@ export function paintMoving(e){
   const sh = movingRun.shot, si = $('movingShotIs'); if(si) si.textContent = sh ? MOVING.shotIs.replace('{turn}', String(Math.round(sh.turn))).replace('{view}', String(Math.round(sh.view))).replace('{zoom}', String(Math.round(sh.zoom))) : MOVING.shotNone;
   const on = { movingMarkRow: m !== 'look', movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingShotRow: m === 'camera' && tp === 'shot', movingRestRow: !loops, movingAlsoRow: m === 'camera' && tp !== 'shot', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
   for(const [id, ok] of Object.entries(on)){ const row = $(id); if(!row) continue; if(row.classList) row.classList.toggle('off', !ok);
-    for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok || (el.name === 'movingSpan' && el.value === '0' && m === 'time'); }
+    for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok; }
   for(const r of movingRadios('movingMove')) r.disabled = busy || !able[r.value];
   for(const r of movingRadios('movingFormat')) r.disabled = busy || (r.value !== 'png' && typeof VideoEncoder === 'undefined');
-  for(const n of ['movingSize', 'movingFps']) for(const r of movingRadios(n)) r.disabled = busy;
+  for(const n of ['movingAspect', 'movingRes', 'movingFps']) for(const r of movingRadios(n)) r.disabled = busy;
   if($('movingLength')) $('movingLength').disabled = busy;
+  // (the custom size dimmed where it stands unless Custom is chosen; the aspect then says nothing)
+  { const cust = movingPick('movingRes', '1080') === 'custom', cr = $('movingCustomRow'), ar = $('movingAspectRow');
+    if(cr && cr.classList) cr.classList.toggle('off', !cust); if(ar && ar.classList) ar.classList.toggle('off', cust);
+    for(const id of ['movingCustomW', 'movingCustomH']) if($(id)) $(id).disabled = busy || !cust; }
   if($('movingSetNow')) $('movingSetNow').disabled = busy || m !== 'look';
   if($('movingSetShot')) $('movingSetShot').disabled = busy || m !== 'camera' || tp !== 'shot';
   const b = $('movingMake'); if(b) b.textContent = busy ? (movingRun.sure ? MOVING.stopSure : MOVING.stop) : MOVING.make;
@@ -235,8 +265,9 @@ export async function makeMoving(){
   if(movingRun.busy){
     if(!movingRun.sure){ movingRun.sure = setTimeout(() => { movingRun.sure = 0; paintMoving(); }, 3500); paintMoving(); return; }
     clearTimeout(movingRun.sure); movingRun.sure = 0; movingRun.stop = true; paintMoving(); return; }
+  if(movingPick('movingCam', 'from') === 'to'){ movingSet('movingCam', 'from'); movingCamSwitch('from'); }   // (the shot kept, the film starting from the page's camera)
   const canvas = $('poemCanvas'), move = movingPick('movingMove', 'camera'), fmt = movingPick('movingFormat', 'mp4'), fps = +movingPick('movingFps', '30') || 30, n = Math.min(60, +$('movingLength').value || 12)*fps;   // (a minute at most)
-  const [w, h] = movingDims(movingPick('movingSize', 'page'), fmt), back = movingPick('movingPlay', 'once') === 'back', ease = movingPick('movingEase', 'even'), eased = ease === 'even' ? false : ease;
+  const [w, h] = movingDims(movingPick('movingAspect', 'page'), movingPick('movingRes', '1080'), fmt), back = movingPick('movingPlay', 'once') === 'back', ease = movingPick('movingEase', 'even'), eased = ease === 'even' ? false : ease;
   const tpick = movingPick('movingTurn', '360'), toShot = move === 'camera' && tpick === 'shot', turn = toShot ? 0 : +tpick || 360, spanS = movingSpan(move), timed = spanS > 0, begin = movingPick('movingBegin', 'lit');
   if(toShot && !movingRun.shot){ movingNote(MOVING.noShot); return; }
   const restS = +movingPick('movingRest', '0') || 0, lenS = n/fps, rest = restS > 0 ? restS/(back ? lenS/2 : lenS) : 0;

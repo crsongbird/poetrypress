@@ -902,7 +902,7 @@ but bear with me, dear}]/jitter:200
             <select id="textureBlend"></select>
           </div>
           <div class="tool-row" id="textureToolRow">
-<div class="field full" id="lightRow">
+<span id="lightRowHome" hidden></span><div class="field full" id="lightRow">
             <label data-str="label.light_direction">Light Direction</label>
             <!-- WHICH LIGHT THE FINGER MOVES (Ruby: a second handle on the dial, chosen as Two Surfaces' Upper and Lower are):
                  the main light, or the RIM LIGHT, a second light from its own place on the dial in its own color. Shown only
@@ -978,7 +978,7 @@ but bear with me, dear}]/jitter:200
                middle toward where the camera stands: the middle looks straight down (or, on Ringworld, straight up),
                the rim looks low across; the slider under it (or a wheel, or a pinch) zooms. While it moves, a wireframe guide shows
                the shot before the surface is made. Shown only for a surface with a camera. -->
-          <div class="field full tool-idle" id="cameraRow">
+          <span id="cameraRowHome" hidden></span><div class="field full tool-idle" id="cameraRow">
             <label data-str="label.camera">Camera</label>
             <!-- THE ZOOM on top (Ruby), where the light's Main / Rim sits, so the two dials stand level and take the same room;
                  a wheel or a pinch on the dial zooms too; halfway is 100%, the ends 25% and 400% -->
@@ -1543,6 +1543,14 @@ but bear with me, dear}]/jitter:200
       <!-- (the choices: on a phone these scroll between the preview and the foot, which hold still) -->
       <div class="moving-cards">
       <p class="hint" data-str="moving.hint">The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.</p>
+      <!-- THE CAMERA AND THE LIGHT (Ruby: "camera and sun controls right in the animation window"): the page's own light and
+           camera dials, moved here while the film's window is open (uiMoving.js, movingDials); From is the page's camera,
+           To the shot the film moves to, set on the same dial -->
+      <fieldset class="film-group" id="movingDialsGroup"><legend data-str="moving.g_dials">Camera and light</legend>
+        <div class="film-sub" id="movingCamRow"><span class="film-k" id="movingCamLabel" data-str="moving.cam">The camera</span>
+          <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingCamLabel"><label><input type="radio" name="movingCam" value="from" checked><span class="radio-btn"><b data-str="moving.cam_from">From</b><small data-str="moving.cam_from_c">where it starts</small></span></label><label><input type="radio" name="movingCam" value="to"><span class="radio-btn"><b data-str="moving.cam_to">To</b><small data-str="moving.cam_to_c">where it ends</small></span></label></div></div>
+        <div class="tool-row moving-dials" id="movingDials"></div>
+      </fieldset>
       <!-- (FOUR GROUPS, picture first: what moves, how long, how big, what file; docs/prior-art/film-export.md §5. Rows
            that do not apply to the chosen move stay where they are, dimmed, so nothing moves under the hand) -->
       <fieldset class="film-group"><legend data-str="moving.g_move">Move</legend>
@@ -1556,8 +1564,11 @@ but bear with me, dear}]/jitter:200
       <div class="film-sub" id="movingMarkRow"><label class="film-k" for="movingMarkCtl" data-str="moving.marks">Also moving</label>
         <div class="moving-marks"><select id="movingMarkCtl"></select><select id="movingMarkHow" aria-label="How it moves"><option value="still" data-str="moving.m_still">Still</option><option value="sway" data-str="moving.m_sway">Sways</option><option value="sweep" data-str="moving.m_sweep">Sweeps</option><option value="drift" data-str="moving.m_drift">Drifts</option></select><select id="movingMarkAmt" aria-label="How far"><option value="0.1" data-str="moving.m_little">A little</option><option value="0.25" data-str="moving.m_some" selected>Some</option><option value="0.5" data-str="moving.m_much">Much</option></select><select id="movingMarkTimes" aria-label="How many times"><option value="1" data-str="moving.m_once">Once</option><option value="2" data-str="moving.m_twice">Twice</option><option value="3" data-str="moving.m_3">3 times</option><option value="4" data-str="moving.m_4">4 times</option></select></div>
         <span class="moving-marks-sum" id="movingMarksSum"></span></div>
-      <div class="film-sub" id="movingSpanRow"><span class="film-k" id="movingSpanRowLabel" data-str="moving.span">Time passes</span>
-        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingSpanRowLabel"><label><input type="radio" name="movingSpan" value="0"><span class="radio-btn"><b data-str="moving.real">Real time</b></span></label><label><input type="radio" name="movingSpan" value="3600" checked><span class="radio-btn"><b data-str="moving.hour">1 hour</b></span></label><label><input type="radio" name="movingSpan" value="21600"><span class="radio-btn"><b data-str="moving.hours6">6 hours</b></span></label><label><input type="radio" name="movingSpan" value="86400"><span class="radio-btn"><b data-str="moving.day1">1 day</b></span></label><label><input type="radio" name="movingSpan" value="172800"><span class="radio-btn"><b data-str="moving.days2">2 days</b></span></label></div></div>
+      <div class="film-sub" id="movingSpanRow"><label class="film-k" id="movingSpanRowLabel" for="movingSpanSlider" data-str="moving.span">Time passes</label>
+        <!-- (Ruby: "more granular time passing options (arbitrary? slider?)": from real time through five minutes to two days,
+             spread evenly by how long it feels, an hour a little left of the middle; the ticks are the old choices) -->
+        <div class="film-slide"><input type="range" id="movingSpanSlider" min="0" max="100" step="1" value="40"><output class="film-read" id="movingSpanRead" for="movingSpanSlider">1 hour</output>
+          <div class="film-ticks" aria-hidden="true"><span style="left:0%" data-str="moving.t_real">real</span><span style="left:40%" data-str="moving.t_hour">1 h</span><span style="left:67.6%" data-str="moving.t_hours6">6 h</span><span style="left:89.2%" data-str="moving.t_day">1 d</span><span style="left:100%" data-str="moving.t_days2">2 d</span></div></div></div>
       <div class="film-sub" id="movingBeginRow"><span class="film-k" id="movingBeginRowLabel" data-str="moving.begin">Begins at</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingBeginRowLabel"><label><input type="radio" name="movingBegin" value="lit" checked><span class="radio-btn"><b data-str="moving.b_lit">As lit</b></span></label><label><input type="radio" name="movingBegin" value="dawn"><span class="radio-btn"><b data-str="moving.b_dawn">Dawn</b></span></label><label><input type="radio" name="movingBegin" value="noon"><span class="radio-btn"><b data-str="moving.b_noon">Midday</b></span></label><label><input type="radio" name="movingBegin" value="dusk"><span class="radio-btn"><b data-str="moving.b_dusk">Dusk</b></span></label><label><input type="radio" name="movingBegin" value="night"><span class="radio-btn"><b data-str="moving.b_night">Night</b></span></label></div></div>
       <div class="film-sub" id="movingEaseRow"><span class="film-k" id="movingEaseRowLabel" data-str="moving.ease">Easing</span>
@@ -1569,19 +1580,19 @@ but bear with me, dear}]/jitter:200
       </fieldset>
       <fieldset class="film-group"><legend data-str="moving.g_length">Length</legend>
       <div class="film-sub"><label class="film-k" for="movingLength" data-str="moving.length">Length</label>
-        <select id="movingLength">
-          <option value="6" data-str="moving.s6">6 seconds</option>
-          <option value="12" selected data-str="moving.s12">12 seconds</option>
-          <option value="24" data-str="moving.s24">24 seconds</option>
-          <option value="30" data-str="moving.s30">30 seconds</option>
-          <option value="45" data-str="moving.s45">45 seconds</option>
-          <option value="60" data-str="moving.s60">1 minute</option>
-        </select></div>
+        <div class="film-slide"><input type="range" id="movingLength" min="2" max="60" step="1" value="12"><output class="film-read" id="movingLengthRead" for="movingLength">12 s</output>
+          <div class="film-ticks" aria-hidden="true"><span style="left:6.9%">6</span><span style="left:17.2%">12</span><span style="left:37.9%">24</span><span style="left:48.3%">30</span><span style="left:74.1%">45</span><span style="left:100%">60</span></div></div></div>
       <div class="film-sub" id="movingFpsRow"><span class="film-k" id="movingFpsRowLabel" data-str="moving.fps">Frame rate</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingFpsRowLabel"><label><input type="radio" name="movingFps" value="24"><span class="radio-btn"><b data-str="moving.fps24">24 fps</b><small data-str="moving.c24">film</small></span></label><label><input type="radio" name="movingFps" value="30" checked><span class="radio-btn"><b data-str="moving.fps30">30 fps</b><small data-str="moving.c30">web</small></span></label><label><input type="radio" name="movingFps" value="48"><span class="radio-btn"><b data-str="moving.fps48">48 fps</b><small data-str="moving.c48">high rate</small></span></label><label><input type="radio" name="movingFps" value="60"><span class="radio-btn"><b data-str="moving.fps60">60 fps</b><small data-str="moving.c60">smoothest</small></span></label></div></div>
       </fieldset>
       <fieldset class="film-group"><legend data-str="moving.g_size">Size</legend>
-        <div class="film-cards film-pick"><label><input type="radio" name="movingSize" value="page" checked><span class="radio-btn"><b data-str="moving.page">The page</b><small id="movingPagePx">&nbsp;</small></span></label><label><input type="radio" name="movingSize" value="tall"><span class="radio-btn"><b data-str="moving.tall">Tall</b><small data-str="moving.tall_c">9:16 · 1080 × 1920</small></span></label><label><input type="radio" name="movingSize" value="square"><span class="radio-btn"><b data-str="moving.square">Square</b><small data-str="moving.square_c">1:1 · 1080 × 1080</small></span></label><label><input type="radio" name="movingSize" value="wide"><span class="radio-btn"><b data-str="moving.wide">Wide</b><small data-str="moving.wide_c">16:9 · 1920 × 1080</small></span></label></div>
+      <div class="film-sub" id="movingAspectRow"><span class="film-k" id="movingAspectLabel" data-str="moving.aspect">Aspect</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingAspectLabel"><label><input type="radio" name="movingAspect" value="page" checked><span class="radio-btn"><b data-str="moving.page">The page</b><small><span id="movingPagePx">&nbsp;</span></small></span></label><label><input type="radio" name="movingAspect" value="9:16"><span class="radio-btn"><b>9:16</b></span></label><label><input type="radio" name="movingAspect" value="4:5"><span class="radio-btn"><b>4:5</b></span></label><label><input type="radio" name="movingAspect" value="1:1"><span class="radio-btn"><b>1:1</b></span></label><label><input type="radio" name="movingAspect" value="16:9"><span class="radio-btn"><b>16:9</b></span></label></div></div>
+      <div class="film-sub" id="movingResRow"><span class="film-k" id="movingResLabel" data-str="moving.res">Resolution</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingResLabel"><label><input type="radio" name="movingRes" value="720"><span class="radio-btn"><b>720p</b></span></label><label><input type="radio" name="movingRes" value="1080" checked><span class="radio-btn"><b>1080p</b></span></label><label><input type="radio" name="movingRes" value="1440"><span class="radio-btn"><b>1440p</b></span></label><label><input type="radio" name="movingRes" value="2160"><span class="radio-btn"><b>2160p</b></span></label><label><input type="radio" name="movingRes" value="custom"><span class="radio-btn"><b data-str="moving.custom">Custom</b></span></label></div></div>
+      <!-- (a custom size, its own width and height, overriding the aspect) -->
+      <div class="film-sub" id="movingCustomRow"><span class="film-k" data-str="moving.custom_size">Width × height</span>
+        <div class="film-custom"><input type="number" id="movingCustomW" min="64" max="7680" step="2" value="1080" aria-label="Width in pixels" inputmode="numeric"><span>×</span><input type="number" id="movingCustomH" min="64" max="7680" step="2" value="1350" aria-label="Height in pixels" inputmode="numeric"><span>px</span></div></div>
       </fieldset>
       <fieldset class="film-group"><legend data-str="moving.g_output">Output</legend>
         <div class="film-seg film-pick"><label><input type="radio" name="movingFormat" value="mp4" checked><span class="radio-btn"><b data-str="moving.mp4">MP4</b><small data-str="moving.mp4_c">H.264</small></span></label><label><input type="radio" name="movingFormat" value="webm"><span class="radio-btn"><b data-str="moving.webm">WebM</b><small data-str="moving.webm_c">VP9</small></span></label><label><input type="radio" name="movingFormat" value="png"><span class="radio-btn"><b data-str="moving.png">PNG frames</b><small data-str="moving.png_c">zip</small></span></label></div>

@@ -4,6 +4,29 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Merope (2026-10-25)
+
+- The Ringworld's stars are fixed to the sky now, as a skybox's are: turning the camera turns past them, the same way the
+  arch and the land go by, so the ring no longer seems to swing round with the camera. Only the ring's slow spin moves
+  them, and gently.
+- The film window has the page's own light and camera dials in it, in a Camera and Light card at its top (on a desktop's
+  Kinesis tab and in a phone's sheet; they go back to Materia when you leave). The Camera's From and To share the dial:
+  From is where the film starts, the page's camera; choose To and set where it ends on the same dial, and the film then
+  turns to that shot.
+- Length is a slider now, two seconds to a minute, its ticks named; Time passes is a slider too, from real time through
+  five minutes to two days, spread by how long it feels.
+- Size is two choices: the Aspect (the page's own, 9:16, 4:5, 1:1 or 16:9) and the Resolution (720p, 1080p, 1440p or
+  2160p as the short side, or Custom, your own width and height, which sets the shape too). A film is 1080p by default.
+- In rain, a storm or snow the overcast lets the arch show through, just: the ring always looms.
+- A crashed ship's smoke rises puff by puff and leans the way the wind blows, harder as it blows harder.
+
+### Under the hood
+- The star field is laid on a cube round the eye, each face cut into patches projected through the ring's camera
+  (`rgPanSky`), every face its picture turned its own way so none repeats beside another.
+- `movingDials` moves the light and camera rows into the window and back, `movingLeave` keeps the shot and puts the
+  page's camera back; the film's size is the Aspect and the Resolution (`movingDims`); the time span's slider is a log of
+  five minutes to two days (`movingSpanSecs`).
+
 ## Pleiades–Maia (2026-10-25)
 
 - The Ringworld's stars are a backdrop now: they stay where they are as the camera turns, tilts or zooms, and drift only
@@ -405,26 +428,3 @@ prints it).
   moving.test.mjs now checks that a full round loops with no frame twice, a part turn ends on its last frame, there
   and back returns, easing leaves and arrives slowly, every choice on the sheet has exactly one default, the rates
   read in fps and in order, and the sheet reads every group it offers. No fingerprint changed.
-
-## Neptune–Sao (2026-10-22)
-
-- The trees, remade in the style of the rest. No two of a kind are alike now: each grows its own crown, wide or narrow
-  for its height, leaning, fuller on one side, open or dense, young and pointed or old and broad, with a touch of its
-  own green. A crown is grown lobe on lobe, so no piece of a tree floats, and its limbs leave the trunk and end
-  inside the clumps they hold.
-- Every tree is shaded: its lower inside darkest, the sky through it here and there, and close by, small leaves of its
-  own shape. With the sun behind a tree, its leaves glow: the shade lifts toward yellow-green and the crown's outline
-  is lit from behind.
-- The conifers: a spruce's drooping tiers and a fir's narrow spire, each side of each tier its own width, the lower
-  boughs dead on an old one. A young pine is a rough cone; a mature pine is a tall trunk with clumps of needles at
-  their own heights on their own limbs. A cedar's shelves sit on limbs that reach them.
-- Palms and tree ferns have feathered fronds, the palm's leaflets hanging and the fern's spread flat; a palm keeps a
-  dead frond or two and its coconuts. A baobab's branches are thick and stubby with leaves at their ends; an acacia
-  forks low into limbs that hold its flat crown; an olive is silver-grey and open.
-
-### Under the hood
-- paintKit.js: `pkTreeForm` (a tree's own form from its stream), `pkTreeTint`, `pkGrow` (crowns grown, not
-  scattered), `pkLobes` near and far, `pkBacklit` (only the arcs of the crown's true outline), `pkLimb` as one
-  tapering shape, `pkConifer`, `pkFrond`. stepsRing.js gives the trees the sun's `back` (how far the camera looks
-  toward it). Research for the next passes (people, water, clouds, turning and grounding things) is in
-  docs/prior-art/ringworld-life-and-views.md. No fingerprint changed.

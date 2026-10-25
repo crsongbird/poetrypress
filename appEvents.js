@@ -33,7 +33,7 @@ import { graphScattersGlyphs } from './stepsPatterns.js';
 import { elementsFor, TEXTURE_ELEMENTS } from './textureElements.js';
 import { attachChooser } from './chooser.js';
 import { withAltText } from './jpegMeta.js';
-import { closeMoving, makeMoving, movingBusy, movingSetEnd, movingSetNow, movingWake, openMoving, paintMoving } from './uiMoving.js';
+import { closeMoving, makeMoving, movingBusy, movingLeave, movingSetEnd, movingSetNow, movingWake, openMoving, paintMoving } from './uiMoving.js';
 import { createMurmur } from './murmur.js';
 import { EFFECT_DEFS, EFFECT_TYPES } from './effects.js';
 import { $, FONTS, FONT_GROUPS, PRESETS, PRESET_GROUPS, DEV_TEMPLATE, DEV_TEMPLATE_TITLE, retireOldPanel, WELCOME_POEM, TEXTURE_GROUPS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
@@ -528,7 +528,7 @@ let showKinesis = null;
   if($('movingTuckCancel') && $('movingTuckCancel').addEventListener) $('movingTuckCancel').addEventListener('click', () => { movingSetEnd(false); if(showKinesis) showKinesis(); });
   if($('movingSheet') && $('movingSheet').addEventListener){
     // (any choice among its cards: their rows and the summary line; on the cards themselves, which move to the Kinesis tab)
-    if($('movingBody') && $('movingBody').addEventListener) $('movingBody').addEventListener('change', paintMoving);
+    if($('movingBody') && $('movingBody').addEventListener){ $('movingBody').addEventListener('change', paintMoving); $('movingBody').addEventListener('input', e => { if(e.target && e.target.type === 'range') paintMoving(e); }); }
     $('movingSheet').addEventListener('click', e => { if(e.target === $('movingSheet')) closeMoving(); });
     $('movingSheet').addEventListener('keydown', e => { if(e.key === 'Escape'){ e.stopPropagation(); closeMoving(); } });
   }
@@ -704,6 +704,7 @@ if(typeof document.querySelectorAll === 'function'){
     // choosing it again closes it, back to whatever was open before
     if(name === 'more' && current === 'more') name = before;
     const was = current; if(name !== current){ before = current; current = name; }
+    if(was === 'film' && name !== 'film') movingLeave();   // (the film's dials home to Materia, the page's camera back)
     const desk = desktopNow();
     if(name === 'more') placeEsoterica();
     if(name === 'film') placeKinesis();

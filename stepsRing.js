@@ -200,14 +200,27 @@ function rgAirOf(V, day){ const dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), w =
   // (a world's own air: the smoke over ruins, the neon's glow in the haze, the magic's)
   return w === 'ruins' ? rsMix(a, [150, 112, 88], 0.32) : w === 'neon' ? rsMix(a, V.g1, 0.22 + 0.2*(1 - day)) : w === 'magic' ? rsMix(a, V.g2, 0.15) : a; }
 
-// THE STARS BEHIND (what the Arch is laid over; Ruby: "stars should not pan with the camera - movement introduced by the
-// ring itself should be subtle, and the skybox should be a backdrop"): a backdrop, still as the camera turns, tilts or
-// zooms, drifting only a little, wrapping round, with the ring's own slow spin (V.spin, already made gentle)
+// THE STARS BEHIND, STILL IN THE WORLD (Ruby: "stars should not pan with the camera"; then "With the starfield LOCKED TO
+// THE CAMERA then it looks like, when the camera rotates, the entire ring rotates. The starfield should be pretty
+// static"): the Starfield's picture laid on the six faces of a cube round the eye, a skybox, each face cut into patches
+// and each patch projected through the camera as the arch is, so the stars stand still in the sky and the camera turns
+// past them; only the ring's slow spin turns them, about its axis (V.spin, kept gentle). Each face takes the picture
+// turned or mirrored its own way, so no two faces repeat side by side
+const RG_SKY_FACES = [[[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[-1, 0, 0], [0, -1, 0], [0, 0, 1]], [[0, 1, 0], [-1, 0, 0], [0, 0, 1]], [[0, -1, 0], [1, 0, 0], [0, 0, 1]], [[0, 0, 1], [0, 1, 0], [-1, 0, 0]], [[0, 0, -1], [0, 1, 0], [1, 0, 0]]];
 function rgPanSky(c, x, V){
-  const { wh, F } = V, oy = ((V.spin*F) % wh + wh) % wh; if(oy < 0.5) return;
-  const [t, tx] = kitCanvas(V.ww, wh); tx.drawImage(c, 0, 0);
-  for(const dy of [oy - wh, oy]) x.drawImage(t, 0, dy);
-  t.width = 0; t.height = 0;
+  const { ww, wh, F, L, proj } = V, m = Math.min(ww, wh), N = 6, cs = Math.cos(V.spin), sn = Math.sin(V.spin);
+  const [t, tx] = kitCanvas(ww, wh); tx.drawImage(c, 0, 0); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#000'; x.fillRect(0, 0, ww, wh);
+  const scr = (dx, dy, dz) => { const l = Math.hypot(dx, dy, dz) || 1, X = dx/l, Y = dy/l; return proj(L.Px + (X*cs - Y*sn)*0.01, (X*sn + Y*cs)*0.01, L.z0 + dz/l*0.01); };
+  RG_SKY_FACES.forEach(([n0, u0, v0], f) => { const flipU = f & 1 ? -1 : 1, swap = f >= 4;
+    const P = []; for(let j = 0; j <= N; j++){ const row = []; for(let i = 0; i <= N; i++){ const u = (i/N*2 - 1)*flipU, v = j/N*2 - 1, a = swap ? v : u, b = swap ? u : v;
+      row.push(scr(n0[0] + u0[0]*a + v0[0]*b, n0[1] + u0[1]*a + v0[1]*b, n0[2] + u0[2]*a + v0[2]*b)); } P.push(row); }
+    for(let j = 0; j < N; j++) for(let i = 0; i < N; i++){ const p00 = P[j][i], p10 = P[j][i + 1], p01 = P[j + 1][i], p11 = P[j + 1][i + 1]; if(!p00 || !p10 || !p01 || !p11) continue;
+      const xs = [p00[0], p10[0], p01[0], p11[0]], ys = [p00[1], p10[1], p01[1], p11[1]];
+      if(Math.max(...xs) < 0 || Math.min(...xs) > ww || Math.max(...ys) < 0 || Math.min(...ys) > wh || Math.max(...xs) - Math.min(...xs) > ww*3) continue;
+      const s0 = i/N*m, s1 = (i + 1)/N*m, r0 = j/N*m, r1 = (j + 1)/N*m, ax = (p10[0] - p00[0])/(s1 - s0), ay = (p10[1] - p00[1])/(s1 - s0), bx = (p01[0] - p00[0])/(r1 - r0), by = (p01[1] - p00[1])/(r1 - r0);
+      x.save(); x.beginPath(); x.moveTo(p00[0], p00[1]); x.lineTo(p10[0], p10[1]); x.lineTo(p11[0], p11[1]); x.lineTo(p01[0], p01[1]); x.closePath(); x.clip();
+      x.setTransform(ax, ay, bx, by, p00[0] - ax*s0 - bx*r0, p00[1] - ay*s0 - by*r0); x.drawImage(t, 0, 0, m, m, 0, 0, m, m); x.restore(); } });
+  x.restore(); t.width = 0; t.height = 0;
 }
 // ---------------- THE ARCH ----------------
 // THE WEATHER (Ruby: "more clouds, slightly rare weather effects … atmospherics, possibly rays from the sun"): by the seed
@@ -601,7 +614,7 @@ function rgPaintArch(x, mk, V){
     const dOf = i => H*0.2*Math.pow(200, i/NR), thinOf = d => rsSmooth(H*1.5, H*35, d), colOf = d => rsMix(rsMix(dark, light, 0.35 + 0.3*rsSmooth(H, H*8, d)), far, thinOf(d)*0.85);
     x.save(); x.lineJoin = 'round';
     // (its body: ring after ring of the ceiling, darkest overhead, each ring a band all the way round)
-    for(let i = NR - 1; i >= 0; i--){ const d0 = dOf(i), d1 = dOf(i + 1), e0 = Math.atan(H/d0), e1 = Math.atan(H/d1), dm = (d0 + d1)/2, css = rsCss(colOf(dm), 0.97 - 0.3*thinOf(dm));
+    for(let i = NR - 1; i >= 0; i--){ const d0 = dOf(i), d1 = dOf(i + 1), e0 = Math.atan(H/d0), e1 = Math.atan(H/d1), dm = (d0 + d1)/2, css = rsCss(colOf(dm), 0.86 - 0.32*thinOf(dm));   // (never quite opaque: the arch looms through, just (Ruby: "The ring should always be visible even in bad weather"))
       x.fillStyle = css; x.strokeStyle = css; x.lineWidth = px(1);
       for(let j = 0; j < NA; j++){ const a0 = j/NA*Math.PI*2, a1 = (j + 1)/NA*Math.PI*2, P = [skyAt(a0, e0), skyAt(a1, e0), skyAt(a1, e1), skyAt(a0, e1)]; if(P.some(p => !p)) continue;
         x.beginPath(); P.forEach((p, q) => q ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.closePath(); x.fill(); x.stroke(); } }
@@ -668,8 +681,13 @@ function rgWork(x, o, X, Y, k, c, night, R, V, e){
       rsPoly(x, hull, rsCss(c.body)); rsPoly(x, [hull[1], hull[2], hull[3], [X, Y - hb*0.3]], rsCss(c.lit));
       rsPoly(x, [[X - len*0.15*ca, Y - len*0.15*sa - hb*0.8], [X - len*0.3*ca, Y - len*0.3*sa - hb*1.9], [X - len*0.05*ca, Y - len*0.05*sa - hb*0.9]], rsCss(c.dark));
       for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(c.glow, 0.5 + 0.4*night); x.fillRect(X + (q - 1)*len*0.12*ca - hb*0.1, Y + (q - 1)*len*0.12*sa - hb*0.55, Math.max(rgPx(1), hb*0.18), Math.max(rgPx(1), hb*0.12)); }
-      const smoke = rgLit(V, [90, 88, 92], day, haze, AIR); for(let q = 0; q < 6; q++){ const r = hb*(0.5 + q*0.35), sx = X + len*0.2 + q*hb*0.5*sd, sy = Y - hb - q*hb*1.1;
-        x.fillStyle = rsCss(smoke, 0.55 - q*0.07); x.beginPath(); for(let v = 0; v < 6; v++){ const t = v/6*Math.PI*2; x[v ? 'lineTo' : 'moveTo'](sx + Math.cos(t)*r, sy + Math.sin(t)*r*0.8); } x.closePath(); x.fill(); }
+      // (its smoke rising and leaning with the wind (Ruby: "Smoke effect from crashes needs to be affected by the wind"): the
+      //  way the wind runs across the page where it stands, a step downwind seen, and harder as it blows harder; each puff
+      //  rising from the wreck, growing and thinning, the next behind it, on the scene's clock)
+      const [wA, wS] = rgWind(V), q0 = V.at(o.a, o.z, e), q1 = V.at(o.a + Math.cos(wA)*1e-4, o.z + Math.sin(wA)*1e-4, e), dq = q0 && q1 ? Math.hypot(q1[0] - q0[0], q1[1] - q0[1]) : 0;
+      const lean = (dq > 1e-9 ? (q1[0] - q0[0])/dq : 0)*Math.min(1, wS/9), tt = V.time ? rgMotionTime(V)*0.06 : 0, smoke = rgLit(V, [90, 88, 92], day, haze, AIR);
+      for(let q = 0; q < 8; q++){ const u = (q/8 + tt) % 1, r = hb*(0.45 + u*2.2), sx = X + len*0.2 + lean*u*u*hb*9 + Math.sin(u*5 + q)*hb*0.25, sy = Y - hb - u*hb*(8 - 4*Math.abs(lean));
+        x.fillStyle = rsCss(smoke, (0.55 - 0.45*u)*rsSmooth(0, 0.06, u)); x.beginPath(); for(let v = 0; v < 6; v++){ const t = v/6*Math.PI*2; x[v ? 'lineTo' : 'moveTo'](sx + Math.cos(t)*r, sy + Math.sin(t)*r*0.8); } x.closePath(); x.fill(); }
       rgGlow(x, X + len*0.15, Y - hb*0.2, hb*2, [255, 140, 60], 0.5); }
     else if(o.kind === 'sh'){ if(o.d < W*0.25) return; const sb = at(o.a, o.z, e + o.up); if(!sb) return; const len = W*(0.003 + 0.01*o.h)*F/sb[2]; if(len < 2) return;
       const [SX, SY] = sb, dir = o.h2 < 0.5 ? -1 : 1, hb = len*0.11, hull = rgLit(V, [150, 156, 172], day, haze*0.8, AIR), top = rsMix(hull, [255, 250, 240], 0.3), under = rsMix(hull, BLACK, 0.35);

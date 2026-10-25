@@ -1721,10 +1721,10 @@ body.is-mobile .tool-row .light-dial{ margin:0 auto; }
 /* (Swap is an action beside the choice, a button of its own) */
 .layer-seg > .layer-swap{ border-radius:var(--r-2); }
 /* (blocks of two rows: their four corners, by place) */
-#aspectGroup > .radio-btn:nth-child(1), .film-moves > label:nth-child(1) > .radio-btn, .film-cards > label:nth-child(1) > .radio-btn{ border-radius:var(--r-2) 0 0 0; }
-#aspectGroup > .radio-btn:nth-child(3), .film-moves > label:nth-child(2) > .radio-btn, .film-cards > label:nth-child(2) > .radio-btn{ border-radius:0 var(--r-2) 0 0; }
-#aspectGroup > .radio-btn:nth-child(4), .film-moves > label:nth-child(3) > .radio-btn, .film-cards > label:nth-child(3) > .radio-btn{ border-radius:0 0 0 var(--r-2); }
-#aspectGroup > .radio-btn:nth-child(6), .film-moves > label:nth-child(4) > .radio-btn, .film-cards > label:nth-child(4) > .radio-btn{ border-radius:0 0 var(--r-2) 0; }
+#aspectGroup > .radio-btn:nth-child(1), .film-moves > label:nth-child(1) > .radio-btn{ border-radius:var(--r-2) 0 0 0; }
+#aspectGroup > .radio-btn:nth-child(3), .film-moves > label:nth-child(2) > .radio-btn{ border-radius:0 var(--r-2) 0 0; }
+#aspectGroup > .radio-btn:nth-child(4), .film-moves > label:nth-child(3) > .radio-btn{ border-radius:0 0 0 var(--r-2); }
+#aspectGroup > .radio-btn:nth-child(6), .film-moves > label:nth-child(4) > .radio-btn{ border-radius:0 0 var(--r-2) 0; }
 
 /* surfaces: a little depth */
 
@@ -1793,6 +1793,17 @@ body .tab-btn[data-tab="film"]{ display:none; }
 @media (min-width: 900px){ body:not(.is-mobile) .tab-btn[data-tab="film"]{ display:flex; } }
 .kinesis-card > .moving-sheet{ width:auto; max-width:none; max-height:none; overflow:visible; padding:0; border:0; background:none; box-shadow:none; }
 .kinesis-card #movingClose{ display:none; }
+/* THE FILM'S SLIDERS (its length, how much time passes): a slider with its reading beside it and its ticks named under it,
+   the readout's room kept always so nothing shifts as it changes */
+.film-slide{ position:relative; display:grid; grid-template-columns:1fr 5.6em; align-items:center; gap:8px; padding-bottom:16px; min-width:0; }
+.film-slide input[type=range]{ width:100%; margin:0; }
+.film-read{ font-size:12px; color:var(--text-main); text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.film-ticks{ position:absolute; left:8px; right:calc(5.6em + 16px); bottom:0; height:14px; pointer-events:none; }
+.film-ticks span{ position:absolute; transform:translateX(-50%); font-size:10px; color:var(--text-dim); white-space:nowrap; }
+.film-ticks span::before{ content:''; position:absolute; left:50%; top:-5px; width:1px; height:4px; background:var(--line); }
+.film-custom{ display:flex; align-items:center; gap:6px; }
+.film-custom input{ width:6.2em; }
+.film-custom span{ color:var(--text-dim); font-size:12px; }
 /* THE PREVIEW BOX (the phone's sheet): a third of the screen high and always so, the frame letterboxed in it, the film
    itself over it once made, a thin rule along its foot for how far a film has come; held at the sheet's top as the
    cards scroll under it. On a desk the stage does this, so the Kinesis card has none */
@@ -1843,13 +1854,12 @@ button.moving-set{ width:auto; flex:0 0 auto; white-space:nowrap; margin:0; padd
 body.is-mobile .moving-tuck{ left:8px; right:8px; transform:none; width:auto; max-width:none; bottom:calc(var(--tabbar-h, 50px) + 8px + env(safe-area-inset-bottom, 0px)); }
 body.moving-tucked .controls{ padding-bottom:calc(var(--tabbar-h) + 96px); }
 .film-seg{ display:flex; gap:4px; min-width:0; }
-.film-moves, .film-cards{ display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:4px 0 8px; }
+.film-moves{ display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:4px 0 8px; }
 .film-pick label{ position:relative; flex:1 1 0; min-width:0; display:flex; }
 .film-pick input{ position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }
 .film-pick .radio-btn{ flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:34px; padding:4px 3px; line-height:1.15; }
 .film-pick .radio-btn b{ font-weight:400; }
 .film-pick .radio-btn small{ font-size:10px; opacity:.72; letter-spacing:0.03em; margin-top:2px; }
-.film-cards .radio-btn{ min-height:44px; }
 .film-pick input:focus-visible + .radio-btn{ outline:1px solid var(--accent); outline-offset:2px; }
 .film-pick input:disabled + .radio-btn{ opacity:.4; cursor:default; }
 body.is-mobile .film-pick .radio-btn{ min-height:40px; }
