@@ -82,11 +82,16 @@ export function wkAt(kind, s, j, t, env = {}){
   case 'walk': case 'hop': case 'prowl': case 'flock': {
     const e = wkEra(s, tt, K.P), { L, P, dist, T } = wkSpan(K, s, j, e.k, n), Pp = wkSpan(K, s, j, e.k - 1, n);
     const alertBy = wkSmooth((wkNoise(s + j*17, tt/7) - 0.15)/0.35), grazeFace = (LL, TT, ux, uz) => Math.atan2(uz, ux) + 1.3*(wkNoise(s + j*5, tt/40) - wkNoise(s + j*5, (LL.dep + TT)/40));
+    // (Ruby: "a deer not always eating": between moves each member keeps its own rhythm of grazing, standing to look
+    //  round, and lying down to rest and chew, slowly, a member at a time; a ground bird hops now and then and flicks
+    //  its wings. lie: how far down it lies, 0 standing … 1 lying; hop: a ground bird's hop, in metres)
+    const act = wkNoise(s + j*31, tt/55), lie = K.way === 'walk' ? wkSmooth((-0.22 - act)/0.22) : 0, look = wkSmooth((act - 0.3)/0.25);
+    const hopU = K.way === 'flock' ? (tt*0.7 + wkHash(j, 33, s)*7) % 7 : 9, hop = hopU < 0.45 ? 0.12*K.size*Math.sin(Math.PI*hopU/0.45) : 0;
     if(tt < L.dep || dist < 1e-6){ const LL = tt < L.dep ? P : L, TT = tt < L.dep ? Pp.T : T, g = wkGraze(K, s, j, LL, TT, tt), ux = LL.p1[0] - (tt < L.dep ? Pp.P : P).p1[0], uz = LL.p1[1] - (tt < L.dep ? Pp.P : P).p1[1];
       const warn = L.bolt && K.way !== 'flock' ? wkSmooth((tt - (L.dep - 1.2))/0.6) : 0;
-      return { x: g[0], z: g[1], y: 0, face: grazeFace(LL, TT, ux, uz), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*(K.way === 'flock' ? 0.9 : 0.12) + j*0.37, head: Math.max(warn, alertBy*(K.way === 'hop' ? 1 : 0.7)), on: 1 }; }
+      return { x: g[0], z: g[1], y: hop, face: grazeFace(LL, TT, ux, uz), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*(K.way === 'flock' ? 0.9 : 0.12) + j*0.37, head: Math.max(warn, alertBy*(K.way === 'hop' ? 1 : 0.7), look, lie*0.8), lie: lie*(1 - warn), flick: hop > 0 ? 1 : 0, on: 1 }; }
     const from = wkGraze(K, s, j, P, Pp.T, L.dep), p = Math.min(1, (tt - L.dep)/T);
-    if(p >= 1){ const g = wkGraze(K, s, j, L, T, tt); return { x: g[0], z: g[1], y: 0, face: grazeFace(L, T, L.p1[0] - from[0], L.p1[1] - from[1]), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*0.9 + j*0.37, head: alertBy*0.7, on: 1 }; }
+    if(p >= 1){ const g = wkGraze(K, s, j, L, T, tt), settle = wkSmooth((tt - L.dep - T)/20); return { x: g[0], z: g[1], y: hop, face: grazeFace(L, T, L.p1[0] - from[0], L.p1[1] - from[1]), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*0.9 + j*0.37, head: Math.max(alertBy*0.7, look*settle, lie*settle*0.8), lie: lie*settle, flick: hop > 0 ? 1 : 0, on: 1 }; }
     const dx = L.p1[0] - from[0], dz = L.p1[1] - from[1], dl = Math.hypot(dx, dz) || 1e-6, nx = -dz/dl, nz = dx/dl;
     // (a bolt and a walk ease on and off; a flock's flight wheels once round as it goes, rising and
     //  settling, the birds loosening in the air and closing up as they land)
@@ -148,9 +153,11 @@ function wkQuad(x, X, Y, m, kind, st, c, px){
   const K = WK_KINDS[kind], d = st.dir, sk = Math.max(0.3, st.side), L = K.size*m, coat = c.mat(K.coat), cervid = kind !== 'fox';
   const lift = st.y*m, run = st.pose === 'run' || st.pose === 'pounce', q = u => X + d*u*sk, fill = wkCss(coat.body), lw = Math.max(px(0.4), L*(cervid ? 0.034 : 0.05));
   // (a deer's back stands about two thirds of its length up, its chest a quarter of its length deep; a fox's low)
-  const back = L*(cervid ? 0.66 : 0.5), deep = L*(cervid ? 0.27 : 0.24), by = Y - lift - back + deep*0.5, ph = st.ph*Math.PI*2;
+  // (lying down to rest (st.lie): its body let down to the ground, its legs folded under it)
+  const lie = st.lie || 0, back = L*(cervid ? 0.66 : 0.5)*(1 - 0.62*lie), deep = L*(cervid ? 0.27 : 0.24), by = Y - lift - back + deep*0.5, ph = st.ph*Math.PI*2;
   const legs = [[0.3, 0], [0.24, Math.PI], [-0.3, Math.PI*0.5], [-0.36, Math.PI*1.5]];
-  if(L > px(3)) legs.forEach(([u, o], i) => { const far = i % 2 === 1, hind = i >= 2, sw = run ? (hind ? -1 : 1)*Math.sin(ph)*0.7 : st.pose === 'walk' ? Math.sin(ph + o)*0.36 : 0;
+  if(lie > 0.6 && L > px(3)) for(const u of [0.22, -0.26]) wkEll(x, q(u*L), Y - deep*0.18, L*0.16*sk, deep*0.2, 0, wkCss(coat.dark));
+  if(L > px(3) && lie <= 0.6) legs.forEach(([u, o], i) => { const far = i % 2 === 1, hind = i >= 2, sw = run ? (hind ? -1 : 1)*Math.sin(ph)*0.7 : st.pose === 'walk' ? Math.sin(ph + o)*0.36 : 0;
     const top = [q(u*L), by + deep*0.25], len = Math.max(L*0.05, Y - lift - top[1]), knee = [top[0] + d*(Math.sin(sw)*0.5 + (hind ? -0.08 : 0.04))*len, top[1] + len*0.5], ft = [top[0] + d*Math.sin(sw)*len, top[1] + Math.cos(sw)*len];
     const col = wkCss(far ? wkMix(coat.dark, [0, 0, 0], 0.3) : coat.dark); wkLine(x, [top, knee, ft], col, lw); if(L > px(10)) wkLine(x, [ft, [ft[0] + d*lw*1.2, ft[1]]], wkCss([24, 20, 18]), lw*1.2); });
   // the body: chest and haunch and the barrel between, lit along the back
@@ -200,9 +207,10 @@ function wkBird(x, X, Y, m, kind, st, c, px){
       wkEll(x, X, by - hgt*0.08, hgt*0.17, hgt*0.1, -d*0.5, wkCss(col.body)); const strike = st.head, nk = [[X + d*hgt*0.1, by - hgt*0.12], [X + d*hgt*(0.04 + 0.22*strike), by - hgt*(0.3 - 0.05*strike)], [X + d*hgt*(0.12 + 0.3*strike), by - hgt*(0.36 - 0.1*strike)]];
       wkLine(x, nk, wkCss(col.lit), Math.max(px(0.5), hgt*0.04)); const hx = nk[2][0], hy = nk[2][1]; wkLine(x, [[hx, hy], [hx + d*hgt*0.16, hy + hgt*0.02*(1 + strike)]], wkCss([196, 168, 80]), Math.max(px(0.4), hgt*0.022));
       if(hgt > px(14)) wkLine(x, [[hx - d*hgt*0.02, hy - hgt*0.01], [hx - d*hgt*0.12, hy - hgt*0.01]], ink, Math.max(px(0.3), hgt*0.012)); return; }
-    const by = Y - b*0.55; wkEll(x, X, by, b*0.5, b*0.26, -d*0.25, wkCss(col.body)); wkLine(x, [[X - d*b*0.42, by + b*0.04], [X - d*b*0.8, by + b*0.12]], wkCss(col.body), Math.max(px(0.4), b*0.14));
+    const by = y - b*0.55; wkEll(x, X, by, b*0.5, b*0.26, -d*0.25, wkCss(col.body));
+    if(st.flick && b > px(3)) for(const s2 of [-1, 1]) wkPolyF(x, [[X - d*b*0.1, by - b*0.1], [X - d*b*0.45, by - b*(0.55 + 0.15*s2)], [X + d*b*0.15, by - b*0.2]], wkCss(s2 > 0 ? col.dark : col.body)); wkLine(x, [[X - d*b*0.42, by + b*0.04], [X - d*b*0.8, by + b*0.12]], wkCss(col.body), Math.max(px(0.4), b*0.14));
     wkEll(x, X + d*b*0.42, by - b*0.2 + bob*b*0.5, b*0.16, b*0.14, 0, wkCss(col.body)); if(b > px(5)) wkLine(x, [[X + d*b*0.56, by - b*0.2 + bob*b*0.5], [X + d*b*0.72, by - b*0.16 + bob*b*0.6]], ink, Math.max(px(0.3), b*0.06));
-    if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, Y]], ink, Math.max(px(0.3), b*0.04)); return; }
+    if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, y]], ink, Math.max(px(0.3), b*0.04)); return; }
   // in the air
   if(kind === 'raptor' || (kind === 'heron' && st.pose === 'fly')){ const span = (kind === 'heron' ? 1.7 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
     // (a broad plank of wing, bowed, its tips fingered; the tail fanned; seen from below as it circles)

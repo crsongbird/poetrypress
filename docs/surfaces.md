@@ -418,6 +418,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     Organ pipes, barrel cacti, prickly pears, chollas, ocotillos and agaves grow in the dry country with it (`RG_CACTI`),
     each blooming in its own months; a young saguaro stands beside its nurse tree, and ivy climbs some old trunks in the
     wet woods.
+  - **Folk** (Ruby: "people of all genders and types, humanoid species"; docs/prior-art/ringworld-folk.md): every person
+    is their own (`pkPerson`): a child, an adult or an elder, their build, their skin of the Monk scale's ten tones
+    (`PK_SKINS`), their hair, a beard, a skirt or a dress, a hat or a headscarf, each from their own stream; their
+    clothes of their world (bright jackets edged with light in the neon world, cloaks and packs in the wilds, robes in
+    the magic world, rags and masks in the ruins); elves, dwarves and fae where the world has them, the builders'
+    androids. Between its moves each deer keeps its own rhythm of grazing, looking round and lying down to rest (`lie`
+    in `wkAt`); ground birds hop and flick their wings.
   - **Highways** (the neon world's main roads; Ruby: the roads that floated, made highways): an elevated expressway on a
     line of columns some 42 m apart, its deck some 12 m over the highest ground beneath it, eased along, over land and
     water alike.

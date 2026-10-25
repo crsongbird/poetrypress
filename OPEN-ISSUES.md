@@ -39,6 +39,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   the amounts feel right?
 - THE STARS IN THE WORLD: a skybox now, standing still as the camera turns past them; in rain, a storm or snow an overcast
   ceiling, the arch just showing through it.
+- FOLK: people of every age, build, skin, hair and dress, each their own, clothed by their world; elves, dwarves and fae
+  in the magic world and now and then in the wilds; the builders' androids. Deer graze, look round and lie down to
+  rest, each in its own time; ground birds hop and flick their wings. Right mix?
 - THE DESERT'S PLANTS: saguaros arming as they grow taller, organ pipes, barrel cacti, prickly pears, chollas,
   ocotillos and agaves in the dry country, each flowering in its months by the seed's season; nurse trees, ivy; some
   rings drier on the whole. Right amounts of each?
@@ -65,9 +68,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   - PLANTS, what is left: blooming and turning in their seasons for the other trees (blossom, autumn colour, bare
     branches, snow on them); more plants that meet each other (moss on the shaded side, flowers at trees' feet, vines on
     ruins); their art styles made one.
-  - ANIMALS AND PEOPLE: fewer, better, more alive: personalities, many animations and the situations to use them (a deer
-    not always eating), birds hopping and flapping, flocks, interactions, hunts between animals; people of all genders
-    and types, humanoid species; their states tracked by id (begun: every thing has an id and tags).
+  - ANIMALS AND PEOPLE, what is left: personalities; more animations and the situations to use them (people sitting,
+    talking in twos and threes, carrying things, working; animals drinking at water, playing); interactions and hunts
+    between animals (a hawk stooping on a hare, a fox stalking the birds); their states tracked by id.
   - THE WORLD'S REGIONS: towns with walls; eras side by side (a medieval town by a robot-infested ruin) with clear
     borders; factions holding regions; names from the seeds and the app's own esoteric language; crystals of a color for
     each magical element ruling a region; the sense that something deeper lies here; rare battles between factions.

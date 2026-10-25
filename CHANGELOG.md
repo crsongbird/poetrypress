@@ -4,6 +4,26 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Pleiades–Alcyone (2026-10-25)
+
+- The Ringworld's people are every kind of person. Each one's age (a child, an adult, an elder with a stoop and now and
+  then a cane), build, skin, hair (short or long, grey with age, dyed in the neon world), beard, skirt or dress, and hat
+  or headscarf is their own, chosen independently, so no kind of person is tied to a costume. Skin comes in ten tones,
+  lightest to deepest.
+- Clothes follow the world: coats in the cities, dark jackets edged with light in the neon world, cloaks and packs in
+  the wilds, robes and pointed hats in the magic world, rags and masks in the ruins, pale suits among the builders.
+- Other folk where the world has them: elves (tall, slender, pointed ears), dwarves (short, broad, bearded) and fae
+  (small, winged, with a light about them) in the magic world and now and then in the wilds; androids with lit seams
+  among the builders.
+- Deer no longer graze without end. Between their moves each keeps its own slow rhythm, grazing, standing to look
+  round, or lying down to rest with its head up, so a herd at any moment holds some of each.
+- Rooks, pigeons, starlings and sparrows on the ground hop now and then, flicking their wings.
+
+### Under the hood
+- `pkPerson` paints a person from their own stream; `PK_SKINS` is the Monk Skin Tone Scale's ten.
+- `wkAt` gives a grazing animal its `lie` and a ground bird its hop; `wkQuad` lays a deer down, its legs folded.
+- docs/prior-art/ringworld-folk.md is the research (figure proportions, the Monk scale, a red deer's day).
+
 ## Pleiades–Atlas (2026-10-25)
 
 - Saguaros grow as saguaros do. Each keeps its true slender width at any height and has no arms until it is over 3 m
@@ -427,30 +447,3 @@ prints it).
   radii that never drew are gone, and each rounded rule says its step (docs/prior-art/corner-radii.md). Pruned the
   stylesheet with tools/css-prune.py.
 - New research notes: the Ringworld held still under a moving camera (docs/prior-art/ringworld-stability.md).
-
-## Ursa Major–Merak (2026-10-24)
-
-- Painted Ringworld is sealed: it no longer opens in the Athanor. The Surface card's Edit in the Athanor button is
-  greyed for it, with a note saying why, and its parts are in no menu. Its chain still draws the page, but its
-  insides can now grow into an engine of its own.
-- And it is faster: a still about a third faster, a film's frames more than that, with the same picture to the pixel.
-  Ring in the Sky got quicker on the way.
-- The Ringworld's countryside follows Works: each farmstead farms its own fields round its yard, as many as Works
-  raises. At a little Works the grazing between farms stays open; at much, the patchwork fills in.
-- Sunrise Scroll's cursed land keeps its petals: they drift down through the ash and lie on the dead ground,
-  blighted at their edges.
-
-### Under the hood
-- The Ringworld's chain is `sealed`: `athanorStarterAt` gives nothing for it, `paintReveal` greys the button,
-  `revealSurface` says why, the Athanor's Open drawer leaves it out, and The Arch and Land on the Ring are hidden
-  parts that `validateGraph` leaves out of any graph. chains.test.mjs checks all of it.
-- Speed (PERFORMANCE-AUDIT.md, the Ringworld as an engine): in a canvas pass a part may take the canvas arriving on an
-  input instead of copying it (`E.take`, `kitOwn`, steps marked `fresh`), counted by output so the Light Engine can
-  take its picture; Oil Paint at nothing passes its picture through; the Light Engine lights flat ground once; a
-  board's ink is kept (`pkInkKept`); a place's rise is worked out only when asked; a field's cheaper tests come
-  first; building proofs are read once a size band. Measured pixel-identical against the release before on Painted
-  Ringworld, Ring in the Sky, Painted Landscape, Brushstrokes and Sunrise Scroll; their fingerprints moved because
-  the drawing calls did. Painted Ringworld's also for the farmsteads' fields.
-- The first release named for a star: the §Build test reads a star cluster and its member as well as a planet and its
-  moon. New research notes for what comes next: corner radii, surfaces that bend the one beneath, and films with any
-  setting (docs/prior-art/).

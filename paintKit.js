@@ -102,7 +102,7 @@ export const PK_SIZE = {
   cargo: [1.2, 2.4], solar: [2, 2.6], dish: [6, 12], beacon: [5, 10], pipes: [1.5, 2.5], tripod: [1.4, 1.6], menhir: [1.8, 4.5], dolmen: [1.8, 2.6], fairyring: [0.12, 0.16], wisp: [0.3, 0.4], flower: [3, 5],
   toadstool: [2.5, 4], moongate: [3, 4],
   warden: [1.0, 1.4], slabgate: [14, 22], pod: [3, 4], spire: [90, 160], cogdoor: [8, 11], diner: [5, 6.5], car: [1.4, 1.6], suit: [6, 8], caps: [0.12, 0.15],
-  rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8], sheep: [0.75, 0.9], boat: [1.6, 2.6],
+  rock: [1, 7], grass: [0.3, 1.1], figure: [1.5, 1.95], sheep: [0.75, 0.9], boat: [1.6, 2.6],
   harvester: [2.4, 3.2], shepherd: [0.7, 0.9], lamplighter: [2.4, 2.8], crab: [0.4, 0.7] };
 // a size in its range, tall specimens rarer (u: a draw from 0 to 1)
 export const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
@@ -1922,17 +1922,58 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     const r = h*0.5, st = pkMat(c, PK_STONE, 0.7); x.lineWidth = Math.max(px(0.6), r*0.18); x.strokeStyle = pkCss(st.dark); x.beginPath(); x.arc(X, Y - r, r, 0, Math.PI*2); x.stroke(); x.lineWidth = Math.max(px(0.4), r*0.1); x.strokeStyle = pkCss(st.lit); x.beginPath(); x.arc(X, Y - r, r*1.03, sd > 0 ? -1.2 : 1.9, sd > 0 ? 0.3 : 3.5); x.stroke();
     pkGlow(x, X, Y - r, r*0.9, c.glow, 0.2 + 0.4*night); pkIvy(x, X - r*0.9, Y - r*0.3, r*1.4, r*0.4, c, RD, px); return; }
   }
-  // a person, for scale: seven and a half heads tall, legs and arms, a coat or jacket in three values, a hat now and
-  // then; no face (the eye reads its size, not who it is)
-  const coat = pkMat(c, [[70, 80, 100], [120, 60, 50], [150, 140, 110], [60, 90, 70], [40, 40, 44], [190, 170, 140]][Math.floor(R()*6)], 0.75), legs = pkMat(c, [[50, 56, 70], [70, 60, 50], [40, 40, 44]][Math.floor(R()*3)], 0.75), skin = pkMat(c, [[220, 180, 150], [170, 120, 90], [110, 74, 54]][Math.floor(R()*3)], 0.7);
-  // (walking (c.stride, -1 to 1, a step's swing), its legs apart and together; standing, its own stance)
-  const hd = h/7.5, r0 = R(), st = c.stride !== undefined && c.stride !== null ? c.stride*hd*0.55 : (r0 - 0.5)*hd*0.6;
-  pkPoly(x, [[X - hd*0.4, Y], [X - hd*0.45 - st*0.3, Y - h*0.47], [X - hd*0.05, Y - h*0.47], [X, Y - h*0.2], [X + hd*0.05, Y - h*0.47], [X + hd*0.45 + st*0.3, Y - h*0.47], [X + hd*0.4 + st, Y], [X + hd*0.12 + st, Y], [X, Y - h*0.3], [X - hd*0.12, Y]], pkCss(legs.body));
-  pkShade(x, [[X - hd*0.55, Y - h*0.42], [X - hd*0.62, Y - h*0.78], [X - hd*0.3, Y - h*0.84], [X + hd*0.3, Y - h*0.84], [X + hd*0.62, Y - h*0.78], [X + hd*0.55, Y - h*0.42]], coat.body, Y - h*0.84, Y - h*0.42, 0.2);
-  pkPoly(x, [[X + sd*hd*0.05, Y - h*0.44], [X + sd*hd*0.08, Y - h*0.8], [X + sd*hd*0.55, Y - h*0.78], [X + sd*hd*0.5, Y - h*0.44]], pkCss(coat.lit, 0.5));
-  for(const s of [-1, 1]) pkPoly(x, [[X + s*hd*0.55, Y - h*0.8], [X + s*hd*0.75, Y - h*0.55], [X + s*hd*0.65, Y - h*0.47], [X + s*hd*0.5, Y - h*0.6]], pkCss(s === sd ? coat.body : coat.dark));
-  pkEll(x, X, Y - h + hd*0.5, hd*0.4, hd*0.5, pkCss(skin.body)); pkEll(x, X - sd*hd*0.06, Y - h + hd*0.38, hd*0.42, hd*0.35, pkCss(pkMat(c, [[40, 32, 28], [120, 90, 60], [190, 170, 130], [30, 30, 34]][Math.floor(R()*4)], 0.7).body));
-  if(R() < 0.25) pkPoly(x, [[X - hd*0.6, Y - h + hd*0.25], [X + hd*0.6, Y - h + hd*0.25], [X + hd*0.35, Y - h + hd*0.1], [X + hd*0.3, Y - h - hd*0.25], [X - hd*0.3, Y - h - hd*0.25], [X - hd*0.35, Y - h + hd*0.1]], pkCss(pkMix(coat.dark, PK_BLACK, 0.3)));
+  // a person (pkPerson)
+  pkPerson(x, X, Y, h, c, sub(3), px);
+}
+
+// PEOPLE OF ALL KINDS (Ruby: "people of all genders and types, humanoid species"; docs/prior-art/ringworld-folk.md): who
+// each one is comes from their own stream, the same person from any view: their age (a child, an adult, an elder with a
+// stoop and now and then a cane), their build, their skin (ten tones), their hair (short or long, tied up or loose,
+// grey with age, dyed in the neon world), a beard on some, a skirt or a dress on some, a hat or a headscarf; their
+// clothes of their world (coats in the cities, a bright jacket edged with light in the neon world, cloaks and packs in
+// the wilds, robes in the magic world, rags and masks in the ruins, the builders' suits); and in the worlds that have
+// them, other folk: elves tall and slender with pointed ears, dwarves short and broad and bearded, fae small and winged
+// with a light about them, the builders' androids with lit seams; their skin one of the Monk Skin Tone Scale's ten. No
+// face: the eye reads who someone is from their shape. Walking (c.stride, a step's swing), legs apart and together; at night (c.lantern) a lantern held low.
+// (the ten tones of the Monk Skin Tone Scale, lightest to deepest)
+export const PK_SKINS = [[246, 237, 228], [243, 231, 219], [247, 234, 208], [234, 218, 186], [215, 189, 150], [160, 126, 86], [130, 92, 67], [96, 65, 52], [58, 49, 42], [41, 36, 32]];
+export function pkPerson(x, X, Y, h, c, R, px){
+  const sd = c.sd, w = c.w || 'cities', u = () => R();
+  const folkR = u(), folk = w === 'magic' ? (folkR < 0.3 ? 'elf' : folkR < 0.45 ? 'dwarf' : folkR < 0.55 ? 'fae' : 'human') : w === 'wilds' ? (folkR < 0.1 ? 'elf' : folkR < 0.16 ? 'dwarf' : 'human') : w === 'builders' && folkR < 0.18 ? 'android' : 'human';
+  const ageR = u(), age = folk === 'fae' ? 'adult' : ageR < 0.12 ? 'child' : ageR > 0.87 ? 'elder' : 'adult', femme = u() < 0.5, longHair = u() < (femme ? 0.72 : 0.22), skirt = u() < (femme ? 0.45 : 0.06), beard = !femme && age !== 'child' && u() < (folk === 'dwarf' ? 0.95 : 0.3);
+  const build = folk === 'dwarf' ? 1.35 : folk === 'elf' ? 0.82 : folk === 'fae' ? 0.75 : 0.85 + 0.4*u(), tall = folk === 'dwarf' ? 0.68 : folk === 'fae' ? 0.42 : folk === 'elf' ? 1.07 : age === 'child' ? 0.6 + 0.12*u() : 1;
+  const skin = folk === 'android' ? [214, 220, 228] : PK_SKINS[Math.floor(u()*PK_SKINS.length)], hairC = age === 'elder' ? [206, 204, 200] : w === 'neon' && u() < 0.35 ? [[236, 60, 170], [60, 200, 240], [140, 236, 90]][Math.floor(u()*3)] : [[30, 26, 24], [64, 44, 30], [104, 72, 44], [150, 74, 40], [214, 182, 110]][Math.floor(u()*5)];
+  const pal = { cities: [[70, 80, 100], [120, 60, 50], [150, 140, 110], [60, 90, 70], [40, 40, 44], [190, 170, 140], [150, 90, 120]], neon: [[30, 28, 40], [60, 30, 80], [24, 50, 70], [70, 30, 40]], wilds: [[94, 82, 60], [70, 90, 60], [110, 70, 50], [60, 64, 70]],
+    magic: [[80, 50, 120], [40, 80, 110], [110, 40, 60], [200, 190, 220], [50, 90, 60]], ruins: [[96, 84, 70], [70, 66, 60], [110, 96, 70], [60, 56, 50]], builders: [[214, 218, 226], [190, 200, 214], [96, 104, 120]] }[w] || [[70, 80, 100]];
+  const coat = pkMat(c, pal[Math.floor(u()*pal.length)], 0.75), legs = pkMat(c, pkMix(pal[Math.floor(u()*pal.length)], [40, 40, 44], 0.5), 0.75), sk = pkMat(c, skin, 0.8), hair = pkMat(c, hairC, 0.75);
+  const hat = u() < (w === 'wilds' ? 0.4 : w === 'magic' && folk !== 'elf' ? 0.35 : 0.18), scarf = !hat && u() < 0.08, pack = w === 'wilds' && u() < 0.35, cane = age === 'elder' && u() < 0.4, mask = w === 'ruins' && u() < 0.4;
+  h *= tall; const hd = h/(age === 'child' ? 5.6 : folk === 'dwarf' ? 5.8 : 7.5), sw = hd*0.62*build, hw = hd*(skirt ? 0.62 : 0.45)*build, stoop = age === 'elder' ? hd*0.25 : 0;
+  const st = c.stride !== undefined && c.stride !== null ? c.stride*hd*0.55 : (u() - 0.5)*hd*0.6, waist = Y - h*0.47, shoulder = Y - h*0.82, nX = X + stoop;
+  // (fae: wings of light behind, and the light about them)
+  if(folk === 'fae'){ const wc = pkMix(c.glow || [200, 240, 255], PK_WHITE, 0.4); for(const s of [-1, 1]){ x.beginPath(); x.ellipse(X + s*hd*0.9, Y - h*0.72, hd*0.9, hd*0.45, s*0.6, 0, Math.PI*2); x.fillStyle = pkCss(wc, 0.4); x.fill(); } pkGlow(x, X, Y - h*0.6, h*0.9, c.glow || [200, 240, 255], 0.3); }
+  if(pack){ pkPoly(x, [[nX - sd*sw*0.9, shoulder + hd*0.1], [nX - sd*sw*1.5, shoulder + hd*0.3], [nX - sd*sw*1.45, waist], [nX - sd*sw*0.8, waist]], pkCss(pkMat(c, [110, 84, 56], 0.75).dark)); }
+  // legs, or a skirt or a robe
+  if(skirt || w === 'magic' && folk !== 'fae' && u() < 0.5){ const hem = Y - h*(skirt ? 0.2 : 0.04); pkShade(x, [[X - hw*1.4, hem], [X - sw*0.75, waist], [X + sw*0.75, waist], [X + hw*1.4, hem]], skirt ? legs.body : coat.body, waist, hem, 0.15);
+    if(skirt){ pkPoly(x, [[X - hd*0.3, hem], [X - hd*0.3 - st*0.2, Y], [X - hd*0.15 - st*0.2, Y], [X - hd*0.12, hem]], pkCss(sk.dark)); pkPoly(x, [[X + hd*0.12, hem], [X + hd*0.15 + st, Y], [X + hd*0.3 + st, Y], [X + hd*0.3, hem]], pkCss(sk.dark)); } }
+  else pkPoly(x, [[X - hd*0.4*build, Y], [X - hd*0.45*build - st*0.3, waist], [X - hd*0.05, waist], [X, Y - h*0.2], [X + hd*0.05, waist], [X + hd*0.45*build + st*0.3, waist], [X + hd*0.4*build + st, Y], [X + hd*0.12 + st, Y], [X, Y - h*0.3], [X - hd*0.12, Y]], pkCss(legs.body));
+  // the body, its lit side, the arms
+  pkShade(x, [[X - sw*0.88, waist + hd*0.1], [nX - sw, shoulder + hd*0.1], [nX - sw*0.5, shoulder], [nX + sw*0.5, shoulder], [nX + sw, shoulder + hd*0.1], [X + sw*0.88, waist + hd*0.1]], coat.body, shoulder, waist, 0.2);
+  pkPoly(x, [[X + sd*hd*0.05, waist + hd*0.05], [nX + sd*hd*0.08, shoulder + hd*0.2], [nX + sd*sw*0.9, shoulder + hd*0.2], [X + sd*sw*0.8, waist + hd*0.05]], pkCss(coat.lit, 0.5));
+  if(w === 'neon' && h > px(10)){ x.strokeStyle = pkCss(pkMix(c.glow || [255, 80, 200], PK_WHITE, 0.3), 0.85); x.lineWidth = Math.max(px(0.4), hd*0.07); x.beginPath(); x.moveTo(nX - sw, shoulder + hd*0.15); x.lineTo(X - sw*0.88, waist + hd*0.1); x.moveTo(nX + sw, shoulder + hd*0.15); x.lineTo(X + sw*0.88, waist + hd*0.1); x.stroke(); }
+  if(folk === 'android' && h > px(10)){ x.strokeStyle = pkCss(c.glow || [150, 224, 255], 0.9); x.lineWidth = Math.max(px(0.4), hd*0.05); x.beginPath(); x.moveTo(nX, shoulder); x.lineTo(X, waist); x.stroke(); }
+  for(const s of [-1, 1]){ const swing = (c.stride || 0)*hd*0.4*s; pkPoly(x, [[nX + s*sw*0.95, shoulder + hd*0.12], [X + s*sw*1.2 + swing, Y - h*0.55], [X + s*sw*1.05 + swing, Y - h*0.46], [X + s*sw*0.8, Y - h*0.6]], pkCss(s === sd ? coat.body : coat.dark));
+    pkDisc(x, X + s*sw*1.12 + swing, Y - h*0.45, Math.max(px(0.4), hd*0.12), pkCss(s === sd ? sk.body : sk.dark)); }
+  if(cane){ x.strokeStyle = pkCss(pkMat(c, [90, 66, 44], 0.75).dark); x.lineWidth = Math.max(px(0.4), hd*0.08); x.beginPath(); x.moveTo(X + sd*sw*1.15, Y - h*0.45); x.lineTo(X + sd*sw*1.5, Y); x.stroke(); }
+  // the head: hair behind, the face's skin, hair on top, ears for the elves, a beard, a mask, a hat or a scarf
+  const hx = nX + stoop*0.4, hy = Y - h + hd*0.5;
+  if(longHair) pkPoly(x, [[hx - hd*0.45, hy - hd*0.1], [hx - hd*0.5, hy + hd*(folk === 'elf' ? 1.6 : 1.1)], [hx + hd*0.5, hy + hd*(folk === 'elf' ? 1.6 : 1.1)], [hx + hd*0.45, hy - hd*0.1]], pkCss(hair.dark));
+  pkEll(x, hx, hy, hd*0.4, hd*0.5, pkCss(sk.body));
+  if(folk === 'elf') for(const s of [-1, 1]) pkPoly(x, [[hx + s*hd*0.35, hy - hd*0.05], [hx + s*hd*0.75, hy - hd*0.45], [hx + s*hd*0.38, hy + hd*0.15]], pkCss(s === sd ? sk.body : sk.dark));
+  pkEll(x, hx - sd*hd*0.06, hy - hd*0.12, hd*0.43, hd*0.36, pkCss(hair.body));
+  if(beard) pkPoly(x, [[hx - hd*0.36, hy + hd*0.05], [hx - hd*0.3, hy + hd*(folk === 'dwarf' ? 1.1 : 0.55)], [hx + hd*0.3, hy + hd*(folk === 'dwarf' ? 1.1 : 0.55)], [hx + hd*0.36, hy + hd*0.05]], pkCss(hair.body));
+  if(mask) pkPoly(x, [[hx - hd*0.38, hy + hd*0.02], [hx - hd*0.3, hy + hd*0.4], [hx + hd*0.3, hy + hd*0.4], [hx + hd*0.38, hy + hd*0.02]], pkCss(pkMat(c, [70, 70, 64], 0.75).dark));
+  if(hat){ const hc = pkMix(coat.dark, PK_BLACK, 0.3), pointed = w === 'magic'; pkPoly(x, pointed ? [[hx - hd*0.65, hy - hd*0.25], [hx + hd*0.65, hy - hd*0.25], [hx + hd*0.15, hy - hd*1.5]] : [[hx - hd*0.6, hy - hd*0.25], [hx + hd*0.6, hy - hd*0.25], [hx + hd*0.35, hy - hd*0.4], [hx + hd*0.3, hy - hd*0.75], [hx - hd*0.3, hy - hd*0.75], [hx - hd*0.35, hy - hd*0.4]], pkCss(hc)); }
+  else if(scarf) pkPoly(x, [[hx - hd*0.5, hy + hd*0.45], [hx - hd*0.52, hy - hd*0.2], [hx, hy - hd*0.6], [hx + hd*0.52, hy - hd*0.2], [hx + hd*0.5, hy + hd*0.45], [hx + hd*0.3, hy + hd*0.15], [hx - hd*0.3, hy + hd*0.15]], pkCss(pkMat(c, pal[0], 0.75).lit));
   // (out at night (c.lantern, how dark): a lantern held low at the side, its light steady, never flickering)
   if(c.lantern > 0){ const lx = X + sd*hd*0.85, ly = Y - h*0.4, warm = [255, 198, 124]; pkGlow(x, lx, ly, h*0.45, warm, 0.4*c.lantern);
     pkDisc(x, lx, ly, Math.max(px(0.5), hd*0.2), pkCss(pkMix(warm, PK_WHITE, 0.5), 0.6 + 0.4*c.lantern)); }

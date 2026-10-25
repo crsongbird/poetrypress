@@ -6307,7 +6307,7 @@ const PK_SIZE = {
   cargo: [1.2, 2.4], solar: [2, 2.6], dish: [6, 12], beacon: [5, 10], pipes: [1.5, 2.5], tripod: [1.4, 1.6], menhir: [1.8, 4.5], dolmen: [1.8, 2.6], fairyring: [0.12, 0.16], wisp: [0.3, 0.4], flower: [3, 5],
   toadstool: [2.5, 4], moongate: [3, 4],
   warden: [1.0, 1.4], slabgate: [14, 22], pod: [3, 4], spire: [90, 160], cogdoor: [8, 11], diner: [5, 6.5], car: [1.4, 1.6], suit: [6, 8], caps: [0.12, 0.15],
-  rock: [1, 7], grass: [0.3, 1.1], figure: [1.6, 1.8], sheep: [0.75, 0.9], boat: [1.6, 2.6],
+  rock: [1, 7], grass: [0.3, 1.1], figure: [1.5, 1.95], sheep: [0.75, 0.9], boat: [1.6, 2.6],
   harvester: [2.4, 3.2], shepherd: [0.7, 0.9], lamplighter: [2.4, 2.8], crab: [0.4, 0.7] };
 
 const pkMetres = (kind, u, j = 0) => { const r = PK_SIZE[kind]; return r[2*j] + (r[2*j + 1] - r[2*j])*Math.pow(u, 1.5); };
@@ -8128,16 +8128,57 @@ function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
     pkGlow(x, X, Y - r, r*0.9, c.glow, 0.2 + 0.4*night); pkIvy(x, X - r*0.9, Y - r*0.3, r*1.4, r*0.4, c, RD, px); return; }
   }
 
+  pkPerson(x, X, Y, h, c, sub(3), px);
+}
 
-  const coat = pkMat(c, [[70, 80, 100], [120, 60, 50], [150, 140, 110], [60, 90, 70], [40, 40, 44], [190, 170, 140]][Math.floor(R()*6)], 0.75), legs = pkMat(c, [[50, 56, 70], [70, 60, 50], [40, 40, 44]][Math.floor(R()*3)], 0.75), skin = pkMat(c, [[220, 180, 150], [170, 120, 90], [110, 74, 54]][Math.floor(R()*3)], 0.7);
 
-  const hd = h/7.5, r0 = R(), st = c.stride !== undefined && c.stride !== null ? c.stride*hd*0.55 : (r0 - 0.5)*hd*0.6;
-  pkPoly(x, [[X - hd*0.4, Y], [X - hd*0.45 - st*0.3, Y - h*0.47], [X - hd*0.05, Y - h*0.47], [X, Y - h*0.2], [X + hd*0.05, Y - h*0.47], [X + hd*0.45 + st*0.3, Y - h*0.47], [X + hd*0.4 + st, Y], [X + hd*0.12 + st, Y], [X, Y - h*0.3], [X - hd*0.12, Y]], pkCss(legs.body));
-  pkShade(x, [[X - hd*0.55, Y - h*0.42], [X - hd*0.62, Y - h*0.78], [X - hd*0.3, Y - h*0.84], [X + hd*0.3, Y - h*0.84], [X + hd*0.62, Y - h*0.78], [X + hd*0.55, Y - h*0.42]], coat.body, Y - h*0.84, Y - h*0.42, 0.2);
-  pkPoly(x, [[X + sd*hd*0.05, Y - h*0.44], [X + sd*hd*0.08, Y - h*0.8], [X + sd*hd*0.55, Y - h*0.78], [X + sd*hd*0.5, Y - h*0.44]], pkCss(coat.lit, 0.5));
-  for(const s of [-1, 1]) pkPoly(x, [[X + s*hd*0.55, Y - h*0.8], [X + s*hd*0.75, Y - h*0.55], [X + s*hd*0.65, Y - h*0.47], [X + s*hd*0.5, Y - h*0.6]], pkCss(s === sd ? coat.body : coat.dark));
-  pkEll(x, X, Y - h + hd*0.5, hd*0.4, hd*0.5, pkCss(skin.body)); pkEll(x, X - sd*hd*0.06, Y - h + hd*0.38, hd*0.42, hd*0.35, pkCss(pkMat(c, [[40, 32, 28], [120, 90, 60], [190, 170, 130], [30, 30, 34]][Math.floor(R()*4)], 0.7).body));
-  if(R() < 0.25) pkPoly(x, [[X - hd*0.6, Y - h + hd*0.25], [X + hd*0.6, Y - h + hd*0.25], [X + hd*0.35, Y - h + hd*0.1], [X + hd*0.3, Y - h - hd*0.25], [X - hd*0.3, Y - h - hd*0.25], [X - hd*0.35, Y - h + hd*0.1]], pkCss(pkMix(coat.dark, PK_BLACK, 0.3)));
+
+
+
+
+
+
+
+
+
+const PK_SKINS = [[246, 237, 228], [243, 231, 219], [247, 234, 208], [234, 218, 186], [215, 189, 150], [160, 126, 86], [130, 92, 67], [96, 65, 52], [58, 49, 42], [41, 36, 32]];
+function pkPerson(x, X, Y, h, c, R, px){
+  const sd = c.sd, w = c.w || 'cities', u = () => R();
+  const folkR = u(), folk = w === 'magic' ? (folkR < 0.3 ? 'elf' : folkR < 0.45 ? 'dwarf' : folkR < 0.55 ? 'fae' : 'human') : w === 'wilds' ? (folkR < 0.1 ? 'elf' : folkR < 0.16 ? 'dwarf' : 'human') : w === 'builders' && folkR < 0.18 ? 'android' : 'human';
+  const ageR = u(), age = folk === 'fae' ? 'adult' : ageR < 0.12 ? 'child' : ageR > 0.87 ? 'elder' : 'adult', femme = u() < 0.5, longHair = u() < (femme ? 0.72 : 0.22), skirt = u() < (femme ? 0.45 : 0.06), beard = !femme && age !== 'child' && u() < (folk === 'dwarf' ? 0.95 : 0.3);
+  const build = folk === 'dwarf' ? 1.35 : folk === 'elf' ? 0.82 : folk === 'fae' ? 0.75 : 0.85 + 0.4*u(), tall = folk === 'dwarf' ? 0.68 : folk === 'fae' ? 0.42 : folk === 'elf' ? 1.07 : age === 'child' ? 0.6 + 0.12*u() : 1;
+  const skin = folk === 'android' ? [214, 220, 228] : PK_SKINS[Math.floor(u()*PK_SKINS.length)], hairC = age === 'elder' ? [206, 204, 200] : w === 'neon' && u() < 0.35 ? [[236, 60, 170], [60, 200, 240], [140, 236, 90]][Math.floor(u()*3)] : [[30, 26, 24], [64, 44, 30], [104, 72, 44], [150, 74, 40], [214, 182, 110]][Math.floor(u()*5)];
+  const pal = { cities: [[70, 80, 100], [120, 60, 50], [150, 140, 110], [60, 90, 70], [40, 40, 44], [190, 170, 140], [150, 90, 120]], neon: [[30, 28, 40], [60, 30, 80], [24, 50, 70], [70, 30, 40]], wilds: [[94, 82, 60], [70, 90, 60], [110, 70, 50], [60, 64, 70]],
+    magic: [[80, 50, 120], [40, 80, 110], [110, 40, 60], [200, 190, 220], [50, 90, 60]], ruins: [[96, 84, 70], [70, 66, 60], [110, 96, 70], [60, 56, 50]], builders: [[214, 218, 226], [190, 200, 214], [96, 104, 120]] }[w] || [[70, 80, 100]];
+  const coat = pkMat(c, pal[Math.floor(u()*pal.length)], 0.75), legs = pkMat(c, pkMix(pal[Math.floor(u()*pal.length)], [40, 40, 44], 0.5), 0.75), sk = pkMat(c, skin, 0.8), hair = pkMat(c, hairC, 0.75);
+  const hat = u() < (w === 'wilds' ? 0.4 : w === 'magic' && folk !== 'elf' ? 0.35 : 0.18), scarf = !hat && u() < 0.08, pack = w === 'wilds' && u() < 0.35, cane = age === 'elder' && u() < 0.4, mask = w === 'ruins' && u() < 0.4;
+  h *= tall; const hd = h/(age === 'child' ? 5.6 : folk === 'dwarf' ? 5.8 : 7.5), sw = hd*0.62*build, hw = hd*(skirt ? 0.62 : 0.45)*build, stoop = age === 'elder' ? hd*0.25 : 0;
+  const st = c.stride !== undefined && c.stride !== null ? c.stride*hd*0.55 : (u() - 0.5)*hd*0.6, waist = Y - h*0.47, shoulder = Y - h*0.82, nX = X + stoop;
+
+  if(folk === 'fae'){ const wc = pkMix(c.glow || [200, 240, 255], PK_WHITE, 0.4); for(const s of [-1, 1]){ x.beginPath(); x.ellipse(X + s*hd*0.9, Y - h*0.72, hd*0.9, hd*0.45, s*0.6, 0, Math.PI*2); x.fillStyle = pkCss(wc, 0.4); x.fill(); } pkGlow(x, X, Y - h*0.6, h*0.9, c.glow || [200, 240, 255], 0.3); }
+  if(pack){ pkPoly(x, [[nX - sd*sw*0.9, shoulder + hd*0.1], [nX - sd*sw*1.5, shoulder + hd*0.3], [nX - sd*sw*1.45, waist], [nX - sd*sw*0.8, waist]], pkCss(pkMat(c, [110, 84, 56], 0.75).dark)); }
+
+  if(skirt || w === 'magic' && folk !== 'fae' && u() < 0.5){ const hem = Y - h*(skirt ? 0.2 : 0.04); pkShade(x, [[X - hw*1.4, hem], [X - sw*0.75, waist], [X + sw*0.75, waist], [X + hw*1.4, hem]], skirt ? legs.body : coat.body, waist, hem, 0.15);
+    if(skirt){ pkPoly(x, [[X - hd*0.3, hem], [X - hd*0.3 - st*0.2, Y], [X - hd*0.15 - st*0.2, Y], [X - hd*0.12, hem]], pkCss(sk.dark)); pkPoly(x, [[X + hd*0.12, hem], [X + hd*0.15 + st, Y], [X + hd*0.3 + st, Y], [X + hd*0.3, hem]], pkCss(sk.dark)); } }
+  else pkPoly(x, [[X - hd*0.4*build, Y], [X - hd*0.45*build - st*0.3, waist], [X - hd*0.05, waist], [X, Y - h*0.2], [X + hd*0.05, waist], [X + hd*0.45*build + st*0.3, waist], [X + hd*0.4*build + st, Y], [X + hd*0.12 + st, Y], [X, Y - h*0.3], [X - hd*0.12, Y]], pkCss(legs.body));
+
+  pkShade(x, [[X - sw*0.88, waist + hd*0.1], [nX - sw, shoulder + hd*0.1], [nX - sw*0.5, shoulder], [nX + sw*0.5, shoulder], [nX + sw, shoulder + hd*0.1], [X + sw*0.88, waist + hd*0.1]], coat.body, shoulder, waist, 0.2);
+  pkPoly(x, [[X + sd*hd*0.05, waist + hd*0.05], [nX + sd*hd*0.08, shoulder + hd*0.2], [nX + sd*sw*0.9, shoulder + hd*0.2], [X + sd*sw*0.8, waist + hd*0.05]], pkCss(coat.lit, 0.5));
+  if(w === 'neon' && h > px(10)){ x.strokeStyle = pkCss(pkMix(c.glow || [255, 80, 200], PK_WHITE, 0.3), 0.85); x.lineWidth = Math.max(px(0.4), hd*0.07); x.beginPath(); x.moveTo(nX - sw, shoulder + hd*0.15); x.lineTo(X - sw*0.88, waist + hd*0.1); x.moveTo(nX + sw, shoulder + hd*0.15); x.lineTo(X + sw*0.88, waist + hd*0.1); x.stroke(); }
+  if(folk === 'android' && h > px(10)){ x.strokeStyle = pkCss(c.glow || [150, 224, 255], 0.9); x.lineWidth = Math.max(px(0.4), hd*0.05); x.beginPath(); x.moveTo(nX, shoulder); x.lineTo(X, waist); x.stroke(); }
+  for(const s of [-1, 1]){ const swing = (c.stride || 0)*hd*0.4*s; pkPoly(x, [[nX + s*sw*0.95, shoulder + hd*0.12], [X + s*sw*1.2 + swing, Y - h*0.55], [X + s*sw*1.05 + swing, Y - h*0.46], [X + s*sw*0.8, Y - h*0.6]], pkCss(s === sd ? coat.body : coat.dark));
+    pkDisc(x, X + s*sw*1.12 + swing, Y - h*0.45, Math.max(px(0.4), hd*0.12), pkCss(s === sd ? sk.body : sk.dark)); }
+  if(cane){ x.strokeStyle = pkCss(pkMat(c, [90, 66, 44], 0.75).dark); x.lineWidth = Math.max(px(0.4), hd*0.08); x.beginPath(); x.moveTo(X + sd*sw*1.15, Y - h*0.45); x.lineTo(X + sd*sw*1.5, Y); x.stroke(); }
+
+  const hx = nX + stoop*0.4, hy = Y - h + hd*0.5;
+  if(longHair) pkPoly(x, [[hx - hd*0.45, hy - hd*0.1], [hx - hd*0.5, hy + hd*(folk === 'elf' ? 1.6 : 1.1)], [hx + hd*0.5, hy + hd*(folk === 'elf' ? 1.6 : 1.1)], [hx + hd*0.45, hy - hd*0.1]], pkCss(hair.dark));
+  pkEll(x, hx, hy, hd*0.4, hd*0.5, pkCss(sk.body));
+  if(folk === 'elf') for(const s of [-1, 1]) pkPoly(x, [[hx + s*hd*0.35, hy - hd*0.05], [hx + s*hd*0.75, hy - hd*0.45], [hx + s*hd*0.38, hy + hd*0.15]], pkCss(s === sd ? sk.body : sk.dark));
+  pkEll(x, hx - sd*hd*0.06, hy - hd*0.12, hd*0.43, hd*0.36, pkCss(hair.body));
+  if(beard) pkPoly(x, [[hx - hd*0.36, hy + hd*0.05], [hx - hd*0.3, hy + hd*(folk === 'dwarf' ? 1.1 : 0.55)], [hx + hd*0.3, hy + hd*(folk === 'dwarf' ? 1.1 : 0.55)], [hx + hd*0.36, hy + hd*0.05]], pkCss(hair.body));
+  if(mask) pkPoly(x, [[hx - hd*0.38, hy + hd*0.02], [hx - hd*0.3, hy + hd*0.4], [hx + hd*0.3, hy + hd*0.4], [hx + hd*0.38, hy + hd*0.02]], pkCss(pkMat(c, [70, 70, 64], 0.75).dark));
+  if(hat){ const hc = pkMix(coat.dark, PK_BLACK, 0.3), pointed = w === 'magic'; pkPoly(x, pointed ? [[hx - hd*0.65, hy - hd*0.25], [hx + hd*0.65, hy - hd*0.25], [hx + hd*0.15, hy - hd*1.5]] : [[hx - hd*0.6, hy - hd*0.25], [hx + hd*0.6, hy - hd*0.25], [hx + hd*0.35, hy - hd*0.4], [hx + hd*0.3, hy - hd*0.75], [hx - hd*0.3, hy - hd*0.75], [hx - hd*0.35, hy - hd*0.4]], pkCss(hc)); }
+  else if(scarf) pkPoly(x, [[hx - hd*0.5, hy + hd*0.45], [hx - hd*0.52, hy - hd*0.2], [hx, hy - hd*0.6], [hx + hd*0.52, hy - hd*0.2], [hx + hd*0.5, hy + hd*0.45], [hx + hd*0.3, hy + hd*0.15], [hx - hd*0.3, hy + hd*0.15]], pkCss(pkMat(c, pal[0], 0.75).lit));
 
   if(c.lantern > 0){ const lx = X + sd*hd*0.85, ly = Y - h*0.4, warm = [255, 198, 124]; pkGlow(x, lx, ly, h*0.45, warm, 0.4*c.lantern);
     pkDisc(x, lx, ly, Math.max(px(0.5), hd*0.2), pkCss(pkMix(warm, PK_WHITE, 0.5), 0.6 + 0.4*c.lantern)); }
@@ -8781,11 +8822,16 @@ function wkAt(kind, s, j, t, env = {}){
   case 'walk': case 'hop': case 'prowl': case 'flock': {
     const e = wkEra(s, tt, K.P), { L, P, dist, T } = wkSpan(K, s, j, e.k, n), Pp = wkSpan(K, s, j, e.k - 1, n);
     const alertBy = wkSmooth((wkNoise(s + j*17, tt/7) - 0.15)/0.35), grazeFace = (LL, TT, ux, uz) => Math.atan2(uz, ux) + 1.3*(wkNoise(s + j*5, tt/40) - wkNoise(s + j*5, (LL.dep + TT)/40));
+
+
+
+    const act = wkNoise(s + j*31, tt/55), lie = K.way === 'walk' ? wkSmooth((-0.22 - act)/0.22) : 0, look = wkSmooth((act - 0.3)/0.25);
+    const hopU = K.way === 'flock' ? (tt*0.7 + wkHash(j, 33, s)*7) % 7 : 9, hop = hopU < 0.45 ? 0.12*K.size*Math.sin(Math.PI*hopU/0.45) : 0;
     if(tt < L.dep || dist < 1e-6){ const LL = tt < L.dep ? P : L, TT = tt < L.dep ? Pp.T : T, g = wkGraze(K, s, j, LL, TT, tt), ux = LL.p1[0] - (tt < L.dep ? Pp.P : P).p1[0], uz = LL.p1[1] - (tt < L.dep ? Pp.P : P).p1[1];
       const warn = L.bolt && K.way !== 'flock' ? wkSmooth((tt - (L.dep - 1.2))/0.6) : 0;
-      return { x: g[0], z: g[1], y: 0, face: grazeFace(LL, TT, ux, uz), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*(K.way === 'flock' ? 0.9 : 0.12) + j*0.37, head: Math.max(warn, alertBy*(K.way === 'hop' ? 1 : 0.7)), on: 1 }; }
+      return { x: g[0], z: g[1], y: hop, face: grazeFace(LL, TT, ux, uz), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*(K.way === 'flock' ? 0.9 : 0.12) + j*0.37, head: Math.max(warn, alertBy*(K.way === 'hop' ? 1 : 0.7), look, lie*0.8), lie: lie*(1 - warn), flick: hop > 0 ? 1 : 0, on: 1 }; }
     const from = wkGraze(K, s, j, P, Pp.T, L.dep), p = Math.min(1, (tt - L.dep)/T);
-    if(p >= 1){ const g = wkGraze(K, s, j, L, T, tt); return { x: g[0], z: g[1], y: 0, face: grazeFace(L, T, L.p1[0] - from[0], L.p1[1] - from[1]), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*0.9 + j*0.37, head: alertBy*0.7, on: 1 }; }
+    if(p >= 1){ const g = wkGraze(K, s, j, L, T, tt), settle = wkSmooth((tt - L.dep - T)/20); return { x: g[0], z: g[1], y: hop, face: grazeFace(L, T, L.p1[0] - from[0], L.p1[1] - from[1]), pose: K.way === 'flock' ? 'peck' : 'graze', ph: tt*0.9 + j*0.37, head: Math.max(alertBy*0.7, look*settle, lie*settle*0.8), lie: lie*settle, flick: hop > 0 ? 1 : 0, on: 1 }; }
     const dx = L.p1[0] - from[0], dz = L.p1[1] - from[1], dl = Math.hypot(dx, dz) || 1e-6, nx = -dz/dl, nz = dx/dl;
 
 
@@ -8847,9 +8893,11 @@ function wkQuad(x, X, Y, m, kind, st, c, px){
   const K = WK_KINDS[kind], d = st.dir, sk = Math.max(0.3, st.side), L = K.size*m, coat = c.mat(K.coat), cervid = kind !== 'fox';
   const lift = st.y*m, run = st.pose === 'run' || st.pose === 'pounce', q = u => X + d*u*sk, fill = wkCss(coat.body), lw = Math.max(px(0.4), L*(cervid ? 0.034 : 0.05));
 
-  const back = L*(cervid ? 0.66 : 0.5), deep = L*(cervid ? 0.27 : 0.24), by = Y - lift - back + deep*0.5, ph = st.ph*Math.PI*2;
+
+  const lie = st.lie || 0, back = L*(cervid ? 0.66 : 0.5)*(1 - 0.62*lie), deep = L*(cervid ? 0.27 : 0.24), by = Y - lift - back + deep*0.5, ph = st.ph*Math.PI*2;
   const legs = [[0.3, 0], [0.24, Math.PI], [-0.3, Math.PI*0.5], [-0.36, Math.PI*1.5]];
-  if(L > px(3)) legs.forEach(([u, o], i) => { const far = i % 2 === 1, hind = i >= 2, sw = run ? (hind ? -1 : 1)*Math.sin(ph)*0.7 : st.pose === 'walk' ? Math.sin(ph + o)*0.36 : 0;
+  if(lie > 0.6 && L > px(3)) for(const u of [0.22, -0.26]) wkEll(x, q(u*L), Y - deep*0.18, L*0.16*sk, deep*0.2, 0, wkCss(coat.dark));
+  if(L > px(3) && lie <= 0.6) legs.forEach(([u, o], i) => { const far = i % 2 === 1, hind = i >= 2, sw = run ? (hind ? -1 : 1)*Math.sin(ph)*0.7 : st.pose === 'walk' ? Math.sin(ph + o)*0.36 : 0;
     const top = [q(u*L), by + deep*0.25], len = Math.max(L*0.05, Y - lift - top[1]), knee = [top[0] + d*(Math.sin(sw)*0.5 + (hind ? -0.08 : 0.04))*len, top[1] + len*0.5], ft = [top[0] + d*Math.sin(sw)*len, top[1] + Math.cos(sw)*len];
     const col = wkCss(far ? wkMix(coat.dark, [0, 0, 0], 0.3) : coat.dark); wkLine(x, [top, knee, ft], col, lw); if(L > px(10)) wkLine(x, [ft, [ft[0] + d*lw*1.2, ft[1]]], wkCss([24, 20, 18]), lw*1.2); });
 
@@ -8899,9 +8947,10 @@ function wkBird(x, X, Y, m, kind, st, c, px){
       wkEll(x, X, by - hgt*0.08, hgt*0.17, hgt*0.1, -d*0.5, wkCss(col.body)); const strike = st.head, nk = [[X + d*hgt*0.1, by - hgt*0.12], [X + d*hgt*(0.04 + 0.22*strike), by - hgt*(0.3 - 0.05*strike)], [X + d*hgt*(0.12 + 0.3*strike), by - hgt*(0.36 - 0.1*strike)]];
       wkLine(x, nk, wkCss(col.lit), Math.max(px(0.5), hgt*0.04)); const hx = nk[2][0], hy = nk[2][1]; wkLine(x, [[hx, hy], [hx + d*hgt*0.16, hy + hgt*0.02*(1 + strike)]], wkCss([196, 168, 80]), Math.max(px(0.4), hgt*0.022));
       if(hgt > px(14)) wkLine(x, [[hx - d*hgt*0.02, hy - hgt*0.01], [hx - d*hgt*0.12, hy - hgt*0.01]], ink, Math.max(px(0.3), hgt*0.012)); return; }
-    const by = Y - b*0.55; wkEll(x, X, by, b*0.5, b*0.26, -d*0.25, wkCss(col.body)); wkLine(x, [[X - d*b*0.42, by + b*0.04], [X - d*b*0.8, by + b*0.12]], wkCss(col.body), Math.max(px(0.4), b*0.14));
+    const by = y - b*0.55; wkEll(x, X, by, b*0.5, b*0.26, -d*0.25, wkCss(col.body));
+    if(st.flick && b > px(3)) for(const s2 of [-1, 1]) wkPolyF(x, [[X - d*b*0.1, by - b*0.1], [X - d*b*0.45, by - b*(0.55 + 0.15*s2)], [X + d*b*0.15, by - b*0.2]], wkCss(s2 > 0 ? col.dark : col.body)); wkLine(x, [[X - d*b*0.42, by + b*0.04], [X - d*b*0.8, by + b*0.12]], wkCss(col.body), Math.max(px(0.4), b*0.14));
     wkEll(x, X + d*b*0.42, by - b*0.2 + bob*b*0.5, b*0.16, b*0.14, 0, wkCss(col.body)); if(b > px(5)) wkLine(x, [[X + d*b*0.56, by - b*0.2 + bob*b*0.5], [X + d*b*0.72, by - b*0.16 + bob*b*0.6]], ink, Math.max(px(0.3), b*0.06));
-    if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, Y]], ink, Math.max(px(0.3), b*0.04)); return; }
+    if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, y]], ink, Math.max(px(0.3), b*0.04)); return; }
 
   if(kind === 'raptor' || (kind === 'heron' && st.pose === 'fly')){ const span = (kind === 'heron' ? 1.7 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
 
@@ -35447,7 +35496,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Pleiades–Atlas';
+const RELEASE = 'Pleiades–Alcyone';
 
 const RELEASE_DATE = '2026-10-25';
 
@@ -36407,7 +36456,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-25 · ee69d55";
+const STAMP = "2026-10-25 · 13c9c00";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
