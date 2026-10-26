@@ -182,7 +182,7 @@ function tobQuartz(ctx, { x, y, s, v, rot }, L){
   const len = s*1.0, wd = s*0.3, T = v.tint, hgt = s*0.24;
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
   const body = (c, ox, oy) => { c.moveTo(-len/2 + ox, -wd/2 + oy); c.lineTo(len*0.25 + ox, -wd/2 + oy); c.lineTo(len/2 + ox, oy); c.lineTo(len*0.25 + ox, wd/2 + oy); c.lineTo(-len/2 + ox, wd/2 + oy); c.closePath(); };
-  const [dx, dy] = tobLocal(L, rot, hgt), [lx, ly] = tobToward(L, rot);
+  const [dx, dy] = tobLocal(L, rot, hgt), [, ly] = tobToward(L, rot);
   tobKit.shadow(ctx, body, dx, dy, s*0.05, 0.3, 6);
   // three long faces: upper, top, lower — each as bright as it faces the light (and up)
   const faces = [[-wd/2, -wd*0.17, -0.8], [-wd*0.17, wd*0.17, 0], [wd*0.17, wd/2, 0.8]];
@@ -219,7 +219,7 @@ function tobDice(ctx, { x, y, s, v }, L){
 }
 /** A pocket watch on its chain, stopped (at 3:33, or 11:11…); now and then its lid open, engraved. */
 function tobWatch(ctx, { x, y, s, v }, L){
-  const r = s*0.42, M = METALS[v.metal], R = Math.random;
+  const r = s*0.42, M = METALS[v.metal];
   // the chain, trailing away to its bar
   const a = v.a, bx = x + Math.cos(a)*r*1.12, by = y + Math.sin(a)*r*1.12, ex = bx + Math.cos(a + v.bend)*s*1.6, ey = by + Math.sin(a + v.bend)*s*1.6, cx = bx + Math.cos(a)*s*0.9, cy = by + Math.sin(a)*s*0.9;
   ctx.strokeStyle = tobKit.css(M); ctx.lineWidth = Math.max(cpx(0.5), s*0.02);

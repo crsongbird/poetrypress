@@ -15,12 +15,12 @@
  */
 import { ATHANOR_STUDIES } from './athanorStudies.js';
 import { ATHANOR_VERSION, ATHANOR_LIMITS, ATHANOR_STARTERS, athanorVersion, athanorBudget, athanorStarter, athanorGraphOf, layoutAthanor, ATHANOR_NODE, groupPorts, athanorNamed, athanorNumbered, athanorIsNamed } from './athanor.js';
-import { STEPS, STEP_BLENDS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
+import { STEPS, STEP_CATEGORIES, VALUE_TYPES } from './steps.js';
 import { TEXTURE_CHAINS } from './chains.js';
 import { TEXTURE_GROUPS, ATHANOR_BASICS, STUDY_GROUPS, STUDY_GROUP_EXTRA } from './appOptions.js';
 import { KEPT, FORGE_BAR, fill } from './strings.js';
 import { WIKI_PARTS } from './athanorWikiParts.js';
-import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiTitle, wikiWalkNeighbors, wikiWalks, WIKI_FIGURES } from './athanorWiki.js';
+import { wikiArticleHtml, wikiContentsHtml, wikiSearch, wikiWalkNeighbors, wikiWalks, WIKI_FIGURES } from './athanorWiki.js';
 
 const FORGE_DF_JS  = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.js';
 const FORGE_DF_CSS = 'https://cdn.jsdelivr.net/npm/drawflow@0.0.60/dist/drawflow.min.css';

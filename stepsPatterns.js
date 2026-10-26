@@ -291,7 +291,7 @@ export const PATTERN_STEPS = {
   insetbox: { cat: 'Inputs', label: 'Inset Box', ins: [], outs: ['inside', 'edge', 'line'],
     params: [PAT_R('width', 'Edge Width', 10, 1, 50), PAT_R('soft', 'Softness', 0)],
     cost: () => 1,
-    run(E, n){ const { N, ww, wh, unit, num, field } = E;
+    run(E, n){ const { N, ww, wh, unit, num } = E;
       const B = patBox(E), W = Math.max(0.5, num(n, 'width', 10)/100*unit), sf = Math.max(0.75, num(n, 'soft', 0)/100*unit*0.2), half = Math.max(0.5, B.thick/2);
       const D = new Float32Array(N); let q = 0; for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++) D[q++] = B.d(x + 0.5, y + 0.5);
       const inside = new Float32Array(N), edge = new Float32Array(N), line = new Float32Array(N);
@@ -381,7 +381,7 @@ export const PATTERN_STEPS = {
   mesh: { cat: 'Marks', label: 'Triangle Mesh', ins: ['where'], outs: ['lines', 'points', 'facets'],
     params: [PAT_R('count', 'Points', 40, 3, 400), PAT_R('even', 'Evenness', 50), PAT_R('prune', 'Thin Out', 0), PAT_R('line', 'Line Width', 15), PAT_R('dot', 'Point Size', 20), PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 3,
-    run(E, n){ const { ww, wh, N, input, num, asField, readCanvas } = E;
+    run(E, n){ const { ww, wh, input, num, asField, readCanvas } = E;
       const where = asField(input(n, 1)), count = Math.max(3, Math.min(400, Math.round(num(n, 'count', 40)))), tries = 1 + Math.round(num(n, 'even', 50)/100*12);
       const prune = num(n, 'prune', 0)/100, lw = num(n, 'line', 15)/100*10, dot = num(n, 'dot', 20)/100*14;
       // the points: each the best of a few candidates (the farthest from the rest: even), landing where the map is light
@@ -497,7 +497,7 @@ export const PATTERN_STEPS = {
   noisegrad: { cat: 'Light & Color', label: 'Noise Gradient', ins: ['field', 'color a', 'color b'], outs: ['picture'], io: { ins: ['field', 'colour', 'colour'], outs: ['image'] },
     params: [PAT_R('stops', 'Stops', 8, 2, 32), PAT_R('drift', 'Color Drift', 40), PAT_R('smooth', 'Smoothness', 70), ['ca', 'Color A', 'text', '#14102A'], ['cb', 'Color B', 'text', '#E8C8E0'], PAT_R('variation', 'Variation', 0, 0, 99)],
     cost: () => 1,
-    run(E, n){ const { ww, wh, N, input, num, P, asField } = E;
+    run(E, n){ const { ww, N, input, num, P, asField } = E;
       const f = asField(input(n, 1)), K = Math.max(2, Math.min(32, Math.round(num(n, 'stops', 8)))), drift = num(n, 'drift', 40)/100, sm = num(n, 'smooth', 70)/100;
       const ca = input(n, 2), cb = input(n, 3), A = Array.isArray(ca) ? ca : patHex(P(n, 'ca', '#14102A')), B = Array.isArray(cb) ? cb : patHex(P(n, 'cb', '#E8C8E0'));
       // the stops: along the line from A to B, each turned in hue and moved in saturation and value by the drift

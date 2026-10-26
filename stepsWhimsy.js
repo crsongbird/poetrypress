@@ -26,7 +26,7 @@
  * textures themselves: chains.js 'clouds', 'landscape'), where it works on
  * its own grid (smoke is soft by nature) or at full size (a stroke is not).
  */
-import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, pageSunAt, kitCanvas, kitPicture, kitOwn, kitField, kitFieldCanvas, seedChoice, withSeed, lightVec, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
+import { canonArea, canonDiv, wordsRoom, mulberry32, cpx, smoothField, pageSunAt, kitCanvas, kitPicture, kitOwn, kitField, kitFieldCanvas, seedChoice, withSeed, dialVec, makeNoiseGrid, sampleNoiseGrid, CPU, kitWhole, wholeDial, wholeHex, wholeZoom, wholeAmt, wholeShare } from './texCore.js';
 import { genEmbers, genSnow, genMagicParticles, genAstralStars, genMoon, genAuroraVeil, genBokeh, genFeathers } from './texWhimsy.js';
 import { skyRingFrame } from './stepsGenerative.js';
 import { pkTree, pkSpire, pkMonolith, pkCrystals } from './paintKit.js';

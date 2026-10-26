@@ -21,7 +21,7 @@ import { openSheetMenu, withLocksPreserved } from './uiLocks.js';
 import { setDrafting } from './textureService.js';
 import { state } from './uiState.js';
 import { layoutControls } from './uiSkins.js';
-import { CHOOSERS, canvas, setColorField, surfaceChooser, surfaceTiles } from './appEvents.js';
+import { CHOOSERS, setColorField, surfaceChooser, surfaceTiles } from './appEvents.js';
 import { modalPrompt } from './uiControls.js';
 
 // Each texture declares two knobs (see TEXTURE_PARAMS). The sliders relabel

@@ -2,6 +2,26 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Pleiades–Alcyone (2026-10-25)
+
+- The Ringworld's people are every kind of person. Each one's age (a child, an adult, an elder with a stoop and now and
+  then a cane), build, skin, hair (short or long, grey with age, dyed in the neon world), beard, skirt or dress, and hat
+  or headscarf is their own, chosen independently, so no kind of person is tied to a costume. Skin comes in ten tones,
+  lightest to deepest.
+- Clothes follow the world: coats in the cities, dark jackets edged with light in the neon world, cloaks and packs in
+  the wilds, robes and pointed hats in the magic world, rags and masks in the ruins, pale suits among the builders.
+- Other folk where the world has them: elves (tall, slender, pointed ears), dwarves (short, broad, bearded) and fae
+  (small, winged, with a light about them) in the magic world and now and then in the wilds; androids with lit seams
+  among the builders.
+- Deer no longer graze without end. Between their moves each keeps its own slow rhythm, grazing, standing to look
+  round, or lying down to rest with its head up, so a herd at any moment holds some of each.
+- Rooks, pigeons, starlings and sparrows on the ground hop now and then, flicking their wings.
+
+### Under the hood
+- `pkPerson` paints a person from their own stream; `PK_SKINS` is the Monk Skin Tone Scale's ten.
+- `wkAt` gives a grazing animal its `lie` and a ground bird its hop; `wkQuad` lays a deer down, its legs folded.
+- docs/prior-art/ringworld-folk.md is the research (figure proportions, the Monk scale, a red deer's day).
+
 ## Pleiades–Atlas (2026-10-25)
 
 - Saguaros grow as saguaros do. Each keeps its true slender width at any height and has no arms until it is over 3 m

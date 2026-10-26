@@ -6,7 +6,7 @@
  */
 import { GLYPHS, GLYPH_FONT } from './spell.js';
 import { PLANETS, ZODIAC } from './symbolLore.js';
-import { makeNoiseGrid, sampleNoiseGrid, CPU, wordsRoom, canonArea, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, litT, greyLit, pickWeighted } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, CPU, wordsRoom, canonDiv, cpx, lightVec, dialSquare, lightHeights, lightSparse, parseHex, litK, litS, litT } from './texCore.js';
 
 // A sigil is drawn, then gone —
 // the mark remembers nothing.
@@ -25,7 +25,7 @@ export function genSigils(w,h,amt,zoom,light,form,M3){
   // wanders, the nib skips into scratches, ink spatters.
   const div=canonDiv(2), ww=Math.ceil(w/div), wh=Math.ceil(h/div);
   const layer=bg=>{ const cv=document.createElement('canvas'); cv.width=ww; cv.height=wh; const x=cv.getContext('2d', CPU); x.fillStyle=bg; x.fillRect(0,0,ww,wh); return [cv,x]; };
-  const [inkC, ink]=layer('#808080'), [cutC, cut]=layer('#000'), [upC, up]=layer('#000');
+  const [inkC, ink]=layer('#808080'), [, cut]=layer('#000'), [, up]=layer('#000');
   cut.globalCompositeOperation='lighten'; up.globalCompositeOperation='lighten';
   cut.fillStyle='#fff'; up.fillStyle='#fff';
   const unit = Math.max(ww,wh);

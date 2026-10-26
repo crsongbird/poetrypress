@@ -367,8 +367,8 @@ export function pkTree(x, X, Y, h, c0, kind, R0, px){
     if(!small){ const R = sub(7), rnd = (a, b) => a + (b - a)*R(); for(let k = 0; k < 3; k++) pkLimb(x, X + lean*0.2, Y - h*0.2, X + lean*0.6 + rnd(-1, 1)*h*0.04, Y - h*rnd(0.45, 0.75), h*0.02, c.trunk, px, 0.02, c.lod); }
     const cx = X + lean*0.6, cy = Y - h*0.58, lobes = [];
     // (each lobe up the column overlapping the one below, so the column is whole)
-    for(let q = 0, m = small ? 4 : 10, yq = Y - h*0.24; q < m; q++){ const u = q/(m - 1), r = h*(0.1 - 0.055*u)*Math.min(1.15, F.wide), yy = Y - h*(0.24 + 0.68*u);
-      lobes.push(...pkGrow(small ? 1 : 2, cx + rnd(-1, 1)*h*0.015, yy, r*1.1, r*0.8, r, R, F)); yq = yy; }
+    for(let q = 0, m = small ? 4 : 10; q < m; q++){ const u = q/(m - 1), r = h*(0.1 - 0.055*u)*Math.min(1.15, F.wide), yy = Y - h*(0.24 + 0.68*u);
+      lobes.push(...pkGrow(small ? 1 : 2, cx + rnd(-1, 1)*h*0.015, yy, r*1.1, r*0.8, r, R, F)); }
     pkLobes(x, lobes, { ...c, leaf: 0.7 }, RL, cx, cy, h*0.4, px); return; }
   if(kind === 'birch'){
     // a birch: a slender pale trunk, a little crooked, marked dark across and black at its foot; an airy crown of small
@@ -2277,7 +2277,7 @@ function pkBoardArt(x, B, fx, fy, fw, fh, p, c, R, px, night, tube){
   const grad = (c0, c1) => { const g = x.createLinearGradient(0, fy, 0, fy + fh); g.addColorStop(0, pkCss(c0)); g.addColorStop(1, pkCss(c1)); x.fillStyle = g; x.fillRect(fx, fy, fw, fh); };
   const shine = (u, v, w, h) => { const g = x.createLinearGradient(U(u), 0, U(u + w), 0); g.addColorStop(0, pkCss(PK_BLACK, 0.25)); g.addColorStop(0.3, pkCss(PK_WHITE, 0.35)); g.addColorStop(0.45, pkCss(PK_WHITE, 0.05)); g.addColorStop(0.85, pkCss(PK_BLACK, 0.2)); g.addColorStop(1, pkCss(PK_WHITE, 0.08)); x.fillStyle = g; x.fillRect(U(u), V(v), w*fw, h*fh); };
   const figure = (u, v, hh, col) => { const s = hh*fh, X0 = U(u), Y0 = V(v); pkPoly(x, [[X0 - s*0.07, Y0], [X0 - s*0.09, Y0 - s*0.5], [X0 - s*0.12, Y0 - s*0.82], [X0 + s*0.12, Y0 - s*0.82], [X0 + s*0.09, Y0 - s*0.5], [X0 + s*0.07, Y0]], pkCss(col)); pkEll(x, X0, Y0 - s*0.9, s*0.065, s*0.075, pkCss(col)); };
-  const hd = p[0], ink = pkMix(p[1], PK_BLACK, 0.1), A = B.art, big = fh > px(10);
+  const ink = pkMix(p[1], PK_BLACK, 0.1), A = B.art, big = fh > px(10);
   switch(A){
     case 'rows': rect(0, 0, 1, 1, p[2]); for(let k = 0; k < 7; k++){ const u0 = 0.35 + k*0.1; poly([[u0, 1], [u0 + 0.06, 1], [0.95 + k*0.008, 0.35 - k*0.02], [0.93 + k*0.008, 0.35 - k*0.02]], k % 2 ? p[1] : pkMix(p[1], p[0], 0.25)); }
       poly([[0.06, 1], [0.07, 0.62], [0.12, 0.56], [0.22, 0.57], [0.25, 0.63], [0.26, 1]], p[0]); break;

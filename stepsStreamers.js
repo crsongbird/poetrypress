@@ -74,7 +74,7 @@ export const STREAMER_STEPS = {
     params: [ST_R('shape', 'Shape: ' + STREAMER_SHAPES.join(' · '), 0), ST_R('count', 'Gusts', 6, 0, 40), ST_R('strands', 'Strands', 3, 1, 8), ST_R('length', 'Length', 50),
       ST_R('curl', 'Curl', 50), ST_R('width', 'Width', 100, 20, 300), ST_R('twist', 'Twist', 30), ST_R('depth', 'Depth', 60), ST_R('horizon', 'Horizon', 45), ST_R('variant', 'Variation', 0, 0, 99)],
     cost: () => 4,
-    run(E, n){ const { ww, wh, num } = E, N = ww*wh, mn = Math.min(ww, wh), W = ww/mn, H = wh/mn;
+    run(E, n){ const { ww, wh, num } = E, mn = Math.min(ww, wh), W = ww/mn, H = wh/mn;
       // (a way wired as a map, as Math hands on, counts by its mean)
       const valOf = v => typeof v === 'number' ? v : v && v.length ? v.reduce((a, b) => a + b, 0)/v.length : null;
       const whereF = E.asField(E.input(n, 1)), bv = valOf(E.input(n, 2)), lv = valOf(E.input(n, 3));

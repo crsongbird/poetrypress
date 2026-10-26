@@ -79,7 +79,7 @@ function evFight(s, t, w, mage){
 function evChase(s, t, robot, prey){
   const P = robot ? EV_KINDS.robohunt.P : EV_KINDS.wildhunt.P, e = wkEra(s, t, P), u = t - e.t0, d = e.d, k = e.k;
   const ang = wkHash(s, 50, 1)*Math.PI*2, Ld = 70, H1 = [Math.cos(ang)*Ld, Math.sin(ang)*Ld], homeOf = kk => kk % 2 === 0 ? [0, 0] : H1;
-  const A = homeOf(k), B = homeOf(k + 1), dx = B[0] - A[0], dz = B[1] - A[1], dl = Math.hypot(dx, dz) || 1, nx = -dz/dl, nz = dx/dl;
+  const A = homeOf(k), B = homeOf(k + 1), dx = B[0] - A[0], dz = B[1] - A[1], dl = Math.hypot(dx, dz) || 1;
   const tS = 0.3*d, tC = Math.min(14, 0.3*d), tE = tS + tC, nH = robot ? 1 : 3 + (wkHash(s, 51, 1) < 0.5 ? 1 : 0), nP = 4 + Math.floor(wkHash(s, 52, 1)*3);
   // (the hunter's waiting place: off beyond the herd's home, on the side it came from, a different side each era)
   const wait = kk => { const h = homeOf(kk), sg = wkHash(kk, 53, s) < 0.5 ? 1 : -1, b = homeOf(kk + 1), ex = b[0] - h[0], ez = b[1] - h[1], el = Math.hypot(ex, ez) || 1; return [h[0] - ex/el*55 + sg*(-ez/el)*20, h[1] - ez/el*55 + sg*(ex/el)*20]; };

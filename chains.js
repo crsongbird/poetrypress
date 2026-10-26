@@ -21,7 +21,6 @@
  *           parts paint: athanor.js) — Cartomancy, whose faces are lettered
  *   teach   what it shows, in a few lines (the Athanor says it on opening)
  */
-import { weaveGridDiv } from './stepsTouch.js';
 import { paramPort, STEPS } from './steps.js';
 import { TEXTURE_PARAMS } from './textureParams.js';
 

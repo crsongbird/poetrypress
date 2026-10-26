@@ -39,13 +39,6 @@ export function weaveAt(f){
   if(t>0.999){ o.patA=o.patB=b.pattern; o.mix=0; } else if(t<0.001){ o.patB=a.pattern; o.mix=0; }
   return o;
 }
-/** The working grid Linen needs: threads at least ~3 pixels apart (finer
- *  aliases into moiré), never finer than the export's grid, never coarser
- *  than the canvas. A preview no longer pays the export's price. */
-export function weaveGridDiv(w, h, S, zoom){
-  const fine = 2*S, coarse = Math.max(fine, 1);
-  return Math.max(fine, Math.min(coarse, Math.min(w, h)*WEAVES[0].pitch*zoom/3.2));
-}
 
 // WATERCOLOR, in two parts (Watercolor Wash, texTouch genWatercolour until now). WASHES lays the pigment's
 // shapes after Tyler Hobbs's method: a polygon deformed by recursive midpoint displacement, drawn forty times
@@ -149,7 +142,7 @@ function druseMaps(ww, wh, o){
   const NRM = { r: new Float32Array(N), g: new Float32Array(N), b: new Float32Array(N) };   // (each point's facing, as a normal map: x, y, z from -1..1 as 0..1)
   const REFR = unit*0.12, R3 = Math.sqrt(3)/2, SEC = [0, 1, 2, 3, 4, 5].map(s => (s + 0.5)*Math.PI/3), nA = { f: null, edge: 0 }, nB = { f: null, edge: 0 };
   for(const f of FRONT.F){ const dc = new Float64Array(12); for(let k = 0; k < 6; k++){ const m = SEC[k] + f.rot; dc[k*2] = Math.cos(m); dc[k*2 + 1] = Math.sin(m); } f.dc = dc; }
-  const thinS = unit*0.0016, striS = Math.max(1, unit*0.004), backS = unit*0.004, CR = o.CR, IN = o.IN, seen = 0.5 + 0.5*clarity;
+  const thinS = unit*0.0016, striS = Math.max(1, unit*0.004), backS = unit*0.004, CR = o.CR, seen = 0.5 + 0.5*clarity;
   const hueC = [0, 1, 2].map(c => Math.max(0.04, CR[c]/255)), hueIn = hueC.map(h => Math.pow(h, 0.45));
   for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){
     const i = y*ww + x, A = near(FRONT, x, y, nA), f = A.f, dx = x - f.x, dy = y - f.y, rr = Math.sqrt(dx*dx + dy*dy), Rf = FRONT.cs*0.62;
@@ -400,7 +393,7 @@ export const TOUCH_STEPS = {
       const lump = (i, t) => { const a = Math.floor(t), f = t - a, u = f*f*(3 - 2*f); return hash(i*31.7 + a)*(1 - u) + hash(i*31.7 + a + 1)*u; };
       const slubAmp = W.slub*0.9;
       const top = (pat, i, j) => pat === 2 ? ((i + j) & 1) === 0 : pat === 1 ? ((((i - j) % 3) + 3) % 3) < 2 : ((i*2 + j) % 5) === 0;
-      // the light, unpacked once (shadeNormal, inlined: no object per pixel)
+      // the light, unpacked once (lightBasis: no object per pixel)
       const Lx = LB.Lx, Ly = LB.Ly, Lz = LB.Lz, Hx = LB.Hx, Hy = LB.Hy, Hz = LB.Hz, spPow = 4 + threadGloss*120, spK = 0.15 + threadGloss*0.85;
       let tS = 0, tP = 0;                                     // one thread's shade and sheen (written by thread())
       // one thread's shade at a point: across it (a), along it (f), whether it is on top

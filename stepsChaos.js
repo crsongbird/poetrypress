@@ -99,7 +99,7 @@ function chaosTuring(ww, wh, growth, zoom, form, room){
 // cells — the hierarchy real crackle has. SPREAD: 0, they start anywhere (craquelure); toward 100, the first ones
 // burst from one point of impact, where the dial points. Returns { segs: [x0,y0,x1,y1,gen] } on a w×h grid.
 function chaosCracks(w, h, o){
-  const unit = Math.min(w, h), N = w*h, A = new Float32Array(N).fill(NaN), ID = new Int32Array(N).fill(-1), marked = [];
+  const N = w*h, A = new Float32Array(N).fill(NaN), ID = new Int32Array(N).fill(-1), marked = [];
   const ix = (x, y) => (y|0)*w + (x|0);
   const segs = [], active = [], maxCracks = Math.round(o.count);
   let made = 0;

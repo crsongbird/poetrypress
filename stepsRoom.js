@@ -59,7 +59,7 @@ function rmNoise(seed){
  * o: kind ('seeded' or a key), reach 0..1, ceiling 0..1, width 0..1, lights 0..1, failing 0..1, strange 0..1
  */
 export function roomPlan(R, o){
-  const rnd = (a, b) => a + R()*(b - a), pick = a => a[Math.floor(R()*a.length)];
+  const rnd = (a, b) => a + R()*(b - a);
   let kind = o.kind;
   if(!ROOM_KINDS[kind]){ const tot = ROOM_KIND_KEYS.reduce((t, k) => t + ROOM_KINDS[k].weight, 0); let t = R()*tot; kind = ROOM_KIND_KEYS.find(k => (t -= ROOM_KINDS[k].weight) < 0) || 'lobby'; }
   const K = ROOM_KINDS[kind], strange = o.strange;
@@ -135,7 +135,7 @@ export function roomPlan(R, o){
 
 /** The buffers (fields on the grid ww × wh) of a plan seen through its camera. cam: turn (0..360), view (0..130), lens. */
 export function roomCast(ww, wh, P, o){
-  const { K, M, W, D, at } = P, cs = K.cs, Hc = P.H, nz = rmNoise(o.seed), R = mulberry32(o.seed ^ 0x9e37);
+  const { K, W, D, at } = P, cs = K.cs, Hc = P.H, nz = rmNoise(o.seed), R = mulberry32(o.seed ^ 0x9e37);
   const N = ww*wh, surf = new Float32Array(N), depth = new Float32Array(N), light = new Float32Array(N), pat = new Float32Array(N), lamps = new Float32Array(N), water = new Float32Array(N), shade = new Float32Array(N);
   // the light map: each lamp's light spread through the open cells only (so no wall lets it through)
   const L = new Float32Array(W*D), open = (x, z) => { const v = at(x, z); return v === 0 || v === 3 || v === 5; };

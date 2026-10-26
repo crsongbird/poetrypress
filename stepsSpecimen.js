@@ -153,7 +153,7 @@ function spcPlan(key, R, U, c, o){
   const items = [], ext = [], S = FLORA[key] || FLORA.daisy, j = o.jitter;
   const put = (z, draw) => items.push({ z: z + R()*0.01, draw });
   const reach = (x, y, r = 0) => ext.push([x, y, r]);
-  const rnd = (a, b) => a + R()*(b - a), pick = arr => arr[Math.floor(R()*arr.length)];
+  const rnd = (a, b) => a + R()*(b - a);
   const stemCol = flMix(c.F, [150, 170, 90], 0.12), wood = flMix(c.F, [96, 70, 54], 0.78);
   const st = o.stage;
   /** A stem from (x, y) heading a, len long: it leans and recovers (tropism up), its tip nods if asked. */

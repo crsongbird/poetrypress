@@ -226,10 +226,13 @@ export function prefetchTexture(type, w, h, opts){
 /** A frame come up: its textures made ahead put in the cache, where its drawing finds them, and let go of here. */
 export function adoptPrefetched(keys){ for(const k of keys){ const a = ahead.get(k); if(a && a.tex){ storeTexture(k, a.tex); } if(a && a.tex !== undefined) ahead.delete(k); } }
 /** While a film is made, a worker per spare core (a phone, or a machine short of memory, keeps its usual pool); 0 when
- *  it is done (the extra workers go as they come free, and frames no longer wanted are forgotten). */
-export function setFilmPool(on){
+ *  it is done (the extra workers go as they come free, and frames no longer wanted are forgotten). gpu: the surface is
+ *  drawn on the GPU (the Ringworld on WebGPU), so no workers are added: each would open a GPU device of its own, fill it
+ *  with its own kept sheets and build its own world first, and they would only queue for the one GPU (Ruby, 2026-10-26:
+ *  "The video framerate/performance is still incredibly slow"). */
+export function setFilmPool(on, gpu){
   const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2, gb = (typeof navigator !== 'undefined' && navigator.deviceMemory) || 8;
-  filmPool = on ? (FRUGAL || gb < 4 ? POOL_SIZE : Math.max(POOL_SIZE, Math.min(8, cores - 1, Math.floor(gb/1.5)))) : 0;
+  filmPool = on ? (FRUGAL || gb < 4 || gpu ? POOL_SIZE : Math.max(POOL_SIZE, Math.min(8, cores - 1, Math.floor(gb/1.5)))) : 0;
   if(!on){ for(const [k, a] of ahead) if(!a.running){ a.resolve(null); ahead.delete(k); } }
   if(on && boot()) while(pool.length < filmPool) pool.push(spawn());
   pump();

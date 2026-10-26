@@ -329,7 +329,7 @@ const STEP_PARTS = {
     return [o];
   } },
   warp: { cat: 'Shape', label: 'Warp', ins: ['field', 'by'], outs: ['field'], params: [STEP_R('amount', 'Strength', 20)], cost: () => 1.5, req: true, maps: ['amount'],
-    run(E, n){ const { ww, wh, N, unit, input, num, asField } = E;
+    run(E, n){ const { ww, wh, N, unit, input, asField } = E;
     const f = asField(input(n, 1)), by = asField(input(n, 2)); if(!f) return null; if(!by) return [f];
     const AM = E.map(n, 'amount', 20), o = new Float32Array(N);
     for(let y = 0; y < wh; y++) for(let x = 0; x < ww; x++){ const q = y*ww + x, a = by[q]*Math.PI*2, A = E.at(AM, q)/100*unit*0.08;
@@ -411,7 +411,7 @@ const STEP_PARTS = {
   } },
   // light and colour
   light: { cat: 'Light & Color', label: 'Simple Lighting', ins: ['height', 'dial'], outs: ['light', 'highlight'], params: [STEP_R('relief', 'Relief', 50), STEP_R('gloss', 'Gloss', 30), STEP_R('shadow', 'Shadow', 60)], cost: () => 14, io: { ins: ['field', 'value'] }, req: true, maps: ['relief:4'],
-    run(E, n){ const { N, unit, ctx, input, num, flat, asField, lightOf } = E;
+    run(E, n){ const { N, unit, ctx, input, num, asField, lightOf } = E;
     const h0 = asField(input(n, 1)); if(!h0) return null;
     const dial = input(n, 2), deg = typeof dial === 'number' ? dial*360 : (ctx.light ?? 315);
     // (RELIEF BY POINT: a map on its ⚙ raises the heights more in some places than others)
@@ -460,7 +460,7 @@ const STEP_PARTS = {
               // ANTI-ALIASING (Filter Forge's menu, ROADMAP A6): off as every graph always drew; edges only smooths the hard
               // edges where they step across the grid (FXAA); all pixels also draws the whole graph on a grid twice as fine
               STEP_SEL('aa', 'Anti-aliasing', ['off', 'edges only', 'all pixels'])], io: { ins: ['image', 'field', 'field', 'field', 'field', 'field'] },
-    run(E, n){ const { N, unit, ctx, input, flat, asField, asImage, lightOf } = E;
+    run(E, n){ const { N, unit, ctx, input, asField, asImage, lightOf } = E;
     const img = asImage(input(n, 1) ?? 0.5), h0 = asField(input(n, 2));
     // ONE CHANNEL for the preview (ROADMAP B2; view only): the height as gray, the normals it makes (a normal map's colors:
     // flat is (0.5, 0.5, 1), green up), the light that reaches into its hollows (occlusion), its shine (specular). Each but
@@ -900,7 +900,7 @@ const STEP_PARTS = {
   } },
   bricks: { cat: 'Noise', label: 'Bricks', ins: ['bevel'], outs: ['bricks', 'mortar', 'each brick'], params: [STEP_R('rows', 'Rows', 12, 2, 60), STEP_R('ratio', 'Length', 200, 100, 400),
               STEP_R('mortar', 'Mortar', 12, 0, 40), STEP_R('stagger', 'Stagger', 50), STEP_R('bevel', 'Bevel', 30), STEP_R('vary', 'Variety', 30)], cost: () => 1, io: { ins: ['curve'] },
-    run(E, n){ const { ww, wh, N, unit, input, num, isCurve } = E;
+    run(E, n){ const { ww, wh, N, input, num, isCurve } = E;
     const rows = Math.max(2, Math.round(num(n, 'rows', 12))), bh = wh/rows, bw = bh*num(n, 'ratio', 200)/100, mo = num(n, 'mortar', 12)/100*bh*0.5;
     const stag = num(n, 'stagger', 50)/100, bev = Math.max(1e-3, num(n, 'bevel', 30)/100*bh*0.5), vary = num(n, 'vary', 30)/100, cv = input(n, 1);
     const hash = (i, j) => { let h = Math.imul(i*374761393 + j*668265263, 1274126177) ^ 0x5bd1e995; h = Math.imul(h ^ (h >>> 13), 1103515245); return ((h ^ (h >>> 16)) >>> 0)/4294967296; };

@@ -4,7 +4,7 @@
  * Sleep; starlight advancing or receding. Clouds, bokeh, the deep field,
  * euphoria dust, burning mana, first snow, aurora.
  */
-import { makeNoiseGrid, sampleNoiseGrid, mixHex, darkenRgb, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv, smoothField, pickWeighted } from './texCore.js';
+import { makeNoiseGrid, sampleNoiseGrid, mixHex, parseHex, withSeed, lightVec, CPU, canonArea, cpx, canonDiv, smoothField, pickWeighted } from './texCore.js';
 
 // SLEEP HAZE is a chain now: smoke → light shaft → dust motes (stepsWhimsy.js, chains.js 'clouds').
 
@@ -91,7 +91,6 @@ export function genAstralStars(w,h,accent1,accent2,amt,zoom,form,GL,room){
   const colourOf = () => { const t = TEMPS[Math.floor(Math.pow(Math.random(), 0.9)*TEMPS.length)], a = Math.random() < 0.5 ? A1 : A2;
     return [t[0]*0.78 + a.r*0.22, t[1]*0.78 + a.g*0.22, t[2]*0.78 + a.b*0.22]; };
   const n = Math.round(canonArea(w,h)/2125 * amt);
-  const unit = Math.min(w, h);
   const glowAt = (x, y, r, c, a) => {
     const g = fctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`);

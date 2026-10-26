@@ -78,7 +78,7 @@ export const LENS_STEPS = {
     params: [LB_R('focus', 'Focus', 35), LB_R('aperture', 'Aperture', 60), LB_R('size', 'Blur Size', 40, 5, 120), LB_R('blades', 'Blades: ' + LENS_BLADES.join(' · '), 0),
       LB_R('turn', 'Blade Turn', 0), LB_R('highlights', 'Highlights', 50)],
     cost: () => 6,
-    run(E, n){ const { ww, wh, N, unit, num, input, asImage, asField, map } = E;
+    run(E, n){ const { ww, wh, N, num, input, asImage, asField, map } = E;
       const im = asImage(input(n, 1)); if(!im) return null;
       const depth = asField(input(n, 2)) || new Float32Array(N).fill(1);
       const fv = map(n, 'focus', 35), focusAt = i => (typeof fv === 'number' ? fv : fv[i])/100;

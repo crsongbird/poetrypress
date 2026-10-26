@@ -324,7 +324,6 @@ export function installEditor({ textarea, mirror, gutter, hint, knownFont, onInp
   // its top can be measured directly out of the same continuous flow the
   // text is in — no block boxes, nothing that could round differently.
   let lastGutter = null;
-  function paintGutter(){ const g = gutterHtml(); if(g !== lastGutter){ lastGutter = g; gutter.innerHTML = g; } }
   function gutterHtml(){
     const marks = mirror.querySelectorAll ? mirror.querySelectorAll('.ln-mark') : [];
     const total = mirror.scrollHeight || 0;

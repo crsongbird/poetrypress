@@ -5,8 +5,7 @@
  * blend through soft-light. Linen, cold press, foxing, fold ghost, cup
  * ring, poured wax, raked substrate, crystal leaf.
  */
-import { drawStitch, pathFromPoints } from './stitches.js';
-import { lightRig, litT, lightVec, dialVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, lightBasis, shadeNormal, fbmSampler, lightLow } from './texCore.js';
+import { lightRig, litT, lightVec, dialVec, parseHex, CPU, canonArea, canonDiv, pageGrid, scaleNow, cpx, makeNoiseGrid, sampleNoiseGrid, lightHeights, lightSparse, smoothField, litK, litS, greyLit, obliqueFrame, obliqueRender, fieldOn, fbmSampler, lightLow } from './texCore.js';
 
 // (Linen is a chain of steps now: chains.js — its weave and its details are
 // stepsTouch.js 'weave' and 'cloth')
@@ -291,7 +290,7 @@ export function genWater(w,h,amt,zoom,light,form,haze,murk,tilt,M3,cam){
   // fish: tapered bodies with a forked tail, curved as they swim
   const fishN=Math.round((kind==='koi' ? 5+Math.random()*4 : kind==='stream' ? 10+Math.random()*10 : 1)*area);
   for(let k=0;k<fishN;k++){
-    const Lf=unit*(kind==='koi' ? 0.11+Math.random()*0.07 : kind==='stream' ? 0.03+Math.random()*0.02 : 0.08), Wf=Lf*0.2;
+    const Lf=unit*(kind==='koi' ? 0.11+Math.random()*0.07 : kind==='stream' ? 0.03+Math.random()*0.02 : 0.08);
     const x=worldX(), y=worldY(), hd=kind==='stream' ? wind+(Math.random()-0.5)*0.6 : Math.random()*Math.PI*2, bendF=(Math.random()-0.5)*0.6;
     const z=0.15+Math.random()*0.6, tone=kind==='koi' ? (Math.random()<0.55 ? 1.85 : Math.random()<0.5 ? 0.3 : 1.45) : 0.32;
     const pat=Math.random()*6.28, ca=Math.cos(hd), sa=Math.sin(hd), R=Lf*0.8;
@@ -410,7 +409,6 @@ export function genGlassRain(w,h,amt,zoom,light,form,M3,env,see=false){
   // touch, and from there everything differs). So the preview's drops are
   // the export's drops.
   const S0=scaleNow(), sw=w/S0/2, sh=h/S0/2, su=Math.min(sw,sh), f2g=ww/sw;
-  const sm=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*(3-2*t); };
   // the sim's own grid of who is near whom (rebuilt each step)
   const CELL=Math.max(4, su*0.03*zoom);
   const D=[];                     // drops: x, y, r, vx, vy, crit (how heavy before it slides), alive
@@ -711,7 +709,7 @@ export function genKintsugi(w,h,amt,zoom,light,tint1,tint2,form,M3,GL){
   const WX=smoothField(ww,wh,st,(u,v)=>(warp(u,v)-0.5)*cs*0.55 + (jag(u,v)-0.5)*cs*0.16), WY=smoothField(ww,wh,st,(u,v)=>(warp(u+0.5,v+0.3)-0.5)*cs*0.55 + (jag(u+0.3,v+0.7)-0.5)*cs*0.16);
   const GZ=smoothField(ww,wh,st*2,(u,v)=>glazeN(u,v));
   for(let y=0;y<wh;y++) for(let x=0;x<ww;x++){
-    const u=x/ww, v=y/wh, px=x + WX[y*ww+x], py=y + WY[y*ww+x];
+    const px=x + WX[y*ww+x], py=y + WY[y*ww+x];
     const ci=Math.floor(px/cs)+1, cj=Math.floor(py/cs)+1;
     let d1=1e9, d2=1e9, k1=0, k2=0;
     for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){

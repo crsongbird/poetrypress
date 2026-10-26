@@ -256,7 +256,7 @@ function netRoute(a, b, style, R, wander, ways){
   const mode = style + (R() - 0.5)*0.14;
   if(mode < 0.33){
     // a gentle curve, bent by wander and toward the ways
-    const nx = -dy/len, ny = dx/len, mx = (a[0] + b[0])/2, my = (a[1] + b[1])/2, e = len*0.25;
+    const nx = -dy/len, ny = dx/len, e = len*0.25;
     // (two bends, each its own: toward the ways, and the seed's wander; at times an S)
     const bend = t => { const px = lerp(a[0], b[0], t), py = lerp(a[1], b[1], t); return (ways(px + nx*e, py + ny*e) - ways(px - nx*e, py - ny*e))*1.2 + (R() - 0.5)*(0.3 + wander*0.9); };
     const l1 = bend(1/3), l2 = bend(2/3), c1 = [lerp(a[0], b[0], 1/3) + nx*len*l1, lerp(a[1], b[1], 1/3) + ny*len*l1], c2 = [lerp(a[0], b[0], 2/3) + nx*len*l2, lerp(a[1], b[1], 2/3) + ny*len*l2], out = [];

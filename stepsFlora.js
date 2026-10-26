@@ -111,7 +111,7 @@ export function flDrawBloom(L, R, cx, cy, Rad, f){
   // ---- the petals, as surfaces: a centre line out from the base, its width each side; cupped (rising), curled at the tip
   const petals = [];
   const addPetal = (theta, len, wid, cup, curl, colK, zBase = 0, rBase = 0, id = 0) => {
-    const pts = [], hs = [], N = Math.min(44, 14 + Math.round(Rad/14)), cupR = cup*Math.PI/180, curlR = curl*Math.PI/180;   // (more points along a petal the larger it is drawn: no facets close up)
+    const pts = [], N = Math.min(44, 14 + Math.round(Rad/14)), cupR = cup*Math.PI/180, curlR = curl*Math.PI/180;   // (more points along a petal the larger it is drawn: no facets close up)
     // (a wilting petal crumples: its edge waves along its length, more as it ages; a little anyway, with Jitter)
     const crK = past*0.32 + f.jitter*0.05, crF = 2 + R()*3, crP = R()*6.283, crF2 = 5 + R()*4, crP2 = R()*6.283;
     const crumple = (s, side) => 1 + crK*(Math.sin(s*crF*Math.PI + crP + side)*0.7 + Math.sin(s*crF2*Math.PI + crP2 - side)*0.3)*Math.sin(Math.PI*Math.min(1, s*1.15));
@@ -128,7 +128,7 @@ export function flDrawBloom(L, R, cx, cy, Rad, f){
       const at = Math.floor(pts.length/2), ins = [];
       for(let k = 1; k <= n*2 - 1; k++){ const u = k/(n*2) - 0.5, w = flWidth(S.shape, 0.97)*wid*len*0.5*u*2, q = k % 2 ? back : tip; ins.push(P(q[0] + lateral[0]*w, q[1] + lateral[1]*w, q[2])); }
       pts.splice(at, 0, ...ins); }
-    const base = P(...ctr(0)), tipP = P(...ctr(1)), mid = ctr(0.6);
+    const base = P(...ctr(0)), tipP = P(...ctr(1));
     // its normal (cup and curl), for the light
     const a = cupR + curlR*0.36, nx = -Math.cos(theta)*Math.sin(a), ny = -Math.sin(theta)*Math.sin(a), nz = Math.cos(a);
     const NY = ny*ca - nz*sa, NZ = ny*sa + nz*ca, NX = nx*tc - NY*ts, NYs = nx*ts + NY*tc;

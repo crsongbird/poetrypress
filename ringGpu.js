@@ -204,7 +204,7 @@ export function ringGpuThings(batch, ww, wh, atlas, light, mesh){
     let ib = null; if(nI > 0){ ib = DEV.createBuffer({ size: batch.n*4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }); DEV.queue.writeBuffer(ib, 0, batch.data, 0, batch.n);
       pass.setBindGroup(0, TBIND); pass.setVertexBuffer(0, ib);
       // (in runs: the glows with their own blending, the rest with theirs, in the order they came)
-      const D = batch.data; let i0 = 0, cur = D[11] > 2.5; for(let i = 1; i <= nI; i++){ const g = i < nI && D[i*RG_TSTRIDE + 11] > 2.5; if(i === nI || g !== cur){ pass.setPipeline(cur ? SPIPE : TPIPE); pass.draw(6, i - i0, 0, i0); i0 = i; cur = g; } } }
+      const D = batch.data, glow = k => k > 2.5 && k < 3.5; let i0 = 0, cur = glow(D[11]); for(let i = 1; i <= nI; i++){ const g = i < nI && glow(D[i*RG_TSTRIDE + 11]); if(i === nI || g !== cur){ pass.setPipeline(cur ? SPIPE : TPIPE); pass.draw(6, i - i0, 0, i0); i0 = i; cur = g; } } }
     pass.end(); DEV.queue.submit([enc.finish()]); if(ib) ib.destroy(); if(mb) mb.destroy();
     return cv.c;
   } catch(e){ RG_GPU_WHY = String(e); return null; }

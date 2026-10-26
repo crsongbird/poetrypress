@@ -36,7 +36,7 @@
  * any size, so a preview is the export, smaller. Their randomness is the
  * texture's seed (+ Variant), like the other parts that grow.
  */
-import { CPU, withSeed, wordsRoom, kitCanvas, makeNoiseGrid, sampleNoiseGrid, lightVec, mulberry32, seedChoice } from './texCore.js';
+import { withSeed, wordsRoom, kitCanvas, makeNoiseGrid, sampleNoiseGrid, mulberry32, seedChoice } from './texCore.js';
 
 const GEN_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 const genClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -806,7 +806,7 @@ function cirEraChip(c, K){
 // A long one is a crystal rod in a cradle, runes along it. What lights is drawn in Arcana (its own light) and in Each
 // Trace's grey, so Charge powers it as it powers the copper.
 function cirMagitekChip(c, K, h, e, mx, my, m, long, wide){
-  const { HT, PD, PT, EA, LG, AR, poly, line, disc, s } = K;
+  const { HT, PD, PT, EA, LG, AR, poly, line, s } = K;
   const ring = (X, cx, cy, r, w, col, a0 = 0, a1 = Math.PI*2) => { X.strokeStyle = col; X.lineWidth = w*s; X.beginPath(); X.arc(cx*s, cy*s, r*s, a0, a1); X.stroke(); };
   const glow = (draw, a = 1) => { AR.globalAlpha = a; draw(AR, '#fff'); AR.globalAlpha = 1; draw(EA, e); };
   const gem = (cx, cy, rx, ry, rot = 0) => {
@@ -1381,7 +1381,7 @@ function dwDraw(ww, wh, unit, webs, o, E){
     for(let j = 1; j <= 3; j++){ const hr = W.size*0.02*j; silk(sp.map(t => [W.hx + Math.cos(t)*hr, W.hy + Math.sin(t)*hr]).concat([[W.hx + Math.cos(sp[0])*hr, W.hy + Math.sin(sp[0])*hr]]), 0.9, 0.5); }
     // the sticky spiral: from past the hub's free zone out to the frame, between each two spokes a thread sagging a little
     const free = 0.16;
-    for(let k = 0; k < W.spokes; k++){ const t0 = sp[k], t1 = sp[(k + 1) % W.spokes] + (k === W.spokes - 1 ? Math.PI*2 : 0), rmax = Math.min(reach[k], reach[(k + 1) % W.spokes]);
+    for(let k = 0; k < W.spokes; k++){ const t0 = sp[k], t1 = sp[(k + 1) % W.spokes] + (k === W.spokes - 1 ? Math.PI*2 : 0);
       for(let j = 0; j < W.turns; j++){ const f0 = free + (1 - free)*(j + (t0 - W.rot)/(Math.PI*2))/W.turns, f1 = free + (1 - free)*(j + (t1 - W.rot)/(Math.PI*2))/W.turns;
         const r0 = f0*reach[k]*0.97, r1 = f1*reach[(k + 1) % W.spokes]*0.97; if(Math.max(r0/reach[k], r1/reach[(k + 1) % W.spokes]) > 0.97 || f1 > 1) break;
         if(torn((t0 + t1)/2, (f0 + f1)/2)){

@@ -18,12 +18,6 @@ check('canonArea is the pixel area at S = 1, and the export area at any S',
   C.canonArea(300, 200) === 60000 && C.withScale(0.5, () => C.canonArea(150, 100)) === 60000);
 check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never finer than 1)',
   C.canonDiv(4) === 4 && C.withScale(1/3, () => Math.abs(C.canonDiv(4) - 4/3) < 1e-12) && C.withScale(0.1, () => C.canonDiv(4)) === 1);
-{
-  // Linen's grid: threads at least ~3 px apart; never finer than the export's grid, never coarser than the canvas
-  const { weaveGridDiv } = await import('../stepsTouch.js');
-  check('linen keeps its threads at least 3 px apart: the export grid when it must, the canvas when it can',
-    weaveGridDiv(1536, 2048, 1, 1) === 2 && weaveGridDiv(512, 683, 1/3, 1) > 0.9 && weaveGridDiv(512, 683, 1/3, 1) <= 1 && Math.abs(weaveGridDiv(512, 683, 1/3, 0.5) - 2/3) < 1e-9);
-}
 
 // ---- the light's direction and height ----
 {
@@ -62,8 +56,8 @@ check('canonDiv is exact at S = 1 and keeps the export grid when smaller (never 
     const peak = A => A.reduce((m, v) => Math.max(m, v), 0), area = A => A.filter(v => v > 0.05).length;
     check('a gloss map gives each pixel its own gloss: mirror-glossy is tight and bright, matte broad and dim',
       peak(shiny.spec) > peak(matte.spec) && area(shiny.spec) < area(matte.spec)); }
-  { const B = C.lightBasis(315), up = C.shadeNormal(B, 0, 0, 1, 0.5);
-    check('lightBasis + shadeNormal: flat ground gets what the engine gives it', Math.abs(up.diffuse - B.flat) < 1e-9); }
+  { const B = C.lightBasis(315);
+    check('lightBasis: the light a unit way, and flat ground gets its height (what the engine gives it)', Math.abs(Math.hypot(B.Lx, B.Ly, B.Lz) - 1) < 1e-9 && Math.abs(B.flat - B.Lz) < 1e-12); }
   check('white Highlight and Shade are no material at all (looks stay exactly as they were)', C.materialOf('#FFFFFF', '#ffffff') === null && C.materialOf(null, undefined) === null);
   const M = C.materialOf('#FFFFFF', '#3060FF');
   const lit = L.light.indexOf(Math.max(...L.light)), shaded = L.light.indexOf(Math.min(...L.light));

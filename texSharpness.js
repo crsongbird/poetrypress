@@ -4,7 +4,7 @@
  * Waking; metal at the edges. Lotus, 90s dots, still rain, the painter's
  * frustration, silverpoint hatch, metal leaf, waking grain.
  */
-import { makeNoiseGrid, sampleNoiseGrid, parseHex, withSeed, CPU, canonArea, cpx, lightVec, scaleNow, canonDiv, lightHeights, litK } from './texCore.js';
+import { parseHex, CPU, canonArea, cpx, lightVec } from './texCore.js';
 import { pkSilhouette } from './paintKit.js';
 
 // The flower's FORM, as keyframes of a few numbers. The Form knob (0–1)

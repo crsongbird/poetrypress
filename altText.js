@@ -16,7 +16,6 @@
  * Everything here is plain data in, words out (no page access), so the
  * page gathers the facts (appEvents lookForAltText) and this writes them.
  */
-import { EFFECT_DEFS } from './effects.js';
 
 export const ALT_MAX = 1500;
 
@@ -51,8 +50,6 @@ const BLEND_WORDS = {
 // the text effects by the names the app gives them ("with a Letterpress effect")
 const EFFECT_NAMES = { outline: 'Outline', shadow: 'Drop Shadow', longshadow: 'Long Shadow', glow: 'Glow', letterpress: 'Letterpress', bevel: 'Bevel',
   chromatic: 'Chromatic Split', doublestrike: 'Double Strike', erosion: 'Erosion', bloom: 'Bloom', halo: 'Halo' };
-const EFFECT_WORDS = { outline: 'an outline', shadow: 'a drop shadow', longshadow: 'a long cast shadow', glow: 'a soft glow', letterpress: 'a letterpress impression',
-  bevel: 'a raised bevel', chromatic: 'a red and blue color split', doublestrike: 'a double strike', erosion: 'worn, eroded edges' };
 
 // ---- colours, named as a person would ----
 const hsl = hex => {
@@ -115,7 +112,7 @@ export function describeLook(L){
   const s = [];
   s.push('An image created with PoetryPress, an open source art tool.');
   // the words
-  const tc = unique((L.textColours || []).map(colourName)), fx = unique((L.effects || []).map(e => EFFECT_WORDS[e]));
+  const tc = unique((L.textColours || []).map(colourName));
   const bg = unique((L.background || []).map(colourName));
   // "The text is typeset in Playfair Display, a Didone font, in …, with a Letterpress effect." (Ruby's words)
   const [fam, kind] = (() => { const f = String(L.font || '').split(' · '); return f.length > 1 ? [f.slice(1).join(' · '), f[0]] : [f[0] || '', ''] })();

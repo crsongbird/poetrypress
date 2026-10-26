@@ -26,9 +26,9 @@
  */
 
 import { $, FONTS, getActiveRadioValue } from './appOptions.js';
-import { buildLines, TYPE_EFFECT_NAMES } from './textParsers.js';
+import { buildLines } from './textParsers.js';
 import { spellForSeed, spellToPML, validateSpell, GLYPH_FONT } from './spell.js';
-import { getTextureCanvas, SEE_REACH, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, graphUsesCurves, chainReadsPoem, layerLights } from './textureGenerators.js';
+import { SEE_REACH, capsFor, defaultBlendFor, paramsFor, paramReadout, textureCacheMB, dropLargeTextures, graphUsesBackdrop, graphUsesBox, graphUsesCurves, chainReadsPoem, layerLights } from './textureGenerators.js';
 import { athanorKnobs, athanorHues, athanorName } from './athanor.js';
 import { POEM_PUNCT, punctMark } from './steps.js';
 import { fill, CHOOSER } from './strings.js';
@@ -37,7 +37,7 @@ import { seedPhrase } from './seedWords.js';
 import { moonPhase } from './moon.js';
 import { moonForSeed } from './texWhimsy.js';
 import { installInlineGlyphs, clearMeasureCache } from './glyphs.js';
-import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge, STITCH_STYLES } from './stitches.js';
+import { drawStitch, pathFromPoints, roundRectPoints, stitchInnerEdge } from './stitches.js';
 import { boxGlass, boxBlend, bendBeneath, BOX_GPU_BLENDS, CANVAS_BLENDS } from './boxFx.js';
 import { makeEffect, legacyOutline, legacyTypeEffect, describeStack } from './effects.js';
 import { requestTexture, onTextureReady, textureServiceInfo } from './textureService.js';
@@ -1274,8 +1274,8 @@ let RENDER_SCALE = 1, PAGE_SIZE = null;
 // THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, handed to a surface with a camera
 // (the Ringworld's clouds drift, its stars wheel, its lights flicker); 0 at rest, so a still is as it always was
 let SCENE_TIME = 0, SCENE_DT = 0, SCENE_FRAME = null, SCENE_STEP = 0, SCENE_SIDE = 0, SCENE_FPS = 0, SCENE_FLY = null;
-// (where a drone flight has carried the eye: { d, rise, head, to } in metres and degrees, or none)
-export function setSceneFly(f){ SCENE_FLY = f && f.route === 'seed' ? { route: 'seed', u: +f.u || 0, secs: +f.secs || 10 } : f && (f.d || f.to) ? { d: +f.d || 0, rise: +f.rise || 0, head: +f.head || 0, to: +f.to || 0 } : null; }
+// (where a drone flight has carried the eye: how far along the seed's route, the film's length and the flight's kind, or none)
+export function setSceneFly(f){ SCENE_FLY = f && f.route === 'seed' ? { route: 'seed', u: +f.u || 0, secs: +f.secs || 10, ...(['orbit', 'dronie', 'rise'].includes(f.flight) ? { flight: f.flight } : {}) } : null; }
 // (a film's frame and its mean step, the scene's seconds a frame over the whole film: from these the scene runs its own
 //  clocks evenly and only forward, however the hours are spread over the frames; none in a still)
 // (and, held the length of a film, which way round the Ringworld's dusk comes: the dial's light would turn it over as the
@@ -1410,7 +1410,8 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const see = !!caps.seeThrough && L.textureSeeThrough === true;
   // a texture that can't be drawn is skipped, never allowed to abort the frame
   const put = t0 => { if(!t0) return; try {
-    let t = t0; if(see && Math.abs(t0.height/t0.width - 2*H/W) < 0.02*H/W){   // (stacked: a picture still on its way shows the one before, alone) bendBeneath(ctx, t0, SEE_REACH*S*(ctx.canvas.width/W), S >= 0.99);
+    // (stacked: a picture still on its way shows the one before, alone)
+    let t = t0; if(see && Math.abs(t0.height/t0.width - 2*H/W) < 0.02*H/W){ bendBeneath(ctx, t0, SEE_REACH*S*(ctx.canvas.width/W), S >= 0.99);
       const pc = document.createElement('canvas'); pc.width = t0.width; pc.height = t0.height/2; pc.getContext('2d', { willReadFrequently: true }).drawImage(t0, 0, 0, t0.width, t0.height/2, 0, 0, t0.width, t0.height/2); t = pc; }
     const img = clearing > 0 ? clearedSurface(t, canvas.width, canvas.height, clearing) : t;
     if(gpu){   // the blends a canvas can't do, mixed per pixel at full size (the GPU when there is one)

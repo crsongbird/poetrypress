@@ -63,7 +63,6 @@ export const SCROLL_STEPS = {
       // ---- the land's things, each drawn on a band (or in front of all, band 5), into the maps
       const MAPS = ['ink', 'wash', 'water', 'paper', 'accent', 'bloom'], ops = [];   // { k, map, draw(x) }
       const put = (k, map, draw) => ops.push({ k, map, draw }), fields = { snow: null };
-      const pathOf = (k, x0, x1) => { const pts = []; for(let X = x0; X <= x1; X += Math.max(1, U*0.004)) pts.push([X, crAt(k, X)]); return pts; };
       // a little evergreen, a pine of a few tiers (on crags and ridges)
       const pine = (k, X, Y, h, a) => put(k, 'ink', x => { scGrey(x, a); x.fillRect(X - h*0.03, Y - h, h*0.06, h);
         for(let t = 0; t < 4; t++){ const y = Y - h*(0.3 + t*0.2), wd = h*(0.42 - t*0.08); scBrush(x, [[X - wd, y + h*0.04], [X, y - h*0.05], [X + wd, y + h*0.03]], h*0.09); } });

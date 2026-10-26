@@ -4,6 +4,37 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Perseus–Menkib (2026-10-26)
+
+- **Drone flights fly the flight you pick.** Orbit, Dronie and Rise were all being filmed as Reveal: the choice was
+  lost before the frame was drawn. Each now flies its own path.
+- **No more bars of light across the Ringworld.** The thin glowing bars that ran from wall top to wall top, warm yellow
+  in the cities, were drawn over everything in front of them, hills included. They are gone; the great arches stay.
+- **Shadows under far things stay dark on the GPU.** The flat shadows laid under distant things were being blended like
+  glows, so they lightened the ground instead of shading it.
+- **See Through bends what is beneath again.** Glass, water and crystal laid over another surface with See Through on
+  showed the surface beneath unbent: the bending was never being called. It is now.
+- **Films of the Ringworld no longer start a crowd of helpers when it draws on the GPU.** Each extra helper opened its
+  own GPU and built its own world before drawing a frame, and then they all queued for the one GPU. A Ringworld film
+  drawn on the GPU now uses the usual few.
+
+### Under the hood
+- Audited the render pipeline for code that does nothing and removed it:
+  - the drone's old form (metres along a heading, rise and turn) everywhere it was read, keyed and tested;
+    a flight is the seed's route only;
+  - the bars of light from the Ringworld's works, their profile weights and their drawing;
+  - unused values and imports across the Ringworld, the paint kit, the renderer and about twenty surface and UI
+    modules (found with a lint pass for unused names; values whose making draws a random number were kept, so no
+    picture moves);
+  - three functions nothing called (a hex darkener, a per-pixel normal shader the weave had inlined, and Linen's old
+    grid size) and the tests that pinned only them.
+- `setSceneFly` keeps the flight, and the texture cache key carries it; the GPU things pass sends only kind 3 (glows)
+  to the screen-blended pipeline.
+- Also reviewed the tests touched by the audit: the drone suite now flies the seed's route at its start, middle and end
+  and checks that an Orbit is not drawn as a Reveal; the light basis test checks the light's own vector rather than
+  the function that was removed. No fingerprint moved.
+- `node tools/gpu-ring.mjs` draws the Ringworld on WebGPU (software GPU) as on the canvas, still and in an Orbit.
+
 ## Perseus–Atik (2026-10-26)
 
 - **Drone flight is its own move now.** In the film sheet, pick **Drone flight** beside Camera round. Then choose a
@@ -509,23 +540,3 @@ prints it).
   and no building stands on a wall.
 - docs/prior-art/ringworld-regions.md is the research (town walls, boundary stones and signs, heraldry, political
   borders in map generators, place names).
-
-## Pleiades–Alcyone (2026-10-25)
-
-- The Ringworld's people are every kind of person. Each one's age (a child, an adult, an elder with a stoop and now and
-  then a cane), build, skin, hair (short or long, grey with age, dyed in the neon world), beard, skirt or dress, and hat
-  or headscarf is their own, chosen independently, so no kind of person is tied to a costume. Skin comes in ten tones,
-  lightest to deepest.
-- Clothes follow the world: coats in the cities, dark jackets edged with light in the neon world, cloaks and packs in
-  the wilds, robes and pointed hats in the magic world, rags and masks in the ruins, pale suits among the builders.
-- Other folk where the world has them: elves (tall, slender, pointed ears), dwarves (short, broad, bearded) and fae
-  (small, winged, with a light about them) in the magic world and now and then in the wilds; androids with lit seams
-  among the builders.
-- Deer no longer graze without end. Between their moves each keeps its own slow rhythm, grazing, standing to look
-  round, or lying down to rest with its head up, so a herd at any moment holds some of each.
-- Rooks, pigeons, starlings and sparrows on the ground hop now and then, flicking their wings.
-
-### Under the hood
-- `pkPerson` paints a person from their own stream; `PK_SKINS` is the Monk Skin Tone Scale's ten.
-- `wkAt` gives a grazing animal its `lie` and a ground bird its hop; `wkQuad` lays a deer down, its legs folded.
-- docs/prior-art/ringworld-folk.md is the research (figure proportions, the Monk scale, a red deer's day).

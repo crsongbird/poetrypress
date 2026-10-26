@@ -352,7 +352,7 @@ export async function makeMoving(){
   // FRAMES AHEAD (Ruby: the film kept a twentieth of the machine busy): the frames to come set up one by one, their
   // textures asked for on a worker per spare core, while this one is drawn and encoded. As many ahead as the workers,
   // and as memory allows at this size; none for a move between looks (each frame's look is a whole restore)
-  const workers = looked ? 0 : setFilmPool(true), aheadN = looked ? 0 : Math.max(0, Math.min(workers*2, Math.floor(6e8/(w*h*4)))), pending = new Map();
+  const workers = looked ? 0 : setFilmPool(true, (($('textureType') || {}).value) === 'ringpaint' && ringDrawnOnGpu() === true), aheadN = looked ? 0 : Math.max(0, Math.min(workers*2, Math.floor(6e8/(w*h*4)))), pending = new Map();
   const queue = j => { if(j >= n || pending.has(j)) return; place(j); pending.set(j, surfaceRequests(w, h).map(r => prefetchTexture(r.type, r.w, r.h, r.opts))); };
   movingRun.busy = true; movingRun.stop = false; paintMoving(); setWorking('saving'); movingWake(); movingInert(true);
   if(document.body && document.body.classList) document.body.classList.add('saving');

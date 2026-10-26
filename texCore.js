@@ -56,12 +56,6 @@ export function mixHex(hexA, hexB, t){
   };
 }
 
-export function darkenRgb(hex, amount){
-  const h = hex.replace('#','');
-  const r=parseInt(h.substr(0,2),16), g=parseInt(h.substr(2,2),16), b=parseInt(h.substr(4,2),16);
-  return { r: Math.round(r*(1-amount)), g: Math.round(g*(1-amount)), b: Math.round(b*(1-amount)) };
-}
-
 // Seeded PRNG (mulberry32) so a given seed always produces the same texture
 // pattern. Rather than threading an rng param through all 18+ generator
 // functions, withSeed() temporarily substitutes the global Math.random for the
@@ -663,8 +657,8 @@ function rigParts(L, RG, HUE, ambient){
  * The light as lightHeights sees it — toward the light (L), Blinn's half
  * vector (Hv), and what open flat ground gets (flat) — for detail too fine to
  * be heights (a weave's threads, a glaze's finest crazing): such detail is a
- * NORMAL per pixel, shaded with shadeNormal by the same light, the same
- * elevation (raking past the rim) and the same highlight as the engine's.
+ * NORMAL per pixel, shaded by the same light (its diffuse N·L, its highlight
+ * N·Hv), the same elevation (raking past the rim) and the same highlight as the engine's.
  */
 export function lightBasis(light){
   const { lx, ly } = lightVec(light);
@@ -673,14 +667,6 @@ export function lightBasis(light){
   const Lx = -lx/dirLen*horiz, Ly = -ly/dirLen*horiz, Lz = Math.sin(elev);
   const hx = Lx, hy = Ly, hz = Lz + 1, hl = Math.hypot(hx, hy, hz) || 1;
   return { Lx, Ly, Lz, Hx: hx/hl, Hy: hy/hl, Hz: hz/hl, flat: Lz };
-}
-/** A surface normal (need not be unit length) lit by a lightBasis: its
- *  diffuse (0..1) and its highlight at this gloss (0 matte … 1 mirror). */
-export function shadeNormal(B, nx, ny, nz, gloss){
-  const l = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1; nx /= l; ny /= l; nz /= l;
-  const diffuse = Math.max(0, nx*B.Lx + ny*B.Ly + nz*B.Lz);
-  const nh = Math.max(0, nx*B.Hx + ny*B.Hy + nz*B.Hz);
-  return { diffuse, spec: Math.pow(nh, 4 + gloss*120)*(0.15 + gloss*0.85) };
 }
 
 /**
@@ -1087,7 +1073,7 @@ export function kitField(v, gw, gh){
   if(v.r instanceof Float32Array){ if(v.r.length !== N) return null; const f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = 0.299*v.r[i] + 0.587*v.g[i] + 0.114*v.b[i]; return f; }
   if(typeof v === 'number') return new Float32Array(N).fill(v);
   if(Array.isArray(v)) return new Float32Array(N).fill(0.299*v[0] + 0.587*v[1] + 0.114*v[2]);
-  if(isCanvasLike(v)){ const [c, x] = kitCanvas(gw, gh); x.imageSmoothingEnabled = true; x.drawImage(v, 0, 0, gw, gh);
+  if(isCanvasLike(v)){ const [, x] = kitCanvas(gw, gh); x.imageSmoothingEnabled = true; x.drawImage(v, 0, 0, gw, gh);
     const d = x.getImageData(0, 0, gw, gh).data, f = new Float32Array(N); for(let i = 0; i < N; i++) f[i] = (0.299*d[i*4] + 0.587*d[i*4+1] + 0.114*d[i*4+2])/255; return f; }
   return null;
 }
@@ -1099,7 +1085,7 @@ export function kitFieldCanvas(f, gw, gh){
 }
 /** A canvas read back as { r, g, b } fields on a gw×gh grid. */
 export function kitImage(cv, gw, gh){
-  const [c, x] = kitCanvas(gw, gh); x.imageSmoothingEnabled = true; x.drawImage(cv, 0, 0, gw, gh);
+  const [, x] = kitCanvas(gw, gh); x.imageSmoothingEnabled = true; x.drawImage(cv, 0, 0, gw, gh);
   const d = x.getImageData(0, 0, gw, gh).data, N = gw*gh, r = new Float32Array(N), g = new Float32Array(N), b = new Float32Array(N);
   for(let i = 0; i < N; i++){ r[i] = d[i*4]/255; g[i] = d[i*4+1]/255; b[i] = d[i*4+2]/255; }
   return { r, g, b };
