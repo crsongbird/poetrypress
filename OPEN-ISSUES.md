@@ -101,7 +101,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
-  - RUBY'S NOTES (2026-10-26), what is left: the GPU path in WebGPU (below); many objects lit poorly, and billboards to
+  - RUBY'S NOTES (2026-10-26), what is left: the GPU path's next steps (below); many objects lit poorly, and billboards to
     become 3D objects; the reflections; robots fighting each other and mages, robots hunting wildlife, humans in groups
     walking to real destinations, wildlife meeting each other, the kneeling giant's head firing a guardian's laser; a
     look at a PS1/PS2 style (vertex snapping, affine textures, radiance cascades) for the game engine build.
@@ -110,16 +110,17 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     eye's distance, so the far ranges change their height a little as a long flight nears them; a film's frames are still
     about as slow as a still of what the drone sees (more land and woods in view from a height); the GPU path is the cure.
   - RUBY'S NOTES (2026-10-25, 22:25), what is left: raise the standard of the other textures and items to the new
-    painted style (a hedge's flat dark slab under its bushes; a tree near the eye going see-through as a ghost over the
-    view; the small orange crossed things lying in the magic world's grass); city buildings laid in their blocks,
+    painted style (a tree near the eye going see-through as a ghost over the view; the small orange crossed things lying
+    in the magic world's grass); city buildings laid in their blocks,
     facing the streets; the hunters hunting (a fox stalking, a kestrel's stoop landing on something, prey freezing when
     a hunter is near); hail, meteor showers and valley mist banks among the weathers.
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
-  - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path"):
-    a film frame's time is mostly the land's cells, its ground marks and the arch drawn as canvas polygons; next, the
-    land's mesh and the arch drawn by WebGL (per-corner colours, the shading and shadow done there) and the kept
-    sprites stamped as instanced quads, the canvas keeping what only it draws.
+  - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path";
+    then "WEBGPU"): the land is laid on WebGPU where a browser has it (ringGpu.js, docs/prior-art/ringworld-gpu.md); next
+    the trees as instanced quads from their kept sheets (about two fifths of a frame in Node), the arch, the land's heights
+    and colours in a compute shader, and the things' depth against the land per pixel; Ruby to say how a film's frame time
+    changed on its own machine (?cpuland in the address draws the land on the canvas, to compare).
   - THE LAND, what is left: floating islands, caves and undergrounds
     (docs/prior-art/ringworld-terrain.md §9); rain shadows behind the ranges; the bands at sharp borders between grounds
     as well as at drops.

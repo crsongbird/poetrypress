@@ -13,6 +13,7 @@
 import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
 import { WK_KINDS, WK_FLYERS, WK_BIRDS, wkAt, wkCount, wkPaint, wkWander, wkNoise } from './wildKit.js';
 import { lkLand, LK_BIOMES, LK_FORESTED } from './landKit.js';
+import { ringGpuReady, ringGpuBatch, ringGpuDraw } from './ringGpu.js';
 import { rkRegions, rkTownName } from './regionKit.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
@@ -1940,7 +1941,11 @@ function rgPaintLand(x, mk, dk, V){
   // (and in falling snow or rain the distance goes sooner: the fall's own veil, over the land and every thing on it
   //  alike, by its distance, the snow's whiteness or the rain's grey in the air; rgFalling)
   const FALL = V.weather === 'snow' ? [0.46, 1400] : V.weather === 'storm' ? [0.5, 1300] : V.weather === 'rain' ? [0.38, 2600] : null;
-  const hazeOf = FALL ? d => Math.max(V.air*(1 - Math.exp(-d/(W*1.3))), FALL[0]*(1 - Math.exp(-d/(FALL[1]*W*0.00025)))) : d => V.air*(1 - Math.exp(-d/(W*1.3)));
+  // (in fog, rain or snow the air thickens with depth, so the far land and all on it sink into it layer on layer: mistAt,
+  //  set once the depths are known, how much of it lies between the eye and d)
+  const MIST = { fog: 0.075, rain: 0.035, storm: 0.03, snow: 0.045 }[V.weather] || 0; let mistAt = () => 0;
+  const hazeOf0 = FALL ? d => Math.max(V.air*(1 - Math.exp(-d/(W*1.3))), FALL[0]*(1 - Math.exp(-d/(FALL[1]*W*0.00025)))) : d => V.air*(1 - Math.exp(-d/(W*1.3)));
+  const hazeOf = MIST ? d => Math.max(hazeOf0(d), mistAt(d)) : hazeOf0;
   // a point of the floor in the view's terms: how far ahead
   const ahead = (a, z) => (a - A0E)*hx + (z - L.z0)*hz;
   // the land's own noise, smooth in the world (the water's glints)
@@ -2054,7 +2059,7 @@ function rgPaintLand(x, mk, dk, V){
   const NCOL = Math.max(64, Math.min(1200, Math.round(ww))), CW = ww/NCOL, NC = NCOL;
   const col = X => Math.max(0, Math.min(NCOL - 1, Math.round(X/CW)));
   shown.sort((p, q) => p.dd - q.dd);
-  const NBK = 40, bkD = [], lay = []; { const dA = Math.max(d0, shown.length ? shown[0].dd : d0); for(let b = 0; b < NBK; b++) bkD.push(b ? dA*Math.pow(reach/dA, b/(NBK - 1)) : 0); }
+  const NBK = 96, bkD = [], lay = []; { const dA = Math.max(d0, shown.length ? shown[0].dd : d0); for(let b = 0; b < NBK; b++) bkD.push(b ? dA*Math.pow(reach/dA, b/(NBK - 1)) : 0); }
   const HY = new Float32Array(NCOL).fill(Infinity), HD = new Float32Array(NCOL), HQ = new Int32Array(NCOL).fill(-1), crests = Array.from({ length: NCOL }, () => []);
   { let b = 0; const tY = new Float32Array(NCOL), bY = new Float32Array(NCOL);
     for(let qi = 0; qi < shown.length; qi++){ const q = shown[qi];
@@ -2075,6 +2080,9 @@ function rgPaintLand(x, mk, dk, V){
   const bandAt = (X, Y) => { const C = crests[col(X)]; for(let k = 0; k < C.length; k += 3) if(C[k] <= Y + px(0.5)) return (Y - C[k])/bandOf(C[k + 1]); return 9; };
   // which bucket of depth a thing stands in (what it is drawn after, and what land nearer than it hides)
   const slot = dd => { let j = -1; for(let i = 0; i < lay.length; i++) if(lay[i].d <= dd) j = i; else break; return j; };
+  // (the mist between the eye and d: a thin layer at each depth bucket past the nearest dozen metres, as many as lie nearer)
+  if(MIST){ const per = 1 - Math.pow(1 - MIST, 16/40), dM = W*0.003, k0 = (NBK - 1)/Math.log(reach/Math.max(bkD[1] || d0, d0)), bA = Math.max(bkD[1] || d0, d0);
+    mistAt = d => { const k = d > dM ? Math.max(0, Math.log(d/Math.max(bA, dM))*k0*40/NBK) : 0; return k > 0 ? 1 - Math.pow(1 - per, k) : 0; }; }
   // is a thing from X0 to X1, its top at Yt, hidden by the land nearer than it? (all its columns covered)
   const hidden = (l, X0, X1, Yt) => { if(X1 < 0 || X0 > ww) return true; const n = l ? l.near : null; if(!n) return false;
     for(let ci = col(Math.max(0, X0)), c1 = col(Math.min(ww, X1)); ci <= c1; ci++) if(!(n[ci] <= Yt)) return false; return true; };
@@ -2083,6 +2091,7 @@ function rgPaintLand(x, mk, dk, V){
   // there, or below the nearer land, is never drawn. Then they are painted, farthest first (vis: measured, then told)
   const covT = new Float32Array(NC).fill(Infinity), covB = new Float32Array(NC).fill(-Infinity); let painting = false, cur = null;
   const vis = (l, X0, X1, Yt, Yb, oc) => { if(painting) return cur.ok;
+    { const B = cur.box; if(B){ if(X0 < B[0]) B[0] = X0; if(X1 > B[1]) B[1] = X1; if(Yt < B[2]) B[2] = Yt; if(Yb > B[3]) B[3] = Yb; } else cur.box = [X0, X1, Yt, Yb]; }
     let ok = false; if(!(X1 < 0 || X0 > ww || Yb < 0 || Yt > wh)){ const n = l ? l.near : null;
       // (Ruby, 2026-10-26: "Object popin is really bad, i think visibility is not being computed correctly for the drone
       //  flight camera": hidden only with room to spare, the land a few pixels over its top and a nearer heart wholly round
@@ -2803,23 +2812,22 @@ function rgPaintLand(x, mk, dk, V){
             x.stroke(); if(creep >= 1) rgGlow(x, G[0], G[1], W0*0.2, [220, 220, 255], 0.35*lit); x.restore(); } } }; } }
 
   // ---- 4. BACK TO FRONT ----
-  // every cell of the land, every thing, every run of way and piece of field, sorted far to near and painted so; a thing
-  // just after the cells about its foot and those just in front of them, so the ground it stands on lies under it and
-  // only land truly nearer hides it
+  // THE LAND FIRST, THEN ALL ON IT (Ruby, 2026-10-26, the GPU path: "implement that sooner rather than later so testing
+  // the flights doesn't take forever"): every cell of the land is laid, far to near, as one picture (which the GPU can
+  // lay in one pass); then every thing, run of way and piece of field and wall, far to near, each clipped by the land
+  // nearer than it: the occlusion horizon of its depth bucket, below which the nearer land stands. Things sharing a bucket
+  // share its clip, so the clips are few
   for(const t of things){ const j = slot(t.dd); if(j >= 0) t.l = lay[j]; }
   things.sort((p, q) => p.dd - q.dd); for(const t of things) if(t.l && t.draw){ cur = t; t.draw(t.l); }
   painting = true;
   const cellNear = dd => { for(let l = 0; l < NLV; l++) if((NG - 0.5)*cl[l] > dd*1.05) return cl[l]; return cl[NLV - 1]; };
-  const items = [];
-  for(const q of shown) items.push({ dd: q.dd, q });
+  const items = [], floor = [];
   for(const t of things) if(t.l && (t.o || t.ok)) items.push({ dd: t.dd - (t.rad || 0) - 0.8*cellNear(t.dd), t });
-  for(let b = 1; b < lay.length; b++){ const dn = lay[b - 1].d, df = lay[b].d; for(const r of collectWays(dn, df)) items.push({ dd: r.dd - 0.8*cellNear(r.dd), r }); }
-  for(const pc of fieldPieces) items.push({ dd: pc.dd - 0.8*cellNear(pc.dd), pc });
-  for(const wp of wallPieces) items.push({ dd: wp.dd - 0.8*cellNear(wp.dd), wp });
-  // (in fog, rain or snow the air thickens with depth, so the far land sinks into it layer on layer)
-  const MIST = { fog: 0.075, rain: 0.035, storm: 0.03, snow: 0.045 }[V.weather] || 0, MISTC = rsMix(AIR, [236, 238, 242], 0.35), MISTB = 1 - Math.pow(1 - MIST, 16/NBK);
-  if(MIST) for(let b = 1; b < lay.length; b++) if(lay[b].d > W*0.012) items.push({ dd: lay[b].d, mist: 1 });
+  for(let b = 1; b < lay.length; b++){ const dn = lay[b - 1].d, df = lay[b].d; for(const r of collectWays(dn, df)) floor.push({ dd: r.dd - 0.8*cellNear(r.dd), r }); }
+  for(const pc of fieldPieces) floor.push({ dd: pc.dd - 0.8*cellNear(pc.dd), pc });
+  for(const wp of wallPieces) floor.push({ dd: wp.dd - 0.8*cellNear(wp.dd), wp });
   // (at dawn and dusk on a still day, mist lies in the low land, thicker the lower, breathing a little with the clock)
+  const MISTC = rsMix(AIR, [236, 238, 242], 0.35);
   const LOWMIST = (V.weather === 'clear' || V.weather === 'clouds') && seedChoice(V.seed, 'mist')() < 0.6 ? 0.22*rgClamp(1 - Math.abs(V.dayHere - 0.5)*3.5) : 0;
   const WT = rgWaterTime(V), WA = rgWind(V)[0];   // (the water's clock, and the way its glints drift)
   const DKG = d => Math.round(255*rgClamp(Math.log(Math.max(d, d0)/d0)/Math.log(reach/d0))), dkPolys = new Map(), mkPath = [];
@@ -2871,6 +2879,13 @@ function rgPaintLand(x, mk, dk, V){
     return v; };
   const vSP = cl.map(() => new Float32Array(SIDE*SIDE));
   const specAt = (l, i, j) => { kSunAt(l, i, j); return vSP[l][(j + NG)*SIDE + i + NG]; };
+  // THE LAND ON THE GPU (ringGpu.js): where WebGPU is open, a cell is not filled on the canvas but laid as two triangles
+  // with its corners' colours and where in the world each corner lies, its ground's kind for the marks the GPU lays on
+  // it per pixel; its water a fan of triangles, its shore and glints thin quads. GB: the batch, or null on the canvas
+  let GB = null; const GANC = Math.round(A0E/(M1*4096))*M1*4096, gkCode = k => RG_GRASSY[k] ? 1 : k === 'sand' || k === 'desert' ? 2 : k === 'rock' ? 3 : k === 'snow' || k === 'ice' ? 4 : 5;
+  const gv = (p, c3, al, a, z, kind, sk) => [p[0], p[1], c3[0]/255, c3[1]/255, c3[2]/255, al, (a - GANC)/M1, z/M1, kind, sk];
+  const gQuad = (A, B, w, c3, al) => { const dx = B[0] - A[0], dy = B[1] - A[1], dl = Math.hypot(dx, dy) || 1, nx = -dy/dl*w/2, ny = dx/dl*w/2, v = (X, Y) => gv([X, Y], c3, al, 0, 0, 0, 0);
+    GB.tri(v(A[0] + nx, A[1] + ny), v(B[0] + nx, B[1] + ny), v(B[0] - nx, B[1] - ny)); GB.tri(v(A[0] + nx, A[1] + ny), v(B[0] - nx, B[1] - ny), v(A[0] - nx, A[1] - ny)); };
   const paintCell = q => {
     const { l, i, j, P, am, zm, dd, c } = q, h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h11 = vh(l, i + 1, j + 1), h01 = vh(l, i, j + 1), hm = (h00 + h10 + h01 + h11)/4, sea = TR.sea;
     const day = ringDay(L, am), haze = hazeOf(dd), wet = [h00 < sea, h10 < sea, h11 < sea, h01 < sea], nWet = wet[0] + wet[1] + wet[2] + wet[3];
@@ -2895,30 +2910,51 @@ function rgPaintLand(x, mk, dk, V){
       const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], aOf(l, VA[k]), zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k]), specAt(l, VA[k], VZ[k])); });   // (each corner's own cloud shadow, so a shadow's edge runs smoothly)
       let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
       const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
-      if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
+      if(GB){ const wa = [aOf(l, i), aOf(l, i + 1), aOf(l, i + 1), aOf(l, i)], wz = [zOf(l, j), zOf(l, j), zOf(l, j + 1), zOf(l, j + 1)], kd = nWet === 0 ? gkCode(ci0.gk) : 0, V4 = poly.map((p, k) => gv(p, cs[k], 1, wa[k], wz[k], kd, nWet === 0 ? 1 : 0));
+        GB.tri(V4[0], V4[1], V4[2]); GB.tri(V4[0], V4[2], V4[3]); }
+      else if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
       else rsPoly(x, poly, rsCss(cA));
-      if(nWet === 0){ const G = { a0: aOf(l, i), z0: zOf(l, j), c, M: M1 }; rgBrush(x, P, q, cA, px, s, G); rgGroundMarks(x, P, q, ci0.gk, cA, px, G); } }
+      if(nWet === 0 && !GB){ const G = { a0: aOf(l, i), z0: zOf(l, j), c, M: M1 }; rgBrush(x, P, q, cA, px, s, G); rgGroundMarks(x, P, q, ci0.gk, cA, px, G); } }
     // WATER with its shore (docs/prior-art/ringworld-terrain.md §3): deep water dark and holding the sky the farther off
     // and the more glancing it is seen, the shallows lighter; where the land meets it, the wet edge and a line of foam
     if(nWet){ const hs = [h00, h10, h11, h01], wp = [], shore = [];
       for(let k = 0; k < 4; k++){ const k2 = (k + 1) & 3; if(wet[k]) wp.push(nWet === 4 ? poly[k] : P[k]); if(wet[k] !== wet[k2]){ const t = (sea - hs[k])/(hs[k2] - hs[k]), pp = lerpP(P[k], P[k2], t); wp.push(pp); shore.push(pp); } }
       const dep = Math.max(0, sea - Math.min(...hs.filter((_, k) => wet[k])))/M1, wbase = rsMix([24, 58, 104], V.sky, 0.35), wc0 = rsMix(wbase, [70, 150, 160], 0.4*(1 - rsSmooth(0, 9, dep)));
       let wc = rgLit(V, rsMix(wc0, AIR, 0.3*rsSmooth(0, W*0.6, dd)), day, haze, AIR); const cs2 = cloudShadeAt(am, zm)*rsSmooth(0.3, 0.7, day)*(1 - 0.85*haze); if(cs2 > 0.004) wc = rsMix(wc, [10, 14, 34], cs2*0.8);
-      if(wp.length >= 3) rsPoly(x, wp, rsCss(wc));
-      if(shore.length >= 2){ x.strokeStyle = rsCss(rgLit(V, [236, 240, 238], day, haze, AIR), 0.55*(1 - haze*0.7)); x.lineWidth = Math.max(px(0.6), Math.min(px(3), c*F/Math.max(dd, 1e-9)*0.08)); x.beginPath(); x.moveTo(shore[0][0], shore[0][1]); x.lineTo(shore[1][0], shore[1][1]); if(shore.length === 4){ x.moveTo(shore[2][0], shore[2][1]); x.lineTo(shore[3][0], shore[3][1]); } x.stroke(); }
+      if(GB){ if(wp.length >= 3){ const W0 = gv(wp[0], wc, 1, 0, 0, 0, 0); for(let k = 1; k + 1 < wp.length; k++) GB.tri(W0, gv(wp[k], wc, 1, 0, 0, 0, 0), gv(wp[k + 1], wc, 1, 0, 0, 0, 0)); }
+        if(shore.length >= 2){ const sc = rgLit(V, [236, 240, 238], day, haze, AIR), sa = 0.55*(1 - haze*0.7), lw = Math.max(px(0.6), Math.min(px(3), c*F/Math.max(dd, 1e-9)*0.08)); gQuad(shore[0], shore[1], lw, sc, sa); if(shore.length === 4) gQuad(shore[2], shore[3], lw, sc, sa); } }
+      else if(wp.length >= 3) rsPoly(x, wp, rsCss(wc));
+      if(shore.length >= 2 && !GB){ x.strokeStyle = rsCss(rgLit(V, [236, 240, 238], day, haze, AIR), 0.55*(1 - haze*0.7)); x.lineWidth = Math.max(px(0.6), Math.min(px(3), c*F/Math.max(dd, 1e-9)*0.08)); x.beginPath(); x.moveTo(shore[0][0], shore[0][1]); x.lineTo(shore[1][0], shore[1][1]); if(shore.length === 4){ x.moveTo(shore[2][0], shore[2][1]); x.lineTo(shore[3][0], shore[3][1]); } x.stroke(); }
       // (with the clock the glints move on the water: on the water's own gentle clock, drifting with the wind, each rising
       //  and fading as it comes and goes, never on or off between frames; docs/prior-art/ringworld-life-and-views.md §4, §7)
       if(nWet === 4 && dd < W*2.5){ const ws = Math.max(W*0.004, c*2), gv = V.time ? wn(am + WT*W*0.0000012*Math.cos(WA), zm + WT*W*0.0000012*Math.sin(WA), ws, 1) : wn(am, zm, ws, 1), gk = rsSmooth(0.5, 0.36, gv)*(0.3 + 0.7*day);
-        if(gk > 0.02){ const [bx0, bx1, by0, by1] = q.box, n3 = wn(am, zm, ws, 3); x.fillStyle = rsCss(rsMix(wc, [255, 255, 255], 0.35*day + 0.05), gk*(1 - haze)); x.fillRect(bx0 + (bx1 - bx0)*0.2*n3, (by0 + by1)/2, (bx1 - bx0)*(0.3 + 0.5*n3), Math.max(px(0.6), (by1 - by0)*0.08)); } } }
+        if(gk > 0.02){ const [bx0, bx1, by0, by1] = q.box, n3 = wn(am, zm, ws, 3), gc = rsMix(wc, [255, 255, 255], 0.35*day + 0.05), ga = gk*(1 - haze), gx = bx0 + (bx1 - bx0)*0.2*n3, gy = (by0 + by1)/2, gw = (bx1 - bx0)*(0.3 + 0.5*n3), gh = Math.max(px(0.6), (by1 - by0)*0.08);
+          if(GB) gQuad([gx, gy + gh/2], [gx + gw, gy + gh/2], gh, gc, ga); else { x.fillStyle = rsCss(gc, ga); x.fillRect(gx, gy, gw, gh); } } } }
     mkPath.push(poly); const g = DKG(dd); let dl = dkPolys.get(g); if(!dl){ dl = []; dkPolys.set(g, dl); } dl.push(poly); };
+  // (the land and what lies flat on it or stands in its lines, the ways, the fields and the walls, far to near)
+  // (on the GPU the land is laid first in one pass, then the ways, fields and walls on it, far to near, each clipped by the
+  //  land nearer than its depth bucket, consecutive ones of a bucket under one clip; on the canvas they go in among the cells)
+  const paintFloor = it => { if(it.q) paintCell(it.q); else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys); else if(it.pc) paintFieldPiece(it.pc); else paintWallPiece(it.wp); };
+  let gpuLaid = false;
+  if(ringGpuReady()){ GB = ringGpuBatch(); for(let k = shown.length - 1; k >= 0; k--) paintCell(shown[k]);
+    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s }); GB = null;
+    if(cv){ x.drawImage(cv, 0, 0); gpuLaid = true; } else { mkPath.length = 0; dkPolys.clear(); } }
+  if(gpuLaid){ floor.sort((p, q) => q.dd - p.dd); let clipJ = -2;
+    for(const it of floor){ const j = slot(it.r ? it.r.dd : it.pc ? it.pc.dd : it.wp.dd);
+      if(j !== clipJ){ if(clipJ !== -2) x.restore(); clipJ = j; x.save(); const n = j >= 0 ? lay[j].near : null;
+        if(n){ x.beginPath(); x.moveTo(-px(4), -wh); for(let c = 0; c < NCOL; c++) x.lineTo(c*CW, Math.min(wh*2, n[c] + px(0.5))); x.lineTo(ww + px(4), Math.min(wh*2, n[NCOL - 1] + px(0.5))); x.lineTo(ww + px(4), -wh); x.closePath(); x.clip(); } }
+      paintFloor(it); }
+    if(clipJ !== -2) x.restore(); }
+  else { for(const q of shown) floor.push({ dd: q.dd, q }); floor.sort((p, q) => q.dd - p.dd); for(const it of floor) paintFloor(it); }
+  // (then the things: one the nearer land reaches up into, where its box meets the horizon of its bucket, drawn inside a
+  //  clip that cuts that land's shape out of the page there; the rest, most of them, drawn freely)
   items.sort((p, q) => q.dd - p.dd);
-  for(const it of items){
-    if(it.q) paintCell(it.q);
-    else if(it.t){ const t = it.t; if(t.o) drawWork(t.o, t.l); else if(t.ok){ cur = t; t.draw(t.l); } }
-    else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys);
-    else if(it.pc) paintFieldPiece(it.pc);
-    else if(it.wp) paintWallPiece(it.wp);
-    else if(it.mist){ x.fillStyle = rsCss(MISTC, MISTB); x.fillRect(0, 0, ww, wh); } }
+  for(const it of items){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
+    if(n && B){ const c0 = Math.max(0, col(B[0]) - 1), c1 = Math.min(NCOL - 1, col(B[1]) + 1), yb = B[3] + px(2); for(let c = c0; c <= c1; c++) if(n[c] < yb){ clip = true; break; }
+      if(clip){ const BIG = wh*4, x0 = c0*CW, x1 = c1*CW; x.save(); x.beginPath(); x.moveTo(-BIG, -BIG); x.lineTo(ww + BIG, -BIG); x.lineTo(ww + BIG, BIG); x.lineTo(x1, BIG);
+        for(let c = c1; c >= c0; c--) x.lineTo(c*CW, Math.min(BIG, n[c] + px(0.5))); x.lineTo(x0, BIG); x.lineTo(-BIG, BIG); x.closePath(); x.clip(); } }
+    if(t.o) drawWork(t.o, t.l); else if(t.ok){ cur = t; t.draw(t.l); }
+    if(clip) x.restore(); }
   // the land's mask and its distance (white far, black near), for the parts after
   mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
   for(const g of [...dkPolys.keys()].sort((p, q) => q - p)){ dk.fillStyle = `rgb(${g},${g},${g})`; dk.beginPath(); for(const P of dkPolys.get(g)){ P.forEach((p, k) => k ? dk.lineTo(p[0], p[1]) : dk.moveTo(p[0], p[1])); dk.closePath(); } dk.fill(); }

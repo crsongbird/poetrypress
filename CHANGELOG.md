@@ -4,6 +4,31 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Alniyat (2026-10-26)
+
+- The Ringworld's land is now drawn with WebGPU wherever the browser has it: current Chrome and Edge (including on
+  Android), Safari 26 and Firefox 141. All the land's polygons go in one pass instead of thousands of separate fills.
+  The ground's brush strokes and marks are worked out on the GPU from where each point lies in the world, so they cost
+  the processor nothing and stay put as the camera moves. Browsers without WebGPU, and computers with only a software
+  version of it, draw the land the old way. Adding ?cpuland to the address also draws it the old way, to compare frame
+  times.
+- The land is now laid down whole first, and then everything standing on it. Each thing is trimmed only where nearer
+  land rises in front of it.
+- Hedgerows no longer sit on a flat dark slab. Their bushes come down to the ground in shade, with a soft shadow
+  underneath.
+
+### Under the hood
+- New module ringGpu.js: `ringGpuInit`, `ringGpuBatch` and `ringGpuDraw`, with a WGSL shader that lays the ground's
+  marks on world-fixed grids.
+- The texture worker and the page open WebGPU once at start (`setRingGpu`). Software adapters are refused unless ?softgl
+  is set.
+- The painter's back-to-front step changed. The floor (cells, ways, fields, walls) is drawn first. Things follow, each
+  clipped by its depth bucket's horizon where its box meets it. There are now 96 depth buckets, and mist and fog are
+  folded into the haze by depth (`mistAt`).
+- New tool tools/gpu-ring.mjs draws the WebGPU land above the canvas land in a headless Chromium and times each.
+- The Ringworld suite checks the canvas fallback and the GPU batch.
+- New research notes: docs/prior-art/ringworld-gpu.md (why WebGPU, what moved, and a PS1/PS2 look for the engine).
+
 ## Scorpius–Antares (2026-10-26)
 
 - The ground's painted marks and brush strokes are now fixed to the land itself. They no longer flicker or reshuffle as
@@ -507,19 +532,3 @@ prints it).
 - The preview box is drawn from the page's canvas after each frame is handed to the encoder (`movingShow`), and the
   film made plays from its own file in a video beside it, its address let go when the sheet closes. A stray Python
   cache that slipped into the last release is gone, and ignored from now on.
-
-## Crux–Hadar (2026-10-24)
-
-- Kinesis, a new tab on a desktop after Materia (its glyph ☿, the messenger's mark): the Moving Image's choices as a
-  card in the left column, with the page beside them on the stage. While a film is made the stage shows each frame as
-  it is drawn, at the film's own shape, so you watch it come together. Holding or right-clicking Save image on a
-  desktop opens the tab; on a phone it stays the sheet it was. Set it now… and Set the shot… come back to the tab.
-- While a film is made, nothing else on the page can be touched: the tabs, the other cards, undo and redo, the
-  filmstrip and the keyboard's shortcuts wait, faded, until it is done or stopped, so no change can slip in between two
-  frames.
-
-### Under the hood
-- The film's cards (`#movingBody`) move between the sheet and the Kinesis tab with the layout (`placeKinesis`), as
-  Esoterica's do; their choices are listened to on the cards themselves. `movingInert` makes the rest of the page inert
-  while a film is made, and the preview's scale holds then (`applyPreviewScale`), so the canvas never resizes between
-  frames.

@@ -92,4 +92,10 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   const one = marks([[0, 0, c]]), four = marks([[0, 0, c/2], [c/2, 0, c/2], [0, c/2, c/2], [c/2, c/2, c/2]]);
   check(`the ground's marks are the world's, not the mesh's: one cell or four lay the same ones (${one.split('|').length} marks)`, one.length > 0 && one === four); }
 
+// (the land on WebGPU, ringGpu.js: where there is none, Node here, the canvas draws it, and the batch of triangles holds
+// what it is given)
+{ const G = await import('../ringGpu.js'), B = G.ringGpuBatch(), v = k => [k, k + 1, 0.5, 0.5, 0.5, 1, 10*k, 20*k, 1, 1];
+  for(let k = 0; k < 5000; k++) B.tri(v(k), v(k + 1), v(k + 2));
+  check('without WebGPU the land is laid on the canvas, and the GPU batch keeps every triangle it is given', !G.ringGpuReady() && G.ringGpuDraw(B, 64, 64) === null && B.n === 5000*3*G.RG_STRIDE && B.data[(4999*3 + 2)*G.RG_STRIDE] === 5001); }
+
 done();

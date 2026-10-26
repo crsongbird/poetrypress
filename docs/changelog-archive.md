@@ -2,6 +2,22 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Crux–Hadar (2026-10-24)
+
+- Kinesis, a new tab on a desktop after Materia (its glyph ☿, the messenger's mark): the Moving Image's choices as a
+  card in the left column, with the page beside them on the stage. While a film is made the stage shows each frame as
+  it is drawn, at the film's own shape, so you watch it come together. Holding or right-clicking Save image on a
+  desktop opens the tab; on a phone it stays the sheet it was. Set it now… and Set the shot… come back to the tab.
+- While a film is made, nothing else on the page can be touched: the tabs, the other cards, undo and redo, the
+  filmstrip and the keyboard's shortcuts wait, faded, until it is done or stopped, so no change can slip in between two
+  frames.
+
+### Under the hood
+- The film's cards (`#movingBody`) move between the sheet and the Kinesis tab with the layout (`placeKinesis`), as
+  Esoterica's do; their choices are listened to on the cards themselves. `movingInert` makes the rest of the page inert
+  while a film is made, and the preview's scale holds then (`applyPreviewScale`), so the canvas never resizes between
+  frames.
+
 ## Crux–Acrux (2026-10-24)
 
 - The Ringworld has wild things now, and they move as wild things do. Deer and elk at the edge of the woods graze, lift

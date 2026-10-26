@@ -19,6 +19,8 @@ import { graphScattersGlyphs } from './stepsPatterns.js';
 const ON_PAGE = new Set(['summoning', 'cards']);      // they draw glyphs and card faces in web fonts
 // ?softgl in the address (AGENTS.md §5.5): the workers may light on software WebGL, to test the GPU path without a GPU
 const SOFTGL = typeof location !== 'undefined' && /[?&]softgl\b/.test(location.search || '');
+// ?cpuland: the Ringworld's land on the canvas rather than WebGPU (ringGpu.js), to compare the two on a real machine
+const CPULAND = typeof location !== 'undefined' && /[?&]cpuland\b/.test(location.search || '');
 // A POOL of workers (one per spare core, up to two): two slots — Deep Field's
 // nebula and its stars — are made side by side, and a new wish for a slot
 // whose old texture is still being made starts at once on a free worker. The
@@ -196,7 +198,7 @@ function pump(){
     const f = { id, slot, key: job.key, type: job.type, job, worker, started: now() };
     worker.job = f; inflight.set(slot, f);
     busy(true, job.type);
-    worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts, softgl: SOFTGL });
+    worker.w.postMessage({ id, type: job.type, w: job.w, h: job.h, opts: job.opts, softgl: SOFTGL, cpuland: CPULAND });
   }
   // (then the film's frames ahead, on whatever workers are left free, oldest frame first)
   for(const a of ahead.values()){
@@ -204,7 +206,7 @@ function pump(){
     const worker = pool.find(x => !x.job); if(!worker) break;
     const id = nextId++; a.running = true;
     worker.job = { id, ahead: true, key: a.key, type: a.type, worker, started: now() };
-    worker.w.postMessage({ id, type: a.type, w: a.w, h: a.h, opts: a.opts, softgl: SOFTGL });
+    worker.w.postMessage({ id, type: a.type, w: a.w, h: a.h, opts: a.opts, softgl: SOFTGL, cpuland: CPULAND });
   }
   // (a film over: the extra workers go as they come free)
   if(!filmPool) for(let i = pool.length - 1; i >= POOL_SIZE; i--) if(!pool[i].job){ try { pool[i].w.terminate(); } catch(_){} pool.splice(i, 1); }

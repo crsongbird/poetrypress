@@ -27,6 +27,7 @@
 import { texturesSettled, setDrafting, requestTexture, onTextureReady } from './textureService.js';
 import { STITCH_STYLES, STITCH_LABELS } from './stitches.js';
 import { setBoxFxSoftware, boxFxBackend } from './boxFx.js';
+import { ringGpuInit, setRingGpu } from './ringGpu.js';
 import { forgeNameSurface, openForge, closeForge } from './forge.js';
 import { validateGraph } from './athanor.js';
 import { graphScattersGlyphs } from './stepsPatterns.js';
@@ -1259,6 +1260,9 @@ bindColorField('cardColor2Hex', scheduleRender);
 // For testing the glass on a machine without a GPU (?softgl): allow software
 // WebGL, which the app otherwise declines (it is slower than the CPU path).
 if(typeof location !== 'undefined' && /[?&]softgl\b/.test(location.search || '')) setBoxFxSoftware(true);
+// The Ringworld's land on WebGPU when textures are made on the page itself (no worker): opened once (ringGpu.js);
+// ?cpuland keeps it on the canvas, ?softgl lets it run on a software adapter
+setRingGpu(!(typeof location !== 'undefined' && /[?&]cpuland\b/.test(location.search || '')), typeof location !== 'undefined' && /[?&]softgl\b/.test(location.search || '')); ringGpuInit();
 if(typeof document !== 'undefined' && document.body && document.body.dataset) document.body.dataset.glass = 'pending';
 // (which way the glass runs here — 'gpu' or 'cpu' — for the curious, on the body)
 setTimeout(() => { try { if(document.body && document.body.dataset) document.body.dataset.glass = boxFxBackend(); } catch(e){} }, 0);

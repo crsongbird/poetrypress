@@ -1744,7 +1744,11 @@ export function pkProp(x, X, Y, h, c, kind, R0, px, night = 0){
       for(let k = 0; k < Math.floor(w/(h*0.14)); k++){ const sx = x0 + k*h*0.14, ty = top(k*h*0.14/w); pkPoly(x, [[sx, ty + h*0.05], [sx + h*0.02, ty - h*0.12], [sx + h*0.12, ty - h*0.1], [sx + h*0.13, ty + h*0.05]], pkCss(k % 2 ? stone.body : stone.lit)); } } return; }
   case 'hedge': { // a hedgerow: a long lumpy band of dark green, now and then a tree grown out of it
     const w0 = h*rnd(4, 8), w = c.runW || w0, g = pkMat(c, [44, 82, 46], 0.8), lobes = []; for(let k = 0, nl = c.runW ? Math.max(2, Math.min(9, Math.round(w/(h*0.7)))) : 9; k < nl; k++){ const u = k/(nl - 1) - 0.5; lobes.push([X + u*w, Y - h*rnd(0.35, 0.55), h*rnd(0.4, 0.6)]); }
-    pkPoly(x, [[X - w/2 - h*0.3, Y], [X - w/2 - h*0.3, Y - h*0.4], [X + w/2 + h*0.3, Y - h*0.4], [X + w/2 + h*0.3, Y]], pkCss(g.dark)); pkLobes(x, lobes, { ...c, ...g }, RD, X, Y - h*0.5, w*0.5, px);
+    // (its foot ragged, the lower growth in shade lobe by lobe down to the ground and a soft shadow under it, never a slab
+    //  with a ruler's edge)
+    x.fillStyle = pkCss([12, 16, 14], 0.28); x.beginPath(); x.ellipse(X, Y, w/2 + h*0.35, h*0.12, 0, 0, Math.PI*2); x.fill();
+    for(const [lx, , lr] of lobes){ const r2 = lr*0.75; pkEll(x, lx, Y - r2*0.7, r2*1.1, r2*0.8, pkCss(g.dark)); }
+    pkLobes(x, lobes, { ...c, ...g }, RD, X, Y - h*0.5, w*0.5, px);
     if(R() < (c.runW ? 0.08 : 0.3)) pkTree(x, X + (R() - 0.5)*w*0.6, Y - h*0.2, h*rnd(3, 5), { ...c, ...g, trunk: wood.body }, 'broadleaf', mulberry32((R()*4294967296) >>> 0), px); return; }
   case 'gate': { // a five-bar gate between two thick posts, its diagonal brace
     const w = h*2.8, x0 = X - w/2; for(const s of [0, 1]) box(x0 + s*w - h*0.08, Y - h*1.1, h*0.16, h*1.1, grey, 0.2);
