@@ -236,8 +236,12 @@ export function setFilmPool(on){
   return filmPool || POOL_SIZE;
 }
 
+// (whether the worker drew the Ringworld on WebGPU, as it last said: null until it has drawn one)
+let RING_GPU = null;
+/** Whether the Ringworld was last drawn on WebGPU (true), on the canvas (false), or not yet drawn (null). */
+export const ringDrawnOnGpu = () => RING_GPU;
 function arrived(entry, e){
-  const { id, bitmap, error } = e.data;
+  const { id, bitmap, error } = e.data; if(typeof e.data.gpu === 'boolean') RING_GPU = e.data.gpu;
   const f = entry.job; entry.job = null;
   if(!f || f.id !== id){ pump(); return; }
   if(f.ahead){ if(!bitmap && typeof console !== 'undefined') console.warn('texture worker (ahead):', error); aheadDone(f.key, bitmap || null); pump(); return; }

@@ -1143,3 +1143,14 @@ export const wholeAmt = (E, n, k, d) => Math.max(0.02, E.num(n, k, d)/100);
 export const wholeShare = (E, n, k, d) => E.num(n, k, d)/100;
 /** A choice the SEED makes, the same in every part that asks it (not the part's own random stream): from list, by the seed and a name. */
 export function seedChoice(seed, salt){ let h = 2166136261 ^ (seed >>> 0); for(let i = 0; i < salt.length; i++){ h ^= salt.charCodeAt(i); h = Math.imul(h, 16777619); } return mulberry32(h >>> 0); }
+
+// THE SUN OF A PLACE (moving.js's films and the Ringworld's Time of Day share it; docs/prior-art/ringworld-time.md): a
+// place at 48° in early summer (declination 15°), its elevation and bearing from the hour angle H as the solar
+// calculators give them, so the sun climbs in an arc and sinks slowly along the horizon; on the light dial its tilt the
+// height (the middle overhead, the rim the horizon, past the rim the twilight deepening to night at 18° below)
+export const SUN_LAT = 48*Math.PI/180, SUN_DEC = 15*Math.PI/180;
+export const sunEl = H => Math.asin(Math.sin(SUN_LAT)*Math.sin(SUN_DEC) + Math.cos(SUN_LAT)*Math.cos(SUN_DEC)*Math.cos(H));
+export const sunAz = H => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(SUN_LAT) - Math.tan(SUN_DEC)*Math.cos(SUN_LAT));
+export const sunTilt = el => el >= 0 ? 100*(1 - el/(Math.PI/2)) : 100 + 30*Math.min(1, -el/(18*Math.PI/180));
+/** The sun at an hour of the day (0 to 24, 12 noon) for a heading (the noon sun's bearing on the dial, degrees): [the dial's turn, its tilt]. */
+export function sunAtHour(heading, hour){ const H = (hour - 12)*Math.PI/12; return [((heading + sunAz(H)*180/Math.PI) % 360 + 360) % 360, sunTilt(sunEl(H))]; }

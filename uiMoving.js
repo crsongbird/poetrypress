@@ -10,7 +10,7 @@
 import { $ } from './appOptions.js';
 import { MOVING, fill } from './strings.js';
 import { render, setRenderScale, setSceneFly, setSceneTime, surfaceRequests } from './canvasRenderer.js';
-import { texturesSettled, texturesBusy, setDrafting, setFilmPool, prefetchTexture, adoptPrefetched } from './textureService.js';
+import { texturesSettled, texturesBusy, setDrafting, setFilmPool, prefetchTexture, adoptPrefetched, ringDrawnOnGpu } from './textureService.js';
 import { capsFor, paramsFor } from './textureGenerators.js';
 import { readStore, SPELL_KEY, stripToLook } from './vault.js';
 import { state } from './uiState.js';
@@ -77,10 +77,13 @@ function movingSummary(){
   const [w, h] = movingDims(movingPick('movingAspect', 'page'), movingPick('movingRes', '1080'), fmt), bytes = fmt === 'png' ? n*w*h*1.5 : movingBitrate(w, h, fps)*len/8;
   let text = MOVING.sum.replace('{len}', String(len)).replace('{fps}', String(fps)).replace('{frames}', String(n)).replace('{size}', `${w} × ${h}`)
     .replace('{fmt}', { mp4: 'MP4', webm: 'WebM', png: 'PNG' }[fmt] || fmt).replace('{mb}', bytes >= 1e9 ? (bytes/1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(bytes/1e6)) + ' MB');
+  // (the Ringworld's frames on WebGPU or on the canvas: the canvas is many times slower)
+  if((($('textureType') || {}).value) === 'ringpaint' && ringDrawnOnGpu() !== null) text += ' · ' + (ringDrawnOnGpu() ? MOVING.onGpu : MOVING.onCanvas);
   const span = movingSpan(movingPick('movingMove', 'camera'));
   if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
   // (a push, a pull or a spiral does not come round as a full turn does, unless the film goes there and back)
-  const cam = movingPick('movingMove', 'camera') === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold', ends = cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral, drone: MOVING.endsDrone }[also];
+  const mv = movingPick('movingMove', 'camera'), cam = mv === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold';
+  const ends = mv === 'drone' ? MOVING.endsFlight[movingPick('movingFlight', 'reveal')] : cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral }[also];
   if(ends && movingPick('movingPlay', 'once') !== 'back') text += ' · ' + MOVING.sumEnds.replace('{what}', ends);
   const nm = movingPick('movingMove', 'camera') === 'look' ? 0 : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still').length;
   if(nm) text += ' · ' + (nm === 1 ? MOVING.marksCount1 : MOVING.marksCount.replace('{n}', String(nm)));
@@ -89,7 +92,7 @@ function movingSummary(){
 // (time passing, from its slider: 0 is real time, then five minutes to two days spread by how long it feels, as a log)
 const movingSpanSecs = v => v <= 0 ? 0 : Math.round(300*Math.pow(172800/300, (Math.min(100, v) - 1)/99));
 function movingSpan(move){ const caps = movingRun.caps || {}, timeable = !!(caps.time || caps.dial === 'Daylight');
-  if(!timeable || (move !== 'camera' && move !== 'time')) return 0; const v = movingSpanSecs(+(($('movingSpanSlider') || {}).value) || 0); return move === 'time' ? v || 86400 : v; }
+  if(!timeable || (move !== 'camera' && move !== 'time' && move !== 'drone')) return 0; const v = movingSpanSecs(+(($('movingSpanSlider') || {}).value) || 0); return move === 'time' ? v || 86400 : v; }
 /** The other looks a film can move to: the spells kept in this browser, and the look before the last change. */
 function movingLooks(){
   const out = [];
@@ -106,7 +109,7 @@ export function openMoving(){
   const looks = movingLooks(), pick = $('movingLook');
   if(pick){ pick.innerHTML = ''; for(const l of looks){ const o = document.createElement('option'); o.value = l.value; o.textContent = l.label; pick.appendChild(o); } }
   // (the moves this surface allows: no camera, no Camera round; Time Passing where it keeps a clock, the Ringworld)
-  movingRun.caps = caps; paintMarks(); movingRun.able = { camera: !!caps.camera, light: !!caps.light, time: !!caps.time, look: true };   // (Set it now always offers one)
+  movingRun.caps = caps; paintMarks(); movingRun.able = { camera: !!caps.camera, drone: !!(caps.camera && caps.camera.fly), light: !!caps.light, time: !!caps.time, look: true };   // (Set it now always offers one)
   if(movingRun.pickSet && pick && movingRun.setLook){ pick.value = 'set'; movingSet('movingMove', 'look'); } movingRun.pickSet = false;
   const ln = $('movingLightName'); if(ln) ln.textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light;
   if(!movingRun.able[movingPick('movingMove', 'camera')]){ const first = movingRadios('movingMove').find(r => movingRun.able[r.value]); if(first) movingSet('movingMove', first.value); }
@@ -224,7 +227,7 @@ export function paintMoving(e){
   // (the rest at the ends dimmed where the film loops round: a full round, a light round, time passing)
   const tp = movingPick('movingTurn', '360'), loops = (m === 'camera' && tp === '360' && movingPick('movingPlay', 'once') !== 'back') || m === 'light' || m === 'time';
   const sh = movingRun.shot, si = $('movingShotIs'); if(si) si.textContent = sh ? MOVING.shotIs.replace('{turn}', String(Math.round(sh.turn))).replace('{view}', String(Math.round(sh.view))).replace('{zoom}', String(Math.round(sh.zoom))) : MOVING.shotNone;
-  const on = { movingMarkRow: m !== 'look', movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingShotRow: m === 'camera' && tp === 'shot', movingRestRow: !loops, movingAlsoRow: m === 'camera' && tp !== 'shot', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
+  const on = { movingMarkRow: m !== 'look', movingLookRow: m === 'look', movingFlightRow: m === 'drone', movingTurnRow: m === 'camera', movingShotRow: m === 'camera' && tp === 'shot', movingRestRow: !loops, movingAlsoRow: m === 'camera' && tp !== 'shot', movingSpanRow: timeable && (m === 'camera' || m === 'time' || m === 'drone'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
   for(const [id, ok] of Object.entries(on)){ const row = $(id); if(!row) continue; if(row.classList) row.classList.toggle('off', !ok);
     for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok; }
   for(const r of movingRadios('movingMove')) r.disabled = busy || !able[r.value];
@@ -311,7 +314,7 @@ export async function makeMoving(){
   const sunOwns = move === 'light' || timed || !!lightRun, marks = looked ? [] : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still' && !(sunOwns && (k.id === 'textureLight' || k.id === 'textureLightTilt')))
     .map((k, q) => ({ ...k, ...movingRun.marks[k.key], el: $(k.id), v0: num(k.id), ph: 1.3 + q*2.17, step0: ($(k.id) || {}).step }));
   for(const mk of marks) if(mk.el && mk.el.step !== undefined) mk.el.step = 'any';   // (a range input rounds to its step: a sway would stair-step)
-  const also = move === 'camera' && !toShot ? movingPick('movingAlso', 'hold') : 'hold', view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100, shot = toShot ? { ...movingRun.shot } : null;
+  const also = move === 'camera' && !toShot ? movingPick('movingAlso', 'hold') : 'hold', flightK = movingPick('movingFlight', 'reveal'), view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100, shot = toShot ? { ...movingRun.shot } : null;
   // (on the Ringworld the light dial is the sun: a Daylight Round is one day of it; Time Passing, or the camera turning
   //  while time passes (Ruby: "time should pass during the camera pan"), as long as was chosen, the scene's clock running
   //  with it, so its clouds drift, its stars wheel and its lights flicker as the hours go; from the light as it is, or
@@ -322,13 +325,15 @@ export async function makeMoving(){
   const clock = sun ? filmHours(sun, (timed ? spanS : 86400)/3600) : null;   // (dawn and dusk given more of the film)
   // (how far along the move frame i is: a full round, or there and back, comes round to where it began so the film
   //  loops; a part turn and a move to a look end where they go; evenly, or eased in and out)
-  const tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: looked || toShot || (move === 'camera' && turn < 360), eased, rest: looked || toShot || (move === 'camera' && turn < 360) || back ? rest : 0 });
+  const goes = looked || toShot || move === 'drone' || (move === 'camera' && turn < 360), tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: goes, eased, rest: goes || back ? rest : 0 });
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
   // FRAME i's dials and clock (the moves that turn a dial or run the clock; a move between looks is placed below)
   // (a surface that keeps a clock runs it in every film: in real time, so the grass sways and the drones hover as
   //  the camera turns; Time Passing runs it fast)
-  const sunAt = hrs => { const [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); };
+  // (the Ringworld with its Time of Day set: the hours carried on its knob, the dial left as the ring's heading)
+  const p9 = $('texP9'), byHour = ((($('textureType') || {}).value) === 'ringpaint') && p9 && +p9.value >= 0.5, hour0 = byHour ? (off === null ? (+p9.value - 1)/99*24 : 12 - SUN_DAY/2 + off) : 0;
+  const sunAt = hrs => { if(byHour){ p9.value = String(1 + (((hour0 + hrs) % 24) + 24) % 24/24*99); return; } const [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); };
   // (the Ringworld's dusk comes round the way the first frame's light says, the whole film long)
   const side = Math.sin((sun ? sun(clock(0))[0] : light0)*Math.PI/180) < 0 ? -1 : 1;
   const place = i => { const u = along(i);
@@ -338,6 +343,9 @@ export async function makeMoving(){
     if(move === 'camera' && shot){ const c = shotAlong({ turn: cam0, view: view0, zoom: zoom0 }, shot, u); $('cameraTurn').value = String(c.turn); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); }
     else if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
       if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0, lenS); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); if(c.fly) setSceneFly(c.fly); } }
+    // (a drone flight its own move: the camera's turn held where it was set, the flight chosen carrying the eye; eased in
+    //  and out by its own easing, so the film's is left even)
+    else if(move === 'drone'){ const c = cameraAlso('drone', u, view0, zoom0, lenS, flightK); if(c.fly) setSceneFly(c.fly); }
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); }
     if(lightRun){ const [a, tl] = lightRun.sun(lightRun.H*u); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); }
     for(const mk of marks) if(mk.el) mk.el.value = String(markValue(mk, i/n)); };

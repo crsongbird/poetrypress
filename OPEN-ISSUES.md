@@ -108,16 +108,14 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     kept for the small things and people; roads that never
     cross needlessly, hover over the ground or go nowhere; no city block left without buildings; the controls panel to
     take any number of on/off switches, shown sensibly; for the Ringworld switches for the weather, the costlier effects
-    and a retro mode (the PlayStation look without its jitter); the drone flight switching off the camera settings it
-    overrides, with more than one flight to choose, in a menu ordered so what switches others off stands above them.
+    and a retro mode (the PlayStation look without its jitter); the rest of the menus ordered so what switches others off
+    stands above them.
   - RUBY'S NOTES (2026-10-26), what is left: the GPU path's next steps (below); many objects lit poorly, and billboards to become 3D objects; the reflections; pop-in and drawing artifacts still in a
     drone film; the happenings taken further (people meeting robots, a fox stalking birds, a hawk stooping on a hare,
     robot wars on a larger scale, groups following the roads); the PS1/PS2 look as a switch of the engine "WITHOUT the
     PS1's jitter and swimming textures, but get all the rest of the things in there" (docs/prior-art/ringworld-gpu.md §3).
-  - THE DRONE SHOT, what is left: more flights (a dronie flying back and up, a rocket straight up, an orbit round the
-    subject, a flight that follows a road or a river), banking into a turn; the far land's painterly height (exf) is by the
-    eye's distance, so the far ranges change their height a little as a long flight nears them; a film's frames are still
-    about as slow as a still of what the drone sees (more land and woods in view from a height); the GPU path is the cure.
+  - THE DRONE SHOT, what is left: a flight that follows a road or a river, banking into a turn (the Ringworld is now a frozen demo:
+    these go to Vulpea Mechanória).
   - RUBY'S NOTES (2026-10-25, 22:25), what is left: raise the standard of the other textures and items to the new
     painted style (a tree near the eye going see-through as a ghost over the view; the small orange crossed things lying
     in the magic world's grass); city buildings laid in their blocks,

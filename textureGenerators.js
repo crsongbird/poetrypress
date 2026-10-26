@@ -205,7 +205,7 @@ export const TEXTURE_CAPS = {
   skyring:       { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse', seeded:{ turn:[0, 360], view:[8, 70], zoom:[80, 145] } } },
   ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], time:true, light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', fly:true, seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },   // (View: overhead to across the water)
   // the dial is where the rain comes from (lightDeg: where it starts when chosen — straight down, as before)
@@ -530,7 +530,7 @@ function cameraOf(type, opts){
   return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))),
     ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}), ...(num(c.fps, 0) > 0 ? { fps: Math.round(num(c.fps, 0)) } : {}) } : {}) } : {}),
     // (and where the eye has been carried, in a drone shot: metres along its heading and up, to a centimetre; none at rest)
-    ...(c.fly && c.fly.route === 'seed' ? { fly: { route: 'seed', u: Math.round(Math.max(0, Math.min(1, num(c.fly.u, 0)))*10000)/10000, secs: r2(Math.max(1, num(c.fly.secs, 10))) } }
+    ...(c.fly && c.fly.route === 'seed' ? { fly: { route: 'seed', u: Math.round(Math.max(0, Math.min(1, num(c.fly.u, 0)))*10000)/10000, secs: r2(Math.max(1, num(c.fly.secs, 10))), ...(['orbit', 'dronie', 'rise'].includes(c.fly.flight) ? { flight: c.fly.flight } : {}) } }
       : c.fly && (num(c.fly.d, 0) || num(c.fly.to, 0)) ? { fly: { d: r2(num(c.fly.d, 0)), rise: r2(num(c.fly.rise, 0)), head: r2(num(c.fly.head, 0)), to: r2(num(c.fly.to, num(c.fly.d, 0))) } } : {}) };
 }
 // THE PAGE'S TRUE SHAPE (Ruby: the saved image's board was not the preview's): the parts that grow by chance on

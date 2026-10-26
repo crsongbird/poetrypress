@@ -216,7 +216,9 @@ export const TEXTURE_PARAMS = {
                   // how far and how finely the land is drawn (Ruby: "low, medium, high, ultra … The current values represent medium")
                   sliderOf('brush', 'Detail', 37, { ticks:[12,37,62,88], names:['Low','Medium','High','Ultra'] }),
                   // the small things of the streets and roads: signs, boards, lamps, benches, bikes, cars (Works is the rest)
-                  sliderOf('clutter', 'Clutter', 50)],
+                  sliderOf('clutter', 'Clutter', 50),
+                  // the hour (Ruby, 2026-10-26): at 0 the light dial sets the sun as ever; else the hour does, the dial's turn the ring's heading
+                  sliderOf('hour', 'Time of Day', 0, { ticks:[0, 26, 50, 75, 100], names:['By the dial', 'Dawn', 'Noon', 'Dusk', 'Midnight'] })],
   // RAIN ON WATER (chains.js 'rainwater'): each drop a ring wave on still water; View looks across it to the horizon
   rainwater:     [sliderOf('zoom', 'Ripple Size', 100, { min:40, max:250, unit:'%' }),
                   sliderOf('amt', 'Rain', 50),

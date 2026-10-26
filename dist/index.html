@@ -4179,13 +4179,17 @@ but bear with me, dear}]/jitter:200
       <!-- (FOUR GROUPS, picture first: what moves, how long, how big, what file; docs/prior-art/film-export.md §5. Rows
            that do not apply to the chosen move stay where they are, dimmed, so nothing moves under the hand) -->
       <fieldset class="film-group"><legend data-str="moving.g_move">Move</legend>
-        <div class="film-moves film-pick"><label><input type="radio" name="movingMove" value="camera" checked><span class="radio-btn"><b data-str="moving.camera">Camera round</b></span></label><label><input type="radio" name="movingMove" value="light"><span class="radio-btn"><b id="movingLightName" data-str="moving.light_round">Light round</b></span></label><label><input type="radio" name="movingMove" value="time"><span class="radio-btn"><b data-str="moving.time">Time passing</b></span></label><label><input type="radio" name="movingMove" value="look"><span class="radio-btn"><b data-str="moving.look">To another look</b></span></label></div>
+        <div class="film-moves film-pick"><label><input type="radio" name="movingMove" value="camera" checked><span class="radio-btn"><b data-str="moving.camera">Camera round</b></span></label><label><input type="radio" name="movingMove" value="drone"><span class="radio-btn"><b data-str="moving.drone">Drone flight</b></span></label><label><input type="radio" name="movingMove" value="light"><span class="radio-btn"><b id="movingLightName" data-str="moving.light_round">Light round</b></span></label><label><input type="radio" name="movingMove" value="time"><span class="radio-btn"><b data-str="moving.time">Time passing</b></span></label><label><input type="radio" name="movingMove" value="look"><span class="radio-btn"><b data-str="moving.look">To another look</b></span></label></div>
+      <!-- (Ruby, 2026-10-26: a drone flight its own move, above the camera's own choices it takes over, and more than one
+           flight to choose: the rows it switches off dimmed below it) -->
+      <div class="film-sub" id="movingFlightRow"><span class="film-k" id="movingFlightRowLabel" data-str="moving.flight">Flight</span>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingFlightRowLabel"><label><input type="radio" name="movingFlight" value="reveal" checked><span class="radio-btn"><b data-str="moving.f_reveal">Reveal</b><small data-str="moving.f_reveal_c">out past a sight</small></span></label><label><input type="radio" name="movingFlight" value="orbit"><span class="radio-btn"><b data-str="moving.f_orbit">Orbit</b><small data-str="moving.f_orbit_c">round a sight</small></span></label><label><input type="radio" name="movingFlight" value="dronie"><span class="radio-btn"><b data-str="moving.f_dronie">Dronie</b><small data-str="moving.f_dronie_c">back and up</small></span></label><label><input type="radio" name="movingFlight" value="rise"><span class="radio-btn"><b data-str="moving.f_rise">Rise</b><small data-str="moving.f_rise_c">straight up</small></span></label></div></div>
       <div class="film-sub" id="movingLookRow"><label class="film-k" for="movingLook" data-str="moving.other">The other look</label><div class="moving-look-pick"><select id="movingLook"></select><button class="ghost moving-set" id="movingSetNow" type="button" data-str="moving.set_now">Set it now…</button></div></div>
       <div class="film-sub" id="movingTurnRow"><span class="film-k" id="movingTurnRowLabel" data-str="moving.turn">Turn</span>
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingTurnRowLabel"><label><input type="radio" name="movingTurn" value="90"><span class="radio-btn"><b data-str="moving.turn90">Quarter</b></span></label><label><input type="radio" name="movingTurn" value="180"><span class="radio-btn"><b data-str="moving.turn180">Half</b></span></label><label><input type="radio" name="movingTurn" value="360" checked><span class="radio-btn"><b data-str="moving.turn360">Full round</b></span></label><label><input type="radio" name="movingTurn" value="shot"><span class="radio-btn"><b data-str="moving.shot">To a shot</b></span></label></div></div>
       <div class="film-sub" id="movingShotRow"><span class="film-k" data-str="moving.the_shot">The shot</span><div class="moving-look-pick"><span class="moving-shot-is" id="movingShotIs" data-str="moving.shot_none">Not set yet</span><button class="ghost moving-set" id="movingSetShot" type="button" data-str="moving.set_shot">Set the shot…</button></div></div>
       <div class="film-sub" id="movingAlsoRow"><span class="film-k" id="movingAlsoRowLabel" data-str="moving.also">Also</span>
-        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingAlsoRowLabel"><label><input type="radio" name="movingAlso" value="hold" checked><span class="radio-btn"><b data-str="moving.a_hold">Nothing</b></span></label><label><input type="radio" name="movingAlso" value="in"><span class="radio-btn"><b data-str="moving.a_in">Push in</b></span></label><label><input type="radio" name="movingAlso" value="out"><span class="radio-btn"><b data-str="moving.a_out">Pull back</b></span></label><label><input type="radio" name="movingAlso" value="tilt"><span class="radio-btn"><b data-str="moving.a_tilt">Tilt</b></span></label><label><input type="radio" name="movingAlso" value="spiral"><span class="radio-btn"><b data-str="moving.a_spiral">Spiral out</b></span></label><label><input type="radio" name="movingAlso" value="drone"><span class="radio-btn"><b data-str="moving.a_drone">Drone flight</b></span></label></div></div>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingAlsoRowLabel"><label><input type="radio" name="movingAlso" value="hold" checked><span class="radio-btn"><b data-str="moving.a_hold">Nothing</b></span></label><label><input type="radio" name="movingAlso" value="in"><span class="radio-btn"><b data-str="moving.a_in">Push in</b></span></label><label><input type="radio" name="movingAlso" value="out"><span class="radio-btn"><b data-str="moving.a_out">Pull back</b></span></label><label><input type="radio" name="movingAlso" value="tilt"><span class="radio-btn"><b data-str="moving.a_tilt">Tilt</b></span></label><label><input type="radio" name="movingAlso" value="spiral"><span class="radio-btn"><b data-str="moving.a_spiral">Spiral out</b></span></label></div></div>
       <div class="film-sub" id="movingMarkRow"><label class="film-k" for="movingMarkCtl" data-str="moving.marks">Also moving</label>
         <div class="moving-marks"><select id="movingMarkCtl"></select><select id="movingMarkHow" aria-label="How it moves"><option value="still" data-str="moving.m_still">Still</option><option value="sway" data-str="moving.m_sway">Sways</option><option value="sweep" data-str="moving.m_sweep">Sweeps</option><option value="drift" data-str="moving.m_drift">Drifts</option></select><select id="movingMarkAmt" aria-label="How far"><option value="0.1" data-str="moving.m_little">A little</option><option value="0.25" data-str="moving.m_some" selected>Some</option><option value="0.5" data-str="moving.m_much">Much</option></select><select id="movingMarkTimes" aria-label="How many times"><option value="1" data-str="moving.m_once">Once</option><option value="2" data-str="moving.m_twice">Twice</option><option value="3" data-str="moving.m_3">3 times</option><option value="4" data-str="moving.m_4">4 times</option></select></div>
         <span class="moving-marks-sum" id="movingMarksSum"></span></div>
@@ -6477,6 +6481,17 @@ const wholeAmt = (E, n, k, d) => Math.max(0.02, E.num(n, k, d)/100);
 const wholeShare = (E, n, k, d) => E.num(n, k, d)/100;
  
 function seedChoice(seed, salt){ let h = 2166136261 ^ (seed >>> 0); for(let i = 0; i < salt.length; i++){ h ^= salt.charCodeAt(i); h = Math.imul(h, 16777619); } return mulberry32(h >>> 0); }
+
+
+
+
+
+const SUN_LAT = 48*Math.PI/180, SUN_DEC = 15*Math.PI/180;
+const sunEl = H => Math.asin(Math.sin(SUN_LAT)*Math.sin(SUN_DEC) + Math.cos(SUN_LAT)*Math.cos(SUN_DEC)*Math.cos(H));
+const sunAz = H => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(SUN_LAT) - Math.tan(SUN_DEC)*Math.cos(SUN_LAT));
+const sunTilt = el => el >= 0 ? 100*(1 - el/(Math.PI/2)) : 100 + 30*Math.min(1, -el/(18*Math.PI/180));
+ 
+function sunAtHour(heading, hour){ const H = (hour - 12)*Math.PI/12; return [((heading + sunAz(H)*180/Math.PI) % 360 + 360) % 360, sunTilt(sunEl(H))]; }
 
 
 /* ==== paintKit.js ==== */
@@ -21050,13 +21065,14 @@ const RG_LIGHTS = { wilds: [[226, 255, 170], [255, 214, 150]], cities: [[255, 21
 const RG_ROUTES = new Map(), RG_DRONE = { speed: 12, climb: 3, weave: 0.02 };
 function rgDroneRoute(seed, ctx){
   const RT = rgDroneRoute0(seed, ctx); rgDroneRoute.last = RT; return RT; }
-function rgDroneRoute0(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key = [seed, W.toFixed(6), zS.toFixed(6), Math.round(look), Math.round(secs*10)].join('|');
+function rgDroneRoute0(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, flight = RG_FLIGHTS.includes(ctx.flight) ? ctx.flight : 'reveal', key = [seed, W.toFixed(6), zS.toFixed(6), Math.round(look), Math.round(secs*10), flight].join('|');
   let RT = RG_ROUTES.get(key); if(RT) return RT;
   const M = W*0.00025, Lr = Math.max(40, RG_DRONE.speed*secs)*M, h0 = look*Math.PI/180, hS = (a, z) => LK.height(a, z, W*0.002), R0 = rgRand(seed | 0, 1960);
   const score = (a, z) => { if(Math.abs(z) > W*0.44) return -9; const e = hS(a, z), sea = TR.sea; let wet = 0, ring = 0;
     for(let q = 0; q < 8; q++){ const an = q/8*Math.PI*2, e2 = hS(a + Math.cos(an)*60*M, z + Math.sin(an)*60*M); if(e2 <= sea) wet++; ring += e2; }
     const coast = e > sea && wet > 0 && wet < 6 ? 1.2 : 0, lake = e <= sea ? 0.45 : 0, prom = rgClamp((e - ring/8)/(25*M))*1.0, w = ctx.worldAt(a, z), town = w === 'wilds' || w === 'magic' ? ctx.cityAt(a, z, 0.12)*1.2 : ctx.cityAt(a, z, (RG_PROF[w] || RG_PROF.wilds).cv*(0.3 + 0.9*ctx.works))*1.1;
     return coast + lake + prom + town + 0.2*R0(); };
+  if(flight !== 'reveal'){ RT = rgDroneFlight(flight, ctx, { M, Lr, h0, hS, R0, score }); if(RG_ROUTES.size > 16) RG_ROUTES.clear(); RG_ROUTES.set(key, RT); return RT; }
   let best = null, bs = -Infinity;
   for(let k = 0; k <= 10; k++) for(let r = 0.35; r <= 0.75; r += 0.1){ const an = h0 + (k/10 - 0.5)*2.4, a = Math.cos(an)*Lr*r, z = zS + Math.sin(an)*Lr*r, v = score(a, z) + 0.35*Math.cos(an - h0);
     if(v > bs){ bs = v; best = { a, z, an, r }; } }
@@ -21100,6 +21116,41 @@ function rgDroneRoute0(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, ke
 
 
 
+const RG_FLIGHTS = ['reveal', 'orbit', 'dronie', 'rise'];
+function rgDroneFlight(flight, ctx, { M, Lr, h0, hS, R0, score }){
+  const { LK, W, zS, secs } = ctx, P0 = [0, zS], angW = d => { while(d > Math.PI) d -= 2*Math.PI; while(d < -Math.PI) d += 2*Math.PI; return d; };
+  const H = Math.max(30, Math.min(90, RG_DRONE.climb*secs*2.6)), forested = (a, z) => { const e = LK.height(a, z, W*0.002), bw = LK.biomes(a, z, e); let f = 0; for(let i = 0; i < LK_BIOMES.length; i++) f += (LK_FORESTED[LK_BIOMES[i].name] || 0)*bw[i]; return [e, f]; };
+  let posAt, yawAt, liftAt, riseAt;
+  if(flight === 'orbit'){
+
+    const sweep = Math.PI*(1 + 0.3*R0())*(R0() < 0.5 ? -1 : 1), R = Math.max(25*M, Math.min(Lr*0.45, Lr/Math.abs(sweep)));
+    let C = [P0[0] + Math.cos(h0)*R, P0[1] + Math.sin(h0)*R], cs = -Infinity;
+    for(let k = 0; k <= 8; k++){ const an = h0 + (k/8 - 0.5)*1.2, c = [P0[0] + Math.cos(an)*R, P0[1] + Math.sin(an)*R], v = score(c[0], c[1]) + 0.3*Math.cos(an - h0); if(v > cs){ cs = v; C = c; } }
+    const th0 = Math.atan2(P0[1] - C[1], P0[0] - C[0]), Rr = Math.hypot(P0[0] - C[0], P0[1] - C[1]);
+    posAt = u => [C[0] + Math.cos(th0 + sweep*u)*Rr, Math.max(-W*0.45, Math.min(W*0.45, C[1] + Math.sin(th0 + sweep*u)*Rr))];
+    const y0 = angW(th0 + Math.PI - h0); yawAt = u => y0 + sweep*u;
+    liftAt = u => -(10 + 6*Math.sin(Math.PI*u)); riseAt = u => H*(0.35 + 0.25*Math.sin(Math.PI*u)); }
+  else if(flight === 'dronie'){
+
+    const D = Lr*0.85, back = h0 + Math.PI;
+    posAt = u => [P0[0] + Math.cos(back)*D*u, Math.max(-W*0.45, Math.min(W*0.45, P0[1] + Math.sin(back)*D*u))];
+    yawAt = () => 0; riseAt = u => H*(0.15 + 1.05*u);
+    liftAt = u => { const hh = 2 + riseAt(u), dd = D/M*u + 40; return -Math.min(40, 6 + 0.6*Math.atan2(hh, dd)*180/Math.PI); }; }
+  else {
+
+    const turn = (R0() < 0.5 ? -1 : 1)*Math.PI/3;
+    posAt = () => P0; yawAt = u => turn*u; riseAt = u => H*(0.1 + 1.15*u); liftAt = u => -(6 + 34*u*u); }
+  const path = []; for(let k = 0; k <= 8; k++) path.push(posAt(k/8));
+  return { subject: posAt(0.5), path, at: u => { u = Math.max(0, Math.min(1, u)); const [a, z] = posAt(u);
+    let gA = -Infinity, fo = 0; for(let k = 0; k <= 5; k++){ const [a2, z2] = posAt(Math.min(1, u + k*0.012)), [e2, f2] = forested(a2, z2); gA = Math.max(gA, e2); fo = Math.max(fo, f2); }
+    return { a, z, yaw: yawAt(u)*180/Math.PI, lift: liftAt(u), rise: riseAt(u), clear: 4 + (14 + 24*rsSmooth(0.1, 0.5, fo))*rsSmooth(0, 0.12, u), ground: gA }; } };
+}
+
+
+
+
+
+
 function rgWorldOf(seed, v){
   const others = RG_WORLDS.slice(1), wt = [1.2, 0.7, 0.9, 1, 1], R = k => mnHash(seed | 0, k, 4242), list = ['wilds'];
   const n = 2 + (R(1) < 0.45 ? 1 : 0) + (R(2) < 0.15 ? 1 : 0);
@@ -21124,7 +21175,12 @@ let rgPx = v => v;
 
 
 function rgView(E, n, ww, wh){
-  const { num, input } = E, toward = input(n, 2), up = input(n, 3), zoom = input(n, 4), sun = input(n, 5), from = input(n, 6);
+  const { num, input } = E, toward = input(n, 2), up = input(n, 3), zoom = input(n, 4), sun0 = input(n, 5), from0 = input(n, 6);
+
+
+
+
+  const hourK = num(n, 'hour', 0), [sun, from] = hourK >= 0.5 ? (([d, t]) => [t/100, d/360])(sunAtHour(typeof from0 === 'number' ? from0*360 : (E.ctx.light ?? 315), (hourK - 1)/99*24)) : [sun0, from0];
   const daylight = typeof sun === 'number' ? 100*(sun <= 1 ? 1 - 0.5*sun : Math.max(0, 0.5 - (sun - 1)/0.3*0.5)) : num(n, 'daylight', 80);
   const seed = ((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
   const p = ringParams({ band: num(n, 'band', 45), walls: num(n, 'walls', 25), altitude: num(n, 'altitude', 15), look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0),
@@ -21194,7 +21250,7 @@ function rgView(E, n, ww, wh){
 
 
 
-  if(FLY && FLY.route === 'seed'){ const RT = rgDroneRoute(seed, { LK, W, zS: L.zS, look: p.look, secs: FLY.secs || 10, TR, worldAt, cityAt, works: num(n, 'works', 50)/100 }), q = RT.at(FLY.u || 0);
+  if(FLY && FLY.route === 'seed'){ const RT = rgDroneRoute(seed, { LK, W, zS: L.zS, look: p.look, secs: FLY.secs || 10, flight: FLY.flight, TR, worldAt, cityAt, works: num(n, 'works', 50)/100 }), q = RT.at(FLY.u || 0);
     L.a0 = q.a; L.z0 = q.z; L.path = RT.path;
     const vH = LK.height(L.a0, L.z0, W*0.001), eE = Math.max(v0 + L.hc + q.rise*MM, Math.max(vH, q.ground) + Math.max(L.hc*0.4, q.clear*MM)); L.hc = eE - vH; L.Px = 1 - eE;
 
@@ -21332,6 +21388,9 @@ const RG_MARKS = Array.from({ length: 9 }, () => ({ L: rgPathRec(), D: rgPathRec
 
 
 
+
+
+let RG_MARK_K = 1;
 const RG_BRUSH_TINTS = [[214, 186, 120], [96, 128, 150], [255, 248, 228], [40, 46, 52], [150, 170, 96]];
 
 
@@ -21354,7 +21413,7 @@ function rgGroundGrid(P, G, target, salt, fn){
 function rgBrush(x, P, q, c, px, s, G){
   const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0; if(w < px(5) || h < px(2)) return;
   x.lineCap = 'round';
-  rgGroundGrid(P, G, px(46), 1, (X, Y, sp, al, R, a, z) => { const busy = mnValue(a/(G.M*90), z/(G.M*90), s + 941); if(busy < 0.42 || R() > (busy - 0.3)*1.6) return;
+  rgGroundGrid(P, G, px(46)*RG_MARK_K, 1, (X, Y, sp, al, R, a, z) => { const busy = mnValue(a/(G.M*90), z/(G.M*90), s + 941); if(busy < 0.42 || R() > (busy - 0.3)*1.6) return;
     const len = sp*(0.5 + 0.5*R()), an = (R() - 0.5)*0.5, tint = RG_BRUSH_TINTS[Math.floor(R()*RG_BRUSH_TINTS.length)], ca = Math.cos(an), sa = Math.sin(an)*0.45;
     x.strokeStyle = rsCss(rsMix(c, tint, 0.2 + 0.14*R()), 0.62*al); x.lineWidth = Math.max(px(1.2), sp*(0.18 + 0.16*R()));
     x.beginPath(); x.moveTo(X - ca*len*0.5, Y - sa*len*0.5); x.quadraticCurveTo(X, Y - sp*0.06, X + ca*len*0.5, Y + sa*len*0.5); x.stroke(); });
@@ -21364,7 +21423,7 @@ function rgGroundMarks(x, P, q, kind, c, px, G){
   const lite = rsMix(c, [255, 250, 232], 0.16), dark = rsMix(c, [0, 0, 0], 0.2);
 
   for(const B of RG_MARKS) B.on = false; let any = false;
-  rgGroundGrid(P, G, px(26), 2, (X, Y, sp, al, R) => { const u = R(), r = sp*(0.22 + 0.2*R()), B = RG_MARKS[Math.round(al*8)];
+  rgGroundGrid(P, G, px(26)*RG_MARK_K, 2, (X, Y, sp, al, R) => { const u = R(), r = sp*(0.22 + 0.2*R()), B = RG_MARKS[Math.round(al*8)];
     if(!B.on){ B.L.reset(); B.D.reset(); B.sp = 0; B.on = true; } any = true; const L = B.L, D = B.D;
     if(RG_GRASSY[kind]){ const lb = r*(kind === 'steppe' || kind === 'savanna' ? 0.9 : 0.7), Pq = u < 0.5 ? L : D, lean = (R() - 0.5)*lb*0.6;
       Pq.moveTo(X - lb*0.25, Y); Pq.lineTo(X - lb*0.3 + lean, Y - lb); Pq.moveTo(X, Y); Pq.lineTo(X + lean*0.5, Y - lb*1.2); Pq.moveTo(X + lb*0.25, Y); Pq.lineTo(X + lb*0.35 + lean, Y - lb*0.9); }
@@ -22988,14 +23047,16 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const DI = V.detail, reach = W*[3.2, 4, 4.6, 5.2][DI], d1 = reach;
-  const NG = 2*Math.round(Math.max(8, Math.min(RG_NG_MAX, F/[16, 12, 9.5, 7.5][DI]))/2);
+
+
+  const F0 = unit*0.652; RG_MARK_K = F/F0; const NG = 2*Math.round(Math.max(8, Math.min(RG_NG_MAX, F0/[16, 12, 9.5, 7.5][DI]))/2);
 
 
 
-  let c0 = W*0.00025*[0.5, 0.36, 0.28, 0.22][DI]; while(c0*F/Math.max(L.hc, W*0.0004) < 1.2 && c0*NG*4 < reach) c0 *= 2;
+  let c0 = W*0.00025*[0.5, 0.36, 0.28, 0.22][DI]; while(c0*F0/Math.max(L.hc, W*0.0004) < 1.2 && c0*NG*4 < reach) c0 *= 2;
 
 
-  const FADE0 = 1 - rsSmooth(1.25, 1.9, c0*F/Math.max(L.hc, W*0.0004));
+  const FADE0 = 1 - rsSmooth(1.25, 1.9, c0*F0/Math.max(L.hc, W*0.0004));
   const NLV = Math.max(1, Math.ceil(Math.log2(reach/(NG*c0))) + 1), cl = [], cz = [], ca = [], ZMAX = W*0.497, SIDE = 2*NG + 1;
   for(let l = 0; l < NLV; l++){ cl.push(c0*Math.pow(2, l)); cz.push(Math.round(L.z0/(2*cl[l]))*2*cl[l]); ca.push(Math.round(A0E/(2*cl[l]))*2*cl[l]); }
   const aOf = (l, i) => ca[l] + i*cl[l];
@@ -23077,7 +23138,7 @@ function rgPaintLand(x, mk, dk, V){
     for(let j = -NG; j < NG; j++){ const zA = cz[l] + j*c, zB = zA + c; if(zB < -ZMAX || zA > ZMAX) continue;
       for(let i = -NG; i < NG; i++){ if(hole && i >= hole[0] && i + 1 <= hole[1] && j >= hole[2] && j + 1 <= hole[3]) continue;
         const am = ca[l] + (i + 0.5)*c, zm = Math.max(-ZMAX, Math.min(ZMAX, (zA + zB)/2)), dd = Math.hypot(am - A0E, zm - L.z0); if(dd > reach) continue;
-        if(Math.abs(angOf(am, zm)) > PHI + Math.atan2(c*0.8, Math.max(dd, 1e-9)) + 0.02) continue;
+        if(dd > L.hc*3 + c && Math.abs(angOf(am, zm)) > PHI + Math.atan2(c*0.8, Math.max(dd, 1e-9)) + 0.02) continue;
         quads.push({ l, i, j, dd, am, zm, c }); } } }
 
 
@@ -24138,7 +24199,7 @@ function rgPaintLand(x, mk, dk, V){
   const paintFloor = it => { if(it.q) paintCell(it.q); else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys); else if(it.pc) paintFieldPiece(it.pc); else paintWallPiece(it.wp); };
   let gpuLaid = false, landMaps = false;
   if(ringGpuReady()){ GB = ringGpuBatch(); for(let k = shown.length - 1; k >= 0; k--) paintCell(shown[k]);
-    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(reach/d0), dq: 1 - d0/DZF }); GB = null;
+    const cv = ringGpuDraw(GB, ww, wh, { px: px(1)*RG_MARK_K, seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(reach/d0), dq: 1 - d0/DZF }); GB = null;
     if(cv){ x.drawImage(cv, 0, 0); gpuLaid = landMaps = true; } else { mkPath.length = 0; dkPolys.clear(); } }
   if(gpuLaid){ floor.sort((p, q) => q.dd - p.dd); let clipJ = -2;
     for(const it of floor){ const j = slot(it.r ? it.r.dd : it.pc ? it.pc.dd : it.wp.dd);
@@ -24257,7 +24318,7 @@ const RING_STEPS = {
   ringarch: { cat: 'Textures', label: 'The Arch', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
-      RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99),
+      RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('hour', 'Time of Day', 0, 0, 100), RG_R('variant', 'Variation', 0, 0, 99),
       ['saturn', 'Gas Giant', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }], RG_WEATHER_SEL], cost: () => 4,
     fresh: true,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
@@ -24266,7 +24327,7 @@ const RING_STEPS = {
   ringland: { cat: 'Marks', label: 'Land on the Ring', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Flora', 50), RG_R('fauna', 'Fauna', 40), RG_R('detail', 'Detail', 37),
-      RG_R('works', 'Works', 50), RG_R('clutter', 'Clutter', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99), RG_WEATHER_SEL], cost: () => 4,
+      RG_R('works', 'Works', 50), RG_R('clutter', 'Clutter', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('hour', 'Time of Day', 0, 0, 100), RG_R('variant', 'Variation', 0, 0, 99), RG_WEATHER_SEL], cost: () => 4,
     fresh: true,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);
       mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh); dk.fillStyle = '#fff'; dk.fillRect(0, 0, ww, wh);
@@ -29418,7 +29479,9 @@ const TEXTURE_PARAMS = {
 
                   sliderOf('brush', 'Detail', 37, { ticks:[12,37,62,88], names:['Low','Medium','High','Ultra'] }),
 
-                  sliderOf('clutter', 'Clutter', 50)],
+                  sliderOf('clutter', 'Clutter', 50),
+
+                  sliderOf('hour', 'Time of Day', 0, { ticks:[0, 26, 50, 75, 100], names:['By the dial', 'Dawn', 'Noon', 'Dusk', 'Midnight'] })],
 
   rainwater:     [sliderOf('zoom', 'Ripple Size', 100, { min:40, max:250, unit:'%' }),
                   sliderOf('amt', 'Rain', 50),
@@ -32341,7 +32404,7 @@ const TEXTURE_CHAINS = {
 
 
 
-  ringpaint: { label: 'Ringworld', canvas: true, sealed: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. Half of every ring is wilds; the rest lies in regions of its other worlds (Cities, Neon, Builders, Magic, Ruins), clustered by the seed. Flora is its trees, grass and flowers, and Fauna its wild things (deer at the woods\' edge, hares and now and then a fox in the open, rooks and starlings that lift all at once and settle somewhere else, pigeons in the towns, ducks, swans and a heron at the water, a hawk circling on the rising air, swallows over the fields, bats at dusk, and sometimes a skein of geese going over; and the hunters, fewer: a stoat bounding, a badger at dusk, a lynx in the deep woods, wolves in the cold, jackals in dry country, an owl quartering the fields, a kestrel hanging on the wind; in the magic world drakes, moonharts, lantern moths by night and sky rays rowing high overhead), now and then something small to find (insects, fairies, slime), and the droids at their work; Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills, their shadows lying on the land under them; by day over dry country a dust devil may whirl, and at dusk a murmuration of starlings wheels over the fields. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog, and by the place a sunshower, a day of dust, the aurora in the cold, blossom drifting in spring, motes of light in the magic world or ash over the ruins; the sky glows round the sun, burning low at dusk, with the pink Belt of Venus opposite. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Detail is how far and how finely the land round you is drawn: Low, Medium, High or Ultra (each step slower to make). Try: World on Neon, then draw the Light Dial past its rim for night.', nodes: [
+  ringpaint: { label: 'Ringworld', canvas: true, sealed: true, teach: 'A ringworld seen from its own floor, painted in flat shapes rather than rendered. It sees through the same camera as Ringworld: the Camera Dial turns you to look along the ring (the land rising ahead into the arch), across it (the rim wall standing at the horizon, the arch crossing the sky), or up; Altitude lifts you from the grass to high over the land. The Light Dial is the sun and the day: its handle is where the sun stands round you (the way you face at that camera turn, so turning the camera turns past it, and the land is lit from it), overhead noon, at its rim dusk on the horizon, past it night, when the arch still shines where its own day is and the cities light. The Arch paints the sky: space and its stars (Starfield), the air thick at the horizon, the star at the ring\'s middle with its shadow squares circling it (one ring in four orbits a gas giant, Saturn, Jupiter, Neptune or Uranus, which hangs huge in its sky beyond the far arch with its moons: The Arch\'s Gas Giant setting), turning slowly with the stars as the ring spins, and the ring\'s far floor climbing into the arch in patches of land, sea, forest and city, its rim walls along both edges. Land on the Ring paints the floor you stand on, ridge behind ridge from the walls\' feet to your own, each cut in facets and lit, with what grows, lives and stands on it. Half of every ring is wilds; the rest lies in regions of its other worlds (Cities, Neon, Builders, Magic, Ruins), clustered by the seed. Flora is its trees, grass and flowers, and Fauna its wild things (deer at the woods\' edge, hares and now and then a fox in the open, rooks and starlings that lift all at once and settle somewhere else, pigeons in the towns, ducks, swans and a heron at the water, a hawk circling on the rising air, swallows over the fields, bats at dusk, and sometimes a skein of geese going over; and the hunters, fewer: a stoat bounding, a badger at dusk, a lynx in the deep woods, wolves in the cold, jackals in dry country, an owl quartering the fields, a kestrel hanging on the wind; in the magic world drakes, moonharts, lantern moths by night and sky rays rowing high overhead), now and then something small to find (insects, fairies, slime), and the droids at their work; Works its buildings, spires, great spans from wall to wall, bridges of light, circles, crystals, craters, wrecks and ships. Clouds stand over the land at their own distance, among the hills, their shadows lying on the land under them; by day over dry country a dust devil may whirl, and at dusk a murmuration of starlings wheels over the fields. Clutter is what stands about the streets and roads: lamps lighting them, signs and billboards, benches, bicycles, parked cars, hay in the fields. Round every village and town the land is farmed: fields of the crops its climate grows (wheat, hay, pasture, the plough, rapeseed, lavender, vines, rice), hedged in wet country and walled in dry, terraces stepped up the steep, bales on the stubble, a flock and its shepherd droid, now and then a harvester at work; boats are moored off the shore at the end of their jetties; and by night the towns far off are their lights, coming on one by one at dusk. The sky\'s weather comes by the seed: mostly clear, now and then clouds, rarely rain, a storm, snow or fog, and by the place a sunshower, a day of dust, the aurora in the cold, blossom drifting in spring, motes of light in the magic world or ash over the ruins; the sky glows round the sun, burning low at dusk, with the pink Belt of Venus opposite. The two hues color the land and the air; the page\'s two accents are the lights (neon, magic, the fairies). Detail is how far and how finely the land round you is drawn: Low, Medium, High or Ultra (each step slower to make). Time of Day sets the hour by hand; the Light Dial’s turn is then the ring’s heading, where its noon sun stands. Try: World on Neon, then draw the Light Dial past its rim for night, or set Time of Day to Dusk.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 120],
       ['knob', { slot: '3' }, 40, 200],
@@ -32357,7 +32420,8 @@ const TEXTURE_CHAINS = {
       ['ringarch', { band: 45, '~band': '0,100', walls: 25, '~walls': '0,50', altitude: 15, '~altitude': '0,100', landforms: 50, '~landforms': '0,100', world: 0, '~world': '0,100', life: 50, '~life': '0,100', works: 50, '~works': '0,100', air: 60 }, 600, 120],
       ['ringland', { band: 45, '~band': '0,100', walls: 25, '~walls': '0,50', altitude: 15, '~altitude': '0,100', landforms: 50, '~landforms': '0,100', world: 0, '~world': '0,100', life: 50, '~life': '0,100', works: 50, '~works': '0,100', clutter: 50, '~clutter': '0,100', air: 60 }, 880, 160],
       ['material', { relief: 16, gloss: 25, shine: 30, shadow: 40, occlusion: 25, ambient: 50 }, 1440, 220],
-      ['surface', { name: 'Ringworld', ground: 'colour' }, 1720, 200]],
+      ['surface', { name: 'Ringworld', ground: 'colour' }, 1720, 200],
+      ['knob', { slot: '9' }, 40, 1160]],
 
 
     wires: [[1, 1, 16, 'band'], [1, 1, 17, 'band'], [2, 1, 16, 'landforms'], [2, 1, 17, 'landforms'],
@@ -32366,7 +32430,7 @@ const TEXTURE_CHAINS = {
       [5, 1, 16, 'altitude'], [5, 1, 17, 'altitude'], [6, 1, 17, 'fauna'], [7, 1, 17, 'detail'], [8, 1, 17, 'clutter'],
       [9, 2, 16, 5], [9, 1, 16, 6], [9, 2, 17, 5], [9, 1, 17, 6], [10, 1, 16, 2], [10, 2, 16, 3], [10, 3, 16, 4], [10, 1, 17, 2], [10, 2, 17, 3], [10, 3, 17, 4],
       [11, 1, 16, 7], [11, 1, 17, 7], [12, 1, 16, 8], [12, 1, 17, 8], [13, 1, 16, 9], [13, 1, 17, 9], [14, 1, 16, 10], [14, 1, 17, 10],
-      [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1]] },
+      [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [20, 1, 16, 'hour'], [20, 1, 17, 'hour']] },
   rainwater: { label: 'Rain on Water', div: 2, teach: 'Rain falling on still water. Raindrops makes every drop that has fallen in the last moment: a ring wave spreading from where it struck, a short packet of ripples that weakens as it widens, the newest still splashing. It hands on three maps: the ripples as heights, the splashes, and how far off each point of the water lies. Tint colors the water by that distance (your Water Hue near, the Sky Hue it reflects toward the horizon), and Displace bends that reflection through the ripples; the Light Engine raises the ripples and catches the light on them; Glow makes the splashes sparkle. View looks from overhead (0) across the water toward the horizon, where the rings grow small and the water calms. Try: Spread at 100 for wide old rings, or wire Raindrops\' Ripples into a Displace to see the poem through the water.', nodes: [
       ['knob', { slot: '1' }, 40, 40],
       ['knob', { slot: '2' }, 40, 140],
@@ -33458,7 +33522,7 @@ const TEXTURE_CAPS = {
   skyring:       { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:8, view:35, zoom:100, guide:'ellipse', seeded:{ turn:[0, 360], view:[8, 70], zoom:[80, 145] } } },
   ringpaint:     { blends:['source-over','screen','overlay','soft-light','hard-light','luminosity','multiply'], time:true, light:true, lowLight:true, dial:'Daylight', lightTilt:40, tints:2,
-                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
+                   tintLabels:['Land Hue','Sky Hue'], tintDefaults:['#6F8F55','#86AEDC'], camera:{ turn:50, view:55, zoom:100, guide:'ring', fly:true, seeded:{ turn:[0, 360], view:[35, 75], zoom:[75, 135] } } },
   rainwater:     { blends:['source-over','screen','overlay','soft-light','luminosity','multiply'], light:true, tints:2,
                    tintLabels:['Water Hue','Sky Hue'], tintDefaults:['#0E1A26','#8FA8BC'], camera:{ turn:0, view:41, zoom:100, guide:'plane' } },
 
@@ -33783,7 +33847,7 @@ function cameraOf(type, opts){
   return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))),
     ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}), ...(num(c.fps, 0) > 0 ? { fps: Math.round(num(c.fps, 0)) } : {}) } : {}) } : {}),
 
-    ...(c.fly && c.fly.route === 'seed' ? { fly: { route: 'seed', u: Math.round(Math.max(0, Math.min(1, num(c.fly.u, 0)))*10000)/10000, secs: r2(Math.max(1, num(c.fly.secs, 10))) } }
+    ...(c.fly && c.fly.route === 'seed' ? { fly: { route: 'seed', u: Math.round(Math.max(0, Math.min(1, num(c.fly.u, 0)))*10000)/10000, secs: r2(Math.max(1, num(c.fly.secs, 10))), ...(['orbit', 'dronie', 'rise'].includes(c.fly.flight) ? { flight: c.fly.flight } : {}) } }
       : c.fly && (num(c.fly.d, 0) || num(c.fly.to, 0)) ? { fly: { d: r2(num(c.fly.d, 0)), rise: r2(num(c.fly.rise, 0)), head: r2(num(c.fly.head, 0)), to: r2(num(c.fly.to, num(c.fly.d, 0))) } } : {}) };
 }
 
@@ -34110,7 +34174,8 @@ self.onmessage = (e) => {
     const canvas = getTextureCanvas(type, w, h, opts);
     clearTextureCache();
     const bitmap = canvas.transferToImageBitmap();
-    self.postMessage({ id, bitmap }, [bitmap]);
+
+    self.postMessage({ id, bitmap, ...(type === 'ringpaint' ? { gpu: ringGpuReady() } : {}) }, [bitmap]);
   } catch(err){
     self.postMessage({ id, error: String((err && err.message) || err) });
   }
@@ -34456,6 +34521,16 @@ const UI_STRINGS = {
   'moving.hint':                           "The page as a short film, drawn frame by frame: the poem when it is shown, and the credit line.",
   'moving.g_move':                        "Move",
   'moving.camera':                        "Camera round",
+  'moving.drone':                         "Drone flight",
+  'moving.flight':                        "Flight",
+  'moving.f_reveal':                      "Reveal",
+  'moving.f_reveal_c':                    "out past a sight",
+  'moving.f_orbit':                       "Orbit",
+  'moving.f_orbit_c':                     "round a sight",
+  'moving.f_dronie':                      "Dronie",
+  'moving.f_dronie_c':                    "back and up",
+  'moving.f_rise':                        "Rise",
+  'moving.f_rise_c':                      "straight up",
   'moving.light_round':                   "Light round",
   'moving.time':                          "Time passing",
   'moving.look':                          "To another look",
@@ -34502,7 +34577,6 @@ const UI_STRINGS = {
   'moving.a_out':                         "Pull back",
   'moving.a_tilt':                        "Tilt",
   'moving.a_spiral':                      "Spiral out",
-  'moving.a_drone':                       "Drone flight",
   'moving.set_now':                       "Set it now…",
   'moving.tuck':                          "Set the look the film moves to, then Done. The page goes back as it was.",
   'moving.tuck_done':                     "Done",
@@ -34709,11 +34783,12 @@ const MOVING = {
   sum: '{len} s · {fps} fps · {frames} frames · {size} · {fmt}, about {mb}',
   sumTime: '{span} at {rate} a second',
   sumBack: 'the sun returns the way it came',
+  onGpu: 'drawn on the GPU (WebGPU)', onCanvas: 'drawn on the CPU: this browser gave no WebGPU, so frames are slow',
   sumEnds: 'ends where it goes: {what}',
   endsIn: 'the camera pushes in',
   endsOut: 'the camera pulls back',
   endsSpiral: 'the camera spirals out',
-  endsDrone: 'the camera flies ahead and climbs',
+  endsFlight: { reveal: 'the camera flies out past a sight and climbs', orbit: 'the camera circles round a sight', dronie: 'the camera flies back and up', rise: 'the camera rises straight up' },
   eta: 'about {name} to go',
 
   realTime: 'real time', lenSecs: '{name} s',
@@ -37015,9 +37090,9 @@ const TEXTURE_ELEMENTS = {
 
 
   ringpaint: { def: 'wind', wind: { name: 'Ringworld' },
-    fire:  { name: 'Neon Arch',    k: [55, 40, 30, 75, 15, 25, 37, 60],  t: ['#4A4A5A', '#9A86C8'], cam: [50, 55, 100], light: [90, 118] },
-    water: { name: 'Garden Ring',  k: [65, 45, 85, 40, 20, 60, 37, 35],  t: ['#5E8F6A', '#7FB4E6'], cam: [30, 60, 100], light: [90, 30] },
-    earth: { name: 'Fallen Ring',  k: [45, 75, 25, 70, 25, 35, 37, 55], t: ['#B8874E', '#D9B48A'], cam: [60, 50, 100], light: [250, 100] } },
+    fire:  { name: 'Neon Arch',    k: [55, 40, 30, 75, 15, 25, 37, 60, 0],  t: ['#4A4A5A', '#9A86C8'], cam: [50, 55, 100], light: [90, 118] },
+    water: { name: 'Garden Ring',  k: [65, 45, 85, 40, 20, 60, 37, 35, 0],  t: ['#5E8F6A', '#7FB4E6'], cam: [30, 60, 100], light: [90, 30] },
+    earth: { name: 'Fallen Ring',  k: [45, 75, 25, 70, 25, 35, 37, 55, 0], t: ['#B8874E', '#D9B48A'], cam: [60, 50, 100], light: [250, 100] } },
 
   dewwebs: { def: 'water', water: { name: 'Dewy Webs' },
     fire:  { name: 'Golden Hour Web', k: [20, 150, 55, 110, 10, 40, 75, 50], t: ['#FFD9A0', '#2A1600'], blend: 'screen', light: [250, 115] },
@@ -37342,8 +37417,12 @@ function setFilmPool(on){
   return filmPool || POOL_SIZE;
 }
 
+
+let RING_GPU = null;
+ 
+const ringDrawnOnGpu = () => RING_GPU;
 function arrived(entry, e){
-  const { id, bitmap, error } = e.data;
+  const { id, bitmap, error } = e.data; if(typeof e.data.gpu === 'boolean') RING_GPU = e.data.gpu;
   const f = entry.job; entry.job = null;
   if(!f || f.id !== id){ pump(); return; }
   if(f.ahead){ if(!bitmap && typeof console !== 'undefined') console.warn('texture worker (ahead):', error); aheadDone(f.key, bitmap || null); pump(); return; }
@@ -37399,11 +37478,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Beehive–Meleph';
+const RELEASE = 'Perseus–Atik';
 
 const RELEASE_DATE = '2026-10-26';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"PbPnSa9W","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"d890X7r-","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -37696,7 +37775,7 @@ function markValue(m, u){
   if(wrap) return ((v - lo) % (hi - lo) + (hi - lo)) % (hi - lo) + lo;
   return Math.max(lo, Math.min(hi, v));
 }
-function cameraAlso(kind, u, view, zoom, secs = 10){
+function cameraAlso(kind, u, view, zoom, secs = 10, flight = 'reveal'){
   const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
   if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };
   if(kind === 'out') return { view, zoom: z(zoom/Math.pow(F.push, u)) };
@@ -37708,7 +37787,8 @@ function cameraAlso(kind, u, view, zoom, secs = 10){
 
 
 
-  if(kind === 'drone'){ const s = u*u*(3 - 2*u); return { view, zoom, fly: { route: 'seed', u: s, secs: Math.max(1, secs) } }; }
+
+  if(kind === 'drone'){ const s = u*u*(3 - 2*u); return { view, zoom, fly: { route: 'seed', u: s, secs: Math.max(1, secs), ...(flight !== 'reveal' ? { flight } : {}) } }; }
   return { view, zoom };
 }
 
@@ -37723,12 +37803,8 @@ function cameraAlso(kind, u, view, zoom, secs = 10){
 
 
 
-const SUN_LAT = 48*Math.PI/180, SUN_DEC = 15*Math.PI/180;
-const sunEl = H => Math.asin(Math.sin(SUN_LAT)*Math.sin(SUN_DEC) + Math.cos(SUN_LAT)*Math.cos(SUN_DEC)*Math.cos(H));
-const sunAz = H => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(SUN_LAT) - Math.tan(SUN_DEC)*Math.cos(SUN_LAT));
 
 const SUN_DAY = 2*Math.acos(-Math.tan(SUN_LAT)*Math.tan(SUN_DEC))*12/Math.PI;
-const sunTilt = el => el >= 0 ? 100*(1 - el/(Math.PI/2)) : 100 + 30*Math.min(1, -el/(18*Math.PI/180));
 function sunPath(deg0, tilt0){
   const el0 = tilt0 <= 100 ? (1 - tilt0/100)*Math.PI/2 : -Math.min(1, (tilt0 - 100)/30)*18*Math.PI/180;
   const c = (Math.sin(el0) - Math.sin(SUN_LAT)*Math.sin(SUN_DEC))/(Math.cos(SUN_LAT)*Math.cos(SUN_DEC)), H0 = -Math.acos(Math.max(-1, Math.min(1, c)));
@@ -38366,7 +38442,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-26 · 92f1bdc";
+const STAMP = "2026-10-26 · bbddcd1";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -42981,7 +43057,7 @@ const WIKI_PARTS = {
     about: 'The Arch sees through Ringworld’s own camera (the same Camera Dial: where you look, how far up, the lens), in a painter’s curved perspective rather than a pinhole’s, so the arch bows across the sky as it does in the old paintings of ringworlds instead of standing as a straight line. What it paints is everything above the land. The sky: the air thick and lit at the horizon, thinning upward until space and its stars show (wire a Starfield into Over), now and then a planet or a comet, and washes of nebula in the page’s accents. The star, at the ring’s middle, which is on the arch’s own line; the shadow squares circling it, which stand between it and the land and make its nights (stand under one and it hides the star). The ring’s far floor, in flat patches: land, sea, forest and city as the World lays them, night where the squares’ shadows fall (with the cities’ lights), hazed low down and clear overhead, with streaks of cloud. And the rim walls along both edges, standing at the horizon as a sheer wall when you look across the ring. Its settings are Land on the Ring’s, so wire the same knobs into both: the land at your feet and the arch overhead are one ring.',
     ins: { over: 'Space behind it all: wire a Starfield.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn): along it, the land rising ahead into the arch; across it, the rim wall at the horizon and the arch crossing the sky.', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day, and how high the sun stands (wire the Light Dial’s Height): its middle noon, the sun overhead as the ring’s own star; its rim dusk, the sun on the horizon; past it night.', 'sun from': 'Where the sun stands round you (wire the Light Dial’s Direction): the way you face at that camera turn, so turning the camera turns past it.', 'land hue': 'The land’s color.', 'sky hue': 'The air’s color.', 'light hue': 'The first light: neon, magic, the page’s first accent (wire an Accent).', 'second light hue': 'The second light (wire the second Accent).' },
     outs: { picture: 'The sky, the arch and the walls.', ring: 'Where the ring’s floor and walls are (1).' },
-    set: { band: 'How wide the ring is against its size: a thin ribbon of an arch, or a broad one.', walls: 'How tall the rim walls are.', altitude: 'How high you stand: on the ground, or high over the land.', landforms: 'How much the land rises: hills, mountains, the ranges at the walls’ feet (it decides where the seas are).', world: 'Who and what the ring holds, in eight bands: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed (three worlds side by side, region by region).', life: 'How much grows: forests, on the arch as on the land.', works: 'How much is built: cities, and their lights by night.', air: 'How much air: the haze at the horizon and on the far arch.', look: 'Where you look round the ring, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height: 0 midnight, 50 dusk, 100 noon.', variant: 'Another ring with the same settings: other land, seas and builders.', weather: 'What the sky is doing: by the seed, or one chosen (as Land on the Ring’s).', saturn: 'Whether the ring orbits a gas giant, so it hangs huge in its sky beyond the far arch, lit by the ring’s star, with its moons: Saturn (with Titan, and now and then Enceladus, its plume rising), Jupiter, Neptune or Uranus, by the seed. By the seed (one ring in four), never, or always.' },
+    set: { band: 'How wide the ring is against its size: a thin ribbon of an arch, or a broad one.', walls: 'How tall the rim walls are.', altitude: 'How high you stand: on the ground, or high over the land.', landforms: 'How much the land rises: hills, mountains, the ranges at the walls’ feet (it decides where the seas are).', world: 'Who and what the ring holds, in eight bands: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, Mixed (three worlds side by side, region by region).', life: 'How much grows: forests, on the arch as on the land.', works: 'How much is built: cities, and their lights by night.', air: 'How much air: the haze at the horizon and on the far arch.', look: 'Where you look round the ring, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height: 0 midnight, 50 dusk, 100 noon.', hour: 'The hour of the ring\u2019s day, set by hand: dawn a quarter of the way along, noon at the middle, dusk three quarters, midnight at the end. The sun then stands where its day\u2019s arc puts it, and the light dial\u2019s turn is the ring\u2019s heading round the body it circles, where its noon sun stands; the dial\u2019s tilt is not read. At 0 the light dial places the sun as before.', variant: 'Another ring with the same settings: other land, seas and builders.', weather: 'What the sky is doing: by the seed, or one chosen (as Land on the Ring’s).', saturn: 'Whether the ring orbits a gas giant, so it hangs huge in its sky beyond the far arch, lit by the ring’s star, with its moons: Saturn (with Titan, and now and then Enceladus, its plume rising), Jupiter, Neptune or Uranus, by the seed. By the seed (one ring in four), never, or always.' },
     tips: ['Look across the ring and up (Camera Dial: Turn near 90, View low) to see the arch cross the whole sky.', 'Past the Light Dial’s rim it is night where you stand, but the arch still shines where its own day is.', 'Set <b>Saturn</b> to always and turn the Camera Dial to find it; change the seed (or Variation) for another view of it.'],
     see: ['part:ringland', 'part:starfield', 'part:camdial', 'part:dial'],
   },
@@ -42990,7 +43066,7 @@ const WIKI_PARTS = {
     about: 'Land on the Ring sees through the same camera as The Arch and paints over it. The land is cut into ridges at distances growing from your feet to the walls’ feet (or as far as the eye goes): each is the land’s line across your view at its distance, washed lit along its crest and deeper below, cut in facets where it is steep, with a bright rim where it catches the light, and the sea flat with a glint. As a painter does, the far land’s forms are drawn taller than they are, so its ranges read. On each ridge stands what the World puts there: forests (firs, round trees, poplars; dead trees in ruin; trees that glow in magic), cities whose windows light at night (edged in neon in a Neon world, broken in Ruins), rocks, grass and flowers, and on some rings a little small life, found rather than seen: insects over the grass, fairies, a patch of flowers, slime. Between the ridges stand the works, each where its own patch of the floor puts it, so turning the camera turns past them: spires, standing stones, domes, summoning circles, pillars of light, crystals, craters with smoke and fire, crashed ships, ships in the air, great spans from wall to wall and bars of light across the band, and roads or paths: a city’s road, a neon street, the builders’ way with its line of light, a ley line, a trail. The light hues are the lights: wire the page’s Accents.',
     ins: { over: 'The sky behind the land: wire The Arch.', 'look toward': 'Where you look round the ring (wire the Camera Dial’s Turn).', 'look up': 'How far up you look (wire the Camera Dial’s View).', zoom: 'The lens (wire the Camera Dial’s Zoom).', 'sun height': 'The time of day, and how high the sun stands (wire the Light Dial’s Height): at night the land darkens and the windows light.', 'sun from': 'Where the sun stands round you, and so which side of each ridge and each thing is lit (wire the Light Dial’s Direction).', 'land hue': 'The land’s color, as each world lays it.', 'sky hue': 'The air’s color: the far ridges fade into it, and the sea takes it.', 'light hue': 'The first light: neon, magic, the fairies and the flowers (wire the first Accent).', 'second light hue': 'The second light (wire the second Accent).' },
     outs: { picture: 'The sky with the land over it.', land: 'Where the land is (1).', distance: 'How far off each ridge is: 1 the nearest, 0 the farthest.' },
-    set: { band: 'How wide the ring is (as The Arch’s).', walls: 'How tall the rim walls are (as The Arch’s).', altitude: 'How high you stand: low, the grass and trees about you; high, the land spread far below.', landforms: 'How much the land rises: rolling at the low end, mountains and ranges at the walls’ feet at the top.', world: 'Who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region).', life: 'How much grows: trees, grass, hedges and flowers.', fauna: 'How much lives and moves: the wild things (herds, flocks, a fox, a heron, a hawk), the small finds (insects, fairies, slime) and the droids at their work.', detail: 'How far and how finely the land round you is drawn, in four steps (Low, Medium, High, Ultra): each step sows plants, stones and small things farther out and closer together, and takes longer to make.', works: 'How much is built: cities, spires, spans, roads, ships and wrecks.', clutter: 'How much stands about the streets and roads: lamps, signs, billboards, benches, bicycles, vending machines, parked cars, hay and the rest of the small things (Works is the buildings and the builders’ works).', air: 'How much air lies over the far land.', weather: 'What the sky is doing: by the seed (mostly clear, now and then clouds, rarely rain, a storm, snow or fog), or one chosen. The Arch and Land on the Ring read it alike, so their clouds and rain agree.', look: 'Where you look, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height.', variant: 'Another ring with the same settings.' },
+    set: { band: 'How wide the ring is (as The Arch’s).', walls: 'How tall the rim walls are (as The Arch’s).', altitude: 'How high you stand: low, the grass and trees about you; high, the land spread far below.', landforms: 'How much the land rises: rolling at the low end, mountains and ranges at the walls’ feet at the top.', world: 'Who and what: By the Seed, Wilds, Cities, Neon, Builders, Magic, Ruins, or Mixed (three, region by region).', life: 'How much grows: trees, grass, hedges and flowers.', fauna: 'How much lives and moves: the wild things (herds, flocks, a fox, a heron, a hawk), the small finds (insects, fairies, slime) and the droids at their work.', detail: 'How far and how finely the land round you is drawn, in four steps (Low, Medium, High, Ultra): each step sows plants, stones and small things farther out and closer together, and takes longer to make.', works: 'How much is built: cities, spires, spans, roads, ships and wrecks.', clutter: 'How much stands about the streets and roads: lamps, signs, billboards, benches, bicycles, vending machines, parked cars, hay and the rest of the small things (Works is the buildings and the builders’ works).', air: 'How much air lies over the far land.', weather: 'What the sky is doing: by the seed (mostly clear, now and then clouds, rarely rain, a storm, snow or fog), or one chosen. The Arch and Land on the Ring read it alike, so their clouds and rain agree.', look: 'Where you look, when nothing is wired into Look Toward.', lift: 'How far up you look, when nothing is wired into Look Up.', daylight: 'The time of day, when nothing is wired into Sun Height.', hour: 'The hour of the ring\u2019s day, set by hand: dawn a quarter of the way along, noon at the middle, dusk three quarters, midnight at the end. The sun then stands where its day\u2019s arc puts it, and the light dial\u2019s turn is the ring\u2019s heading round the body it circles, where its noon sun stands; the dial\u2019s tilt is not read. At 0 the light dial places the sun as before.', variant: 'Another ring with the same settings.' },
     tips: ['Wire the same knobs into The Arch and Land on the Ring, so the land and the arch agree.', 'Altitude high and the Camera Dial looking down a little: the land spread out to the walls’ feet.', 'Every village and town is ringed by its fields (Life and Works set how many towns, Clutter what stands in the fields): look across a valley from a little height to see the patchwork, and turn the Light Dial past its rim to see the towns far off as their lights.'],
     see: ['part:ringarch', 'part:accent', 'part:camdial'],
   },
@@ -49238,10 +49314,13 @@ function movingSummary(){
   const [w, h] = movingDims(movingPick('movingAspect', 'page'), movingPick('movingRes', '1080'), fmt), bytes = fmt === 'png' ? n*w*h*1.5 : movingBitrate(w, h, fps)*len/8;
   let text = MOVING.sum.replace('{len}', String(len)).replace('{fps}', String(fps)).replace('{frames}', String(n)).replace('{size}', `${w} × ${h}`)
     .replace('{fmt}', { mp4: 'MP4', webm: 'WebM', png: 'PNG' }[fmt] || fmt).replace('{mb}', bytes >= 1e9 ? (bytes/1e9).toFixed(1) + ' GB' : Math.max(1, Math.round(bytes/1e6)) + ' MB');
+
+  if((($('textureType') || {}).value) === 'ringpaint' && ringDrawnOnGpu() !== null) text += ' · ' + (ringDrawnOnGpu() ? MOVING.onGpu : MOVING.onCanvas);
   const span = movingSpan(movingPick('movingMove', 'camera'));
   if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
 
-  const cam = movingPick('movingMove', 'camera') === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold', ends = cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral, drone: MOVING.endsDrone }[also];
+  const mv = movingPick('movingMove', 'camera'), cam = mv === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold';
+  const ends = mv === 'drone' ? MOVING.endsFlight[movingPick('movingFlight', 'reveal')] : cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral }[also];
   if(ends && movingPick('movingPlay', 'once') !== 'back') text += ' · ' + MOVING.sumEnds.replace('{what}', ends);
   const nm = movingPick('movingMove', 'camera') === 'look' ? 0 : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still').length;
   if(nm) text += ' · ' + (nm === 1 ? MOVING.marksCount1 : MOVING.marksCount.replace('{n}', String(nm)));
@@ -49250,7 +49329,7 @@ function movingSummary(){
 
 const movingSpanSecs = v => v <= 0 ? 0 : Math.round(300*Math.pow(172800/300, (Math.min(100, v) - 1)/99));
 function movingSpan(move){ const caps = movingRun.caps || {}, timeable = !!(caps.time || caps.dial === 'Daylight');
-  if(!timeable || (move !== 'camera' && move !== 'time')) return 0; const v = movingSpanSecs(+(($('movingSpanSlider') || {}).value) || 0); return move === 'time' ? v || 86400 : v; }
+  if(!timeable || (move !== 'camera' && move !== 'time' && move !== 'drone')) return 0; const v = movingSpanSecs(+(($('movingSpanSlider') || {}).value) || 0); return move === 'time' ? v || 86400 : v; }
  
 function movingLooks(){
   const out = [];
@@ -49267,7 +49346,7 @@ function openMoving(){
   const looks = movingLooks(), pick = $('movingLook');
   if(pick){ pick.innerHTML = ''; for(const l of looks){ const o = document.createElement('option'); o.value = l.value; o.textContent = l.label; pick.appendChild(o); } }
 
-  movingRun.caps = caps; paintMarks(); movingRun.able = { camera: !!caps.camera, light: !!caps.light, time: !!caps.time, look: true };
+  movingRun.caps = caps; paintMarks(); movingRun.able = { camera: !!caps.camera, drone: !!(caps.camera && caps.camera.fly), light: !!caps.light, time: !!caps.time, look: true };
   if(movingRun.pickSet && pick && movingRun.setLook){ pick.value = 'set'; movingSet('movingMove', 'look'); } movingRun.pickSet = false;
   const ln = $('movingLightName'); if(ln) ln.textContent = caps.dial === 'Daylight' ? MOVING.day : MOVING.light;
   if(!movingRun.able[movingPick('movingMove', 'camera')]){ const first = movingRadios('movingMove').find(r => movingRun.able[r.value]); if(first) movingSet('movingMove', first.value); }
@@ -49385,7 +49464,7 @@ function paintMoving(e){
 
   const tp = movingPick('movingTurn', '360'), loops = (m === 'camera' && tp === '360' && movingPick('movingPlay', 'once') !== 'back') || m === 'light' || m === 'time';
   const sh = movingRun.shot, si = $('movingShotIs'); if(si) si.textContent = sh ? MOVING.shotIs.replace('{turn}', String(Math.round(sh.turn))).replace('{view}', String(Math.round(sh.view))).replace('{zoom}', String(Math.round(sh.zoom))) : MOVING.shotNone;
-  const on = { movingMarkRow: m !== 'look', movingLookRow: m === 'look', movingTurnRow: m === 'camera', movingShotRow: m === 'camera' && tp === 'shot', movingRestRow: !loops, movingAlsoRow: m === 'camera' && tp !== 'shot', movingSpanRow: timeable && (m === 'camera' || m === 'time'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
+  const on = { movingMarkRow: m !== 'look', movingLookRow: m === 'look', movingFlightRow: m === 'drone', movingTurnRow: m === 'camera', movingShotRow: m === 'camera' && tp === 'shot', movingRestRow: !loops, movingAlsoRow: m === 'camera' && tp !== 'shot', movingSpanRow: timeable && (m === 'camera' || m === 'time' || m === 'drone'), movingBeginRow: timed, movingEaseRow: m !== 'time', movingPlayRow: true };
   for(const [id, ok] of Object.entries(on)){ const row = $(id); if(!row) continue; if(row.classList) row.classList.toggle('off', !ok);
     for(const el of row.querySelectorAll ? row.querySelectorAll('input, select') : []) el.disabled = busy || !ok; }
   for(const r of movingRadios('movingMove')) r.disabled = busy || !able[r.value];
@@ -49472,7 +49551,7 @@ async function makeMoving(){
   const sunOwns = move === 'light' || timed || !!lightRun, marks = looked ? [] : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still' && !(sunOwns && (k.id === 'textureLight' || k.id === 'textureLightTilt')))
     .map((k, q) => ({ ...k, ...movingRun.marks[k.key], el: $(k.id), v0: num(k.id), ph: 1.3 + q*2.17, step0: ($(k.id) || {}).step }));
   for(const mk of marks) if(mk.el && mk.el.step !== undefined) mk.el.step = 'any';
-  const also = move === 'camera' && !toShot ? movingPick('movingAlso', 'hold') : 'hold', view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100, shot = toShot ? { ...movingRun.shot } : null;
+  const also = move === 'camera' && !toShot ? movingPick('movingAlso', 'hold') : 'hold', flightK = movingPick('movingFlight', 'reveal'), view0 = num('cameraView'), zoom0 = num('cameraZoom') || 100, shot = toShot ? { ...movingRun.shot } : null;
 
 
 
@@ -49483,13 +49562,15 @@ async function makeMoving(){
   const clock = sun ? filmHours(sun, (timed ? spanS : 86400)/3600) : null;
 
 
-  const tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: looked || toShot || (move === 'camera' && turn < 360), eased, rest: looked || toShot || (move === 'camera' && turn < 360) || back ? rest : 0 });
+  const goes = looked || toShot || move === 'drone' || (move === 'camera' && turn < 360), tri = u => u < 0.5 ? u*2 : 2 - u*2, along = i => moveAlong(i, n, { back, ends: goes, eased, rest: goes || back ? rest : 0 });
   const sink = movingSink(fmt, cfg, w, h, fps);
   let spare = null, made = null;
 
 
 
-  const sunAt = hrs => { const [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); };
+
+  const p9 = $('texP9'), byHour = ((($('textureType') || {}).value) === 'ringpaint') && p9 && +p9.value >= 0.5, hour0 = byHour ? (off === null ? (+p9.value - 1)/99*24 : 12 - SUN_DAY/2 + off) : 0;
+  const sunAt = hrs => { if(byHour){ p9.value = String(1 + (((hour0 + hrs) % 24) + 24) % 24/24*99); return; } const [a, tl] = sun(hrs); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); };
 
   const side = Math.sin((sun ? sun(clock(0))[0] : light0)*Math.PI/180) < 0 ? -1 : 1;
   const place = i => { const u = along(i);
@@ -49499,6 +49580,9 @@ async function makeMoving(){
     if(move === 'camera' && shot){ const c = shotAlong({ turn: cam0, view: view0, zoom: zoom0 }, shot, u); $('cameraTurn').value = String(c.turn); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); }
     else if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
       if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0, lenS); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); if(c.fly) setSceneFly(c.fly); } }
+
+
+    else if(move === 'drone'){ const c = cameraAlso('drone', u, view0, zoom0, lenS, flightK); if(c.fly) setSceneFly(c.fly); }
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); }
     if(lightRun){ const [a, tl] = lightRun.sun(lightRun.H*u); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); }
     for(const mk of marks) if(mk.el) mk.el.value = String(markValue(mk, i/n)); };

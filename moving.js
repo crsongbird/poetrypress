@@ -7,6 +7,7 @@
  * Prior art: docs/prior-art/moving-image.md.
  */
 import { FILM_CAMERA } from './tunables.js';
+import { SUN_LAT, SUN_DEC, sunEl, sunAz, sunTilt } from './texCore.js';
 
 // ---------- a look toward another ----------
 
@@ -99,7 +100,7 @@ export function markValue(m, u){
   if(wrap) return ((v - lo) % (hi - lo) + (hi - lo)) % (hi - lo) + lo;
   return Math.max(lo, Math.min(hi, v));
 }
-export function cameraAlso(kind, u, view, zoom, secs = 10){
+export function cameraAlso(kind, u, view, zoom, secs = 10, flight = 'reveal'){
   const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
   if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };
   if(kind === 'out') return { view, zoom: z(zoom/Math.pow(F.push, u)) };
@@ -111,7 +112,8 @@ export function cameraAlso(kind, u, view, zoom, secs = 10){
   //  (Ruby: "generate a route per seed that the camera follows … make sure the route is picturesque": the route itself, its
   //  turning and its looking down, are the seed's, worked out where the world is: stepsRing's rgDroneRoute; here only how
   //  far along it the eye is, eased at both ends, and the film's length)
-  if(kind === 'drone'){ const s = u*u*(3 - 2*u); return { view, zoom, fly: { route: 'seed', u: s, secs: Math.max(1, secs) } }; }
+  //  (flight: which of the seed's flights, stepsRing's RG_FLIGHTS: a reveal, an orbit, a dronie, a rise)
+  if(kind === 'drone'){ const s = u*u*(3 - 2*u); return { view, zoom, fly: { route: 'seed', u: s, secs: Math.max(1, secs), ...(flight !== 'reveal' ? { flight } : {}) } }; }
   return { view, zoom };
 }
 
@@ -126,12 +128,8 @@ export function cameraAlso(kind, u, view, zoom, secs = 10){
  * (the middle overhead, the rim the horizon, past the rim the twilight deepening to night at 18° below).
  * Starting where the dial is, it gives for any hours since [the dial's turn, its tilt].
  */
-const SUN_LAT = 48*Math.PI/180, SUN_DEC = 15*Math.PI/180;
-const sunEl = H => Math.asin(Math.sin(SUN_LAT)*Math.sin(SUN_DEC) + Math.cos(SUN_LAT)*Math.cos(SUN_DEC)*Math.cos(H));
-const sunAz = H => Math.atan2(Math.sin(H), Math.cos(H)*Math.sin(SUN_LAT) - Math.tan(SUN_DEC)*Math.cos(SUN_LAT));
-// (how long that sun is up: its day from sunrise to sunset, in hours, some fourteen and a quarter)
+// (the sun's own sums, texCore.js's: SUN_LAT, sunEl, sunAz, sunTilt; SUN_DAY, how long its day is)
 export const SUN_DAY = 2*Math.acos(-Math.tan(SUN_LAT)*Math.tan(SUN_DEC))*12/Math.PI;
-const sunTilt = el => el >= 0 ? 100*(1 - el/(Math.PI/2)) : 100 + 30*Math.min(1, -el/(18*Math.PI/180));
 export function sunPath(deg0, tilt0){
   const el0 = tilt0 <= 100 ? (1 - tilt0/100)*Math.PI/2 : -Math.min(1, (tilt0 - 100)/30)*18*Math.PI/180;
   const c = (Math.sin(el0) - Math.sin(SUN_LAT)*Math.sin(SUN_DEC))/(Math.cos(SUN_LAT)*Math.cos(SUN_DEC)), H0 = -Math.acos(Math.max(-1, Math.min(1, c)));   // (the morning's)

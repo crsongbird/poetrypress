@@ -306,6 +306,11 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
   logic as the 3D generator but 2D", and of the flat style, "simplified, but
   cosmic"): Starfield → The Arch → Land on the Ring → Oil Paint (Paint 0: the
   flat shapes alone).
+  - **Time of Day** (knob 9, Ruby, 2026-10-26): at 0 the light dial places the sun as always; set, the hour places it
+    on its day's arc (texCore.js's `sunAtHour`, the films' own sun) and the dial's turn is the ring's heading, where its
+    noon sun stands. A film passing time with it set carries the hours on the knob.
+  - **Frozen as a demo** (Ruby, 2026-10-26): the Ringworld's growth goes on in its own project, Vulpea Mechanória; here
+    it stays a picturesque still and film surface, fixed rather than grown.
   - **Sealed** (Ruby: "it definitely shouldn't be" loadable in the Athanor; "it's
     pretty special"): its chain draws the page but never opens in the Athanor
     (the Surface card's button greyed, `paintReveal`), The Arch and Land on the

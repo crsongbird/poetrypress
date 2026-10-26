@@ -4,6 +4,41 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Perseus–Atik (2026-10-26)
+
+- **Drone flight is its own move now.** In the film sheet, pick **Drone flight** beside Camera round. Then choose a
+  flight:
+  - **Reveal**: out past a sight, as before.
+  - **Orbit**: round a sight, keeping its eye on it.
+  - **Dronie**: back and up, looking down at where it began.
+  - **Rise**: straight up, turning slowly and looking down as it climbs.
+
+  The camera's own Turn, Shot and Also rows sit below and dim while a drone flies, so they can't fight it. Time can
+  pass during a flight.
+- **Time of Day on the Ringworld.** A new slider sets the hour: Dawn, Noon, Dusk, Midnight or anything between. The
+  light dial's turn then sets the ring's heading, which is where its noon sun stands. At **By the dial** the dial works
+  as before. A film that passes time moves the hour along.
+- **The land no longer wobbles when a film zooms.** A push in, pull back or spiral rebuilt the land's whole mesh every
+  frame. The mesh now depends on the page's size, not the lens. The ground's painted marks grow with the zoom as the
+  land does, instead of fading between sizes.
+- **The ground below a high drone is always drawn.** Looking down from a height could leave a corner of the frame
+  empty.
+- **The film sheet says how the Ringworld is drawn**: on the GPU (WebGPU), or on the CPU, many times slower, when the
+  browser gave no WebGPU.
+
+### Under the hood
+- stepsRing.js:
+  - `RG_FLIGHTS` and rgDroneFlight hold the orbit, dronie and rise.
+  - The land's cell count and finest cells are worked from F0, the plain lens's focal length, and `RG_MARK_K` scales
+    the marks' spacing by the lens.
+  - The flat-angle cull spares the ground under the eye.
+  - The Arch and Land on the Ring take an `hour`, wired from knob 9.
+- texCore.js: the sun of a place (`sunAtHour`, sunEl, sunAz, sunTilt) now lives here, shared by the films and the
+  painter.
+- The texture worker reports whether WebGPU drew the Ringworld (textureService.js `ringDrawnOnGpu`).
+- ringworldView checks the new flights. The moving suite checks the Flight row and the flight carried to the scene.
+- The ringpaint fingerprint is updated for the zoom-independent mesh.
+
 ## Beehive–Meleph (2026-10-26)
 
 - **Buildings are solid on the GPU.** On the Ringworld in a browser with WebGPU, houses, terraces, towers, barns,
@@ -494,30 +529,3 @@ prints it).
 - `pkPerson` paints a person from their own stream; `PK_SKINS` is the Monk Skin Tone Scale's ten.
 - `wkAt` gives a grazing animal its `lie` and a ground bird its hop; `wkQuad` lays a deer down, its legs folded.
 - docs/prior-art/ringworld-folk.md is the research (figure proportions, the Monk scale, a red deer's day).
-
-## Pleiades–Atlas (2026-10-25)
-
-- Saguaros grow as saguaros do. Each keeps its true slender width at any height and has no arms until it is over 3 m
-  tall. After that it gains about one arm for every 1.7 m of height, never the same count twice, and now and then one
-  never arms at all. Each arm goes out at its own bearing round the column: the arms behind are drawn in the column's
-  shade, the arms in front in the light. Old saguaros' arms sometimes droop before they turn up, and now and then an arm
-  grows from an arm.
-- Each ring has its season, by the seed. From late April to mid June saguaros wear white flowers with yellow hearts on
-  every crown, then red fruit into July.
-- More of the desert grows in the dry country:
-  - clumps of organ pipes;
-  - barrel cacti leaning south, ringed with yellow and orange flowers in summer;
-  - prickly pears of flat pads, yellow-flowered, then purple-red with fruit;
-  - teddy-bear chollas, their silvery spines catching the light;
-  - ocotillos, bare grey canes in leaf after the rains and red-tipped in spring;
-  - agaves, a few old ones sending up their one tall flower stalk.
-- Plants meet: a young saguaro grows beside its nurse tree, and ivy climbs some old trunks in the wet woods.
-- Every plant's form follows its size, so a small one is young and a tall one old, regular for its kind.
-- Some rings are drier on the whole than others, so dry country and its plants turn up more often.
-
-### Under the hood
-- `pkTree` takes the plant's height in metres (`hM`) and the season from its caller.
-- docs/prior-art/ringworld-desert-plants.md is the research (the Park Service's saguaro growth, arms and flowering pages,
-  and the other cacti's).
-- The land kit's moisture spreads wider, each seed with its own aridity.
-- The Ringworld's fingerprint updated (its plants, intended).

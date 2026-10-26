@@ -128,12 +128,12 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   //  eye is, eased at both ends, and how long the film is; the route's turns and looking down are the seed's)
   const df = [0, 0.25, 0.5, 0.75, 1].map(u => a('drone', u));
   check('a drone flight follows the seed\'s route from its start to its end, gently at both ends', df.every(c => c.fly.route === 'seed' && c.fly.secs === 10) && df[0].fly.u === 0 && df[4].fly.u === 1
-    && df.every((c, k) => !k || c.fly.u > df[k - 1].fly.u) && df[1].fly.u < 0.25 && df[3].fly.u > 0.75 && cameraAlso('drone', 0.5, 40, 100, 30).fly.secs === 30);
+    && df.every((c, k) => !k || c.fly.u > df[k - 1].fly.u) && df[1].fly.u < 0.25 && df[3].fly.u > 0.75 && cameraAlso('drone', 0.5, 40, 100, 30).fly.secs === 30 && cameraAlso('drone', 0.5, 40, 100, 30, 'orbit').fly.flight === 'orbit' && !('flight' in cameraAlso('drone', 0.5, 40, 100, 30).fly));
   check('the view and zoom keep to their ranges', a('in', 1, 40, 380).zoom === 400 && a('out', 1, 40, 30).zoom === 25 && a('tilt', 0.5, 95).view >= 0 && a('spiral', 1, 90).view <= 100 && a('in', 1, 40, 300).zoom === 400);
 }
 // ---- the sheet's markup: each choice a radio group with one chosen by default, each group under a legend ----
 { const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8'), sheet = html.slice(html.indexOf('id="movingSheet"'), html.indexOf('id="movingMake"'));
-  const names = ['movingCam', 'movingMove', 'movingTurn', 'movingAlso', 'movingRest', 'movingBegin', 'movingEase', 'movingPlay', 'movingFps', 'movingAspect', 'movingRes', 'movingFormat'];
+  const names = ['movingCam', 'movingMove', 'movingFlight', 'movingTurn', 'movingAlso', 'movingRest', 'movingBegin', 'movingEase', 'movingPlay', 'movingFps', 'movingAspect', 'movingRes', 'movingFormat'];
   const checkedOf = nm => [...sheet.matchAll(new RegExp(`name="${nm}" value="[^"]+"( checked)?`, 'g'))];
   check('every choice on the film sheet is a radio group with exactly one chosen by default', names.every(nm => { const r = checkedOf(nm); return r.length >= 2 && r.filter(m => m[1]).length === 1; }));
   check('the frame rates read "24 fps" and so on, in order', /24 fps[\s\S]*30 fps[\s\S]*48 fps[\s\S]*60 fps/.test(sheet) && !/a second<\/option>/.test(sheet));

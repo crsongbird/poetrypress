@@ -10,7 +10,7 @@
  * one world (the land's heights, its seas, forests and cities, who built it) is shared by both, so the arch overhead
  * and the land at your feet are the same ring.
  */
-import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
+import { mulberry32, kitCanvas, kitOwn, seedChoice, sunAtHour } from './texCore.js';
 import { WK_KINDS, WK_FLYERS, WK_BIRDS, wkAt, wkCount, wkPaint, wkWander, wkNoise } from './wildKit.js';
 import { lkLand, LK_BIOMES, LK_FORESTED } from './landKit.js';
 import { ringGpuReady, ringGpuBatch, ringGpuDraw, ringGpuLandMaps, ringGpuDepth, ringGpuThingBatch, ringGpuMeshBatch, ringGpuThings, ringGpuSheet, ringGpuPutSheet } from './ringGpu.js';
@@ -61,13 +61,14 @@ const RG_LIGHTS = { wilds: [[226, 255, 170], [255, 214, 150]], cities: [[255, 21
 const RG_ROUTES = new Map(), RG_DRONE = { speed: 12, climb: 3, weave: 0.02 };
 export function rgDroneRoute(seed, ctx){   // (exported, and the last one kept: a test hook, test/ringworldView.test.mjs)
   const RT = rgDroneRoute0(seed, ctx); rgDroneRoute.last = RT; return RT; }
-function rgDroneRoute0(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key = [seed, W.toFixed(6), zS.toFixed(6), Math.round(look), Math.round(secs*10)].join('|');
+function rgDroneRoute0(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, flight = RG_FLIGHTS.includes(ctx.flight) ? ctx.flight : 'reveal', key = [seed, W.toFixed(6), zS.toFixed(6), Math.round(look), Math.round(secs*10), flight].join('|');
   let RT = RG_ROUTES.get(key); if(RT) return RT;
   const M = W*0.00025, Lr = Math.max(40, RG_DRONE.speed*secs)*M, h0 = look*Math.PI/180, hS = (a, z) => LK.height(a, z, W*0.002), R0 = rgRand(seed | 0, 1960);
   const score = (a, z) => { if(Math.abs(z) > W*0.44) return -9; const e = hS(a, z), sea = TR.sea; let wet = 0, ring = 0;
     for(let q = 0; q < 8; q++){ const an = q/8*Math.PI*2, e2 = hS(a + Math.cos(an)*60*M, z + Math.sin(an)*60*M); if(e2 <= sea) wet++; ring += e2; }
     const coast = e > sea && wet > 0 && wet < 6 ? 1.2 : 0, lake = e <= sea ? 0.45 : 0, prom = rgClamp((e - ring/8)/(25*M))*1.0, w = ctx.worldAt(a, z), town = w === 'wilds' || w === 'magic' ? ctx.cityAt(a, z, 0.12)*1.2 : ctx.cityAt(a, z, (RG_PROF[w] || RG_PROF.wilds).cv*(0.3 + 0.9*ctx.works))*1.1;
     return coast + lake + prom + town + 0.2*R0(); };
+  if(flight !== 'reveal'){ RT = rgDroneFlight(flight, ctx, { M, Lr, h0, hS, R0, score }); if(RG_ROUTES.size > 16) RG_ROUTES.clear(); RG_ROUTES.set(key, RT); return RT; }
   let best = null, bs = -Infinity;
   for(let k = 0; k <= 10; k++) for(let r = 0.35; r <= 0.75; r += 0.1){ const an = h0 + (k/10 - 0.5)*2.4, a = Math.cos(an)*Lr*r, z = zS + Math.sin(an)*Lr*r, v = score(a, z) + 0.35*Math.cos(an - h0);
     if(v > bs){ bs = v; best = { a, z, an, r }; } }
@@ -106,6 +107,41 @@ function rgDroneRoute0(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, ke
       return { a, z, yaw, lift, rise, clear: 3 + (14 + 24*rsSmooth(0.1, 0.5, fo))*rsSmooth(0, 0.12, u) + 3*(1 - low), ground: gA }; } };   // (rising soon to a drone's own height, some 25 to 80 m, as a landscape's is flown; and keeping clear of what it crosses)
   if(RG_ROUTES.size > 16) RG_ROUTES.clear(); RG_ROUTES.set(key, RT); return RT; }
 
+// THE OTHER FLIGHTS (Ruby, 2026-10-26: "more than one option for a drone flight"; docs/prior-art/film-animation.md, the
+// drone's shots): an orbit, round the finest sight within a short flight of the start, the eye on it all the way; a
+// dronie, flying back and up away from where it began, the eye on the start as it falls away below; a rise, straight up
+// from where it stands, turning slowly and looking down more as it climbs. Each as fast as the reveal, its height kept
+// clear of the ground and the trees ahead as the reveal's is (same returns as rgDroneRoute's at)
+const RG_FLIGHTS = ['reveal', 'orbit', 'dronie', 'rise'];
+function rgDroneFlight(flight, ctx, { M, Lr, h0, hS, R0, score }){
+  const { LK, W, zS, secs } = ctx, P0 = [0, zS], angW = d => { while(d > Math.PI) d -= 2*Math.PI; while(d < -Math.PI) d += 2*Math.PI; return d; };
+  const H = Math.max(30, Math.min(90, RG_DRONE.climb*secs*2.6)), forested = (a, z) => { const e = LK.height(a, z, W*0.002), bw = LK.biomes(a, z, e); let f = 0; for(let i = 0; i < LK_BIOMES.length; i++) f += (LK_FORESTED[LK_BIOMES[i].name] || 0)*bw[i]; return [e, f]; };
+  let posAt, yawAt, liftAt, riseAt;
+  if(flight === 'orbit'){
+    // (round a sight: its centre the best scored of the places a short way ahead, the arc a little over half round)
+    const sweep = Math.PI*(1 + 0.3*R0())*(R0() < 0.5 ? -1 : 1), R = Math.max(25*M, Math.min(Lr*0.45, Lr/Math.abs(sweep)));
+    let C = [P0[0] + Math.cos(h0)*R, P0[1] + Math.sin(h0)*R], cs = -Infinity;
+    for(let k = 0; k <= 8; k++){ const an = h0 + (k/8 - 0.5)*1.2, c = [P0[0] + Math.cos(an)*R, P0[1] + Math.sin(an)*R], v = score(c[0], c[1]) + 0.3*Math.cos(an - h0); if(v > cs){ cs = v; C = c; } }
+    const th0 = Math.atan2(P0[1] - C[1], P0[0] - C[0]), Rr = Math.hypot(P0[0] - C[0], P0[1] - C[1]);
+    posAt = u => [C[0] + Math.cos(th0 + sweep*u)*Rr, Math.max(-W*0.45, Math.min(W*0.45, C[1] + Math.sin(th0 + sweep*u)*Rr))];
+    const y0 = angW(th0 + Math.PI - h0); yawAt = u => y0 + sweep*u;   // (toward its sight all the way round, never wrapped)
+    liftAt = u => -(10 + 6*Math.sin(Math.PI*u)); riseAt = u => H*(0.35 + 0.25*Math.sin(Math.PI*u)); }
+  else if(flight === 'dronie'){
+    // (back and up: the eye held on the start, tipping down as the start falls away below)
+    const D = Lr*0.85, back = h0 + Math.PI;
+    posAt = u => [P0[0] + Math.cos(back)*D*u, Math.max(-W*0.45, Math.min(W*0.45, P0[1] + Math.sin(back)*D*u))];
+    yawAt = () => 0; riseAt = u => H*(0.15 + 1.05*u);
+    liftAt = u => { const hh = 2 + riseAt(u), dd = D/M*u + 40; return -Math.min(40, 6 + 0.6*Math.atan2(hh, dd)*180/Math.PI); }; }
+  else {
+    // (straight up, turning a sixth of the way round as it climbs, looking down more and more)
+    const turn = (R0() < 0.5 ? -1 : 1)*Math.PI/3;
+    posAt = () => P0; yawAt = u => turn*u; riseAt = u => H*(0.1 + 1.15*u); liftAt = u => -(6 + 34*u*u); }   // (no higher than the reveal climbs: the land's mesh is laid for a drone's heights)
+  const path = []; for(let k = 0; k <= 8; k++) path.push(posAt(k/8));
+  return { subject: posAt(0.5), path, at: u => { u = Math.max(0, Math.min(1, u)); const [a, z] = posAt(u);
+    let gA = -Infinity, fo = 0; for(let k = 0; k <= 5; k++){ const [a2, z2] = posAt(Math.min(1, u + k*0.012)), [e2, f2] = forested(a2, z2); gA = Math.max(gA, e2); fo = Math.max(fo, f2); }
+    return { a, z, yaw: yawAt(u)*180/Math.PI, lift: liftAt(u), rise: riseAt(u), clear: 4 + (14 + 24*rsSmooth(0.1, 0.5, fo))*rsSmooth(0, 0.12, u), ground: gA }; } };
+}
+
 // THE RING'S WORLDS (Ruby, 2026-10-25: "remove the 'world' slider and make sure the rings are 50% wilds, and all of the
 // other regions are clustered regions on rings in seed dependent ways - wilds looks the best and the rest look like
 // biomes"): every ring the wilds over about half its floor, and two to four of the others by the seed, each in stretches
@@ -135,7 +171,12 @@ let rgPx = v => v;
 
 // THE VIEW both parts paint through: the Ringworld's camera (ringParams, ringCamera) standing on this world's land
 function rgView(E, n, ww, wh){
-  const { num, input } = E, toward = input(n, 2), up = input(n, 3), zoom = input(n, 4), sun = input(n, 5), from = input(n, 6);
+  const { num, input } = E, toward = input(n, 2), up = input(n, 3), zoom = input(n, 4), sun0 = input(n, 5), from0 = input(n, 6);
+  // TIME OF DAY (Ruby, 2026-10-26: "a Time Of Day slider and the sun direction slider should really be setting the
+  // ringworld's orbit and heading around its parent body"): set (1 to 100, midnight to midnight), the hour places the
+  // sun on its day's arc (texCore.js's sunAtHour) and the dial's turn is the ring's heading, where its noon sun stands;
+  // the dial's tilt is not read. At 0, by the dial, as it always was
+  const hourK = num(n, 'hour', 0), [sun, from] = hourK >= 0.5 ? (([d, t]) => [t/100, d/360])(sunAtHour(typeof from0 === 'number' ? from0*360 : (E.ctx.light ?? 315), (hourK - 1)/99*24)) : [sun0, from0];
   const daylight = typeof sun === 'number' ? 100*(sun <= 1 ? 1 - 0.5*sun : Math.max(0, 0.5 - (sun - 1)/0.3*0.5)) : num(n, 'daylight', 80);
   const seed = ((E.ctx.seed >>> 0) + Math.round(num(n, 'variant', 0))*7919) >>> 0;
   const p = ringParams({ band: num(n, 'band', 45), walls: num(n, 'walls', 25), altitude: num(n, 'altitude', 15), look: typeof toward === 'number' ? toward*360 : num(n, 'look', 0),
@@ -205,7 +246,7 @@ function rgView(E, n, ww, wh){
   // along it is (FLY.u, 0 to 1) and how long the film is (FLY.secs) follows the seed's own route (rgDroneRoute): out
   // toward the most picturesque thing within its reach, past it at its side, and on; the eye turning to watch it as it
   // passes and looking down a little more as it climbs
-  if(FLY && FLY.route === 'seed'){ const RT = rgDroneRoute(seed, { LK, W, zS: L.zS, look: p.look, secs: FLY.secs || 10, TR, worldAt, cityAt, works: num(n, 'works', 50)/100 }), q = RT.at(FLY.u || 0);
+  if(FLY && FLY.route === 'seed'){ const RT = rgDroneRoute(seed, { LK, W, zS: L.zS, look: p.look, secs: FLY.secs || 10, flight: FLY.flight, TR, worldAt, cityAt, works: num(n, 'works', 50)/100 }), q = RT.at(FLY.u || 0);
     L.a0 = q.a; L.z0 = q.z; L.path = RT.path;
     const vH = LK.height(L.a0, L.z0, W*0.001), eE = Math.max(v0 + L.hc + q.rise*MM, Math.max(vH, q.ground) + Math.max(L.hc*0.4, q.clear*MM)); L.hc = eE - vH; L.Px = 1 - eE;
     // (Ruby, 2026-10-26: "Shouldn't it also take the camera/override the camera angle settings after the initial one?":
@@ -343,6 +384,9 @@ const RG_MARKS = Array.from({ length: 9 }, () => ({ L: rgPathRec(), D: rgPathRec
 // painted.md): over a cell's colour, a few broad flat strokes of the same paint mixed a little warmer, cooler, lighter
 // or darker, laid along one way across the cell, as one brush would; uneven, as Dishonored's are (busy here, calm
 // there, by a slow noise of the world), each stroke its cell's own so the paint stays put on the land as the camera moves
+// (the marks' spacing on the page grows with the lens, so a zoom enlarges them as it enlarges the land, and they never
+//  fade from one size of grid to the next as a film zooms: the land painter sets it, the lens over the plain one)
+let RG_MARK_K = 1;
 const RG_BRUSH_TINTS = [[214, 186, 120], [96, 128, 150], [255, 248, 228], [40, 46, 52], [150, 170, 96]];
 // THE GROUND'S PAINT FIXED TO THE WORLD (Ruby, 2026-10-26: "ground texture/texture lods recomputing so frequently is
 // both a source of render slowdown and also terrible to look at … it doesn't need to be so detailed close up"): the
@@ -365,7 +409,7 @@ export function rgGroundGrid(P, G, target, salt, fn){   // (exported: a test hoo
 function rgBrush(x, P, q, c, px, s, G){
   const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0; if(w < px(5) || h < px(2)) return;
   x.lineCap = 'round';
-  rgGroundGrid(P, G, px(46), 1, (X, Y, sp, al, R, a, z) => { const busy = mnValue(a/(G.M*90), z/(G.M*90), s + 941); if(busy < 0.42 || R() > (busy - 0.3)*1.6) return;
+  rgGroundGrid(P, G, px(46)*RG_MARK_K, 1, (X, Y, sp, al, R, a, z) => { const busy = mnValue(a/(G.M*90), z/(G.M*90), s + 941); if(busy < 0.42 || R() > (busy - 0.3)*1.6) return;
     const len = sp*(0.5 + 0.5*R()), an = (R() - 0.5)*0.5, tint = RG_BRUSH_TINTS[Math.floor(R()*RG_BRUSH_TINTS.length)], ca = Math.cos(an), sa = Math.sin(an)*0.45;
     x.strokeStyle = rsCss(rsMix(c, tint, 0.2 + 0.14*R()), 0.62*al); x.lineWidth = Math.max(px(1.2), sp*(0.18 + 0.16*R()));
     x.beginPath(); x.moveTo(X - ca*len*0.5, Y - sa*len*0.5); x.quadraticCurveTo(X, Y - sp*0.06, X + ca*len*0.5, Y + sa*len*0.5); x.stroke(); });
@@ -375,7 +419,7 @@ function rgGroundMarks(x, P, q, kind, c, px, G){
   const lite = rsMix(c, [255, 250, 232], 0.16), dark = rsMix(c, [0, 0, 0], 0.2);
   // (the marks of each octave in its own batch, laid at its own strength)
   for(const B of RG_MARKS) B.on = false; let any = false;
-  rgGroundGrid(P, G, px(26), 2, (X, Y, sp, al, R) => { const u = R(), r = sp*(0.22 + 0.2*R()), B = RG_MARKS[Math.round(al*8)];
+  rgGroundGrid(P, G, px(26)*RG_MARK_K, 2, (X, Y, sp, al, R) => { const u = R(), r = sp*(0.22 + 0.2*R()), B = RG_MARKS[Math.round(al*8)];
     if(!B.on){ B.L.reset(); B.D.reset(); B.sp = 0; B.on = true; } any = true; const L = B.L, D = B.D;
     if(RG_GRASSY[kind]){ const lb = r*(kind === 'steppe' || kind === 'savanna' ? 0.9 : 0.7), Pq = u < 0.5 ? L : D, lean = (R() - 0.5)*lb*0.6;
       Pq.moveTo(X - lb*0.25, Y); Pq.lineTo(X - lb*0.3 + lean, Y - lb); Pq.moveTo(X, Y); Pq.lineTo(X + lean*0.5, Y - lb*1.2); Pq.moveTo(X + lb*0.25, Y); Pq.lineTo(X + lb*0.35 + lean, Y - lb*0.9); }
@@ -1999,14 +2043,16 @@ function rgPaintLand(x, mk, dk, V){
   // into the next coarser ring's shape (a geomorph by place), so where two rings meet they share their edge and no crack
   // opens. Detail sets how fine the cells (some 16 to 7.5 pixels at the page's scale) and how far the land reaches.
   const DI = V.detail, reach = W*[3.2, 4, 4.6, 5.2][DI], d1 = reach;
-  const NG = 2*Math.round(Math.max(8, Math.min(RG_NG_MAX, F/[16, 12, 9.5, 7.5][DI]))/2);   // (cells from a ring's middle to its edge)
+  // (by the page's size and not the lens: a zoom in a film reshaped the whole mesh every frame and the land wobbled,
+  //  Ruby, 2026-10-26: "texture wobbles and so does the land, in a really bad way"; F0 the focal length at the plain lens)
+  const F0 = unit*0.652; RG_MARK_K = F/F0; const NG = 2*Math.round(Math.max(8, Math.min(RG_NG_MAX, F0/[16, 12, 9.5, 7.5][DI]))/2);   // (cells from a ring's middle to its edge)
   // (the finest ring's cells a fraction of a metre, the ground at your feet being so near; and finer rings drawn only where their cells would show at all from the
   //  eye's height, so looking down from a height costs no more than looking across. A ring so left out was finer than
   //  a pixel: its land is the next ring's, the same land without detail no one could see)
-  let c0 = W*0.00025*[0.5, 0.36, 0.28, 0.22][DI]; while(c0*F/Math.max(L.hc, W*0.0004) < 1.2 && c0*NG*4 < reach) c0 *= 2;
+  let c0 = W*0.00025*[0.5, 0.36, 0.28, 0.22][DI]; while(c0*F0/Math.max(L.hc, W*0.0004) < 1.2 && c0*NG*4 < reach) c0 *= 2;
   // (and as the eye rises toward the height where the finest ring is left out, that ring eases wholly into the next one's
   //  shape and colour first, so its going is never seen: FADE0)
-  const FADE0 = 1 - rsSmooth(1.25, 1.9, c0*F/Math.max(L.hc, W*0.0004));
+  const FADE0 = 1 - rsSmooth(1.25, 1.9, c0*F0/Math.max(L.hc, W*0.0004));
   const NLV = Math.max(1, Math.ceil(Math.log2(reach/(NG*c0))) + 1), cl = [], cz = [], ca = [], ZMAX = W*0.497, SIDE = 2*NG + 1;
   for(let l = 0; l < NLV; l++){ cl.push(c0*Math.pow(2, l)); cz.push(Math.round(L.z0/(2*cl[l]))*2*cl[l]); ca.push(Math.round(A0E/(2*cl[l]))*2*cl[l]); }
   const aOf = (l, i) => ca[l] + i*cl[l];   // (a corner's place along the ring: each ring's middle at the eye, on the world's grid)
@@ -2088,7 +2134,7 @@ function rgPaintLand(x, mk, dk, V){
     for(let j = -NG; j < NG; j++){ const zA = cz[l] + j*c, zB = zA + c; if(zB < -ZMAX || zA > ZMAX) continue;
       for(let i = -NG; i < NG; i++){ if(hole && i >= hole[0] && i + 1 <= hole[1] && j >= hole[2] && j + 1 <= hole[3]) continue;
         const am = ca[l] + (i + 0.5)*c, zm = Math.max(-ZMAX, Math.min(ZMAX, (zA + zB)/2)), dd = Math.hypot(am - A0E, zm - L.z0); if(dd > reach) continue;
-        if(Math.abs(angOf(am, zm)) > PHI + Math.atan2(c*0.8, Math.max(dd, 1e-9)) + 0.02) continue;
+        if(dd > L.hc*3 + c && Math.abs(angOf(am, zm)) > PHI + Math.atan2(c*0.8, Math.max(dd, 1e-9)) + 0.02) continue;   // (the ground below a drone looking down is in the frame whatever its way round)
         quads.push({ l, i, j, dd, am, zm, c }); } } }
   // which way round a cell facing you winds on the page (a flat cell straight ahead), so cells turned away, hidden behind
   // the land in front of them, are never drawn
@@ -3149,7 +3195,7 @@ function rgPaintLand(x, mk, dk, V){
   const paintFloor = it => { if(it.q) paintCell(it.q); else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys); else if(it.pc) paintFieldPiece(it.pc); else paintWallPiece(it.wp); };
   let gpuLaid = false, landMaps = false;
   if(ringGpuReady()){ GB = ringGpuBatch(); for(let k = shown.length - 1; k >= 0; k--) paintCell(shown[k]);
-    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(reach/d0), dq: 1 - d0/DZF }); GB = null;
+    const cv = ringGpuDraw(GB, ww, wh, { px: px(1)*RG_MARK_K, seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(reach/d0), dq: 1 - d0/DZF }); GB = null;
     if(cv){ x.drawImage(cv, 0, 0); gpuLaid = landMaps = true; } else { mkPath.length = 0; dkPolys.clear(); } }
   if(gpuLaid){ floor.sort((p, q) => q.dd - p.dd); let clipJ = -2;
     for(const it of floor){ const j = slot(it.r ? it.r.dd : it.pc ? it.pc.dd : it.wp.dd);
@@ -3268,7 +3314,7 @@ export const RING_STEPS = {
   ringarch: { cat: 'Textures', label: 'The Arch', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Life', 50),
-      RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99),
+      RG_R('works', 'Works', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('hour', 'Time of Day', 0, 0, 100), RG_R('variant', 'Variation', 0, 0, 99),
       ['saturn', 'Gas Giant', 'select', 'by the seed', { options: ['by the seed', 'never', 'always'] }], RG_WEATHER_SEL], cost: () => 4,
     fresh: true,   // (it paints a canvas of its own, which the next part may take: athanor.js E.take)
     paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh); mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh);
@@ -3277,7 +3323,7 @@ export const RING_STEPS = {
   ringland: { cat: 'Marks', label: 'Land on the Ring', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'land', 'distance'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field', 'field'] },
     params: [RG_R('band', 'Band Width', 45), RG_R('walls', 'Rim Walls', 25), RG_R('altitude', 'Altitude', 15), RG_R('landforms', 'Landforms', 50), RG_R('world', 'World', 0), RG_R('life', 'Flora', 50), RG_R('fauna', 'Fauna', 40), RG_R('detail', 'Detail', 37),
-      RG_R('works', 'Works', 50), RG_R('clutter', 'Clutter', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('variant', 'Variation', 0, 0, 99), RG_WEATHER_SEL], cost: () => 4,
+      RG_R('works', 'Works', 50), RG_R('clutter', 'Clutter', 50), RG_R('air', 'Air', 60), RG_R('look', 'Look Toward', 0, 0, 360), RG_R('lift', 'Look Up', 22, -30, 100), RG_R('daylight', 'Daylight', 80), RG_R('hour', 'Time of Day', 0, 0, 100), RG_R('variant', 'Variation', 0, 0, 99), RG_WEATHER_SEL], cost: () => 4,
     fresh: true,
     paint(E, n){ const { ww, wh } = E, [c, x] = kitOwn(E, n, 1, ww, wh, 0), [mc, mk] = kitCanvas(ww, wh), [dc, dk] = kitCanvas(ww, wh);
       mk.fillStyle = '#000'; mk.fillRect(0, 0, ww, wh); dk.fillStyle = '#fff'; dk.fillRect(0, 0, ww, wh);

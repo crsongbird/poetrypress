@@ -88,7 +88,16 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   //  more than a few degrees in a hundredth of the flight, and never swings back and forth)
   const RT = SR.rgDroneRoute.last; let big = 0, flips = 0, prev = null, dPrev = 0;
   for(let k = 0; k <= 400; k++){ const y = RT.at(k/400).yaw; if(prev !== null){ const d = y - prev; big = Math.max(big, Math.abs(d)*4); if(Math.abs(d) > 0.05 && Math.abs(dPrev) > 0.05 && Math.sign(d) !== Math.sign(dPrev) && Math.abs(d - dPrev) > 1) flips++; if(Math.abs(d) > 0.05) dPrev = d; } prev = y; }
-  check(`the drone's eye turns evenly (at most ${big.toFixed(1)}° in a hundredth of the flight, ${flips} sudden reversals)`, big < 8 && flips === 0); }
+  check(`the drone's eye turns evenly (at most ${big.toFixed(1)}° in a hundredth of the flight, ${flips} sudden reversals)`, big < 8 && flips === 0);
+  // (Ruby, 2026-10-26: "more than one option for a drone flight": an orbit keeps its distance round its sight, a dronie
+  //  flies away from its start and climbs, a rise climbs where it stands; each from the start, each turning evenly)
+  const flown = fl => { const o = { seed: 511298746, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 160/3072, camera: { view: 100, zoom: 100, turn: 0, fly: { route: 'seed', u: 0.5, secs: 12, flight: fl } } };
+    defs.forEach((dd, j) => o['p' + (j + 1)] = String(dd.def)); T.clearTextureCache(); T.getTextureCanvas('ringpaint', 160, 100, o); return SR.rgDroneRoute.last; };
+  const even = R => { let mx = 0; for(let k = 1; k <= 200; k++) mx = Math.max(mx, Math.abs(R.at(k/200).yaw - R.at((k - 1)/200).yaw)*2); return mx; };
+  const ob = flown('orbit'), dr = flown('dronie'), ri = flown('rise'), d = (p, q) => Math.hypot(p.a - q.a, p.z - q.z);
+  check('the other flights: an orbit turns its eye half round and more as it circles, a dronie flies off and climbs, a rise climbs where it stands, each turning evenly',
+    Math.abs(ob.at(1).yaw - ob.at(0).yaw) > 150 && d(ob.at(0.5), ob.at(0)) > 0 && d(dr.at(1), dr.at(0)) > d(dr.at(0.5), dr.at(0)) && dr.at(1).rise > dr.at(0).rise
+    && d(ri.at(1), ri.at(0)) < 1e-9 && ri.at(1).rise > ri.at(0).rise*3 && ri.at(1).lift < ri.at(0).lift && [ob, dr, ri].every(R => even(R) < 8)); }
 
 // (Ruby, 2026-10-26: "sudden color shifts from lighting/daytime changes are a no, they need to be a lil more gradual"):
 // through a sunrise the sun's light on a slope and the dawn's warmth change by small steps, with no corner to turn at

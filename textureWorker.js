@@ -12,7 +12,7 @@
  */
 import { getTextureCanvas, clearTextureCache } from './textureGenerators.js';
 import { setGpuLight, setGpuPasses, setGpuSoftware, setGridCap } from './texCore.js';
-import { ringGpuInit, setRingGpu } from './ringGpu.js';
+import { ringGpuInit, setRingGpu, ringGpuReady } from './ringGpu.js';
 
 // (the Ringworld's land on WebGPU, opened once as the worker starts; until it is open the canvas draws it)
 ringGpuInit();
@@ -34,7 +34,8 @@ self.onmessage = (e) => {
     const canvas = getTextureCanvas(type, w, h, opts);
     clearTextureCache();                         // the page caches; a transferred canvas is emptied
     const bitmap = canvas.transferToImageBitmap();
-    self.postMessage({ id, bitmap }, [bitmap]);
+    // (and, for the Ringworld, whether WebGPU drew it: the film sheet says so)
+    self.postMessage({ id, bitmap, ...(type === 'ringpaint' ? { gpu: ringGpuReady() } : {}) }, [bitmap]);
   } catch(err){
     self.postMessage({ id, error: String((err && err.message) || err) });
   }
