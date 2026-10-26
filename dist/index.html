@@ -4185,7 +4185,7 @@ but bear with me, dear}]/jitter:200
         <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingTurnRowLabel"><label><input type="radio" name="movingTurn" value="90"><span class="radio-btn"><b data-str="moving.turn90">Quarter</b></span></label><label><input type="radio" name="movingTurn" value="180"><span class="radio-btn"><b data-str="moving.turn180">Half</b></span></label><label><input type="radio" name="movingTurn" value="360" checked><span class="radio-btn"><b data-str="moving.turn360">Full round</b></span></label><label><input type="radio" name="movingTurn" value="shot"><span class="radio-btn"><b data-str="moving.shot">To a shot</b></span></label></div></div>
       <div class="film-sub" id="movingShotRow"><span class="film-k" data-str="moving.the_shot">The shot</span><div class="moving-look-pick"><span class="moving-shot-is" id="movingShotIs" data-str="moving.shot_none">Not set yet</span><button class="ghost moving-set" id="movingSetShot" type="button" data-str="moving.set_shot">Set the shot…</button></div></div>
       <div class="film-sub" id="movingAlsoRow"><span class="film-k" id="movingAlsoRowLabel" data-str="moving.also">Also</span>
-        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingAlsoRowLabel"><label><input type="radio" name="movingAlso" value="hold" checked><span class="radio-btn"><b data-str="moving.a_hold">Nothing</b></span></label><label><input type="radio" name="movingAlso" value="in"><span class="radio-btn"><b data-str="moving.a_in">Push in</b></span></label><label><input type="radio" name="movingAlso" value="out"><span class="radio-btn"><b data-str="moving.a_out">Pull back</b></span></label><label><input type="radio" name="movingAlso" value="tilt"><span class="radio-btn"><b data-str="moving.a_tilt">Tilt</b></span></label><label><input type="radio" name="movingAlso" value="spiral"><span class="radio-btn"><b data-str="moving.a_spiral">Spiral out</b></span></label></div></div>
+        <div class="film-seg film-pick" role="radiogroup" aria-labelledby="movingAlsoRowLabel"><label><input type="radio" name="movingAlso" value="hold" checked><span class="radio-btn"><b data-str="moving.a_hold">Nothing</b></span></label><label><input type="radio" name="movingAlso" value="in"><span class="radio-btn"><b data-str="moving.a_in">Push in</b></span></label><label><input type="radio" name="movingAlso" value="out"><span class="radio-btn"><b data-str="moving.a_out">Pull back</b></span></label><label><input type="radio" name="movingAlso" value="tilt"><span class="radio-btn"><b data-str="moving.a_tilt">Tilt</b></span></label><label><input type="radio" name="movingAlso" value="spiral"><span class="radio-btn"><b data-str="moving.a_spiral">Spiral out</b></span></label><label><input type="radio" name="movingAlso" value="drone"><span class="radio-btn"><b data-str="moving.a_drone">Drone flight</b></span></label></div></div>
       <div class="film-sub" id="movingMarkRow"><label class="film-k" for="movingMarkCtl" data-str="moving.marks">Also moving</label>
         <div class="moving-marks"><select id="movingMarkCtl"></select><select id="movingMarkHow" aria-label="How it moves"><option value="still" data-str="moving.m_still">Still</option><option value="sway" data-str="moving.m_sway">Sways</option><option value="sweep" data-str="moving.m_sweep">Sweeps</option><option value="drift" data-str="moving.m_drift">Drifts</option></select><select id="movingMarkAmt" aria-label="How far"><option value="0.1" data-str="moving.m_little">A little</option><option value="0.25" data-str="moving.m_some" selected>Some</option><option value="0.5" data-str="moving.m_much">Much</option></select><select id="movingMarkTimes" aria-label="How many times"><option value="1" data-str="moving.m_once">Once</option><option value="2" data-str="moving.m_twice">Twice</option><option value="3" data-str="moving.m_3">3 times</option><option value="4" data-str="moving.m_4">4 times</option></select></div>
         <span class="moving-marks-sum" id="movingMarksSum"></span></div>
@@ -4347,11 +4347,16 @@ const SPELLS = {
 
 
 
+
 const FILM_CAMERA = {
   push: 1.5,
   tilt: 30,
   spiralPull: 1.5,
   spiralTilt: 25,
+
+
+  droneSpeed: 7,
+  droneClimb: 2.5,
 };
 
 
@@ -20373,14 +20378,28 @@ function rgView(E, n, ww, wh){
 
 
 
+
+  const FLY = E.ctx.camera && E.ctx.camera.fly, MM = W*0.00025; L.zS = L.z0; L.a0 = 0;
+  if(FLY && FLY.d){ const hp = (FLY.head ?? p.look)*Math.PI/180; L.a0 = FLY.d*Math.cos(hp)*MM; L.z0 = Math.max(-W*0.46, Math.min(W*0.46, L.zS + FLY.d*Math.sin(hp)*MM)); }
+
+
+
+  { const to = FLY ? (FLY.to ?? FLY.d ?? 0) : 0, hp = FLY ? (FLY.head ?? p.look)*Math.PI/180 : 0;
+    L.path = { a0: 0, z0: L.zS, a1: to*Math.cos(hp)*MM, z1: Math.max(-W*0.46, Math.min(W*0.46, L.zS + to*Math.sin(hp)*MM)) }; }
+
+
+
   const detail = Math.max(0, Math.min(3, Math.floor(num(n, 'detail', 37)/25)));
-  const LK = lkLand(seed, { W, Hw: L.Hw, forms, flat: world.list.includes('cities') || world.list.includes('neon') ? 0.55 : 1, terrace: world.list.includes('builders') ? W*0.004 : 0, z0: L.z0, blend: [0.15, 0.45, 0.75, 1][detail] });
+  const LK = lkLand(seed, { W, Hw: L.Hw, forms, flat: world.list.includes('cities') || world.list.includes('neon') ? 0.55 : 1, terrace: world.list.includes('builders') ? W*0.004 : 0, z0: L.zS, blend: [0.15, 0.45, 0.75, 1][detail] });
   const TR = { sea: LK.sea, snow: LK.snowline, cloud: W*0.03*(0.7 + 0.6*mnHash(seed | 0, 4, 77)), raw: (a, z, fine) => LK.height(a, z, fine) };
-  const v0 = LK.height(0, L.z0, W*0.001);
+  const v0 = LK.height(0, L.zS, W*0.001);
 
   const wx = rgWeatherOf(seed, E.P(n, 'weather', 'by the seed'), world); if(wx === 'snow') TR.snow = v0 - W*0.004;
   const T = (a, z, fine) => LK.height(a, z, fine); T.true = T;
-  L.Px = 1 - L.hc - v0;
+
+
+  if(FLY){ const vH = LK.height(L.a0, L.z0, W*0.001), eE = Math.max(v0 + L.hc + (FLY.rise || 0)*MM, vH + Math.max(L.hc*0.4, 3*MM)); L.hc = eE - vH; L.Px = 1 - eE; }
+  else L.Px = 1 - L.hc - v0;
   const unit = Math.min(ww, wh), F = L.f*unit, cx = ww/2, cy = wh/2;
 
 
@@ -20388,7 +20407,7 @@ function rgView(E, n, ww, wh){
 
   const proj = (X, Y, Z) => { const dx = X - L.Px, dy = Y, dz = Z - L.z0, vf = dx*L.fx + dy*L.fy + dz*L.fz, l = Math.sqrt(dx*dx + dy*dy + dz*dz), q = l + vf; if(q <= l*0.12 || l < 1e-9) return null;
     return [cx + 2*F*(dx*L.rx + dy*L.ry + dz*L.rz)/q, cy - 2*F*(dx*L.ux + dy*L.uy + dz*L.uz)/q, q/2]; };
-  const at = (a, z, e) => proj((1 - e)*Math.cos(a), (1 - e)*Math.sin(a), z);
+  const at = (a, z, e) => proj((1 - e)*Math.cos(a - L.a0), (1 - e)*Math.sin(a - L.a0), z);
   const psi = p.look*Math.PI/180, th = p.lift*Math.PI/180;
   const rgb = (v, d) => Array.isArray(v) ? v.slice(0, 3).map(q => q*255) : d;
   const land = rgb(input(n, 7), [111, 143, 85]), sky = rgb(input(n, 8), [134, 174, 220]), g1 = rgb(input(n, 9), [176, 48, 58]), g2 = rgb(input(n, 10), [201, 163, 58]);
@@ -20422,7 +20441,7 @@ function rgView(E, n, ww, wh){
   return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, LK, detail, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, regionAt, elementAt, regions: RG, dryAt, forestAt, cityAt, lightsOf, lightsAt, districtAt, psi,
 
 
-    season: seedChoice(seed, 'season')(), life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, 0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
+    season: seedChoice(seed, 'season')(), life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, L.a0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
 
 
 
@@ -20837,10 +20856,10 @@ function rgPaintArch(x, mk, V){
 
 
 
-  const AB = W*0.004, A0 = Math.floor(W*[3.2, 4, 4.6, 5.2][V.detail]*0.6/AB)*AB, TGT = Math.max(1.5, px(4));
-  const archKey = [V.seed, W, V.forms, V.world.list.join(), V.detail, L.z0, L.Hw, V.life, V.works, V.land.join(), V.sky.join()].join('|');
+  const AB = W*0.004, A0 = Math.floor(W*[3.2, 4, 4.6, 5.2][V.detail]*0.6/AB)*AB, TGT = Math.max(1.5, px(4)), aSh = Math.round((L.a0 || 0)/(AB*128))*AB*128;
+  const archKey = [V.seed, W, V.forms, V.world.list.join(), V.detail, L.zS ?? L.z0, aSh, L.Hw, V.life, V.works, V.land.join(), V.sky.join()].join('|');
   let AK = RG_ARCH_KEPT.get(archKey); if(!AK){ AK = new Map(); RG_ARCH_KEPT.set(archKey, AK); while(RG_ARCH_KEPT.size > 3) RG_ARCH_KEPT.delete(RG_ARCH_KEPT.keys().next().value); }
-  const dist3 = (a, z) => Math.hypot(Math.cos(a) - L.Px, Math.sin(a), z - L.z0);
+  const dist3 = (a, z) => Math.hypot(Math.cos(a + aSh - L.a0) - L.Px, Math.sin(a + aSh - L.a0), z - L.z0);
 
 
 
@@ -20849,7 +20868,7 @@ function rgPaintArch(x, mk, V){
   const unfinished = a => UF && a >= UF.lo && a <= UF.hi;
   const SUN3 = V.sun.D;
   for(const sg of [1, -1]) for(let a = A0, guard = 0; a < Math.PI && guard < 4000; guard++){ const dz0 = dist3(a, L.z0), k = Math.max(0, Math.min(7, Math.ceil(Math.log2(TGT*dz0/(F*AB))))), da = AB*Math.pow(2, k);
-    const aN = Math.min(Math.PI, (Math.floor(a/da + 1e-6) + 1)*da), i = Math.round(a/AB), a0 = a*sg, a1 = aN*sg, am = (a0 + a1)/2, day = ringDay(L, am); a = aN;
+    const aN = Math.min(Math.PI, (Math.floor(a/da + 1e-6) + 1)*da), i = Math.round(a/AB), a0 = a*sg + aSh, a1 = aN*sg + aSh, am = (a0 + a1)/2, day = ringDay(L, am); a = aN;
     const LNa = Math.pow(2, Math.max(1, Math.min(7, Math.floor(Math.log2(F*W/(dz0*TGT)))))), ws = W*0.06;
     for(let j = 0; j < LNa; j++){ const z0 = -W/2 + W*j/LNa, z1 = -W/2 + W*(j + 1)/LNa, zm = (z0 + z1)/2, q = [at(a0, z0, 0), at(a1, z0, 0), at(a1, z1, 0), at(a0, z1, 0)];
       if(q.some(v => !v) || (q[0][0] < 0 && q[1][0] < 0 && q[2][0] < 0 && q[3][0] < 0) || (q[0][0] > ww && q[1][0] > ww && q[2][0] > ww && q[3][0] > ww) || (q[0][1] > wh && q[1][1] > wh && q[2][1] > wh && q[3][1] > wh) || (q[0][1] < 0 && q[1][1] < 0 && q[2][1] < 0 && q[3][1] < 0)) continue;
@@ -20861,14 +20880,14 @@ function rgPaintArch(x, mk, V){
       if(wet < 0.95){ const dA2 = PK.dA2, dZ2 = PK.dZ2, ca3 = Math.cos(am), sa3 = Math.sin(am);
         const nx = dA2*sa3 - ca3, ny = -dA2*ca3 - sa3, nz = -dZ2, nl = Math.hypot(nx, ny, nz), up3 = -(ca3*SUN3[0] + sa3*SUN3[1]), nd = (nx*SUN3[0] + ny*SUN3[1] + nz*SUN3[2])/nl, kk = up3 > 0.04 ? Math.max(0, Math.min(1.6, nd/Math.max(0.3, up3))) : 1;
         c = kk < 1 ? rsMix(rsMix(c, [26, 34, 70], 0.3), c, kk) : rsMix(c, rsMix(c, [255, 244, 222], 0.2), (kk - 1)/0.6*0.5); }
-      const zc = (q[0][2] + q[2][2])/2, eS = elevOf(Math.cos(am), Math.sin(am), zm), jj = j*(32/LNa);
+      const zc = (q[0][2] + q[2][2])/2, eS = elevOf(Math.cos(am - L.a0), Math.sin(am - L.a0), zm), jj = j*(32/LNa);
       if(unfinished(am)){ quads.push([zc, q, rgLit(V, rsMix(WALL0, SPACE, 0.55), 0.3 + 0.7*day, hzOf(zc, eS)*0.55, AIR), null, 'frame', rgRand(s, 813, i*sg, jj)]); continue; }
 
       const bh = mnHash(i*sg, jj, s + 944); quads.push([zc, q, rgLit(V, rsMix(rsMix(c, [255, 255, 255], 0.06), RG_BRUSH_TINTS[Math.floor(bh*5)], 0.07*mnHash(jj, i*sg, s + 945)), day, hzOf(zc, eS)*0.55, AIR), day < 0.5 ? PK.city : null, false, rgRand(s, 805, i*sg, jj)]); } }
   const Hw = L.Hw, WALL = rsMix([96, 104, 124], S, 0.22), aW = steps(0, W*0.012, W*0.4, 0.12);
-  for(const zw of [-W/2, W/2]) for(const sg of [1, -1]) for(let i = 0; i + 1 < aW.length; i++){ const a0 = aW[i]*sg, a1 = aW[i + 1]*sg, am = (a0 + a1)/2, q = [at(a0, zw, 0), at(a1, zw, 0), at(a1, zw, Hw), at(a0, zw, Hw)];
+  for(const zw of [-W/2, W/2]) for(const sg of [1, -1]) for(let i = 0; i + 1 < aW.length; i++){ const a0 = aW[i]*sg + L.a0, a1 = aW[i + 1]*sg + L.a0, am = (a0 + a1)/2, q = [at(a0, zw, 0), at(a1, zw, 0), at(a1, zw, Hw), at(a0, zw, Hw)];
     if(q.some(v => !v)) continue;
-    const zc = (q[0][2] + q[2][2])/2, eS = elevOf((1 - Hw*0.5)*Math.cos(am), (1 - Hw*0.5)*Math.sin(am), zw), rib = i % 4 === 0 ? 0.12 : 0, day = ringDay(L, am);
+    const zc = (q[0][2] + q[2][2])/2, eS = elevOf((1 - Hw*0.5)*Math.cos(am - L.a0), (1 - Hw*0.5)*Math.sin(am - L.a0), zw), rib = i % 4 === 0 ? 0.12 : 0, day = ringDay(L, am);
 
 
     quads.push([zc, q, rgLit(V, rsMix(rsMix(WALL, RG_BRUSH_TINTS[(i*7 + (zw > 0 ? 3 : 0)) % 5], 0.05 + 0.07*mnHash(i, zw > 0 ? 1 : 2, s + 943)), [0, 0, 0], rib*0.5), 0.25 + 0.75*day, Math.min(0.92, 0.32*V.air + hzOf(zc, eS)*0.5), AIR), null, true, rgRand(s, 810, i*sg, zw > 0 ? 1 : 0), V.worldAt(am, zw*0.96), day, Math.min(0.9, 0.35 + 0.6*V.air)]); }
@@ -21307,17 +21326,20 @@ const RG_NEAR_KINDS = { cities: ['row', 'brick', 'chapel', 'cottage'], neon: ['m
 const RG_SINKS = ['hulk', 'column', 'statue', 'container', 'bicycle', 'barrel', 'crate', 'traps'];
 function rgStore(V){
   const { L, W, T, TR } = V, s = V.seed | 0;
-  const key = [s, V.world.list.join('+'), V.forms, V.life, V.fauna, V.detailK, V.works, V.clutter, W.toFixed(6), L.z0.toFixed(6)].join('|');
+  const key = [s, V.world.list.join('+'), V.forms, V.life, V.fauna, V.detailK, V.works, V.clutter, W.toFixed(6), L.zS.toFixed(6), L.path.a1.toFixed(6), L.path.z1.toFixed(6)].join('|');
   const kept = RG_KEPT_STORES.get(key); if(kept) return kept;
+
+  const PT = L.path, pdA = PT.a1 - PT.a0, pdZ = PT.z1 - PT.z0, pdL = pdA*pdA + pdZ*pdZ, PA0 = Math.min(PT.a0, PT.a1), PA1 = Math.max(PT.a0, PT.a1), PZ0 = Math.min(PT.z0, PT.z1), PZ1 = Math.max(PT.z0, PT.z1);
+  const PD = (a, z) => { const u = pdL > 0 ? Math.max(0, Math.min(1, ((a - PT.a0)*pdA + (z - PT.z0)*pdZ)/pdL)) : 0; return Math.hypot(a - PT.a0 - u*pdA, z - PT.z0 - u*pdZ); };
   const out = []; let onWall = null;
   const WALL_ROOM = { bldg: 1, tree: 1, prop: 1, rock: 1, board: 1, egg: 1, henge: 1 };
   const sow = (id, c0, B0, rMax, cap, fn) => {
     for(let m = 0; m < 12; m++){ const hi = Math.min(rMax, B0*Math.pow(2, m + 1)), c = c0*Math.pow(2, m);
-      const i0 = Math.floor(-hi/c) - 1, i1 = Math.ceil(hi/c) + 1, j0 = Math.floor((L.z0 - hi)/c) - 1, j1 = Math.ceil((L.z0 + hi)/c) + 1;
+      const i0 = Math.floor((PA0 - hi)/c) - 1, i1 = Math.ceil((PA1 + hi)/c) + 1, j0 = Math.floor((PZ0 - hi)/c) - 1, j1 = Math.ceil((PZ1 + hi)/c) + 1;
       for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
-        const ac = (i + 0.5)*c, zc = (j + 0.5)*c; if(Math.hypot(ac, zc - L.z0) - c > hi) continue;
+        const ac = (i + 0.5)*c, zc = (j + 0.5)*c; if(PD(ac, zc) - c > hi) continue;
         for(let q = 0; q < cap; q++){ const R = rgRand(s, id*16 + m, i*2048 + q, j), a = (i + R())*c, z = (j + R())*c;
-          if(Math.abs(z) > W*0.485) continue; const r = Math.hypot(a, z - L.z0); if(r >= hi) continue;
+          if(Math.abs(z) > W*0.485) continue; const r = PD(a, z); if(r >= hi) continue;
           const o = fn(a, z, r, R); if(o && !(onWall && WALL_ROOM[o.c] && onWall(a, z, ((o.wM || 2)*0.5 + 1.5)*V.W*0.00025))){ o.a = a; o.z = z; o.r = r; o.rs = (R()*4294967296) >>> 0; out.push(o); } } }
       if(hi >= rMax) break; } };
 
@@ -21379,14 +21401,14 @@ function rgStore(V){
       return; }
     addWay(rd.along ? walk(-W*0.32, rd.at, 0, W*0.64, step, [W*0.32, rd.at], R) : walk(rd.at, -W*0.46, Math.PI/2, W*0.95, step, [rd.at, W*0.46], R), mat, rd.w, true, R); });
 
-  const hubs = [], farms = []; { const C = W*0.05, Rr = W*0.25; for(let i = Math.floor(-Rr/C); i <= Math.ceil(Rr/C); i++) for(let j = Math.floor((L.z0 - Rr)/C); j <= Math.ceil((L.z0 + Rr)/C); j++){
-    const a = (i + 0.5)*C, z = (j + 0.5)*C; if(Math.abs(z) > W*0.46 || Math.hypot(a, z - L.z0) > Rr) continue; const w = V.worldAt(a, z), t = townAt(w, a, z); if(t < (w === 'wilds' || w === 'magic' ? 0.1 : 0.25)) continue;
+  const hubs = [], farms = []; { const C = W*0.05, Rr = W*0.25; for(let i = Math.floor((PA0 - Rr)/C); i <= Math.ceil((PA1 + Rr)/C); i++) for(let j = Math.floor((PZ0 - Rr)/C); j <= Math.ceil((PZ1 + Rr)/C); j++){
+    const a = (i + 0.5)*C, z = (j + 0.5)*C; if(Math.abs(z) > W*0.46 || PD(a, z) > Rr) continue; const w = V.worldAt(a, z), t = townAt(w, a, z); if(t < (w === 'wilds' || w === 'magic' ? 0.1 : 0.25)) continue;
     let top = true; for(const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const a2 = a + di*C, z2 = z + dj*C; if(townAt(V.worldAt(a2, z2), a2, z2) > t){ top = false; break; } }
     if(!top || T.true(a, z, W*0.003) <= TR.sea || mnHash(i, j, s + 65) > 0.15 + 0.7*V.works) continue; hubs.push([a, z, w, t]); } }
 
   const villageAt = (w, a, z) => w === 'wilds' ? 0.7*V.cityAt(a, z, 0.12*(0.3 + 0.9*V.works)) : V.cityAt(a, z, RG_PROF[w].cv*(0.3 + 0.9*V.works));
-  { const C = W*0.03, Rr = W*0.3; for(let i = Math.floor(-Rr/C); i <= Math.ceil(Rr/C); i++) for(let j = Math.floor((L.z0 - Rr)/C); j <= Math.ceil((L.z0 + Rr)/C); j++){
-    const a = (i + 0.5)*C, z = (j + 0.5)*C; if(Math.abs(z) > W*0.46 || Math.hypot(a, z - L.z0) > Rr) continue; const w = V.worldAt(a, z), t = villageAt(w, a, z); if(t < 0.06) continue;
+  { const C = W*0.03, Rr = W*0.3; for(let i = Math.floor((PA0 - Rr)/C); i <= Math.ceil((PA1 + Rr)/C); i++) for(let j = Math.floor((PZ0 - Rr)/C); j <= Math.ceil((PZ1 + Rr)/C); j++){
+    const a = (i + 0.5)*C, z = (j + 0.5)*C; if(Math.abs(z) > W*0.46 || PD(a, z) > Rr) continue; const w = V.worldAt(a, z), t = villageAt(w, a, z); if(t < 0.06) continue;
     let top = true; for(const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]){ const a2 = a + di*C, z2 = z + dj*C; if(villageAt(V.worldAt(a2, z2), a2, z2) > t){ top = false; break; } }
 
     if(top && w !== 'wilds' && T.true(a, z, W*0.003) > TR.sea) farms.push([a, z, w, Math.min(1, t*2)]); } }
@@ -21425,7 +21447,7 @@ function rgStore(V){
 
 
   const walls = []; out.walls = walls; const WALLED = { wilds: 0.5, magic: 0.6, ruins: 0.3 };
-  hubs.forEach(([a0, z0, w, t], hi) => { const R = rgRand(s, 1340, hi); if(!WALLED[w] || R() > WALLED[w] || Math.hypot(a0, z0 - L.z0) > W*1.6) return;
+  hubs.forEach(([a0, z0, w, t], hi) => { const R = rgRand(s, 1340, hi); if(!WALLED[w] || R() > WALLED[w] || PD(a0, z0) > W*1.6) return;
     const rr = (60 + 80*t)*M; if(walls.some(wl => Math.hypot(wl.a - a0, wl.z - z0) < (wl.rr + rr)*1.6)) return;
     const p1 = R()*6.283, p2 = R()*6.283, rOf = th => rr*(1 + 0.09*Math.sin(3*th + p1) + 0.05*Math.sin(5*th + p2));
     const n = Math.max(24, Math.min(160, Math.round(2*Math.PI*rr/(12*M)))), pts = [];
@@ -21444,7 +21466,7 @@ function rgStore(V){
       const wl = walls.find(q => q.a === ha && q.z === hz), rT = wl ? wl.rr*1.18 + 8*M : (90 + 180*t)*0.7*M, P = wy.pts; let i = 1; while(i < P.length && Math.hypot(P[i].a - ha, P[i].z - hz) < rT) i++; if(i >= P.length) return;
       const A = P[i - 1], B = P[i], dl = Math.hypot(B.a - A.a, B.z - A.z) || 1, nx = -(B.z - A.z)/dl, nz = (B.a - A.a)/dl, off = wy.half + 1.8*M, a = B.a + nx*off, z = B.z + nz*off; if(Math.abs(z) > W*0.47 || ground(a, z).wet) return;
       named.push([ha, hz]); const I = V.regionAt(a, z), R = rgRand(s, 1350, hi);
-      out.push({ c: 'prop', w, kind: 'welcome', hM: pkMetres('welcome', R()), a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(B.z - A.z, B.a - A.a), mark: { say: rkTownName(R, w), ban: I.faction } }); }); }
+      out.push({ c: 'prop', w, kind: 'welcome', hM: pkMetres('welcome', R()), a, z, r: PD(a, z), rs: (R()*4294967296) >>> 0, face: Math.atan2(B.z - A.z, B.a - A.a), mark: { say: rkTownName(R, w), ban: I.faction } }); }); }
 
   if(walls.length) onWall = (a, z, room) => { for(const wl of walls){ const da = a - wl.a, dz = z - wl.z, d = Math.hypot(da, dz); if(d < wl.rr*1.2 + room && Math.abs(d - wl.rOf(Math.atan2(dz, da))) < room + wl.T) return true; } return false; };
 
@@ -21488,10 +21510,10 @@ function rgStore(V){
 
 
   const beltAt = (a, z) => { const cv = RG_PROF.cities.cv*(0.3 + 0.9*V.works); return V.cityAt(a, z, cv + 0.25)*(1 - V.cityAt(a, z, cv)); };
-  { const span = W*2.2, i0 = Math.floor(-span/SEAT), i1 = Math.ceil(span/SEAT), j0 = Math.floor((L.z0 - span)/SEAT), j1 = Math.ceil((L.z0 + span)/SEAT);
+  { const span = W*2.2, i0 = Math.floor((PA0 - span)/SEAT), i1 = Math.ceil((PA1 + span)/SEAT), j0 = Math.floor((PZ0 - span)/SEAT), j1 = Math.ceil((PZ1 + span)/SEAT);
     for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
       const sa = (i + 0.2 + 0.6*mnHash(i, j, s + 92))*SEAT, sz = (j + 0.2 + 0.6*mnHash(i, j, s + 93))*SEAT; if(Math.abs(sz) > W*0.45) continue;
-      const rs0 = Math.hypot(sa, sz - L.z0); if(rs0 > span) continue; const w = V.worldAt(sa, sz); if(w !== 'cities' && w !== 'magic') continue;
+      const rs0 = PD(sa, sz); if(rs0 > span) continue; const w = V.worldAt(sa, sz); if(w !== 'cities' && w !== 'magic') continue;
       const ci = w === 'cities' ? 0.7*beltAt(sa, sz) : V.cityAt(sa, sz, RG_PROF[w].cv*(0.3 + 0.9*V.works));
       if(ci < 0.05 || mnHash(i, j, s + 91) > 0.3 + 0.45*ci) continue;
       const g0 = ground(sa, sz); if(g0.wet || g0.slope > 0.8) continue;
@@ -21508,7 +21530,7 @@ function rgStore(V){
         return [sa + Math.cos(an)*dd, sz + Math.sin(an)*dd, null]; };
       const placed = [];
       for(let k = 0; k < n; k++){
-        const [a, z, fc] = spot(k), r = Math.hypot(a, z - L.z0); if(R() > 0.08 + 0.92*rsSmooth(W*0.012, W*0.07, r)) continue;
+        const [a, z, fc] = spot(k), r = PD(a, z); if(R() > 0.08 + 0.92*rsSmooth(W*0.012, W*0.07, r)) continue;
         const g = ground(a, z); if(g.wet || g.slope > 0.9) continue;
         let kind = null; for(let t = 0; t < 3 && !kind; t++){ const u = R(), k2 = !fam ? pkArchOf(PK_STYLE[w], u) : seat.hamlet ? pkVernacularOf(fam, u) : (k ? farm.out : farm.house)[Math.floor(u*(k ? farm.out : farm.house).length)];
           if(rgFits(k2, g, seat.hamlet ? 0.3 : 0.1)) kind = k2; } if(!kind) continue;
@@ -21529,7 +21551,7 @@ function rgStore(V){
         for(const arm of [th, th + Math.PI/2]){ const ca = Math.cos(arm), sn = Math.sin(arm);
           for(const [rw, kind, sp, hk] of [[0, tall, 4.5, 0.85], [1, 'broadleaf', 4, 0.45], [2, 'bush', 3, 1]]) for(let t2 = -run; t2 <= run; t2 += sp*M){ const a = sa + ca*(Dw + rw*rowM) - sn*t2, z = sz + sn*(Dw + rw*rowM) + ca*t2;
             if(Math.abs(z) > W*0.47 || R() < 0.06 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M)) continue;
-            out.push({ c: 'tree', w, kind, hM: pkMetres(kind, R())*hk, a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0 }); } }
+            out.push({ c: 'tree', w, kind, hM: pkMetres(kind, R())*hk, a, z, r: PD(a, z), rs: (R()*4294967296) >>> 0 }); } }
         seats.get(seat.key).rf = Dw + 3*rowM + 4*M; }
       if(seat.hamlet && rs0 < W*0.5 && R() < 0.7) out.push({ c: 'prop', w, kind: 'well', hM: pkMetres('well', R()), a: sa, z: sz, r: rs0, rs: (R()*4294967296) >>> 0, face: R()*Math.PI*2 }); } }
 
@@ -21544,10 +21566,10 @@ function rgStore(V){
 
 
 
-  { const CELL = 2600*M, span = W*2.2, i0 = Math.floor(-span/CELL), i1 = Math.ceil(span/CELL), j0 = Math.floor((L.z0 - span)/CELL), j1 = Math.ceil((L.z0 + span)/CELL);
-    const put = (o, a, z, R) => { if(Math.abs(z) > W*0.47 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M) || (onWall && onWall(a, z, 2*M))) return; out.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0 }); };
+  { const CELL = 2600*M, span = W*2.2, i0 = Math.floor((PA0 - span)/CELL), i1 = Math.ceil((PA1 + span)/CELL), j0 = Math.floor((PZ0 - span)/CELL), j1 = Math.ceil((PZ1 + span)/CELL);
+    const put = (o, a, z, R) => { if(Math.abs(z) > W*0.47 || T.true(a, z, W*0.002) <= TR.sea || !offWay(a, z, 2*M) || (onWall && onWall(a, z, 2*M))) return; out.push({ ...o, a, z, r: PD(a, z), rs: (R()*4294967296) >>> 0 }); };
     for(let i = i0; i <= i1; i++) for(let j = j0; j <= j1; j++){
-      const a0 = (i + 0.15 + 0.7*mnHash(i, j, s + 1501))*CELL, z0 = (j + 0.15 + 0.7*mnHash(i, j, s + 1502))*CELL; if(Math.abs(z0) > W*0.44 || Math.hypot(a0, z0 - L.z0) > span) continue;
+      const a0 = (i + 0.15 + 0.7*mnHash(i, j, s + 1501))*CELL, z0 = (j + 0.15 + 0.7*mnHash(i, j, s + 1502))*CELL; if(Math.abs(z0) > W*0.44 || PD(a0, z0) > span) continue;
       const w = V.worldAt(a0, z0); if(w !== 'wilds' && w !== 'magic') continue; if(mnHash(i, j, s + 1503) > (w === 'magic' ? 0.6 : 0.5)) continue;
       const g = ground(a0, z0); if(g.wet || g.coast || g.slope > 0.45 || V.cityAt(a0, z0, 0.12) > 0.05) continue;
       const R = rgRand(s, 1510, i*4099 + j), fo = V.forestAt(a0, z0), dr = V.dryAt(a0, z0), u = R(), th = R()*Math.PI*2, ca = Math.cos(th), sn = Math.sin(th);
@@ -21584,11 +21606,11 @@ function rgStore(V){
 
 
 
-  { const RN = rgRand(s, 1720), w0 = V.worldAt(0, L.z0), kinds = RG_NEAR_KINDS[w0];
-    if(kinds && RN() < 0.7) for(let k = 0, n = 2 + Math.floor(RN()*3); k < n; k++){ const an = RN()*Math.PI*2, d = (60 + 140*RN())*M, a = Math.cos(an)*d, z = L.z0 + Math.sin(an)*d, kind = kinds[Math.floor(RN()*kinds.length)], hu = RN(), wu = RN();
+  { const RN = rgRand(s, 1720), w0 = V.worldAt(0, L.zS), kinds = RG_NEAR_KINDS[w0];
+    if(kinds && RN() < 0.7) for(let k = 0, n = 2 + Math.floor(RN()*3); k < n; k++){ const an = RN()*Math.PI*2, d = (60 + 140*RN())*M, a = Math.cos(an)*d, z = L.zS + Math.sin(an)*d, kind = kinds[Math.floor(RN()*kinds.length)], hu = RN(), wu = RN();
       if(Math.abs(z) > W*0.46 || V.worldAt(a, z) !== w0) continue; const g = ground(a, z); if(g.wet || g.slope > 0.35 || !rgFits(kind, g, 0.5)) continue;
       const hM = Math.min(kind === 'wizard' ? 36 : 28, pkMetres(kind, 0.3 + 0.4*hu)), wM = pkMetres(kind, wu, 1);
-      const face = Math.atan2(L.z0 - z, -a), ft = footing(a, z, wM, face, kind); if(!ft || (onWall && onWall(a, z, (wM*0.5 + 2)*M))) continue;
+      const face = Math.atan2(L.zS - z, -a), ft = footing(a, z, wM, face, kind); if(!ft || (onWall && onWall(a, z, (wM*0.5 + 2)*M))) continue;
       out.push({ c: 'bldg', w: w0, kind, hM, wM, face, near: true, a, z, r: d, rs: (RN()*4294967296) >>> 0, ...ft }); } }
 
 
@@ -21693,7 +21715,7 @@ function rgStore(V){
       if(w !== 'ruins') deck(pts, 'jetty', w, 1.1*M, TR.sea + 1.0*M);
       const n = w === 'ruins' ? 0 : 1 + Math.floor(R()*2), side = R() < 0.5 ? 1 : -1;
       for(let k = 0; k < n; k++){ const ba = end[0] - ca*k*4*M + (-sa)*side*(2.6 + 0.4*k)*M, bz = end[1] - sa*k*4*M + ca*side*(2.6 + 0.4*k)*M;
-        out.push({ c: 'prop', w, kind: 'boat', hM: pkMetres('boat', R()), a: ba, z: bz, r: Math.hypot(ba, bz - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(sa, ca) + (R() - 0.5)*0.4, afloat: true }); }
+        out.push({ c: 'prop', w, kind: 'boat', hM: pkMetres('boat', R()), a: ba, z: bz, r: PD(ba, bz), rs: (R()*4294967296) >>> 0, face: Math.atan2(sa, ca) + (R() - 0.5)*0.4, afloat: true }); }
       if(R() < 0.15) return { c: 'bot', w, kind: 'crab', hM: pkMetres('crab', R()) };
       return null; });
     sow(16, W*0.02, W*0.04, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z), p = { builders: 0.5, ruins: 0.25, magic: 0.1 }[w] ?? 0.03; if(R() > p*(0.3 + V.works)) return null;
@@ -21706,7 +21728,7 @@ function rgStore(V){
 
   { const CLF = 0.3 + 0.7*Math.min(1, CL);
     for(const f of fields){ const R = rgRand(s, 1410, f.i), at2 = (u, v) => [f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux];
-      const put = (kind, u, v, extra = {}) => { const [a, z] = at2(u, v); if(Math.abs(z) > W*0.485) return; out.push({ c: kind === 'shepherd' || kind === 'harvester' ? 'bot' : 'prop', w: f.w, kind, hM: pkMetres(kind, R()), a, z, r: Math.hypot(a, z - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(f.uz, f.ux) + (R() < 0.5 ? 0 : Math.PI), ...extra }); };
+      const put = (kind, u, v, extra = {}) => { const [a, z] = at2(u, v); if(Math.abs(z) > W*0.485) return; out.push({ c: kind === 'shepherd' || kind === 'harvester' ? 'bot' : 'prop', w: f.w, kind, hM: pkMetres(kind, R()), a, z, r: PD(a, z), rs: (R()*4294967296) >>> 0, face: Math.atan2(f.uz, f.ux) + (R() < 0.5 ? 0 : Math.PI), ...extra }); };
       if(f.step) continue;
 
 
@@ -21835,7 +21857,7 @@ function rgStore(V){
 
   for(const wy of ways){ if(wy.deck !== undefined) continue; const w = wy.w, R = rgRand(s, 1200, wy.i), kerb = wy.half + 1.6*M, side = () => R() < 0.5 ? 1 : -1;
     const put = (kind, a, z, nx, nz, sd2, off = 0, extra = {}) => { const a2 = a + nx*sd2*(kerb + off), z2 = z + nz*sd2*(kerb + off); if(Math.abs(z2) > W*0.485 || ground(a2, z2).wet || (onWall && onWall(a2, z2, 1.5*M))) return null;
-      const o = { c: 'prop', w, kind, hM: pkMetres(kind, R()), a: a2, z: z2, r: Math.hypot(a2, z2 - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nz*sd2, -nx*sd2), ...extra }; out.push(o); return o; };
+      const o = { c: 'prop', w, kind, hM: pkMetres(kind, R()), a: a2, z: z2, r: PD(a2, z2), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nz*sd2, -nx*sd2), ...extra }; out.push(o); return o; };
     if(RG_LIT_WAYS.includes(wy.mat) && w !== 'wilds'){ let k = 0; along(wy, 25*M, (a, z, nx, nz, u, dec) => { k++; if(inTown(w, a, z) && dec < 0.7 && R() < Math.min(1, 0.3 + 1.4*V.clutter)){ put('lamp', a, z, nx, nz, k % 2 ? 1 : -1);
 
       if(w !== 'neon' && R() < 0.012*V.fauna*2){ const o = put('lamplighter', a + nz*1.2*M, z - nx*1.2*M, nx, nz, k % 2 ? 1 : -1, 0.6*M); if(o) o.c = 'bot'; } } }); }
@@ -21850,7 +21872,7 @@ function rgStore(V){
       if((w === 'wilds' || w === 'magic') && town){ if(R() < 0.05*CL) put('mailbox', a, z, nx, nz, side(), 0.4*M); if(R() < 0.025*CL) put('bench', a, z, nx, nz, side(), 1.2*M); if(w === 'magic' && R() < 0.06*CL) put('lamp', a, z, nx, nz, side(), 0.3*M); } });
 
     if(wy.main && wy.mat !== 'ley' && wy.mat !== 'light' && CL > 0.02){ const sd2 = mnHash(s, 70 + wy.i, 3) < 0.5 ? -1 : 1; let prev = null;
-      along(wy, 40*M, (a, z, nx, nz) => { if(inTown(w, a, z) || Math.hypot(a, z - L.z0) > W*0.25){ prev = null; return; } const o = put('pole', a, z, nx, nz, sd2, 2.5*M); if(o && prev) prev.next = [o.a, o.z]; prev = o; }); } }
+      along(wy, 40*M, (a, z, nx, nz) => { if(inTown(w, a, z) || PD(a, z) > W*0.25){ prev = null; return; } const o = put('pole', a, z, nx, nz, sd2, 2.5*M); if(o && prev) prev.next = [o.a, o.z]; prev = o; }); } }
 
 
   { const KINDS = Object.keys(PK_EGGS);
@@ -21874,10 +21896,10 @@ function rgStore(V){
     for(let i = 1; i < P.length; i++){ const r1 = V.regions.at(P[i].a, P[i].z).id; if(r1 === r0) continue; const A = P[i - 1], B = P[i], from = r0; r0 = r1;
 
       let lo = 0, hi = 1; for(let k = 0; k < 10; k++){ const m = (lo + hi)/2; if(V.regions.at(A.a + (B.a - A.a)*m, A.z + (B.z - A.z)*m).id === from) lo = m; else hi = m; }
-      const m = (lo + hi)/2, a = A.a + (B.a - A.a)*m, z = A.z + (B.z - A.z)*m; if(Math.abs(z) > W*0.47 || Math.hypot(a, z - L.z0) > W*1.2 || (last && Math.hypot(a - last[0], z - last[1]) < 250*M)) continue; last = [a, z];
+      const m = (lo + hi)/2, a = A.a + (B.a - A.a)*m, z = A.z + (B.z - A.z)*m; if(Math.abs(z) > W*0.47 || PD(a, z) > W*1.2 || (last && Math.hypot(a - last[0], z - last[1]) < 250*M)) continue; last = [a, z];
       const dl = Math.hypot(B.a - A.a, B.z - A.z) || 1, da = (B.a - A.a)/dl, dz = (B.z - A.z)/dl, nx = -dz, nz = da, IA = V.regions.info(from), IB = V.regions.info(r1), toA = Math.atan2(-dz, -da), toB = Math.atan2(dz, da);
       const mark = (kind, w, sd, back, extra) => { const off = wy.half + (kind === 'banner' ? 3 : 1.6)*M, a2 = a + nx*sd*off + da*back*M, z2 = z + nz*sd*off + dz*back*M; if(ground(a2, z2).wet) return;
-        out.push({ c: 'prop', w, kind, hM: pkMetres(kind, RB()), a: a2, z: z2, r: Math.hypot(a2, z2 - L.z0), rs: (RB()*4294967296) >>> 0, ...extra }); };
+        out.push({ c: 'prop', w, kind, hM: pkMetres(kind, RB()), a: a2, z: z2, r: PD(a2, z2), rs: (RB()*4294967296) >>> 0, ...extra }); };
       const signs = I => I.world === 'cities' || I.world === 'neon' || I.world === 'builders';
       if(signs(IB)) mark('welcome', IB.world, 1, 6, { face: toA, mark: { say: IB.name, ban: IB.faction } });
       if(signs(IA)) mark('welcome', IA.world, -1, -6, { face: toB, mark: { say: IA.name, ban: IA.faction } });
@@ -21892,9 +21914,9 @@ function rgStore(V){
     ways.filter(wy => wy.main).forEach(wy => { const R = rgRand(s, 1000, wy.i), w0 = wy.w, spots = [];
       along(wy, 30*M, (a, z, nx, nz) => spots.push([a, z, nx, nz]));
       for(let i = 0; i < spots.length; i += 2){ const [a0, z0, nx, nz] = spots[i], sd2 = R() < 0.5 ? -1 : 1, off = wy.half + (5 + 6*R())*M, a = a0 + nx*sd2*off, z = z0 + nz*sd2*off;
-        if(Math.abs(z) > W*0.485) continue; const r = Math.hypot(a, z - L.z0); if(r > W*0.3) continue; const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || g.slope > 0.6) continue;
+        if(Math.abs(z) > W*0.485) continue; const r = PD(a, z); if(r > W*0.3) continue; const w = V.worldAt(a, z), g = ground(a, z); if(g.wet || g.slope > 0.6) continue;
         if((w === 'wilds' || w === 'ruins') && R() < 0.03*CL && i + 5 < spots.length){ const v = Math.floor(R()*PK_SERIALS.length), ag = age(w, R);
-          for(let k = 0; k < 5; k++){ const [ak0, zk0, nkx, nkz] = spots[i + k], ak = ak0 + nkx*sd2*off, zk = zk0 + nkz*sd2*off; out.push({ c: 'board', w, kind: 'serial', v, k, aged: ag, hM: pkBoardSize('serial')[1], wM: pkBoardSize('serial')[0], a: ak, z: zk, r: Math.hypot(ak, zk - L.z0), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nkz*sd2, -nkx*sd2) }); }
+          for(let k = 0; k < 5; k++){ const [ak0, zk0, nkx, nkz] = spots[i + k], ak = ak0 + nkx*sd2*off, zk = zk0 + nkz*sd2*off; out.push({ c: 'board', w, kind: 'serial', v, k, aged: ag, hM: pkBoardSize('serial')[1], wM: pkBoardSize('serial')[0], a: ak, z: zk, r: PD(ak, zk), rs: (R()*4294967296) >>> 0, face: Math.atan2(-nkz*sd2, -nkx*sd2) }); }
           i += 6; continue; }
         if(R() > (BOARD[w] || 0)*CL) continue; const id = pkBoardOf(w, R()); if(!id || PK_SMALL_BOARDS.includes(PK_BOARDS[id].fmt)) continue;
         const [bw, bh] = pkBoardSize(id); out.push({ c: 'board', w, kind: id, aged: age(w, R), hM: bh, wM: bw, a, z, r, rs: (R()*4294967296) >>> 0, face: Math.atan2(-nz*sd2, -nx*sd2) }); } });
@@ -21919,7 +21941,7 @@ function rgStore(V){
     for(let i = out.length - 1; i >= 0; i--){ const o = out[i], rn = o.c === 'prop' && RUN[o.kind]; if(!rn || o.piece) continue;
       const len = o.hM*rn[0], n = Math.max(1, Math.round(len/rn[1])), pl = len/n, ax = o.face ?? (o.rs % 62832)/10000, ca = Math.cos(ax), sa = Math.sin(ax);
       for(let k = 0; k < n; k++){ const t = (k + 0.5 - n/2)*pl*M, a = o.a + ca*t, z = o.z + sa*t;
-        pieces.push({ ...o, a, z, r: Math.hypot(a, z - L.z0), piece: pl, axis: ax, rs: (Math.imul(o.rs, 31) + k*0x9E3779B1) >>> 0 }); }
+        pieces.push({ ...o, a, z, r: PD(a, z), piece: pl, axis: ax, rs: (Math.imul(o.rs, 31) + k*0x9E3779B1) >>> 0 }); }
       out.splice(i, 1); }
     out.push(...pieces); }
 
@@ -21928,7 +21950,7 @@ function rgStore(V){
   { const doors = out.filter(o => o.c === 'bldg' && !RG_DOORLESS.includes(o.kind));
     for(const o of out){ if(o.c !== 'prop' || o.kind !== 'figure' || o.w === 'neon') continue; let best = null, bd = 250*M;
       for(const b of doors){ const d = Math.abs(b.a - o.a) + Math.abs(b.z - o.z); if(d < bd*1.42 && Math.hypot(b.a - o.a, b.z - o.z) < bd){ bd = Math.hypot(b.a - o.a, b.z - o.z); best = b; } }
-      if(best){ const ex = -best.a, ez = L.z0 - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } } }
+      if(best){ const ex = -best.a, ez = L.zS - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } } }
 
 
 
@@ -22051,13 +22073,13 @@ function rgPaintLand(x, mk, dk, V){
   const half = Math.hypot(ww/2, wh/2)/unit/L.f, PHI = Math.min(2.55, 2*Math.atan(half/2)*1.06 + 0.06);
 
 
-  const angOf = (a, z) => Math.atan2(-a*hz + (z - L.z0)*hx, a*hx + (z - L.z0)*hz), cutOf = (a, z) => Math.hypot(a, z - L.z0);
+  const A0E = L.a0 || 0, angOf = (a, z) => Math.atan2(-(a - A0E)*hz + (z - L.z0)*hx, (a - A0E)*hx + (z - L.z0)*hz), cutOf = (a, z) => Math.hypot(a - A0E, z - L.z0);
 
 
   const FALL = V.weather === 'snow' ? [0.62, 900] : V.weather === 'storm' ? [0.5, 1300] : V.weather === 'rain' ? [0.38, 2600] : null;
   const hazeOf = FALL ? d => Math.max(V.air*(1 - Math.exp(-d/(W*1.3))), FALL[0]*(1 - Math.exp(-d/(FALL[1]*W*0.00025)))) : d => V.air*(1 - Math.exp(-d/(W*1.3)));
 
-  const ahead = (a, z) => a*hx + (z - L.z0)*hz;
+  const ahead = (a, z) => (a - A0E)*hx + (z - L.z0)*hz;
 
   const wn = (a, z, ws, salt) => mnValue(a/ws + salt*3.17, z/ws - salt*1.93, s + 900 + salt);
 
@@ -22077,15 +22099,16 @@ function rgPaintLand(x, mk, dk, V){
 
 
   let c0 = W*0.00025*[0.5, 0.36, 0.28, 0.22][DI]; while(c0*F/Math.max(L.hc, W*0.0004) < 1.2 && c0*NG*4 < reach) c0 *= 2;
-  const NLV = Math.max(1, Math.ceil(Math.log2(reach/(NG*c0))) + 1), cl = [], cz = [], ZMAX = W*0.497, SIDE = 2*NG + 1;
-  for(let l = 0; l < NLV; l++){ cl.push(c0*Math.pow(2, l)); cz.push(Math.round(L.z0/(2*cl[l]))*2*cl[l]); }
+  const NLV = Math.max(1, Math.ceil(Math.log2(reach/(NG*c0))) + 1), cl = [], cz = [], ca = [], ZMAX = W*0.497, SIDE = 2*NG + 1;
+  for(let l = 0; l < NLV; l++){ cl.push(c0*Math.pow(2, l)); cz.push(Math.round(L.z0/(2*cl[l]))*2*cl[l]); ca.push(Math.round(A0E/(2*cl[l]))*2*cl[l]); }
+  const aOf = (l, i) => ca[l] + i*cl[l];
 
 
 
 
-  const meshKey = [V.seed, W, V.forms, V.world.list.join(), V.detail, L.z0, L.Hw, TR.snow, V.life, V.works, V.land.join()].join('|');
+  const meshKey = [V.seed, W, V.forms, V.world.list.join(), V.detail, L.zS ?? L.z0, L.Hw, TR.snow, V.life, V.works, V.land.join()].join('|');
   let kept = RG_MESH_KEPT.get(meshKey); if(!kept){ kept = { rings: new Map() }; RG_MESH_KEPT.set(meshKey, kept); while(RG_MESH_KEPT.size > 3) RG_MESH_KEPT.delete(RG_MESH_KEPT.keys().next().value); }
-  const SM = 2*RG_NG_MAX + 1, ringOf = cs => { const k = cs.toPrecision(9); let r = kept.rings.get(k); if(!r){ r = { raw: new Float64Array(SM*SM).fill(NaN), col: new Float32Array(SM*SM*3).fill(-1), lit: null, litKey: null }; kept.rings.set(k, r); } return r; };
+  const SM = 2*RG_NG_MAX + 1, ringOf = (cs, l) => { const k = cs.toPrecision(9) + '|' + ca[l].toPrecision(9) + '|' + cz[l].toPrecision(9); let r = kept.rings.get(k); if(!r){ r = { raw: new Float64Array(SM*SM).fill(NaN), col: new Float32Array(SM*SM*3).fill(-1), lit: null, litKey: null }; kept.rings.set(k, r); while(kept.rings.size > 48) kept.rings.delete(kept.rings.keys().next().value); } return r; };
   const RINGS = cl.map(ringOf), kAt = (i, j) => (j + RG_NG_MAX)*SM + i + RG_NG_MAX;
   const vH = cl.map(() => new Float64Array(SIDE*SIDE).fill(NaN)), vP = cl.map(() => new Array(SIDE*SIDE));
   const zOf = (l, j) => Math.max(-ZMAX, Math.min(ZMAX, cz[l] + j*cl[l]));
@@ -22098,16 +22121,20 @@ function rgPaintLand(x, mk, dk, V){
   const exH = (h, d) => { if(h <= 0) return h; const v = h*exf(d); return v < capD - capK*4 ? v : capD - capK*Math.log1p(Math.exp((capD - v)/capK)); };
   let heightIn = null;
 
-  const rawH = (l, i, j) => { const A = RINGS[l].raw, k = kAt(i, j); let h = A[k]; if(h === h) return h; const a = i*cl[l], z = zOf(l, j); h = exH(PADS(a, z, V.LK.height(a, z, 2*cl[l])), Math.hypot(a, z - L.z0)); A[k] = h; return h; };
+
+  const tH = (l, i, j) => { const A = RINGS[l].raw, k = kAt(i, j); let h = A[k]; if(h === h) return h; const a = aOf(l, i), z = zOf(l, j); h = PADS(a, z, V.LK.height(a, z, 2*cl[l])); A[k] = h; return h; };
+  const vR = cl.map(() => new Float64Array(SIDE*SIDE).fill(NaN));
+  const rawH = (l, i, j) => { const inS = Math.abs(i) <= NG && Math.abs(j) <= NG, k = (j + NG)*SIDE + i + NG; if(inS){ const v = vR[l][k]; if(v === v) return v; }
+    const h = exH(tH(l, i, j), Math.hypot(aOf(l, i) - A0E, zOf(l, j) - L.z0)); if(inS) vR[l][k] = h; return h; };
   const vh = (l, i, j) => { const k = (j + NG)*SIDE + i + NG; let h = vH[l][k]; if(h === h) return h;
-    const a = i*cl[l], z = zOf(l, j); h = rawH(l, i, j);
+    const a = aOf(l, i), z = zOf(l, j); h = rawH(l, i, j);
     const al = l + 1 < NLV ? rsSmooth(0.7, 1, Math.max(Math.abs(i), Math.abs(j))/NG) : 0; if(al > 0) h += (heightIn(l + 1, a, z) - h)*al;
     vH[l][k] = h; return h; };
-  heightIn = (l, a, z) => { const u = a/cl[l], v = (z - cz[l])/cl[l], i = Math.max(-NG, Math.min(NG - 1, Math.floor(u))), j = Math.max(-NG, Math.min(NG - 1, Math.floor(v))), fu = u - i, fv = v - j;
+  heightIn = (l, a, z) => { const u = (a - ca[l])/cl[l], v = (z - cz[l])/cl[l], i = Math.max(-NG, Math.min(NG - 1, Math.floor(u))), j = Math.max(-NG, Math.min(NG - 1, Math.floor(v))), fu = u - i, fv = v - j;
     const h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h01 = vh(l, i, j + 1), h11 = vh(l, i + 1, j + 1); return h00 + (h10 - h00)*fu + (h01 - h00)*fv + (h00 - h10 - h01 + h11)*fu*fv; };
 
 
-  const levelAt = (a, z) => { for(let l = 0; l < NLV; l++){ const R = (NG - 0.5)*cl[l]; if(Math.abs(a) < R && Math.abs(z - cz[l]) < R) return l; } return -1; };
+  const levelAt = (a, z) => { for(let l = 0; l < NLV; l++){ const R = (NG - 0.5)*cl[l]; if(Math.abs(a - ca[l]) < R && Math.abs(z - cz[l]) < R) return l; } return -1; };
   const meshH = (a, z) => { const l = levelAt(a, z); return l < 0 ? V.LK.height(a, z, cl[NLV - 1]*2) : heightIn(l, a, z); };
 
   const slopeAt = (a, z) => { const d = W*0.0005; return Math.hypot(meshH(a + d, z) - meshH(a - d, z), meshH(a, z + d) - meshH(a, z - d))/(2*d); };
@@ -22120,29 +22147,30 @@ function rgPaintLand(x, mk, dk, V){
   const SUN0 = V.sun.D, sunKey = SUN0.map(v => v.toFixed(4)).join(), M1s = W*0.00025;
 
 
-  const litAt = (a, z, h0, s0 = c0) => { const ca = Math.cos(a), sa = Math.sin(a), up = -(ca*SUN0[0] + sa*SUN0[1]), al = -sa*SUN0[0] + ca*SUN0[1], ac = SUN0[2], hl = Math.hypot(al, ac);
+  const litAt = (a, z, h0, s0 = c0) => { const cA = Math.cos(a - A0E), sA = Math.sin(a - A0E), up = -(cA*SUN0[0] + sA*SUN0[1]), al = -sA*SUN0[0] + cA*SUN0[1], ac = SUN0[2], hl = Math.hypot(al, ac);
     if(up <= 0.02 || hl < 1e-6) return 1; const tE = up/hl, da = al/hl, dz = ac/hl; let occ = 0;
     for(let s2 = Math.max(s0*2.5, 3*M1s); s2 < W*0.6; s2 *= 1.32){ const a2 = a + da*s2, z2 = z + dz*s2, ray = h0 + tE*s2 + 0.5*M1s;
       const h2 = Math.abs(z2) > ZMAX ? L.Hw : meshH(a2, z2); if(h2 > ray - s2*0.03){ occ = Math.max(occ, (h2 - ray)/(s2*0.03) + 1); if(occ >= 2) break; }
       if(ray > L.Hw*1.05) break; }
     return 1 - rsSmooth(0, 2, occ); };
 
-  for(const r of RINGS) if(r.litKey !== sunKey){ r.lit = new Float32Array(SM*SM).fill(-1); r.litKey = sunKey; }
-  const vLit = (l, i, j) => { const k2 = kAt(i, j), A = RINGS[l].lit; if(A[k2] >= 0) return A[k2]; const v = litAt(i*cl[l], zOf(l, j), rawH(l, i, j), cl[l]); A[k2] = v; return v; };
-  RG_LAST_MESH = { c0, NG, NLV, cz: cz.slice(), height: (l, i, j) => vh(l, i, j) };
+  const litKey = sunKey + '|' + A0E.toFixed(7) + '|' + L.z0.toFixed(7);
+  for(const r of RINGS) if(r.litKey !== litKey){ r.lit = new Float32Array(SM*SM).fill(-1); r.litKey = litKey; }
+  const vLit = (l, i, j) => { const k2 = kAt(i, j), A = RINGS[l].lit; if(A[k2] >= 0) return A[k2]; const v = litAt(aOf(l, i), zOf(l, j), rawH(l, i, j), cl[l]); A[k2] = v; return v; };
+  RG_LAST_MESH = { c0, NG, NLV, cz: cz.slice(), ca: ca.slice(), height: (l, i, j) => vh(l, i, j) };
 
-  const vp = (l, i, j) => { const k = (j + NG)*SIDE + i + NG; let p = vP[l][k]; if(p !== undefined) return p; p = at(i*cl[l], zOf(l, j), Math.max(TR.sea, vh(l, i, j))); vP[l][k] = p; return p; };
+  const vp = (l, i, j) => { const k = (j + NG)*SIDE + i + NG; let p = vP[l][k]; if(p !== undefined) return p; p = at(aOf(l, i), zOf(l, j), Math.max(TR.sea, vh(l, i, j))); vP[l][k] = p; return p; };
 
   const quads = [];
-  for(let l = 0; l < NLV; l++){ const c = cl[l], hole = l > 0 ? [-NG/2, NG/2, (cz[l - 1] - cz[l])/c - NG/2, (cz[l - 1] - cz[l])/c + NG/2] : null;
+  for(let l = 0; l < NLV; l++){ const c = cl[l], hole = l > 0 ? [(ca[l - 1] - ca[l])/c - NG/2, (ca[l - 1] - ca[l])/c + NG/2, (cz[l - 1] - cz[l])/c - NG/2, (cz[l - 1] - cz[l])/c + NG/2] : null;
     for(let j = -NG; j < NG; j++){ const zA = cz[l] + j*c, zB = zA + c; if(zB < -ZMAX || zA > ZMAX) continue;
       for(let i = -NG; i < NG; i++){ if(hole && i >= hole[0] && i + 1 <= hole[1] && j >= hole[2] && j + 1 <= hole[3]) continue;
-        const am = (i + 0.5)*c, zm = Math.max(-ZMAX, Math.min(ZMAX, (zA + zB)/2)), dd = Math.hypot(am, zm - L.z0); if(dd > reach) continue;
+        const am = ca[l] + (i + 0.5)*c, zm = Math.max(-ZMAX, Math.min(ZMAX, (zA + zB)/2)), dd = Math.hypot(am - A0E, zm - L.z0); if(dd > reach) continue;
         if(Math.abs(angOf(am, zm)) > PHI + Math.atan2(c*0.8, Math.max(dd, 1e-9)) + 0.02) continue;
         quads.push({ l, i, j, dd, am, zm, c }); } } }
 
 
-  const ORI = (() => { const dq = W*0.02, a0 = dq*hx, z0 = L.z0 + dq*hz, e = Math.max(TR.sea, meshH(0, L.z0)), dl = W*0.001, P = [at(a0, z0, e), at(a0 + dl, z0, e), at(a0 + dl, z0 + dl, e), at(a0, z0 + dl, e)];
+  const ORI = (() => { const dq = W*0.02, a0 = A0E + dq*hx, z0 = L.z0 + dq*hz, e = Math.max(TR.sea, meshH(A0E, L.z0)), dl = W*0.001, P = [at(a0, z0, e), at(a0 + dl, z0, e), at(a0 + dl, z0 + dl, e), at(a0, z0 + dl, e)];
     if(P.some(p => !p)) return 1; let A = 0; for(let q = 0; q < 4; q++){ const p = P[q], r = P[(q + 1) & 3]; A += p[0]*r[1] - r[0]*p[1]; } return A >= 0 ? 1 : -1; })();
   const shown = [];
   for(const q of quads){ const { l, i, j } = q, P = [vp(l, i, j), vp(l, i + 1, j), vp(l, i + 1, j + 1), vp(l, i, j + 1)]; if(P[0] === null || P[1] === null || P[2] === null || P[3] === null) continue;
@@ -22208,7 +22236,7 @@ function rgPaintLand(x, mk, dk, V){
   const cloudShadeAt = (a, z) => { if(!shades.length) return 0; let v = 1; for(const h of shades){ const dx = a - h.a, dz = z - h.z, q = (dx*dx + dz*dz)/(h.r*h.r); if(q > 1.9) continue;
     const th = Math.atan2(dz, dx), rr = 1 + 0.16*Math.sin(3*th + h.ph) + 0.09*Math.sin(5*th + 2*h.ph); v *= 1 - h.k*rsSmooth(1.08, 0.8, Math.sqrt(q)/rr); } return CSH*(1 - v); };
 
-  const keep = (a, z, w0 = 0) => { const r = Math.hypot(a, z - L.z0), ph = angOf(a, z), dd = r; if(dd <= 0) return null;
+  const keep = (a, z, w0 = 0) => { const r = Math.hypot(a - A0E, z - L.z0), ph = angOf(a, z), dd = r; if(dd <= 0) return null;
     if(Math.abs(ph) > PHI + Math.atan2(w0 + W*0.0005, Math.max(r, 1e-9))) return null; return dd; };
 
   const colsOf = (w, day, haze, o = null, pos = o) => { const lights = pos ? V.lightsAt(w, pos.a, pos.z) : V.lightsOf(w), g = lights[0], g2 = lights[1], pal = o ? rgPaletteOf(V, o, w) : null;
@@ -22235,7 +22263,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const lodOf = (o, f) => Math.min(1, W*0.00025*F/Math.max(1e-9, Math.hypot((1 - f[3])*Math.cos(o.a) - L.Px, (1 - f[3])*Math.sin(o.a), o.z - L.z0))/f[2]);
+  const lodOf = (o, f) => Math.min(1, W*0.00025*F/Math.max(1e-9, Math.hypot((1 - f[3])*Math.cos(o.a - A0E) - L.Px, (1 - f[3])*Math.sin(o.a - A0E), o.z - L.z0))/f[2]);
 
 
 
@@ -22244,7 +22272,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
   let loudOne = null, loudR = Infinity;
-  for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
+  for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a - A0E, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
   const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
 
 
@@ -22260,7 +22288,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const viewOf = o => { const face = o.face ?? (o.rs % 62832)/10000, rel = face - Math.atan2(L.z0 - o.z, -o.a); return { cs: Math.cos(rel), sn: Math.sin(rel) }; };
+  const viewOf = o => { const face = o.face ?? (o.rs % 62832)/10000, rel = face - Math.atan2(L.z0 - o.z, A0E - o.a); return { cs: Math.cos(rel), sn: Math.sin(rel) }; };
 
 
 
@@ -22337,7 +22365,7 @@ function rgPaintLand(x, mk, dk, V){
       if((sz < px(0.7) && !fly) || sz > wh*0.5 || (f[3] <= TR.sea && !o.afloat && !st.y)) continue;
       const X = f[0], Y = fly || st.y ? f[1] : stand(l, X, f[1]), yy = Y - st.y*m; if(!vis(l, X - sz, X + sz, yy - sz, yy + sz*0.3)) continue;
 
-      const g2 = foot(a + Math.cos(st.face)*M1*3, z + Math.sin(st.face)*M1*3), side = Math.abs(Math.sin(st.face - Math.atan2(L.z0 - z, -a)));
+      const g2 = foot(a + Math.cos(st.face)*M1*3, z + Math.sin(st.face)*M1*3), side = Math.abs(Math.sin(st.face - Math.atan2(L.z0 - z, A0E - a)));
       let al = pres*st.on; if(step > 0.2){ const p = wkAt(o.kind, o.rs, j, t - step, env), fp = p.on ? foot(o.a + p.x*M1, o.z + p.z*M1) : null;
         if(fp) al *= rsSmooth(Math.max(px(2), sz)*2.5, Math.max(px(2), sz)*0.9, Math.hypot(fp[0] - X, fp[1] - p.y*fp[2] - yy)); }
       if(al < 0.03) continue;
@@ -22418,7 +22446,7 @@ function rgPaintLand(x, mk, dk, V){
       if(E.loud && o0 !== loudOne) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*2, X + h*2, Y - h*(o.kind === 'warden' ? 4.2 : o.kind === 'spire' ? 1.1 : 1.8), Y)) return;
       const c = colsOf(o.w, cday, haze, null, o), vw = viewOf(o); if(vw.sn < 0 && o.kind !== 'diner') mirrored(X, () => pkEgg(x, X, Y + h*0.02, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkEgg(x, X, Y + h*0.02, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
-    if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, cday, haze, null, o); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a, z - L.z0)]; }, c, R, rgPx); return; }
+    if(o.c === 'henge'){ if(f[2]*o.hm < px(2)) return; const c = colsOf(o.w, cday, haze, null, o); rgHenge(x, o, (a, z) => { const q = foot(a, z); return q && [q[0], stand(l, q[0], q[1]), q[2], Math.hypot(a - A0E, z - L.z0)]; }, c, R, rgPx); return; }
     if(o.c === 'board'){ const m = f[2], h = o.hM*m, bw = o.wM*m; if(h*lodOf(o, f) < px(3) || h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - bw/2, X + bw/2, Y - h, Y)) return;
       pkBoard(x, X, Y, m, { ...colsOf(o.w, cday, haze, null, o), view: viewOf(o) }, o.kind === 'serial' ? { serial: PK_SERIALS[o.v], k: o.k } : o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday), o.aged); return; }
@@ -22490,7 +22518,7 @@ function rgPaintLand(x, mk, dk, V){
     for(let i = 0; i < 40; i++){ const w = V.world.list[i % V.world.list.length], P = RG_PROF[w]; if(mnHash(i, 1, s + 521) > P.sh*V.works*0.22) continue;
       const a = (mnHash(i, 2, s + 522)*2 - 1)*d1, z = (mnHash(i, 3, s + 523) - 0.5)*W*0.9, dd = keep(a, z, W*0.02);
       if(dd == null || dd < d0*4 || dd > d1) continue;
-      things.push({ dd, o: { d: Math.hypot(a, z - L.z0), a, z, kind: 'sh', w, h: mnHash(i, 4, s + 524), h2: mnHash(i, 6, s + 524), up: W*(0.006 + 0.05*mnHash(i, 5, s + 525)), R: rgRand(s, 521, i) } }); } }
+      things.push({ dd, o: { d: Math.hypot(a - A0E, z - L.z0), a, z, kind: 'sh', w, h: mnHash(i, 4, s + 524), h2: mnHash(i, 6, s + 524), up: W*(0.006 + 0.05*mnHash(i, 5, s + 525)), R: rgRand(s, 521, i) } }); } }
   const drawWork = (o, l) => {
     const e = Math.max(TR.sea, meshH(o.a, o.z)), b = at(o.a, o.z, e); if(!b) return;
     const k = F/b[2], day = ringDay(L, o.a), big = { sp: 0.02 + 0.08*o.h, mo: 0.006 + 0.02*o.h, do: 0.006 + 0.016*o.h, to: 0.02 + 0.07*o.h, wr: 0.006 + 0.02*o.h, cr: 0.012 }[o.kind]; if(big && W*big/o.d > 0.4) return;
@@ -22503,7 +22531,7 @@ function rgPaintLand(x, mk, dk, V){
 
   const wayPieces = store.ways.map(wy => { const out2 = [];
     for(let i = 0; i + 1 < wy.pts.length; i++){ const p = wy.pts[i], q = wy.pts[i + 1], len = Math.hypot(q.a - p.a, q.z - p.z) || 1e-9, nx = -(q.z - p.z)/len, nz = (q.a - p.a)/len;
-      const dist = Math.hypot((p.a + q.a)/2, (p.z + q.z)/2 - L.z0), n = Math.max(1, Math.min(8, Math.ceil(len/Math.max(W*0.0005, dist*0.06))));
+      const dist = Math.hypot((p.a + q.a)/2 - A0E, (p.z + q.z)/2 - L.z0), n = Math.max(1, Math.min(8, Math.ceil(len/Math.max(W*0.0005, dist*0.06))));
       for(let k = 0; k < n; k++){ const t0 = k/n, t1 = (k + 1)/n, P0 = { a: p.a + (q.a - p.a)*t0, z: p.z + (q.z - p.z)*t0, dec: p.dec + (q.dec - p.dec)*t0, u: p.u + (q.u - p.u)*t0, e: p.e === undefined ? undefined : p.e + (q.e - p.e)*t0 }, P1 = { a: p.a + (q.a - p.a)*t1, z: p.z + (q.z - p.z)*t1, dec: p.dec + (q.dec - p.dec)*t1, u: p.u + (q.u - p.u)*t1, e: p.e === undefined ? undefined : p.e + (q.e - p.e)*t1 };
         out2.push({ p: P0, q: P1, nx, nz, dd: Math.min(cutOf(P0.a, P0.z), cutOf(P1.a, P1.z)) - wy.half }); } }
     return out2; });
@@ -22556,7 +22584,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const fieldPieces = []; for(const f of store.fields){ const dist = Math.hypot(f.a, f.z - L.z0), ext = Math.max(f.hl, f.hw); if(keep(f.a, f.z, ext) == null || dist > W*0.8) continue;
+  const fieldPieces = []; for(const f of store.fields){ const dist = Math.hypot(f.a - A0E, f.z - L.z0), ext = Math.max(f.hl, f.hw); if(keep(f.a, f.z, ext) == null || dist > W*0.8) continue;
     const sz = Math.max(W*0.0005, dist*0.06), nu = Math.max(1, Math.min(10, Math.ceil(f.hl*2/sz))), nv = Math.max(1, Math.min(10, Math.ceil(f.hw*2/sz)));
     for(let i = 0; i < nu; i++) for(let j = 0; j < nv; j++){ const u0 = -f.hl + 2*f.hl*i/nu, u1 = -f.hl + 2*f.hl*(i + 1)/nu, v0 = -f.hw + 2*f.hw*j/nv, v1 = -f.hw + 2*f.hw*(j + 1)/nv, um = (u0 + u1)/2, vm = (v0 + v1)/2;
 
@@ -22566,10 +22594,10 @@ function rgPaintLand(x, mk, dk, V){
     const wa = (u, v) => [f.a + u*f.ux - v*f.uz, f.z + u*f.uz + v*f.ux], M1 = W*0.00025, lift = W*0.00002;
     const P = (u, v, up = 0) => { const [a, z] = wa(u, v); return at(a, z, Math.max(TR.sea, meshH(a, z)) + lift + up); };
     const q = [P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)]; if(q.some(p => !p)) return;
-    const [am, zm] = wa((u0 + u1)/2, (v0 + v1)/2), day = ringDay(L, am)*(0.45 + 0.55*litAt(am, zm, meshH(am, zm))), haze = hazeOf(Math.hypot(am, zm - L.z0)), lit = col => rgLit(V, col, day, haze, AIR), C = RG_CROPS[f.crop] || RG_CROPS.pasture;
+    const [am, zm] = wa((u0 + u1)/2, (v0 + v1)/2), day = ringDay(L, am)*(0.45 + 0.55*litAt(am, zm, meshH(am, zm))), haze = hazeOf(Math.hypot(am - A0E, zm - L.z0)), lit = col => rgLit(V, col, day, haze, AIR), C = RG_CROPS[f.crop] || RG_CROPS.pasture;
     const n1 = mnValue(am/(W*0.004) + f.i*0.37, zm/(W*0.004), s + 83), ppm = W*0.00025*F/q[0][2];
 
-    const near0 = 0.3 + 0.7*rsSmooth(120*M1, 520*M1, Math.hypot(am, zm - L.z0));
+    const near0 = 0.3 + 0.7*rsSmooth(120*M1, 520*M1, Math.hypot(am - A0E, zm - L.z0));
     let base = rsMix(C.c, n1 > 0.5 ? [255, 250, 230] : [0, 0, 0], Math.abs(n1 - 0.5)*0.16); if(C.water) base = rsMix(base, AIR, 0.15);
 
     { const cd = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(([u, v]) => { const [a2, z2] = wa(u, v); return rgLit(V, base, ringDay(L, a2)*(0.45 + 0.55*litAt(a2, z2, meshH(a2, z2))), haze, AIR); });
@@ -22606,7 +22634,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  const wallPieces = []; for(const wl of store.walls || []){ if(keep(wl.a, wl.z, wl.rr*1.3) == null || Math.hypot(wl.a, wl.z - L.z0) - wl.rr > W*0.9) continue;
+  const wallPieces = []; for(const wl of store.walls || []){ if(keep(wl.a, wl.z, wl.rr*1.3) == null || Math.hypot(wl.a - A0E, wl.z - L.z0) - wl.rr > W*0.9) continue;
     for(let k = 0; k < wl.n; k++){ const A = wl.pts[k], B = wl.pts[(k + 1) % wl.n];
       if(!wl.gap[k]) wallPieces.push({ wl, k, A, B, dd: Math.min(cutOf(A[0], A[1]), cutOf(B[0], B[1])) - wl.T });
       if(wl.tower[k]) wallPieces.push({ wl, k, tw: true, A, dd: cutOf(A[0], A[1]) - 4.5*W*0.00025 }); } }
@@ -22650,7 +22678,7 @@ function rgPaintLand(x, mk, dk, V){
     const tr = (3.3 + 1.2*mnHash(wl.i, k, s + 1344))*M1, Ht = (wl.broke ? wl.H*(0.4 + 0.8*mnHash(wl.i, k, s + 1345)) : wl.H + 3.5*M1), b0 = at(A[0], A[1], e0), b1 = at(A[0], A[1], e0 + Ht); if(!b0 || !b1) return;
     const rp = tr*F/b0[2], X = b0[0], Yb = b0[1], Yt = b1[1]; if(Yb - Yt < px(1.2) || rp > ww*0.3 || Yb - Yt > wh*0.9) return;
 
-    const ex = -A[0], ez = L.z0 - A[1], el2 = Math.hypot(ex, ez) || 1, tq = at(A[0] + ex/el2*tr, A[1] + ez/el2*tr, e0 + Ht), ry = tq ? Math.max(0, tq[1] - Yt) : 0;
+    const ex = A0E - A[0], ez = L.z0 - A[1], el2 = Math.hypot(ex, ez) || 1, tq = at(A[0] + ex/el2*tr, A[1] + ez/el2*tr, e0 + Ht), ry = tq ? Math.max(0, tq[1] - Yt) : 0;
     const sdx = V.sun.LT[0] >= 0 ? 1 : -1, cLit = lit(stone, up <= 0 ? 0.8 : 0.98), cSh = lit(rsMix(stone, [0, 0, 0], 0.1), up <= 0 ? 0.8 : 0.66);
     const g = x.createLinearGradient(X - rp, 0, X + rp, 0); g.addColorStop(0, rsCss(sdx < 0 ? cLit : cSh)); g.addColorStop(0.5, rsCss(rsMix(cLit, cSh, 0.4))); g.addColorStop(1, rsCss(sdx < 0 ? cSh : cLit));
     x.fillStyle = g; x.beginPath(); x.moveTo(X - rp, Yt); x.lineTo(X - rp, Yb); x.ellipse(X, Yb, rp, Math.max(0.01, ry), 0, Math.PI, 0, true); x.lineTo(X + rp, Yt); x.closePath(); x.fill();
@@ -22762,7 +22790,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-        const Wt = h.wd*F/Math.max(1e-9, Math.hypot((1 - h.eb)*Math.cos(h.a) - L.Px, (1 - h.eb)*Math.sin(h.a), h.z - L.z0));
+        const Wt = h.wd*F/Math.max(1e-9, Math.hypot((1 - h.eb)*Math.cos(h.a - A0E) - L.Px, (1 - h.eb)*Math.sin(h.a - A0E), h.z - L.z0));
         const S0 = Math.sqrt(W0*Math.max(H0, W0*0.35)), pr0 = S0*0.11, npf = Math.max(6, Math.min(64, W0*H0/(pr0*pr0)*0.55, Wt/px(4)))*(0.4 + 0.6*(h.grow ?? 1));
         const pad = W0*0.25 + pr0*1.5, cw = Math.ceil(W0*1.5 + pad*2), ch = Math.ceil(H0*1.3 + pad*2), ox = X - cw/2, oy = Y - H0*1.15 - pad;
 
@@ -22912,13 +22940,13 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const vcol = (l, i, j) => { const k = kAt(i, j)*3, C = RINGS[l].col; if(C[k] >= 0) return [C[k], C[k + 1], C[k + 2]];
-    const a = i*cl[l], z = zOf(l, j), g = rgGround(V, a, z, Math.max(rawH(l, i, j)/exf(Math.hypot(a, z - L.z0)), TR.sea + M1*0.5)); C[k] = g[0]; C[k + 1] = g[1]; C[k + 2] = g[2]; return g; };
+    const a = aOf(l, i), z = zOf(l, j), g = rgGround(V, a, z, Math.max(tH(l, i, j), TR.sea + M1*0.5)); C[k] = g[0]; C[k + 1] = g[1]; C[k + 2] = g[2]; return g; };
 
 
   const vKS = cl.map(() => new Float32Array(SIDE*SIDE).fill(NaN));
   const kSunAt = (l, i, j) => { const k = (j + NG)*SIDE + i + NG, A = vKS[l]; let v = A[k]; if(v === v) return v; const c = cl[l];
     const i0 = Math.max(-RG_NG_MAX, i - 1), i1 = Math.min(RG_NG_MAX, i + 1), j0 = Math.max(-RG_NG_MAX, j - 1), j1 = Math.min(RG_NG_MAX, j + 1);
-    const dA = (rawH(l, i1, j) - rawH(l, i0, j))/((i1 - i0)*c), dZ = (rawH(l, i, j1) - rawH(l, i, j0))/((j1 - j0)*c), a = i*c, ca2 = Math.cos(a), sa2 = Math.sin(a);
+    const dA = (rawH(l, i1, j) - rawH(l, i0, j))/((i1 - i0)*c), dZ = (rawH(l, i, j1) - rawH(l, i, j0))/((j1 - j0)*c), a = aOf(l, i) - A0E, ca2 = Math.cos(a), sa2 = Math.sin(a);
     const nx = dA*sa2 - ca2, ny = -dA*ca2 - sa2, nz = -dZ, nl = Math.hypot(nx, ny, nz), upS = -(ca2*SUN[0] + sa2*SUN[1]), ndl = (nx*SUN[0] + ny*SUN[1] + nz*SUN[2])/nl;
     v = upS > 0.04 ? ndl/Math.max(0.3, upS) : 1 + 0.4*(ndl - upS); A[k] = v;
 
@@ -22934,7 +22962,7 @@ function rgPaintLand(x, mk, dk, V){
     const { l, i, j, P, am, zm, dd, c } = q, h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h11 = vh(l, i + 1, j + 1), h01 = vh(l, i, j + 1), hm = (h00 + h10 + h01 + h11)/4, sea = TR.sea;
     const day = ringDay(L, am), haze = hazeOf(dd), wet = [h00 < sea, h10 < sea, h11 < sea, h01 < sea], nWet = wet[0] + wet[1] + wet[2] + wet[3];
     const dA = ((h10 - h00) + (h11 - h01))/(2*c), dZ = ((h01 - h00) + (h11 - h10))/(2*c), slope = Math.hypot(dA, dZ)/exf(dd);
-    const ca2 = Math.cos(am), sa2 = Math.sin(am), nx = dA*sa2 - ca2, ny = -dA*ca2 - sa2, nz = -dZ, nl = Math.hypot(nx, ny, nz);
+    const ca2 = Math.cos(am - A0E), sa2 = Math.sin(am - A0E), nx = dA*sa2 - ca2, ny = -dA*ca2 - sa2, nz = -dZ, nl = Math.hypot(nx, ny, nz);
     const upS = -(ca2*SUN[0] + sa2*SUN[1]), ndl = (nx*SUN[0] + ny*SUN[1] + nz*SUN[2])/nl, kSun = upS > 0.04 ? ndl/Math.max(0.3, upS) : 1 + 0.4*(ndl - upS);
     const cv = (vh(l, Math.max(-NG, i - 1), j) + vh(l, Math.min(NG, i + 2), j) + vh(l, i, Math.max(-NG, j - 1)) + vh(l, i, Math.min(NG, j + 2)))/4, hol = rgClamp((cv - hm)/(c*1.6))*0.3;
 
@@ -22951,7 +22979,7 @@ function rgPaintLand(x, mk, dk, V){
     const bw = nWet === 4 ? null : ci0.bw; let g0 = null, gloss = 0.35;
     if(bw){ gloss = 0.35 + 0.5*rsSmooth(0.45, 0.95, slope) + (ci0.gk === 'snow' ? 0.6 : ci0.gk === 'sand' ? 0.3 : ci0.gk === 'paving' ? 0.25 : 0); const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = ci0.fp, g4 = [vcol(l, i, j), vcol(l, i + 1, j), vcol(l, i + 1, j + 1), vcol(l, i, j + 1)];
       g0 = [0, 1, 2].map(ch => (g4[0][ch] + g4[1][ch] + g4[2][ch] + g4[3][ch])/4);
-      const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], VA[k]*c, zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k]), specAt(l, VA[k], VZ[k])); });
+      const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], aOf(l, VA[k]), zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k]), specAt(l, VA[k], VZ[k])); });
       let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
       const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
       if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
@@ -32570,7 +32598,9 @@ function cameraOf(type, opts){
 
   const r2 = v => Math.round(v*100)/100, film = c.frame !== undefined && c.frame !== null && isFinite(+c.frame), time = num(c.time, 0) > 0 ? r2(num(c.time, 0)) : 0, dt = time || film ? r2(Math.max(0, num(c.dt, 0))) : 0;
   return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))),
-    ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}), ...(num(c.fps, 0) > 0 ? { fps: Math.round(num(c.fps, 0)) } : {}) } : {}) } : {}) };
+    ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}), ...(num(c.fps, 0) > 0 ? { fps: Math.round(num(c.fps, 0)) } : {}) } : {}) } : {}),
+
+    ...(c.fly && (num(c.fly.d, 0) || num(c.fly.to, 0)) ? { fly: { d: r2(num(c.fly.d, 0)), rise: r2(num(c.fly.rise, 0)), head: r2(num(c.fly.head, 0)), to: r2(num(c.fly.to, num(c.fly.d, 0))) } } : {}) };
 }
 
 
@@ -32673,7 +32703,7 @@ function describeRequest(type, w, h, opts){
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
 
             + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' + Math.round(+opts.fill*100) : '') + (opts.around ? '_R' + Math.round(+opts.around*100) : '') + (opts.aware === false ? '_A0' : '') : '')
-            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time || cam.frame !== undefined ? `_T${cam.time}x${cam.dt}` + (cam.frame !== undefined ? `f${cam.frame}s${cam.step}` + (cam.side ? `d${cam.side}` : '') : '') : '') : '')(cameraOf(type, opts)))
+            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time || cam.frame !== undefined ? `_T${cam.time}x${cam.dt}` + (cam.frame !== undefined ? `f${cam.frame}s${cam.step}` + (cam.side ? `d${cam.side}` : '') : '') : '') + (cam.fly ? `_F${cam.fly.d}u${cam.fly.rise}h${cam.fly.head}t${cam.fly.to}` : '') : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)))
 
@@ -33283,6 +33313,7 @@ const UI_STRINGS = {
   'moving.a_out':                         "Pull back",
   'moving.a_tilt':                        "Tilt",
   'moving.a_spiral':                      "Spiral out",
+  'moving.a_drone':                       "Drone flight",
   'moving.set_now':                       "Set it now…",
   'moving.tuck':                          "Set the look the film moves to, then Done. The page goes back as it was.",
   'moving.tuck_done':                     "Done",
@@ -33493,6 +33524,7 @@ const MOVING = {
   endsIn: 'the camera pushes in',
   endsOut: 'the camera pulls back',
   endsSpiral: 'the camera spirals out',
+  endsDrone: 'the camera flies ahead and climbs',
   eta: 'about {name} to go',
 
   realTime: 'real time', lenSecs: '{name} s',
@@ -36176,11 +36208,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Scorpius–Acrab';
+const RELEASE = 'Scorpius–Iklil';
 
 const RELEASE_DATE = '2026-10-26';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"kPxbnAAu","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"P8rjJ_J6","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -36473,12 +36505,16 @@ function markValue(m, u){
   if(wrap) return ((v - lo) % (hi - lo) + (hi - lo)) % (hi - lo) + lo;
   return Math.max(lo, Math.min(hi, v));
 }
-function cameraAlso(kind, u, view, zoom){
+function cameraAlso(kind, u, view, zoom, secs = 10){
   const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
   if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };
   if(kind === 'out') return { view, zoom: z(zoom/Math.pow(F.push, u)) };
   if(kind === 'tilt') return { view: v(view + toward*F.tilt*Math.sin(Math.PI*u)), zoom };
   if(kind === 'spiral') return { view: v(view + toward*F.spiralTilt*u), zoom: z(zoom/Math.pow(F.spiralPull, u)) };
+
+
+
+  if(kind === 'drone'){ const s = u*u*(3 - 2*u), to = F.droneSpeed*Math.max(1, secs); return { view: v(view + 6*s), zoom, fly: { d: to*s, rise: F.droneClimb*Math.max(1, secs)*s*s*0.5, to } }; }
   return { view, zoom };
 }
 
@@ -37136,7 +37172,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-26 · 7bd0595";
+const STAMP = "2026-10-26 · 8356889";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };
@@ -38500,7 +38536,9 @@ let LAST_RENDER_MS = 0, LAST_PROFILE = '';
 let RENDER_SCALE = 1, PAGE_SIZE = null;
 
 
-let SCENE_TIME = 0, SCENE_DT = 0, SCENE_FRAME = null, SCENE_STEP = 0, SCENE_SIDE = 0, SCENE_FPS = 0;
+let SCENE_TIME = 0, SCENE_DT = 0, SCENE_FRAME = null, SCENE_STEP = 0, SCENE_SIDE = 0, SCENE_FPS = 0, SCENE_FLY = null;
+
+function setSceneFly(f){ SCENE_FLY = f && (f.d || f.to) ? { d: +f.d || 0, rise: +f.rise || 0, head: +f.head || 0, to: +f.to || 0 } : null; }
 
 
 
@@ -38627,7 +38665,7 @@ function drawSurfaceLayer(ctx, L, slot, { W, H, S, canvas, clearing, env }){
   const p4 = has(4) ? num(L.texP4) : null, p5 = has(5) ? num(L.texP5) : null, p6 = has(6) ? num(L.texP6) : null, p7 = has(7) ? num(L.texP7) : null, p8 = has(8) ? num(L.texP8) : null, p9 = has(9) ? num(L.texP9) : null, p10 = has(10) ? num(L.texP10) : null;
   const accent1 = $('accent1ColorHex').value, accent2 = $('accent2ColorHex').value;
 
-  const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom, ...(SCENE_TIME > 0 || SCENE_FRAME !== null ? { time: SCENE_TIME, dt: SCENE_DT, ...(SCENE_FRAME !== null ? { frame: SCENE_FRAME, step: SCENE_STEP, ...(SCENE_SIDE ? { side: SCENE_SIDE } : {}), ...(SCENE_FPS ? { fps: SCENE_FPS } : {}) } : {}) } : {}) } : undefined;
+  const camera = L.cameraTurn !== undefined ? { turn: +L.cameraTurn, view: +L.cameraView, zoom: +L.cameraZoom, ...(SCENE_TIME > 0 || SCENE_FRAME !== null ? { time: SCENE_TIME, dt: SCENE_DT, ...(SCENE_FRAME !== null ? { frame: SCENE_FRAME, step: SCENE_STEP, ...(SCENE_SIDE ? { side: SCENE_SIDE } : {}), ...(SCENE_FPS ? { fps: SCENE_FPS } : {}) } : {}) } : {}), ...(SCENE_FLY ? { fly: SCENE_FLY } : {}) } : undefined;
   const name = s => slot === 'main' ? s : 'base' + (s === 'main' ? '' : s);
 
 
@@ -48003,7 +48041,7 @@ function movingSummary(){
   const span = movingSpan(movingPick('movingMove', 'camera'));
   if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
 
-  const cam = movingPick('movingMove', 'camera') === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold', ends = cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral }[also];
+  const cam = movingPick('movingMove', 'camera') === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold', ends = cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral, drone: MOVING.endsDrone }[also];
   if(ends && movingPick('movingPlay', 'once') !== 'back') text += ' · ' + MOVING.sumEnds.replace('{what}', ends);
   const nm = movingPick('movingMove', 'camera') === 'look' ? 0 : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still').length;
   if(nm) text += ' · ' + (nm === 1 ? MOVING.marksCount1 : MOVING.marksCount.replace('{n}', String(nm)));
@@ -48260,7 +48298,7 @@ async function makeMoving(){
     else if(clocked) setSceneTime(i/fps, 1/fps, i, 1/fps, side, fps);
     if(move === 'camera' && shot){ const c = shotAlong({ turn: cam0, view: view0, zoom: zoom0 }, shot, u); $('cameraTurn').value = String(c.turn); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); }
     else if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
-      if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); } }
+      if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0, lenS); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); if(c.fly) setSceneFly({ ...c.fly, head: cam0 }); } }
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); }
     if(lightRun){ const [a, tl] = lightRun.sun(lightRun.H*u); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); }
     for(const mk of marks) if(mk.el) mk.el.value = String(markValue(mk, i/n)); };
@@ -48303,7 +48341,7 @@ async function makeMoving(){
   } finally {
     setFilmPool(false); if(movingRun.wake){ try { movingRun.wake.release(); } catch(e){   } movingRun.wake = null; }
     clearTimeout(movingRun.sure); movingRun.sure = 0;
-    setSceneTime(0); if(looked) restoreSettings(start);
+    setSceneTime(0); setSceneFly(null); if(looked) restoreSettings(start);
     else for(const [id, v] of [['cameraTurn', cam0], ['cameraView', view0], ['cameraZoom', zoom0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
     for(const mk of marks) if(mk.el){ if(mk.step0 !== undefined) mk.el.step = mk.step0; mk.el.value = String(mk.v0); }
     canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);

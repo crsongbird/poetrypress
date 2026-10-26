@@ -4,6 +4,29 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Iklil (2026-10-25)
+
+- Drone flights. In the film window, Camera round now has a new Also choice, Drone flight. The camera itself flies ahead
+  in the direction it first faces, at a drone's fly-over speed (so a longer film flies farther, never faster). It skims
+  low, then climbs as it goes, its gaze dipping a little; it sets off and arrives gently, and it can turn as it flies.
+  It flies over the land as it is: towns, walls, woods and fields pass beneath it and stay where they are from frame to
+  frame, and it never sinks into a hill it crosses.
+- The camera can now stand anywhere along and across the ring, not only where the seed puts you. This is the first step
+  toward moving through the world freely.
+- Far mountain peaks are coloured by their true height, so their snow and rock no longer shift with how tall the
+  painter draws them.
+
+### Under the hood
+- The eye's place (`L.a0`, `L.z0`) is kept apart from the seed's own place (`L.zS`). The land kit and its landing stay
+  with the seed, and points are drawn from wherever the eye stands. The film tells each frame where the eye has flown
+  (`setSceneFly`; the camera request's `fly`, which is in its cache key).
+- A flight's world is built once, sown along the whole line it flies (`L.path`), so every frame of the film reads the
+  same things.
+- The land's rings sit around the eye on the world's grid, each corner keeping its true height by place (`aOf`, `tH`).
+  The painter's added height for far land is laid on per view, and the arch's patches follow in whole steps.
+- New checks: the drone flight's speed and climb (moving suite), and that a flight's world is the same at its start,
+  middle and end (Ringworld suite). The Ringworld's fingerprint changed only for the far peaks' true-height colours.
+
 ## Scorpius–Acrab (2026-10-25)
 
 - No more grid in the sky. In rain, storm and snow, the overcast ceiling showed a faint grid at film sizes such as
@@ -458,14 +481,3 @@ prints it).
 - Reviewed the tests the film and See Through lean on (test/moving.test.mjs, test/textureLayers.test.mjs,
   test/persistenceCoverage.test.mjs, where the film sheet's mark controls are left out of the look as the sheet's other
   controls are): nothing stale.
-
-## Hyades–Chamukuy (2026-10-24)
-
-- Rain on Glass sees through: laid over another surface with See Through on, each raindrop is a little lens over what
-  lies beneath, turning it over, and shows only its dark rim, the sky in its edge and its highlight, so the surface
-  below shows in it. Laid alone, or with See Through off, it draws as it did.
-
-### Under the hood
-- A whole generator can leave its offsets on its canvas (`kitWhole` hands them on as the part's lens, in canonical
-  pixels); `genGlassRain` does, and draws its drops for seeing through when its part is asked for a lens. No
-  fingerprint moved.

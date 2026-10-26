@@ -397,6 +397,7 @@ export const UI_STRINGS = {
   'moving.a_out':                         "Pull back",
   'moving.a_tilt':                        "Tilt",
   'moving.a_spiral':                      "Spiral out",
+  'moving.a_drone':                       "Drone flight",
   'moving.set_now':                       "Set it now…",
   'moving.tuck':                          "Set the look the film moves to, then Done. The page goes back as it was.",
   'moving.tuck_done':                     "Done",
@@ -607,6 +608,7 @@ export const MOVING = {
   endsIn: 'the camera pushes in',
   endsOut: 'the camera pulls back',
   endsSpiral: 'the camera spirals out',
+  endsDrone: 'the camera flies ahead and climbs',
   eta: 'about {name} to go',
   // (spans and rates, written out: "2 hours a second", "about 3 minutes to go")
   realTime: 'real time', lenSecs: '{name} s',

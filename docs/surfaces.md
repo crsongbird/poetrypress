@@ -434,6 +434,12 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     row of houses or a factory hardly at all, a pueblo or a castle on its hill much more); the land under a building is
     levelled to its middle's height and eased back over a skirt (`rgPads`), so its door meets the ground. A field
     whose corners fall more than one in four (a terrace seven in ten) is not sown.
+  - **The eye carried** (Ruby: "drone shot camera including movement (this introduces player movement)"): the eye may
+    stand anywhere along the ring and across it, not only where the seed stands you (`L.a0`, `L.z0`; the seed's own place
+    `L.zS`); the film's Drone flight carries it (docs/prior-art/film-animation.md §C). The land kit, the store and the
+    landing stay the seed's; the store is sown along the whole line of a flight (`L.path`), so every frame reads one world;
+    the mesh's rings stand about the eye on the world's grid and keep each corner's true height by place; the arch's
+    patches follow in whole steps of its coarsest patch.
   - **Light on the land** (Ruby: "shadows cast by the sun where it stands … nearby lights lighting what is near them
     more … rocks of different stones"): each corner of the land, each thing and each field looks toward the sun over the
     land as it is drawn (`litAt`): where a hill or a rim wall stands above the line, it lies in its shadow, softer the

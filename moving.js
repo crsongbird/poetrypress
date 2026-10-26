@@ -99,12 +99,16 @@ export function markValue(m, u){
   if(wrap) return ((v - lo) % (hi - lo) + (hi - lo)) % (hi - lo) + lo;
   return Math.max(lo, Math.min(hi, v));
 }
-export function cameraAlso(kind, u, view, zoom){
+export function cameraAlso(kind, u, view, zoom, secs = 10){
   const z = s => Math.max(25, Math.min(400, s)), v = s => Math.max(0, Math.min(100, s)), toward = view > 50 ? -1 : 1, F = FILM_CAMERA;
   if(kind === 'in') return { view, zoom: z(zoom*Math.pow(F.push, u)) };
   if(kind === 'out') return { view, zoom: z(zoom/Math.pow(F.push, u)) };
   if(kind === 'tilt') return { view: v(view + toward*F.tilt*Math.sin(Math.PI*u)), zoom };
   if(kind === 'spiral') return { view: v(view + toward*F.spiralTilt*u), zoom: z(zoom/Math.pow(F.spiralPull, u)) };
+  // (a drone flight, Ruby: "drone shot camera including movement": the eye itself carried ahead, setting off and
+  //  arriving gently, skimming low and then climbing as it goes, as a fly-over is flown, its gaze dipping a little as it
+  //  climbs; fly: metres flown and climbed so far, and the whole way; secs: the film's length)
+  if(kind === 'drone'){ const s = u*u*(3 - 2*u), to = F.droneSpeed*Math.max(1, secs); return { view: v(view + 6*s), zoom, fly: { d: to*s, rise: F.droneClimb*Math.max(1, secs)*s*s*0.5, to } }; }
   return { view, zoom };
 }
 

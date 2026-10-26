@@ -2,6 +2,17 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Hyades–Chamukuy (2026-10-24)
+
+- Rain on Glass sees through: laid over another surface with See Through on, each raindrop is a little lens over what
+  lies beneath, turning it over, and shows only its dark rim, the sky in its edge and its highlight, so the surface
+  below shows in it. Laid alone, or with See Through off, it draws as it did.
+
+### Under the hood
+- A whole generator can leave its offsets on its canvas (`kitWhole` hands them on as the part's lens, in canonical
+  pixels); `genGlassRain` does, and draws its drops for seeing through when its part is asked for a lens. No
+  fingerprint moved.
+
 ## Hyades–Secunda Hyadum (2026-10-24)
 
 - Any setting can move in a film. The Moving Image has an Also moving row: choose one of the surface's sliders, or the

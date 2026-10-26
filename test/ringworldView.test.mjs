@@ -64,4 +64,15 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   check(`a shadow to the side falls to that side (${side.map(Math.round)})`, side[0] < -50);
   check('with no sun known, the old shadow away from the light', none[0] < 0 && none[1] > 0); }
 
+// THE EYE CARRIED (a drone flight): the world it flies over is built once for the whole flight (every frame reads the same
+// store, so nothing pops in or out), the land under it is the world's own (a place's true height the same seen from
+// anywhere on the way), and where the eye has gone the picture changes
+{ const { installCanvasMock } = await import('./canvasMock.mjs'); installCanvasMock();
+  const T = await import('../textureGenerators.js'), SR = await import('../stepsRing.js'), defs = T.paramsFor('ringpaint'), t6 = T.TEXTURE_CAPS.ringpaint.tintDefaults || [];
+  const shot = d => { const o = { seed: 15, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 200/3072, camera: { view: 100, zoom: 100, turn: 0, fly: { d, rise: d/8, head: 0, to: 300 } } };
+    defs.forEach((dd, j) => o['p' + (j + 1)] = String(dd.def)); o.p3 = '14'; T.clearTextureCache(); T.getTextureCanvas('ringpaint', 200, 120, o); const st = SR.ringKeptStores().pop(), m = SR.ringMeshOf(); return { st, m }; };
+  const A = shot(0), B = shot(150), C = shot(300);
+  check('a flight\'s world is built once: the same store at its start, its middle and its end', A.st === B.st && B.st === C.st && A.st.length > 50);
+  check('the eye has gone somewhere: its rings stand about another place', B.m.ca && A.m.ca && B.m.ca[0] !== A.m.ca[0]); }
+
 done();

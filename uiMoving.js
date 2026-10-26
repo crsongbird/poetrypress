@@ -9,7 +9,7 @@
  */
 import { $ } from './appOptions.js';
 import { MOVING, fill } from './strings.js';
-import { render, setRenderScale, setSceneTime, surfaceRequests } from './canvasRenderer.js';
+import { render, setRenderScale, setSceneFly, setSceneTime, surfaceRequests } from './canvasRenderer.js';
 import { texturesSettled, texturesBusy, setDrafting, setFilmPool, prefetchTexture, adoptPrefetched } from './textureService.js';
 import { capsFor, paramsFor } from './textureGenerators.js';
 import { readStore, SPELL_KEY, stripToLook } from './vault.js';
@@ -80,7 +80,7 @@ function movingSummary(){
   const span = movingSpan(movingPick('movingMove', 'camera'));
   if(span) text += ' · ' + MOVING.sumTime.replace('{span}', movingWords(span)).replace('{rate}', movingWords(span/len)) + (movingPick('movingPlay', 'once') === 'back' ? ' · ' + MOVING.sumBack : '');
   // (a push, a pull or a spiral does not come round as a full turn does, unless the film goes there and back)
-  const cam = movingPick('movingMove', 'camera') === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold', ends = cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral }[also];
+  const cam = movingPick('movingMove', 'camera') === 'camera', also = cam ? movingPick('movingAlso', 'hold') : 'hold', ends = cam && movingPick('movingTurn', '360') === 'shot' ? MOVING.endsShot : { in: MOVING.endsIn, out: MOVING.endsOut, spiral: MOVING.endsSpiral, drone: MOVING.endsDrone }[also];
   if(ends && movingPick('movingPlay', 'once') !== 'back') text += ' · ' + MOVING.sumEnds.replace('{what}', ends);
   const nm = movingPick('movingMove', 'camera') === 'look' ? 0 : markables().filter(k => movingRun.marks[k.key] && movingRun.marks[k.key].how !== 'still').length;
   if(nm) text += ' · ' + (nm === 1 ? MOVING.marksCount1 : MOVING.marksCount.replace('{n}', String(nm)));
@@ -337,7 +337,7 @@ export async function makeMoving(){
     else if(clocked) setSceneTime(i/fps, 1/fps, i, 1/fps, side, fps);
     if(move === 'camera' && shot){ const c = shotAlong({ turn: cam0, view: view0, zoom: zoom0 }, shot, u); $('cameraTurn').value = String(c.turn); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); }
     else if(move === 'camera'){ $('cameraTurn').value = String(((cam0 + turn*u) % 360 + 360) % 360);
-      if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); } }
+      if(also !== 'hold'){ const c = cameraAlso(also, u, view0, zoom0, lenS); $('cameraView').value = String(c.view); $('cameraZoom').value = String(c.zoom); if(c.fly) setSceneFly({ ...c.fly, head: cam0 }); } }
     else if(move === 'light'){ if(sunDay) sunAt(clock(u)); else $('textureLight').value = String((light0 + 360*u) % 360); }
     if(lightRun){ const [a, tl] = lightRun.sun(lightRun.H*u); $('textureLight').value = String(a); $('textureLightTilt').value = String(tl); }
     for(const mk of marks) if(mk.el) mk.el.value = String(markValue(mk, i/n)); };
@@ -380,7 +380,7 @@ export async function makeMoving(){
   } finally {
     setFilmPool(false); if(movingRun.wake){ try { movingRun.wake.release(); } catch(e){ /* let go already */ } movingRun.wake = null; }
     clearTimeout(movingRun.sure); movingRun.sure = 0;
-    setSceneTime(0); if(looked) restoreSettings(start);
+    setSceneTime(0); setSceneFly(null); if(looked) restoreSettings(start);
     else for(const [id, v] of [['cameraTurn', cam0], ['cameraView', view0], ['cameraZoom', zoom0], ['textureLight', light0], ['textureLightTilt', tilt0]]) if($(id)) $(id).value = String(v);
     for(const mk of marks) if(mk.el){ if(mk.step0 !== undefined) mk.el.step = mk.step0; mk.el.value = String(mk.v0); }
     canvas.width = pw; canvas.height = ph; setRenderScale(pw/(state.page.exportW || pw), [state.page.exportW || pw, state.page.exportH || ph]);

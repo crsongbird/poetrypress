@@ -11,6 +11,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE LAND IN STEPS, NOW WITHOUT LINES: shelves closer to the first painted ring's ridge-behind-ridge look, fewer in
   the city worlds; the lit lines along crests and shelf lips are gone, and the land gleams where it turns between the
   sun and the eye instead, brightest looking into the sun. Is the gleam strong enough, and on the right ground?
+- DRONE FLIGHT: Film → Camera round → Also → Drone flight carries the eye ahead along where it first looks at a
+  fly-over's speed, low and then climbing, over the land as it is (the world built once for the whole flight, so nothing
+  pops). Right speed and climb? Which flights next (dronie, rocket, orbit, following a road)?
 - THE SKY'S GRID GONE: the overcast is now one solid sheet; the grid seen at 720p should be gone. Still there on that seed?
 - NOTHING SEE-THROUGH: boulders, huts and other things are painted after every patch of land under them, so the ground
   no longer shows through their lower parts. Any still see-through? (Which seed was it?)
@@ -92,10 +95,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
-  - THE DRONE SHOT (Ruby, 2026-10-25: "drone shot camera including movement (this introduces player movement)"): the eye
-    itself carried through the world, rising, flying ahead and banking, not only turning; the eye standing anywhere round
-    the ring (its angle as well as its place across the band), the land's mesh and the store following it without a
-    thing popping. Next pass.
+  - THE DRONE SHOT, what is left: more flights (a dronie flying back and up, a rocket straight up, an orbit round a
+    thing, a flight that follows a road or a river), banking into a turn; the far land's painterly height (exf) is by the
+    eye's distance, so the far ranges change their height a little as a long flight nears them; a path chosen on the dial.
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
   - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path"):

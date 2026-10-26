@@ -284,6 +284,20 @@ The main page stays as it is. The marks show only in a marking mode entered from
 - **Code:** place(i) in makeMoving (uiMoving.js) sets cameraView and cameraZoom as it already sets cameraTurn, and the finally block puts all three back.
   - The camera is in the texture's key (textureGenerators.js, describeRequest), so each frame is a new surface, exactly as Camera round is today; frames-ahead still works.
   - Dolly zoom is not offered: the dial has one zoom, not a distance and a lens.
+- **Drone flight** (Ruby, 2026-10-25: "drone shot camera including movement (this introduces player movement)"):
+  - DJI's QuickShots move the drone itself, not only its gimbal: a Dronie "flies backward and upward", a Rocket "flies
+    straight up into the air", a Helix climbs "spiraling around your subject"
+    [src](https://www.digitalcameraworld.com/tutorials/dji-quickshot-modes-explained).
+  - A fly-over: "Fly low and level toward the object, then climb in a straight line as you reach it", approached at 8 to 15
+    mph; most cinematic moves fall within 2 to 8 mph; "Keep speed constant"; "Commit to a single motion"
+    [src](https://www.thedroneu.com/blog/types-of-shots-in-drone-cinematography/).
+  - So in the app [est]: Also · Drone flight carries the Ringworld's eye itself ahead along the way it first looks, at a
+    fly-over's 7 m/s (so a longer film flies farther, never faster), skimming low and then climbing (2.5 m/s by its end),
+    its gaze dipping a little as it climbs; set off and arrive gently; the camera may turn as it flies (cameraAlso,
+    tunables.js FILM_CAMERA). The eye's place goes in the camera's request (`fly`: metres flown, climbed, the heading, and
+    the whole way), so each frame is its own surface; the world it flies over is built once for the whole way (the store
+    sown along the flight's line), so no frame sees a thing appear or vanish; the land's mesh follows the eye, kept by
+    place, and the eye never sinks into a hill it crosses.
 
 ### D. Moving controls: sway, sweep, drift (moderate; the "arbitrary settings")
 
