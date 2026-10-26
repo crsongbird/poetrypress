@@ -404,3 +404,31 @@ The Ringworld's animals today are sheep on two-metre timetables and a few marks 
   - The content of the RDR2 GDC talk.
   - Measured durations of a duck's up-end, a rabbit's hop rate, a fox's trotting speed, a bat's wingbeat, and a heron's strike in milliseconds. These appear above as [est].
 - **Weak sources, used with care.** The 40 mph for red deer is from a student project. Gulls finding the plough comes from a popular article citing no studies. The butterfly temperatures are from a popular guide. The Flight Simulator animals are players' reports [est].
+
+## 8. Bigger, fewer, more colourful birds
+
+Ruby, 2026-10-25: "Can we increase the size of and diversity of birds (and colors, shading, etc) and reduce their number
+overall?"
+
+- Eurasian jay: "a length of 34–35 cm … and a wingspan of 52–58 cm", "light rufous brown to a pinkish brown body
+  plumage", "a prominent bright blue patch with fine black bars" on the wing, "The tail is mainly black"
+  [src](https://en.wikipedia.org/wiki/Eurasian_jay).
+- European goldfinch: "12–13 cm … long", wingspan "21–25 cm"; "a red face", black wings with a "broad yellow bar",
+  "Warm brown upperparts" and "white underparts with buff flanks"; in winter "flocks of up to 40"
+  [src](https://en.wikipedia.org/wiki/European_goldfinch).
+- Eurasian magpie: "44–46 cm … in length, more than half of which is the tail", wingspan "52–62 cm"; head, neck and
+  breast "glossy black with a metallic green and violet sheen", belly and shoulders "pure white"
+  [src](https://en.wikipedia.org/wiki/Eurasian_magpie).
+- Rose-ringed parakeet: about 40 cm, "vibrant green plumage", "red beak", "highly social", "often seen in noisy
+  flocks", in "cities, plantations, woodlands, and farmlands" [src](https://bigbird.alibaba.com/guides/rose-ringed-parakeet).
+- European robin: "12.5–14.0 cm long", wingspan "20–22 cm", "an orange breast and face", upperparts "brownish", belly
+  "whitish" [src](https://www.jungledragon.com/specie/72/european-robin.html).
+- Great egret: "over 4 feet in height", wingspan "more than 50 inches", "stout yellow bill", black legs; flies
+  "slowly and with its neck retracted"; hunts standing or walking slowly in shallow water
+  [src](https://www.nps.gov/ever/learn/nature/greategret.htm).
+- So in the painter [est]: half as many flocks over the land and fewer birds near you, each drawn larger again (2.4
+  times life, as a painter puts birds where they will read). Each kind by its field marks (`WK_KINDS`: breast, wing,
+  patch, face, tail, bill), its body shaded round (lit along its back, its breast's colour under it), its wing folded
+  with its patch or beating with its patch near the shoulder and darker tips (`wkSongbirdUp`, `wkSongbirdDown`).
+  Parakeets where it is warm and in town, goldfinches over the meadows, magpies and jays at the woods' edges, robins
+  near cover; egrets beside herons at warm water; the rooks, starlings, pigeons and sparrows given their own marks too.

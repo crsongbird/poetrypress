@@ -161,7 +161,9 @@ function pkBlossom(x, lobes, c, R, px){ const RB = mulberry32((R()*4294967296) >
     pkDisc(x, X + Math.cos(a)*d, Y + Math.sin(a)*d, Math.max(px ? px(0.5) : 0.5, r*(0.07 + 0.05*RB())), pkCss(lt > 0 ? pkMix(c.blossom, PK_WHITE, 0.25) : pkMix(c.blossom, c.dark, 0.25), 0.9)); } }
 function pkLobes(x, lobes, c, R, cx, cy, rr, px){
   if(c.bare) return pkBareCrown(x, lobes, c, R, cx, cy, rr, px);
-  pkLobesOf(x, lobes, c, R, cx, cy, rr, px); if(c.blossom) pkBlossom(x, lobes, c, R, px); }
+  pkLobesOf(x, lobes, c, R, cx, cy, rr, px); if(c.blossom) pkBlossom(x, lobes, c, R, px);
+  // (snow on the crown: a cap on each clump's top, white toward the light, blue-grey away)
+  if(c.snow) for(const [X, Y, r] of lobes){ const lt = (X - cx)*c.L[0] > 0; pkEll(x, X, Y - r*0.55, r*0.62, r*0.2, pkCss(lt ? [244, 246, 252] : [204, 212, 230], 0.92)); } }
 function pkLobesOf(x, lobes, c, R, cx, cy, rr, px){
   // (rd: the crown's size as its detail reads it, at its true distance, so a turn never changes its stage; and the
   //  leaves and the backlit dashes each on a stream of their own, so a leaf more moves nothing else)
@@ -286,7 +288,9 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small, sub){
         for(let k = 0, m = Math.round(wdd/px(5)); k < m; k++){ const v = 0.2 + 0.8*R(), [bx, by] = P[Math.min(P.length - 2, Math.round(v*5))], len = th*rnd(0.12, 0.25);
           x.strokeStyle = pkCss(lit ? (R() < 0.5 ? c.lit : pkMix(c.lit, PK_WHITE, 0.15)) : c.body, 0.85); x.beginPath(); x.moveTo(bx, by + th*0.08); x.lineTo(bx + s*len*0.6, by - len*0.4); x.stroke(); } }
       // (the sun behind: the tier's edge glowing through its needles)
-      if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, Math.min(0.8, c.back*0.8)); x.lineWidth = Math.max(px(0.6), th*0.1); x.beginPath(); P.slice(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); } } }
+      if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, Math.min(0.8, c.back*0.8)); x.lineWidth = Math.max(px(0.6), th*0.1); x.beginPath(); P.slice(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); }
+      // (snow lying along the tier's top, thickest toward the trunk, white in the light and blue-grey in shade)
+      if(c.snow){ const S2 = P.slice(0, -1), Lw = S2.map(([a, b], k) => [a, b + th*(0.22 - 0.16*k/S2.length)]); pkPoly(x, [...S2, ...Lw.reverse()], pkCss(lit ? [244, 246, 252] : [200, 210, 228], 0.95)); } } }
   // (the spire: the leader rising from the top tier, thin, with a last small whorl or two on it)
   const sy = Y - bare - span + th*0.3, sw = h*o.bw*0.16*F.wide; x.strokeStyle = pkCss(c.dark); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.5), h*0.01); x.beginPath(); x.moveTo(axis((Y - sy)/h), sy); x.lineTo(axis(1), top); x.stroke();
   for(const f of [0.35, 0.7]){ const yy = sy + (top - sy)*f, ax = axis((Y - yy)/h), ww = sw*(1.1 - f*0.8); pkPoly(x, [[ax, yy - th*0.25], [ax + ww, yy + th*0.12], [ax, yy + th*0.05], [ax - ww, yy + th*0.12]], pkCss(c.dark));
@@ -737,8 +741,9 @@ function pkBox(x, X, Y, top, wd, c, dep){
 //  taken, so every other feature keeps its stream)
 // ---- THE WIDER KIT: each kind drawn at (X, Y), h tall and wd wide, in the caller's lit colours ----
 // a gable roof over [x0, x1] from eave height ye up to the ridge yr; its lit slope toward the light
-const pkGable = (x, x0, x1, ye, yr, c, over = 0.08) => { const w = x1 - x0, m = (x0 + x1)/2; pkPoly(x, [[x0 - w*over, ye], [m, yr], [x1 + w*over, ye]], pkCss(c.dark));
-  pkPoly(x, c.sd > 0 ? [[m, yr], [x1 + w*over, ye], [m, ye]] : [[m, yr], [x0 - w*over, ye], [m, ye]], pkCss(pkMix(c.dark, c.body, 0.6))); };
+let PK_SNOW = false;   // (snow lying on the roofs: set by pkBuilding from its colours' snow, for the gables it draws)
+const pkGable = (x, x0, x1, ye, yr, c, over = 0.08) => { const w = x1 - x0, m = (x0 + x1)/2, sn = k => PK_SNOW ? pkMix(k, [236, 240, 248], 0.7) : k; pkPoly(x, [[x0 - w*over, ye], [m, yr], [x1 + w*over, ye]], pkCss(sn(c.dark)));
+  pkPoly(x, c.sd > 0 ? [[m, yr], [x1 + w*over, ye], [m, ye]] : [[m, yr], [x0 - w*over, ye], [m, ye]], pkCss(sn(pkMix(c.dark, c.body, 0.6)))); };
 // a strip (a sill, a coping, a course of brick) at least a hair thick
 const pkBar = (x, x0, y0, w, t, col, px, a = 1) => { x.fillStyle = pkCss(col, a); x.fillRect(x0, y0, w, Math.max(px(0.4), t)); };
 // a window in its frame (or a door's glazing, door true): the frame catching the light, the sky held in its upper panes by
@@ -1122,7 +1127,7 @@ const PK_PROOFS = new Map();
 //  film's moving camera nor its passing hours ever read it again or read it differently)
 function pkFaceProof(face, c, R0, h, wdt, eave, id, px){
   const H0 = px ? px(140) : 140, W0 = H0*wdt/Math.max(1e-6, h), raw = !!c.raw;
-  const key = id ? id + '|' + Math.round(wdt/Math.max(1e-6, h)*24) + '|' + eave + '|' + (raw ? 'raw' : JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'ft' || k === 'view' || k === 'windX' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*100)/100 : v)) : null;
+  const key = id ? id + '|' + Math.round(wdt/Math.max(1e-6, h)*24) + '|' + eave + '|' + (PK_SNOW ? 's|' : '') + (raw ? 'raw' : JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'ft' || k === 'view' || k === 'windX' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*100)/100 : v)) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
   const cP = raw ? { ...c, mat: m0 => { const m = c.raw(m0); return { body: m, lit: pkMix(m, PK_WHITE, 0.28), dark: pkMix(m, PK_BLACK, 0.42) }; }, body: c.rawBody || c.body, lit: c.rawLit || c.lit, dark: c.rawDark || c.dark } : c;
   const out = pkFaceProofOf(face, cP, R0, H0, W0, eave);
@@ -1209,7 +1214,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
     if(glassy) x.globalAlpha = GA*0.6;
     { const ew = o.ends && pr[sideN], ec = ew ? litOf(ew) : c;
       if(side){ wall([[-Dt/2, sv, z0], [Dt/2, sv, z0], [Dt/2, sv, zt], [-Dt/2, sv, zt]], 0, sideN, ec); windows(-Dt/2 + Dt*0.08, sv, Dt/2 - Dt*0.08, sv, z0 + (zt - z0)*0.05, zt*0.97, Rw); }
-      if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof ? litOf(pr.roof).body : rm.body, o = wdt*0.04;
+      if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pkMix(pr.roof ? litOf(pr.roof).body : rm.body, [236, 240, 248], c.snow ? 0.72 : 0), o = wdt*0.04;   // (snow lying on it where it is snowing)
         // both slopes, the far one first: seen nearly end-on, from a little above, the far one shows beside the near
         for(const sg of [-sideN, sideN]){ const up = S.light(0, sg, sd)*0.5 + 0.25, sv2 = sg*a;
           const rc = up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45), Q = (u, f) => S.P(u, sv2*1.08*(1 - f), Hs - h*0.02 + (ridge - Hs + h*0.02)*f);
@@ -1255,6 +1260,7 @@ const pkRoofThings = (x, X0, X1, top, h, c, R, px) => { const sp = X1 - X0;
   if(R() < 0.6){ for(let k = 0, n = 2 + Math.floor(R()*3); k < n; k++){ const bx = X0 + sp*(0.1 + 0.8*R()), bw = Math.min(sp*0.12, h*(0.03 + 0.03*R())), bh = bw*(0.5 + 0.4*R());
     x.fillStyle = pkCss(pkMix(c.body, c.lit, 0.4)); x.fillRect(bx - bw/2, top - bh, bw, bh); x.fillStyle = pkCss(c.dark, 0.6); x.fillRect(bx - bw/2, top - bh*0.25, bw, bh*0.25); } } };
 export function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
+  PK_SNOW = !!c.snow;
   // (on a slope (c.plinth, its height in pixels): first the stone plinth it stands on, its footprint's own box, from its
   //  floor at Y down into the ground at its lowest corner)
   if(c.plinth > px(0.6)){ const dk = (PK_BOX3[kind0] || [0.8])[0], hv = wdt*0.47, S = pkSpace(X, Y, 1, c.view || { cs: 1, sn: 0 }); pkBox3(x, S, -hv*dk, hv*dk, -hv, hv, -c.plinth, 0, pkMat(c, PK_STONE, 0.65), c.sd); c = { ...c, plinth: 0 }; }

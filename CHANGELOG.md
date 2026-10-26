@@ -4,6 +4,32 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Acrab (2026-10-25)
+
+- No more grid in the sky. In rain, storm and snow, the overcast ceiling showed a faint grid at film sizes such as
+  720p, because every seam between its pieces was painted twice. It is now laid as one solid sheet.
+- Rocks, huts and other things no longer show the ground through their lower parts. Each is painted after all the
+  land beneath it.
+- Fewer, bigger, more colourful birds. There are about half as many flocks, drawn larger, with new kinds: magpies,
+  jays, goldfinches, parakeets, robins and egrets. Each bird has its own markings (a jay's blue wing patch, a
+  goldfinch's red face and yellow bar, a robin's orange breast) and is shaded so it looks round. Rooks, starlings and
+  pigeons get their own markings too.
+- Snow and rain fall with depth. Instead of a flat curtain over the picture, flakes and streaks fall in the world
+  around the camera at every distance: big, soft flakes close by, smaller ones farther off. They move with the camera,
+  drift with the wind and hide behind hills. Far away, the falling snow or rain becomes a veil that softens the land.
+- Snow settles. When it snows, snow lies on open ground, along conifer branches, in caps on other trees, on bare twigs
+  and on roofs; meadow flowers close and the grass turns frosty.
+
+### Under the hood
+- `rgFalling` draws the falling weather in layers by distance, hidden by the land's distance map. The land's haze
+  (`hazeOf`) thickens in falling weather and takes on the snow's white or the rain's grey.
+- Each thing's reach toward the camera (`radOf`) decides when it is painted, so it is drawn after every patch of land
+  beneath it.
+- New bird kinds in `WK_KINDS` with their markings; `wkSongbirdUp` and `wkSongbirdDown` paint them, and `WK_BIRDS` are
+  drawn larger. A new check in the wildlife suite makes sure each colourful kind paints its markings.
+- New research notes: docs/prior-art/ringworld-weather.md (how fast snow and rain fall, how far you can see through
+  them) and a section on birds in docs/prior-art/ringworld-wildlife.md.
+
 ## Scorpius–Dschubba (2026-10-25)
 
 - Walled towns fly their colours. Every other tower on a town's wall now flies the square banner of the faction that
@@ -443,16 +469,3 @@ prints it).
 - A whole generator can leave its offsets on its canvas (`kitWhole` hands them on as the part's lens, in canonical
   pixels); `genGlassRain` does, and draws its drops for seeing through when its part is asked for a lens. No
   fingerprint moved.
-
-## Hyades–Secunda Hyadum (2026-10-24)
-
-- Any setting can move in a film. The Moving Image has an Also moving row: choose one of the surface's sliders, or the
-  light (the sun, on the Ringworld) or its height, and how it moves (it sways round where it stands, sweeps out to its
-  far end and back, or drifts), how far (a little, some, much) and how many times in the film. Mark as many as you
-  like; the line under the row says which are moving. Each comes back to where it began by the film's end, so a film
-  that loops still loops, and every control is put back after.
-
-### Under the hood
-- `markValue` gives a marked control's value through the film (test/moving.test.mjs checks it starts and ends where
-  it stands, sweeps without snapping, keeps to its ends and wraps an angle); a marked slider is set to step freely during
-  the film, so a slow sway never stair-steps.

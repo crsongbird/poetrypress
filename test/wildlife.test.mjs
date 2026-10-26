@@ -62,4 +62,14 @@ for(const kind of kinds){ let worst = 0;
   const herd = a.find(o => o.c === 'wild'), st = herd && R.ringStateOf(herd, 12.5);
   check('a wild group\'s members each have an id and a state that can be captured', !herd || (st.members.length > 0 && st.members.every((m, j) => m.id === herd.id + '#' + j && 'pose' in m))); }
 
+// (Ruby: "increase the size of and diversity of birds (and colors, shading, etc)": each colourful kind painted in its own
+// field marks, four colours or more, in the air and on the ground; and the flocks the land sows are fewer)
+{ const rec = () => { const cols = new Set(), x = { set fillStyle(v){ cols.add(v); }, get fillStyle(){ return ''; }, set strokeStyle(v){ cols.add(v); }, get strokeStyle(){ return ''; }, lineWidth: 1, lineCap: 'butt' };
+    for(const f of ['beginPath', 'moveTo', 'lineTo', 'closePath', 'fill', 'stroke', 'ellipse', 'arc', 'fillRect', 'quadraticCurveTo', 'bezierCurveTo', 'save', 'restore', 'rect', 'clip']) x[f] = () => {}; return [x, cols]; };
+  const mat = m => ({ body: m, lit: m.map(v => Math.min(255, v + 40)), dark: m.map(v => v*0.6) }), c = { mat, lit: [240, 240, 230] };
+  const marks = ['magpies', 'jays', 'goldfinches', 'parakeets', 'robins'].map(k => { const [a, A] = rec(), [b, B] = rec();
+    K.wkPaint(a, 100, 100, 200, k, { y: 0.6, pose: 'fly', ph: 0.15, dir: 1, head: 1 }, c, v => v); K.wkPaint(b, 100, 100, 200, k, { y: 0, pose: 'stand', ph: 0, dir: 1, head: 0.2 }, c, v => v); return [k, A.size, B.size]; });
+  check(`the colourful birds paint their field marks in the air and on the ground (${marks.map(m => m.join(' ')).join(', ')})`, marks.every(([, a, b]) => a >= 4 && b >= 4));
+  check('the new kinds are all birds drawn larger than life', ['magpies', 'jays', 'goldfinches', 'parakeets', 'robins', 'egret'].every(k => K.WK_BIRDS.includes(k) && K.WK_KINDS[k])); }
+
 done();

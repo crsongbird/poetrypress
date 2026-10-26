@@ -39,15 +39,23 @@ export const WK_KINDS = {
   hare:      { way: 'hop', n: [1, 3], P: 24, range: 6, spread: 5, walk: 2.4, run: 10, bolt: 0.18, wander: 0.5, tau: 9, size: 0.55, stride: 1.1, coat: [152, 124, 90] },
   fox:       { way: 'prowl', n: [1, 1], P: 80, range: 35, spread: 0, walk: 2.1, run: 9, bolt: 0.08, wander: 0.8, tau: 14, size: 0.75, stride: 1.4, coat: [196, 98, 44] },
   // the ground's birds, flushed all at once and wheeling down elsewhere (hgt: how high they rise)
-  rooks:     { way: 'flock', n: [5, 12], P: 55, range: 28, spread: 8, fly: 9, wander: 1.3, tau: 7, size: 0.85, hgt: [5, 14], coat: [30, 30, 36], body: 0.46 },
-  pigeons:   { way: 'flock', n: [4, 10], P: 40, range: 20, spread: 5, fly: 10, wander: 1.0, tau: 6, size: 0.65, hgt: [4, 11], coat: [128, 132, 146], body: 0.33 },
-  starlings: { way: 'flock', n: [6, 16], P: 34, range: 22, spread: 6, fly: 10, wander: 1.2, tau: 5, size: 0.4, hgt: [3, 9], coat: [44, 46, 54], body: 0.21 },
-  sparrows:  { way: 'flock', n: [4, 10], P: 26, range: 14, spread: 2.5, fly: 6, wander: 0.7, tau: 4, size: 0.24, hgt: [1.5, 4], coat: [134, 104, 76], body: 0.15 },
+  rooks:     { way: 'flock', n: [5, 12], P: 55, range: 28, spread: 8, fly: 9, wander: 1.3, tau: 7, size: 0.85, hgt: [5, 14], coat: [30, 30, 36], body: 0.46, breast: [44, 44, 52], bill: [86, 84, 90], tail: 0.7 },
+  pigeons:   { way: 'flock', n: [4, 10], P: 40, range: 20, spread: 5, fly: 10, wander: 1.0, tau: 6, size: 0.65, hgt: [4, 11], coat: [128, 132, 146], body: 0.33, breast: [170, 150, 170], face: [96, 140, 120], wing: [150, 154, 166] },
+  starlings: { way: 'flock', n: [6, 16], P: 34, range: 22, spread: 6, fly: 10, wander: 1.2, tau: 5, size: 0.4, hgt: [3, 9], coat: [44, 46, 54], body: 0.21, breast: [58, 60, 72], gloss: [90, 70, 130], bill: [214, 190, 70] },
+  sparrows:  { way: 'flock', n: [4, 10], P: 26, range: 14, spread: 2.5, fly: 6, wander: 0.7, tau: 4, size: 0.24, hgt: [1.5, 4], coat: [134, 104, 76], body: 0.15, breast: [196, 180, 152], face: [92, 84, 78] },
+  // (Ruby, 2026-10-25: "increase the size of and diversity of birds (and colors, shading, etc)": the colourful ones,
+  //  each by its field marks, docs/prior-art/ringworld-wildlife.md §8: breast, wing patch, face, tail, bill)
+  magpies:   { way: 'flock', n: [2, 5], P: 60, range: 22, spread: 5, fly: 7, wander: 1.1, tau: 8, size: 0.58, hgt: [3, 9], coat: [22, 24, 30], body: 0.44, breast: [242, 242, 238], patch: [238, 238, 234], gloss: [70, 120, 110], tail: 1.6 },
+  jays:      { way: 'flock', n: [1, 3], P: 70, range: 24, spread: 6, fly: 7, wander: 1.2, tau: 9, size: 0.55, hgt: [4, 10], coat: [190, 146, 124], body: 0.34, breast: [206, 172, 150], wing: [40, 38, 42], patch: [74, 128, 214], face: [236, 230, 222], tail: 0.9 },
+  goldfinches: { way: 'flock', n: [6, 14], P: 24, range: 12, spread: 3, fly: 7, wander: 0.8, tau: 4, size: 0.23, hgt: [1.5, 5], coat: [176, 138, 98], body: 0.13, breast: [238, 228, 212], wing: [26, 24, 26], patch: [246, 206, 40], face: [208, 42, 40] },
+  parakeets: { way: 'flock', n: [5, 12], P: 40, range: 30, spread: 6, fly: 12, wander: 1, tau: 6, size: 0.45, hgt: [6, 16], coat: [98, 194, 84], body: 0.3, breast: [158, 220, 110], wing: [64, 156, 66], patch: [232, 222, 92], bill: [214, 44, 44], tail: 1.7 },
+  robins:    { way: 'flock', n: [1, 2], P: 30, range: 10, spread: 2, fly: 6, wander: 0.6, tau: 5, size: 0.21, hgt: [1, 3], coat: [128, 108, 78], body: 0.13, breast: [230, 118, 50], face: [230, 118, 50] },
   // on the water: a slow drift, now and then up-ended to feed
   ducks:     { way: 'paddle', n: [2, 7], spread: 3, wander: 5, tau: 38, size: 0.55, coat: [116, 96, 74], head: [40, 88, 60] },
   swans:     { way: 'paddle', n: [1, 3], spread: 4, wander: 7, tau: 55, size: 1.4, coat: [240, 238, 232], head: [240, 238, 232] },
   // at the water's edge: still, a slow step, the strike, and now and then a long slow flight down the shore
   heron:     { way: 'wade', n: [1, 1], P: 90, range: 6, fly: 9, flyOff: 45, flies: 0.22, size: 0.95, coat: [150, 156, 164] },
+  egret:     { way: 'wade', n: [1, 1], P: 90, range: 6, fly: 8, flyOff: 45, flies: 0.22, size: 1.0, coat: [246, 246, 240], bill: [232, 192, 52] },
   // in the air: circling on a thermal and gliding to the next; hawking for insects on noise (amp: how far, hgt: how high)
   raptor:    { way: 'soar', n: [1, 2], P: 160, size: 1.3, speed: 9, coat: [96, 72, 52] },
   swallows:  { way: 'hawk', n: [3, 7], tau: 10, amp: 18, hgt: [1.2, 9], size: 0.32, flap: 5, coat: [36, 40, 64] },
@@ -65,6 +73,8 @@ export const WK_KINDS = {
   geese:     { way: 'skein', n: [7, 15], P: 520, speed: 16, hgt: [120, 240], size: 1.6, coat: [110, 104, 96] },
 };
 export const WK_FLYERS = ['raptor', 'swallows', 'swifts', 'bats', 'geese', 'butterflies', 'dragonflies'];
+// (the birds: drawn larger than life still, as a painter does birds so that they read, Ruby: "increase the size of … birds")
+export const WK_BIRDS = ['rooks', 'pigeons', 'starlings', 'sparrows', 'magpies', 'jays', 'goldfinches', 'parakeets', 'robins', 'heron', 'egret', 'raptor', 'swallows', 'swifts', 'geese'];
 export const wkCount = (kind, s) => { const K = WK_KINDS[kind]; return K.n[0] + Math.floor(wkHash(s, 1, 5)*(K.n[1] - K.n[0] + 1)); };
 
 // a walker's or a flock's LEG into era k: where its member j is bound (round the era's home), when it sets off, how fast
@@ -262,19 +272,21 @@ function wkBird(x, X, Y, m, kind, st, c, px){
   const K = WK_KINDS[kind], d = st.dir, S = K.size*m, col = c.mat(K.coat), y = Y - st.y*m, ink = wkCss(col.dark), w = Math.max(px(0.5), S*0.07);
   if(S < px(1.1)){ x.fillStyle = ink; x.fillRect(X - px(0.5), y - px(0.5), px(1), px(1)); return; }
   if(st.pose === 'peck' || st.pose === 'stand' || st.pose === 'wade'){ const b = (K.body || 0.4)*m, bob = st.pose === 'peck' ? Math.max(0, Math.sin(st.ph*Math.PI*2))*0.6 : 0;
-    if(kind === 'heron'){ const hgt = 0.95*m, by = Y - hgt*0.62; wkLine(x, [[X - d*b*0.05, Y], [X, by]], ink, Math.max(px(0.4), hgt*0.02)); wkLine(x, [[X + d*b*0.08, Y], [X + d*b*0.02, by]], ink, Math.max(px(0.4), hgt*0.02));
+    if(K.way === 'wade'){ const hgt = K.size*m, by = Y - hgt*0.62; wkLine(x, [[X - d*b*0.05, Y], [X, by]], ink, Math.max(px(0.4), hgt*0.02)); wkLine(x, [[X + d*b*0.08, Y], [X + d*b*0.02, by]], ink, Math.max(px(0.4), hgt*0.02));
       wkEll(x, X, by - hgt*0.08, hgt*0.17, hgt*0.1, -d*0.5, wkCss(col.body)); const strike = st.head, nk = [[X + d*hgt*0.1, by - hgt*0.12], [X + d*hgt*(0.04 + 0.22*strike), by - hgt*(0.3 - 0.05*strike)], [X + d*hgt*(0.12 + 0.3*strike), by - hgt*(0.36 - 0.1*strike)]];
-      wkLine(x, nk, wkCss(col.lit), Math.max(px(0.5), hgt*0.04)); const hx = nk[2][0], hy = nk[2][1]; wkLine(x, [[hx, hy], [hx + d*hgt*0.16, hy + hgt*0.02*(1 + strike)]], wkCss([196, 168, 80]), Math.max(px(0.4), hgt*0.022));
+      wkLine(x, nk, wkCss(col.lit), Math.max(px(0.5), hgt*0.04)); const hx = nk[2][0], hy = nk[2][1]; wkLine(x, [[hx, hy], [hx + d*hgt*0.16, hy + hgt*0.02*(1 + strike)]], wkCss(K.bill || [196, 168, 80]), Math.max(px(0.4), hgt*0.022));
       if(hgt > px(14)) wkLine(x, [[hx - d*hgt*0.02, hy - hgt*0.01], [hx - d*hgt*0.12, hy - hgt*0.01]], ink, Math.max(px(0.3), hgt*0.012)); return; }
+    if(K.breast || K.patch || K.tail) return wkSongbirdDown(x, X, y, b, d, bob, K, c, col, st, px);
     const by = y - b*0.55; wkEll(x, X, by, b*0.5, b*0.26, -d*0.25, wkCss(col.body));
     if(st.flick && b > px(3)) for(const s2 of [-1, 1]) wkPolyF(x, [[X - d*b*0.1, by - b*0.1], [X - d*b*0.45, by - b*(0.55 + 0.15*s2)], [X + d*b*0.15, by - b*0.2]], wkCss(s2 > 0 ? col.dark : col.body)); wkLine(x, [[X - d*b*0.42, by + b*0.04], [X - d*b*0.8, by + b*0.12]], wkCss(col.body), Math.max(px(0.4), b*0.14));
     wkEll(x, X + d*b*0.42, by - b*0.2 + bob*b*0.5, b*0.16, b*0.14, 0, wkCss(col.body)); if(b > px(5)) wkLine(x, [[X + d*b*0.56, by - b*0.2 + bob*b*0.5], [X + d*b*0.72, by - b*0.16 + bob*b*0.6]], ink, Math.max(px(0.3), b*0.06));
     if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, y]], ink, Math.max(px(0.3), b*0.04)); return; }
   // in the air
-  if(kind === 'raptor' || (kind === 'heron' && st.pose === 'fly')){ const span = (kind === 'heron' ? 1.7 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
+  const wader = K.way === 'wade';
+  if(kind === 'raptor' || (wader && st.pose === 'fly')){ const span = (wader ? 1.7*K.size/0.95 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
     // (a broad plank of wing, bowed, its tips fingered; the tail fanned; seen from below as it circles)
     const ws = span*0.5, cw = span*0.09, tip = sg => [X + sg*ws, y - span*fl*0.6];
-    wkPolyF(x, [[X - cw*0.6, y - cw*0.2], tip(-1), [X - ws*0.95, y + cw*0.5], [X, y + cw*0.7], [X + ws*0.95, y + cw*0.5], tip(1), [X + cw*0.6, y - cw*0.2]], wkCss(kind === 'heron' ? col.body : col.dark));
+    wkPolyF(x, [[X - cw*0.6, y - cw*0.2], tip(-1), [X - ws*0.95, y + cw*0.5], [X, y + cw*0.7], [X + ws*0.95, y + cw*0.5], tip(1), [X + cw*0.6, y - cw*0.2]], wkCss(wader ? col.body : col.dark));
     if(kind === 'raptor'){ wkPolyF(x, [[X - cw*0.3, y + cw*0.4], [X - cw*0.8, y + cw*2.2], [X + cw*0.8, y + cw*2.2], [X + cw*0.3, y + cw*0.4]], wkCss(col.dark));
       if(span > px(14)) for(const sg of [-1, 1]) for(let f = 0; f < 4; f++) wkLine(x, [[X + sg*ws*0.9, y - span*fl*0.55 + cw*(f*0.25 - 0.2)], [X + sg*ws*1.04, y - span*fl*0.6 + cw*(f*0.3 - 0.35)]], wkCss(col.dark), Math.max(px(0.3), cw*0.18)); }
     else { wkLine(x, [[X + d*cw*0.6, y - cw*0.1], [X + d*cw*1.4, y - cw*0.8], [X + d*cw*2.0, y - cw*0.3]], wkCss(col.body), Math.max(px(0.4), cw*0.5)); wkLine(x, [[X - d*cw*0.6, y + cw*0.4], [X - d*cw*3.2, y + cw*0.9]], ink, Math.max(px(0.3), cw*0.18)); }
@@ -295,10 +307,48 @@ function wkBird(x, X, Y, m, kind, st, c, px){
     for(const sg of [-1, 1]) wkPolyF(x, [[X, y - sp*0.06], [X + sg*sp*0.55, y - sp*0.3*k], [X + sg*sp, y - sp*(sw*k - 0.05)], [X + sg*sp*0.5, y - sp*0.05*k], [X, y + sp*0.08]], ink);
     if(kind === 'swallows' && S > px(5)) wkLine(x, [[X - px(0.3), y + sp*0.05], [X - sp*0.12, y + sp*0.4]], ink, Math.max(px(0.3), sp*0.04)), wkLine(x, [[X + px(0.3), y + sp*0.05], [X + sp*0.12, y + sp*0.4]], ink, Math.max(px(0.3), sp*0.04));
     return; }
+  if(K.breast || K.patch || K.tail) return wkSongbirdUp(x, X, y, S, d, fl, K, c, col, px);
   // (a flushed flock: rooks, pigeons, starlings, sparrows; a pale underwing on a pigeon as it turns)
   const under = kind === 'pigeons' ? wkCss(col.lit) : ink; wkEll(x, X, y, sp*0.22, sp*0.11, -d*0.2, wkCss(col.body));
   wkLine(x, [[X - sp, y - sp*fl*0.7], [X - sp*0.45, y - sp*(0.25 + fl*0.35)], [X, y]], under, w); wkLine(x, [[X, y], [X + sp*0.45, y - sp*(0.25 + fl*0.35)], [X + sp, y - sp*fl*0.7]], ink, w);
 }
+
+// A SONGBIRD BY ITS FIELD MARKS (Ruby: "diversity of birds (and colors, shading, etc)"): its body shaded round (lit
+//  above toward the light, its breast's colour under it, a darker belly edge), its wing folded with its patch (a jay's
+//  blue, a goldfinch's yellow bar, a magpie's white shoulder), its tail by its length (a magpie's and a parakeet's
+//  long), its face (a robin's orange, a goldfinch's red), its bill; on the ground, or beating in the air
+function wkSongbirdDown(x, X, y, b, d, bob, K, c, col, st, px){
+  const wing = c.mat(K.wing || K.coat), br = c.mat(K.breast || K.coat), by = y - b*0.55, tl = K.tail || 0.6, gl = K.gloss ? c.mat(K.gloss) : null;
+  wkLine(x, [[X - d*b*0.38, by - b*0.02], [X - d*b*(0.38 + 0.55*tl), by - b*(0.06 + 0.1*tl)]], wkCss(K.tail ? wing.dark : col.body), Math.max(px(0.4), b*0.13));   // its tail, cocked
+  if(gl && b > px(4)) wkLine(x, [[X - d*b*0.42, by - b*0.04], [X - d*b*(0.4 + 0.5*tl), by - b*(0.07 + 0.1*tl)]], wkCss(gl.lit, 0.6), Math.max(px(0.3), b*0.05));
+  wkEll(x, X, by, b*0.5, b*0.27, -d*0.25, wkCss(col.dark));                                          // the body, its shade
+  wkEll(x, X + d*b*0.04, by - b*0.04, b*0.44, b*0.21, -d*0.25, wkCss(col.body));
+  wkEll(x, X + d*b*0.16, by + b*0.06, b*0.26, b*0.16, -d*0.1, wkCss(br.body));                    // the breast
+  wkEll(x, X - d*b*0.06, by - b*0.08, b*0.3, b*0.13, -d*0.3, wkCss(wing.body));                   // the folded wing
+  if(K.patch) wkEll(x, X + d*b*0.02, by - b*0.06, b*0.12, b*0.07, -d*0.3, wkCss(c.mat(K.patch).lit));
+  if(st.flick && b > px(3)) for(const s2 of [-1, 1]) wkPolyF(x, [[X - d*b*0.1, by - b*0.1], [X - d*b*0.45, by - b*(0.55 + 0.15*s2)], [X + d*b*0.15, by - b*0.2]], wkCss(s2 > 0 ? wing.dark : wing.body));
+  wkEll(x, X + d*b*0.1, by - b*0.2, b*0.3, b*0.06, -d*0.25, wkCss(col.lit, 0.55));               // the light along its back
+  const hx = X + d*b*0.42, hy = by - b*0.2 + bob*b*0.5; wkEll(x, hx, hy, b*0.17, b*0.15, 0, wkCss(col.body));
+  if(K.face) wkEll(x, hx + d*b*0.05, hy + b*0.03, b*0.1, b*0.09, 0, wkCss(c.mat(K.face).body));
+  if(b > px(4)){ wkLine(x, [[hx + d*b*0.15, hy], [hx + d*b*0.3, hy + b*0.04 + bob*b*0.1]], wkCss(c.mat(K.bill || [52, 46, 42]).body), Math.max(px(0.3), b*0.06));
+    wkEll(x, hx + d*b*0.06, hy - b*0.03, b*0.025, b*0.025, 0, wkCss([12, 12, 14])); }
+  if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, y]], wkCss(wing.dark), Math.max(px(0.3), b*0.04)); }
+function wkSongbirdUp(x, X, y, S, d, fl, K, c, col, px){
+  const wing = c.mat(K.wing || K.coat), br = c.mat(K.breast || K.coat), sp = S*0.5, tl = K.tail || 0.6, w = Math.max(px(0.5), S*0.09);
+  // (the wings: from the shoulder out to the tip, each a broad stroke of its colour, its patch near the shoulder, its
+  //  tip darker; the far wing first, in shade)
+  const wingAt = (sg, near) => { const tipY = y - sp*fl*0.7, mid = [X + sg*sp*0.45, y - sp*(0.22 + fl*0.32)], tip = [X + sg*sp, tipY];
+    wkPolyF(x, [[X - d*sp*0.05, y - sp*0.04], mid, tip, [X + sg*sp*0.55, y - sp*(0.12 + fl*0.2)], [X + d*sp*0.08, y + sp*0.02]], wkCss(near ? wing.body : wing.dark));
+    wkLine(x, [mid, tip], wkCss(wing.dark), w*0.8);
+    if(K.patch && S > px(4)) wkLine(x, [[X + sg*sp*0.12, y - sp*(0.06 + fl*0.1)], [X + sg*sp*0.36, y - sp*(0.18 + fl*0.26)]], wkCss(c.mat(K.patch).lit), w*1.1); };
+  wingAt(-d, false);
+  wkLine(x, [[X - d*sp*0.2, y + sp*0.02], [X - d*sp*(0.3 + 0.5*tl), y + sp*0.06]], wkCss(K.tail ? wing.dark : col.body), Math.max(px(0.4), S*(K.tail ? 0.07 : 0.1)));   // the tail streaming behind
+  wkEll(x, X, y, sp*0.26, sp*0.12, -d*0.15, wkCss(col.body));                                     // the body
+  wkEll(x, X + d*sp*0.04, y + sp*0.04, sp*0.18, sp*0.07, -d*0.1, wkCss(br.body));                 // its breast below
+  wkEll(x, X - d*sp*0.02, y - sp*0.05, sp*0.16, sp*0.04, -d*0.15, wkCss(col.lit, 0.6));           // the light on its back
+  const hx = X + d*sp*0.3, hy = y - sp*0.03; wkEll(x, hx, hy, sp*0.1, sp*0.09, 0, wkCss(K.face ? c.mat(K.face).body : col.body));
+  if(S > px(5)) wkLine(x, [[hx + d*sp*0.08, hy], [hx + d*sp*0.17, hy + sp*0.02]], wkCss(c.mat(K.bill || [52, 46, 42]).body), Math.max(px(0.3), S*0.04));
+  wingAt(d, true); }
 
 // ON THE WATER: a body half under, a head on its neck (a mallard's green, a swan's curve), up-ended to feed with its
 // tail to the sky, and the V of its wake behind it as it goes

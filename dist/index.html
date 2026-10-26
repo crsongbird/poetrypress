@@ -6624,7 +6624,9 @@ function pkBlossom(x, lobes, c, R, px){ const RB = mulberry32((R()*4294967296) >
     pkDisc(x, X + Math.cos(a)*d, Y + Math.sin(a)*d, Math.max(px ? px(0.5) : 0.5, r*(0.07 + 0.05*RB())), pkCss(lt > 0 ? pkMix(c.blossom, PK_WHITE, 0.25) : pkMix(c.blossom, c.dark, 0.25), 0.9)); } }
 function pkLobes(x, lobes, c, R, cx, cy, rr, px){
   if(c.bare) return pkBareCrown(x, lobes, c, R, cx, cy, rr, px);
-  pkLobesOf(x, lobes, c, R, cx, cy, rr, px); if(c.blossom) pkBlossom(x, lobes, c, R, px); }
+  pkLobesOf(x, lobes, c, R, cx, cy, rr, px); if(c.blossom) pkBlossom(x, lobes, c, R, px);
+
+  if(c.snow) for(const [X, Y, r] of lobes){ const lt = (X - cx)*c.L[0] > 0; pkEll(x, X, Y - r*0.55, r*0.62, r*0.2, pkCss(lt ? [244, 246, 252] : [204, 212, 230], 0.92)); } }
 function pkLobesOf(x, lobes, c, R, cx, cy, rr, px){
 
 
@@ -6749,7 +6751,9 @@ function pkConifer(x, X, Y, h, c, R, F, o, px, small, sub){
         for(let k = 0, m = Math.round(wdd/px(5)); k < m; k++){ const v = 0.2 + 0.8*R(), [bx, by] = P[Math.min(P.length - 2, Math.round(v*5))], len = th*rnd(0.12, 0.25);
           x.strokeStyle = pkCss(lit ? (R() < 0.5 ? c.lit : pkMix(c.lit, PK_WHITE, 0.15)) : c.body, 0.85); x.beginPath(); x.moveTo(bx, by + th*0.08); x.lineTo(bx + s*len*0.6, by - len*0.4); x.stroke(); } }
 
-      if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, Math.min(0.8, c.back*0.8)); x.lineWidth = Math.max(px(0.6), th*0.1); x.beginPath(); P.slice(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); } } }
+      if(c.back > 0.05){ x.strokeStyle = pkCss(c.trans, Math.min(0.8, c.back*0.8)); x.lineWidth = Math.max(px(0.6), th*0.1); x.beginPath(); P.slice(1).forEach(([a, b], k) => k ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); }
+
+      if(c.snow){ const S2 = P.slice(0, -1), Lw = S2.map(([a, b], k) => [a, b + th*(0.22 - 0.16*k/S2.length)]); pkPoly(x, [...S2, ...Lw.reverse()], pkCss(lit ? [244, 246, 252] : [200, 210, 228], 0.95)); } } }
 
   const sy = Y - bare - span + th*0.3, sw = h*o.bw*0.16*F.wide; x.strokeStyle = pkCss(c.dark); x.lineCap = 'round'; x.lineWidth = Math.max(px(0.5), h*0.01); x.beginPath(); x.moveTo(axis((Y - sy)/h), sy); x.lineTo(axis(1), top); x.stroke();
   for(const f of [0.35, 0.7]){ const yy = sy + (top - sy)*f, ax = axis((Y - yy)/h), ww = sw*(1.1 - f*0.8); pkPoly(x, [[ax, yy - th*0.25], [ax + ww, yy + th*0.12], [ax, yy + th*0.05], [ax - ww, yy + th*0.12]], pkCss(c.dark));
@@ -7200,8 +7204,9 @@ function pkBox(x, X, Y, top, wd, c, dep){
 
 
 
-const pkGable = (x, x0, x1, ye, yr, c, over = 0.08) => { const w = x1 - x0, m = (x0 + x1)/2; pkPoly(x, [[x0 - w*over, ye], [m, yr], [x1 + w*over, ye]], pkCss(c.dark));
-  pkPoly(x, c.sd > 0 ? [[m, yr], [x1 + w*over, ye], [m, ye]] : [[m, yr], [x0 - w*over, ye], [m, ye]], pkCss(pkMix(c.dark, c.body, 0.6))); };
+let PK_SNOW = false;
+const pkGable = (x, x0, x1, ye, yr, c, over = 0.08) => { const w = x1 - x0, m = (x0 + x1)/2, sn = k => PK_SNOW ? pkMix(k, [236, 240, 248], 0.7) : k; pkPoly(x, [[x0 - w*over, ye], [m, yr], [x1 + w*over, ye]], pkCss(sn(c.dark)));
+  pkPoly(x, c.sd > 0 ? [[m, yr], [x1 + w*over, ye], [m, ye]] : [[m, yr], [x0 - w*over, ye], [m, ye]], pkCss(sn(pkMix(c.dark, c.body, 0.6)))); };
 
 const pkBar = (x, x0, y0, w, t, col, px, a = 1) => { x.fillStyle = pkCss(col, a); x.fillRect(x0, y0, w, Math.max(px(0.4), t)); };
 
@@ -7585,7 +7590,7 @@ const PK_PROOFS = new Map();
 
 function pkFaceProof(face, c, R0, h, wdt, eave, id, px){
   const H0 = px ? px(140) : 140, W0 = H0*wdt/Math.max(1e-6, h), raw = !!c.raw;
-  const key = id ? id + '|' + Math.round(wdt/Math.max(1e-6, h)*24) + '|' + eave + '|' + (raw ? 'raw' : JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'ft' || k === 'view' || k === 'windX' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*100)/100 : v)) : null;
+  const key = id ? id + '|' + Math.round(wdt/Math.max(1e-6, h)*24) + '|' + eave + '|' + (PK_SNOW ? 's|' : '') + (raw ? 'raw' : JSON.stringify(c, (k, v) => k === 't' || k === 'mt' || k === 'smt' || k === 'ft' || k === 'view' || k === 'windX' || typeof v === 'function' ? undefined : typeof v === 'number' ? Math.round(v*100)/100 : v)) : null;
   if(key && PK_PROOFS.has(key)) return PK_PROOFS.get(key);
   const cP = raw ? { ...c, mat: m0 => { const m = c.raw(m0); return { body: m, lit: pkMix(m, PK_WHITE, 0.28), dark: pkMix(m, PK_BLACK, 0.42) }; }, body: c.rawBody || c.body, lit: c.rawLit || c.lit, dark: c.rawDark || c.dark } : c;
   const out = pkFaceProofOf(face, cP, R0, H0, W0, eave);
@@ -7672,7 +7677,7 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
     if(glassy) x.globalAlpha = GA*0.6;
     { const ew = o.ends && pr[sideN], ec = ew ? litOf(ew) : c;
       if(side){ wall([[-Dt/2, sv, z0], [Dt/2, sv, z0], [Dt/2, sv, zt], [-Dt/2, sv, zt]], 0, sideN, ec); windows(-Dt/2 + Dt*0.08, sv, Dt/2 - Dt*0.08, sv, z0 + (zt - z0)*0.05, zt*0.97, Rw); }
-      if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pr.roof ? litOf(pr.roof).body : rm.body, o = wdt*0.04;
+      if(eave){ const rm = pkMat(c, roofM, 0.8), rb = pkMix(pr.roof ? litOf(pr.roof).body : rm.body, [236, 240, 248], c.snow ? 0.72 : 0), o = wdt*0.04;
 
         for(const sg of [-sideN, sideN]){ const up = S.light(0, sg, sd)*0.5 + 0.25, sv2 = sg*a;
           const rc = up > 0 ? pkMix(rb, PK_WHITE, up*0.3) : pkMix(rb, PK_BLACK, -up*0.45), Q = (u, f) => S.P(u, sv2*1.08*(1 - f), Hs - h*0.02 + (ridge - Hs + h*0.02)*f);
@@ -7718,6 +7723,7 @@ const pkRoofThings = (x, X0, X1, top, h, c, R, px) => { const sp = X1 - X0;
   if(R() < 0.6){ for(let k = 0, n = 2 + Math.floor(R()*3); k < n; k++){ const bx = X0 + sp*(0.1 + 0.8*R()), bw = Math.min(sp*0.12, h*(0.03 + 0.03*R())), bh = bw*(0.5 + 0.4*R());
     x.fillStyle = pkCss(pkMix(c.body, c.lit, 0.4)); x.fillRect(bx - bw/2, top - bh, bw, bh); x.fillStyle = pkCss(c.dark, 0.6); x.fillRect(bx - bw/2, top - bh*0.25, bw, bh*0.25); } } };
 function pkBuilding(x, X, Y, h, wdt, c, style, night, R0, px, kind0){
+  PK_SNOW = !!c.snow;
 
 
   if(c.plinth > px(0.6)){ const dk = (PK_BOX3[kind0] || [0.8])[0], hv = wdt*0.47, S = pkSpace(X, Y, 1, c.view || { cs: 1, sn: 0 }); pkBox3(x, S, -hv*dk, hv*dk, -hv, hv, -c.plinth, 0, pkMat(c, PK_STONE, 0.65), c.sd); c = { ...c, plinth: 0 }; }
@@ -9137,15 +9143,23 @@ const WK_KINDS = {
   hare:      { way: 'hop', n: [1, 3], P: 24, range: 6, spread: 5, walk: 2.4, run: 10, bolt: 0.18, wander: 0.5, tau: 9, size: 0.55, stride: 1.1, coat: [152, 124, 90] },
   fox:       { way: 'prowl', n: [1, 1], P: 80, range: 35, spread: 0, walk: 2.1, run: 9, bolt: 0.08, wander: 0.8, tau: 14, size: 0.75, stride: 1.4, coat: [196, 98, 44] },
 
-  rooks:     { way: 'flock', n: [5, 12], P: 55, range: 28, spread: 8, fly: 9, wander: 1.3, tau: 7, size: 0.85, hgt: [5, 14], coat: [30, 30, 36], body: 0.46 },
-  pigeons:   { way: 'flock', n: [4, 10], P: 40, range: 20, spread: 5, fly: 10, wander: 1.0, tau: 6, size: 0.65, hgt: [4, 11], coat: [128, 132, 146], body: 0.33 },
-  starlings: { way: 'flock', n: [6, 16], P: 34, range: 22, spread: 6, fly: 10, wander: 1.2, tau: 5, size: 0.4, hgt: [3, 9], coat: [44, 46, 54], body: 0.21 },
-  sparrows:  { way: 'flock', n: [4, 10], P: 26, range: 14, spread: 2.5, fly: 6, wander: 0.7, tau: 4, size: 0.24, hgt: [1.5, 4], coat: [134, 104, 76], body: 0.15 },
+  rooks:     { way: 'flock', n: [5, 12], P: 55, range: 28, spread: 8, fly: 9, wander: 1.3, tau: 7, size: 0.85, hgt: [5, 14], coat: [30, 30, 36], body: 0.46, breast: [44, 44, 52], bill: [86, 84, 90], tail: 0.7 },
+  pigeons:   { way: 'flock', n: [4, 10], P: 40, range: 20, spread: 5, fly: 10, wander: 1.0, tau: 6, size: 0.65, hgt: [4, 11], coat: [128, 132, 146], body: 0.33, breast: [170, 150, 170], face: [96, 140, 120], wing: [150, 154, 166] },
+  starlings: { way: 'flock', n: [6, 16], P: 34, range: 22, spread: 6, fly: 10, wander: 1.2, tau: 5, size: 0.4, hgt: [3, 9], coat: [44, 46, 54], body: 0.21, breast: [58, 60, 72], gloss: [90, 70, 130], bill: [214, 190, 70] },
+  sparrows:  { way: 'flock', n: [4, 10], P: 26, range: 14, spread: 2.5, fly: 6, wander: 0.7, tau: 4, size: 0.24, hgt: [1.5, 4], coat: [134, 104, 76], body: 0.15, breast: [196, 180, 152], face: [92, 84, 78] },
+
+
+  magpies:   { way: 'flock', n: [2, 5], P: 60, range: 22, spread: 5, fly: 7, wander: 1.1, tau: 8, size: 0.58, hgt: [3, 9], coat: [22, 24, 30], body: 0.44, breast: [242, 242, 238], patch: [238, 238, 234], gloss: [70, 120, 110], tail: 1.6 },
+  jays:      { way: 'flock', n: [1, 3], P: 70, range: 24, spread: 6, fly: 7, wander: 1.2, tau: 9, size: 0.55, hgt: [4, 10], coat: [190, 146, 124], body: 0.34, breast: [206, 172, 150], wing: [40, 38, 42], patch: [74, 128, 214], face: [236, 230, 222], tail: 0.9 },
+  goldfinches: { way: 'flock', n: [6, 14], P: 24, range: 12, spread: 3, fly: 7, wander: 0.8, tau: 4, size: 0.23, hgt: [1.5, 5], coat: [176, 138, 98], body: 0.13, breast: [238, 228, 212], wing: [26, 24, 26], patch: [246, 206, 40], face: [208, 42, 40] },
+  parakeets: { way: 'flock', n: [5, 12], P: 40, range: 30, spread: 6, fly: 12, wander: 1, tau: 6, size: 0.45, hgt: [6, 16], coat: [98, 194, 84], body: 0.3, breast: [158, 220, 110], wing: [64, 156, 66], patch: [232, 222, 92], bill: [214, 44, 44], tail: 1.7 },
+  robins:    { way: 'flock', n: [1, 2], P: 30, range: 10, spread: 2, fly: 6, wander: 0.6, tau: 5, size: 0.21, hgt: [1, 3], coat: [128, 108, 78], body: 0.13, breast: [230, 118, 50], face: [230, 118, 50] },
 
   ducks:     { way: 'paddle', n: [2, 7], spread: 3, wander: 5, tau: 38, size: 0.55, coat: [116, 96, 74], head: [40, 88, 60] },
   swans:     { way: 'paddle', n: [1, 3], spread: 4, wander: 7, tau: 55, size: 1.4, coat: [240, 238, 232], head: [240, 238, 232] },
 
   heron:     { way: 'wade', n: [1, 1], P: 90, range: 6, fly: 9, flyOff: 45, flies: 0.22, size: 0.95, coat: [150, 156, 164] },
+  egret:     { way: 'wade', n: [1, 1], P: 90, range: 6, fly: 8, flyOff: 45, flies: 0.22, size: 1.0, coat: [246, 246, 240], bill: [232, 192, 52] },
 
   raptor:    { way: 'soar', n: [1, 2], P: 160, size: 1.3, speed: 9, coat: [96, 72, 52] },
   swallows:  { way: 'hawk', n: [3, 7], tau: 10, amp: 18, hgt: [1.2, 9], size: 0.32, flap: 5, coat: [36, 40, 64] },
@@ -9163,6 +9177,8 @@ const WK_KINDS = {
   geese:     { way: 'skein', n: [7, 15], P: 520, speed: 16, hgt: [120, 240], size: 1.6, coat: [110, 104, 96] },
 };
 const WK_FLYERS = ['raptor', 'swallows', 'swifts', 'bats', 'geese', 'butterflies', 'dragonflies'];
+
+const WK_BIRDS = ['rooks', 'pigeons', 'starlings', 'sparrows', 'magpies', 'jays', 'goldfinches', 'parakeets', 'robins', 'heron', 'egret', 'raptor', 'swallows', 'swifts', 'geese'];
 const wkCount = (kind, s) => { const K = WK_KINDS[kind]; return K.n[0] + Math.floor(wkHash(s, 1, 5)*(K.n[1] - K.n[0] + 1)); };
 
 
@@ -9360,19 +9376,21 @@ function wkBird(x, X, Y, m, kind, st, c, px){
   const K = WK_KINDS[kind], d = st.dir, S = K.size*m, col = c.mat(K.coat), y = Y - st.y*m, ink = wkCss(col.dark), w = Math.max(px(0.5), S*0.07);
   if(S < px(1.1)){ x.fillStyle = ink; x.fillRect(X - px(0.5), y - px(0.5), px(1), px(1)); return; }
   if(st.pose === 'peck' || st.pose === 'stand' || st.pose === 'wade'){ const b = (K.body || 0.4)*m, bob = st.pose === 'peck' ? Math.max(0, Math.sin(st.ph*Math.PI*2))*0.6 : 0;
-    if(kind === 'heron'){ const hgt = 0.95*m, by = Y - hgt*0.62; wkLine(x, [[X - d*b*0.05, Y], [X, by]], ink, Math.max(px(0.4), hgt*0.02)); wkLine(x, [[X + d*b*0.08, Y], [X + d*b*0.02, by]], ink, Math.max(px(0.4), hgt*0.02));
+    if(K.way === 'wade'){ const hgt = K.size*m, by = Y - hgt*0.62; wkLine(x, [[X - d*b*0.05, Y], [X, by]], ink, Math.max(px(0.4), hgt*0.02)); wkLine(x, [[X + d*b*0.08, Y], [X + d*b*0.02, by]], ink, Math.max(px(0.4), hgt*0.02));
       wkEll(x, X, by - hgt*0.08, hgt*0.17, hgt*0.1, -d*0.5, wkCss(col.body)); const strike = st.head, nk = [[X + d*hgt*0.1, by - hgt*0.12], [X + d*hgt*(0.04 + 0.22*strike), by - hgt*(0.3 - 0.05*strike)], [X + d*hgt*(0.12 + 0.3*strike), by - hgt*(0.36 - 0.1*strike)]];
-      wkLine(x, nk, wkCss(col.lit), Math.max(px(0.5), hgt*0.04)); const hx = nk[2][0], hy = nk[2][1]; wkLine(x, [[hx, hy], [hx + d*hgt*0.16, hy + hgt*0.02*(1 + strike)]], wkCss([196, 168, 80]), Math.max(px(0.4), hgt*0.022));
+      wkLine(x, nk, wkCss(col.lit), Math.max(px(0.5), hgt*0.04)); const hx = nk[2][0], hy = nk[2][1]; wkLine(x, [[hx, hy], [hx + d*hgt*0.16, hy + hgt*0.02*(1 + strike)]], wkCss(K.bill || [196, 168, 80]), Math.max(px(0.4), hgt*0.022));
       if(hgt > px(14)) wkLine(x, [[hx - d*hgt*0.02, hy - hgt*0.01], [hx - d*hgt*0.12, hy - hgt*0.01]], ink, Math.max(px(0.3), hgt*0.012)); return; }
+    if(K.breast || K.patch || K.tail) return wkSongbirdDown(x, X, y, b, d, bob, K, c, col, st, px);
     const by = y - b*0.55; wkEll(x, X, by, b*0.5, b*0.26, -d*0.25, wkCss(col.body));
     if(st.flick && b > px(3)) for(const s2 of [-1, 1]) wkPolyF(x, [[X - d*b*0.1, by - b*0.1], [X - d*b*0.45, by - b*(0.55 + 0.15*s2)], [X + d*b*0.15, by - b*0.2]], wkCss(s2 > 0 ? col.dark : col.body)); wkLine(x, [[X - d*b*0.42, by + b*0.04], [X - d*b*0.8, by + b*0.12]], wkCss(col.body), Math.max(px(0.4), b*0.14));
     wkEll(x, X + d*b*0.42, by - b*0.2 + bob*b*0.5, b*0.16, b*0.14, 0, wkCss(col.body)); if(b > px(5)) wkLine(x, [[X + d*b*0.56, by - b*0.2 + bob*b*0.5], [X + d*b*0.72, by - b*0.16 + bob*b*0.6]], ink, Math.max(px(0.3), b*0.06));
     if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, y]], ink, Math.max(px(0.3), b*0.04)); return; }
 
-  if(kind === 'raptor' || (kind === 'heron' && st.pose === 'fly')){ const span = (kind === 'heron' ? 1.7 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
+  const wader = K.way === 'wade';
+  if(kind === 'raptor' || (wader && st.pose === 'fly')){ const span = (wader ? 1.7*K.size/0.95 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
 
     const ws = span*0.5, cw = span*0.09, tip = sg => [X + sg*ws, y - span*fl*0.6];
-    wkPolyF(x, [[X - cw*0.6, y - cw*0.2], tip(-1), [X - ws*0.95, y + cw*0.5], [X, y + cw*0.7], [X + ws*0.95, y + cw*0.5], tip(1), [X + cw*0.6, y - cw*0.2]], wkCss(kind === 'heron' ? col.body : col.dark));
+    wkPolyF(x, [[X - cw*0.6, y - cw*0.2], tip(-1), [X - ws*0.95, y + cw*0.5], [X, y + cw*0.7], [X + ws*0.95, y + cw*0.5], tip(1), [X + cw*0.6, y - cw*0.2]], wkCss(wader ? col.body : col.dark));
     if(kind === 'raptor'){ wkPolyF(x, [[X - cw*0.3, y + cw*0.4], [X - cw*0.8, y + cw*2.2], [X + cw*0.8, y + cw*2.2], [X + cw*0.3, y + cw*0.4]], wkCss(col.dark));
       if(span > px(14)) for(const sg of [-1, 1]) for(let f = 0; f < 4; f++) wkLine(x, [[X + sg*ws*0.9, y - span*fl*0.55 + cw*(f*0.25 - 0.2)], [X + sg*ws*1.04, y - span*fl*0.6 + cw*(f*0.3 - 0.35)]], wkCss(col.dark), Math.max(px(0.3), cw*0.18)); }
     else { wkLine(x, [[X + d*cw*0.6, y - cw*0.1], [X + d*cw*1.4, y - cw*0.8], [X + d*cw*2.0, y - cw*0.3]], wkCss(col.body), Math.max(px(0.4), cw*0.5)); wkLine(x, [[X - d*cw*0.6, y + cw*0.4], [X - d*cw*3.2, y + cw*0.9]], ink, Math.max(px(0.3), cw*0.18)); }
@@ -9393,10 +9411,48 @@ function wkBird(x, X, Y, m, kind, st, c, px){
     for(const sg of [-1, 1]) wkPolyF(x, [[X, y - sp*0.06], [X + sg*sp*0.55, y - sp*0.3*k], [X + sg*sp, y - sp*(sw*k - 0.05)], [X + sg*sp*0.5, y - sp*0.05*k], [X, y + sp*0.08]], ink);
     if(kind === 'swallows' && S > px(5)) wkLine(x, [[X - px(0.3), y + sp*0.05], [X - sp*0.12, y + sp*0.4]], ink, Math.max(px(0.3), sp*0.04)), wkLine(x, [[X + px(0.3), y + sp*0.05], [X + sp*0.12, y + sp*0.4]], ink, Math.max(px(0.3), sp*0.04));
     return; }
+  if(K.breast || K.patch || K.tail) return wkSongbirdUp(x, X, y, S, d, fl, K, c, col, px);
 
   const under = kind === 'pigeons' ? wkCss(col.lit) : ink; wkEll(x, X, y, sp*0.22, sp*0.11, -d*0.2, wkCss(col.body));
   wkLine(x, [[X - sp, y - sp*fl*0.7], [X - sp*0.45, y - sp*(0.25 + fl*0.35)], [X, y]], under, w); wkLine(x, [[X, y], [X + sp*0.45, y - sp*(0.25 + fl*0.35)], [X + sp, y - sp*fl*0.7]], ink, w);
 }
+
+
+
+
+
+function wkSongbirdDown(x, X, y, b, d, bob, K, c, col, st, px){
+  const wing = c.mat(K.wing || K.coat), br = c.mat(K.breast || K.coat), by = y - b*0.55, tl = K.tail || 0.6, gl = K.gloss ? c.mat(K.gloss) : null;
+  wkLine(x, [[X - d*b*0.38, by - b*0.02], [X - d*b*(0.38 + 0.55*tl), by - b*(0.06 + 0.1*tl)]], wkCss(K.tail ? wing.dark : col.body), Math.max(px(0.4), b*0.13));
+  if(gl && b > px(4)) wkLine(x, [[X - d*b*0.42, by - b*0.04], [X - d*b*(0.4 + 0.5*tl), by - b*(0.07 + 0.1*tl)]], wkCss(gl.lit, 0.6), Math.max(px(0.3), b*0.05));
+  wkEll(x, X, by, b*0.5, b*0.27, -d*0.25, wkCss(col.dark));
+  wkEll(x, X + d*b*0.04, by - b*0.04, b*0.44, b*0.21, -d*0.25, wkCss(col.body));
+  wkEll(x, X + d*b*0.16, by + b*0.06, b*0.26, b*0.16, -d*0.1, wkCss(br.body));
+  wkEll(x, X - d*b*0.06, by - b*0.08, b*0.3, b*0.13, -d*0.3, wkCss(wing.body));
+  if(K.patch) wkEll(x, X + d*b*0.02, by - b*0.06, b*0.12, b*0.07, -d*0.3, wkCss(c.mat(K.patch).lit));
+  if(st.flick && b > px(3)) for(const s2 of [-1, 1]) wkPolyF(x, [[X - d*b*0.1, by - b*0.1], [X - d*b*0.45, by - b*(0.55 + 0.15*s2)], [X + d*b*0.15, by - b*0.2]], wkCss(s2 > 0 ? wing.dark : wing.body));
+  wkEll(x, X + d*b*0.1, by - b*0.2, b*0.3, b*0.06, -d*0.25, wkCss(col.lit, 0.55));
+  const hx = X + d*b*0.42, hy = by - b*0.2 + bob*b*0.5; wkEll(x, hx, hy, b*0.17, b*0.15, 0, wkCss(col.body));
+  if(K.face) wkEll(x, hx + d*b*0.05, hy + b*0.03, b*0.1, b*0.09, 0, wkCss(c.mat(K.face).body));
+  if(b > px(4)){ wkLine(x, [[hx + d*b*0.15, hy], [hx + d*b*0.3, hy + b*0.04 + bob*b*0.1]], wkCss(c.mat(K.bill || [52, 46, 42]).body), Math.max(px(0.3), b*0.06));
+    wkEll(x, hx + d*b*0.06, hy - b*0.03, b*0.025, b*0.025, 0, wkCss([12, 12, 14])); }
+  if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, y]], wkCss(wing.dark), Math.max(px(0.3), b*0.04)); }
+function wkSongbirdUp(x, X, y, S, d, fl, K, c, col, px){
+  const wing = c.mat(K.wing || K.coat), br = c.mat(K.breast || K.coat), sp = S*0.5, tl = K.tail || 0.6, w = Math.max(px(0.5), S*0.09);
+
+
+  const wingAt = (sg, near) => { const tipY = y - sp*fl*0.7, mid = [X + sg*sp*0.45, y - sp*(0.22 + fl*0.32)], tip = [X + sg*sp, tipY];
+    wkPolyF(x, [[X - d*sp*0.05, y - sp*0.04], mid, tip, [X + sg*sp*0.55, y - sp*(0.12 + fl*0.2)], [X + d*sp*0.08, y + sp*0.02]], wkCss(near ? wing.body : wing.dark));
+    wkLine(x, [mid, tip], wkCss(wing.dark), w*0.8);
+    if(K.patch && S > px(4)) wkLine(x, [[X + sg*sp*0.12, y - sp*(0.06 + fl*0.1)], [X + sg*sp*0.36, y - sp*(0.18 + fl*0.26)]], wkCss(c.mat(K.patch).lit), w*1.1); };
+  wingAt(-d, false);
+  wkLine(x, [[X - d*sp*0.2, y + sp*0.02], [X - d*sp*(0.3 + 0.5*tl), y + sp*0.06]], wkCss(K.tail ? wing.dark : col.body), Math.max(px(0.4), S*(K.tail ? 0.07 : 0.1)));
+  wkEll(x, X, y, sp*0.26, sp*0.12, -d*0.15, wkCss(col.body));
+  wkEll(x, X + d*sp*0.04, y + sp*0.04, sp*0.18, sp*0.07, -d*0.1, wkCss(br.body));
+  wkEll(x, X - d*sp*0.02, y - sp*0.05, sp*0.16, sp*0.04, -d*0.15, wkCss(col.lit, 0.6));
+  const hx = X + d*sp*0.3, hy = y - sp*0.03; wkEll(x, hx, hy, sp*0.1, sp*0.09, 0, wkCss(K.face ? c.mat(K.face).body : col.body));
+  if(S > px(5)) wkLine(x, [[hx + d*sp*0.08, hy], [hx + d*sp*0.17, hy + sp*0.02]], wkCss(c.mat(K.bill || [52, 46, 42]).body), Math.max(px(0.3), S*0.04));
+  wingAt(d, true); }
 
 
 
@@ -20452,6 +20508,9 @@ function rgGround(V, a, z, e, coarse = 1, slope = 0, bw0 = null){
   const sand = (1 - rsSmooth(1.2*M, 3.5*M, e))*(1 - ci); if(sand > 0) c = rsMix(c, [222, 206, 164], sand*0.75);
   const hi = rsSmooth(V.TR.snow*0.6, V.TR.snow, e); if(hi > 0) c = rsMix(c, [128, 122, 116], hi*0.4);
   if(e > V.TR.snow) c = rsMix(c, [240, 243, 250], rsSmooth(V.TR.snow, V.TR.snow*1.15, e)*(1 - rsSmooth(0.8, 1.4, slope)));
+
+
+  else if(V.weather === 'snow') c = rsMix(c, [236, 240, 248], 0.66*(1 - rsSmooth(0.85, 1.4, slope))*(1 - 0.35*ci));
   return c;
 }
 
@@ -20971,13 +21030,29 @@ function rgPaintArch(x, mk, V){
     const dOf = i => H*0.2*Math.pow(200, i/NR), thinOf = d => rsSmooth(H*1.5, H*35, d), colOf = d => rsMix(rsMix(dark, light, 0.35 + 0.3*rsSmooth(H, H*8, d)), far, thinOf(d)*0.85);
     x.save(); x.lineJoin = 'round';
 
-    for(let i = NR - 1; i >= 0; i--){ const d0 = dOf(i), d1 = dOf(i + 1), e0 = Math.atan(H/d0), e1 = Math.atan(H/d1), dm = (d0 + d1)/2, css = rsCss(colOf(dm), 0.86 - 0.32*thinOf(dm));
-      x.fillStyle = css; x.strokeStyle = css; x.lineWidth = px(1);
-      for(let j = 0; j < NA; j++){ const a0 = j/NA*Math.PI*2, a1 = (j + 1)/NA*Math.PI*2, P = [skyAt(a0, e0), skyAt(a1, e0), skyAt(a1, e1), skyAt(a0, e1)]; if(P.some(p => !p)) continue;
-        x.beginPath(); P.forEach((p, q) => q ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.closePath(); x.fill(); x.stroke(); } }
 
-    { const e0 = Math.atan(H/dOf(0)), Z = skyAt(0, Math.PI/2 - 1e-4), css = rsCss(colOf(dOf(0)*0.5), 0.86); x.fillStyle = css; x.strokeStyle = css; x.lineWidth = px(1);
-      if(Z) for(let j = 0; j < NA; j++){ const A = skyAt(j/NA*Math.PI*2, e0), B = skyAt((j + 1)/NA*Math.PI*2, e0); if(!A || !B) continue; x.beginPath(); x.moveTo(Z[0], Z[1]); x.lineTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.closePath(); x.fill(); x.stroke(); } }
+
+
+
+
+    const ring = (dc, i, col, alphaOnly) => { const d0 = dOf(i), d1 = dOf(i + 1), e0 = Math.atan(H/d0), e1 = Math.atan(H/d1), dm = (d0 + d1)/2, a = 0.86 - 0.32*thinOf(dm), cc = alphaOnly ? [a*255, a*255, a*255] : colOf(dm);
+      dc.fillStyle = rsCss(cc.map(Math.round)); dc.beginPath();
+
+      for(let j = 0; j < NA; j++){ const a0 = j/NA*Math.PI*2, a1 = (j + 1)/NA*Math.PI*2, P = [skyAt(a0, e0), skyAt(a1, e0), skyAt(a1, e1), skyAt(a0, e1)]; if(P.some(p => !p)) continue;
+        const mx = (P[0][0] + P[1][0] + P[2][0] + P[3][0])/4, my = (P[0][1] + P[1][1] + P[2][1] + P[3][1])/4;
+        P.forEach((p, q) => { const dx = p[0] - mx, dy = p[1] - my, dl = Math.hypot(dx, dy) || 1, g = GROW/dl; q ? dc.lineTo(p[0] + dx*g, p[1] + dy*g) : dc.moveTo(p[0] + dx*g, p[1] + dy*g); }); dc.closePath(); } dc.fill(); };
+    const cap = (dc, alphaOnly) => { const e0 = Math.atan(H/dOf(0)), Z = skyAt(0, Math.PI/2 - 1e-4); if(!Z) return; dc.fillStyle = rsCss(alphaOnly ? [219, 219, 219] : colOf(dOf(0)*0.5).map(Math.round)); dc.beginPath();
+      for(let j = 0; j < NA; j++){ const A = skyAt(j/NA*Math.PI*2, e0), B = skyAt((j + 1)/NA*Math.PI*2, e0); if(!A || !B) continue; const mx = (Z[0] + A[0] + B[0])/3, my = (Z[1] + A[1] + B[1])/3;
+        [Z, A, B].forEach((p, q) => { const dx = p[0] - mx, dy = p[1] - my, dl = Math.hypot(dx, dy) || 1, g = GROW/dl; q ? dc.lineTo(p[0] + dx*g, p[1] + dy*g) : dc.moveTo(p[0] + dx*g, p[1] + dy*g); }); dc.closePath(); } dc.fill(); };
+    let GROW = 1;
+    const lay = (dc, alphaOnly) => { for(let i = NR - 1; i >= 0; i--) ring(dc, i, null, alphaOnly); cap(dc, alphaOnly); };
+    let laid = false;
+    try { const cw = x.canvas.width, ch = x.canvas.height, [cC, cX] = kitCanvas(cw, ch), [aC, aX] = kitCanvas(cw, ch), T0 = x.getTransform();
+      for(const q of [cX, aX]){ q.setTransform(T0); q.lineJoin = 'round'; } GROW = 1.1/(Math.hypot(T0.a, T0.b) || 1); lay(cX, false); lay(aX, true);
+      const ci = cX.getImageData(0, 0, cw, ch), ai = aX.getImageData(0, 0, cw, ch), cd = ci.data, ad = ai.data;
+      for(let k = 3; k < cd.length; k += 4) cd[k] = ad[k - 3]*ad[k]/255;
+      cX.putImageData(ci, 0, 0); x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cC, 0, 0); x.restore(); laid = true; } catch(e){ laid = false; }
+    if(!laid){ x.globalAlpha = 0.86; lay(x, false); x.globalAlpha = 1; }
 
 
     const RD = rgRand(s, 832), nRoll = 260;
@@ -21711,17 +21786,27 @@ function rgStore(V){
       if(g.wet || g.slope > 0.5 || V.forestAt(a, z) > 0.7) return null; return wild('slimes', w); });
     sowD(27, W*0.02, W*0.04, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(w !== 'magic' || R() > 0.4*LIFE) return null; const g = ground(a, z);
       if(g.wet || g.slope > 0.45 || V.forestAt(a, z) > 0.3 || inTown(w, a, z)) return null; return wild('striders', w); });
-    sowD(19, W*0.012, W*0.03, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.24*LIFE) return null; const g = ground(a, z); if(g.wet || V.forestAt(a, z) > 0.45) return null;
-      const u = R(); return wild(inTown(w, a, z) ? (u < 0.6 ? 'pigeons' : 'sparrows') : w === 'ruins' || w === 'magic' ? (u < 0.7 ? 'rooks' : 'starlings') : u < 0.45 ? 'rooks' : u < 0.8 ? 'starlings' : 'sparrows', w); });
+
+
+
+    const birdOf = (w, a, z, u, town) => { const fo = V.forestAt(a, z), dr = V.dryAt(a, z), bw = V.LK.biomes(a, z, T.true(a, z, W*0.01)), warm = bw[LK_BIOMES.findIndex(b => b.name === 'jungle')] + bw[LK_BIOMES.findIndex(b => b.name === 'savanna')];
+      if(warm > 0.3 && u < 0.5) return 'parakeets';
+      if(town) return u < 0.35 ? 'pigeons' : u < 0.6 ? 'sparrows' : u < 0.8 ? 'magpies' : u < 0.9 ? 'parakeets' : 'robins';
+      if(w === 'ruins' || w === 'magic') return u < 0.4 ? 'rooks' : u < 0.6 ? 'magpies' : u < 0.8 ? 'jays' : 'starlings';
+      if(fo > 0.25) return u < 0.35 ? 'jays' : u < 0.6 ? 'magpies' : u < 0.8 ? 'robins' : 'goldfinches';
+      return dr < 0.5 && u < 0.3 ? 'goldfinches' : u < 0.5 ? 'rooks' : u < 0.7 ? 'starlings' : u < 0.85 ? 'magpies' : 'sparrows'; };
+    sowD(19, W*0.012, W*0.03, W*0.4, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.12*LIFE) return null; const g = ground(a, z); if(g.wet || V.forestAt(a, z) > 0.55) return null;
+      return wild(birdOf(w, a, z, R(), inTown(w, a, z)), w); });
     sowD(20, W*0.012, W*0.03, W*0.5, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE) return null; const g = ground(a, z); if(!g.coast) return null;
-      if(g.wet) return wild(R() < 0.25 ? 'swans' : 'ducks', w, { afloat: true }); return R() < 0.5 ? wild('heron', w) : null; });
-    sowD(21, W*0.06, W*0.12, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.55*LIFE*(w === 'neon' ? 0.25 : 1)) return null; const u = R();
+      if(g.wet) return wild(R() < 0.25 ? 'swans' : 'ducks', w, { afloat: true }); return R() < 0.5 ? wild(V.dryAt(a, z) < 0.5 && R() < 0.4 ? 'egret' : 'heron', w) : null; });
+    sowD(21, W*0.06, W*0.12, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE*(w === 'neon' ? 0.25 : 1)) return null; const u = R();
       return wild(inTown(w, a, z) ? (u < 0.7 ? 'swifts' : 'raptor') : u < 0.4 ? 'raptor' : u < 0.8 ? 'swallows' : 'swifts', w); });
     sowD(22, W*0.015, W*0.04, W*0.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE) return null; const g = ground(a, z); if((g.wet && !g.coast) || (!g.coast && V.forestAt(a, z) < 0.3)) return null; return wild('bats', w); });
     sowD(24, W*0.004, W*0.008, W*0.04, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.3*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet && !g.coast) return null; return wild(g.coast ? 'dragonflies' : 'butterflies', w); });
 
     sowD(25, W*0.005, W*0.012, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.38*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
-      const u = R(), town = inTown(w, a, z), fo = V.forestAt(a, z); return wild(town ? (u < 0.5 ? 'sparrows' : u < 0.8 ? 'pigeons' : 'swifts') : fo > 0.5 ? (u < 0.5 ? 'butterflies' : 'sparrows') : u < 0.3 ? 'hare' : u < 0.4 ? 'fox' : u < 0.6 ? 'swallows' : u < 0.8 ? 'starlings' : 'rooks', w); });
+      const u = R(), town = inTown(w, a, z), fo = V.forestAt(a, z); if(u > 0.45 && R() < 0.5) return null;
+      return wild(u < 0.3 ? (town ? 'butterflies' : fo > 0.5 ? 'butterflies' : u < 0.2 ? 'hare' : 'fox') : u < 0.45 ? (fo > 0.5 ? 'robins' : 'swallows') : birdOf(w, a, z, R(), town), w); });
     sow(23, W*0.4, W*0.8, W*2.4, 1, (a, z, r, R) => R() < 0.35*LIFE ? wild('geese', V.worldAt(a, z)) : null); }
 
 
@@ -21958,7 +22043,7 @@ function rgPaintLand(x, mk, dk, V){
   let FLASH = null;
   rgPx = V.px;
   const { L, W, ww, wh, unit, F, at, T, TR, px, hx, hz } = V, BLACK = [0, 0, 0], s = V.seed | 0;
-  const LT = V.sun.LT, sd = V.sun.sd, cth = Math.cos(V.th), AIR = rgAirOf(V, V.dayHere);
+  const LT = V.sun.LT, sd = V.sun.sd, cth = Math.cos(V.th), AIR = V.weather === 'snow' ? rsMix(rgAirOf(V, V.dayHere), [232, 236, 246], 0.55) : /rain|storm/.test(V.weather) ? rsMix(rgAirOf(V, V.dayHere), [138, 146, 160], 0.35) : rgAirOf(V, V.dayHere);
   const d0 = W*0.0012;
 
 
@@ -21967,7 +22052,10 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const angOf = (a, z) => Math.atan2(-a*hz + (z - L.z0)*hx, a*hx + (z - L.z0)*hz), cutOf = (a, z) => Math.hypot(a, z - L.z0);
-  const hazeOf = d => V.air*(1 - Math.exp(-d/(W*1.3)));
+
+
+  const FALL = V.weather === 'snow' ? [0.62, 900] : V.weather === 'storm' ? [0.5, 1300] : V.weather === 'rain' ? [0.38, 2600] : null;
+  const hazeOf = FALL ? d => Math.max(V.air*(1 - Math.exp(-d/(W*1.3))), FALL[0]*(1 - Math.exp(-d/(FALL[1]*W*0.00025)))) : d => V.air*(1 - Math.exp(-d/(W*1.3)));
 
   const ahead = (a, z) => a*hx + (z - L.z0)*hz;
 
@@ -22158,7 +22246,13 @@ function rgPaintLand(x, mk, dk, V){
   let loudOne = null, loudR = Infinity;
   for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
   const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
-  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: o.c === 'bldg' ? o.wM*0.6*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*0.5*W*0.00025 : 0, draw: l => rgPaintThing(o, l, dd) }); }
+
+
+
+
+  const radOf = o => { const M0 = W*0.00025; return o.c === 'bldg' ? o.wM*0.6*M0 : o.c === 'board' || o.c === 'henge' ? o.wM*0.5*M0 : o.c === 'rock' ? o.hM*0.95*M0
+    : o.c === 'prop' || o.c === 'solid' ? (o.wM ? o.wM*0.55 : (o.hM || 1)*0.45)*M0 : o.c === 'tree' ? (o.hM || 4)*0.06*M0 : 0; };
+  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: radOf(o), draw: l => rgPaintThing(o, l, dd) }); }
 
 
   const nearCut = wh*3;
@@ -22233,13 +22327,13 @@ function rgPaintLand(x, mk, dk, V){
 
   const RG_WILD_LICENCE = 1.5, rgWildHere = (o, night) => { const k = o.kind, q = ((o.rs >>> 8) % 1000)/1000, wet = /rain|storm/.test(V.weather), cold = /snow/.test(V.weather);
     const av = k === 'bats' ? (cold ? 0 : rsSmooth(0.2, 0.5, night)) : ['swallows', 'swifts', 'butterflies', 'dragonflies', 'raptor'].includes(k) ? (1 - rsSmooth(0.25, 0.6, night))*(cold ? 0 : wet ? (k === 'swallows' ? 0.7 : 0) : 1)
-      : ['rooks', 'pigeons', 'starlings', 'sparrows'].includes(k) ? (1 - rsSmooth(0.35, 0.7, night))*(V.weather === 'storm' ? 0.3 : 1) : k === 'fox' ? 0.35 + 0.65*rsSmooth(0.15, 0.45, night) : 1;
+      : ['rooks', 'pigeons', 'starlings', 'sparrows', 'magpies', 'jays', 'goldfinches', 'parakeets', 'robins'].includes(k) ? (1 - rsSmooth(0.35, 0.7, night))*(V.weather === 'storm' ? 0.3 : 1) : k === 'fox' ? 0.35 + 0.65*rsSmooth(0.15, 0.45, night) : 1;
     return av >= 1 ? 1 : av <= 0 ? 0 : rsSmooth(q - 0.04, q + 0.04, av); };
   const rgPaintWild = (o, l, dd) => { const K = WK_KINDS[o.kind], wday = ringDay(L, o.a), night = 1 - rsSmooth(0.3, 0.7, wday), pres = rgWildHere(o, night); if(pres < 0.02) return;
     const haze = hazeOf(dd), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday))*(0.5 + 0.5*litAt(o.a, o.z, meshH(o.a, o.z) + 0.8*M1s)), n = wkCount(o.kind, o.rs), t = V.time ? MT : 0, step = V.frame !== null && V.time ? Math.min(2.5, rgStep(V)) : 0;
     const env = { wind: rgWind(V) }, M1 = W*0.00025, fly = WK_FLYERS.includes(o.kind), c = { ...colsOf(o.w, cday, haze, null, o), flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, g, Math.max(0.4, wday), haze, AIR)) }, out2 = [];
     for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); if(!st.on) continue;
-      const a = o.a + st.x*M1, z = o.z + st.z*M1, f = foot(a, z); if(!f) continue; const m = f[2], sz = K.size*m*RG_WILD_LICENCE;
+      const a = o.a + st.x*M1, z = o.z + st.z*M1, f = foot(a, z); if(!f) continue; const LIC = RG_WILD_LICENCE*(WK_BIRDS.includes(o.kind) ? 1.6 : 1), m = f[2], sz = K.size*m*LIC;
       if((sz < px(0.7) && !fly) || sz > wh*0.5 || (f[3] <= TR.sea && !o.afloat && !st.y)) continue;
       const X = f[0], Y = fly || st.y ? f[1] : stand(l, X, f[1]), yy = Y - st.y*m; if(!vis(l, X - sz, X + sz, yy - sz, yy + sz*0.3)) continue;
 
@@ -22247,7 +22341,7 @@ function rgPaintLand(x, mk, dk, V){
       let al = pres*st.on; if(step > 0.2){ const p = wkAt(o.kind, o.rs, j, t - step, env), fp = p.on ? foot(o.a + p.x*M1, o.z + p.z*M1) : null;
         if(fp) al *= rsSmooth(Math.max(px(2), sz)*2.5, Math.max(px(2), sz)*0.9, Math.hypot(fp[0] - X, fp[1] - p.y*fp[2] - yy)); }
       if(al < 0.03) continue;
-      out2.push([m, () => { x.globalAlpha = al; wkPaint(x, X, Y, m*RG_WILD_LICENCE, o.kind, { ...st, y: st.y/RG_WILD_LICENCE, dir: !g2 || g2[0] >= X ? 1 : -1, side, stag: j === 0 && (o.rs & 4), hue: j, nt: night }, c, rgPx); x.globalAlpha = 1; }]); }
+      out2.push([m, () => { x.globalAlpha = al; wkPaint(x, X, Y, m*LIC, o.kind, { ...st, y: st.y/LIC, dir: !g2 || g2[0] >= X ? 1 : -1, side, stag: j === 0 && (o.rs & 4), hue: j, nt: night }, c, rgPx); x.globalAlpha = 1; }]); }
     out2.sort((p, q) => p[0] - q[0]); for(const [, d] of out2) d(); };
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
 
@@ -22273,7 +22367,7 @@ function rgPaintLand(x, mk, dk, V){
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], dq, hq, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), dq, hq, AIR), body: rgLit(V, green, dq, hq, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), dq, hq, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], dq, hq, AIR) : null,
 
-        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv, bare: SZ.bare, snow: SZ.bare && V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
+        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv, bare: SZ.bare, snow: V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
 
       if(c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
         x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
@@ -22289,7 +22383,7 @@ function rgPaintLand(x, mk, dk, V){
       const Sres = rgStep2(h), Sdet = Math.min(Sres, rgStep2(Math.max(hl, px(8))));
       if(Sres > px(260)){ if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); x.globalAlpha = 1; return; }
       const Sd = Math.max(Sres, px(24)), sw = Math.ceil(Sd*2.4), sh = Math.ceil(Sd*1.4), ax = sw/2, ay = Math.ceil(Sd*1.22), AIRk = AIR.map(v => v >> 3).join('.');
-      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
+      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
       const sp = rgSprite(key, sw, sh, sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
         if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); });
       const k = h/Sd; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = 1; return; }
@@ -22298,7 +22392,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
       const fall = (o.up || 0) + (o.down || 0), pl = fall > 0.25 ? (fall + 0.3)*f[2] : 0, onPl = pl > px(0.6) && !RG_LIGHTFOOT.includes(o.kind);
-      const cb = colsOf(o.w, cday, haze, o), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, smt: ST, ft: FT, windX: smokeAt(o, f), plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, cday, haze, o), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, snow: V.weather === 'snow', lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, smt: ST, ft: FT, windX: smokeAt(o, f), plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
 
 
       const m = f[2]; if(m*lo*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
@@ -22314,11 +22408,11 @@ function rgPaintLand(x, mk, dk, V){
       const st = rgStoneOf(V, o.a, o.z, f[3]); pkRock(x, X, Y, rr, rgLit(V, rsMix(PK_STONES[st], V.land, 0.08), cday, haze, AIR), LT, R, rgPx, st); return; }
     if(o.c === 'grass'){ const gH = o.hM*f[2]; if(gH < px(2.5) || gH > wh*0.4) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - gH, X + gH, Y - gH*1.4, Y)) return;
-      const gc2 = rgLit(V, rsMix(rsMix([40, 88, 54], V.land, 0.45), [164, 150, 112], rgWinter(V)*0.4), cday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
+      const gc2 = rgLit(V, rsMix(rsMix(rsMix([40, 88, 54], V.land, 0.45), [164, 150, 112], rgWinter(V)*0.4), [214, 220, 226], V.weather === 'snow' ? 0.35 : 0), cday, haze, AIR), gl = rsMix(gc2, [255, 244, 222], 0.2), flw = [V.g1, V.g2, [250, 246, 240]], rnd = (p, q) => p + (q - p)*R();
 
       const sway = V.time ? gH*(0.16*Math.sin(ST*1.7 - o.a/(W*0.002) + (o.rs & 7)) + 0.08*Math.sin(ST*2.3 + (o.rs & 31))) : 0;
       for(let b = -2; b <= 2; b++) rsPoly(x, [[X + b*gH*0.25, Y], [X + b*gH*0.5 + (R() - 0.5)*gH*0.4 + sway*(1 + 0.15*b), Y - gH*rnd(0.7, 1.4)], [X + b*gH*0.25 + gH*0.15, Y]], rsCss(b*LT[0] > 0 ? gl : gc2));
-      if(R() < 0.25*RG_PROF[o.w].gr && !(rgWinter(V) > 0.3 && o.w !== 'magic')){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
+      if(R() < 0.25*RG_PROF[o.w].gr && !(rgWinter(V) > 0.3 && o.w !== 'magic') && V.weather !== 'snow'){ const fc = rsMix(flw[Math.floor(R()*3)], [0, 0, 0], 0.1); x.fillStyle = rsCss(fc); x.beginPath(); x.arc(X, Y - gH*1.1, Math.max(rgPx(0.8), gH*0.18), 0, Math.PI*2); x.fill(); if(o.w === 'magic') rgGlow(x, X, Y - gH*1.1, gH*0.8, fc, 0.6); }
       return; }
     if(o.c === 'egg'){ const h = o.hM*f[2], E = PK_EGGS[o.kind]; if(h*lodOf(o, f) < px(o.kind === 'caps' ? 1.2 : 3) || h > nearCut) return;
       if(E.loud && o0 !== loudOne) return;
@@ -22890,10 +22984,8 @@ function rgPaintLand(x, mk, dk, V){
 
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(col, 0.22)); g.addColorStop(0.4, rsCss(col, 0.07)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
-  if(V.weather === 'rain' || V.weather === 'storm'){ const R = rgRand(s, 820), n = Math.round(ww*wh/(px(26)*px(26))), sl = 0.18; x.strokeStyle = rsCss(rsMix(AIR, [230, 236, 246], 0.5), V.weather === 'storm' ? 0.24 : 0.18); x.lineWidth = Math.max(px(0.5), px(0.9)); x.beginPath();
-
-    const fall = rgClock(V, 1/30)*wh*1.6; for(let k = 0; k < Math.min(n, 4000); k++){ const ln = px(10 + 30*R()), X0 = R()*ww, Y = ((R()*wh + fall) % (wh + ln)) - ln, X = ((X0 + fall*sl) % ww); x.moveTo(X, Y); x.lineTo(X + ln*sl, Y + ln); } x.stroke();
-    if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); } }
+  if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); }
+  if(/rain|storm|snow/.test(V.weather)) rgFalling(x, dk, V, { d0, reach, M1, AIR });
 
 
 
@@ -22912,9 +23004,40 @@ function rgPaintLand(x, mk, dk, V){
     const t1 = tenths(mx0), dmax = Math.max(1e-9, ...t1.map((v, r) => Math.abs(v - t0[r]))), a = lit*Math.min(1, 0.06/dmax); mc0.width = 0;
     const [lc, lx] = kitCanvas(ww, wh); lx.drawImage(x.canvas, 0, 0); lay(lx, ww, wh, a); lx.globalCompositeOperation = 'destination-in'; lx.drawImage(x.canvas, 0, 0);
     x.save(); x.globalCompositeOperation = 'source-atop'; x.drawImage(lc, 0, 0); x.restore(); lc.width = 0; }
-  if(V.weather === 'snow'){ const R = rgRand(s, 821), n = Math.min(3000, Math.round(ww*wh/(px(34)*px(34)))); x.fillStyle = rsCss([250, 252, 255], 0.85); x.beginPath();
-    for(let k = 0; k < n; k++){ const X0 = R()*ww, Y0 = R()*wh, r = px(0.8 + 2.6*Math.pow(R(), 3)), sp2 = wh*(0.05 + 0.04*r/px(3.4)), Y = (Y0 + rgClock(V, 0.12)*sp2) % wh, X = ((X0 + Math.sin(ST*0.8 + k)*px(6)*(V.time ? 1 : 0)) % ww + ww) % ww;
-      x.moveTo(X + r, Y); x.arc(X, Y, r, 0, Math.PI*2); } x.fill(); }
+}
+
+
+
+
+
+
+
+
+
+function rgFalling(x, dk, V, { d0, reach, M1, AIR }){
+  const { L, F, ww, wh, W } = V, px = V.px, snow = V.weather === 'snow', storm = V.weather === 'storm', s = V.seed | 0;
+  let dd = null; try { dd = dk.getImageData(0, 0, ww, wh).data; } catch(e){ dd = null; }
+  const landAt = (X, Y) => { if(!dd) return Infinity; const i = ((Math.round(Y)*ww + Math.round(X)) << 2); const g = dd[i]; return g >= 254 ? Infinity : d0*Math.pow(reach/d0, g/255); };
+
+  const SH = snow ? [[1.2, 3.5, 70, 1.7], [3.5, 9, 180, 1.5], [9, 24, 420, 1.4], [24, 60, 900, 1.3], [60, 150, 1600, 1.2]]
+    : [[1.5, 5, 50, 1], [5, 14, 130, 1], [14, 40, 320, 1], [40, 110, 640, 1]];
+  const t = V.time ? rgClock(V, 1/24) : 0, [wA, wS] = rgWind(V), vF = snow ? 1.4 : 8.5, drift = snow ? 0.5 : 0.18, wu = Math.cos(wA)*wS*drift, ww2 = Math.sin(wA)*wS*drift;
+  const hl = Math.hypot(L.fy, L.fz) || 1, th0 = Math.atan2(L.fz/hl, L.fy/hl), half = 2*Math.atan(Math.hypot(ww, wh)/(4*F)) + 0.2, CW = 0.035, D = snow ? 0.02 : 0.0022;
+  const colS = rsMix([250, 252, 255], AIR, 0.1), colR = rsMix([214, 222, 236], AIR, 0.3);
+  const dots = [], lines = [];
+  SH.forEach(([r0, r1, nRad, lic], li) => { const nc = Math.max(1, Math.round(nRad*CW));
+    for(let c = Math.floor((th0 - half)/CW); c <= Math.ceil((th0 + half)/CW); c++){ const R = rgRand(s, 860 + li, c & 0xffff);
+      for(let k = 0; k < nc; k++){ const th = (c + R())*CW, r = r0 + (r1 - r0)*R(), hMin = -0.6*r - 2, hMax = 1.1*r + 3, span = hMax - hMin, h0 = hMin + span*R(), ph = R()*6.283, sz = R();
+        const h = hMin + ((((h0 - vF*t) - hMin) % span) + span) % span, sway = snow ? Math.sin(t*0.9 + ph)*0.35 : 0;
+        const u = r*Math.cos(th) + ((wu*t + sway) % 6) , w = r*Math.sin(th) + ((ww2*t) % 6), P = V.proj(L.Px - h*M1, u*M1, L.z0 + w*M1); if(!P) continue;
+        const X = P[0], Y = P[1]; if(X < -4 || X > ww + 4 || Y < -4 || Y > wh + 4) continue;
+        const dist = Math.hypot(h, u, w - 0)*M1; if(landAt(Math.min(ww - 1, Math.max(0, X)), Math.min(wh - 1, Math.max(0, Y))) < dist) continue;
+        const fade = 1 - (li/(SH.length))*0.55;
+        if(snow){ const rad = Math.max(0.6, D*0.5*(0.6 + 0.8*sz)*F*M1/P[2]*lic); dots.push([X, Y, rad, fade*(0.65 + 0.3*sz)]); }
+        else { const Q = V.proj(L.Px - (h + 0.5)*M1, (u - wu*0.06)*M1, L.z0 + (w - ww2*0.06)*M1); if(Q) lines.push([X, Y, Q[0], Q[1], fade*(storm ? 0.42 : 0.32), Math.max(0.5, D*F*M1/P[2]*1.4)]); } } } });
+  if(snow){ dots.sort((p, q) => p[2] - q[2]); for(const [X, Y, r, a] of dots){ x.fillStyle = rsCss(colS, a); if(r < 0.9){ x.fillRect(X - r, Y - r, r*2, r*2); continue; } x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill();
+      if(r > px(2.5)){ x.fillStyle = rsCss(colS, a*0.25); x.beginPath(); x.arc(X, Y, r*1.8, 0, Math.PI*2); x.fill(); } } }
+  else { x.lineCap = 'round'; for(const [X, Y, X2, Y2, a, lw] of lines){ x.strokeStyle = rsCss(colR, a); x.lineWidth = lw; x.beginPath(); x.moveTo(X, Y); x.lineTo(X2, Y2); x.stroke(); } x.lineCap = 'butt'; }
 }
 
 
@@ -36053,9 +36176,9 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Scorpius–Dschubba';
+const RELEASE = 'Scorpius–Acrab';
 
-const RELEASE_DATE = '2026-10-25';
+const RELEASE_DATE = '2026-10-26';
 
 const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"kPxbnAAu","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
@@ -37013,7 +37136,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-25 · 54449a4";
+const STAMP = "2026-10-26 · 7bd0595";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

@@ -2,6 +2,19 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Hyades–Secunda Hyadum (2026-10-24)
+
+- Any setting can move in a film. The Moving Image has an Also moving row: choose one of the surface's sliders, or the
+  light (the sun, on the Ringworld) or its height, and how it moves (it sways round where it stands, sweeps out to its
+  far end and back, or drifts), how far (a little, some, much) and how many times in the film. Mark as many as you
+  like; the line under the row says which are moving. Each comes back to where it began by the film's end, so a film
+  that loops still loops, and every control is put back after.
+
+### Under the hood
+- `markValue` gives a marked control's value through the film (test/moving.test.mjs checks it starts and ends where
+  it stands, sweeps without snapping, keeps to its ends and wraps an angle); a marked slider is set to step freely during
+  the film, so a slow sway never stair-steps.
+
 ## Hyades–Prima Hyadum (2026-10-24)
 
 - The Moving Image can rest at its ends: None, half a second or a second held still at the start and the end (and at

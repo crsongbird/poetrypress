@@ -11,6 +11,13 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE LAND IN STEPS, NOW WITHOUT LINES: shelves closer to the first painted ring's ridge-behind-ridge look, fewer in
   the city worlds; the lit lines along crests and shelf lips are gone, and the land gleams where it turns between the
   sun and the eye instead, brightest looking into the sun. Is the gleam strong enough, and on the right ground?
+- THE SKY'S GRID GONE: the overcast is now one solid sheet; the grid seen at 720p should be gone. Still there on that seed?
+- NOTHING SEE-THROUGH: boulders, huts and other things are painted after every patch of land under them, so the ground
+  no longer shows through their lower parts. Any still see-through? (Which seed was it?)
+- BIRDS: fewer, larger, and many more kinds by their field marks (magpies, jays, goldfinches, parakeets, robins,
+  egrets), each shaded round. Right size and number?
+- WEATHER IN DEPTH: snow and rain fall in the world round the eye at every distance, hidden behind hills, the far land
+  veiled; snow lies on the ground, the trees and the roofs. Does it still read as a curtain?
 - THE TREES' SEASONS: by the seed's season the broadleaf trees, birches, poplars, willows and orchards leaf fresh and
   blossom in spring, turn gold, scarlet and russet in autumn and stand bare in winter; the grass goes straw in winter.
   Do the bare trees read as trees, and is autumn bright enough?
@@ -85,6 +92,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
+  - THE DRONE SHOT (Ruby, 2026-10-25: "drone shot camera including movement (this introduces player movement)"): the eye
+    itself carried through the world, rising, flying ahead and banking, not only turning; the eye standing anywhere round
+    the ring (its angle as well as its place across the band), the land's mesh and the store following it without a
+    thing popping. Next pass.
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
   - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path"):
@@ -106,8 +117,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   - OVERHEAD: spacedocks, satellites, ships of many kinds, builder ships and drones watching one another.
   - THINGS IN THE ROUND: every object in at least 8 angles (16 or 32), large objects in horizontal slices, buildings that
     can be walked around and so any shape (or simple 3D models, as the land will be); everything existing in space.
-  - WEATHER WITH DEPTH: rain and snow in layers that keep their distance (parallax); cloud lighting with depth and faked
-    subsurface scattering; storms that look like storms; wind on the trees in the rain showing its strength and way.
+  - WEATHER WITH DEPTH, what is left: cloud lighting with depth and faked subsurface scattering; storms that look like storms; wind on the trees in the rain showing its strength and way.
   - THE SKY BEYOND: planets and moons with more variety, the ring's distance from its planet by the seed, the star's
     color and Rayleigh scattering on them; fictional star systems, other light colors, an accurate Milky Way, skies from
     other galaxies.
@@ -129,8 +139,8 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     favor them; less farming in magic worlds, and never mundane farms there.
   - DETAIL IN EARNEST, what is left: how far out detailed objects are drawn and how detailed they are, not only how many
     small things.
-  - WEATHER THAT TOUCHES THINGS: rain, snow, dust storms, meteor showers and more, their layers keeping depth and meeting
-    the objects; what falls gathering on objects and the ground where it would (snow on fronds); fogs with fog lights and
+  - WEATHER THAT TOUCHES THINGS, what is left: dust storms, meteor showers and more; rain wetting the ground (puddles,
+    sheen); snow on the rest of what it would gather on (fronds, fences, cars, walls' tops); fogs with fog lights and
     distortions.
   - A RARE REENACTMENT: one seed in 776 stages a Revolutionary War reenactment in the middle distance or the foreground (the
     South always losing badly), the test bed for a wide variety of people and animations: women, people of every color;

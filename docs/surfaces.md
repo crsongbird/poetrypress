@@ -541,7 +541,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     fanning out, a flock flushed together and wheeling down elsewhere, a heron's long flight down the shore), each leg
     held inside its era so it never jumps at the turn; between moves each member drifts on noise (`wkWander`). Groups come
     and go one by one with their hours and weather (`rgWildHere`), and are drawn half again their size
-    (`RG_WILD_LICENCE`) so they are found at all; the sheep, gulls, insects, fairies and kites drift on the same noise.
+    (`RG_WILD_LICENCE`) so they are found at all, the birds larger again (`WK_BIRDS`) and fewer, each kind by its field
+    marks, magpies, jays, goldfinches, parakeets, robins and egrets among them (docs/prior-art/ringworld-wildlife.md §8);
+    the sheep, gulls, insects, fairies and kites drift on the same noise. Each thing reaches toward the eye by its own
+    size in the paint order, so no nearer cell is laid over a boulder's or a hut's foot.
   - **Motion without flicker** (Ruby: "clouds and smoke should follow the wind and never flicker";
     docs/prior-art/ringworld-motion-and-variety.md). The bands and the cirrus ride the wind along chords wide enough that
     they fade in and out low over the horizon, never leaping across the sky; the cirrus is combed along the wind as the
@@ -641,7 +644,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     the sun's side (`pkFlip`). Trees are mirrored by the seed.
   - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow; heaps of
     cloud lit from the sun's side, rain in veils, lightning, a rainbow opposite a low sun, rays from a low or clouded
-    sun, the sun's glare low over the land, mist thickening with depth, rain and snow falling over it all. The
+    sun, the sun's glare low over the land, mist thickening with depth. Rain and snow fall in the world in shells of
+    distance round the eye, hidden behind the land, the farthest a veil over the land (`rgFalling`;
+    docs/prior-art/ringworld-weather.md), and snow lies on the open ground, the trees and the roofs. The overcast is laid as one solid
+    sheet, no seams. The
     air round the sun (docs/prior-art/ringworld-sky.md): the sky brightens toward the sun and the horizon under it glows,
     burning orange and red at dusk and lingering after the sun has gone; opposite it at dusk and dawn, the Belt of
     Venus over the blue-grey of the world's shadow. Cirrus combed into fine strands, some hooked (mares' tails). By day in clear weather
