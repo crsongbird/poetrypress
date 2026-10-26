@@ -4,6 +4,30 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Alpha Persei–Mirfak (2026-10-26)
+
+- **The drone flies steadily.** It no longer swings round suddenly or shakes. The way it faces is smoothed along its
+  route, and as it passes its subject it lets the subject go, instead of whipping round to keep it in view.
+- **The ground holds still.** When the camera is still, the ground no longer rises and falls under it, and the detail
+  close to the camera no longer re-cuts every few frames. Finer detail now fades in with distance instead of switching
+  on.
+- **Sunrise and sunset come on gradually.** The sun's light on the land, the shadows, the glare and the light on the
+  trees now all come on as the sun climbs, instead of switching on. The warm colours of dawn and dusk rise and fade
+  smoothly.
+
+### Under the hood
+- In stepsRing.js, the drone's heading is the mean of its line's direction over a stretch either side. The turn
+  towards its subject fades out as the subject falls behind. Its weave is gentler.
+- The land's mesh morphs by continuous distance (`mw`, `vcolM`), and the finest ring fades in (`FADE0`). The land's
+  exaggeration is anchored to where the flight starts (`exD`), not to the moving eye.
+- The light: `rgSunK` blends the night's even light into the sun's over the sun's first fifteen degrees. `rgDusk`
+  replaces five tent-shaped ramps with one smooth hump. Shadows, glare and rays ease in with the sun's height. The
+  trees' kept light steps are cross-faded, and the haze is finer-stepped.
+- Reviewed the tests: the drone's turn and the sunrise were checked only by eye. ringworldView now checks that the
+  drone turns at most a few degrees in a hundredth of its flight with no reversals (`rgDroneRoute`). It also checks
+  that `rgSunK` and `rgDusk` change by small, cornerless steps through a sunrise.
+- The ringpaint fingerprint is updated for the steadier ground and the gradual light.
+
 ## Scorpius–Fang (2026-10-26)
 
 - Things happen on the Ringworld now:
@@ -516,31 +540,3 @@ prints it).
 - `movingDials` moves the light and camera rows into the window and back, `movingLeave` keeps the shot and puts the
   page's camera back; the film's size is the Aspect and the Resolution (`movingDims`); the time span's slider is a log of
   five minutes to two days (`movingSpanSecs`).
-
-## Pleiades–Maia (2026-10-25)
-
-- The Ringworld's stars are a backdrop now: they stay where they are as the camera turns, tilts or zooms, and drift only
-  a little with the ring's own slow spin, a sixth of what it was, as do the planets and the nebula beyond it.
-- Rain is rarer (about one seed in twenty-two, storms one in forty), and whenever it rains, storms or snows an overcast
-  ceiling covers the sky: darkest overhead, thinning to a paler band at the horizon, mottled with the darker bases of its
-  rolls, riding the wind. No sun rays shine through it.
-- Field gates were drawn the size of the rare keyless gate in a cliff, as tall as a house; they are a gate's size again.
-  The keyless gate keeps its own.
-- The Ringworld's oil paint is retired. Life is now Flora (trees, grass, hedges, flowers); its seventh slider is Fauna
-  (the wild things, the small finds and the droids), 40 by default, with smaller flocks; its eighth is Detail: Low,
-  Medium, High or Ultra, how far out and how closely the plants, stones and small things round you are sown (Medium is
-  how it always was; each step up takes longer to make). An older look opens with Fauna and Detail at their defaults.
-- The neon world's ground is a lit grey now, not near black.
-- The Moving Image on a phone is a column: the preview at the top and Make the film at the bottom hold still while the
-  choices scroll between them; in the Kinesis tab the summary and the buttons follow the choices, so nothing lies over
-  the file formats any more.
-
-### Under the hood
-- Every thing in the Ringworld's store has an id and tags (what it is, its world, what it does: npc, animal, plant,
-  building, moves, flies…), the same thing keeping its id from any view; `ringStateOf` captures its state at a moment of
-  the clock, a wild group's members each under the group's id and their number. The ids and states are tested.
-- The keyless gate is `slabgate`: two tables shared the name gate, and the later won.
-- The orders of the 24th and 25th are written into OPEN-ISSUES.md as the list being built, in order.
-- Reviewed the tests: the editor's two-layer style checks moved from mobileCss.test to editor.test, the suite of their
-  concern, and the helper both read (`effective`) into the shared harness; the Ringworld's slider remap is tested where
-  the looks are (audit.test), and the things' ids where the wild things are (wildlife.test).

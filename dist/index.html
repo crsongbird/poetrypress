@@ -20822,8 +20822,10 @@ const RG_LIGHTS = { wilds: [[226, 255, 170], [255, 214, 150]], cities: [[255, 21
 
 
 
-const RG_ROUTES = new Map(), RG_DRONE = { speed: 12, climb: 3, weave: 0.045 };
-function rgDroneRoute(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key = [seed, W.toFixed(6), zS.toFixed(6), Math.round(look), Math.round(secs*10)].join('|');
+const RG_ROUTES = new Map(), RG_DRONE = { speed: 12, climb: 3, weave: 0.02 };
+function rgDroneRoute(seed, ctx){
+  const RT = rgDroneRoute0(seed, ctx); rgDroneRoute.last = RT; return RT; }
+function rgDroneRoute0(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key = [seed, W.toFixed(6), zS.toFixed(6), Math.round(look), Math.round(secs*10)].join('|');
   let RT = RG_ROUTES.get(key); if(RT) return RT;
   const M = W*0.00025, Lr = Math.max(40, RG_DRONE.speed*secs)*M, h0 = look*Math.PI/180, hS = (a, z) => LK.height(a, z, W*0.002), R0 = rgRand(seed | 0, 1960);
   const score = (a, z) => { if(Math.abs(z) > W*0.44) return -9; const e = hS(a, z), sea = TR.sea; let wet = 0, ring = 0;
@@ -20842,12 +20844,19 @@ function rgDroneRoute(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key
   const raw = t => { const p0 = raw0(t), p1 = raw0(Math.min(1, t + 0.01)), p_ = raw0(Math.max(0, t - 0.01)), dx = p1[0] - p_[0], dz = p1[1] - p_[1], dl = Math.hypot(dx, dz) || 1, o = wv*Math.sin(2*Math.PI*wf*t)*Math.sin(Math.PI*t)*(1 - 0.8*Math.exp(-(((t - 0.55)/0.12)**2)));
     return [p0[0] - dz/dl*o, Math.max(-W*0.45, Math.min(W*0.45, p0[1] + dx/dl*o))]; };
 
-  const N = 64, pts = [raw(0)], cum = [0]; for(let q = 1; q <= N; q++){ const p2 = raw(q/N); cum.push(cum[q - 1] + Math.hypot(p2[0] - pts[q - 1][0], p2[1] - pts[q - 1][1])); pts.push(p2); }
+  const N = 256, pts = [raw(0)], cum = [0]; for(let q = 1; q <= N; q++){ const p2 = raw(q/N); cum.push(cum[q - 1] + Math.hypot(p2[0] - pts[q - 1][0], p2[1] - pts[q - 1][1])); pts.push(p2); }
   const along = u => { const d = u*cum[N]; let q = 1; while(q < N && cum[q] < d) q++; const f = (d - cum[q - 1])/((cum[q] - cum[q - 1]) || 1); return [pts[q - 1][0] + (pts[q][0] - pts[q - 1][0])*f, pts[q - 1][1] + (pts[q][1] - pts[q - 1][1])*f, Math.atan2(pts[q][1] - pts[q - 1][1], pts[q][0] - pts[q - 1][0])]; };
   const angW = d => { while(d > Math.PI) d -= 2*Math.PI; while(d < -Math.PI) d += 2*Math.PI; return d; };
-  RT = { subject: [T.a, T.z], path: pts.filter((_, q) => q % 8 === 0 || q === N), at: u => { const [a, z, hd] = along(Math.max(0, Math.min(1, u))), toT = Math.atan2(T.z - z, T.a - a);
 
-      const near = rsSmooth(0.15, 0.45, u)*(1 - rsSmooth(0.7, 0.95, u)), dirA = hd + Math.max(-1.2, Math.min(1.2, angW(toT - hd)))*near, yaw = angW(dirA - h0)*180/Math.PI;
+
+
+  const hdAt = u => { const [a1, z1] = along(Math.min(1, u + 0.012)), [a2, z2] = along(Math.max(0, u - 0.012)); return Math.atan2(z1 - z2, a1 - a2); };
+  const hdS = u => { let sx = 0, sz = 0; for(let k = -4; k <= 4; k++){ const w = 1 - Math.abs(k)/5, h = hdAt(Math.max(0, Math.min(1, u + k*0.012))); sx += w*Math.cos(h); sz += w*Math.sin(h); } return Math.atan2(sz, sx); };
+  const hd0 = hdS(0);
+  RT = { subject: [T.a, T.z], path: pts.filter((_, q) => q % 32 === 0 || q === N), at: u => { u = Math.max(0, Math.min(1, u)); const [a, z] = along(u), hd = hdS(u), toT = Math.atan2(T.z - z, T.a - a);
+
+
+      const rel = angW(toT - hd), near = rsSmooth(0.15, 0.45, u)*(1 - rsSmooth(0.7, 0.95, u))*(1 - rsSmooth(0.5, 1.9, Math.abs(rel))), dirA = hd + rel*near, yaw = (angW(dirA - hd0) + angW(hd0 - h0))*180/Math.PI;
 
 
 
@@ -20875,6 +20884,13 @@ function rgWorldOf(seed, v){
 }
 
 const rgClamp = v => v < 0 ? 0 : v > 1 ? 1 : v;
+
+
+const rgDusk = d => { const t = Math.min(1, Math.abs(d - 0.5)*3.2); return 0.5 + 0.5*Math.cos(Math.PI*t); };
+
+
+
+const rgSunK = (upS, ndl) => { const night = 1 + 0.4*(ndl - upS), sun = ndl/Math.max(0.3, upS), w = rgClamp(upS/0.26); return night + (sun - night)*w*w*(3 - 2*w); };
 
 
 const rgRand = (s, a, b = 0, c = 0) => mulberry32((Math.imul(s | 0, 0x9E3779B1) ^ Math.imul(a | 0, 0x85EBCA77) ^ Math.imul(b | 0, 0xC2B2AE3D) ^ Math.imul(c | 0, 0x27D4EB2F)) >>> 0);
@@ -21152,7 +21168,7 @@ function rgStoneOf(V, a, z, e){ const W = V.W, s = V.seed | 0, r = mnValue(a/(W*
 
 function rgLit(V, c, day, haze, air){ const n = rsMix(rsMix(c, [8, 12, 30], 0.82), c, 0.08); return rsMix(rsMix(n, c, day), air, haze); }
 
-function rgAirOf(V, day){ const dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), w = V.world.list[0];
+function rgAirOf(V, day){ const dusk = rgDusk(day), w = V.world.list[0];
   const a = rsMix(rsMix(rsMix(V.sky, [6, 8, 20], 0.86), rsMix(V.sky, [255, 255, 255], 0.38), rsSmooth(0.3, 0.75, day)), rsMix([255, 150, 118], V.g1, 0.2), dusk*0.55);
 
   const b = w === 'ruins' ? rsMix(a, [150, 112, 88], 0.32) : w === 'neon' ? rsMix(a, V.g1, 0.22 + 0.2*(1 - day)) : w === 'magic' ? rsMix(a, V.g2, 0.15) : a;
@@ -21270,7 +21286,7 @@ function rgGiant(x, X, Y, r, kind, o){
 }
 function rgPaintArch(x, mk, V){
   rgPx = V.px;
-  const { L, W, ww, wh, unit, F, cx, cy, proj, at, sky: S, g1, g2, px } = V, dl = V.dayHere, kday = rsSmooth(0.3, 0.75, dl), dusk = rgClamp(1 - Math.abs(dl - 0.5)*3.2);
+  const { L, W, ww, wh, unit, F, cx, cy, proj, at, sky: S, g1, g2, px } = V, dl = V.dayHere, kday = rsSmooth(0.3, 0.75, dl), dusk = rgDusk(dl);
   const SPACE = [8, 10, 24], AIR = rgAirOf(V, dl), s = V.seed | 0;
 
 
@@ -21668,7 +21684,7 @@ function rgPaintArch(x, mk, V){
 
 
 
-  if(sp && (lowSun || cloudy) && (wx === 'clear' || wx === 'clouds')){ const R = rgRand(s, 814), n = 6 + Math.floor(R()*6), Lr = F*1.5, col = rsMix([255, 236, 200], [255, 170, 130], dusk*0.6), str = (cloudy ? 0.06 : 0.045)*(0.4 + 0.6*kday + dusk*0.6);
+  if(sp && (lowSun || cloudy) && (wx === 'clear' || wx === 'clouds')){ const R = rgRand(s, 814), n = 6 + Math.floor(R()*6), Lr = F*1.5, col = rsMix([255, 236, 200], [255, 170, 130], dusk*0.6), str = (cloudy ? 0.06 : 0.045)*(0.4 + 0.6*kday + dusk*0.6)*rsSmooth(0, 0.08, Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))));
     x.save(); x.globalCompositeOperation = 'screen'; for(let k = 0; k < n; k++){ const a = Math.PI/2 + (k/(n - 1) - 0.5)*2.6 + (R() - 0.5)*0.25, wa = 0.03 + 0.07*R(), g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], Lr*(0.6 + 0.4*R()));
       g.addColorStop(0, rsCss(col, str)); g.addColorStop(0.35, rsCss(col, str*0.45)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
       for(const k2 of [1, 0.55, 0.25]){ x.beginPath(); x.moveTo(sp[0], sp[1]); x.arc(sp[0], sp[1], Lr, a - wa*k2*1.6, a + wa*k2*1.6); x.closePath(); x.fill(); } } x.restore(); }
@@ -22748,6 +22764,9 @@ function rgPaintLand(x, mk, dk, V){
 
 
   let c0 = W*0.00025*[0.5, 0.36, 0.28, 0.22][DI]; while(c0*F/Math.max(L.hc, W*0.0004) < 1.2 && c0*NG*4 < reach) c0 *= 2;
+
+
+  const FADE0 = 1 - rsSmooth(1.25, 1.9, c0*F/Math.max(L.hc, W*0.0004));
   const NLV = Math.max(1, Math.ceil(Math.log2(reach/(NG*c0))) + 1), cl = [], cz = [], ca = [], ZMAX = W*0.497, SIDE = 2*NG + 1;
   for(let l = 0; l < NLV; l++){ cl.push(c0*Math.pow(2, l)); cz.push(Math.round(L.z0/(2*cl[l]))*2*cl[l]); ca.push(Math.round(A0E/(2*cl[l]))*2*cl[l]); }
   const aOf = (l, i) => ca[l] + i*cl[l];
@@ -22771,6 +22790,10 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const exf = d => 1 + 2.2*rsSmooth(W*0.05, W*2, d), capD = L.Hw*0.9, capK = L.Hw*0.06;
+
+
+
+  const EXA = L.path ? L.path[0][0] : A0E, EXZ = L.path ? L.path[0][1] : L.z0, exD = (a, z) => Math.hypot(a - EXA, z - EXZ);
   const exH = (h, d) => { if(h <= 0) return h; const v = h*exf(d); return v < capD - capK*4 ? v : capD - capK*Math.log1p(Math.exp((capD - v)/capK)); };
   let heightIn = null;
 
@@ -22778,10 +22801,15 @@ function rgPaintLand(x, mk, dk, V){
   const tH = (l, i, j) => { const A = RINGS[l].raw, k = kAt(l, i, j); let h = A[k]; if(h === h) return h; const a = aOf(l, i), z = zOf(l, j); h = PADS(a, z, V.LK.height(a, z, 2*cl[l])); A[k] = h; return h; };
   const vR = cl.map(() => new Float64Array(SIDE*SIDE).fill(NaN));
   const rawH = (l, i, j) => { const inS = Math.abs(i) <= NG && Math.abs(j) <= NG, k = (j + NG)*SIDE + i + NG; if(inS){ const v = vR[l][k]; if(v === v) return v; }
-    const h = exH(tH(l, i, j), Math.hypot(aOf(l, i) - A0E, zOf(l, j) - L.z0)); if(inS) vR[l][k] = h; return h; };
+    const h = exH(tH(l, i, j), exD(aOf(l, i), zOf(l, j))); if(inS) vR[l][k] = h; return h; };
+
+
+
+
+  const mw = (l, a, z) => { if(l + 1 >= NLV) return 0; const al = rsSmooth(0.6*NG, NG - 1.5, Math.max(Math.abs(a - A0E), Math.abs(z - L.z0))/cl[l]); return l === 0 ? Math.max(al, FADE0) : al; };
   const vh = (l, i, j) => { const k = (j + NG)*SIDE + i + NG; let h = vH[l][k]; if(h === h) return h;
     const a = aOf(l, i), z = zOf(l, j); h = rawH(l, i, j);
-    const al = l + 1 < NLV ? rsSmooth(0.7, 1, Math.max(Math.abs(i), Math.abs(j))/NG) : 0; if(al > 0) h += (heightIn(l + 1, a, z) - h)*al;
+    const al = mw(l, a, z); if(al > 0) h += (heightIn(l + 1, a, z) - h)*al;
     vH[l][k] = h; return h; };
   heightIn = (l, a, z) => { const u = (a - ca[l])/cl[l], v = (z - cz[l])/cl[l], i = Math.max(-NG, Math.min(NG - 1, Math.floor(u))), j = Math.max(-NG, Math.min(NG - 1, Math.floor(v))), fu = u - i, fv = v - j;
     const h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h01 = vh(l, i, j + 1), h11 = vh(l, i + 1, j + 1); return h00 + (h10 - h00)*fu + (h01 - h00)*fv + (h00 - h10 - h01 + h11)*fu*fv; };
@@ -22801,11 +22829,11 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const litAt = (a, z, h0, s0 = c0) => { const cA = Math.cos(a - A0E), sA = Math.sin(a - A0E), up = -(cA*SUN0[0] + sA*SUN0[1]), al = -sA*SUN0[0] + cA*SUN0[1], ac = SUN0[2], hl = Math.hypot(al, ac);
-    if(up <= 0.02 || hl < 1e-6) return 1; const tE = up/hl, da = al/hl, dz = ac/hl; let occ = 0;
+    if(up <= 0.005 || hl < 1e-6) return 1; const tE = up/hl, da = al/hl, dz = ac/hl, ease = rsSmooth(0.005, 0.12, up); let occ = 0;
     for(let s2 = Math.max(s0*2.5, 3*M1s); s2 < W*0.6; s2 *= 1.32){ const a2 = a + da*s2, z2 = z + dz*s2, ray = h0 + tE*s2 + 0.5*M1s;
       const h2 = Math.abs(z2) > ZMAX ? L.Hw : meshH(a2, z2); if(h2 > ray - s2*0.03){ occ = Math.max(occ, (h2 - ray)/(s2*0.03) + 1); if(occ >= 2) break; }
       if(ray > L.Hw*1.05) break; }
-    return 1 - rsSmooth(0, 2, occ); };
+    return 1 - rsSmooth(0, 2, occ)*ease; };
 
 
 
@@ -23123,7 +23151,12 @@ function rgPaintLand(x, mk, dk, V){
       const fadeIn = rgClamp((hl - px(2))/px(1.5)); if(fadeIn < 1) x.globalAlpha = fadeIn;
 
 
-      const dq = Math.round(cday*24)/24, hq = Math.round(haze*16)/16, bq = Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
+
+
+
+
+      const dqF = cday*24, dqT = dqF - Math.floor(dqF), dqA = Math.floor(dqF)/24, dqB = Math.min(1, dqA + 1/24);
+      const drawTree = (dq, al, pass) => { const hq = Math.round(haze*32)/32, bq = Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
       const el = o.w === 'magic' ? V.elementAt(o.a, o.z) : null, green0 = o.kind === 'olive' ? [118, 134, 106] : RG_CACTI.includes(o.kind) ? rsMix([96, 128, 98], V.land, 0.2) : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35);
       const SZ = rgSeasonOf(V, o), green = SZ.leaf ? rsMix(el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, SZ.leaf, SZ.k) : el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, dq, hq, null, o);
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], dq, hq, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), dq, hq, AIR), body: rgLit(V, green, dq, hq, AIR),
@@ -23131,24 +23164,25 @@ function rgPaintLand(x, mk, dk, V){
 
         back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv, bare: SZ.bare, snow: V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
 
-      if(c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
+      if(pass === 0 && c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
         x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
 
         x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.6), 0.3); x.beginPath(); x.ellipse(X, Y, wS*0.55, wS*0.16, 0, 0, Math.PI*2); x.fill(); }
 
-      if(o.nurse){ const g2 = rsMix([118, 140, 70], V.land, 0.25), nc = { ...tc, hM: undefined, dark: rgLit(V, rsMix(g2, BLACK, 0.2), cday, haze, AIR), body: rgLit(V, g2, cday, haze, AIR), lit: rgLit(V, rsMix(g2, [255, 244, 222], 0.3), cday, haze, AIR) };
+      if(pass === 0 && o.nurse){ const g2 = rsMix([118, 140, 70], V.land, 0.25), nc = { ...tc, hM: undefined, dark: rgLit(V, rsMix(g2, BLACK, 0.2), cday, haze, AIR), body: rgLit(V, g2, cday, haze, AIR), lit: rgLit(V, rsMix(g2, [255, 244, 222], 0.3), cday, haze, AIR) };
         pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx); }
 
 
 
 
       const Sres = rgStep2(h), Sdet = Math.min(Sres, rgStep2(Math.max(hl, px(8))));
-      if(Sres > px(260)){ if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); x.globalAlpha = 1; return; }
+      if(Sres > px(260)){ if(pass) return; if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return 'near'; }
       const Sd = Math.max(Sres, px(24)), sw = Math.ceil(Sd*2.4), sh = Math.ceil(Sd*1.4), ax = sw/2, ay = Math.ceil(Sd*1.22), AIRk = AIR.map(v => v >> 3).join('.');
       const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
       const sp = rgSprite(key, sw, sh, sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
         if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); });
-      const k = h/Sd; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = 1; return; }
+      const k = h/Sd, ga = x.globalAlpha; x.globalAlpha = ga*al; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = ga; };
+      const r0 = drawTree(dqT < 0.94 ? dqA : dqB, 1, 0); if(r0 !== 'near' && dqT >= 0.06 && dqT < 0.94) drawTree(dqB, dqT, 1); x.globalAlpha = 1; return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1.2)){ nightDot(o, f, l, wday, haze, hl > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd*1.7, X + wd*1.7, Y - h*1.4, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
 
@@ -23287,7 +23321,7 @@ function rgPaintLand(x, mk, dk, V){
   const collectWays = (dn, df) => { const out = []; store.ways.forEach((wy, wi) => { let run = [], decs = [], keys = [], dmin = Infinity, gnd = [], pyl = [], lastU = null;
     const flush = () => { if(run.length >= 2){ run.gnd = gnd; run.pyl = pyl; out.push({ wy, run, decs, keys, dd: dmin }); } run = []; decs = []; keys = []; dmin = Infinity; gnd = []; pyl = []; lastU = null; };
     for(const pc of wayPieces[wi]){ if(!(pc.dd > dn && pc.dd <= df) || pc.p.dec > 0.8){ flush(); continue; } dmin = Math.min(dmin, pc.dd);
-      for(const P of run.length ? [pc.q] : [pc.p, pc.q]){ const e = P.e !== undefined ? exH(P.e, cutOf(P.a, P.z)) : wy.deck ?? Math.max(TR.sea, meshH(P.a, P.z)) + W*0.00003;
+      for(const P of run.length ? [pc.q] : [pc.p, pc.q]){ const e = P.e !== undefined ? exH(P.e, exD(P.a, P.z)) : wy.deck ?? Math.max(TR.sea, meshH(P.a, P.z)) + W*0.00003;
         if(wy.high){ gnd.push(at(P.a, P.z, Math.max(TR.sea, meshH(P.a, P.z)))); const k2 = Math.floor(P.u/(42*W*0.00025)); pyl.push(lastU !== null && k2 !== lastU); lastU = k2; } const A = at(P.a - pc.nx*wy.half, P.z - pc.nz*wy.half, e), B = at(P.a + pc.nx*wy.half, P.z + pc.nz*wy.half, e);
         if(!A || !B){ if(wy.high){ gnd.pop(); pyl.pop(); } flush(); continue; } run.push([A, B]); decs.push(P.dec); keys.push(Math.imul(Math.round(P.a/W*20000), 73856093) ^ Math.imul(Math.round(P.z/W*20000), 19349663)); } }
     flush(); }); return out; };
@@ -23476,7 +23510,7 @@ function rgPaintLand(x, mk, dk, V){
 
   if((V.weather === 'clear' || V.weather === 'clouds') && seedChoice(V.seed, 'flock')() < 0.3 && V.world.list.some(w => w === 'wilds' || w === 'cities' || w === 'builders')){
     const RF = rgRand(s, 880), az = RF()*Math.PI*2, r0 = W*(0.04 + 0.2*RF()), a0 = Math.cos(az)*r0, z0 = Math.max(-W*0.42, Math.min(W*0.42, L.z0 + Math.sin(az)*r0)), hF = 90 + 160*RF(), SF = 160 + 260*RF(), NB = 600 + Math.floor(900*RF()), ph = RF()*50;
-    const dd = keep(a0, z0, SF*W*0.00025); if(dd != null) things.push({ dd, draw: l => { const day = ringDay(L, a0), dk = rgClamp(1 - Math.abs(day - 0.5)*3.2); if(dk < 0.15) return;
+    const dd = keep(a0, z0, SF*W*0.00025); if(dd != null) things.push({ dd, draw: l => { const day = ringDay(L, a0), dk = rgDusk(day); if(dk < 0.15) return;
       const e = Math.max(TR.sea, T(a0, z0, W*0.003)), B = at(a0, z0, e + hF*W*0.00025); if(!B) return; const k = W*0.00025*F/B[2], S2 = SF*k*0.5, X = B[0], Y = B[1]; if(S2 < px(5) || S2 > wh*1.5) return;
       if(!vis(l, X - S2*2.4, X + S2*2.4, Y - S2*1.6, Y + S2*1.6)) return;
       const T0 = (V.time ? MT*0.004 : 0) + ph, sx = 1.6 + 0.7*Math.sin(T0*0.7), sy = 0.45 + 0.25*Math.sin(T0*0.9 + 1), th = T0*0.3, ct = Math.cos(th), st = Math.sin(th), Rb = mulberry32(s ^ 0xb1d5);
@@ -23533,7 +23567,7 @@ function rgPaintLand(x, mk, dk, V){
         hb.bolt = { ph: sph, ev: sev }; FLASH = { lit: rgBoltLit(sph)*(G ? 1 : 0.8), X: G ? G[0] : ww/2, Y: G ? G[1] : -wh*0.5 }; }
       const paintHeap = (h, l, dd) => { const B = at(h.a, h.z, h.eb); if(!B) return; const kpx = F/B[2], W0 = h.wd*kpx, H0 = h.ht*kpx; if(W0 < px(2) || W0 > ww*1.2) return;
         const X = B[0], Y = B[1]; if(!vis(l, X - W0*1.2, X + W0*1.2, Y - H0*1.3, Y + H0*0.1)) return;
-        const day = ringDay(L, h.a), haze = hazeOf(dd), dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), R = mulberry32(h.seed), rnd = (a, b) => a + (b - a)*R();
+        const day = ringDay(L, h.a), haze = hazeOf(dd), dusk = rgDusk(day), R = mulberry32(h.seed), rnd = (a, b) => a + (b - a)*R();
         const white = rsMix(rgLit(V, [244, 244, 250], day, 0, AIR), [255, 170, 140], dusk*0.4), grey = rsMix(white, [70, 74, 86], storm ? 0.6 : wx === 'rain' ? 0.38 : wx === 'snow' ? 0.15 : 0.05);
         const base = rsMix(rsMix(grey, [40, 44, 60], 0.25), AIR, haze*0.85), lit = rsMix(rsMix(grey, [255, 248, 236], 0.35*rsSmooth(0.3, 0.75, day) + 0.1), AIR, haze*0.85);
 
@@ -23687,6 +23721,11 @@ function rgPaintLand(x, mk, dk, V){
     let bi = 0; for(let k = 1; k < bw.length; k++) if(bw[k] > bw[bi]) bi = k; return LK_BIOMES[bi].name; };
 
 
+
+  const vcolM = (l, i, j) => { const g = vcol(l, i, j), a = aOf(l, i), z = zOf(l, j), al = mw(l, a, z); if(al <= 0) return g;
+    const n = l + 1, u = (a - ca[n])/cl[n], v = (z - cz[n])/cl[n], i0 = Math.max(-NG, Math.min(NG - 1, Math.floor(u))), j0 = Math.max(-NG, Math.min(NG - 1, Math.floor(v))), fu = u - i0, fv = v - j0;
+    const c00 = vcol(n, i0, j0), c10 = vcol(n, i0 + 1, j0), c01 = vcol(n, i0, j0 + 1), c11 = vcol(n, i0 + 1, j0 + 1);
+    return [0, 1, 2].map(ch => { const cc = c00[ch] + (c10[ch] - c00[ch])*fu + (c01[ch] - c00[ch])*fv + (c00[ch] - c10[ch] - c01[ch] + c11[ch])*fu*fv; return g[ch] + (cc - g[ch])*al; }); };
   const vcol = (l, i, j) => { const k = kAt(l, i, j)*3, C = RINGS[l].col; if(C[k] >= 0) return [C[k], C[k + 1], C[k + 2]];
     const a = aOf(l, i), z = zOf(l, j), g = rgGround(V, a, z, Math.max(tH(l, i, j), TR.sea + M1*0.5)); C[k] = g[0]; C[k + 1] = g[1]; C[k + 2] = g[2]; return g; };
 
@@ -23696,7 +23735,7 @@ function rgPaintLand(x, mk, dk, V){
     const i0 = Math.max(-RG_NG_MAX, i - 1), i1 = Math.min(RG_NG_MAX, i + 1), j0 = Math.max(-RG_NG_MAX, j - 1), j1 = Math.min(RG_NG_MAX, j + 1);
     const dA = (rawH(l, i1, j) - rawH(l, i0, j))/((i1 - i0)*c), dZ = (rawH(l, i, j1) - rawH(l, i, j0))/((j1 - j0)*c), a = aOf(l, i) - A0E, ca2 = Math.cos(a), sa2 = Math.sin(a);
     const nx = dA*sa2 - ca2, ny = -dA*ca2 - sa2, nz = -dZ, nl = Math.hypot(nx, ny, nz), upS = -(ca2*SUN[0] + sa2*SUN[1]), ndl = (nx*SUN[0] + ny*SUN[1] + nz*SUN[2])/nl;
-    v = upS > 0.04 ? ndl/Math.max(0.3, upS) : 1 + 0.4*(ndl - upS); A[k] = v;
+    v = rgSunK(upS, ndl); A[k] = v;
 
 
 
@@ -23716,9 +23755,9 @@ function rgPaintLand(x, mk, dk, V){
   const paintCell = q => {
     const { l, i, j, P, am, zm, dd, c } = q, h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h11 = vh(l, i + 1, j + 1), h01 = vh(l, i, j + 1), hm = (h00 + h10 + h01 + h11)/4, sea = TR.sea;
     const day = ringDay(L, am), haze = hazeOf(dd), wet = [h00 < sea, h10 < sea, h11 < sea, h01 < sea], nWet = wet[0] + wet[1] + wet[2] + wet[3];
-    const dA = ((h10 - h00) + (h11 - h01))/(2*c), dZ = ((h01 - h00) + (h11 - h10))/(2*c), slope = Math.hypot(dA, dZ)/exf(dd);
+    const dA = ((h10 - h00) + (h11 - h01))/(2*c), dZ = ((h01 - h00) + (h11 - h10))/(2*c), slope = Math.hypot(dA, dZ)/exf(exD(am, zm));
     const ca2 = Math.cos(am - A0E), sa2 = Math.sin(am - A0E), nx = dA*sa2 - ca2, ny = -dA*ca2 - sa2, nz = -dZ, nl = Math.hypot(nx, ny, nz);
-    const upS = -(ca2*SUN[0] + sa2*SUN[1]), ndl = (nx*SUN[0] + ny*SUN[1] + nz*SUN[2])/nl, kSun = upS > 0.04 ? ndl/Math.max(0.3, upS) : 1 + 0.4*(ndl - upS);
+    const upS = -(ca2*SUN[0] + sa2*SUN[1]), ndl = (nx*SUN[0] + ny*SUN[1] + nz*SUN[2])/nl, kSun = rgSunK(upS, ndl);
     const cv = (vh(l, Math.max(-NG, i - 1), j) + vh(l, Math.min(NG, i + 2), j) + vh(l, i, Math.max(-NG, j - 1)) + vh(l, i, Math.min(NG, j + 2)))/4, hol = rgClamp((cv - hm)/(c*1.6))*0.3;
 
     const tb = P.map(p => bandAt(p[0], p[1])), fl = t => (1 - rsSmooth(0, 1.1, t))*0.62, fd = t => rsSmooth(0.8, 1.8, t)*(1 - rsSmooth(1.8, 3.4, t))*0.2;
@@ -23729,10 +23768,10 @@ function rgPaintLand(x, mk, dk, V){
       if(LOWMIST > 0 && dd > W*0.01){ const lw = rsSmooth(TR.cloud*0.25, sea, hm); if(lw > 0.05) cc = rsMix(cc, MISTC, LOWMIST*lw*0.7*(0.8 + 0.2*Math.sin(rgCloudTime(V)*0.03 + am*40))); }
       return cc; };
 
-    const poly = grow(P), he = Math.max(hm/exf(dd), sea + M1*0.5), CI = RINGS[l].cells, ck = kAt(l, i, j);
+    const poly = grow(P), he = Math.max(hm/exf(exD(am, zm)), sea + M1*0.5), CI = RINGS[l].cells, ck = kAt(l, i, j);
     let ci0 = CI[ck]; if(!ci0 && nWet !== 4){ const bw0 = V.LK.biomes(am, zm, he); ci0 = CI[ck] = { bw: bw0, fp: rgFieldPatch(V, am, zm, he, bw0, slope, dd), gk: groundKind(he, slope, bw0, am, zm) }; }
     const bw = nWet === 4 ? null : ci0.bw; let g0 = null, gloss = 0.35;
-    if(bw){ gloss = 0.35 + 0.5*rsSmooth(0.45, 0.95, slope) + (ci0.gk === 'snow' ? 0.6 : ci0.gk === 'sand' ? 0.3 : ci0.gk === 'paving' ? 0.25 : 0); const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = ci0.fp, g4 = [vcol(l, i, j), vcol(l, i + 1, j), vcol(l, i + 1, j + 1), vcol(l, i, j + 1)];
+    if(bw){ gloss = 0.35 + 0.5*rsSmooth(0.45, 0.95, slope) + (ci0.gk === 'snow' ? 0.6 : ci0.gk === 'sand' ? 0.3 : ci0.gk === 'paving' ? 0.25 : 0); const rock = rsSmooth(0.45, 0.95, slope), rk = rsMix([128, 120, 112], V.land, 0.12), fp = ci0.fp, g4 = [vcolM(l, i, j), vcolM(l, i + 1, j), vcolM(l, i + 1, j + 1), vcolM(l, i, j + 1)];
       g0 = [0, 1, 2].map(ch => (g4[0][ch] + g4[1][ch] + g4[2][ch] + g4[3][ch])/4);
       const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], aOf(l, VA[k]), zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k]), specAt(l, VA[k], VZ[k])); });
       let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
@@ -23786,8 +23825,8 @@ function rgPaintLand(x, mk, dk, V){
   mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
   for(const g of [...dkPolys.keys()].sort((p, q) => q - p)){ dk.fillStyle = `rgb(${g},${g},${g})`; dk.beginPath(); for(const P of dkPolys.get(g)){ P.forEach((p, k) => k ? dk.lineTo(p[0], p[1]) : dk.moveTo(p[0], p[1])); dk.closePath(); } dk.fill(); }
 
-  const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);
-    x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(col, 0.22)); g.addColorStop(0.4, rsCss(col, 0.07)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
+  const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgDusk(dk)*0.6);
+    x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); const ge = rsSmooth(0, 0.1, el); g.addColorStop(0, rsCss(col, 0.22*ge)); g.addColorStop(0.4, rsCss(col, 0.07*ge)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
   if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); }
   if(V.wfx === 'dust' || V.wfx === 'ash'){ x.fillStyle = rsCss(V.wfx === 'dust' ? [196, 146, 88] : [120, 92, 74], V.wfx === 'dust' ? 0.14 : 0.1); x.fillRect(0, 0, ww, wh); }
   if(/rain|storm|snow/.test(V.weather) || RG_FALLS[V.wfx]) rgFalling(x, dk, V, { d0, reach, M1, AIR });
@@ -37012,11 +37051,11 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Scorpius–Fang';
+const RELEASE = 'Alpha Persei–Mirfak';
 
 const RELEASE_DATE = '2026-10-26';
 
-const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"rypiC9Yh","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
+const TEXTURE_STAMPS = {"ash":"-ItRfWAU","astral":"7wDpCBM_","astral_fog":"n2ouptTF","astral_stars":"pRVITqrB","athanor":"itTWDgMJ","aurora":"_kOuEHYE","aurorasky":"LR0-S8Cq","blackhole":"x0RvrQgF","bokeh":"2ULWW1AF","botline":"2asp_lco","bouquets":"w70Yaia4","brokenglass":"g7WOgTdK","brushstrokes":"oIEmVI1Z","cards":"fsiMvw7Y","caustics":"md662DRF","cells":"lxc8llRo","checker":"KkB1dIau","chladni":"zWMx2YEN","circuit":"oHi6RcKA","cityscape":"DYmnH40B","clouds":"w_l6OqVB","coldpress":"A_AS05h9","contour":"USsqBIgI","corvids":"2oBbiYxx","crackedglaze":"qXTmvqVV","crackle":"dGyJKoWz","crystal":"MxaSoMvf","cupring":"0vFkxODz","dappled":"B9tWFFtI","dewwebs":"cJgfSjJ_","ditsy":"rra12mqu","drapery":"AzdXj4En","dunes":"YJnHzsfc","embers":"IH3hkliS","feathers":"eL19wBBV","flowers":"r8ele9LK","flowfield":"ssRdiHHI","frost":"lwimNqDT","glassrain":"GPMIear0","grain":"sXiGDWE0","growth":"YdBpogoK","guilloche":"gPrm4jnw","halftone":"ZRBlxOXn","hatch":"adXBHkrA","imprints":"kpHFZlhQ","inkbleed":"AlVr1C12","inkscroll":"Iw9OwPUJ","kintsugi":"qSUAXJWp","knotwork":"wuoRQXck","landscape":"dg_Yv4n2","lichtenberg":"bFjCCF2f","lightleaks":"Uw7oYTZv","liminal":"ZJH8zCCL","linen":"ZPpVyv5L","macro":"dNpGmf8x","magicparticles":"gUGxBVgN","mathnoise":"Tro0JaUq","meadow":"lCXAHLJQ","metalleaf":"KDP6dXY1","moon":"Z6tKwfwn","moss":"wLYxRJbY","oldpaper":"9Sn4mONW","petals":"MLA7WNck","pixelspace":"1OqJMNbo","plainnoise":"67Yj0nb8","polka":"Ubp9x1Rl","rainstreaks":"HNYmyNX6","rainwater":"JicGfKKz","ringpaint":"PbPnSa9W","sigils":"oFaAKxnj","skyring":"nGsTUanw","snow":"HyhkmU8T","softgradient":"GjaVQAV9","spangle":"rqqINBCQ","stainedglass":"7Pl9S8VH","stripes":"X8DOKxcF","suminagashi":"gK_sciu_","summoning":"nPyFd2HK","tessellate":"IYsLGHhm","turing":"nXgzbOCG","underglass":"yw9UZYdJ","veins":"ldSTeU8u","water":"sBGZ48m_","watercolour":"pg8g8DCf","wax":"fI2Bmko4","webb":"ZBDkWmXn","windowlight":"phkfASHA","windsea":"3789O0E6"};
 const SWATCH_STAMP = 'v1-21GxF';
 
 
@@ -37979,7 +38018,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-26 · 98408d9";
+const STAMP = "2026-10-26 · f6435c9";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

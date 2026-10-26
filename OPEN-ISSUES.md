@@ -101,10 +101,13 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
-  - RUBY'S NOTES (2026-10-26), what is left: the GPU path's next steps (below); many objects lit poorly, and billboards to
-    become 3D objects; the reflections; the happenings taken further (people meeting robots, a fox stalking birds, a
-    hawk stooping on a hare, robot wars on a larger scale, groups following the roads); the PS1/PS2 look as a switch of
-    the engine (docs/prior-art/ringworld-gpu.md §3).
+  - RUBY'S NOTES (2026-10-26), what is left: the GPU path's next steps (below); the ground's painted texture drawn on the
+    GPU from baked tiles with mipmaps, so it never re-cuts ("if it's drawn with the GPU with correct lods and mipmapping it
+    shouldn't do the recalculating thing"); the rest of the things on the GPU, so a film renders at a fair frame rate;
+    many objects lit poorly, and billboards to become 3D objects; the reflections; pop-in and drawing artifacts still in a
+    drone film; the happenings taken further (people meeting robots, a fox stalking birds, a hawk stooping on a hare,
+    robot wars on a larger scale, groups following the roads); the PS1/PS2 look as a switch of the engine "WITHOUT the
+    PS1's jitter and swimming textures, but get all the rest of the things in there" (docs/prior-art/ringworld-gpu.md §3).
   - THE DRONE SHOT, what is left: more flights (a dronie flying back and up, a rocket straight up, an orbit round the
     subject, a flight that follows a road or a river), banking into a turn; the far land's painterly height (exf) is by the
     eye's distance, so the far ranges change their height a little as a long flight nears them; a film's frames are still

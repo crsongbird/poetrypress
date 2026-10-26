@@ -467,3 +467,24 @@ The main page stays as it is. The marks show only in a marking mode entered from
   - Whether DJI interpolates curved or straight between waypoints.
   - Procreate Dreams' playback speed while performing.
 - **Not measured yet:** the frame time of a film whose marks remake the surface every frame, on the baseline phone. It should match a Camera round at the same size (both remake every frame); confirm with a 6 s film before promising a speed.
+
+## A steady drone and a gradual sunrise (2026-10-26)
+
+Ruby, 2026-10-26: "The drone camera sometimes just suddenly switches direction or shakes, it's very bad"; "sudden color
+shifts from lighting/daytime changes are a no, they need to be a lil more gradual (render a sunrise sequence to catch
+this)"; "staring at a spot on the ground watching it distort up and down while the camera isn't moving".
+
+- A drone film's guide: operators who "jerk the camera left and right" make footage "completely useless to editors";
+  better "a nice, slow coasting move with subtle panning motions (if needed)", since "quick movement can be
+  disorientating", and the move made "with the drone's flight path rather than its camera"
+  [src](https://www.premiumbeat.com/blog/8-flight-tips-drone-footage).
+- The warm light of the golden hour comes "when the Sun is between 6 degrees below and 6 degrees above the horizon", and
+  it lasts some fifty minutes near the equator to over ninety in Oslo; a low sun's light, scattered through more air,
+  takes "a golden or reddish hue" and is "less intense", with softer contours and less contrast
+  [src](https://www.timeanddate.com/astronomy/golden-hour.html).
+- So here [est]: the drone faces the smoothed way of its line, and its turn toward the subject fades to nothing as the
+  subject falls behind, instead of swinging across a half turn to keep it (the jerk Ruby saw); the sun's light on a slope
+  is blended in from the night's over its first fifteen degrees, and dawn's warmth is one smooth hump about the half
+  light, so a sunrise film brightens by small steps; the land's detail fades in by distance and its height is anchored
+  to the flight's start, so a still eye sees still ground. Checked with a sunrise sequence and a whole drone film, frame
+  against frame.

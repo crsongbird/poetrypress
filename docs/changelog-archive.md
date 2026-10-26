@@ -2,6 +2,34 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Pleiades–Maia (2026-10-25)
+
+- The Ringworld's stars are a backdrop now: they stay where they are as the camera turns, tilts or zooms, and drift only
+  a little with the ring's own slow spin, a sixth of what it was, as do the planets and the nebula beyond it.
+- Rain is rarer (about one seed in twenty-two, storms one in forty), and whenever it rains, storms or snows an overcast
+  ceiling covers the sky: darkest overhead, thinning to a paler band at the horizon, mottled with the darker bases of its
+  rolls, riding the wind. No sun rays shine through it.
+- Field gates were drawn the size of the rare keyless gate in a cliff, as tall as a house; they are a gate's size again.
+  The keyless gate keeps its own.
+- The Ringworld's oil paint is retired. Life is now Flora (trees, grass, hedges, flowers); its seventh slider is Fauna
+  (the wild things, the small finds and the droids), 40 by default, with smaller flocks; its eighth is Detail: Low,
+  Medium, High or Ultra, how far out and how closely the plants, stones and small things round you are sown (Medium is
+  how it always was; each step up takes longer to make). An older look opens with Fauna and Detail at their defaults.
+- The neon world's ground is a lit grey now, not near black.
+- The Moving Image on a phone is a column: the preview at the top and Make the film at the bottom hold still while the
+  choices scroll between them; in the Kinesis tab the summary and the buttons follow the choices, so nothing lies over
+  the file formats any more.
+
+### Under the hood
+- Every thing in the Ringworld's store has an id and tags (what it is, its world, what it does: npc, animal, plant,
+  building, moves, flies…), the same thing keeping its id from any view; `ringStateOf` captures its state at a moment of
+  the clock, a wild group's members each under the group's id and their number. The ids and states are tested.
+- The keyless gate is `slabgate`: two tables shared the name gate, and the later won.
+- The orders of the 24th and 25th are written into OPEN-ISSUES.md as the list being built, in order.
+- Reviewed the tests: the editor's two-layer style checks moved from mobileCss.test to editor.test, the suite of their
+  concern, and the helper both read (`effective`) into the shared harness; the Ringworld's slider remap is tested where
+  the looks are (audit.test), and the things' ids where the wild things are (wildlife.test).
+
 ## Crux–Matza (2026-10-24)
 
 - On a phone the Moving Image is the whole screen now, the page hidden behind it, with a preview at its top that always

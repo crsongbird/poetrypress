@@ -83,7 +83,20 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
     defs.forEach((dd, j) => o['p' + (j + 1)] = String(dd.def)); T.clearTextureCache(); T.getTextureCanvas('ringpaint', 160, 100, o); return { st: SR.ringKeptStores().pop(), m: SR.ringMeshOf() }; };
   const a = shot(0), b = shot(0.5), c = shot(1), c2 = shot(1);
   check('the seed\'s route is its own: the same flight twice', JSON.stringify(c.m.ca) === JSON.stringify(c2.m.ca) && JSON.stringify(c.m.cz) === JSON.stringify(c2.m.cz));
-  check('the route goes somewhere, and its world is built once for all of it', (c.m.ca[0] !== a.m.ca[0] || c.m.cz[0] !== a.m.cz[0]) && a.st === b.st && b.st === c.st); }
+  check('the route goes somewhere, and its world is built once for all of it', (c.m.ca[0] !== a.m.ca[0] || c.m.cz[0] !== a.m.cz[0]) && a.st === b.st && b.st === c.st);
+  // (Ruby, 2026-10-26: "The drone camera sometimes just suddenly switches direction or shakes": its eye turns evenly, never
+  //  more than a few degrees in a hundredth of the flight, and never swings back and forth)
+  const RT = SR.rgDroneRoute.last; let big = 0, flips = 0, prev = null, dPrev = 0;
+  for(let k = 0; k <= 400; k++){ const y = RT.at(k/400).yaw; if(prev !== null){ const d = y - prev; big = Math.max(big, Math.abs(d)*4); if(Math.abs(d) > 0.05 && Math.abs(dPrev) > 0.05 && Math.sign(d) !== Math.sign(dPrev) && Math.abs(d - dPrev) > 1) flips++; if(Math.abs(d) > 0.05) dPrev = d; } prev = y; }
+  check(`the drone's eye turns evenly (at most ${big.toFixed(1)}° in a hundredth of the flight, ${flips} sudden reversals)`, big < 8 && flips === 0); }
+
+// (Ruby, 2026-10-26: "sudden color shifts from lighting/daytime changes are a no, they need to be a lil more gradual"):
+// through a sunrise the sun's light on a slope and the dawn's warmth change by small steps, with no corner to turn at
+{ const SR = await import('../stepsRing.js'); let sunStep = 0, duskStep = 0, duskBend = 0;
+  for(const ndl of [0, 0.3, 0.7, 1]) for(let k = 1; k <= 200; k++){ const u0 = (k - 1)/200*0.5, u1 = k/200*0.5; sunStep = Math.max(sunStep, Math.abs(SR.rgSunK(u1, ndl) - SR.rgSunK(u0, ndl))); }
+  for(let k = 1; k < 400; k++){ const d = x => SR.rgDusk(x/400), a = d(k) - d(k - 1), b = d(k + 1) - d(k); duskStep = Math.max(duskStep, Math.abs(b)); duskBend = Math.max(duskBend, Math.abs(b - a)); }
+  check(`the sun's light comes on evenly as it rises (largest step ${sunStep.toFixed(3)} in a 400th of its climb)`, sunStep < 0.05);
+  check(`dawn's and dusk's warmth swell and fade with no corner (largest step ${duskStep.toFixed(4)}, bend ${duskBend.toFixed(5)})`, duskStep < 0.02 && duskBend < 0.002); }
 
 // (Ruby, 2026-10-26: "ground texture/texture lods recomputing so frequently is … terrible to look at": the ground's marks
 // stand on the world's own grid, so a patch of the world cut into one cell or into four lays the same marks in it)
