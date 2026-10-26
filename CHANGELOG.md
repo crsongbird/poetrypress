@@ -4,6 +4,33 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Beehive–Meleph (2026-10-26)
+
+- **Buildings are solid on the GPU.** On the Ringworld in a browser with WebGPU, houses, terraces, towers, barns,
+  chapels, factories and the rest are now real 3D shapes instead of pictures turned to face the camera.
+  - Their walls, setbacks and gabled roofs stand in the world, and they hide and are hidden by the land, by each other
+    and by trees, pixel by pixel.
+  - The front is the building's own painted face. The other walls get rows of windows, and roofs are laid in courses.
+  - Each wall is lit by where the sun really is, so the shaded side is the side away from it. Walls are darker at their
+    foot.
+  - By night about half the windows light, including the dark panes of the painted fronts.
+  - Each building casts its shadow on the ground. A building's door, lamp and planter still show close up.
+- Pagodas, mosques, round towers, gates and greenhouses, and a building fading as it fills the frame, are still painted
+  as before.
+
+### Under the hood
+- ringGpu.js: a solid pass (`ringGpuMeshBatch`, its own pipeline with depth writes) is drawn before the quads. Its shader
+  handles the painted fronts (relit like the tree pictures), walls with windows, roofs in courses, and lighting from
+  dark-side to lit-side. The quads gain a flat parallelogram kind for buildings' shadows and the lights of far
+  buildings.
+- paintKit.js: `pkBuildingShape` reads a turned building's shape and unlit colours from its own face, as pkTurned does,
+  and paints its front for the GPU.
+- stepsRing.js: rgBldgMesh stands each building in the world facing its own way, one projected vertex per corner.
+  Trees and buildings lay their own GPU work; everything else is still painted on the frame's page.
+- ringworldView checks the solids' batch and the shapes read for a gabled and a flat-topped building.
+- docs/pitfalls.md: no suite compiles the WGSL, so run tools/gpu-ring.mjs after any shader edit.
+- Research notes: docs/prior-art/ringworld-gpu.md §5.
+
 ## Alpha Persei–Áldu (2026-10-26)
 
 - **Nothing drops out of the Ringworld's frames any more.** At full HD, the GPU's page of painted things could fill up,
@@ -494,26 +521,3 @@ prints it).
   and the other cacti's).
 - The land kit's moisture spreads wider, each seed with its own aridity.
 - The Ringworld's fingerprint updated (its plants, intended).
-
-## Pleiades–Electra (2026-10-25)
-
-- The Ringworld's sun casts the land's shadows now: hills and the rim walls shade what lies behind them from the sun, the
-  shadows long and soft-edged at dawn and dusk, sweeping across the band as the sun goes down. Trees, creatures,
-  buildings and fields standing in a hill's shadow are darkened with it.
-- A shadow's edge, a forest's edge or a field's runs smoothly over the land, never in steps; the ground at your feet is
-  drawn far more finely.
-- By night street lamps lay pools of light on the ground about them.
-- Boulders are of five stones, one to a region: rounded, speckled granite; blocky sandstone with its beds laid level;
-  dark basalt in columns; pale, pitted limestone; slate in tilted slabs. A boulder on a slope is set into it.
-- In the neon world each district has its own pair of neons, and its ground leans faintly to their hue.
-- Glowing trees keep their glow close about their crowns, and there are fewer of them in the neon world.
-
-### Under the hood
-- `litAt` walks toward the sun over the drawn land from each corner, thing and field. A corner's light is kept with the
-  mesh for that sun.
-- `fillTri` shades a triangle exactly between its corners' colours with one linear gradient laid along the way the
-  colour changes. A cell whose corners differ is drawn as two of them, and so is a field's wash.
-- `rgStoneOf` chooses a region's stone; `pkRock` takes the stone (`PK_STONES`) and shapes and marks the boulder by it,
-  its marks clipped to its outline. `slopeAt` sets things into slopes.
-- `RG_NEON_DISTRICTS` and `lightsAt` give the neon world its districts' lights.
-- The Ringworld's fingerprint updated (its light and stones, intended).

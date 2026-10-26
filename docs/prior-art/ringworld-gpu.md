@@ -89,3 +89,30 @@ even render the video at a reasonable frameerate."
   - All of them far to near, each hidden by the land nearer than it pixel by pixel. The canvas's buckets drew a far
     thing over a nearer hill now and then (a spire showing through the slope before it); the depth does not.
   - Kept on the canvas: a tree right before the eye and the trees with a light of their own (`RG_GLOW_TREES`).
+
+## 5 · The buildings as solids (2026-10-26)
+
+Ruby, 2026-10-26: "I wonder if we should just make all of these objects three-dimensional instead of two dimensional
+billboards which might help with the z fighting (if we used extremely sparse geometry it wouldn't cost too much of a
+performance degradation) … You COULD redo the trees and large plants … as 3D geometry IN THE STYLE OF the billboards.
+You SHOULD do the same for roads and buildings."
+
+- Hand-painted game art lays its look on simple geometry: "all the lighting and shading information comes from one map",
+  "There is no actual geometry for the details", and a body's value "should shift from the darkest at the lower body to
+  the lightest at the upper body" [src](https://www.theseus.fi/bitstream/handle/10024/107534/Thesis_ZuzanaBubenova.pdf?sequence=1).
+- A browser engine's impostors bake the colour unlit and light it at run time [src](https://app.cinevva.com/blog/2026-05-04-open-world-browser-part-19-imposters).
+- So here [est]:
+  - A building the canvas turns (paintKit.js's PK_BOX3 kinds) is now a solid on the GPU, its shape read from its own
+    face as the canvas reads it (`pkBuildingShape`): its walls, its setback tiers or its gabled roof, its plinth on a
+    slope. That is a few dozen triangles a building, against a canvas that painted every building's turned faces afresh
+    each frame.
+  - Its front is its own painted face, drawn once in its unlit colours and kept on the GPU as a tree's sheet is, then lit
+    there. Its other walls carry windows in storeys and bays. Its roof is laid in courses.
+  - Each face is lit by the sun's true way to it (rgSunK, as the land's slopes are), so its shaded side is the side away
+    from the sun. The canvas's turned buildings were lit by a left-or-right guess.
+  - Each face is darkest at its foot. By night its windows, and the dark panes of its painted face, light at random,
+    about half of them.
+  - It hides, and is hidden by, the land and every other thing pixel by pixel.
+  - Kept painted, on a page of the frame's: the pagodas, mosques, round towers, gates, greenhouses, a building fading as
+    it fills the frame.
+  - Next: the roads and paths as draped strips, then the trees as solids in their sheets' style.

@@ -13,12 +13,12 @@
 import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
 import { WK_KINDS, WK_FLYERS, WK_BIRDS, wkAt, wkCount, wkPaint, wkWander, wkNoise } from './wildKit.js';
 import { lkLand, LK_BIOMES, LK_FORESTED } from './landKit.js';
-import { ringGpuReady, ringGpuBatch, ringGpuDraw, ringGpuLandMaps, ringGpuDepth, ringGpuThingBatch, ringGpuThings, ringGpuSheet, ringGpuPutSheet } from './ringGpu.js';
+import { ringGpuReady, ringGpuBatch, ringGpuDraw, ringGpuLandMaps, ringGpuDepth, ringGpuThingBatch, ringGpuMeshBatch, ringGpuThings, ringGpuSheet, ringGpuPutSheet } from './ringGpu.js';
 import { evAt, evGiant, evPaintFx } from './eventKit.js';
 import { rkRegions, rkTownName } from './regionKit.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
-import { pkGlowTo, PK_TREES, pkTree, pkShadowWay, PK_STYLE, pkBuilding, pkRock, PK_STONES, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkRune, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
+import { pkGlowTo, pkBuildingShape, PK_TREES, pkTree, pkShadowWay, PK_STYLE, pkBuilding, pkRock, PK_STONES, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkRune, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // DETAIL (Ruby: "longer view distance with higher detail (low, medium, high, ultra) … The current values represent
@@ -2210,7 +2210,7 @@ function rgPaintLand(x, mk, dk, V){
   //  through it): a building by its width, a boulder by its own size, a prop by its width or a part of its height)
   const radOf = o => { const M0 = W*0.00025; return o.c === 'bldg' ? o.wM*0.6*M0 : o.c === 'board' || o.c === 'henge' ? o.wM*0.5*M0 : o.c === 'rock' ? o.hM*0.95*M0
     : o.c === 'prop' || o.c === 'solid' ? (o.wM ? o.wM*0.55 : (o.hM || 1)*0.45)*M0 : o.c === 'tree' ? (o.hM || 4)*0.06*M0 : 0; };
-  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: radOf(o), tree: o.c === 'tree', draw: l => rgPaintThing(o, l, dd) }); }
+  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: radOf(o), own: o.c === 'tree' || o.c === 'bldg', draw: l => rgPaintThing(o, l, dd) }); }
   // (Ruby: "don't clip objects until they are entirely out of frame": a thing near you is drawn however large it grows,
   //  until it is so large it would fill the frame from edge to edge, or wholly off it; vis() tests the frame itself)
   const nearCut = wh*3;
@@ -2239,6 +2239,9 @@ function rgPaintLand(x, mk, dk, V){
     const fl = on*(V.time && (o.w === 'ruins' || (o.rs & 15) === 5) ? 0.75 + 0.25*Math.sin(FT*Math.PI*2*(0.2 + (o.rs & 7)*0.035) + (o.rs & 255)) : 1);
     const X = f[0], Y = stand(l, X, f[1]) - px(0.6)*big; if(!vis(l, X - px(1), X + px(1), Y - px(2), Y + px(1))) return;
     const lights = V.lightsAt(o.w, o.a, o.z), col = rsMix(o.rs & 2 ? lights[0] : lights[1] || lights[0], AIR, haze*0.5), r = px(0.55 + 0.5*((o.rs >> 3) % 3)/2)*big;
+    // (on the GPU, outside a page of its own: a lit square and its glow as quads of their own)
+    if(GTB && !RG_GLOW_TO){ const c2 = rsMix(col, [255, 255, 255], 0.35); GTB.put(X, Y, r, 0, 0, r, 0, 0, 0, 0, 0, 4, gDz, Math.min(1, nt*1.3)*fl, c2[0]/255, c2[1]/255, c2[2]/255, 0);
+      if((o.rs & 12) === 12){ const a2 = 0.35*nt*on; GTB.put(X, Y, r*5, 0, 0, r*5, 0, 0, 0, 0, 0, 3, gDz, 1, col[0]/255*a2, col[1]/255*a2, col[2]/255*a2, 0); } return; }
     x.fillStyle = rsCss(rsMix(col, [255, 255, 255], 0.35), Math.min(1, nt*1.3)*fl); x.fillRect(X - r, Y - r, r*2, r*2);
     if((o.rs & 12) === 12) rgGlow(x, X, Y, r*5, col, 0.35*nt*on); };
   // WHAT MOVES (Ruby: "robots moving, minor animations"; "longer, smoother paths"; then, 2026-10-22: "humans don't
@@ -2442,17 +2445,23 @@ function rgPaintLand(x, mk, dk, V){
       // (on a slope, level: its floor at its uphill corner's ground, on a stone plinth down to the ground at its lowest
       //  corner and a little into it, so no corner of it hangs in the air)
       const fall = (o.up || 0) + (o.down || 0), pl = fall > 0.25 ? (fall + 0.3)*f[2] : 0, onPl = pl > px(0.6) && !RG_LIGHTFOOT.includes(o.kind);
-      const cb = colsOf(o.w, cday, haze, o), night = 1 - rsSmooth(0.3, 0.7, wday); pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, snow: V.weather === 'snow', lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, smt: ST, ft: FT, windX: smokeAt(o, f), plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
+      const cb = colsOf(o.w, cday, haze, o), night = 1 - rsSmooth(0.3, 0.7, wday);
+      // (on the GPU, a solid where it can be one (rgBldgMesh); else, or faint as it fills the frame, painted on a page)
+      const body = () => pkBuilding(x, X, onPl ? Y - (o.up || 0)*f[2] : Y + h*0.03, h, wd, { ...cb, snow: V.weather === 'snow', lod: lo, view: seen(o, f), mpx: f[2], t: V.time, mt: MT, smt: ST, ft: FT, windX: smokeAt(o, f), plinth: onPl ? pl : 0 }, PK_STYLE[o.w], night, R, rgPx, o.kind);
       // CLOSE BY, its foot (the building's base detailed, Ruby: "close-up versions with details for their base"): a door
       // two metres tall with its step, a lamp beside it lit at night, a planter
-      const m = f[2]; if(m*lo*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine'){
+      const m = f[2], foot2 = () => { if(!(m*lo*2.1 > px(10) && o.kind !== 'arch' && o.kind !== 'needle' && o.kind !== 'pylon' && o.kind !== 'torii' && o.kind !== 'turbine')) return;
         const Rb = mulberry32(o.rs ^ 0x5eed), dx = X + (Rb() - 0.5)*wd*0.5, dw = 1.0*m, dh = 2.1*m;
         x.fillStyle = rsCss(rsMix(cb.dark, BLACK, 0.35)); x.fillRect(dx - dw/2, Y - dh, dw, dh);
         if(night > 0.2){ x.fillStyle = rsCss(cb.glow, 0.5*night); x.fillRect(dx - dw/2 + dw*0.15, Y - dh*0.9, dw*0.7, dh*0.35); }
         x.fillStyle = rsCss(cb.lit); x.fillRect(dx - dw*0.75, Y - m*0.15, dw*1.5, m*0.15);
         pkProp(x, dx + dw*1.3, Y, 3.2*m, cb, 'lamp', mulberry32(o.rs ^ 0x1a3b), rgPx, night);
-        if(Rb() < 0.6){ x.fillStyle = rsCss(cb.dark); x.fillRect(dx - dw*1.9, Y - m*0.5, dw*0.7, m*0.5); for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(rgLit(V, [60, 110, 60], cday, haze, AIR)); x.beginPath(); x.arc(dx - dw*1.55 + (q - 1)*dw*0.2, Y - m*0.6, m*0.22, 0, Math.PI*2); x.fill(); } } }
-      return; }
+        if(Rb() < 0.6){ x.fillStyle = rsCss(cb.dark); x.fillRect(dx - dw*1.9, Y - m*0.5, dw*0.7, m*0.5); for(let q = 0; q < 3; q++){ x.fillStyle = rsCss(rgLit(V, [60, 110, 60], cday, haze, AIR)); x.beginPath(); x.arc(dx - dw*1.55 + (q - 1)*dw*0.2, Y - m*0.6, m*0.22, 0, Math.PI*2); x.fill(); } } };
+      // (on the GPU, a solid where it can be one (rgBldgMesh), its foot's details on a page before it; else, or faint as it
+      //  fills the frame, painted on a page as on the canvas)
+      if(GTB){ if(x.globalAlpha > 0.97 && rgBldgMesh(o, f, { ...cb, snow: V.weather === 'snow' }, cday, haze, night, X, Y, h, wd)){ if(m*lo*2.1 > px(10)) gtPaint([X - wd*0.9, X + wd*0.9, Y - m*4, Y + m*0.4], foot2); return; }
+        gtPaint([X - wd*1.9, X + wd*1.9, Y - h*1.5, Y + Math.max(px(4), pl + h*0.1)], () => { body(); foot2(); }); return; }
+      body(); foot2(); return; }
     if(o.c === 'rock'){ const rr = o.hM*f[2]; if(rr*lodOf(o, f) < px(2) || rr > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]) + rr*Math.min(0.32, slopeAt(o.a, o.z)*0.45); if(!vis(l, X - rr, X + rr, Y - rr, Y, [X - rr*0.5, X + rr*0.5, Y - rr*0.4, Y])) return;
       const st = rgStoneOf(V, o.a, o.z, f[3]); pkRock(x, X, Y, rr, rgLit(V, rsMix(PK_STONES[st], V.land, 0.08), cday, haze, AIR), LT, R, rgPx, st); return; }
@@ -3016,7 +3025,7 @@ function rgPaintLand(x, mk, dk, V){
   // (the pages packed in shelves, each shelf of one height to the next quarter (as WebRender's glyph atlases are), so a
   //  flat rock and a tall tower don't share one; and if every page is full, a thing is painted smaller rather than lost
   //  (Ruby, 2026-10-26: whole buildings dropping out of a film's frames, the pages full at 1080 lines))
-  let GTB = null, gDz = 0, gNP = 0; const FA = RG_FA;
+  let GTB = null, MB = null, gDz = 0, gNP = 0; const FA = RG_FA;
   const gtAlloc = (w, h) => { const S = FA.S, hb = h <= 16 ? 16 : Math.min(S, Math.ceil(16*Math.pow(1.25, Math.ceil(Math.log(h/16)/Math.log(1.25)))));
     for(let L = 0; L < gNP; L++){ const pg = FA.pages[L]; for(const sh of pg.shelves) if(sh.h === hb && sh.x + w <= S){ const r = { L, x: sh.x, y: sh.y }; sh.x += w; pg.wide = Math.max(pg.wide, sh.x); return r; } }
     for(let L = 0; L < RG_FA_MAX; L++){ if(L >= gNP){ if(!FA.pages[L]){ const c = document.createElement('canvas'); c.width = c.height = S; FA.pages[L] = { c, x: c.getContext('2d', { willReadFrequently: true }), used: 0, wide: 0, shelves: [] }; } gNP = L + 1; }
@@ -3033,6 +3042,56 @@ function rgPaintLand(x, mk, dk, V){
     const Xp = x; x = A; pkGlowTo(G); RG_GLOW_TO = G; try { fn(); } finally { x = Xp; A.restore(); pkGlowTo(null); RG_GLOW_TO = null; } };
   const gtEll = (cx, cy, rx, ry, rot, col, a) => { if(!(rx > 0.3 && ry > 0.2 && a > 0.004)) return; const cr = Math.cos(rot), sr = Math.sin(rot);
     GTB.put(cx, cy, cr*(rx + 0.5), sr*(rx + 0.5), -sr*(ry + 0.5), cr*(ry + 0.5), 0, 0, 0, 0, 0, 2, gDz, a, col[0]/255, col[1]/255, col[2]/255, 0); };
+  // A BUILDING AS A SOLID (Ruby, 2026-10-26: "You SHOULD do the same for roads and buildings"; docs/prior-art/
+  // ringworld-gpu.md §5): its shape read from its own face as the canvas reads it (pkBuildingShape), stood in the world
+  // facing its own way: its walls and roof as triangles with their own depth, each face lit by the sun as the land's
+  // slopes are (rgSunK) and by the day and haze as everything is; its face, as painted, on its front (its sheet drawn
+  // once in its unlit colours, kept on the GPU as a tree's is); windows on its other walls; its shadow cast on the ground.
+  // False where it can't be a solid (the canvas paints it)
+  const rgBldgMesh = (o, f, cb, cday, haze, night, X, Y, hS, wS) => {
+    const SH = pkBuildingShape(o.hM, o.wM, cb, PK_STYLE[o.w], mulberry32(o.rs), rgPx, o.kind); if(!SH) return false;
+    const M1 = W*0.00025, fa = o.face ?? (o.rs % 62832)/10000, fc = Math.cos(fa), fs = Math.sin(fa), hM = o.hM, wM = o.wM, e0 = f[3] + (o.up || 0)*M1;
+    const w2 = SH.a*wM, D = w2*2*SH.dk, ar = o.a - A0E, ca = Math.cos(ar), sa = Math.sin(ar), upS = -(ca*SUN[0] + sa*SUN[1]);
+    const P = (u, v, hh) => { const a = o.a + M1*(u*fc - v*fs), z = o.z + M1*(u*fs + v*fc), p = at(a, z, e0 + hh*M1); return p && [p[0], p[1], gdz(Math.max(d0, Math.hypot(a - A0E, z - L.z0) - 0.3*M1))]; };
+    // (the sun on a face whose outward way is (nu along its depth, nv across it) tipped up by tilt, from -1 (away from it)
+    //  to 1 (full to it), as the canvas lights a turned building's faces but by the sun's true way round: a wall by how
+    //  far round the sun stands from it, whatever its height; a roof by its slope's light against flat ground's)
+    const up3 = [-ca, -sa, 0], sUp = SUN[0]*up3[0] + SUN[1]*up3[1], sH = [SUN[0] - sUp*up3[0], SUN[1] - sUp*up3[1], SUN[2]], sHl = Math.hypot(...sH) || 1, dayK = rsSmooth(-0.02, 0.12, upS)*(0.55 + 0.45*Math.min(1, sHl));   // (a high sun parts the lit side from the shaded less)
+    const kOf = (nu, nv, tilt = 0) => { const na = nu*fc - nv*fs, nz = nu*fs + nv*fc, ct = Math.cos(tilt), st = Math.sin(tilt), n3 = [-na*sa*ct - ca*st, na*ca*ct - sa*st, nz*ct];
+      if(!tilt) return dayK*(n3[0]*sH[0] + n3[1]*sH[1] + n3[2]*sH[2])/sHl;
+      return dayK*rgClamp((rgSunK(upS, n3[0]*SUN[0] + n3[1]*SUN[1] + n3[2]*SUN[2]) - 1)*0.75 + 0.5)*2 - dayK; };
+    const kL = 0.2456 + 0.7544*cday, nW = 0.7544*(1 - cday), gl = rsMix(cb.glow, [255, 255, 255], 0.3), nt = rsSmooth(0.2, 0.6, night), seed = (o.rs % 9973) + 0.5;
+    const vx = (p, uv, mu, mv, kind, layer, kk, col) => [p[0], p[1], p[2], uv[0], uv[1], mu, mv, kind, layer, kk, seed, col[0]/255, col[1]/255, col[2]/255, haze, kL, nW, gl[0]/255, gl[1]/255, gl[2]/255, nt, 0];
+    // (a face of four corners, each [u, v, height] with its place on the wall in metres and on the sheet)
+    const face4 = (C, kind, kk, col, layer = 0) => { const Q = C.map(c => P(c[0], c[1], c[2])); if(Q.some(q => !q)) return; const V4 = Q.map((q, k) => vx(q, C[k][5] || [0, 0], C[k][3], C[k][4], kind, layer, kk, col));
+      MB.tri(V4[0], V4[1], V4[2]); MB.tri(V4[0], V4[2], V4[3]); };
+    const wall = SH.wall, roof = cb.snow ? rsMix(SH.roof, [236, 240, 248], 0.72) : SH.roof, stone = [150, 144, 134];
+    let z0 = hM*SH.lift;
+    // (on a slope, its plinth of stone down into the ground)
+    const fall = (o.up || 0) + (o.down || 0); if(fall > 0.25){ const pd = -(fall + 0.3); for(const [nu, nv, u0, v0, u1, v1] of [[1, 0, D/2, -w2, D/2, w2], [-1, 0, -D/2, w2, -D/2, -w2], [0, 1, D/2, w2, -D/2, w2], [0, -1, -D/2, -w2, D/2, -w2]])
+      face4([[u0, v0, pd, 0, pd], [u1, v1, pd, 1, pd], [u1, v1, 0, 1, 0], [u0, v0, 0, 0, 0]], 3, kOf(nu, nv), stone); }
+    SH.tiers.forEach((T, i) => { const a = T.a*wM, Dt = D*T.a*wM/w2, zt = hM*T.z, last = i === SH.tiers.length - 1;
+      // (its sides and back, with windows; the front closed behind its painted face)
+      face4([[Dt/2, a, z0, 0, 0], [-Dt/2, a, z0, Dt, 0], [-Dt/2, a, zt, Dt, zt - z0], [Dt/2, a, zt, 0, zt - z0]], 1, kOf(0, 1), wall);
+      face4([[-Dt/2, -a, z0, 0, 0], [Dt/2, -a, z0, Dt, 0], [Dt/2, -a, zt, Dt, zt - z0], [-Dt/2, -a, zt, 0, zt - z0]], 1, kOf(0, -1), wall);
+      face4([[-Dt/2, a, z0, 0, 0], [-Dt/2, -a, z0, 2*a, 0], [-Dt/2, -a, zt, 2*a, zt - z0], [-Dt/2, a, zt, 0, zt - z0]], 1, kOf(-1, 0), wall);
+      face4([[Dt/2 - 0.05, -a, z0, 0, 0], [Dt/2 - 0.05, a, z0, 0, 0], [Dt/2 - 0.05, a, zt, 0, 0], [Dt/2 - 0.05, -a, zt, 0, 0]], 3, kOf(1, 0), wall);
+      if(SH.eave){ const Hs = hM*SH.eave, rg = hM*SH.ridge, ov = wM*0.04, sl = Math.hypot(a*1.08, rg - Hs), tl = Math.atan2(a*1.08, rg - Hs);
+        for(const sg of [-1, 1]) face4([[-Dt/2 - ov, sg*a*1.08, Hs - hM*0.02, 0, 0], [Dt/2 + ov, sg*a*1.08, Hs - hM*0.02, Dt, 0], [Dt/2 + ov, 0, rg, Dt, sl], [-Dt/2 - ov, 0, rg, 0, sl]], 2, kOf(0, sg, tl), roof);
+        const B3 = [P(-Dt/2, a, Hs), P(-Dt/2, -a, Hs), P(-Dt/2, 0, rg)]; if(B3.every(Boolean)){ const k = kOf(-1, 0); MB.tri(...B3.map((q, j) => vx(q, [0, 0], 0, 0, 3, 0, k, wall))); } }
+      else face4([[-Dt/2, -a, zt, 0, 0], [Dt/2, -a, zt, 0, 0], [Dt/2, a, zt, 0, 0], [-Dt/2, a, zt, 0, 0]], 3, kOf(0, 0, Math.PI/2), rsMix(rsMix(wall, [255, 255, 255], 0.2), [170, 166, 156], 0.3));
+      z0 = zt; });
+    // (its face as painted, on its front plane: its sheet drawn once, in steps of the square root of two in size)
+    const Hpx = Math.min(768, rgStep2(Math.max(hS, px(24)))), sw = Math.ceil(2*wM/hM*Hpx) + 4, sh = Math.ceil(1.55*Hpx) + 4, ox = sw/2, oy = sh - 2 - 0.04*Hpx;
+    const key = ['B', o.rs, o.kind, o.w, Hpx.toFixed(1), cb.snow ? 's' : ''].join('|');
+    const uv = ringGpuSheet(key) || ringGpuPutSheet(key, rgSprite(key, sw, sh, q => { q.translate(ox, oy); SH.paint(q, Hpx); }));
+    if(uv && uv[7]){ const k = hM/Hpx, vL = (uv[5] - ox)*k, vR = (uv[5] + uv[7] - ox)*k, hT = (oy - uv[6])*k, hB = (oy - uv[6] - uv[8])*k, Du = D/2 + 0.02;
+      // (which way across the front is the page's left to right, as it is seen from before it)
+      const A0 = P(Du, -1, 0), A1 = P(Du, 1, 0), sgn = A0 && A1 && (A1[0] - A0[0]) < 0 ? -1 : 1, vl = sgn > 0 ? vL : -vL, vr = sgn > 0 ? vR : -vR;
+      face4([[Du, vl, hB, 0, hB, [uv[1], uv[4]]], [Du, vr, hB, vR - vL, hB, [uv[3], uv[4]]], [Du, vr, hT, vR - vL, hT, [uv[3], uv[2]]], [Du, vl, hT, 0, hT, [uv[1], uv[2]]]], 0, kOf(1, 0), wall, uv[0]); }
+    // (and its shadow on the ground, under it and away from the sun)
+    if(cb.shv){ const [dx, dy] = pkShadowWay(cb, Math.min(hS, wS*1.6)); GTB.put(X + dx/2, Y + dy/2, wS*0.55, 0, dx/2, dy/2, 0, 0, 0, 0, 0, 4, gDz, 0.22, ...rsMix(cb.dark, BLACK, 0.5).map(v => v/255), 0); }
+    return true; };
   // (and each corner's depth, so the things laid after are hidden by the land nearer than them pixel by pixel; the water,
   //  its shore and glints at their cell's depth, gD)
   const DZF = reach*4, gdz = d => ringGpuDepth(d, d0, DZF); let gD = 1;
@@ -3107,11 +3166,11 @@ function rgPaintLand(x, mk, dk, V){
     if(FA.S !== S){ FA.S = S; FA.pages.length = 0; } for(const pg of FA.pages){ if(pg.used > 0) pg.x.clearRect(0, 0, S, Math.min(S, pg.used + 2)); pg.used = 0; pg.wide = 0; pg.shelves = []; }
     // (the great arches and the shells over the band, beyond everything and as wide as the sky, laid on the canvas first)
     const ARCHY = { sa: 1, br: 1, sh: 1 }; for(const it of items) if(it.t.o && ARCHY[it.t.o.kind]) canvasItem(it);
-    GTB = ringGpuThingBatch(); gNP = 0;
+    GTB = ringGpuThingBatch(); MB = ringGpuMeshBatch(); gNP = 0;
     for(const it of items){ const t = it.t; gDz = gdz(t.dd - (t.rad || 0) - Math.min(0.8*cellNear(t.dd), 0.02*t.dd)); if(t.o){ if(!ARCHY[t.o.kind]) drawWork(t.o, t.l); continue; } if(!t.ok) continue; cur = t;
-      if(t.tree) t.draw(t.l);
+      if(t.own) t.draw(t.l);   // (a tree or a building lays its own quads and solids, and its pages where it needs them)
       else if(t.box){ const B = t.box, pd = px(4) + 0.12*Math.max(B[1] - B[0], B[3] - B[2]); gtPaint([B[0] - pd, B[1] + pd, B[2] - pd, B[3] + pd], () => t.draw(t.l)); } }
-    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, gNP) }, { air: AIR }); GTB = null;
+    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, gNP) }, { air: AIR }, MB); GTB = null; MB = null;
     if(tcv) x.drawImage(tcv, 0, 0); else gpuLaid = false; }
   if(!gpuLaid) for(const it of items) canvasItem(it);
   function canvasItem(it){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;

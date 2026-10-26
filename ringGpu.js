@@ -18,7 +18,7 @@
  * browser) or only a software emulator (slower than the canvas), the painter draws on the canvas as it always has.
  */
 let DEV = null, PIPE = null, UBUF = null, BIND = null, FMT = null, OPENING = null, SOFT_OK = false, ON = true, DEPTH = null;
-let TPIPE = null, SPIPE = null, TUBUF = null, TBIND = null, SAMP = null, TA = null, FA = null, FA_S = 0, FA_L = 0;
+let TPIPE = null, SPIPE = null, MPIPE = null, TUBUF = null, TBIND = null, SAMP = null, TA = null, FA = null, FA_S = 0, FA_L = 0;
 const CANVASES = new Map();
 let RG_GPU_WHY = '';
 /** Why the GPU land is not open (a shader's errors), for the tools. */
@@ -66,6 +66,15 @@ export function ringGpuInit(){
           { shaderLocation: 3, offset: 24, format: 'float32x2' }, { shaderLocation: 4, offset: 32, format: 'float32x2' }, { shaderLocation: 5, offset: 40, format: 'float32x4' }, { shaderLocation: 6, offset: 56, format: 'float32x4' }] }] },
         fragment: { module: tmod, entryPoint: 'tfs', targets: [{ format: FMT, blend: { color: { srcFactor: 'one-minus-dst', dstFactor: 'one' }, alpha: { srcFactor: 'zero', dstFactor: 'one' } } }] },
         primitive: { topology: 'triangle-list' }, depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less-equal' } });
+      // (and the buildings: true solids, their triangles with depth of their own, so they hide one another and what stands
+      //  behind them pixel by pixel)
+      MPIPE = dev.createRenderPipeline({ layout: TLAY,
+        vertex: { module: tmod, entryPoint: 'mvs', buffers: [{ arrayStride: RG_MSTRIDE*4, attributes: [
+          { shaderLocation: 0, offset: 0, format: 'float32x2' }, { shaderLocation: 1, offset: 8, format: 'float32' }, { shaderLocation: 2, offset: 12, format: 'float32x2' },
+          { shaderLocation: 3, offset: 20, format: 'float32x2' }, { shaderLocation: 4, offset: 28, format: 'float32x4' }, { shaderLocation: 5, offset: 44, format: 'float32x4' },
+          { shaderLocation: 6, offset: 60, format: 'float32x2' }, { shaderLocation: 7, offset: 68, format: 'float32x3' }, { shaderLocation: 8, offset: 80, format: 'float32x2' }] }] },
+        fragment: { module: tmod, entryPoint: 'mfs', targets: [{ format: FMT, blend: PREMUL }] },
+        primitive: { topology: 'triangle-list' }, depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less-equal' } });
       TUBUF = dev.createBuffer({ size: 48, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       SAMP = dev.createSampler({ magFilter: 'linear', minFilter: 'linear' });
       dev.lost.then(() => { DEV = null; OPENING = null; CANVASES.clear(); DEPTH = null; TA = null; FA = null; });
@@ -122,7 +131,7 @@ export function ringGpuDraw(batch, ww, wh, o = {}){
 // moment's light and haze, so its colour runs smoothly with the day and a sheet serves every frame; any other thing is
 // painted this frame onto a page of its own (the frame's atlas) as the canvas painted it; a tree's shadow is an ellipse
 // worked out here. An instance: its middle, its two half-axes, the corners of its picture, then [atlas page, kind (0 a
-// tree, 1 a painted thing, 2 a shadow, 3 a glow), depth, alpha], then [the light's gain, the night's share, the haze, ·]
+// tree, 1 a painted thing, 2 a shadow, 3 a glow, 4 a flat shadow, a parallelogram), depth, alpha], then [the light's gain, the night's share, the haze, ·]
 // for a tree, the shadow's colour, or the glow's (its strength in it)
 export const RG_TSTRIDE = 18;
 /** A growable list of the things' quads. */
@@ -159,9 +168,22 @@ export function ringGpuPutSheet(key, cv){
     const uv = [row.L, ox/TA_S, oy/TA_S, (ox + w)/TA_S, (oy + h)/TA_S, x0, y0, w, h]; A.map.set(key, { row, uv, seen: A.frame }); return uv;
   } catch(e){ RG_GPU_WHY = String(e); return null; } }
 
-/** Lay the things' quads over the land's depth, on a canvas of their own; atlas: the frame's pages (canvases, side S,
- * how much of each is used); light: { air, night } (0..255). Returns the canvas, or null. */
-export function ringGpuThings(batch, ww, wh, atlas, light){
+// THE BUILDINGS AS SOLIDS (Ruby, 2026-10-26: "You SHOULD do the same for roads and buildings"; docs/prior-art/
+// ringworld-gpu.md §5): each a few boxes and roof slopes, its triangles laid with their own depth before the quads. A
+// vertex: x, y (page), depth, u, v (on a sheet: its face as painted), its place on its wall in metres (along, up), then
+// [kind (0 its painted face, 1 a wall with windows, 2 a roof in courses, 3 plain), sheet page, the sun's light on its
+// face (-1 away from it to 1 full to it), a seed], [its colour unlit (0..1), the haze], [the light's gain, the night's share], its windows'
+// light (0..1), [how dark the night is, ·]
+export const RG_MSTRIDE = 22;
+/** A growable list of the buildings' triangles. */
+export function ringGpuMeshBatch(){ let a = new Float32Array(RG_MSTRIDE*3*1024), n = 0;
+  return { get n(){ return n; }, get data(){ return a; },
+    tri(p0, p1, p2){ if(n + RG_MSTRIDE*3 > a.length){ const b = new Float32Array(a.length*2); b.set(a); a = b; } for(const p of [p0, p1, p2]) for(let k = 0; k < RG_MSTRIDE; k++) a[n++] = p[k] || 0; } }; }
+
+/** Lay the things' quads over the land's depth, on a canvas of their own, the buildings' solids first (mesh, a
+ * ringGpuMeshBatch, or none); atlas: the frame's pages (canvases, side S, how much of each is used); light: { air,
+ * night } (0..255). Returns the canvas, or null. */
+export function ringGpuThings(batch, ww, wh, atlas, light, mesh){
   if(!ringGpuReady() || !DEPTH || DEPTH.width !== ww || DEPTH.height !== wh) return null;
   try {
     const A = rgTreeAtlas(); A.frame++;
@@ -177,11 +199,13 @@ export function ringGpuThings(batch, ww, wh, atlas, light){
     const cv = rgCanvasOf('T', ww, wh), nI = batch.n/RG_TSTRIDE;
     const enc = DEV.createCommandEncoder(), pass = enc.beginRenderPass({ colorAttachments: [{ view: cv.ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 0 }, storeOp: 'store' }],
       depthStencilAttachment: { view: DEPTH.createView(), depthLoadOp: 'load', depthStoreOp: 'store' } });
+    let mb = null; if(mesh && mesh.n > 0){ mb = DEV.createBuffer({ size: mesh.n*4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }); DEV.queue.writeBuffer(mb, 0, mesh.data, 0, mesh.n);
+      pass.setBindGroup(0, TBIND); pass.setPipeline(MPIPE); pass.setVertexBuffer(0, mb); pass.draw(mesh.n/RG_MSTRIDE); }
     let ib = null; if(nI > 0){ ib = DEV.createBuffer({ size: batch.n*4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }); DEV.queue.writeBuffer(ib, 0, batch.data, 0, batch.n);
       pass.setBindGroup(0, TBIND); pass.setVertexBuffer(0, ib);
       // (in runs: the glows with their own blending, the rest with theirs, in the order they came)
       const D = batch.data; let i0 = 0, cur = D[11] > 2.5; for(let i = 1; i <= nI; i++){ const g = i < nI && D[i*RG_TSTRIDE + 11] > 2.5; if(i === nI || g !== cur){ pass.setPipeline(cur ? SPIPE : TPIPE); pass.draw(6, i - i0, 0, i0); i0 = i; cur = g; } } }
-    pass.end(); DEV.queue.submit([enc.finish()]); if(ib) ib.destroy();
+    pass.end(); DEV.queue.submit([enc.finish()]); if(ib) ib.destroy(); if(mb) mb.destroy();
     return cv.c;
   } catch(e){ RG_GPU_WHY = String(e); return null; }
 }
@@ -202,11 +226,41 @@ struct TO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) 
   var o: TO; o.pos = vec4f(P.x/tu.size.x*2.0 - 1.0, 1.0 - P.y/tu.size.y*2.0, lm.z, 1.0); o.uv = mix(uv0, uv1, q*0.5 + 0.5); o.q = q; o.lm = lm; o.p = p; return o; }
 @fragment fn tfs(i: TO) -> @location(0) vec4f {
   let L = i32(i.lm.x + 0.5); let st = textureSample(ta, samp, i.uv, L); let sf = textureSample(fa, samp, i.uv, L);
-  let r = length(i.q); let aa = max(fwidth(r), 1e-4); let al = i.lm.w;
+  let r = length(i.q); let aa = max(fwidth(r), 1e-4); let al = i.lm.w; let e = 1.0 - max(abs(i.q.x), abs(i.q.y)); let fe = max(fwidth(e), 1e-4);
   if(i.lm.y < 0.5){ if(st.a < 0.004){ discard; } let c = st.rgb/st.a; let lit = mix(i.p.x*c + i.p.y*tu.night.rgb, tu.air.rgb, i.p.z); return vec4f(lit, 1.0)*(st.a*al); }
   if(i.lm.y < 1.5){ if(sf.a < 0.004){ discard; } return sf*al; }
+  if(i.lm.y > 3.5){ let a4 = clamp(e/fe, 0.0, 1.0)*al; if(a4 < 0.004){ discard; } return vec4f(i.p.rgb*a4, a4); }
   if(i.lm.y > 2.5){ let g = clamp(1.0 - r, 0.0, 1.0); if(g <= 0.0){ discard; } return vec4f(i.p.rgb*g, 0.0); }
   let a = clamp((1.0 - r)/aa, 0.0, 1.0)*al; if(a < 0.004){ discard; } return vec4f(i.p.rgb*a, a); }
+// THE BUILDINGS: a face lit by the sun as the canvas lights a turned building's (paintKit.js's pkTurned: toward its dark
+// on the side away from the sun, toward its light on the side to it), then by the day and the haze (rgLit); its windows a grid of storeys and bays, dark
+// glass by day, some lit by night; its painted face's dark panes lit so too; a roof laid in courses
+struct MO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) m: vec2f, @location(2) @interpolate(flat) a: vec4f, @location(3) @interpolate(flat) c: vec4f,
+  @location(4) @interpolate(flat) l: vec2f, @location(5) @interpolate(flat) g: vec3f, @location(6) @interpolate(flat) n: vec2f };
+@vertex fn mvs(@location(0) p: vec2f, @location(1) dz: f32, @location(2) uv: vec2f, @location(3) m: vec2f, @location(4) a: vec4f, @location(5) c: vec4f, @location(6) l: vec2f, @location(7) g: vec3f, @location(8) n: vec2f) -> MO {
+  var o: MO; o.pos = vec4f(p.x/tu.size.x*2.0 - 1.0, 1.0 - p.y/tu.size.y*2.0, dz, 1.0); o.uv = uv; o.m = m; o.a = a; o.c = c; o.l = l; o.g = g; o.n = n; return o; }
+fn mhash(p: vec2f, s: f32) -> f32 { return fract(sin(dot(p, vec2f(127.1, 311.7)) + s*0.013)*43758.5453); }
+fn mshade(c: vec3f, kk: f32) -> vec3f { let k = clamp(kk, -1.0, 1.0);
+  // (its shaded side softened by the sky's light on it)
+  if(k < 0.0){ return mix(c, c*0.7, -k*0.85); } return mix(c, mix(c, vec3f(1.0, 0.965, 0.886), 0.28), k*0.85); }
+@fragment fn mfs(i: MO) -> @location(0) vec4f {
+  let L = i32(i.a.y + 0.5); let st = textureSample(ta, samp, i.uv, L); let fw = max(fwidth(i.m), vec2f(1e-4));
+  let kind = i.a.x; var base = i.c.rgb; var al = 1.0; var win = 0.0; var glass = 0.0;
+  // (the windows: a storey every 3.2 m, a bay every 3 m, each pane 1.2 m by 1.5 m, its edges soft by a pixel)
+  let q = i.m/vec2f(3.0, 3.2); let f = fract(q) - vec2f(0.5, 0.55); let id = floor(q);
+  let inside = clamp((0.2 - abs(f.x))*3.0/fw.x, 0.0, 1.0)*clamp((0.234 - abs(f.y))*3.2/fw.y, 0.0, 1.0);
+  let on = select(0.0, 1.0, mhash(id, i.a.w) < 0.45);
+  if(kind < 0.5){ if(st.a < 0.35){ discard; } base = st.rgb/st.a; al = st.a;
+    let lum = dot(base, vec3f(0.3, 0.59, 0.11)); let wl = dot(i.c.rgb, vec3f(0.3, 0.59, 0.11)); glass = clamp((wl*0.62 - lum)/(wl*0.2 + 0.02), 0.0, 1.0);
+    let q2 = i.m/vec2f(1.5, 3.2); win = glass*select(0.0, 1.0, mhash(floor(q2), i.a.w) < 0.45); }
+  else if(kind < 1.5){ glass = inside; win = inside*on; base = mix(base, base*0.55, inside); }
+  else if(kind < 2.5){ let cr = fract(i.m.y/0.42); let line = 1.0 - clamp(abs(cr - 0.08)/(fw.y/0.42*1.2 + 0.06), 0.0, 1.0); base = mix(base, base*0.72, line*0.6); }
+  // (darkest at its foot, as a painter darkens a body low and lightens it high: the ground's shade on its lowest metres)
+  if(kind < 1.5 || kind > 2.5){ base = base*mix(0.8, 1.0, clamp(i.m.y/2.5, 0.0, 1.0)); }
+  var c = mshade(base, i.a.z); c = mix(i.l.x*c + i.l.y*tu.night.rgb, tu.air.rgb, i.c.w);
+  c = mix(c, mix(c, tu.air.rgb, 0.25), glass*0.4*(1.0 - i.n.x));
+  c = mix(c, i.g, win*i.n.x);
+  return vec4f(c, 1.0)*al; }
 `;
 
 // THE SHADER: the vertex's place on the page; the fragment's colour, the ground's paint laid over it as the canvas lays

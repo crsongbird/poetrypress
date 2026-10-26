@@ -1272,6 +1272,20 @@ function pkTurned(x, X, Y, h, wdt, c, R0, px, night, o){
   if(front) crown();
   return true;
 }
+// THE BUILDING AS A SOLID (the GPU's way, stepsRing.js; Ruby, 2026-10-26: "You SHOULD do the same for roads and
+// buildings"): its shape as pkTurned reads it from the proof of its face (its half-width a and depth dk as shares of its
+// width, its eaves and ridge or its setback tiers as shares of its height, how high it stands on pillars), its wall's and
+// roof's own unlit colours, and a painter for its face in those colours (paint(q, H): drawn at the origin, its foot there,
+// H pixels high, every window dark: the GPU lights them by night). Null for what pkTurned does not turn.
+export function pkBuildingShape(h, wdt, c, style, R0, px, kind0){
+  const B = PK_BOX3[kind0]; if(!B || !c.raw || kind0 === 'greenhouse') return null; const [dk, eave0, roofM] = B;
+  const face = (q, cc, R, hh = h, ww = wdt, nt = 0) => pkBuilding(q, 0, 0, hh, ww, cc, style, nt, R, px, kind0);
+  const v0 = R0(), R1 = () => v0, pr = pkFaceProof(face, c, R1, h, wdt, eave0, 'b|' + kind0 + '|' + style + '|' + v0 + '|' + px(100).toFixed(3), px);
+  const ends = kind0 === 'row', eave = eave0 ? ((!ends && pr.eave) || eave0) : 0, ridge = (!ends && pr.ridge) || 1, a = pr.a || 0.5;
+  const raw = { ...c, mat: m0 => { const m = c.raw(m0); return { body: m, lit: pkMix(m, PK_WHITE, 0.28), dark: pkMix(m, PK_BLACK, 0.42) }; }, body: c.rawBody || c.body, lit: c.rawLit || c.lit, dark: c.rawDark || c.dark };
+  return { a, dk, eave, ridge, tiers: eave ? [{ z: eave, a }] : (pr.tiers || [{ z: 0.97, a }]), lift: pr.lift || 0, v0,
+    wall: pr.wall || raw.body, roof: pr.roof || (roofM ? c.raw(roofM) : pkMix(pkMix(raw.body, raw.lit, 0.55), PK_CONCRETE, 0.25)), glassy: false,
+    paint: (q, H) => face(q, { ...raw, view: null, vdep: 1e-6, nocast: true, unlit: true, lod: 1 }, R1, H, H*wdt/h, 0) }; }
 // THE ROOF'S CLUTTER (Ruby: "minor variations on buildings"; docs/prior-art/ringworld-motion-and-variety.md §7.1): on a
 // flat roof from X0 to X1 at top, now and then aerials, a dish, the boxes of its plant; drawn from a stream of its own
 // (R), so adding them changed nothing else on the building

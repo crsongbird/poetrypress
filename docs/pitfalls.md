@@ -119,5 +119,10 @@ Mistakes made once, so they aren't made twice. Moved from AGENTS.md §10; skim i
 - **Measure on the right machine.** This sandbox has one core and no GPU.
   Parallel workers and shaders can't show their gains here, and timing
   harnesses lie easily. Count events rather than infer them.
+- **No suite compiles the WGSL.** Node has no WebGPU, so a broken shader in
+  ringGpu.js passes every suite and quietly drops the browser back to the canvas.
+  A `//` comment slipped into a one-line WGSL function once commented out its
+  closing brace. After any shader edit, run `node tools/gpu-ring.mjs`: it prints
+  the compiler's errors and says whether WebGPU opened.
 
 ---

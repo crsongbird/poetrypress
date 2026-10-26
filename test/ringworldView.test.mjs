@@ -114,6 +114,14 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   const T = G.ringGpuThingBatch(); for(let k = 0; k < 3000; k++) T.put(k, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, k % 4, 0.5, 1, 0, 0, 0, 0);
   check('the GPU\'s quads for the things keep their order, and without WebGPU the canvas paints them', T.n === 3000*G.RG_TSTRIDE && T.data[2999*G.RG_TSTRIDE] === 2999 && T.data[2999*G.RG_TSTRIDE + 11] === 3
     && G.ringGpuThings(T, 64, 64, { S: 2048, pages: [] }, {}) === null && G.ringGpuSheet('x') === null && G.ringGpuPutSheet('x', null) === null && G.ringGpuLandMaps() === null);
+  // (the buildings' solids: kept in order as they grow; a turned building's shape read as the canvas reads it, a gabled
+  //  one with its ridge over its eaves, and none for a building the canvas does not turn)
+  const MB = G.ringGpuMeshBatch(), mv = k => Array.from({ length: G.RG_MSTRIDE }, (_, j) => j ? 0.5 : k); for(let k = 0; k < 2000; k++) MB.tri(mv(k), mv(k + 1), mv(k + 2));
+  const PK = await import('../paintKit.js'), cc = { body: [180, 170, 150], lit: [220, 210, 190], dark: [90, 80, 70], glow: [255, 220, 160], sd: 1, raw: m => m, rawBody: [180, 170, 150], rawLit: [220, 210, 190], rawDark: [90, 80, 70] };
+  const cot = PK.pkBuildingShape(7, 9, cc, 'village', mulberry32(5), v => v, 'cottage'), flat = PK.pkBuildingShape(30, 12, cc, 'city', mulberry32(6), v => v, 'brick');
+  check('the buildings\' solids keep their triangles, and a building is turned into a solid as the canvas turns it', MB.n === 2000*3*G.RG_MSTRIDE && MB.data[1999*3*G.RG_MSTRIDE] === 1999
+    && cot && cot.eave > 0 && cot.ridge > cot.eave && cot.a > 0.15 && cot.a < 1.2 && flat && !flat.eave && flat.tiers.length >= 1 && typeof cot.paint === 'function'
+    && PK.pkBuildingShape(7, 9, cc, 'village', mulberry32(5), v => v, 'no-such-kind') === null);
   // (depth by one over the distance, as a camera's: even across a triangle of the land seen in perspective, the near given the room)
   check('depth runs from the eye to the farthest by one over the distance', G.ringGpuDepth(1, 1, 1000) === 0 && G.ringGpuDepth(1000, 1, 1000) === 1 && Math.abs(G.ringGpuDepth(2, 1, 1000) - 0.5005) < 0.001 && G.ringGpuDepth(5000, 1, 1000) === 1); }
 

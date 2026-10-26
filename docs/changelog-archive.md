@@ -2,6 +2,29 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Pleiades–Electra (2026-10-25)
+
+- The Ringworld's sun casts the land's shadows now: hills and the rim walls shade what lies behind them from the sun, the
+  shadows long and soft-edged at dawn and dusk, sweeping across the band as the sun goes down. Trees, creatures,
+  buildings and fields standing in a hill's shadow are darkened with it.
+- A shadow's edge, a forest's edge or a field's runs smoothly over the land, never in steps; the ground at your feet is
+  drawn far more finely.
+- By night street lamps lay pools of light on the ground about them.
+- Boulders are of five stones, one to a region: rounded, speckled granite; blocky sandstone with its beds laid level;
+  dark basalt in columns; pale, pitted limestone; slate in tilted slabs. A boulder on a slope is set into it.
+- In the neon world each district has its own pair of neons, and its ground leans faintly to their hue.
+- Glowing trees keep their glow close about their crowns, and there are fewer of them in the neon world.
+
+### Under the hood
+- `litAt` walks toward the sun over the drawn land from each corner, thing and field. A corner's light is kept with the
+  mesh for that sun.
+- `fillTri` shades a triangle exactly between its corners' colours with one linear gradient laid along the way the
+  colour changes. A cell whose corners differ is drawn as two of them, and so is a field's wash.
+- `rgStoneOf` chooses a region's stone; `pkRock` takes the stone (`PK_STONES`) and shapes and marks the boulder by it,
+  its marks clipped to its outline. `slopeAt` sets things into slopes.
+- `RG_NEON_DISTRICTS` and `lightsAt` give the neon world its districts' lights.
+- The Ringworld's fingerprint updated (its light and stones, intended).
+
 ## Pleiades–Taygeta (2026-10-25)
 
 - The Ringworld's land is generated now, the same land however the camera looks at it. Each seed lays real landmasses:
