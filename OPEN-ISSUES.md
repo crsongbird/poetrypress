@@ -101,6 +101,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
+  - RUBY'S NOTES (2026-10-26), what is left: the GPU path in WebGPU (below); many objects lit poorly, and billboards to
+    become 3D objects; the reflections; robots fighting each other and mages, robots hunting wildlife, humans in groups
+    walking to real destinations, wildlife meeting each other, the kneeling giant's head firing a guardian's laser; a
+    look at a PS1/PS2 style (vertex snapping, affine textures, radiance cascades) for the game engine build.
   - THE DRONE SHOT, what is left: more flights (a dronie flying back and up, a rocket straight up, an orbit round the
     subject, a flight that follows a road or a river), banking into a turn; the far land's painterly height (exf) is by the
     eye's distance, so the far ranges change their height a little as a long flight nears them; a film's frames are still

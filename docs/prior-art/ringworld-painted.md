@@ -64,3 +64,29 @@ Ruby's order, LIGHT: "things' own shadows cast on the land by where the sun stan
   falling away is drawn with its thing, after what stands farther, so it is held short (an eighth of the thing's height
   up the page, shortened along its own way) rather than lie over them. A tree's shadow is laid under its kept sheet,
   never baked into it, with a tight contact shadow at its foot. By night the old shadow away from the screen's light.
+
+## 5 · The ground's paint fixed to the world
+
+Ruby, 2026-10-26: "ground texture/texture lods recomputing so frequently is both a source of render slowdown and also
+terrible to look at - we have to find some other way to draw this texture without it being so heavy on the redraw, it
+doesn't need to be so detailed close up".
+
+- The Dishonored artists concentrated "on medium size details" and kept the small ones out
+  [src](https://80.lv/articles/asset-material-production-in-dishonored-2/) (§1 above).
+- So in the painter [est]: the strokes and the ground's marks no longer belong to the mesh's cells, which change their
+  size as the eye moves; they stand on grids of the world's own, octaves of 2, 4, 8 m and on, each point jittered by its
+  own hash (`rgGroundGrid`). A cell draws the points of its patch of the world at the octave its size on the page asks
+  for, fading one octave out as the next fades in, so a mark is where it was however the mesh is cut and never jumps.
+  Near you the octave stops at 2 m: the marks grow larger and fewer rather than finer.
+
+## 6 · Solar fields in the round
+
+Ruby, 2026-10-26: "solar panels should NOT be billboards and should follow the sun".
+
+- A dual-axis tracker keeps its panels "perpendicular to incoming sunlight at all times", turning east to west through
+  the day and tilting with the season, and returns "to safe position overnight"
+  [src](https://quickestimate.co/glossary/dual-axis-tracker).
+- So in the painter [est]: a solar field is a grid of trackers on pedestals, each panel a quad in the world turned to
+  face the sun, its tilt held to sixty degrees from level, laid flat by night (`rgSolarField`). From in front the
+  panel's blue holds more of the sky the more glancing it is seen, with the sun's glint where it throws the sun toward
+  the eye; from behind, its grey frame; each casts its shadow on the ground away from the sun.

@@ -53,8 +53,10 @@ const RG_LIGHTS = { wilds: [[226, 255, 170], [255, 214, 150]], cities: [[255, 21
 // toward it, passes it at its side (so it is seen turning past, a reveal, never flown into), and goes on as far again;
 // along it the eye looks ahead, turning toward the subject as it nears and passes, and looks down a little more as it
 // climbs. ctx: { LK, W, zS, look, secs, TR, worldAt, cityAt, works }. Kept by its seed, look and length
-// (how fast it flies, a fly-over's 8 to 15 mph, and climbs by its end, metres a second; so a longer film flies farther, never faster)
-const RG_ROUTES = new Map(), RG_DRONE = { speed: 7, climb: 2.5 };
+// (how fast it flies and climbs by its end, metres a second; so a longer film flies farther, never faster. Ruby,
+//  2026-10-26: "Shouldn't the drone flight be a little more fun? Slightly faster, more adventurous?": some 27 mph, a
+//  sport drone's cruise; weave: how far it swings from side to side of its line, a share of the flight)
+const RG_ROUTES = new Map(), RG_DRONE = { speed: 12, climb: 3, weave: 0.045 };
 function rgDroneRoute(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key = [seed, W.toFixed(6), zS.toFixed(6), Math.round(look), Math.round(secs*10)].join('|');
   let RT = RG_ROUTES.get(key); if(RT) return RT;
   const M = W*0.00025, Lr = Math.max(40, RG_DRONE.speed*secs)*M, h0 = look*Math.PI/180, hS = (a, z) => LK.height(a, z, W*0.002), R0 = rgRand(seed | 0, 1960);
@@ -69,7 +71,10 @@ function rgDroneRoute(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key
   const side = R0() < 0.5 ? -1 : 1, T = best, off = Lr*(0.12 + 0.08*R0()), nx = -Math.sin(T.an)*side, nz = Math.cos(T.an)*side;
   const P0 = [0, zS], P1 = [T.a + nx*off, T.z + nz*off], P2 = [P1[0] + Math.cos(T.an)*Lr*(1 - T.r), P1[1] + Math.sin(T.an)*Lr*(1 - T.r)];
   const C = [2*P1[0] - (P0[0] + P2[0])/2, 2*P1[1] - (P0[1] + P2[1])/2];   // (a curve through the pass point at its middle)
-  const raw = t => [(1 - t)*(1 - t)*P0[0] + 2*(1 - t)*t*C[0] + t*t*P2[0], Math.max(-W*0.45, Math.min(W*0.45, (1 - t)*(1 - t)*P0[1] + 2*(1 - t)*t*C[1] + t*t*P2[1]))];
+  // (and weaving across its line in a long S, a pilot's play, still passing its subject's side)
+  const wv = Lr*RG_DRONE.weave*(0.6 + 0.8*R0()), wf = 1.2 + 0.8*R0(), raw0 = t => [(1 - t)*(1 - t)*P0[0] + 2*(1 - t)*t*C[0] + t*t*P2[0], (1 - t)*(1 - t)*P0[1] + 2*(1 - t)*t*C[1] + t*t*P2[1]];
+  const raw = t => { const p0 = raw0(t), p1 = raw0(Math.min(1, t + 0.01)), p_ = raw0(Math.max(0, t - 0.01)), dx = p1[0] - p_[0], dz = p1[1] - p_[1], dl = Math.hypot(dx, dz) || 1, o = wv*Math.sin(2*Math.PI*wf*t)*Math.sin(Math.PI*t)*(1 - 0.8*Math.exp(-(((t - 0.55)/0.12)**2)));
+    return [p0[0] - dz/dl*o, Math.max(-W*0.45, Math.min(W*0.45, p0[1] + dx/dl*o))]; };
   // (by its length, so the eye goes evenly along it)
   const N = 64, pts = [raw(0)], cum = [0]; for(let q = 1; q <= N; q++){ const p2 = raw(q/N); cum.push(cum[q - 1] + Math.hypot(p2[0] - pts[q - 1][0], p2[1] - pts[q - 1][1])); pts.push(p2); }
   const along = u => { const d = u*cum[N]; let q = 1; while(q < N && cum[q] < d) q++; const f = (d - cum[q - 1])/((cum[q] - cum[q - 1]) || 1); return [pts[q - 1][0] + (pts[q][0] - pts[q - 1][0])*f, pts[q - 1][1] + (pts[q][1] - pts[q - 1][1])*f, Math.atan2(pts[q][1] - pts[q - 1][1], pts[q][0] - pts[q - 1][0])]; };
@@ -77,7 +82,17 @@ function rgDroneRoute(seed, ctx){ const { LK, W, zS, look, secs, TR } = ctx, key
   RT = { subject: [T.a, T.z], path: pts.filter((_, q) => q % 8 === 0 || q === N), at: u => { const [a, z, hd] = along(Math.max(0, Math.min(1, u))), toT = Math.atan2(T.z - z, T.a - a);
       // (the eye: ahead, turning toward the subject as it nears and passes it, at most seventy degrees aside)
       const near = rsSmooth(0.15, 0.45, u)*(1 - rsSmooth(0.7, 0.95, u)), dirA = hd + Math.max(-1.2, Math.min(1.2, angW(toT - hd)))*near, yaw = angW(dirA - h0)*180/Math.PI;
-      const H = Math.max(25, Math.min(80, RG_DRONE.climb*secs*2.4)); return { a, z, yaw, pitch: 4 + 10*rsSmooth(0, 1, u) + 6*near, rise: H*(0.7*rsSmooth(0, 0.5, u) + 0.3*u), clear: 3 + 14*rsSmooth(0, 0.3, u) }; } };   // (rising soon to a drone's own height, some 25 to 80 m, as a landscape's is flown; and keeping clear of what it crosses)
+      // (its height an adventure: up off the ground, then a fast low run skimming over the land just clear of its
+      //  trees, a pop-up as it nears the subject for the reveal, and a long climb away to look down over all of it; the
+      //  ground under it read some way ahead, so it lifts over a hill before it reaches it, never through it)
+      const H = Math.max(30, Math.min(90, RG_DRONE.climb*secs*2.6)), low = rsSmooth(0.08, 0.2, u)*(1 - rsSmooth(0.38, 0.5, u));
+      const rise = H*(0.3*rsSmooth(0, 0.1, u)*(1 - 0.85*low) + 0.45*rsSmooth(0.42, 0.6, u) + 0.4*rsSmooth(0.65, 1, u));
+      // (and its trees: over woods it skims their tops, a tall wood's some 30 m up)
+      let gA = -Infinity, fo = 0; for(let k = 0; k <= 5; k++){ const [a2, z2] = along(Math.min(1, u + k*0.012)), e2 = LK.height(a2, z2, W*0.002); gA = Math.max(gA, e2);
+        const bw = LK.biomes(a2, z2, e2); let f2 = 0; for(let i = 0; i < LK_BIOMES.length; i++) f2 += (LK_FORESTED[LK_BIOMES[i].name] || 0)*bw[i]; fo = Math.max(fo, f2); }
+      // (where it looks: down a little on the low run, more as it climbs; the camera's own setting kept only at the start)
+      const lift = -(6 + 6*low + 12*rsSmooth(0.55, 1, u) + 5*near);
+      return { a, z, yaw, lift, rise, clear: 3 + (14 + 24*rsSmooth(0.1, 0.5, fo))*rsSmooth(0, 0.12, u) + 3*(1 - low), ground: gA }; } };   // (rising soon to a drone's own height, some 25 to 80 m, as a landscape's is flown; and keeping clear of what it crosses)
   if(RG_ROUTES.size > 16) RG_ROUTES.clear(); RG_ROUTES.set(key, RT); return RT; }
 
 // THE RING'S WORLDS (Ruby, 2026-10-25: "remove the 'world' slider and make sure the rings are 50% wilds, and all of the
@@ -174,9 +189,12 @@ function rgView(E, n, ww, wh){
   // passes and looking down a little more as it climbs
   if(FLY && FLY.route === 'seed'){ const RT = rgDroneRoute(seed, { LK, W, zS: L.zS, look: p.look, secs: FLY.secs || 10, TR, worldAt, cityAt, works: num(n, 'works', 50)/100 }), q = RT.at(FLY.u || 0);
     L.a0 = q.a; L.z0 = q.z; L.path = RT.path;
-    const vH = LK.height(L.a0, L.z0, W*0.001), eE = Math.max(v0 + L.hc + q.rise*MM, vH + Math.max(L.hc*0.4, q.clear*MM)); L.hc = eE - vH; L.Px = 1 - eE;
-    const L2 = ringCamera({ ...p, look: p.look + q.yaw, lift: Math.max(-30, p.lift - q.pitch) }); for(const k of ['fx', 'fy', 'fz', 'rx', 'ry', 'rz', 'ux', 'uy', 'uz']) L[k] = L2[k];
-    psi = (p.look + q.yaw)*Math.PI/180; th = Math.max(-30, p.lift - q.pitch)*Math.PI/180; }
+    const vH = LK.height(L.a0, L.z0, W*0.001), eE = Math.max(v0 + L.hc + q.rise*MM, Math.max(vH, q.ground) + Math.max(L.hc*0.4, q.clear*MM)); L.hc = eE - vH; L.Px = 1 - eE;
+    // (Ruby, 2026-10-26: "Shouldn't it also take the camera/override the camera angle settings after the initial one?":
+    //  the first moment is the camera as it was set; over the first tenth of the flight the drone takes it over)
+    const take = rsSmooth(0, 0.12, FLY.u || 0), look = p.look + q.yaw*take, lift = Math.max(-40, p.lift + (q.lift - p.lift)*take);
+    const L2 = ringCamera({ ...p, look, lift }); for(const k of ['fx', 'fy', 'fz', 'rx', 'ry', 'rz', 'ux', 'uy', 'uz']) L[k] = L2[k];
+    psi = look*Math.PI/180; th = lift*Math.PI/180; }
   // THE SUN (Ruby: the light dial places it, in the world, so turning the camera turns past it, and the light on the land
   // comes from where it is): its way round the dial's, its height the dial's reach (overhead it is the ring's own star, on
   // the arch; at the dial's rim it sets; past it, night). Where it falls on the screen, and which way its light comes there
@@ -301,32 +319,46 @@ const rgPathRec = () => { const o = []; let n = 0; const put = (k, a) => { o[n++
     play(c){ c.beginPath(); for(let q = 0; q < n;){ const k = o[q++];
       if(k === 0){ c.moveTo(o[q], o[q + 1]); q += 2; } else if(k === 1){ c.lineTo(o[q], o[q + 1]); q += 2; } else if(k === 2){ c.quadraticCurveTo(o[q], o[q + 1], o[q + 2], o[q + 3]); q += 4; }
       else if(k === 3){ c.arc(o[q], o[q + 1], o[q + 2], o[q + 3], o[q + 4]); q += 5; } else { c.ellipse(o[q], o[q + 1], o[q + 2], o[q + 3], o[q + 4], o[q + 5], o[q + 6]); q += 7; } } } }; };
-const RG_MARKS_L = rgPathRec(), RG_MARKS_D = rgPathRec();
+const RG_MARKS = Array.from({ length: 9 }, () => ({ L: rgPathRec(), D: rgPathRec(), sp: 0, on: false }));   // (a batch of marks for each strength an octave is laid at)
 // THE LAND AS PAINTED (Ruby, 2026-10-25: "make the terrain and other textures themselves seem.. painted on … See the
 // texture work in the game Dishonored - do that, but to a significantly lower complexity"; docs/prior-art/ringworld-
 // painted.md): over a cell's colour, a few broad flat strokes of the same paint mixed a little warmer, cooler, lighter
 // or darker, laid along one way across the cell, as one brush would; uneven, as Dishonored's are (busy here, calm
 // there, by a slow noise of the world), each stroke its cell's own so the paint stays put on the land as the camera moves
 const RG_BRUSH_TINTS = [[214, 186, 120], [96, 128, 150], [255, 248, 228], [40, 46, 52], [150, 170, 96]];
-function rgBrush(x, P, q, c, px, s){
+// THE GROUND'S PAINT FIXED TO THE WORLD (Ruby, 2026-10-26: "ground texture/texture lods recomputing so frequently is
+// both a source of render slowdown and also terrible to look at … it doesn't need to be so detailed close up"): the
+// strokes and marks stand on grids of the world's own, octaves of 2 m, 4 m, 8 m and on, each point jittered by its own
+// hash. A cell draws the points of its own patch of the world at the octave its size on the page asks for (target: the
+// pixels between them), fading one octave out as the next fades in, so a mark never depends on which ring of the mesh
+// holds it, never jumps as the eye moves, and grows no finer than 2 m however near: near you, fewer and larger.
+// G: { a0, z0, c (the cell's corner and side in the world), M (a metre) }; fn(X, Y, spacing on the page, alpha, R)
+export function rgGroundGrid(P, G, target, salt, fn){   // (exported: a test hook, test/ringworldView.test.mjs)
+  const ax = P[1][0] - P[0][0], ay = P[1][1] - P[0][1], bx = P[3][0] - P[0][0], by = P[3][1] - P[0][1], area = Math.abs(ax*by - ay*bx);
+  const ppw = Math.sqrt(Math.max(area, 1e-6))/G.c, lv = Math.log2(target/(ppw*2*G.M)), k0 = Math.max(0, Math.floor(lv)), f = lv < 0 ? 0 : lv - k0;
+  const pt = (u, v) => { const ax2 = P[0][0] + (P[1][0] - P[0][0])*u, ay2 = P[0][1] + (P[1][1] - P[0][1])*u, bx2 = P[3][0] + (P[2][0] - P[3][0])*u, by2 = P[3][1] + (P[2][1] - P[3][1])*u; return [ax2 + (bx2 - ax2)*v, ay2 + (by2 - ay2)*v]; };
+  for(const [k, al] of [[k0, 1 - f], [k0 + 1, f]]){ if(al < 0.04) continue; const S = 2*G.M*Math.pow(2, k), sp = S*ppw;
+    const i0 = Math.floor(G.a0/S), i1 = Math.floor((G.a0 + G.c)/S), j0 = Math.floor(G.z0/S), j1 = Math.floor((G.z0 + G.c)/S); if((i1 - i0 + 1)*(j1 - j0 + 1) > 400) continue;
+    for(let gi = i0; gi <= i1; gi++) for(let gj = j0; gj <= j1; gj++){ const R = mulberry32((Math.imul(gi, 0x27D4EB2D) ^ Math.imul(gj, 0x165667B1) ^ Math.imul(k + salt*16, 0x9E3779B1)) >>> 0);
+      const a = (gi + R())*S, z = (gj + R())*S; if(a < G.a0 || a >= G.a0 + G.c || z < G.z0 || z >= G.z0 + G.c) continue;
+      const [X, Y] = pt((a - G.a0)/G.c, (z - G.z0)/G.c); fn(X, Y, sp, al, R, a, z); } } }
+// (a few broad strokes, each a fifth to a third toward one of the tints the whole picture shares, where the ground is
+//  busy by a slow noise of the world; some ground left calm)
+function rgBrush(x, P, q, c, px, s, G){
   const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0; if(w < px(5) || h < px(2)) return;
-  const busy = mnValue(q.i*0.21 + q.l*7.1, q.j*0.21, s + 941); if(busy < 0.3) return;
-  const R = mulberry32((Math.imul(q.l + 7, 0x27D4EB2D) ^ Math.imul(q.i, 0x165667B1) ^ Math.imul(q.j, 0x9E3779B1) ^ 0x51ED) >>> 0), n = 1 + Math.floor((busy - 0.3)*5*R());
-  const pt = (u, v) => { const ax = P[0][0] + (P[1][0] - P[0][0])*u, ay = P[0][1] + (P[1][1] - P[0][1])*u, bx = P[3][0] + (P[2][0] - P[3][0])*u, by = P[3][1] + (P[2][1] - P[3][1])*u; return [ax + (bx - ax)*v, ay + (by - ay)*v]; };
   x.lineCap = 'round';
-  for(let k = 0; k < n; k++){ const u0 = 0.1 + 0.5*R(), v0 = 0.15 + 0.7*R(), len = 0.3 + 0.5*R(), tint = RG_BRUSH_TINTS[Math.floor(R()*RG_BRUSH_TINTS.length)];
-    const A = pt(u0, v0), B = pt(Math.min(1, u0 + len), Math.max(0, Math.min(1, v0 + (R() - 0.5)*0.3))), C = pt(u0 + len*0.5, v0 + (R() - 0.5)*0.25);
-    x.strokeStyle = rsCss(rsMix(c, tint, 0.2 + 0.14*R()), 0.62); x.lineWidth = Math.max(px(1.2), Math.min(w, h*2.2)*(0.2 + 0.2*R()));
-    x.beginPath(); x.moveTo(A[0], A[1]); x.quadraticCurveTo(C[0], C[1] - h*0.08, B[0], B[1]); x.stroke(); }
+  rgGroundGrid(P, G, px(46), 1, (X, Y, sp, al, R, a, z) => { const busy = mnValue(a/(G.M*90), z/(G.M*90), s + 941); if(busy < 0.42 || R() > (busy - 0.3)*1.6) return;
+    const len = sp*(0.5 + 0.5*R()), an = (R() - 0.5)*0.5, tint = RG_BRUSH_TINTS[Math.floor(R()*RG_BRUSH_TINTS.length)], ca = Math.cos(an), sa = Math.sin(an)*0.45;
+    x.strokeStyle = rsCss(rsMix(c, tint, 0.2 + 0.14*R()), 0.62*al); x.lineWidth = Math.max(px(1.2), sp*(0.18 + 0.16*R()));
+    x.beginPath(); x.moveTo(X - ca*len*0.5, Y - sa*len*0.5); x.quadraticCurveTo(X, Y - sp*0.06, X + ca*len*0.5, Y + sa*len*0.5); x.stroke(); });
   x.lineCap = 'butt'; }
-function rgGroundMarks(x, P, q, kind, c, px){
-  const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0, area = w*h*0.55; if(w < px(6) || h < px(2.5)) return;
-  const n = Math.min(5, Math.floor(area/(px(22)*px(22)))); if(n < 1) return;   // (few: medium marks, not a noise of little ones)
-  const R = mulberry32((Math.imul(q.l + 1, 0x9E3779B1) ^ Math.imul(q.i, 0x85EBCA77) ^ Math.imul(q.j, 0xC2B2AE3D)) >>> 0);
-  const pt = (u, v) => { const ax = P[0][0] + (P[1][0] - P[0][0])*u, ay = P[0][1] + (P[1][1] - P[0][1])*u, bx = P[3][0] + (P[2][0] - P[3][0])*u, by = P[3][1] + (P[2][1] - P[3][1])*u; return [ax + (bx - ax)*v, ay + (by - ay)*v]; };
-  const lite = rsCss(rsMix(c, [255, 250, 232], 0.16), 0.75), dark = rsCss(rsMix(c, [0, 0, 0], 0.2), 0.7), s = Math.min(w, h*2.2)/Math.sqrt(n + 1);
-  const L = RG_MARKS_L.reset(), D = RG_MARKS_D.reset(); let any = false;
-  for(let k = 0; k < n; k++){ const [X, Y] = pt(0.1 + 0.8*R(), 0.1 + 0.8*R()), u = R(), r = s*(0.25 + 0.25*R()); any = true;
+function rgGroundMarks(x, P, q, kind, c, px, G){
+  const [bx0, bx1, by0, by1] = q.box, w = bx1 - bx0, h = by1 - by0; if(w < px(6) || h < px(2.5)) return;
+  const lite = rsMix(c, [255, 250, 232], 0.16), dark = rsMix(c, [0, 0, 0], 0.2);
+  // (the marks of each octave in its own batch, laid at its own strength)
+  for(const B of RG_MARKS) B.on = false; let any = false;
+  rgGroundGrid(P, G, px(26), 2, (X, Y, sp, al, R) => { const u = R(), r = sp*(0.22 + 0.2*R()), B = RG_MARKS[Math.round(al*8)];
+    if(!B.on){ B.L.reset(); B.D.reset(); B.sp = 0; B.on = true; } any = true; const L = B.L, D = B.D;
     if(RG_GRASSY[kind]){ const lb = r*(kind === 'steppe' || kind === 'savanna' ? 0.9 : 0.7), Pq = u < 0.5 ? L : D, lean = (R() - 0.5)*lb*0.6;
       Pq.moveTo(X - lb*0.25, Y); Pq.lineTo(X - lb*0.3 + lean, Y - lb); Pq.moveTo(X, Y); Pq.lineTo(X + lean*0.5, Y - lb*1.2); Pq.moveTo(X + lb*0.25, Y); Pq.lineTo(X + lb*0.35 + lean, Y - lb*0.9); }
     else if(kind === 'sand' || kind === 'desert'){ const lw = r*1.6; D.moveTo(X - lw, Y); D.quadraticCurveTo(X, Y - r*0.35, X + lw, Y); L.moveTo(X - lw, Y - r*0.2); L.quadraticCurveTo(X, Y - r*0.55, X + lw, Y - r*0.2); }
@@ -334,11 +366,13 @@ function rgGroundMarks(x, P, q, kind, c, px){
     else if(kind === 'snow' || kind === 'ice'){ const lw = r*1.4; L.moveTo(X - lw, Y); L.lineTo(X + lw, Y - r*0.12); D.moveTo(X - lw*0.6, Y + r*0.18); D.lineTo(X + lw*0.7, Y + r*0.1); }
     else if(kind === 'tundra'){ L.moveTo(X + r*0.3, Y); L.arc(X, Y, Math.max(px(0.5), r*0.3), 0, Math.PI*2); D.moveTo(X + r*0.9 + r*0.2, Y + r*0.3); D.arc(X + r*0.9, Y + r*0.3, Math.max(px(0.4), r*0.2), 0, Math.PI*2); }
     else if(kind === 'marsh'){ if(u < 0.4){ D.moveTo(X + r, Y); D.ellipse(X, Y, r, r*0.3, 0, 0, Math.PI*2); } else { L.moveTo(X - r*0.3, Y); L.lineTo(X - r*0.4, Y - r*0.9); L.moveTo(X, Y); L.lineTo(X, Y - r*1.1); L.moveTo(X + r*0.3, Y); L.lineTo(X + r*0.45, Y - r*0.8); } }
-    else if(kind === 'paving'){ const lw = r*1.5; D.moveTo(X - lw, Y); D.lineTo(X + lw, Y); D.moveTo(X, Y - r*0.4); D.lineTo(X, Y + r*0.4); } }
+    else if(kind === 'paving'){ const lw = r*1.5; D.moveTo(X - lw, Y); D.lineTo(X + lw, Y); D.moveTo(X, Y - r*0.4); D.lineTo(X, Y + r*0.4); }
+    B.sp = Math.max(B.sp, sp); });
   if(!any) return;
-  x.lineWidth = Math.max(px(0.5), s*0.06); x.lineCap = 'round';
-  x.strokeStyle = dark; D.play(x); x.stroke(); x.strokeStyle = lite; L.play(x); x.stroke();
-  if(kind === 'marsh' || kind === 'rock' || kind === 'tundra'){ x.fillStyle = dark; D.play(x); x.fill(); }
+  x.lineCap = 'round';
+  RG_MARKS.forEach((B, ak) => { if(!B.on) return; const al = ak/8; x.lineWidth = Math.max(px(0.5), B.sp*0.05);
+    x.strokeStyle = rsCss(dark, 0.7*al); B.D.play(x); x.stroke(); x.strokeStyle = rsCss(lite, 0.75*al); B.L.play(x); x.stroke();
+    if(kind === 'marsh' || kind === 'rock' || kind === 'tundra'){ x.fillStyle = rsCss(dark, 0.7*al); B.D.play(x); x.fill(); } });
   x.lineCap = 'butt';
 }
 // THE STONE a place's rocks are of (Ruby: "rocks of different stones"): sandstone in dry country, granite and slate up
@@ -2050,7 +2084,11 @@ function rgPaintLand(x, mk, dk, V){
   const covT = new Float32Array(NC).fill(Infinity), covB = new Float32Array(NC).fill(-Infinity); let painting = false, cur = null;
   const vis = (l, X0, X1, Yt, Yb, oc) => { if(painting) return cur.ok;
     let ok = false; if(!(X1 < 0 || X0 > ww || Yb < 0 || Yt > wh)){ const n = l ? l.near : null;
-      for(let ci = Math.max(0, col(Math.max(0, X0)) - 1), c1 = Math.min(NC - 1, col(Math.min(ww, X1)) + 1); ci <= c1; ci++) if(!((n && n[ci] <= Yt) || (covT[ci] <= Yt && covB[ci] >= Yb))){ ok = true; break; } }
+      // (Ruby, 2026-10-26: "Object popin is really bad, i think visibility is not being computed correctly for the drone
+      //  flight camera": hidden only with room to spare, the land a few pixels over its top and a nearer heart wholly round
+      //  it with a margin, so a thing at the edge of being seen is drawn rather than flicking on as the eye moves)
+      const mg = Math.max(px(3), (Yb - Yt)*0.15);
+      for(let ci = Math.max(0, col(Math.max(0, X0)) - 2), c1 = Math.min(NC - 1, col(Math.min(ww, X1)) + 2); ci <= c1; ci++) if(!((n && n[ci] <= Yt - mg) || (covT[ci] <= Yt - mg && covB[ci] >= Yb + mg))){ ok = true; break; } }
     cur.ok = ok;
     if(ok && oc) for(let ci = col(Math.max(0, oc[0])), c1 = col(Math.min(ww, oc[1])); ci <= c1; ci++){
       if(covT[ci] === Infinity || (oc[2] <= covB[ci] && oc[3] >= covT[ci])){ covT[ci] = Math.min(covT[ci], oc[2]); covB[ci] = Math.max(covB[ci], oc[3]); }
@@ -2200,15 +2238,43 @@ function rgPaintLand(x, mk, dk, V){
     const env = { wind: rgWind(V) }, M1 = W*0.00025, fly = WK_FLYERS.includes(o.kind), c = { ...colsOf(o.w, cday, haze, null, o), flowers: [V.g1, V.g2, [244, 238, 228]].map(g => rgLit(V, g, Math.max(0.4, wday), haze, AIR)) }, out2 = [];
     for(let j = 0; j < n; j++){ const st = wkAt(o.kind, o.rs, j, t, env); if(!st.on) continue;
       const a = o.a + st.x*M1, z = o.z + st.z*M1, f = foot(a, z); if(!f) continue; const LIC = RG_WILD_LICENCE*(WK_BIRDS.includes(o.kind) ? 1.6 : 1), m = f[2], sz = K.size*m*LIC;
-      if((sz < px(0.7) && !fly) || sz > wh*0.5 || (f[3] <= TR.sea && !o.afloat && !st.y)) continue;
+      if(sz < px(fly ? 1.4 : 2) || sz > wh*0.5 || (f[3] <= TR.sea && !o.afloat && !st.y)) continue;
       const X = f[0], Y = fly || st.y ? f[1] : stand(l, X, f[1]), yy = Y - st.y*m; if(!vis(l, X - sz, X + sz, yy - sz, yy + sz*0.3)) continue;
       // (its heading a step along, seen: which way it faces on the page, and how side-on)
       const g2 = foot(a + Math.cos(st.face)*M1*3, z + Math.sin(st.face)*M1*3), side = Math.abs(Math.sin(st.face - Math.atan2(L.z0 - z, A0E - a)));
-      let al = pres*st.on; if(step > 0.2){ const p = wkAt(o.kind, o.rs, j, t - step, env), fp = p.on ? foot(o.a + p.x*M1, o.z + p.z*M1) : null;
+      let al = pres*st.on*rgClamp((sz - px(fly ? 1.4 : 2))/px(1.5)); if(step > 0.2){ const p = wkAt(o.kind, o.rs, j, t - step, env), fp = p.on ? foot(o.a + p.x*M1, o.z + p.z*M1) : null;
         if(fp) al *= rsSmooth(Math.max(px(2), sz)*2.5, Math.max(px(2), sz)*0.9, Math.hypot(fp[0] - X, fp[1] - p.y*fp[2] - yy)); }
       if(al < 0.03) continue;
       out2.push([m, () => { x.globalAlpha = al; wkPaint(x, X, Y, m*LIC, o.kind, { ...st, y: st.y/LIC, dir: !g2 || g2[0] >= X ? 1 : -1, side, stag: j === 0 && (o.rs & 4), hue: j, nt: night, wint: rgWinter(V) }, c, rgPx); x.globalAlpha = 1; }]); }
     out2.sort((p, q) => p[0] - q[0]); for(const [, d] of out2) d(); };
+  // A SOLAR FIELD IN THE ROUND (Ruby, 2026-10-26: "solar panels should NOT be billboards and should follow the sun"):
+  // a grid of trackers on their pedestals, each panel a quad in the world turned to face the sun (its tilt held to sixty
+  // degrees from level, as a tracker's travel is), laid flat to stow by night; seen from in front, the panel's dark blue
+  // holding the sky more as it is seen more glancing, and the sun's glint where it throws the sun toward the eye; from
+  // behind, its grey frame; each casting its shadow on the ground away from the sun
+  const rgSolarField = (o, f, c, cday) => { const M0 = W*0.00025, e0 = f[3], R = mulberry32(o.rs ^ 0x501a), rows = 2 + Math.floor(R()*2), cols = 3 + Math.floor(R()*2), sp = 7;
+    const D = V.sun.D, ca = Math.cos(o.a - A0E), sa = Math.sin(o.a - A0E), su = -(ca*D[0] + sa*D[1]), sA = -sa*D[0] + ca*D[1], sZ = D[2], hl = Math.hypot(sA, sZ) || 1;
+    const up = su > 0.05, hA = up ? sA/hl : 1, hZ = up ? sZ/hl : 0, el = up ? Math.max(Math.asin(Math.min(1, su)), Math.PI/6) : Math.PI/2, ce = Math.cos(el), se = Math.sin(el);
+    const n = [ce*hA, ce*hZ, se], r = [-hZ, hA, 0], v = [-se*hA, -se*hZ, ce], eyeE = 1 - L.Px, sunV = [sA, sZ, su], sl = Math.hypot(...sunV) || 1;
+    const P = (pa, pz, pu, b) => at(b[0] + pa*M0, b[1] + pz*M0, b[2] + pu*M0), dot = (p, q) => p[0]*q[0] + p[1]*q[1] + p[2]*q[2];
+    const base = rsMix([36, 50, 90], c.rawBody || [36, 50, 90], 0), pv = c.mat(base), frame = c.mat([150, 156, 164]), sky = c.air || pv.lit, glint = rgLit(V, [255, 248, 230], Math.max(0.4, cday), c.haze || 0, AIR);
+    const units = []; for(let i = 0; i < cols; i++) for(let j = 0; j < rows; j++){ const b = [o.a + ((i - (cols - 1)/2)*sp + (R() - 0.5))*M0, o.z + ((j - (rows - 1)/2)*sp + (R() - 0.5))*M0, 0];
+      b[2] = Math.max(TR.sea, meshH(b[0], b[1])); const ctr = P(0, 0, 2.2, b); if(ctr) units.push({ b, d: ctr[2] }); }
+    units.sort((p, q) => q.d - p.d);
+    for(const { b } of units){ const pw = 2.1, ph = 1.3, k = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([kr, kv]) => [r[0]*pw*kr + v[0]*ph*kv, r[1]*pw*kr + v[1]*ph*kv, 2.2 + r[2]*pw*kr + v[2]*ph*kv]);
+      // (its shadow, the panel's corners carried down to the ground away from the sun)
+      if(up && su > 0.08){ const g2 = k.map(q => P(q[0] - sunV[0]/sl*q[2]/(su/sl), q[1] - sunV[1]/sl*q[2]/(su/sl), 0, b)); if(g2.every(Boolean)) rsPoly(x, g2.map(q => [q[0], q[1]]), rsCss([10, 14, 24], 0.22*cday)); }
+      const foot0 = P(0, 0, 0, b), top0 = P(0, 0, 2.2, b); if(!foot0 || !top0) continue; const mpx = M0*F/top0[2];
+      x.strokeStyle = rsCss(frame.dark); x.lineWidth = Math.max(px(0.5), 0.18*mpx); x.beginPath(); x.moveTo(foot0[0], foot0[1]); x.lineTo(top0[0], top0[1]); x.stroke();
+      const Q = k.map(q => P(q[0], q[1], q[2], b)); if(!Q.every(Boolean)) continue; const pts = Q.map(q => [q[0], q[1]]);
+      const ev = [(A0E - b[0])/M0, (L.z0 - b[1])/M0, (eyeE - b[2])/M0 - 2.2], evl = Math.hypot(...ev) || 1, vw = ev.map(q => q/evl), nv = dot(n, vw);
+      if(nv <= 0){ rsPoly(x, pts, rsCss(frame.body)); x.strokeStyle = rsCss(frame.dark); x.lineWidth = Math.max(px(0.4), 0.06*mpx); x.beginPath(); x.moveTo(pts[0][0], pts[0][1]); x.lineTo(pts[2][0], pts[2][1]); x.moveTo(pts[1][0], pts[1][1]); x.lineTo(pts[3][0], pts[3][1]); x.stroke(); continue; }
+      const fres = Math.pow(1 - nv, 3), rv = n.map((q, i) => 2*nv*q - vw[i]), spec = up ? Math.pow(Math.max(0, dot(rv, sunV)/sl), 60) : 0;
+      rsPoly(x, pts, rsCss(rsMix(rsMix(pv.body, sky, 0.15 + 0.55*fres), glint, Math.min(1, spec*1.4))));
+      if(mpx*pw > px(10)){ x.strokeStyle = rsCss(rsMix(pv.lit, [255, 255, 255], 0.35), 0.45); x.lineWidth = Math.max(px(0.3), 0.03*mpx); x.beginPath();
+        for(let q = 1; q < 4; q++){ const A = [pts[0][0] + (pts[1][0] - pts[0][0])*q/4, pts[0][1] + (pts[1][1] - pts[0][1])*q/4], B = [pts[3][0] + (pts[2][0] - pts[3][0])*q/4, pts[3][1] + (pts[2][1] - pts[3][1])*q/4]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); }
+        const A = [(pts[0][0] + pts[3][0])/2, (pts[0][1] + pts[3][1])/2], B = [(pts[1][0] + pts[2][0])/2, (pts[1][1] + pts[2][1])/2]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
+        x.strokeStyle = rsCss(frame.dark); x.lineWidth = Math.max(px(0.4), 0.05*mpx); x.beginPath(); pts.forEach((p2, i) => i ? x.lineTo(p2[0], p2[1]) : x.moveTo(p2[0], p2[1])); x.closePath(); x.stroke(); } } };
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
     // (a building standing near the eye is drawn faint as it grows to fill the frame, gone before it could block it)
     if(o0.near){ const f1 = foot(o0.a, o0.z); if(!f1) return; const nf = rsSmooth(ww*0.8, ww*0.45, o0.wM*f1[2]*1.6)*rsSmooth(wh*1.05, wh*0.65, o0.hM*f1[2]); if(nf < 0.03) return;
@@ -2217,14 +2283,22 @@ function rgPaintLand(x, mk, dk, V){
     const p = moved(o0, MT - Math.min(2.5, rgStep(V))), f1 = foot(o.a, o.z), f0 = foot(p.a, p.z); if(!f1 || !f0) return rgPaintThing0(o, l, dd, o0);
     const sz = Math.max(px(2), (o.hM || 1.7)*f1[2]), gh = rsSmooth(sz*2.5, sz*0.9, Math.hypot(f1[0] - f0[0], f1[1] - f0[1]));
     if(gh >= 0.97) return rgPaintThing0(o, l, dd, o0); if(gh < 0.03) return; x.save(); x.globalAlpha = gh; rgPaintThing0(o, l, dd, o0); x.restore(); };
+  // (Ruby, 2026-10-26: "Can we just not draw objects that are only a pixel or two thus saving cpu cycles?": a small
+  //  thing under two pixels is not drawn at all, and fades in over the next pixel and a half as it nears, so it never
+  //  pops on; lights, buildings and the works keep their own rules)
+  const RG_SMALL = { rock: 1, prop: 1, bot: 1, egg: 1, grass: 1, life: 1, board: 1, solid: 1 };
   const rgPaintThing0 = (o, l, dd, o0) => { if(o.c === 'wild') return rgPaintWild(o, l, dd);
+    if(RG_SMALL[o.c]){ const f0 = foot(o.a, o.z); if(!f0) return; const sp = Math.max(o.hM || 1.5, (o.wM || 0)*0.6)*f0[2]; if(sp < px(2)) return;
+      const fa = rgClamp((sp - px(2))/px(1.5)); if(fa < 0.98 && painting){ x.save(); x.globalAlpha *= fa; rgPaintThing1(o, l, dd, o0); x.restore(); return; } }
+    return rgPaintThing1(o, l, dd, o0); };
+  const rgPaintThing1 = (o, l, dd, o0) => {
     const f = foot(o.a, o.z); if(!f || (f[3] <= TR.sea && !o.afloat)) return;
     const wday = ringDay(L, o.a), haze = hazeOf(dd), R = mulberry32(o.rs), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday))*(0.5 + 0.5*litAt(o.a, o.z, meshH(o.a, o.z) + Math.min(6, (o.hM || 2)*0.5)*M1s));   // (its colours by the sun that reaches it, under a cloud's shadow or not; its nights by the hour)
-    if(o.c === 'tree'){ const h = o.hM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1) || h > nearCut) return;   // (Ruby: "trees … culled too early": kept down to a speck)
+    if(o.c === 'tree'){ const h = o.hM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(2) || h > nearCut) return;   // (Ruby: "trees … culled too early": kept down to a speck)
       // (its solid heart, what hides a farther thing behind it, kept inside its drawn shape: a narrow conifer's narrow)
       const hw = RG_NARROW_TREES.includes(o.kind) ? 0.045 : 0.13, X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - h*0.3, X + h*0.3, Y - h, Y, o.kind === 'dead' || o.kind === 'willow' || hl < px(4) ? null : [X - h*hw, X + h*hw, Y - h*0.8, Y - h*0.4])) return;
       // (and the smallest fade in as they grow, never popping on at the size they are first drawn)
-      const fadeIn = rgClamp((hl - px(1))/px(0.9)); if(fadeIn < 1) x.globalAlpha = fadeIn;
+      const fadeIn = rgClamp((hl - px(2))/px(1.5)); if(fadeIn < 1) x.globalAlpha = fadeIn;
       // (in the magic world a tree's leaves lean to its region's element, and its glow is the element's: RK_ELEMENTS)
       // (its light kept to steps, so its kept sheet serves frame after frame: rgSprite)
       const dq = Math.round(cday*24)/24, hq = Math.round(haze*16)/16, bq = Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
@@ -2319,6 +2393,7 @@ function rgPaintLand(x, mk, dk, V){
       if(o.piece){ const ca = Math.cos(o.axis), sa = Math.sin(o.axis), hp = o.piece*0.5*W*0.00025, e0 = foot(o.a - ca*hp, o.z - sa*hp), e1 = foot(o.a + ca*hp, o.z + sa*hp); if(!e0 || !e1) return;
         const pw = Math.abs(e1[0] - e0[0]) + h*0.25; if(h > wh*0.3 || pw > ww*0.45) return;   // (a piece right at your feet is let go, as a whole one was)
         pkProp(x, (e0[0] + e1[0])/2, Y + sink, h, { ...cc, view: null, runW: pw }, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+      if(o.kind === 'solar') return rgSolarField(o, f, c, cday);
       if(o.sink){ x.save(); x.beginPath(); x.rect(X - h*6, Y - h*6, h*12, h*6 + h*0.02); x.clip(); pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); x.restore(); }
       else pkProp(x, X, Y + sink, h, cc, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
       // (a road's pole wired to the next one along, the wires sagging between)
@@ -2822,7 +2897,7 @@ function rgPaintLand(x, mk, dk, V){
       const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
       if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
       else rsPoly(x, poly, rsCss(cA));
-      if(nWet === 0){ rgBrush(x, P, q, cA, px, s); rgGroundMarks(x, P, q, ci0.gk, cA, px); } }
+      if(nWet === 0){ const G = { a0: aOf(l, i), z0: zOf(l, j), c, M: M1 }; rgBrush(x, P, q, cA, px, s, G); rgGroundMarks(x, P, q, ci0.gk, cA, px, G); } }
     // WATER with its shore (docs/prior-art/ringworld-terrain.md §3): deep water dark and holding the sky the farther off
     // and the more glancing it is seen, the shallows lighter; where the land meets it, the wet edge and a line of foam
     if(nWet){ const hs = [h00, h10, h11, h01], wp = [], shore = [];

@@ -85,4 +85,11 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   check('the seed\'s route is its own: the same flight twice', JSON.stringify(c.m.ca) === JSON.stringify(c2.m.ca) && JSON.stringify(c.m.cz) === JSON.stringify(c2.m.cz));
   check('the route goes somewhere, and its world is built once for all of it', (c.m.ca[0] !== a.m.ca[0] || c.m.cz[0] !== a.m.cz[0]) && a.st === b.st && b.st === c.st); }
 
+// (Ruby, 2026-10-26: "ground texture/texture lods recomputing so frequently is … terrible to look at": the ground's marks
+// stand on the world's own grid, so a patch of the world cut into one cell or into four lays the same marks in it)
+{ const SR = await import('../stepsRing.js'), M = 0.00001, c = 64*M, sc = 4/M, P = (a0, z0, cc) => [[a0*sc, z0*sc], [(a0 + cc)*sc, z0*sc], [(a0 + cc)*sc, (z0 + cc)*sc], [a0*sc, (z0 + cc)*sc]];
+  const marks = cells => { const out = []; for(const [a0, z0, cc] of cells) SR.rgGroundGrid(P(a0, z0, cc), { a0, z0, c: cc, M }, 30, 2, (X, Y, sp, al, R, a, z) => out.push(`${a.toFixed(9)},${z.toFixed(9)},${al.toFixed(3)}`)); return out.sort().join('|'); };
+  const one = marks([[0, 0, c]]), four = marks([[0, 0, c/2], [c/2, 0, c/2], [0, c/2, c/2], [c/2, c/2, c/2]]);
+  check(`the ground's marks are the world's, not the mesh's: one cell or four lay the same ones (${one.split('|').length} marks)`, one.length > 0 && one === four); }
+
 done();

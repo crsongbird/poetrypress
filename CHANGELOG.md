@@ -4,6 +4,35 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Antares (2026-10-26)
+
+- The ground's painted marks and brush strokes are now fixed to the land itself. They no longer flicker or reshuffle as
+  the camera moves or the drone flies. Close up they are fewer and larger instead of finer, which is also quicker to
+  draw.
+- Less pop-in. A thing near the edge of being hidden by a hill or a tree is now drawn rather than flicking on as the
+  camera moves.
+- Things smaller than about two pixels are no longer drawn at all, which saves work. As they come nearer they fade in
+  over the next pixel and a half instead of popping on.
+- Drone flights are more fun:
+  - faster (about 27 mph);
+  - weaving across the route;
+  - a low run just over the land and the treetops, lifting before a hill or a wood rather than going through it;
+  - a pop-up as it reaches the subject, then a long climb away.
+  The first moment uses the camera as it was set; after that the drone takes over where it looks.
+- Solar fields are no longer flat pictures. Each panel stands on its own tracker and turns to face the sun, then lies
+  flat at night. Seen from in front it is dark blue, catching the sky and the sun's glint; from behind you see its grey
+  frame. Each panel casts its shadow on the ground.
+
+### Under the hood
+- `rgGroundGrid` lays the ground's marks and strokes on world-fixed octaves (2 m and up), crossfading between them.
+- `rgSolarField` builds the trackers in world space through the camera's own projection.
+- The visibility test (`vis`) hides a thing only with a margin to spare.
+- The drone's route now carries an absolute camera tilt (`lift`) and reads the ground and woods ahead (`ground`).
+- The Ringworld suite checks that one cell or four lay the same ground marks.
+- New research notes:
+  - docs/prior-art/ringworld-painted.md §5–6 (the ground's paint, solar trackers);
+  - docs/prior-art/film-animation.md (the livelier drone).
+
 ## Scorpius–Paikauhale (2026-10-25)
 
 - Hunters have come to the Ringworld, fewer than the animals they hunt and each in its own country:
@@ -494,35 +523,3 @@ prints it).
   Esoterica's do; their choices are listened to on the cards themselves. `movingInert` makes the rest of the page inert
   while a film is made, and the preview's scale holds then (`applyPreviewScale`), so the canvas never resizes between
   frames.
-
-## Crux–Acrux (2026-10-24)
-
-- The Ringworld has wild things now, and they move as wild things do. Deer and elk at the edge of the woods graze, lift
-  their heads, walk on, and now and then bolt, fanning out as they run and closing up again where they stop. Hares sit,
-  hop and sometimes dash; a fox trots the field edges toward dusk and now and then ends a trot in the mouser's pounce.
-  Rooks, starlings, sparrows and pigeons peck about the grass and lift all at once, wheel round and come down somewhere
-  else. Ducks and swans drift by the shore with a wake behind them and up-end to feed; a heron stands still at the edge
-  and now and then flies slowly down the shore. A hawk circles up a thermal and glides on to the next; swallows and
-  swifts hawk over the fields and the towns, bats come out at dusk, butterflies and dragonflies are found near you, and
-  sometimes a skein of geese goes over against the wind.
-- They keep their hours and their weather: the day's birds go to roost at dusk, swallows fly low and hawks are grounded
-  in rain, butterflies stay down in it, and each group comes or goes one at a time, so a time-lapse thins or fills
-  gently. They are drawn half again their true size, as a painter draws the creatures in a landscape, so they are found.
-- Nothing on a loop: the grazing sheep, the gulls behind the plough (now each down in the furrow and up again in its own
-  time), the insects, the fairies and the kites all drift on paths of their own that never come round again.
-- The antenna dishes are built in the round: a bowl a third of its width deep with its rim catching the light, the feed
-  held at the focus on four legs, the hub and its struts behind, the axle between the yoke's arms, the turntable on its
-  pedestal, every piece joined to the next and lit from where the sun is, however the dish is turned.
-- Now and then a well-made building stands close to where you are (a row house, a cottage, a chapel, a motel, an
-  observatory, a wizard's tower), facing you, and fades away before it could fill the frame.
-
-### Under the hood
-- wildKit.js: the wild things, each member's place a pure function of its group's seed and the clock (`wkAt`): eras
-  ending in a move, each leg held inside its era so nothing jumps at the turn, a drift on noise between (`wkWander`);
-  painted in a few flat shapes (`wkPaint`). The Ringworld sows them by world and ground and paints them
-  (`rgPaintWild`). A new suite, wildlife.test.mjs: no creature faster than it can go between two frames, a herd never
-  back to the same spot, a flock lifting together, a bolt fanning out, every kind painted in every pose.
-- `pkDish` builds the dish from points in its own space, painted far to near, its mount kept behind the bowl while the
-  bowl faces you. Smoke and turned things keep a faded thing's transparency.
-- The research: docs/prior-art/ringworld-wildlife.md and docs/prior-art/arena-on-a-ringworld.md (the long horizon's
-  game); docs/prior-art/film-studio.md (the film studio to come); and docs/ring-ideas.md, the Ringworld's idea book.

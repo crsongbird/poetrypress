@@ -305,6 +305,16 @@ The main page stays as it is. The marks show only in a marking mode entered from
     as it nears and passes (at most seventy degrees aside), looks down 4° more at the start and some 20° by the pass,
     and rises soon to a drone's own height (25 to 80 m by the film's length), keeping clear of what it crosses
     (`rgDroneRoute`). The film tells it only how far along (eased at both ends) and the film's length.
+  - More fun (Ruby, 2026-10-26: "Shouldn't the drone flight be a little more fun? Slightly faster, more adventurous?
+    … Shouldn't it also take the camera/override the camera angle settings after the initial one?"): a fly-over "skims
+    low toward a foreground object, then rises over it to open the scene behind", run faster than other moves (8 to 15
+    mph), its tension from "staying low as long as possible"; a tilt-down reveal "flies forward over a ridge or rooftop
+    while the gimbal tilts down" [src](https://www.thedroneu.com/blog/types-of-shots-in-drone-cinematography/).
+  - So in the app [est]: 12 m/s, a sport drone's cruise rather than a cinema pilot's; the route weaving across its
+    line in a long S; up off the ground, then a low run just clear of the land and over the woods' tops (the ground
+    and the trees read some way ahead, so it lifts before a hill or a wood, never through it), a pop-up for the reveal
+    as it nears the subject, and a long climb away, the gaze tilting down as it goes. The first moment is the camera as
+    it was set; over the first tenth of the flight the drone takes its heading and its tilt over (`take`).
 
 ### D. Moving controls: sway, sweep, drift (moderate; the "arbitrary settings")
 
