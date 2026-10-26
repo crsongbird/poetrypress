@@ -385,10 +385,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     lengths; the sky's things stand in directions of the world (`skyAt`), and
     the stars behind stand on a skybox of the world (`rgPanSky`).
   - **How it is painted** (Ruby's method from game development): the cells in view are walked nearest first, and in
-    each column of the page the highest land yet is kept (the occlusion horizon), snapshotted at forty depths. Where a
-    farther cell rises above it from behind it, the land below was a crest: Ruby's bands are kept there (Ruby: "the
-    bands kept to mark drops in elevation and sharp borders"), each face lit along its top and deepening a band below
-    (`bandAt`); no line along it. Then every thing is measured nearest first, the solid heart of each laid in its
+    each column of the page the highest land yet is kept (the occlusion horizon), snapshotted at forty depths. No band
+    or line is drawn along a crest (Ruby, 2026-10-26: "that texture effect doesn't even need to be drawn anymore"); the
+    land's gleam marks a slope the sun catches. Then every thing is measured nearest first, the solid heart of each laid in its
     columns; a thing wholly below the nearer land, or wholly inside what nearer things cover, is never drawn (`vis`).
     Then every cell, thing, run of way and piece of field is painted far to near, a thing just after the cells under its
     nearest edge. A cell takes its corners' colours (`vcol`), so a border between two grounds runs smoothly across the

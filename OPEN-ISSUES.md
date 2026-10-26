@@ -13,9 +13,9 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   sun and the eye instead, brightest looking into the sun. Is the gleam strong enough, and on the right ground?
 - DRONE FLIGHTS THAT FLY AS CHOSEN: Film → Drone flight → Reveal, Orbit, Dronie or Rise. Until this release the film
   drew every flight as Reveal (the choice was lost on its way to the drawing). Do the four read as different shots?
-- THE BARS OF LIGHT ARE GONE: the thin glowing bars from wall top to wall top (warm yellow in the cities, drawn over
-  everything, hills included) were dropped as the likely yellow seam; the great arches stay. If a yellow seam still
-  shows, a screenshot or the seed would find it.
+- BARS OF LIGHT BY THE WALLS, AND NO CREST BANDS: the bars of light come back only in cities and neon districts, each
+  reaching from a wall's top a sixth of the way across the band. The pale band once laid along the top of each crest
+  (the yellow line on the ground) is no longer drawn at all; the gleam is left. Is the yellow line gone?
 - HALF WILDS: no World slider; every ring is wilds over about half of it, its other two to four worlds in stretches by
   the seed. Old looks keep their other settings. Is the balance right?
 - STREETS: paved towns lay a grid of streets (local, collector, arterial by the town's density), paved roads between
