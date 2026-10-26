@@ -8977,6 +8977,8 @@ function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
   pkPoly(x, [[X + sd*h*0.02, Y - h*0.32], [X + sd*h*0.27, Y - h*0.38], [X + sd*h*0.24, Y - h*0.78], [X + sd*h*0.02, Y - h*0.76]], pkCss(pkMix(rust, PK_WHITE, 0.12)));
   pkPoly(x, [[X - h*0.12, Y - h*0.8], [X - h*0.1, Y - h*1.0], [X + h*0.15, Y - h*0.98], [X + h*0.14, Y - h*0.8]], pkCss(rust));
   x.fillStyle = pkCss(PK_BLACK, 0.6); x.fillRect(X - h*0.04, Y - h*0.92, h*0.14, h*0.035);
+
+  if(c.eyeOn > 0.02){ const ec = [255, 110, 60]; pkGlow(x, X + h*0.03, Y - h*0.902, h*0.12*(0.6 + c.eyeOn), ec, 0.5*c.eyeOn); x.fillStyle = pkCss(pkMix(ec, PK_WHITE, 0.4*c.eyeOn), 0.4 + 0.6*c.eyeOn); x.fillRect(X - h*0.04, Y - h*0.92, h*0.14, h*0.035); }
   pkPoly(x, [[X + h*0.28, Y - h*0.75], [X + h*0.55, Y - h*0.4], [X + h*0.6, Y], [X + h*0.48, Y], [X + h*0.44, Y - h*0.38], [X + h*0.22, Y - h*0.6]], pkCss(c.dark));
   for(let q = 0; q < 5; q++) pkEll(x, X + (R() - 0.5)*h*0.5, Y - h*(0.3 + R()*0.5), h*0.06, h*0.03, pkCss(moss, 0.8));
 }
@@ -9674,6 +9676,151 @@ function wkPaint(x, X, Y, m, kind, st, c, px){
   if(K.body === 'hunter'){ if(K.size*m < px(1.4)){ x.fillStyle = wkCss(c.mat(K.coat).dark); x.fillRect(X - px(0.7), Y - st.y*m - px(1.2), px(1.4), px(1)); return; } return wkHunter(x, X, Y, m, kind, st, c, px); }
   if(K.way === 'walk' || K.way === 'hop' || K.way === 'prowl'){ const L = K.size*m; if(L < px(1.4)){ x.fillStyle = wkCss(c.mat(K.coat).dark); x.fillRect(X - px(0.7), Y - st.y*m - px(1.2), px(1.4), px(1)); return; } return wkQuad(x, X, Y, m, kind, st, c, px); }
   return wkBird(x, X, Y, m, kind, st, c, px);
+}
+
+
+/* ==== eventKit.js ==== */
+const evS = (a, b, v) => v <= a ? 0 : v >= b ? 1 : (v - a)/(b - a)*(v - a)/(b - a)*(3 - 2*(v - a)/(b - a));
+const evLerp = (p, q, t) => [p[0] + (q[0] - p[0])*t, p[1] + (q[1] - p[1])*t, p[2] + (q[2] - p[2])*t];
+
+
+const EV_KINDS = {
+  skirmish:  { P: 48 },
+  magefight: { P: 46 },
+  robohunt:  { P: 54 },
+  wildhunt:  { P: 60 },
+  march:     { P: 0 },
+};
+
+
+const EV_SIDES = {
+  neon: [['sentry', 'sentry', 'walker'], ['walker', 'helper', 'walker']], ruins: [['sentry', 'crawler', 'sentry'], ['walker', 'sentry', 'walker']],
+  builders: [['helper', 'walker', 'helper'], ['sentry', 'sentry', 'walker']], cities: [['helper', 'helper', 'walker'], ['sentry', 'walker', 'sentry']] };
+
+
+
+
+function evFight(s, t, w, mage){
+  const P = mage ? EV_KINDS.magefight.P : EV_KINDS.skirmish.P, e = wkEra(s, t, P), u = t - e.t0, d = e.d, k = e.k, sides = EV_SIDES[w] || EV_SIDES.builders;
+  const n = [mage ? 1 + (wkHash(s, 1, 3) < 0.45 ? 1 : 0) : 2 + (wkHash(s, 1, 3) < 0.5 ? 1 : 0), 2 + (wkHash(s, 2, 3) < 0.5 ? 1 : 0)];
+  const kinds = [mage ? null : sides[0], mage ? ['sentry', 'drone', 'sentry'] : sides[1]];
+  const lose = wkHash(k, 3, s) < (mage ? 0.65 : 0.5) ? 1 : 0, loser = Math.floor(wkHash(k, 4, s)*n[lose]);
+  const tA = 0.16*d, tF = 0.62*d, tK = tA + (tF - tA)*(0.5 + 0.3*wkHash(k, 5, s)), tR = 0.8*d;
+  const gap = v => { const g0 = 46 - 22*evS(0, tA, v); return g0 + (v > tF ? (46 - g0)*evS(tF, d - 1.5, v) : 0); };
+
+  const at = (side, i, v) => { const sg = side ? 1 : -1, wd = wkWander(s + side*131 + i*17, t, 6), lb = side === lose && v > tK ? 12*evS(tK + 0.8, tK + 6, v)*(1 - evS(tF, tF + 6, v)) : 0;
+    return [sg*(gap(v)/2 + lb) + wd[0]*1.2, (i - (n[side] - 1)/2)*7 + (wkHash(i, 6 + side, s) - 0.5)*3 + wd[1]*1.2, 0]; };
+  const down = (side, i, v) => side === lose && i === loser ? evS(tK, tK + 0.8, v)*(1 - evS(tR, d - 2, v)) : 0;
+  const actors = [], fx = [];
+  for(const side of [0, 1]) for(let i = 0; i < n[side]; i++){ const p = at(side, i, u), q = at(side, i, u + 0.25), vx = (q[0] - p[0])/0.25, dn = down(side, i, u);
+    const returning = u > tF && Math.abs(vx) > 0.15, face = returning ? (side ? 0 : Math.PI) : (side ? Math.PI : 0);
+    actors.push({ role: mage && side === 0 ? 'mage' : 'robot', kind: mage && side === 0 ? 'mage' : kinds[side][i % kinds[side].length], side, x: p[0], z: p[1], y: 0, face, pose: dn > 0.02 ? 'down' : Math.abs(vx) > 0.15 ? 'walk' : 'stand', fall: dn, id: side*8 + i }); }
+
+
+  const live = (side, i, v) => down(side, i, v) < 0.02;
+  const shot = (side, i, j, tS, aim, knock) => { const from = at(side, i, tS), tgtSide = 1 - side, tj = knock ? loser : Math.floor(wkHash(j, 30 + i, s + k*7 + side)*n[tgtSide]), to0 = at(tgtSide, tj, tS + 0.5);
+    const miss = !knock && wkHash(j, 40 + i, s + k*7 + side) < 0.45, orb = mage && side === 0, sp = orb ? 14 : 35;
+    const to = miss ? [to0[0] + (wkHash(j, 41, s) - 0.5)*8, to0[1] + (wkHash(j, 42, s) - 0.5)*8, 0] : [to0[0], to0[1], 1.1];
+    from[2] = orb ? 1.6 : 1.2; const T = Math.hypot(to[0] - from[0], to[1] - from[1])/sp, p = (u - tS)/T;
+    if(p >= 0 && p <= 1){ const pos = evLerp(from, to, p); if(orb) pos[2] += Math.sin(Math.PI*p)*T*sp*0.18; fx.push({ type: orb ? 'orb' : 'bolt', side, pos, prev: evLerp(from, to, Math.max(0, p - 0.06)), p }); }
+    const q = (u - tS - T)/0.6; if(q >= 0 && q <= 1){ const hitMage = !miss && mage && tgtSide === 0; fx.push({ type: miss ? 'puff' : hitMage ? 'shield' : 'spark', side, pos: to, p: q, tgt: tj }); }
+    if(orb && u >= tS - 0.4 && u <= tS + 0.1) actors.find(a => a.side === 0 && a.id === i).pose = 'cast'; };
+  for(const side of [0, 1]) for(let i = 0; i < n[side]; i++){ const per = (mage && side === 0 ? 2.6 : 1.7) + 1.3*wkHash(i, 20 + side, s), ph = wkHash(i, 22 + side, s)*per;
+    for(let j = 0; ; j++){ const tS = tA + ph + j*per; if(tS > tF - 1.5 || tS > u + 0.1) break; if(tS + 4 < u) continue; if(!live(side, i, tS)) continue; shot(side, i, j, tS, null, false); } }
+
+  { const side = 1 - lose, i = 0, from = at(side, i, tK - 1), to = at(lose, loser, tK), T = Math.hypot(to[0] - from[0], to[1] - from[1])/(mage && side === 0 ? 14 : 35), tS = tK - T; if(u > tS - 0.5 && u < tK + 1) shot(side, i, 999, tS, null, true); }
+
+  for(const a of actors) if(a.fall > 0.5) for(let q = 0; q < 3; q++){ const ph = ((u*0.5 + q/3) % 1); fx.push({ type: 'smoke', side: a.side, pos: [a.x + ph*1.5, a.z, 0.8 + ph*4], p: ph, a: a.fall }); }
+  return { actors, fx };
+}
+
+
+
+
+function evChase(s, t, robot, prey){
+  const P = robot ? EV_KINDS.robohunt.P : EV_KINDS.wildhunt.P, e = wkEra(s, t, P), u = t - e.t0, d = e.d, k = e.k;
+  const ang = wkHash(s, 50, 1)*Math.PI*2, Ld = 70, H1 = [Math.cos(ang)*Ld, Math.sin(ang)*Ld], homeOf = kk => kk % 2 === 0 ? [0, 0] : H1;
+  const A = homeOf(k), B = homeOf(k + 1), dx = B[0] - A[0], dz = B[1] - A[1], dl = Math.hypot(dx, dz) || 1, nx = -dz/dl, nz = dx/dl;
+  const tS = 0.3*d, tC = Math.min(14, 0.3*d), tE = tS + tC, nH = robot ? 1 : 3 + (wkHash(s, 51, 1) < 0.5 ? 1 : 0), nP = 4 + Math.floor(wkHash(s, 52, 1)*3);
+
+  const wait = kk => { const h = homeOf(kk), sg = wkHash(kk, 53, s) < 0.5 ? 1 : -1, b = homeOf(kk + 1), ex = b[0] - h[0], ez = b[1] - h[1], el = Math.hypot(ex, ez) || 1; return [h[0] - ex/el*55 + sg*(-ez/el)*20, h[1] - ez/el*55 + sg*(ex/el)*20]; };
+  const W0 = wait(k), W1 = wait(k + 1), run = evS(tS, tE, u), actors = [], fx = [];
+  for(let i = 0; i < nP; i++){ const an = wkHash(i, 54, s)*Math.PI*2, rd = 2 + 4*Math.sqrt(wkHash(i, 55, s)), wd = wkWander(s + i*37, t, 20), fan = 1 + 0.8*Math.sin(Math.PI*run);
+    const hx = A[0] + dx*run + (Math.cos(an)*rd*fan + wd[0]*2.5), hz = A[1] + dz*run + (Math.sin(an)*rd*fan + wd[1]*2.5), running = u > tS - 0.5 && u < tE + 0.5;
+    actors.push({ role: 'prey', kind: prey, x: hx, z: hz, y: 0, face: running ? Math.atan2(dz, dx) : wkHash(i, 56 + (k & 7), s)*Math.PI*2, pose: running ? 'run' : 'graze', ph: running ? u*1.6 + i*0.3 : u*0.12, head: u > tS - 4 && u < tE + 6 ? 1 : 0.2, id: i }); }
+
+
+  const lag = 18 - 8*Math.sin(Math.PI*run);
+  for(let i = 0; i < nH; i++){ const off = [-(i - (nH - 1)/2)*3*Math.sin(ang), (i - (nH - 1)/2)*3*Math.cos(ang)], back = [A[0] + dx*run - dx/dl*lag, A[1] + dz*run - dz/dl*lag];
+    const stalk = evS(0, tS, u), give = evS(tE, tE + 8, u), retire = evS(tE + 8, d - 2, u), app = [W0[0] + (A[0] - dx/dl*18 - W0[0])*stalk, W0[1] + (A[1] - dz/dl*18 - W0[1])*stalk];
+    const pos = u < tS ? app : u < tE ? [back[0], back[1]] : [B[0] - dx/dl*(lag + 14*give) + (W1[0] - B[0] + dx/dl*(lag + 14))*retire, B[1] - dz/dl*(lag + 14*give) + (W1[1] - B[1] + dz/dl*(lag + 14))*retire];
+    const p2 = u < tS ? app : pos, wd = wkWander(s + 300 + i*41, t, 8), x = pos[0] + off[0] + wd[0], z = pos[1] + off[1] + wd[1];
+    const mv = u < tS ? (stalk > 0.01 && stalk < 0.99) : u < tE + 8 || (retire > 0.01 && retire < 0.99), face = u < tE + 8 ? Math.atan2(dz, dx) : Math.atan2(W1[1] - B[1], W1[0] - B[0]);
+    actors.push({ role: 'hunter', kind: robot ? 'drone' : 'wolves', x, z, y: robot ? 6 + 3*Math.sin(t*0.7) : 0, face, pose: u > tS && u < tE ? 'run' : mv ? 'walk' : 'graze', ph: u*(u > tS && u < tE ? 1.8 : 0.6) + i*0.4, head: 0.5, id: 10 + i, p2 }); }
+
+  if(robot) for(let j = 0; j < 40; j++){ const tsj = tS + 0.4 + j*0.9; if(tsj > tE) break; if(tsj > u || tsj + 1.2 < u) continue; const hv = actors[nP], rj = wkHash(j, 57, s + k), tgt = actors[Math.floor(rj*nP)];
+    const from = [hv.x, hv.z, hv.y], to = [tgt.x + (wkHash(j, 58, s) - 0.5)*6, tgt.z + (wkHash(j, 59, s) - 0.5)*6, 0], T = 0.3, p = (u - tsj)/T;
+    if(p <= 1) fx.push({ type: 'bolt', side: 1, pos: evLerp(from, to, p), prev: evLerp(from, to, Math.max(0, p - 0.15)), p }); else if(p - 1 < 3) fx.push({ type: 'puff', side: 1, pos: to, p: (p - 1)/3 }); }
+  return { actors, fx };
+}
+
+
+
+function evMarch(s, t, dest){
+  const n = 3 + Math.floor(wkHash(s, 60, 1)*5), dist = Math.hypot(dest[0], dest[1]) || 1, sp = 1.25, trav = dist/sp, stay = 16 + 14*wkHash(s, 61, 1), P = 2*(trav + stay);
+  const c = ((t + wkHash(s, 62, 1)*P) % P + P) % P, bend = (wkHash(s, 63, 1) - 0.5)*0.35*dist, nx = -dest[1]/dist, nz = dest[0]/dist;
+  const curve = q => { const b = 4*q*(1 - q)*bend; return [dest[0]*q + nx*b, dest[1]*q + nz*b]; };
+
+  let q, go = false, dir = 1; if(c < stay){ q = 0; } else if(c < stay + trav){ q = evS(0, 1, (c - stay)/trav); go = true; } else if(c < 2*stay + trav){ q = 1; } else { q = 1 - evS(0, 1, (c - 2*stay - trav)/trav); go = true; dir = -1; }
+  const [px, pz] = curve(q), [qx, qz] = curve(Math.min(1, Math.max(0, q + 0.01*dir))), hd = Math.atan2(qz - pz, qx - px), ch = Math.cos(hd), sh = Math.sin(hd);
+
+  const mixc = go ? evS(0, 0.06, Math.min(q, 1 - q)) : 0, actors = [];
+  for(let i = 0; i < n; i++){ const row = Math.floor(i/2), sd = i % 2 ? 1 : -1, wd = wkWander(s + i*53, t, 5);
+    const cx = -row*1.4, cz = sd*0.6, ra = i/n*Math.PI*2, rx = Math.cos(ra)*1.8, rz = Math.sin(ra)*1.8, k2 = go ? mixc : 0;
+
+    const ox = rx + (ch*cx - sh*cz - rx)*k2, oz = rz + (sh*cx + ch*cz - rz)*k2;
+    actors.push({ role: 'person', kind: 'figure', x: px + ox + wd[0]*0.3, z: pz + oz + wd[1]*0.3, y: 0, face: go && k2 > 0.5 ? hd : ra + Math.PI, pose: go ? 'walk' : 'stand', id: i }); }
+  return { actors, fx: [] };
+}
+
+
+
+
+function evAt(kind, s, t, o = {}){
+  if(kind === 'skirmish') return evFight(s, t, o.w, false);
+  if(kind === 'magefight') return evFight(s, t, o.w, true);
+  if(kind === 'robohunt') return evChase(s, t, true, o.prey || 'deer');
+  if(kind === 'wildhunt') return evChase(s, t, false, o.prey || 'deer');
+  if(kind === 'march') return evMarch(s, t, o.dest || [40, 0]);
+  return { actors: [], fx: [] };
+}
+
+
+
+
+
+
+function evGiant(s, t){
+  const T = 26 + 10*wkHash(s, 70, 1), c = ((t + wkHash(s, 71, 1)*T) % T + T) % T, k = Math.floor((t + wkHash(s, 71, 1)*T)/T);
+  const an = (wkHash(k, 72, s) - 0.5)*2.1, r = 30 + 60*wkHash(k, 73, s), drift = Math.min(1, Math.max(0, (c - 3)/5)), tgt = [Math.cos(an)*r + (1 - drift)*6*Math.sin(k), Math.sin(an)*r + (1 - drift)*4];
+  const aim = evS(3, 4.2, c)*(1 - evS(8.3, 8.6, c)), fire = evS(8.6, 8.9, c)*(1 - evS(9.6, 10.1, c)), eye = Math.max(0.15, evS(2, 3, c)*(1 - evS(10.5, 13, c))*(0.6 + 0.4*evS(8, 8.6, c)));
+  return { eye, aim, fire, tgt, hit: c >= 8.8 ? Math.min(1, (c - 8.8)/1.6) : -1, scorch: c >= 8.8 ? 1 - evS(9, 20, c) : 0 };
+}
+
+
+
+function evPaintFx(x, f, X, Y, r, col, px, P2){
+  const css = (c, a) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`, glow = (gx, gy, rr, c, a) => { if(!(rr > 0.5)) return; const g = x.createRadialGradient(gx, gy, 0, gx, gy, rr); g.addColorStop(0, css(c, a)); g.addColorStop(1, css(c, 0)); x.fillStyle = g; x.fillRect(gx - rr, gy - rr, rr*2, rr*2); };
+  x.save(); x.globalCompositeOperation = 'screen';
+  if(f.type === 'bolt'){ const [X2, Y2] = P2 || [X, Y], w = Math.max(px(0.8), r*0.12); x.lineCap = 'round'; x.strokeStyle = css(col, 0.9); x.lineWidth = w; x.beginPath(); x.moveTo(X2, Y2); x.lineTo(X, Y); x.stroke();
+    x.strokeStyle = css([255, 255, 255], 0.8); x.lineWidth = w*0.4; x.stroke(); glow(X, Y, Math.max(px(2), r*0.6), col, 0.5); }
+  else if(f.type === 'orb'){ const rr = Math.max(px(1.5), r*0.35); glow(X, Y, rr*3, col, 0.55); x.fillStyle = css([255, 255, 255], 0.85); x.beginPath(); x.arc(X, Y, rr*0.5, 0, Math.PI*2); x.fill(); }
+  else if(f.type === 'spark'){ const q = f.p, rr = Math.max(px(2), r*(0.6 + 1.6*q)); glow(X, Y, rr, col, 0.6*(1 - q)); x.strokeStyle = css(col, 0.7*(1 - q)); x.lineWidth = Math.max(px(0.6), r*0.06);
+    x.beginPath(); for(let k = 0; k < 6; k++){ const a = k*1.047 + 0.4, l0 = rr*0.3, l1 = rr*(0.6 + 0.4*q); x.moveTo(X + Math.cos(a)*l0, Y + Math.sin(a)*l0*0.7); x.lineTo(X + Math.cos(a)*l1, Y + Math.sin(a)*l1*0.7); } x.stroke(); }
+  else if(f.type === 'shield'){ const q = f.p, rr = r*1.6, a = 0.4*Math.sin(Math.PI*Math.min(1, q*1.3)); x.strokeStyle = css(col, a); x.lineWidth = Math.max(px(0.8), r*0.08); x.beginPath(); x.ellipse(X, Y - rr*0.6, rr*0.7, rr, 0, 0, Math.PI*2); x.stroke(); glow(X, Y - rr*0.6, rr, col, a*0.4); }
+  x.restore();
+  if(f.type === 'puff' || f.type === 'smoke'){ const q = f.p, rr = Math.max(px(1.5), r*(f.type === 'smoke' ? 0.5 + 1.2*q : 0.4 + 1.4*q)), a = (f.type === 'smoke' ? 0.35*(f.a ?? 1) : 0.45)*(1 - q);
+    x.fillStyle = css(f.type === 'smoke' ? [70, 70, 74] : [150, 136, 112], a); x.beginPath(); x.arc(X, Y - (f.type === 'puff' ? rr*0.5 : 0), rr, 0, Math.PI*2); x.fill(); }
 }
 
 
@@ -22241,7 +22388,7 @@ function rgStore(V){
 
 
 
-  { const BOTS = { builders: 0.2, neon: 0.14, cities: 0.07, ruins: 0.1, wilds: 0.012, magic: 0.015 };
+  { const BOTS = { builders: 0.3, neon: 0.22, cities: 0.1, ruins: 0.16, wilds: 0.018, magic: 0.02 };
     sow(6, W*0.004, W*0.012, W*0.3, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > (BOTS[w] || 0)*(0.3 + V.fauna)) return null;
       const g = ground(a, z); if(g.wet || g.slope > 1.2) return null; const L2 = PK_BOTS[w] || PK_BOTS.cities, kind = L2[Math.floor(R()*L2.length)];
       if(kind === 'derelict' && R() > 0.2) return null;
@@ -22311,7 +22458,16 @@ function rgStore(V){
       if(g.wet || g.slope > 0.6 || fo < 0.1 || fo > 0.65 || inTown(w, a, z)) return null; return wild('moonharts', w); });
     sowD(32, W*0.008, W*0.016, W*0.12, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if((w !== 'magic' && w !== 'ruins') || R() > (w === 'magic' ? 0.35 : 0.15)*LIFE) return null; const g = ground(a, z);
       if(g.wet && !g.coast) return null; if(!g.coast && V.forestAt(a, z) < 0.2) return null; return wild('lanternmoths', w); });
-    if(V.world.list.includes('magic')) sow(33, W*0.15, W*0.3, W*1.2, 1, (a, z, r, R) => R() < 0.3*LIFE ? wild('skyrays', V.worldAt(a, z)) : null); }
+    if(V.world.list.includes('magic')) sow(33, W*0.15, W*0.3, W*1.2, 1, (a, z, r, R) => R() < 0.3*LIFE ? wild('skyrays', V.worldAt(a, z)) : null);
+
+
+
+
+
+    const EVW = { neon: [['skirmish', 0.4]], ruins: [['skirmish', 0.35]], builders: [['skirmish', 0.22], ['robohunt', 0.22]], cities: [['skirmish', 0.08]], magic: [['magefight', 0.4], ['wildhunt', 0.1]], wilds: [['wildhunt', 0.22], ['robohunt', 0.04]] };
+    sowD(34, W*0.03, W*0.06, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z), L2 = EVW[w]; if(!L2) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+      if(g.wet || g.slope > 0.35 || fo > 0.45 || inTown(w, a, z)) return null; const u = R(); let acc = 0, kind = null; for(const [k, pr] of L2){ acc += pr*(0.4 + 0.8*LIFE); if(u < acc){ kind = k; break; } } if(!kind) return null;
+      const b = biome(a, z), cold = b.tundra + b.taiga + b.ice; return { c: 'event', kind, w, face: R()*Math.PI*2, prey: w === 'magic' ? 'striders' : cold > 0.4 ? 'elk' : 'deer' }; }); }
 
 
 
@@ -22432,7 +22588,14 @@ function rgStore(V){
   { const doors = out.filter(o => o.c === 'bldg' && !RG_DOORLESS.includes(o.kind));
     for(const o of out){ if(o.c !== 'prop' || o.kind !== 'figure' || o.w === 'neon') continue; let best = null, bd = 250*M;
       for(const b of doors){ const d = Math.abs(b.a - o.a) + Math.abs(b.z - o.z); if(d < bd*1.42 && Math.hypot(b.a - o.a, b.z - o.z) < bd){ bd = Math.hypot(b.a - o.a, b.z - o.z); best = b; } }
-      if(best){ const ex = -best.a, ez = L.zS - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } } }
+      if(best){ const ex = -best.a, ez = L.zS - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } }
+
+
+
+    const doorOf = b => { const ex = -b.a, ez = L.zS - b.z, el = Math.hypot(ex, ez) || 1, off = (b.wM*0.5 + 1)*M; return [b.a + ex/el*off, b.z + ez/el*off]; }, MRATE = { cities: 0.07, neon: 0.06, builders: 0.05, magic: 0.06, wilds: 0.04, ruins: 0.02 };
+    for(const b of doors){ const R = rgRand(s, 881, (b.rs >>> 4) & 0xffff, b.rs & 15); if(R() > (MRATE[b.w] || 0.03)*(0.5 + V.fauna)) continue;
+      const A = doorOf(b), cand = doors.filter(d2 => d2 !== b && (() => { const dd2 = Math.hypot(d2.a - b.a, d2.z - b.z); return dd2 > 40*M && dd2 < 180*M; })()); if(!cand.length) continue;
+      const B = doorOf(cand[Math.floor(R()*cand.length)]); out.push({ c: 'event', kind: 'march', w: b.w, a: A[0], z: A[1], r: PD(A[0], A[1]), rs: (R()*4294967296) >>> 0, face: 0, dest: [(B[0] - A[0])/M, (B[1] - A[1])/M] }); } }
 
 
 
@@ -22772,7 +22935,7 @@ function rgPaintLand(x, mk, dk, V){
 
   let loudOne = null, loudR = Infinity;
   for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a - A0E, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
-  const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
+  const marginOf = o => o.c === 'event' ? (o.dest ? Math.hypot(...o.dest) + 30 : 90)*W*0.00025 : o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
 
 
 
@@ -22902,6 +23065,38 @@ function rgPaintLand(x, mk, dk, V){
         for(let q = 1; q < 4; q++){ const A = [pts[0][0] + (pts[1][0] - pts[0][0])*q/4, pts[0][1] + (pts[1][1] - pts[0][1])*q/4], B = [pts[3][0] + (pts[2][0] - pts[3][0])*q/4, pts[3][1] + (pts[2][1] - pts[3][1])*q/4]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); }
         const A = [(pts[0][0] + pts[3][0])/2, (pts[0][1] + pts[3][1])/2], B = [(pts[1][0] + pts[2][0])/2, (pts[1][1] + pts[2][1])/2]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
         x.strokeStyle = rsCss(frame.dark); x.lineWidth = Math.max(px(0.4), 0.05*mpx); x.beginPath(); pts.forEach((p2, i) => i ? x.lineTo(p2[0], p2[1]) : x.moveTo(p2[0], p2[1])); x.closePath(); x.stroke(); } } };
+
+
+
+  const RG_EV_SIZE = { helper: 1.25, drone: 0.75, crawler: 0.8, sentry: 2.3, walker: 3.4 };
+  const rgPaintEvent = (o, l, dd) => { const t = V.time ? MT : 0, M0 = W*0.00025, wday = ringDay(L, o.a), night = 1 - rsSmooth(0.3, 0.7, wday);
+    const pres = o.kind === 'march' ? (o.w === 'neon' ? 0.8 : rsSmooth(0.2, 0.55, wday)) : 1; if(pres < 0.03) return;
+    const E2 = evAt(o.kind, o.rs, t, o), ca = Math.cos(o.face || 0), sa = Math.sin(o.face || 0), haze = hazeOf(dd), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));
+    const wpos = (px0, pz0) => [o.a + (ca*px0 - sa*pz0)*M0, o.z + (sa*px0 + ca*pz0)*M0], c0 = colsOf(o.w, cday, haze, null, o);
+    const sideCol = [o.kind === 'magefight' ? c0.glow : rsMix(c0.glow, [120, 220, 255], 0.5), [255, 76, 60]], draws = [];
+    for(const A of E2.actors){ const [a, z] = wpos(A.x, A.z), f = foot(a, z); if(!f) continue; const m = f[2], X = f[0], Y = f[1], wf = A.face + (o.face || 0), rel = wf - Math.atan2(L.z0 - z, A0E - a), view = { cs: Math.cos(rel), sn: Math.sin(rel) };
+      if(A.role === 'robot' || (A.role === 'hunter' && A.kind === 'drone')){ const h = (RG_EV_SIZE[A.kind] || 1.5)*m*1.3, yy = Y - (A.y || 0)*m; if(h < px(2) || h > wh*0.6) continue; if(!vis(l, X - h, X + h, yy - h*1.2, Y)) continue;
+        draws.push([m, () => { const c = { ...c0, eye: sideCol[A.side ?? 1], view }; const R = mulberry32(o.rs ^ (A.id*0x9E37)); x.save(); x.globalAlpha *= pres;
+          if(A.fall > 0.01){ x.translate(X, Y); x.rotate((A.side ? 1 : -1)*A.fall*1.25); x.translate(-X, -Y); }
+          if(view.sn < 0 && !PK_BOTS3.includes(A.kind)) mirrored(X, () => pkRobot(x, X, yy, h, pkFlip(c), A.kind, R, rgPx, night)); else pkRobot(x, X, yy, h, c, A.kind, R, rgPx, night); x.restore(); }]); continue; }
+      if(A.role === 'mage' || A.role === 'person'){ const h = 1.75*m*1.3; if(h < px(2) || h > wh*0.6) continue; if(!vis(l, X - h*0.5, X + h*0.5, Y - h*1.2, Y)) continue;
+        draws.push([m, () => { const cc = { ...colsOf(o.w, cday, haze, null, { ...o, rs: (o.rs + A.id*7919) >>> 0 }), view, stride: A.pose === 'walk' ? Math.sin(t*5.5 + A.id) : 0, lantern: 0 }, R = mulberry32((o.rs + A.id*7919) >>> 0); x.save(); x.globalAlpha *= pres;
+          const kneel = A.pose === 'down' ? 0.6 : 1; if(kneel < 1){ x.translate(X, Y); x.scale(1, kneel); x.translate(-X, -Y); }
+          pkProp(x, X, Y, h, cc, 'figure', R, rgPx, night);
+          if(A.role === 'mage'){ const g = sideCol[0], sd2 = view.sn < 0 ? -1 : 1, rob = rsMix(g, [40, 30, 60], 0.45);
+            x.fillStyle = rsCss(rob, 0.92); x.beginPath(); x.moveTo(X - h*0.09, Y - h*0.72); x.lineTo(X + h*0.09, Y - h*0.72); x.lineTo(X + h*0.2, Y); x.lineTo(X - h*0.2, Y); x.closePath(); x.fill();
+            const up = A.pose === 'cast' ? 1 : 0, sx0 = X + sd2*h*0.2, top = [sx0 + sd2*h*0.05*up, Y - h*(1.05 + 0.25*up)]; x.strokeStyle = rsCss([92, 66, 44]); x.lineWidth = Math.max(px(0.6), h*0.03); x.beginPath(); x.moveTo(sx0, Y); x.lineTo(top[0], top[1]); x.stroke();
+            x.save(); x.globalCompositeOperation = 'screen'; const gr = x.createRadialGradient(top[0], top[1], 0, top[0], top[1], h*(0.12 + 0.18*up)); gr.addColorStop(0, rsCss(rsMix(g, [255, 255, 255], 0.5), 0.9)); gr.addColorStop(1, rsCss(g, 0)); x.fillStyle = gr; x.fillRect(top[0] - h*0.3, top[1] - h*0.3, h*0.6, h*0.6); x.restore(); }
+          x.restore(); }]); continue; }
+
+      const K = WK_KINDS[A.kind]; if(!K) continue; const LIC = RG_WILD_LICENCE, sz = K.size*m*LIC; if(sz < px(2) || sz > wh*0.5) continue; const yy = Y - (A.y || 0)*m; if(!vis(l, X - sz, X + sz, yy - sz, yy + sz*0.3)) continue;
+      const g2 = foot(a + Math.cos(wf)*M0*3, z + Math.sin(wf)*M0*3), dir = !g2 || g2[0] >= X ? 1 : -1, side = Math.abs(view.sn);
+      draws.push([m, () => { const c = { ...colsOf(o.w, cday, haze, null, o), flowers: [V.g1, V.g2, [244, 238, 228]] }; x.save(); x.globalAlpha *= pres; wkPaint(x, X, Y, m*LIC, A.kind, { y: (A.y || 0)/LIC, pose: A.pose, ph: A.ph || 0, head: A.head ?? 0.5, dir, side, stag: A.id === 0, hue: A.id, nt: night, lie: 0 }, c, rgPx); x.restore(); }]); }
+
+    for(const fx of E2.fx){ const [a, z] = wpos(fx.pos[0], fx.pos[1]), f = foot(a, z); if(!f) continue; const P = at(a, z, f[3] + (fx.pos[2] || 0)*M0); if(!P) continue; const m = M0*F/P[2];
+      let P2 = null; if(fx.prev){ const [a2, z2] = wpos(fx.prev[0], fx.prev[1]), f2 = foot(a2, z2); if(f2){ const Q = at(a2, z2, f2[3] + (fx.prev[2] || 0)*M0); if(Q) P2 = [Q[0], Q[1]]; } }
+      if(painting) draws.push([m*1.001, () => evPaintFx(x, fx, P[0], P[1], m, sideCol[fx.side ?? 1], rgPx, P2)]); }
+    if(!painting) return; draws.sort((p, q) => p[0] - q[0]); for(const [, d] of draws) d(); };
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
 
     if(o0.near){ const f1 = foot(o0.a, o0.z); if(!f1) return; const nf = rsSmooth(ww*0.8, ww*0.45, o0.wM*f1[2]*1.6)*rsSmooth(wh*1.05, wh*0.65, o0.hM*f1[2]); if(nf < 0.03) return;
@@ -22914,7 +23109,7 @@ function rgPaintLand(x, mk, dk, V){
 
 
   const RG_SMALL = { rock: 1, prop: 1, bot: 1, egg: 1, grass: 1, life: 1, board: 1, solid: 1 };
-  const rgPaintThing0 = (o, l, dd, o0) => { if(o.c === 'wild') return rgPaintWild(o, l, dd);
+  const rgPaintThing0 = (o, l, dd, o0) => { if(o.c === 'wild') return rgPaintWild(o, l, dd); if(o.c === 'event') return rgPaintEvent(o, l, dd);
     if(RG_SMALL[o.c]){ const f0 = foot(o.a, o.z); if(!f0) return; const sp = Math.max(o.hM || 1.5, (o.wM || 0)*0.6)*f0[2]; if(sp < px(2)) return;
       const fa = rgClamp((sp - px(2))/px(1.5)); if(fa < 0.98 && painting){ x.save(); x.globalAlpha *= fa; rgPaintThing1(o, l, dd, o0); x.restore(); return; } }
     return rgPaintThing1(o, l, dd, o0); };
@@ -23031,7 +23226,21 @@ function rgPaintLand(x, mk, dk, V){
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;
       if(PK_BOTS3.includes(o.kind)){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
       const bob = V.time && o.kind === 'drone' ? Math.sin(ST*1.3 + (o.rs & 63))*h*0.12 : 0;
-      if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+
+
+
+      const GZ = o.kind === 'derelict' ? evGiant(o.rs, V.time ? FT : 0) : null; if(GZ) c.eyeOn = GZ.eye;
+      const flip = viewOf(o).sn < 0;
+      if(flip) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
+      if(GZ && (GZ.aim > 0.01 || GZ.fire > 0.01 || GZ.scorch > 0.01)){ const fc = o.face ?? (o.rs % 62832)/10000, M0 = W*0.00025, ta = o.a + (Math.cos(fc)*GZ.tgt[0] - Math.sin(fc)*GZ.tgt[1])*M0, tz = o.z + (Math.sin(fc)*GZ.tgt[0] + Math.cos(fc)*GZ.tgt[1])*M0, ft = foot(ta, tz);
+        if(ft){ const ex = X + (flip ? -1 : 1)*h*0.03, ey = Y - h*0.9, m = ft[2], beam = [255, 96, 60];
+          if(GZ.scorch > 0.01){ x.fillStyle = rsCss([24, 18, 14], 0.4*GZ.scorch); x.beginPath(); x.ellipse(ft[0], ft[1], m*2.2, m*0.7, 0, 0, Math.PI*2); x.fill(); }
+          x.save(); x.globalCompositeOperation = 'screen'; x.lineCap = 'round';
+          if(GZ.aim > 0.01){ x.strokeStyle = rsCss(beam, 0.55*GZ.aim); x.lineWidth = Math.max(px(0.6), h*0.004); x.beginPath(); x.moveTo(ex, ey); x.lineTo(ft[0], ft[1]); x.stroke(); }
+          if(GZ.fire > 0.01){ const bw = Math.max(px(1.5), Math.min(h*0.03, m*0.9)); for(const [kw, ka, cc2] of [[3, 0.25, beam], [1.4, 0.6, beam], [0.5, 0.9, [255, 236, 210]]]){ x.strokeStyle = rsCss(cc2, ka*GZ.fire); x.lineWidth = bw*kw; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ft[0], ft[1]); x.stroke(); } }
+          if(GZ.hit >= 0 && GZ.hit < 1){ const q = GZ.hit, rr = m*(1.5 + 4*q), g = x.createRadialGradient(ft[0], ft[1], 0, ft[0], ft[1], rr); g.addColorStop(0, rsCss([255, 200, 140], 0.55*(1 - q))); g.addColorStop(1, rsCss(beam, 0)); x.fillStyle = g; x.fillRect(ft[0] - rr, ft[1] - rr, rr*2, rr*2); }
+          x.restore(); } }
+      return; }
 
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.6) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y > wh + hh*0.2 || !vis(l, X - hh*4, X + hh*4, Y - hh*(o.kind === 'kite' ? 5 : 1.4), Y)) return;
@@ -36803,7 +37012,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Scorpius–Alniyat';
+const RELEASE = 'Scorpius–Fang';
 
 const RELEASE_DATE = '2026-10-26';
 
@@ -37770,7 +37979,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-26 · 9705432";
+const STAMP = "2026-10-26 · 98408d9";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

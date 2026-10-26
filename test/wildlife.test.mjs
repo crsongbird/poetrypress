@@ -98,4 +98,15 @@ for(const kind of kinds){ let worst = 0;
   check('some rain falls with the sun out, and the common weathers still come most', share('sunshower', ['wilds'], {}) > 0.005 && share('clear', ['wilds'], {}) > 0.35);
   check('each rarer weather stands on a common sky', Object.entries(R.RG_WX_BASE).every(([k, v]) => ['clear', 'clouds', 'fog'].includes(v))); }
 
+// (Ruby, 2026-10-26: "robot fights. robot wars. robots versus mages. humans in groups … robots hunting wildlife … the
+// large tall half-giant robot … guardian laser style": the happenings, eventKit.js; nobody in them ever jumps, a fight
+// shoots and someone falls and gets up again, the giant's beam eases on and off and never flashes)
+{ const E = await import('../eventKit.js'), top = { skirmish: 6, magefight: 6, robohunt: 40, wildhunt: 30, march: 3 };
+  for(const kind of Object.keys(top)){ let worst = 0, shots = 0, falls = 0;
+    for(const sd of [7, 31337]){ let prev = null; for(let t = 0; t < 400; t += 0.05){ const r = E.evAt(kind, sd, t, { w: 'neon', dest: [70, 25], prey: 'deer' }); shots += r.fx.filter(f => f.type === 'bolt' || f.type === 'orb').length; falls += r.actors.some(a => a.fall > 0.9) ? 1 : 0;
+      if(prev) r.actors.forEach((a, i) => { const b = prev.actors[i]; if(b) worst = Math.max(worst, Math.hypot(a.x - b.x, a.z - b.z, a.y - b.y)/0.05); }); prev = r; } }
+    check(`${kind}: nobody jumps (fastest ${worst.toFixed(1)} m/s, at most ${top[kind]})` + (kind === 'skirmish' || kind === 'magefight' ? `, shots fly (${shots}) and someone falls` : ''), worst <= top[kind] && (kind !== 'skirmish' && kind !== 'magefight' || (shots > 100 && falls > 10))); }
+  let step = 0, fired = 0; for(let t = 0; t < 300; t += 0.02){ const a = E.evGiant(11, t).fire, b = E.evGiant(11, t + 0.02).fire; step = Math.max(step, Math.abs(b - a)); if(a > 0.9) fired++; }
+  check(`the giant fires, its beam eased on and off, never a flash (largest step a 50th of a second: ${step.toFixed(3)})`, fired > 0 && step < 0.12); }
+
 done();

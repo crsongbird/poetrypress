@@ -2506,13 +2506,15 @@ export function pkRobot(x, X, Y, h, c, kind, R0, px, night = 0){
     pkEll(x, X, by, w*0.38, h*0.22, pkCss(c.body)); pkEll(x, X + sd*w*0.08, by - h*0.08, w*0.24, h*0.1, pkCss(c.lit));
     pkPoly(x, [[X - w*0.2, by - h*0.15], [X - w*0.16, by - h*0.55], [X + w*0.12, by - h*0.55], [X + w*0.16, by - h*0.15]], pkCss(pkMat(c, PK_WOOD, 0.7).body));
     for(const e of [-1, 1]){ x.beginPath(); x.moveTo(X + e*w*0.12, by - h*0.1); x.lineTo(X + e*w*0.16, by - h*0.4); x.stroke(); dot(X + e*w*0.16, by - h*0.42, Math.max(px(0.4), h*0.04)); } return; }
-  // a derelict: a giant, fallen long ago, kneeling, one arm on the ground, rust and moss on it, its eye long dark
+  // a derelict: a giant, fallen long ago, kneeling, one arm on the ground, rust and moss on it, its eye dark but when it wakes
   const rust = pkMix(c.body, [140, 80, 50], 0.45), moss = pkMix(c.dark, [70, 100, 60], 0.4);
   pkPoly(x, [[X - h*0.35, Y], [X - h*0.3, Y - h*0.35], [X - h*0.05, Y - h*0.38], [X, Y]], pkCss(c.dark));                       // the knee
   pkPoly(x, [[X - h*0.25, Y - h*0.3], [X - h*0.3, Y - h*0.75], [X + h*0.25, Y - h*0.8], [X + h*0.3, Y - h*0.35]], pkCss(rust));   // the torso
   pkPoly(x, [[X + sd*h*0.02, Y - h*0.32], [X + sd*h*0.27, Y - h*0.38], [X + sd*h*0.24, Y - h*0.78], [X + sd*h*0.02, Y - h*0.76]], pkCss(pkMix(rust, PK_WHITE, 0.12)));
   pkPoly(x, [[X - h*0.12, Y - h*0.8], [X - h*0.1, Y - h*1.0], [X + h*0.15, Y - h*0.98], [X + h*0.14, Y - h*0.8]], pkCss(rust));   // the head
   x.fillStyle = pkCss(PK_BLACK, 0.6); x.fillRect(X - h*0.04, Y - h*0.92, h*0.14, h*0.035);
+  // (awake (c.eyeOn, eventKit's evGiant): its eye's slit lit red-orange, a glow round it as it gathers its light)
+  if(c.eyeOn > 0.02){ const ec = [255, 110, 60]; pkGlow(x, X + h*0.03, Y - h*0.902, h*0.12*(0.6 + c.eyeOn), ec, 0.5*c.eyeOn); x.fillStyle = pkCss(pkMix(ec, PK_WHITE, 0.4*c.eyeOn), 0.4 + 0.6*c.eyeOn); x.fillRect(X - h*0.04, Y - h*0.92, h*0.14, h*0.035); }
   pkPoly(x, [[X + h*0.28, Y - h*0.75], [X + h*0.55, Y - h*0.4], [X + h*0.6, Y], [X + h*0.48, Y], [X + h*0.44, Y - h*0.38], [X + h*0.22, Y - h*0.6]], pkCss(c.dark));   // the arm on the ground
   for(let q = 0; q < 5; q++) pkEll(x, X + (R() - 0.5)*h*0.5, Y - h*(0.3 + R()*0.5), h*0.06, h*0.03, pkCss(moss, 0.8));
 }

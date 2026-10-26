@@ -4,6 +4,33 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Fang (2026-10-26)
+
+- Things happen on the Ringworld now:
+  - **Robot fights.** Two lines of robots close in and trade bolts, many of them missing into the ground. One robot is
+    knocked down and lies smoking while its side backs off. Then both sides walk back to their lines and the fallen
+    robot is repaired and stands up again. They fight in the neon, the ruins and the builders' country, and now and then
+    in a city.
+  - **Mages against sentries** in the magic world. Mages wear robes in their region's light and carry staffs that glow
+    at the tip and rise as they cast. Their orbs arc across, and a shield of light catches the sentries' bolts.
+  - **Hunts.** A drone runs a herd across the builders' open country, its shots kicking up the ground around them. In
+    the wilds a wolf pack stalks, then chases deer or elk until it is outrun. Nothing is ever caught.
+  - **People in company.** A small group sets out from one house's door to another's, walks there in pairs, stands
+    talking in a ring for a while, then walks back. This happens by day, and at all hours in neon cities.
+  - **The kneeling giant wakes.** About every half minute its eye lights and a thin beam settles on a spot on the ground.
+    Then it fires a beam for about a second, leaving a small burst and a scorch mark. The beam fades on and off, so it
+    never flashes.
+- More robots: about half again as many.
+
+### Under the hood
+- New module eventKit.js: `evAt`, `evGiant` and `evPaintFx`. Everything in a happening is worked out from its own seed
+  and the clock, and each episode ends where the next begins.
+- The land painter sows the happenings: the fights and hunts with the wildlife, the walking groups from the doors. It
+  paints them with pkRobot, pkProp and wkPaint. The giant's eye glows (`eyeOn`) and its beam runs on the film's clock.
+- The wildlife suite checks that no one in a happening jumps, that fights fire shots and someone falls, and that the
+  giant's beam never flashes.
+- New research notes: docs/prior-art/ringworld-happenings.md.
+
 ## Scorpius–Alniyat (2026-10-26)
 
 - The Ringworld's land is now drawn with WebGPU wherever the browser has it: current Chrome and Edge (including on
@@ -517,18 +544,3 @@ prints it).
 - Reviewed the tests: the editor's two-layer style checks moved from mobileCss.test to editor.test, the suite of their
   concern, and the helper both read (`effective`) into the shared harness; the Ringworld's slider remap is tested where
   the looks are (audit.test), and the things' ids where the wild things are (wildlife.test).
-
-## Crux–Matza (2026-10-24)
-
-- On a phone the Moving Image is the whole screen now, the page hidden behind it, with a preview at its top that always
-  keeps its height: the page before a film, each frame as it is made with a thin line along its foot for how far the
-  film has come, and once it is made, the film itself playing over and over until the sheet is closed. What the film
-  will be and Make the film stay held at the bottom as the choices scroll under them; on a desktop they stay at the
-  foot of the Kinesis column.
-- Esoterica has a Moving Image card: Make a film of the page… opens it (the sheet on a phone, the Kinesis tab on a
-  desktop), so holding Save image is no longer the only way in.
-
-### Under the hood
-- The preview box is drawn from the page's canvas after each frame is handed to the encoder (`movingShow`), and the
-  film made plays from its own file in a video beside it, its address let go when the sheet closes. A stray Python
-  cache that slipped into the last release is gone, and ignored from now on.

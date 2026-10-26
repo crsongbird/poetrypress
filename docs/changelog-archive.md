@@ -2,6 +2,21 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Crux–Matza (2026-10-24)
+
+- On a phone the Moving Image is the whole screen now, the page hidden behind it, with a preview at its top that always
+  keeps its height: the page before a film, each frame as it is made with a thin line along its foot for how far the
+  film has come, and once it is made, the film itself playing over and over until the sheet is closed. What the film
+  will be and Make the film stay held at the bottom as the choices scroll under them; on a desktop they stay at the
+  foot of the Kinesis column.
+- Esoterica has a Moving Image card: Make a film of the page… opens it (the sheet on a phone, the Kinesis tab on a
+  desktop), so holding Save image is no longer the only way in.
+
+### Under the hood
+- The preview box is drawn from the page's canvas after each frame is handed to the encoder (`movingShow`), and the
+  film made plays from its own file in a video beside it, its address let go when the sheet closes. A stray Python
+  cache that slipped into the last release is gone, and ignored from now on.
+
 ## Crux–Hadar (2026-10-24)
 
 - Kinesis, a new tab on a desktop after Materia (its glyph ☿, the messenger's mark): the Moving Image's choices as a

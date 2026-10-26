@@ -14,6 +14,7 @@ import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
 import { WK_KINDS, WK_FLYERS, WK_BIRDS, wkAt, wkCount, wkPaint, wkWander, wkNoise } from './wildKit.js';
 import { lkLand, LK_BIOMES, LK_FORESTED } from './landKit.js';
 import { ringGpuReady, ringGpuBatch, ringGpuDraw } from './ringGpu.js';
+import { evAt, evGiant, evPaintFx } from './eventKit.js';
 import { rkRegions, rkTownName } from './regionKit.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
@@ -1623,7 +1624,7 @@ function rgStore(V){
   // ROBOTS AND DROIDS, as life, where they belong (Ruby: "cute robots and threatening ones, in appropriate biomes
   // only"): the builders' helpers and drones, the neon's sentries and walkers, the ruins' scavengers, and now and then
   // a giant fallen long ago, kneeling in the grass
-  { const BOTS = { builders: 0.2, neon: 0.14, cities: 0.07, ruins: 0.1, wilds: 0.012, magic: 0.015 };
+  { const BOTS = { builders: 0.3, neon: 0.22, cities: 0.1, ruins: 0.16, wilds: 0.018, magic: 0.02 };   // (Ruby, 2026-10-26: "More robots")
     sow(6, W*0.004, W*0.012, W*0.3, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > (BOTS[w] || 0)*(0.3 + V.fauna)) return null;
       const g = ground(a, z); if(g.wet || g.slope > 1.2) return null; const L2 = PK_BOTS[w] || PK_BOTS.cities, kind = L2[Math.floor(R()*L2.length)];
       if(kind === 'derelict' && R() > 0.2) return null;
@@ -1693,7 +1694,16 @@ function rgStore(V){
       if(g.wet || g.slope > 0.6 || fo < 0.1 || fo > 0.65 || inTown(w, a, z)) return null; return wild('moonharts', w); });
     sowD(32, W*0.008, W*0.016, W*0.12, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if((w !== 'magic' && w !== 'ruins') || R() > (w === 'magic' ? 0.35 : 0.15)*LIFE) return null; const g = ground(a, z);
       if(g.wet && !g.coast) return null; if(!g.coast && V.forestAt(a, z) < 0.2) return null; return wild('lanternmoths', w); });
-    if(V.world.list.includes('magic')) sow(33, W*0.15, W*0.3, W*1.2, 1, (a, z, r, R) => R() < 0.3*LIFE ? wild('skyrays', V.worldAt(a, z)) : null); }
+    if(V.world.list.includes('magic')) sow(33, W*0.15, W*0.3, W*1.2, 1, (a, z, r, R) => R() < 0.3*LIFE ? wild('skyrays', V.worldAt(a, z)) : null);
+    // THE HAPPENINGS (Ruby, 2026-10-26: "robot fights. robot wars. robots versus mages … wildlife that interact with each
+    //  other. robots hunting wildlife"; eventKit.js, docs/prior-art/ringworld-happenings.md): on open, level ground, a
+    //  skirmish of robots where the neon, the ruins and the builders are (now and then in a city); mages against sentries
+    //  in the magic world; a drone running a herd in the builders' open country; a wolf pack running deer or elk in the
+    //  wilds. Each turned its own way (face) and a long way apart from the next
+    const EVW = { neon: [['skirmish', 0.4]], ruins: [['skirmish', 0.35]], builders: [['skirmish', 0.22], ['robohunt', 0.22]], cities: [['skirmish', 0.08]], magic: [['magefight', 0.4], ['wildhunt', 0.1]], wilds: [['wildhunt', 0.22], ['robohunt', 0.04]] };
+    sowD(34, W*0.03, W*0.06, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z), L2 = EVW[w]; if(!L2) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+      if(g.wet || g.slope > 0.35 || fo > 0.45 || inTown(w, a, z)) return null; const u = R(); let acc = 0, kind = null; for(const [k, pr] of L2){ acc += pr*(0.4 + 0.8*LIFE); if(u < acc){ kind = k; break; } } if(!kind) return null;
+      const b = biome(a, z), cold = b.tundra + b.taiga + b.ice; return { c: 'event', kind, w, face: R()*Math.PI*2, prey: w === 'magic' ? 'striders' : cold > 0.4 ? 'elk' : 'deer' }; }); }
   // SMALL THINGS near you (Ruby: "small things that get found closer to the player"): fences and mailboxes in the wilds,
   // lamps, benches and bicycles in town, barrels and crates in the ruins, now and then a person, for scale
   // (each where it belongs: hay, a scarecrow, a tractor in the open fields; a well, a shrine, a mailbox by a village; a
@@ -1814,7 +1824,14 @@ function rgStore(V){
   { const doors = out.filter(o => o.c === 'bldg' && !RG_DOORLESS.includes(o.kind));
     for(const o of out){ if(o.c !== 'prop' || o.kind !== 'figure' || o.w === 'neon') continue; let best = null, bd = 250*M;
       for(const b of doors){ const d = Math.abs(b.a - o.a) + Math.abs(b.z - o.z); if(d < bd*1.42 && Math.hypot(b.a - o.a, b.z - o.z) < bd){ bd = Math.hypot(b.a - o.a, b.z - o.z); best = b; } }
-      if(best){ const ex = -best.a, ez = L.zS - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } } }
+      if(best){ const ex = -best.a, ez = L.zS - best.z, el = Math.hypot(ex, ez) || 1, off = (best.wM*0.5 + 1)*M; o.door = { a: best.a + ex/el*off, z: best.z + ez/el*off }; } }
+    // PEOPLE IN COMPANY (Ruby, 2026-10-26: "humans in groups. humanoids moving to true destinations in groups or in
+    //  organized paths"): now and then a band of three to seven sets out from one house's door for another's some 40 to
+    //  180 m off, walks there in pairs, gathers there a while, and walks back (eventKit's march); more in the towns
+    const doorOf = b => { const ex = -b.a, ez = L.zS - b.z, el = Math.hypot(ex, ez) || 1, off = (b.wM*0.5 + 1)*M; return [b.a + ex/el*off, b.z + ez/el*off]; }, MRATE = { cities: 0.07, neon: 0.06, builders: 0.05, magic: 0.06, wilds: 0.04, ruins: 0.02 };
+    for(const b of doors){ const R = rgRand(s, 881, (b.rs >>> 4) & 0xffff, b.rs & 15); if(R() > (MRATE[b.w] || 0.03)*(0.5 + V.fauna)) continue;
+      const A = doorOf(b), cand = doors.filter(d2 => d2 !== b && (() => { const dd2 = Math.hypot(d2.a - b.a, d2.z - b.z); return dd2 > 40*M && dd2 < 180*M; })()); if(!cand.length) continue;
+      const B = doorOf(cand[Math.floor(R()*cand.length)]); out.push({ c: 'event', kind: 'march', w: b.w, a: A[0], z: A[1], r: PD(A[0], A[1]), rs: (R()*4294967296) >>> 0, face: 0, dest: [(B[0] - A[0])/M, (B[1] - A[1])/M] }); } }
   // EVERY THING NAMED (Ruby: "Each NPC should probably have an internal ID and tag so they can be tracked and given specific
   // animation states and their states can be captured … Same with the plants … and the buildings"): an id from its own
   // stream (the same thing has the same id from wherever it is seen, view after view, film frame after frame), and its tags
@@ -2154,7 +2171,7 @@ function rgPaintLand(x, mk, dk, V){
   //  a turn never swaps one for another)
   let loudOne = null, loudR = Infinity;
   for(const o of store) if(o.c === 'egg' && PK_EGGS[o.kind] && PK_EGGS[o.kind].loud){ const r = Math.hypot(o.a - A0E, o.z - L.z0); if(r < loudR){ loudR = r; loudOne = o; } }
-  const marginOf = o => o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
+  const marginOf = o => o.c === 'event' ? (o.dest ? Math.hypot(...o.dest) + 30 : 90)*W*0.00025 : o.c === 'bldg' ? Math.max(o.wM*1.7, o.hM)*W*0.00025 : o.c === 'board' || o.c === 'henge' ? o.wM*W*0.00025 : o.c === 'tree' || o.c === 'bot' || o.c === 'egg' ? o.hM*W*0.0005 : o.c === 'prop' ? o.hM*W*0.0012 : o.c === 'wild' ? (WK_FLYERS.includes(o.kind) ? 200 : 90)*W*0.00025 : W*0.0004;
   // (how far a thing reaches toward the eye from where it stands, so it is painted after every cell under it (Ruby,
   //  2026-10-25: "rocks (and roofs and other things) should not have sections that are transparent": a boulder or a
   //  hut reached past the cell it stood in, and the nearer cells under it were laid over its foot, the ground showing
@@ -2284,6 +2301,38 @@ function rgPaintLand(x, mk, dk, V){
         for(let q = 1; q < 4; q++){ const A = [pts[0][0] + (pts[1][0] - pts[0][0])*q/4, pts[0][1] + (pts[1][1] - pts[0][1])*q/4], B = [pts[3][0] + (pts[2][0] - pts[3][0])*q/4, pts[3][1] + (pts[2][1] - pts[3][1])*q/4]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); }
         const A = [(pts[0][0] + pts[3][0])/2, (pts[0][1] + pts[3][1])/2], B = [(pts[1][0] + pts[2][0])/2, (pts[1][1] + pts[2][1])/2]; x.moveTo(A[0], A[1]); x.lineTo(B[0], B[1]); x.stroke();
         x.strokeStyle = rsCss(frame.dark); x.lineWidth = Math.max(px(0.4), 0.05*mpx); x.beginPath(); pts.forEach((p2, i) => i ? x.lineTo(p2[0], p2[1]) : x.moveTo(p2[0], p2[1])); x.closePath(); x.stroke(); } } };
+  // THE HAPPENINGS PAINTED (eventKit.js): each actor where the happening's clock has it, a robot by pkRobot (toppled as it
+  // falls), a mage a person in a robe of the region's light with a staff, a person in company walking, a hunted herd and
+  // its hunters by wildKit; then the shots, sparks and smoke between them; farthest first. A band of people only by day
+  const RG_EV_SIZE = { helper: 1.25, drone: 0.75, crawler: 0.8, sentry: 2.3, walker: 3.4 };
+  const rgPaintEvent = (o, l, dd) => { const t = V.time ? MT : 0, M0 = W*0.00025, wday = ringDay(L, o.a), night = 1 - rsSmooth(0.3, 0.7, wday);
+    const pres = o.kind === 'march' ? (o.w === 'neon' ? 0.8 : rsSmooth(0.2, 0.55, wday)) : 1; if(pres < 0.03) return;
+    const E2 = evAt(o.kind, o.rs, t, o), ca = Math.cos(o.face || 0), sa = Math.sin(o.face || 0), haze = hazeOf(dd), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday));
+    const wpos = (px0, pz0) => [o.a + (ca*px0 - sa*pz0)*M0, o.z + (sa*px0 + ca*pz0)*M0], c0 = colsOf(o.w, cday, haze, null, o);
+    const sideCol = [o.kind === 'magefight' ? c0.glow : rsMix(c0.glow, [120, 220, 255], 0.5), [255, 76, 60]], draws = [];
+    for(const A of E2.actors){ const [a, z] = wpos(A.x, A.z), f = foot(a, z); if(!f) continue; const m = f[2], X = f[0], Y = f[1], wf = A.face + (o.face || 0), rel = wf - Math.atan2(L.z0 - z, A0E - a), view = { cs: Math.cos(rel), sn: Math.sin(rel) };
+      if(A.role === 'robot' || (A.role === 'hunter' && A.kind === 'drone')){ const h = (RG_EV_SIZE[A.kind] || 1.5)*m*1.3, yy = Y - (A.y || 0)*m; if(h < px(2) || h > wh*0.6) continue; if(!vis(l, X - h, X + h, yy - h*1.2, Y)) continue;
+        draws.push([m, () => { const c = { ...c0, eye: sideCol[A.side ?? 1], view }; const R = mulberry32(o.rs ^ (A.id*0x9E37)); x.save(); x.globalAlpha *= pres;
+          if(A.fall > 0.01){ x.translate(X, Y); x.rotate((A.side ? 1 : -1)*A.fall*1.25); x.translate(-X, -Y); }
+          if(view.sn < 0 && !PK_BOTS3.includes(A.kind)) mirrored(X, () => pkRobot(x, X, yy, h, pkFlip(c), A.kind, R, rgPx, night)); else pkRobot(x, X, yy, h, c, A.kind, R, rgPx, night); x.restore(); }]); continue; }
+      if(A.role === 'mage' || A.role === 'person'){ const h = 1.75*m*1.3; if(h < px(2) || h > wh*0.6) continue; if(!vis(l, X - h*0.5, X + h*0.5, Y - h*1.2, Y)) continue;
+        draws.push([m, () => { const cc = { ...colsOf(o.w, cday, haze, null, { ...o, rs: (o.rs + A.id*7919) >>> 0 }), view, stride: A.pose === 'walk' ? Math.sin(t*5.5 + A.id) : 0, lantern: 0 }, R = mulberry32((o.rs + A.id*7919) >>> 0); x.save(); x.globalAlpha *= pres;
+          const kneel = A.pose === 'down' ? 0.6 : 1; if(kneel < 1){ x.translate(X, Y); x.scale(1, kneel); x.translate(-X, -Y); }
+          pkProp(x, X, Y, h, cc, 'figure', R, rgPx, night);
+          if(A.role === 'mage'){ const g = sideCol[0], sd2 = view.sn < 0 ? -1 : 1, rob = rsMix(g, [40, 30, 60], 0.45);   // (its robe, of its region's light; its staff, lit at the tip, raised as it casts)
+            x.fillStyle = rsCss(rob, 0.92); x.beginPath(); x.moveTo(X - h*0.09, Y - h*0.72); x.lineTo(X + h*0.09, Y - h*0.72); x.lineTo(X + h*0.2, Y); x.lineTo(X - h*0.2, Y); x.closePath(); x.fill();
+            const up = A.pose === 'cast' ? 1 : 0, sx0 = X + sd2*h*0.2, top = [sx0 + sd2*h*0.05*up, Y - h*(1.05 + 0.25*up)]; x.strokeStyle = rsCss([92, 66, 44]); x.lineWidth = Math.max(px(0.6), h*0.03); x.beginPath(); x.moveTo(sx0, Y); x.lineTo(top[0], top[1]); x.stroke();
+            x.save(); x.globalCompositeOperation = 'screen'; const gr = x.createRadialGradient(top[0], top[1], 0, top[0], top[1], h*(0.12 + 0.18*up)); gr.addColorStop(0, rsCss(rsMix(g, [255, 255, 255], 0.5), 0.9)); gr.addColorStop(1, rsCss(g, 0)); x.fillStyle = gr; x.fillRect(top[0] - h*0.3, top[1] - h*0.3, h*0.6, h*0.6); x.restore(); }
+          x.restore(); }]); continue; }
+      // (a herd and a pack, by wildKit's painter, its gait from the happening's clock)
+      const K = WK_KINDS[A.kind]; if(!K) continue; const LIC = RG_WILD_LICENCE, sz = K.size*m*LIC; if(sz < px(2) || sz > wh*0.5) continue; const yy = Y - (A.y || 0)*m; if(!vis(l, X - sz, X + sz, yy - sz, yy + sz*0.3)) continue;
+      const g2 = foot(a + Math.cos(wf)*M0*3, z + Math.sin(wf)*M0*3), dir = !g2 || g2[0] >= X ? 1 : -1, side = Math.abs(view.sn);
+      draws.push([m, () => { const c = { ...colsOf(o.w, cday, haze, null, o), flowers: [V.g1, V.g2, [244, 238, 228]] }; x.save(); x.globalAlpha *= pres; wkPaint(x, X, Y, m*LIC, A.kind, { y: (A.y || 0)/LIC, pose: A.pose, ph: A.ph || 0, head: A.head ?? 0.5, dir, side, stag: A.id === 0, hue: A.id, nt: night, lie: 0 }, c, rgPx); x.restore(); }]); }
+    // (the shots, sparks, shields and smoke, each where it is in the world, after the actors near it)
+    for(const fx of E2.fx){ const [a, z] = wpos(fx.pos[0], fx.pos[1]), f = foot(a, z); if(!f) continue; const P = at(a, z, f[3] + (fx.pos[2] || 0)*M0); if(!P) continue; const m = M0*F/P[2];
+      let P2 = null; if(fx.prev){ const [a2, z2] = wpos(fx.prev[0], fx.prev[1]), f2 = foot(a2, z2); if(f2){ const Q = at(a2, z2, f2[3] + (fx.prev[2] || 0)*M0); if(Q) P2 = [Q[0], Q[1]]; } }
+      if(painting) draws.push([m*1.001, () => evPaintFx(x, fx, P[0], P[1], m, sideCol[fx.side ?? 1], rgPx, P2)]); }
+    if(!painting) return; draws.sort((p, q) => p[0] - q[0]); for(const [, d] of draws) d(); };
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
     // (a building standing near the eye is drawn faint as it grows to fill the frame, gone before it could block it)
     if(o0.near){ const f1 = foot(o0.a, o0.z); if(!f1) return; const nf = rsSmooth(ww*0.8, ww*0.45, o0.wM*f1[2]*1.6)*rsSmooth(wh*1.05, wh*0.65, o0.hM*f1[2]); if(nf < 0.03) return;
@@ -2296,7 +2345,7 @@ function rgPaintLand(x, mk, dk, V){
   //  thing under two pixels is not drawn at all, and fades in over the next pixel and a half as it nears, so it never
   //  pops on; lights, buildings and the works keep their own rules)
   const RG_SMALL = { rock: 1, prop: 1, bot: 1, egg: 1, grass: 1, life: 1, board: 1, solid: 1 };
-  const rgPaintThing0 = (o, l, dd, o0) => { if(o.c === 'wild') return rgPaintWild(o, l, dd);
+  const rgPaintThing0 = (o, l, dd, o0) => { if(o.c === 'wild') return rgPaintWild(o, l, dd); if(o.c === 'event') return rgPaintEvent(o, l, dd);
     if(RG_SMALL[o.c]){ const f0 = foot(o.a, o.z); if(!f0) return; const sp = Math.max(o.hM || 1.5, (o.wM || 0)*0.6)*f0[2]; if(sp < px(2)) return;
       const fa = rgClamp((sp - px(2))/px(1.5)); if(fa < 0.98 && painting){ x.save(); x.globalAlpha *= fa; rgPaintThing1(o, l, dd, o0); x.restore(); return; } }
     return rgPaintThing1(o, l, dd, o0); };
@@ -2413,7 +2462,21 @@ function rgPaintLand(x, mk, dk, V){
       if(o.kind === 'lamplighter' && !(nt > 0.12 && nt < 0.8)) return;   // (out only about dusk, on its round)
       if(PK_BOTS3.includes(o.kind)){ pkRobot(x, X, Y + h*0.02, h, { ...c, view: seen(o, f) }, o.kind, R, rgPx, nt); return; }
       const bob = V.time && o.kind === 'drone' ? Math.sin(ST*1.3 + (o.rs & 63))*h*0.12 : 0;   // (a drone hovering, rising and dipping a little)
-      if(viewOf(o).sn < 0) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday)); return; }
+      // (the kneeling giant awake, Ruby, 2026-10-26: "it's head should be able to shoot a laser, guardian laser style":
+      //  eventKit's evGiant, on the film's own clock; its eye lit, its thin beam laid on a mark on the ground before it,
+      //  then the beam itself, eased on and off over a quarter second and more, a small burst and a scorch where it strikes)
+      const GZ = o.kind === 'derelict' ? evGiant(o.rs, V.time ? FT : 0) : null; if(GZ) c.eyeOn = GZ.eye;
+      const flip = viewOf(o).sn < 0;
+      if(flip) mirrored(X, () => pkRobot(x, X, Y + h*0.02 + bob, h, pkFlip(c), o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday))); else pkRobot(x, X, Y + h*0.02 + bob, h, c, o.kind, R, rgPx, 1 - rsSmooth(0.3, 0.7, wday));
+      if(GZ && (GZ.aim > 0.01 || GZ.fire > 0.01 || GZ.scorch > 0.01)){ const fc = o.face ?? (o.rs % 62832)/10000, M0 = W*0.00025, ta = o.a + (Math.cos(fc)*GZ.tgt[0] - Math.sin(fc)*GZ.tgt[1])*M0, tz = o.z + (Math.sin(fc)*GZ.tgt[0] + Math.cos(fc)*GZ.tgt[1])*M0, ft = foot(ta, tz);
+        if(ft){ const ex = X + (flip ? -1 : 1)*h*0.03, ey = Y - h*0.9, m = ft[2], beam = [255, 96, 60];
+          if(GZ.scorch > 0.01){ x.fillStyle = rsCss([24, 18, 14], 0.4*GZ.scorch); x.beginPath(); x.ellipse(ft[0], ft[1], m*2.2, m*0.7, 0, 0, Math.PI*2); x.fill(); }
+          x.save(); x.globalCompositeOperation = 'screen'; x.lineCap = 'round';
+          if(GZ.aim > 0.01){ x.strokeStyle = rsCss(beam, 0.55*GZ.aim); x.lineWidth = Math.max(px(0.6), h*0.004); x.beginPath(); x.moveTo(ex, ey); x.lineTo(ft[0], ft[1]); x.stroke(); }
+          if(GZ.fire > 0.01){ const bw = Math.max(px(1.5), Math.min(h*0.03, m*0.9)); for(const [kw, ka, cc2] of [[3, 0.25, beam], [1.4, 0.6, beam], [0.5, 0.9, [255, 236, 210]]]){ x.strokeStyle = rsCss(cc2, ka*GZ.fire); x.lineWidth = bw*kw; x.beginPath(); x.moveTo(ex, ey); x.lineTo(ft[0], ft[1]); x.stroke(); } }
+          if(GZ.hit >= 0 && GZ.hit < 1){ const q = GZ.hit, rr = m*(1.5 + 4*q), g = x.createRadialGradient(ft[0], ft[1], 0, ft[0], ft[1], rr); g.addColorStop(0, rsCss([255, 200, 140], 0.55*(1 - q))); g.addColorStop(1, rsCss(beam, 0)); x.fillStyle = g; x.fillRect(ft[0] - rr, ft[1] - rr, rr*2, rr*2); }
+          x.restore(); } }
+      return; }
     // small life: found rather than seen
     const hh = 2.8*f[2]; if(hh < px(3) || hh > wh*0.6) return;
     const X = f[0], Y = stand(l, X, f[1]); if(Y > wh + hh*0.2 || !vis(l, X - hh*4, X + hh*4, Y - hh*(o.kind === 'kite' ? 5 : 1.4), Y)) return;

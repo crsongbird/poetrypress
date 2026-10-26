@@ -559,6 +559,9 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     stoats, badgers, lynx, wolves and jackals, an owl quartering and a kestrel hanging on the wind (`hover`;
     docs/prior-art/ringworld-wildlife.md §9); the magic world's drakes, moonharts, lantern moths and its sky rays rowing
     the high air (`cruise`; docs/prior-art/ringworld-magic-creatures.md §3–6);
+    the happenings (eventKit.js, `evAt`; docs/prior-art/ringworld-happenings.md): robots fighting robots, mages against
+    sentries, a drone or a wolf pack running a herd, people walking in company between doors, and the kneeling giant's
+    beam (`evGiant`);
     the sheep, gulls, insects, fairies and kites drift on the same noise. Each thing reaches toward the eye by its own
     size in the paint order, so no nearer cell is laid over a boulder's or a hut's foot.
   - **Motion without flicker** (Ruby: "clouds and smoke should follow the wind and never flicker";
