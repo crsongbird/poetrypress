@@ -24,7 +24,11 @@ const pkEll = (x, X, Y, rx, ry, fill) => { if(!(rx > 0 && ry > 0)) return; x.fil
 const PK_WHITE = [255, 248, 232], PK_BLACK = [0, 0, 0];
 const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; pkNow = b; pkFace = 0; pkLodNow = 1; return f; };
 let pkNow = 0, pkFace = 0, pkLodNow = 1;   // (the thing being drawn, how many faces of it so far: what its faces' grain is keyed by; and its detail size over its drawn size)   // (f.b: the thing's own number, the same every frame)
-export function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
+// (a glow may be handed elsewhere instead of painted: the Ringworld on the GPU lays its glows there, screened over what is
+//  behind them, as the canvas's 'screen' would; pkGlowTo({ x, fn }) while x is painted on, null after)
+let PK_GLOW_TO = null;
+export const pkGlowTo = o => { PK_GLOW_TO = o; };
+export function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; if(PK_GLOW_TO && PK_GLOW_TO.x === x){ PK_GLOW_TO.fn(x, X, Y, r, col, a); return; } x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
   g.addColorStop(0, pkCss(col, a)); g.addColorStop(1, pkCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 // a soft shadow where a thing stands, thrown away from the light
 const pkFoot = (x, X, Y, r, c) => pkEll(x, X - c.sd*r*0.35, Y, r, r*0.22, pkCss(c.dark, 0.28));

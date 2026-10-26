@@ -101,10 +101,7 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
-  - RUBY'S NOTES (2026-10-26), what is left: the GPU path's next steps (below); the ground's painted texture drawn on the
-    GPU from baked tiles with mipmaps, so it never re-cuts ("if it's drawn with the GPU with correct lods and mipmapping it
-    shouldn't do the recalculating thing"); the rest of the things on the GPU, so a film renders at a fair frame rate;
-    many objects lit poorly, and billboards to become 3D objects; the reflections; pop-in and drawing artifacts still in a
+  - RUBY'S NOTES (2026-10-26), what is left: the GPU path's next steps (below); many objects lit poorly, and billboards to become 3D objects; the reflections; pop-in and drawing artifacts still in a
     drone film; the happenings taken further (people meeting robots, a fox stalking birds, a hawk stooping on a hare,
     robot wars on a larger scale, groups following the roads); the PS1/PS2 look as a switch of the engine "WITHOUT the
     PS1's jitter and swimming textures, but get all the rest of the things in there" (docs/prior-art/ringworld-gpu.md §3).
@@ -120,10 +117,10 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
   - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path";
-    then "WEBGPU"): the land is laid on WebGPU where a browser has it (ringGpu.js, docs/prior-art/ringworld-gpu.md); next
-    the trees as instanced quads from their kept sheets (about two fifths of a frame in Node), the arch, the land's heights
-    and colours in a compute shader, and the things' depth against the land per pixel; Ruby to say how a film's frame time
-    changed on its own machine (?cpuland in the address draws the land on the canvas, to compare).
+    then "WEBGPU"): the land and the things are laid on WebGPU where a browser has it (ringGpu.js,
+    docs/prior-art/ringworld-gpu.md); next the arch, the land's heights and colours in a compute shader, the light pillars'
+    beams screened as the glows are, the other things lit there as the trees are; Ruby to say how a film's frame time
+    changed on its own machine (?cpuland in the address draws it all on the canvas, to compare).
   - THE LAND, what is left: floating islands, caves and undergrounds
     (docs/prior-art/ringworld-terrain.md §9); rain shadows behind the ranges; the bands at sharp borders between grounds
     as well as at drops.

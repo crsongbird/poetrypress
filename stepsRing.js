@@ -13,12 +13,12 @@
 import { mulberry32, kitCanvas, kitOwn, seedChoice } from './texCore.js';
 import { WK_KINDS, WK_FLYERS, WK_BIRDS, wkAt, wkCount, wkPaint, wkWander, wkNoise } from './wildKit.js';
 import { lkLand, LK_BIOMES, LK_FORESTED } from './landKit.js';
-import { ringGpuReady, ringGpuBatch, ringGpuDraw } from './ringGpu.js';
+import { ringGpuReady, ringGpuBatch, ringGpuDraw, ringGpuLandMaps, ringGpuDepth, ringGpuThingBatch, ringGpuThings, ringGpuSheet, ringGpuPutSheet } from './ringGpu.js';
 import { evAt, evGiant, evPaintFx } from './eventKit.js';
 import { rkRegions, rkTownName } from './regionKit.js';
 import { ringParams, ringCamera, ringDay, ringSunDir, mnHash, mnValue, RING_COV, RING_SQR } from './stepsGenerative.js';
 import { rsMix, rsCss, rsPoly, rsFace, rsSmooth, paintSaturn, paintEnceladus } from './stepsWhimsy.js';
-import { PK_TREES, pkTree, pkShadowWay, PK_STYLE, pkBuilding, pkRock, PK_STONES, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkRune, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
+import { pkGlowTo, PK_TREES, pkTree, pkShadowWay, PK_STYLE, pkBuilding, pkRock, PK_STONES, pkSpire, pkMonolith, pkStone, pkLintel, pkDome, pkCrystals, pkRune, pkMetres, pkArchOf, pkVernacularOf, PK_FLORA, PK_BOTS, PK_BOTS3, pkRobot, PK_PROPS, PK_PROPS_BIG, pkProp, pkWires, pkFlip, PK_EGGS, pkEgg, PK_BOARDS, PK_SERIALS, pkBoardOf, pkBoardSize, pkBoard } from './paintKit.js';
 
 const RG_R = (key, label, def, min = 0, max = 100) => [key, label, 'range', def, { min, max }];
 // DETAIL (Ruby: "longer view distance with higher detail (low, medium, high, ultra) … The current values represent
@@ -1061,7 +1061,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     x.fillStyle = rsCss(c.slime, 0.68); x.beginPath(); x.ellipse(sx, Y, sw, sh, 0, Math.PI, Math.PI*2); x.fill();
     x.fillStyle = rsCss([255, 255, 255], 0.45); x.beginPath(); x.ellipse(sx - sw*0.3, Y - sh*0.55, sw*0.22, sh*0.16, -0.3, 0, Math.PI*2); x.fill(); }
 }
-function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
+function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; if(RG_GLOW_TO && RG_GLOW_TO.x === x){ RG_GLOW_TO.fn(x, X, Y, r, col, a); return; } x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
 // ---------------- THE WORLD STORE ----------------
 // Everything on the land within sight, as records in the world's own coordinates: { c (class), a, z (where), r (how far
@@ -1894,7 +1894,11 @@ const RG_MESH_KEPT = new Map(), RG_NG_MAX = 80, RG_ARCH_KEPT = new Map();   // (
 // than it shows and in the light of the moment kept to a few steps, and that sheet laid down wherever and however often
 // it is seen after (a film's frames, a turn of the camera). So its shape never changes as it grows or shrinks on the
 // page, and the work of drawing it is done once. Kept by its id, kind, sizes and light; the oldest let go past a budget
-const RG_SPRITES = new Map(); let RG_SPRITE_PX = 0;
+const RG_SPRITES = new Map(); let RG_SPRITE_PX = 0, RG_GLOW_TO = null;   // (RG_GLOW_TO: as paintKit's pkGlowTo, for rgGlow)
+// (the trees with a light of their own, which the GPU's relighting of a sheet would put out)
+const RG_GLOW_TREES = ['mushroom', 'crystal', 'glow'];
+// (the frame's pages for the things painted on the GPU's way, kept from frame to frame and cleared as each begins)
+const RG_FA = { S: 0, pages: [] }, RG_FA_MAX = 6;
 const rgSprite = (key, w, h, draw) => { let sp = RG_SPRITES.get(key); if(sp){ RG_SPRITES.delete(key); RG_SPRITES.set(key, sp); return sp; }
   const [c, x] = kitCanvas(w, h); draw(x); sp = c; RG_SPRITES.set(key, sp); RG_SPRITE_PX += w*h;
   while(RG_SPRITE_PX > 1e7 && RG_SPRITES.size > 1){ const [k0, c0] = RG_SPRITES.entries().next().value; RG_SPRITES.delete(k0); RG_SPRITE_PX -= c0.width*c0.height; } return sp; };
@@ -2206,7 +2210,7 @@ function rgPaintLand(x, mk, dk, V){
   //  through it): a building by its width, a boulder by its own size, a prop by its width or a part of its height)
   const radOf = o => { const M0 = W*0.00025; return o.c === 'bldg' ? o.wM*0.6*M0 : o.c === 'board' || o.c === 'henge' ? o.wM*0.5*M0 : o.c === 'rock' ? o.hM*0.95*M0
     : o.c === 'prop' || o.c === 'solid' ? (o.wM ? o.wM*0.55 : (o.hM || 1)*0.45)*M0 : o.c === 'tree' ? (o.hM || 4)*0.06*M0 : 0; };
-  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: radOf(o), draw: l => rgPaintThing(o, l, dd) }); }
+  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: radOf(o), tree: o.c === 'tree', draw: l => rgPaintThing(o, l, dd) }); }
   // (Ruby: "don't clip objects until they are entirely out of frame": a thing near you is drawn however large it grows,
   //  until it is so large it would fill the frame from edge to edge, or wholly off it; vis() tests the frame itself)
   const nearCut = wh*3;
@@ -2392,21 +2396,23 @@ function rgPaintLand(x, mk, dk, V){
       //  changes evenly and never jumps from one step to the next: Ruby, 2026-10-26, "sudden color shifts … need to be a
       //  lil more gradual")
       const dqF = cday*24, dqT = dqF - Math.floor(dqF), dqA = Math.floor(dqF)/24, dqB = Math.min(1, dqA + 1/24);
-      const drawTree = (dq, al, pass) => { const hq = Math.round(haze*32)/32, bq = Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
+      const drawTree = (dq, al, pass, gpu) => { const hq = gpu ? 0 : Math.round(haze*32)/32, bq = gpu ? Math.round(V.sun.back*rsSmooth(0.35, 0.7, cday)*(1 - haze)*8)/8 : Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
       const el = o.w === 'magic' ? V.elementAt(o.a, o.z) : null, green0 = o.kind === 'olive' ? [118, 134, 106] : RG_CACTI.includes(o.kind) ? rsMix([96, 128, 98], V.land, 0.2) : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35);
-      const SZ = rgSeasonOf(V, o), green = SZ.leaf ? rsMix(el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, SZ.leaf, SZ.k) : el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, dq, hq, null, o);
+      const SZ = rgSeasonOf(V, o), green = SZ.leaf ? rsMix(el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, SZ.leaf, SZ.k) : el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, dq, hq, null, o), cS = gpu ? colsOf(o.w, cday, haze, null, o) : c;
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], dq, hq, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), dq, hq, AIR), body: rgLit(V, green, dq, hq, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), dq, hq, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], dq, hq, AIR) : null,
         // (the sun behind it, low: the light through its leaves; less as it hazes into the distance)
-        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv, bare: SZ.bare, snow: V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
+        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!cS.shv, bare: SZ.bare, snow: V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
       // (its shadow laid on the land by where the sun stands, under its sheet and never baked into it: colsOf's shv)
-      if(pass === 0 && c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
-        x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
+      if(pass === 0 && cS.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(cS, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
+        if(gpu){ gtEll(X + dx*0.5, Y + dy*0.5, Ls*0.5 + wS, wS*0.55, Math.atan2(dy, dx), rsMix(cS.dark, BLACK, 0.5), 0.26*x.globalAlpha); gtEll(X, Y, wS*0.55, wS*0.16, 0, rsMix(cS.dark, BLACK, 0.6), 0.3*x.globalAlpha); }
+        else { x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
         // (and its contact shadow, tight at its foot whatever the sun: the ground under it out of the sky's light)
-        x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.6), 0.3); x.beginPath(); x.ellipse(X, Y, wS*0.55, wS*0.16, 0, 0, Math.PI*2); x.fill(); }
+        x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.6), 0.3); x.beginPath(); x.ellipse(X, Y, wS*0.55, wS*0.16, 0, 0, Math.PI*2); x.fill(); } }
       // (a young saguaro in the shade of its nurse tree, a palo verde, as they grow in the desert: the nurse first, behind)
       if(pass === 0 && o.nurse){ const g2 = rsMix([118, 140, 70], V.land, 0.25), nc = { ...tc, hM: undefined, dark: rgLit(V, rsMix(g2, BLACK, 0.2), cday, haze, AIR), body: rgLit(V, g2, cday, haze, AIR), lit: rgLit(V, rsMix(g2, [255, 244, 222], 0.3), cday, haze, AIR) };
-        pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx); }
+        const nurse = () => pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx);
+        if(gpu) gtPaint([X - f[2]*14, X + f[2]*14, Y - f[2]*12, Y + f[2]*3], nurse); else nurse(); }
       // (a tree has no front: half of them are drawn mirrored, their light kept where it is)
       // (drawn once onto its sheet and laid down: its sheet a step of the square root of two larger than it shows, its
       //  detail read at its true distance as ever, and never less than a small tree's whole shape, so a tree never
@@ -2414,11 +2420,23 @@ function rgPaintLand(x, mk, dk, V){
       const Sres = rgStep2(h), Sdet = Math.min(Sres, rgStep2(Math.max(hl, px(8))));
       if(Sres > px(260)){ if(pass) return; if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return 'near'; }
       const Sd = Math.max(Sres, px(24)), sw = Math.ceil(Sd*2.4), sh = Math.ceil(Sd*1.4), ax = sw/2, ay = Math.ceil(Sd*1.22), AIRk = AIR.map(v => v >> 3).join('.');
-      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
-      const sp = rgSprite(key, sw, sh, sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
-        if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); });
+      const key = gpu ? ['g', o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', el ? el.name : '', o.w].join('|')
+        : [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
+      const sheet = sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
+        if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); };
+      // (on the GPU: its sheet in the plain light put there once, and a quad lit by the moment's light and haze, rgLit's
+      //  own sums: toward the night's blue by the dark, toward the air by the haze)
+      if(gpu){ const uv = ringGpuSheet(key) || ringGpuPutSheet(key, rgSprite(key, sw, sh, sheet)); if(!uv) return 'full'; if(!uv[7]) return; const k = h/Sd, qx = X - ax*k + uv[5]*k, qy = Y - ay*k + uv[6]*k, qw = uv[7]*k/2, qh = uv[8]*k/2;
+        GTB.put(qx + qw, qy + qh, qw, 0, 0, qh, uv[1], uv[2], uv[3], uv[4], uv[0], 0, gDz, x.globalAlpha*al, 0.2456 + 0.7544*cday, 0.7544*(1 - cday), haze, 0); return; }
+      const sp = rgSprite(key, sw, sh, sheet);
       const k = h/Sd, ga = x.globalAlpha; x.globalAlpha = ga*al; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = ga; };
-      const r0 = drawTree(dqT < 0.94 ? dqA : dqB, 1, 0); if(r0 !== 'near' && dqT >= 0.06 && dqT < 0.94) drawTree(dqB, dqT, 1); x.globalAlpha = 1; return; }
+      const onCanvas = () => { const r0 = drawTree(dqT < 0.94 ? dqA : dqB, 1, 0); if(r0 !== 'near' && dqT >= 0.06 && dqT < 0.94) drawTree(dqB, dqT, 1); };
+      // (on the GPU, a tree right before the eye, one that glows (RG_GLOW_TREES: its own light is not the day's), or one with no room left for its sheet this frame is
+      //  painted as on the canvas, on the frame's page)
+      if(GTB){ const glowy = RG_GLOW_TREES.includes(o.kind);
+        if(glowy || rgStep2(h) > px(260) || drawTree(1, 1, 0, true) === 'full') gtPaint([X - h*1.6, X + h*1.6, Y - h*1.25, Y + h*0.6], onCanvas); }
+      else onCanvas();
+      x.globalAlpha = 1; return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1.2)){ nightDot(o, f, l, wday, haze, hl > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd*1.7, X + wd*1.7, Y - h*1.4, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
       // (on a slope, level: its floor at its uphill corner's ground, on a stone plinth down to the ground at its lowest
@@ -2544,7 +2562,11 @@ function rgPaintLand(x, mk, dk, V){
     const X = b[0], Y = o.kind === 'sh' || o.kind === 'sa' || o.kind === 'br' ? b[1] : stand(l, b[0], b[1]);
     if(big && hidden(l, X - W*big*k*0.3, X + W*big*k*0.3, Y - W*big*k)) return;
     const night = 1 - rsSmooth(0.3, 0.7, day), haze = hazeOf(o.d), c = colsOf(o.w, day, haze, null, o);
-    rgWork(x, o, X, Y, k, c, night, o.R, V, e);
+    if(!GTB) return rgWork(x, o, X, Y, k, c, night, o.R, V, e);
+    // (on the GPU, painted on the frame's page in a box about it: a work's own height, H, and the far arches the frame)
+    const H = W*({ sp: 0.1, mo: 0.026, do: 0.022, to: 0.126, wr: 0.026, cr: 0.0084, ci: 0.0144, ca: 0.024, pi: 0.45 }[o.kind] || 0)*k + px(12);
+    const B = o.kind === 'sh' || o.kind === 'sa' || o.kind === 'br' || !H ? [0, ww, 0, wh] : o.kind === 'mo' && o.w !== 'builders' ? [X - H*1.6, X + H*1.6, Y - H*1.6, Y + H*1.2] : o.kind === 'ci' || o.kind === 'ca' ? [X - H*1.3, X + H*1.3, Y - H*1.3, Y + H*1.3] : [X - H*1.3, X + H*1.3, Y - H*2.6, Y + H*0.6];
+    gtPaint(B, () => rgWork(x, o, X, Y, k, c, night, o.R, V, e));
   };
   // THE WAYS on the floor (the store's, walked across the land), each run drawn just after the land under it, so the
   // hills nearer hide it; near you a piece is cut finer, so the way lies on the ground between its points, not across the air
@@ -2984,11 +3006,34 @@ function rgPaintLand(x, mk, dk, V){
   // THE LAND ON THE GPU (ringGpu.js): where WebGPU is open, a cell is not filled on the canvas but laid as two triangles
   // with its corners' colours and where in the world each corner lies, its ground's kind for the marks the GPU lays on
   // it per pixel; its water a fan of triangles, its shore and glints thin quads. GB: the batch, or null on the canvas
-  let GB = null; const GANC = Math.round(A0E/(M1*4096))*M1*4096, gkCode = k => RG_GRASSY[k] ? 1 : k === 'sand' || k === 'desert' ? 2 : k === 'rock' ? 3 : k === 'snow' || k === 'ice' ? 4 : 5;
-  const gv = (p, c3, al, a, z, kind, sk) => [p[0], p[1], c3[0]/255, c3[1]/255, c3[2]/255, al, (a - GANC)/M1, z/M1, kind, sk];
+  let GB = null; const GANC = Math.round(A0E/(M1*4096))*M1*4096, gkCode = k => RG_GRASSY[k] ? (k === 'steppe' || k === 'savanna' ? 6 : 1) : k === 'sand' || k === 'desert' ? 2 : k === 'rock' ? 3 : k === 'snow' || k === 'ice' ? 4 : k === 'tundra' ? 7 : k === 'marsh' ? 8 : k === 'paving' ? 9 : 5;
+  // THE THINGS ON THE GPU (ringGpu.js ringGpuThings; Ruby, 2026-10-26: "Go ahead and try to get the rest of the things on
+  // a GPU so we can even render the video at a reasonable framerate"): where the land was laid there, every thing is a
+  // quad laid far to near over the land's depth. A tree is its kept sheet, drawn once in a plain noon light (so one
+  // sheet serves every light and haze, and its colour runs smoothly with the day); its shadows ellipses (gtEll); any
+  // other thing painted as ever, but onto a page of the frame's own (gtPaint: its box on the next free place, the
+  // painter's context moved there for it). GTB: the quads, or null on the canvas; gDz: the depth of the thing now drawn
+  let GTB = null, gDz = 0, gPg = 0, gX = 0, gY = 0, gH = 0; const FA = RG_FA;
+  const gtAlloc = (w, h) => { const S = FA.S; if(gX + w > S){ gY += gH; gX = 0; gH = 0; } if(gY + h > S){ gPg++; gX = 0; gY = 0; gH = 0; } if(gPg >= RG_FA_MAX) return null;
+    if(!FA.pages[gPg]){ const c = document.createElement('canvas'); c.width = c.height = S; FA.pages[gPg] = { c, x: c.getContext('2d', { willReadFrequently: true }), used: 0, wide: 0 }; }
+    const pg = FA.pages[gPg], r = { L: gPg, x: gX, y: gY }; gX += w; gH = Math.max(gH, h); pg.used = Math.max(pg.used, gY + gH); pg.wide = Math.max(pg.wide, gX); return r; };
+  const gtPaint = (B, fn) => { const x0 = Math.floor(Math.max(B[0], -px(4))), y0 = Math.floor(Math.max(B[2], -px(4))), w = Math.ceil(Math.min(B[1], ww + px(4)) - x0), h = Math.ceil(Math.min(B[3], wh + px(4)) - y0);
+    if(!(w >= 1 && h >= 1)) return; const S = FA.S, sc = Math.min(1, (S - 2)/w, (S - 2)/h), w2 = Math.ceil(w*sc), h2 = Math.ceil(h*sc), r = gtAlloc(w2 + 2, h2 + 2); if(!r) return;
+    GTB.put(x0 + w/2, y0 + h/2, w/2, 0, 0, h/2, (r.x + 1)/S, (r.y + 1)/S, (r.x + 1 + w*sc)/S, (r.y + 1 + h*sc)/S, r.L, 1, gDz, 1, 0, 0, 0, 0);
+    const A = FA.pages[r.L].x, ga = x.globalAlpha; A.save(); A.beginPath(); A.rect(r.x + 1, r.y + 1, w2, h2); A.clip(); A.translate(r.x + 1, r.y + 1); if(sc < 1) A.scale(sc, sc); A.translate(-x0, -y0); A.globalAlpha = ga;
+    // (its glows not painted on the page but laid as glows of their own, screened over what is behind them, and free of its box)
+    const B0 = A.getTransform().inverse(), G = { x: A, fn: (c2, X, Y, rr, col, al) => { const T = B0.multiply(c2.getTransform()), Pt = T.transformPoint(new DOMPoint(X, Y)), k = Math.sqrt(Math.abs(T.a*T.d - T.b*T.c)), R = rr*k, a2 = al*c2.globalAlpha;
+      if(R > 0.5 && a2 > 0.004) GTB.put(Pt.x, Pt.y, R, 0, 0, R, 0, 0, 0, 0, 0, 3, gDz, 1, col[0]/255*a2, col[1]/255*a2, col[2]/255*a2, 0); } };
+    const Xp = x; x = A; pkGlowTo(G); RG_GLOW_TO = G; try { fn(); } finally { x = Xp; A.restore(); pkGlowTo(null); RG_GLOW_TO = null; } };
+  const gtEll = (cx, cy, rx, ry, rot, col, a) => { if(!(rx > 0.3 && ry > 0.2 && a > 0.004)) return; const cr = Math.cos(rot), sr = Math.sin(rot);
+    GTB.put(cx, cy, cr*(rx + 0.5), sr*(rx + 0.5), -sr*(ry + 0.5), cr*(ry + 0.5), 0, 0, 0, 0, 0, 2, gDz, a, col[0]/255, col[1]/255, col[2]/255, 0); };
+  // (and each corner's depth, so the things laid after are hidden by the land nearer than them pixel by pixel; the water,
+  //  its shore and glints at their cell's depth, gD)
+  const DZF = reach*4, gdz = d => ringGpuDepth(d, d0, DZF); let gD = 1;
+  const gv = (p, c3, al, a, z, kind, sk, dz = gD) => [p[0], p[1], c3[0]/255, c3[1]/255, c3[2]/255, al, (a - GANC)/M1, z/M1, kind, sk, dz];
   const gQuad = (A, B, w, c3, al) => { const dx = B[0] - A[0], dy = B[1] - A[1], dl = Math.hypot(dx, dy) || 1, nx = -dy/dl*w/2, ny = dx/dl*w/2, v = (X, Y) => gv([X, Y], c3, al, 0, 0, 0, 0);
     GB.tri(v(A[0] + nx, A[1] + ny), v(B[0] + nx, B[1] + ny), v(B[0] - nx, B[1] - ny)); GB.tri(v(A[0] + nx, A[1] + ny), v(B[0] - nx, B[1] - ny), v(A[0] - nx, A[1] - ny)); };
-  const paintCell = q => {
+  const paintCell = q => { if(GB) gD = gdz(q.dd);
     const { l, i, j, P, am, zm, dd, c } = q, h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h11 = vh(l, i + 1, j + 1), h01 = vh(l, i, j + 1), hm = (h00 + h10 + h01 + h11)/4, sea = TR.sea;
     const day = ringDay(L, am), haze = hazeOf(dd), wet = [h00 < sea, h10 < sea, h11 < sea, h01 < sea], nWet = wet[0] + wet[1] + wet[2] + wet[3];
     const dA = ((h10 - h00) + (h11 - h01))/(2*c), dZ = ((h01 - h00) + (h11 - h10))/(2*c), slope = Math.hypot(dA, dZ)/exf(exD(am, zm));   // (its true steepness, for rock and snow)
@@ -3012,7 +3057,7 @@ function rgPaintLand(x, mk, dk, V){
       const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], aOf(l, VA[k]), zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k]), specAt(l, VA[k], VZ[k])); });   // (each corner's own cloud shadow, so a shadow's edge runs smoothly)
       let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
       const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
-      if(GB){ const wa = [aOf(l, i), aOf(l, i + 1), aOf(l, i + 1), aOf(l, i)], wz = [zOf(l, j), zOf(l, j), zOf(l, j + 1), zOf(l, j + 1)], kd = nWet === 0 ? gkCode(ci0.gk) : 0, V4 = poly.map((p, k) => gv(p, cs[k], 1, wa[k], wz[k], kd, nWet === 0 ? 1 : 0));
+      if(GB){ const wa = [aOf(l, i), aOf(l, i + 1), aOf(l, i + 1), aOf(l, i)], wz = [zOf(l, j), zOf(l, j), zOf(l, j + 1), zOf(l, j + 1)], kd = nWet === 0 ? gkCode(ci0.gk) : 0, qb = q.box, sk = nWet === 0 ? rsSmooth(px(3), px(7), qb[1] - qb[0])*rsSmooth(px(1.5), px(3), qb[3] - qb[2]) : 0, V4 = poly.map((p, k) => gv(p, cs[k], 1, wa[k], wz[k], kd, sk, gdz(Math.hypot(wa[k] - A0E, wz[k] - L.z0))));   // (marks fading out on the smallest cells, as the canvas leaves them bare)
         GB.tri(V4[0], V4[1], V4[2]); GB.tri(V4[0], V4[2], V4[3]); }
       else if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
       else rsPoly(x, poly, rsCss(cA));
@@ -3032,15 +3077,15 @@ function rgPaintLand(x, mk, dk, V){
       if(nWet === 4 && dd < W*2.5){ const ws = Math.max(W*0.004, c*2), gv = V.time ? wn(am + WT*W*0.0000012*Math.cos(WA), zm + WT*W*0.0000012*Math.sin(WA), ws, 1) : wn(am, zm, ws, 1), gk = rsSmooth(0.5, 0.36, gv)*(0.3 + 0.7*day);
         if(gk > 0.02){ const [bx0, bx1, by0, by1] = q.box, n3 = wn(am, zm, ws, 3), gc = rsMix(wc, [255, 255, 255], 0.35*day + 0.05), ga = gk*(1 - haze), gx = bx0 + (bx1 - bx0)*0.2*n3, gy = (by0 + by1)/2, gw = (bx1 - bx0)*(0.3 + 0.5*n3), gh = Math.max(px(0.6), (by1 - by0)*0.08);
           if(GB) gQuad([gx, gy + gh/2], [gx + gw, gy + gh/2], gh, gc, ga); else { x.fillStyle = rsCss(gc, ga); x.fillRect(gx, gy, gw, gh); } } } }
-    mkPath.push(poly); const g = DKG(dd); let dl = dkPolys.get(g); if(!dl){ dl = []; dkPolys.set(g, dl); } dl.push(poly); };
+    if(GB) return; mkPath.push(poly); const g = DKG(dd); let dl = dkPolys.get(g); if(!dl){ dl = []; dkPolys.set(g, dl); } dl.push(poly); };   // (on the GPU, its mask and distance laid there with it)
   // (the land and what lies flat on it or stands in its lines, the ways, the fields and the walls, far to near)
   // (on the GPU the land is laid first in one pass, then the ways, fields and walls on it, far to near, each clipped by the
   //  land nearer than its depth bucket, consecutive ones of a bucket under one clip; on the canvas they go in among the cells)
   const paintFloor = it => { if(it.q) paintCell(it.q); else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys); else if(it.pc) paintFieldPiece(it.pc); else paintWallPiece(it.wp); };
-  let gpuLaid = false;
+  let gpuLaid = false, landMaps = false;
   if(ringGpuReady()){ GB = ringGpuBatch(); for(let k = shown.length - 1; k >= 0; k--) paintCell(shown[k]);
-    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s }); GB = null;
-    if(cv){ x.drawImage(cv, 0, 0); gpuLaid = true; } else { mkPath.length = 0; dkPolys.clear(); } }
+    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(DZF/d0)/Math.log(reach/d0) }); GB = null;
+    if(cv){ x.drawImage(cv, 0, 0); gpuLaid = landMaps = true; } else { mkPath.length = 0; dkPolys.clear(); } }
   if(gpuLaid){ floor.sort((p, q) => q.dd - p.dd); let clipJ = -2;
     for(const it of floor){ const j = slot(it.r ? it.r.dd : it.pc ? it.pc.dd : it.wp.dd);
       if(j !== clipJ){ if(clipJ !== -2) x.restore(); clipJ = j; x.save(); const n = j >= 0 ? lay[j].near : null;
@@ -3051,15 +3096,25 @@ function rgPaintLand(x, mk, dk, V){
   // (then the things: one the nearer land reaches up into, where its box meets the horizon of its bucket, drawn inside a
   //  clip that cuts that land's shape out of the page there; the rest, most of them, drawn freely)
   items.sort((p, q) => q.dd - p.dd);
-  for(const it of items){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
+  // (on the GPU: every thing a quad over the land's depth, far to near; see gtPaint. If the GPU fails them, the canvas)
+  if(gpuLaid){ const S = Math.min(4096, Math.max(2048, 2 ** Math.ceil(Math.log2(Math.max(ww, wh)))));
+    if(FA.S !== S){ FA.S = S; FA.pages.length = 0; } for(const pg of FA.pages){ if(pg.used > 0) pg.x.clearRect(0, 0, S, Math.min(S, pg.used + 2)); pg.used = 0; pg.wide = 0; }
+    GTB = ringGpuThingBatch(); gPg = 0; gX = 0; gY = 0; gH = 0;
+    for(const it of items){ const t = it.t; gDz = gdz(t.dd - (t.rad || 0) - Math.min(0.8*cellNear(t.dd), 0.03*t.dd)); if(t.o){ drawWork(t.o, t.l); continue; } if(!t.ok) continue; cur = t;
+      if(t.tree) t.draw(t.l);
+      else if(t.box){ const B = t.box, pd = px(6) + 0.3*Math.max(B[1] - B[0], B[3] - B[2]); gtPaint([B[0] - pd, B[1] + pd, B[2] - pd, B[3] + pd], () => t.draw(t.l)); } }
+    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, Math.min(FA.pages.length, gPg + 1)) }, { air: AIR }); GTB = null;
+    if(tcv) x.drawImage(tcv, 0, 0); else gpuLaid = false; }
+  if(!gpuLaid) for(const it of items){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
     if(n && B){ const c0 = Math.max(0, col(B[0]) - 1), c1 = Math.min(NCOL - 1, col(B[1]) + 1), yb = B[3] + px(2); for(let c = c0; c <= c1; c++) if(n[c] < yb){ clip = true; break; }
       if(clip){ const BIG = wh*4, x0 = c0*CW, x1 = c1*CW; x.save(); x.beginPath(); x.moveTo(-BIG, -BIG); x.lineTo(ww + BIG, -BIG); x.lineTo(ww + BIG, BIG); x.lineTo(x1, BIG);
         for(let c = c1; c >= c0; c--) x.lineTo(c*CW, Math.min(BIG, n[c] + px(0.5))); x.lineTo(x0, BIG); x.lineTo(-BIG, BIG); x.closePath(); x.clip(); } }
     if(t.o) drawWork(t.o, t.l); else if(t.ok){ cur = t; t.draw(t.l); }
     if(clip) x.restore(); }
   // the land's mask and its distance (white far, black near), for the parts after
-  mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
-  for(const g of [...dkPolys.keys()].sort((p, q) => q - p)){ dk.fillStyle = `rgb(${g},${g},${g})`; dk.beginPath(); for(const P of dkPolys.get(g)){ P.forEach((p, k) => k ? dk.lineTo(p[0], p[1]) : dk.moveTo(p[0], p[1])); dk.closePath(); } dk.fill(); }
+  const LM = landMaps && ringGpuLandMaps(); if(LM){ mk.drawImage(LM[0], 0, 0); dk.drawImage(LM[1], 0, 0); }
+  else { mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
+  for(const g of [...dkPolys.keys()].sort((p, q) => q - p)){ dk.fillStyle = `rgb(${g},${g},${g})`; dk.beginPath(); for(const P of dkPolys.get(g)){ P.forEach((p, k) => k ? dk.lineTo(p[0], p[1]) : dk.moveTo(p[0], p[1])); dk.closePath(); } dk.fill(); } }
   // ---- 5. THE AIR OVER IT ALL: the sun's glare low in the sky, and the weather falling ----
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgDusk(dk)*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); const ge = rsSmooth(0, 0.1, el); g.addColorStop(0, rsCss(col, 0.22*ge)); g.addColorStop(0.4, rsCss(col, 0.07*ge)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }   // (eased in as the sun clears the horizon)

@@ -4,6 +4,35 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Alpha Persei–Sarvvis (2026-10-26)
+
+- **The Ringworld's things are drawn on the GPU.** In a browser with WebGPU, the trees, rocks, buildings, creatures,
+  works and happenings are now drawn there along with the land. The browser's own work per film frame drops to about a
+  fifth.
+- **Trees light smoothly.** Each tree's picture is drawn once and lit by the moment's light and haze as it is shown, so
+  its colour follows the day with no steps.
+- **Hills hide what's behind them properly.** Things are now hidden by the nearer land pixel by pixel. Before, a far
+  spire or tower could show through the slope in front of it.
+- **Glows still glow.** Lamps and other glowing things brighten what's behind them, as they do when drawn the old way.
+- **The ground's paint on the GPU looks as it did on the canvas.** The brush strokes, tufts, ripples, chips and paving
+  joints now stand upright on the page, as a painter lays them. Before, they were flattened into the ground and almost
+  vanished from a drone's height. They still stay fixed to the land.
+- Without WebGPU, the Ringworld draws as before. Adding ?cpuland to the address draws it the old way, for comparison.
+
+### Under the hood
+- ringGpu.js:
+  - The land pass writes depth (`ringGpuDepth`), plus the land's mask and distance for the parts after.
+  - `ringGpuThings` draws every thing as an instanced quad, far to near, depth-tested against the land.
+  - Tree pictures are cropped and kept in rows on the GPU; a row unseen this frame gives up its place when room runs
+    out (`ringGpuPutSheet`).
+  - Glows are drawn in their own runs with screen blending.
+- stepsRing.js:
+  - Every non-tree thing is painted onto a shared per-frame atlas canvas (gtPaint). Glows from pkGlow and rgGlow are
+    handed to the GPU instead of painted.
+  - A tree right in front of the eye, and the self-lit kinds (`RG_GLOW_TREES`), stay painted the canvas way.
+- ringworldView checks the things' quad list, that the canvas takes over when there is no WebGPU, and the depth scale.
+- Research notes: docs/prior-art/ringworld-gpu.md §4.
+
 ## Alpha Persei–Mirfak (2026-10-26)
 
 - **The drone flies steadily.** It no longer swings round suddenly or shakes. The way it faces is smoothed along its
@@ -517,26 +546,3 @@ prints it).
   - The graffiti check now tells a mark hanging free in the night from a bright stretch of the arch.
   - The tree-id check counts the trees this world grows.
 - The Ringworld's fingerprint updated (its land redrawn, intended).
-
-## Pleiades–Merope (2026-10-25)
-
-- The Ringworld's stars are fixed to the sky now, as a skybox's are: turning the camera turns past them, the same way the
-  arch and the land go by, so the ring no longer seems to swing round with the camera. Only the ring's slow spin moves
-  them, and gently.
-- The film window has the page's own light and camera dials in it, in a Camera and Light card at its top (on a desktop's
-  Kinesis tab and in a phone's sheet; they go back to Materia when you leave). The Camera's From and To share the dial:
-  From is where the film starts, the page's camera; choose To and set where it ends on the same dial, and the film then
-  turns to that shot.
-- Length is a slider now, two seconds to a minute, its ticks named; Time passes is a slider too, from real time through
-  five minutes to two days, spread by how long it feels.
-- Size is two choices: the Aspect (the page's own, 9:16, 4:5, 1:1 or 16:9) and the Resolution (720p, 1080p, 1440p or
-  2160p as the short side, or Custom, your own width and height, which sets the shape too). A film is 1080p by default.
-- In rain, a storm or snow the overcast lets the arch show through, just: the ring always looms.
-- A crashed ship's smoke rises puff by puff and leans the way the wind blows, harder as it blows harder.
-
-### Under the hood
-- The star field is laid on a cube round the eye, each face cut into patches projected through the ring's camera
-  (`rgPanSky`), every face its picture turned its own way so none repeats beside another.
-- `movingDials` moves the light and camera rows into the window and back, `movingLeave` keeps the shot and puts the
-  page's camera back; the film's size is the Aspect and the Resolution (`movingDims`); the time span's slider is a log of
-  five minutes to two days (`movingSpanSecs`).

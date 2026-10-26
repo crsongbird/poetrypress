@@ -152,7 +152,7 @@ node tools/smoke.mjs                           # click every kind of control, de
 node tools/phone-shot.mjs out.png [--tex t] [--tab page] [--at id]   # the built page on a phone: look at a change before shipping it
 node tools/snapshot.mjs [repo] <out>            # the registry as data (chains, starters, sliders, caps, parts): cmp before/after a refactor
 node tools/gpu-ab.mjs [repo]                     # GPU lighting, a GPU pass and the box's glass on software WebGL: diff before/after (needs Playwright)
-node tools/gpu-ring.mjs out.png [seed w h camera frames]  # the Ringworld with its land on WebGPU over the same on the canvas, and each one's time (needs Playwright)
+node tools/gpu-ring.mjs out.png [seed w h camera frames]  # the Ringworld on WebGPU (its land and things) over the same on the canvas, and each one's time (needs Playwright)
 SHIP_TRAILER='…' sh tools/ship.sh               # build, every suite, commit with the release notes (+ the session's attribution) and push main
 ```
 
@@ -244,7 +244,7 @@ default.
 | `textureGenerators.js` | the registry (`TEXTURE_CAPS`: what each can do; blends as `GREY_BLENDS`, `LIT_BLENDS` or `ledBlends(first, set)`), dispatch (`CHAIN_TINTS`: which hues a chain is handed), the cache and its keys |
 | `textureService.js` · `textureWorker.js` | textures made off the page's thread |
 | `eventKit.js` | the Ringworld's happenings, as wildKit's wild things: `evAt` (where every actor, bolt, orb, spark and puff is in a skirmish, a mage fight, a drone's or a wolf pack's hunt, a band of people walking between doors, by the seed and the clock, in eras that end where the next begins), `evGiant` (the kneeling giant's watch and beam) and `evPaintFx` (the effects on the page, never a flash) |
-| `ringGpu.js` | the Ringworld's land on WebGPU: `ringGpuInit` (opened once, async, in the worker and on the page; a software adapter refused but with ?softgl), `ringGpuBatch` (the land's triangles: page place, colour, the world under each corner, its ground), `ringGpuDraw` (laid in one pass, the ground's marks worked out per pixel from the world, onto a canvas the painter draws its things on). Node and browsers without WebGPU draw the land on the canvas; ?cpuland forces that |
+| `ringGpu.js` | the Ringworld's land on WebGPU: `ringGpuInit` (opened once, async, in the worker and on the page; a software adapter refused but with ?softgl), `ringGpuBatch` (the land's triangles: page place, colour, the world under each corner, its ground), `ringGpuDraw` (laid in one pass with its depth, mask and distance, the ground's marks worked out per pixel from the world as the canvas paints them), `ringGpuThings` (every thing a quad over the land's depth, far to near: a tree its kept sheet relit there, `ringGpuPutSheet`; any other thing painted on a page of the frame's own; glows screened). Node and browsers without WebGPU draw it all on the canvas; ?cpuland forces that |
 | `webgl.js` | the one way WebGL2 is opened: `glOpen` (a context, or null on none or a software emulator) and `glProgram` (a quad drawn by a fragment shader). The worker's lighting and GPU passes share one context |
 | `texCore.js` | shared maths: seeded random, noise, `pixelPass`, canonical pixels, `lightHeights` (the lighting engine, CPU and WebGL2), FXAA (`fxaaImage`), the steps' kit |
 | `texWhimsy.js` `texSharpness.js` `texChaos.js` `texTouch.js` | the older generators, one file per element (being taken apart into steps) |

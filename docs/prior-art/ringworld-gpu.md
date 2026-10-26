@@ -34,8 +34,7 @@ compares the two on a real machine.
   were), its water a fan, its shore and glints thin quads; the ground's marks and strokes worked out per pixel from
   where it lies in the world, on the world's own grids (docs/prior-art/ringworld-painted.md §5), so they cost nothing on
   the CPU and never jump. The ways, fields and walls are drawn on it after, clipped bucket by bucket.
-- Next: the trees as instanced quads from their kept sheets, then the arch; the land's heights and colours in a compute
-  shader; the things' depth against the land's per pixel instead of by bucket.
+- Next: the arch on the GPU; the land's heights and colours in a compute shader (§4 has the things).
 
 ## 3 · The PS1/PS2 look, for the engine build
 
@@ -56,3 +55,37 @@ compares the two on a real machine.
   style and the PS1 look meet in flat colour and few polygons; they part on the jitter and the swimming, which the
   painted Ringworld avoids on purpose (Ruby: the ground's paint "terrible to look at" when it moves), so the look is
   best a switch of the engine's, not its default.
+
+## 4 · The ground's paint and the things on the GPU (2026-10-26)
+
+Ruby, 2026-10-26: "The ground texture made SENSE and was very pretty if it's drawn with the GPU with correct lods and
+mipmapping it shouldn't do the recalculating thing … Go ahead and try to get the rest of the things on a GPU so we can
+even render the video at a reasonable frameerate."
+
+- A browser open world's impostors: each prop baked into an atlas, "The color pass is unlit, so no lighting gets baked
+  into the texture"; at run time "The imposter is a single quad", its material lit by "the scene's sun and environment
+  lighting"; each instance's place uploaded as instanced attributes, a shared unit quad expanded in the vertex shader
+  [src](https://app.cinevva.com/blog/2026-05-04-open-world-browser-part-19-imposters).
+- A dynamic texture atlas by shelf packing, which "works very well when there is a high number of items with similar
+  sizes", as WebRender's glyph atlases are [src](https://docs.rs/crate/etagere/latest).
+- Measured here [est] (Chromium, its WebGPU on a software adapter, so the GPU's own time says nothing; Ruby's seed and
+  settings at 960×540): the canvas path spends about ten seconds of the page's own work a frame, a quarter of it laying
+  the trees' sheets (some 6,700 a frame) and a third painting new sheets as the light and haze stepped; with the things
+  on the GPU the page's own work is under two seconds a frame.
+- So here [est]:
+  - The ground's marks on the GPU are the canvas's own (rgBrush and rgGroundMarks: strokes toward the shared tints,
+    tufts, ripples, chips, drift lines, hummocks, reeds, joints), on the world's grids as before, but drawn upright on
+    the page as a painter draws them: each fragment turns the triangle's own map from the page to the world about to
+    find where a mark's point lies on the page. Lying flat in the ground they were foreshortened to nothing at a drone's
+    angle, which is why the GPU's ground had looked bare.
+  - The land writes its depth (by the logarithm of distance, `ringGpuDepth`), its mask and its distance for the parts
+    after.
+  - A tree is a quad of its kept sheet, the sheet drawn once in a plain noon light, cropped to what is drawn, and kept on
+    the GPU in rows of one height, a row unseen this frame given up when room runs out (`ringGpuPutSheet`). The shader
+    lights it with stepsRing.js's own rgLit sums (toward the night's blue by the dark, toward the air by the haze), so a
+    sheet serves every light, and the light runs smoothly with no steps. Its shadows are ellipses worked out there.
+  - Every other thing is painted as ever, on a page of the frame's own (gtPaint), and laid as a quad; its glows are
+    screened over what is behind them, as the canvas's 'screen' does.
+  - All of them far to near, each hidden by the land nearer than it pixel by pixel. The canvas's buckets drew a far
+    thing over a nearer hill now and then (a spire showing through the slope before it); the depth does not.
+  - Kept on the canvas: a tree right before the eye and the trees with a light of their own (`RG_GLOW_TREES`).

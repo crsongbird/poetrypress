@@ -1,4 +1,4 @@
-// tools/gpu-ring.mjs — the Ringworld drawn in a real Chromium with its land on WebGPU (ringGpu.js) and on the canvas, one
+// tools/gpu-ring.mjs — the Ringworld drawn in a real Chromium with its land and things on WebGPU (ringGpu.js) and on the canvas, one
 // over the other in a PNG, with each one's time a frame (needs Playwright; WebGPU on SwiftShader's Vulkan, so the times
 // say little about a real GPU, the pictures everything):
 //   node tools/gpu-ring.mjs out.png [seed] [w] [h] ['{"turn":0}' or '{"fly":{"route":"seed","u":0.5,"secs":10}}'] [frames]

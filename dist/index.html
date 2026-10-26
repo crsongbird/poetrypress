@@ -6488,7 +6488,11 @@ const pkEll = (x, X, Y, rx, ry, fill) => { if(!(rx > 0 && ry > 0)) return; x.fil
 const PK_WHITE = [255, 248, 232], PK_BLACK = [0, 0, 0];
 const pkSub = R => { const b = (R()*4294967296) >>> 0, f = t => mulberry32((b ^ Math.imul(t, 0x9E3779B1)) >>> 0); f.b = b; pkNow = b; pkFace = 0; pkLodNow = 1; return f; };
 let pkNow = 0, pkFace = 0, pkLodNow = 1;
-function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
+
+
+let PK_GLOW_TO = null;
+const pkGlowTo = o => { PK_GLOW_TO = o; };
+function pkGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; if(PK_GLOW_TO && PK_GLOW_TO.x === x){ PK_GLOW_TO.fn(x, X, Y, r, col, a); return; } x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r);
   g.addColorStop(0, pkCss(col, a)); g.addColorStop(1, pkCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
 const pkFoot = (x, X, Y, r, c) => pkEll(x, X - c.sd*r*0.35, Y, r, r*0.22, pkCss(c.dark, 0.28));
@@ -9825,7 +9829,8 @@ function evPaintFx(x, f, X, Y, r, col, px, P2){
 
 
 /* ==== ringGpu.js ==== */
-let DEV = null, PIPE = null, UBUF = null, BIND = null, FMT = null, OPENING = null, SOFT_OK = false, ON = true;
+let DEV = null, PIPE = null, UBUF = null, BIND = null, FMT = null, OPENING = null, SOFT_OK = false, ON = true, DEPTH = null;
+let TPIPE = null, SPIPE = null, TUBUF = null, TBIND = null, SAMP = null, TA = null, FA = null, FA_S = 0, FA_L = 0;
 const CANVASES = new Map();
 let RG_GPU_WHY = '';
  
@@ -9836,6 +9841,7 @@ function ringGpuReady(){ return ON && !!DEV; }
  
 function setRingGpu(on, soft){ ON = !!on; if(soft !== undefined && !!soft !== SOFT_OK){ SOFT_OK = !!soft; if(!DEV) OPENING = null; } }
 
+const PREMUL = { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } };
  
 function ringGpuInit(){
   if(OPENING) return OPENING;
@@ -9846,18 +9852,36 @@ function ringGpuInit(){
       const info = ad.info || {}, soft = ad.isFallbackAdapter || info.isFallbackAdapter || /swiftshader|llvmpipe|software|warp/i.test(`${info.vendor} ${info.architecture} ${info.description} ${info.device}`);
       if(soft && !SOFT_OK) return false;
       const dev = await ad.requestDevice(); FMT = gpu.getPreferredCanvasFormat();
-      const mod = dev.createShaderModule({ code: RG_WGSL });
-      const ci = await mod.getCompilationInfo(); if(ci.messages.some(m => m.type === 'error')){ RG_GPU_WHY = ci.messages.map(m => `${m.lineNum}:${m.linePos} ${m.message}`).join('\n'); return false; }
+      const mod = dev.createShaderModule({ code: RG_WGSL }), tmod = dev.createShaderModule({ code: RG_THINGS_WGSL });
+      for(const m of [mod, tmod]){ const ci = await m.getCompilationInfo(); if(ci.messages.some(q => q.type === 'error')){ RG_GPU_WHY = ci.messages.map(q => `${q.lineNum}:${q.linePos} ${q.message}`).join('\n'); return false; } }
       PIPE = dev.createRenderPipeline({ layout: 'auto',
         vertex: { module: mod, entryPoint: 'vs', buffers: [{ arrayStride: RG_STRIDE*4, attributes: [
           { shaderLocation: 0, offset: 0, format: 'float32x2' }, { shaderLocation: 1, offset: 8, format: 'float32x4' },
-          { shaderLocation: 2, offset: 24, format: 'float32x2' }, { shaderLocation: 3, offset: 32, format: 'float32x2' }] }] },
-        fragment: { module: mod, entryPoint: 'fs', targets: [{ format: FMT, blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } } }] },
-        primitive: { topology: 'triangle-list' } });
+          { shaderLocation: 2, offset: 24, format: 'float32x2' }, { shaderLocation: 3, offset: 32, format: 'float32x2' }, { shaderLocation: 4, offset: 40, format: 'float32' }] }] },
+        fragment: { module: mod, entryPoint: 'fs', targets: [{ format: FMT, blend: PREMUL }, { format: FMT }, { format: FMT }] },
+        primitive: { topology: 'triangle-list' }, depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'always' } });
       UBUF = dev.createBuffer({ size: 32, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
       BIND = dev.createBindGroup({ layout: PIPE.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: UBUF } }] });
-      dev.lost.then(() => { DEV = null; OPENING = null; CANVASES.clear(); });
-      DEV = dev; return true;
+
+      const TBGL = dev.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: {} }, { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { viewDimension: '2d-array' } }, { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { viewDimension: '2d-array' } }] }), TLAY = dev.createPipelineLayout({ bindGroupLayouts: [TBGL] });
+      TPIPE = dev.createRenderPipeline({ layout: TLAY,
+        vertex: { module: tmod, entryPoint: 'tvs', buffers: [{ arrayStride: RG_TSTRIDE*4, stepMode: 'instance', attributes: [
+          { shaderLocation: 0, offset: 0, format: 'float32x2' }, { shaderLocation: 1, offset: 8, format: 'float32x2' }, { shaderLocation: 2, offset: 16, format: 'float32x2' },
+          { shaderLocation: 3, offset: 24, format: 'float32x2' }, { shaderLocation: 4, offset: 32, format: 'float32x2' }, { shaderLocation: 5, offset: 40, format: 'float32x4' }, { shaderLocation: 6, offset: 56, format: 'float32x4' }] }] },
+        fragment: { module: tmod, entryPoint: 'tfs', targets: [{ format: FMT, blend: PREMUL }] },
+        primitive: { topology: 'triangle-list' }, depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less-equal' } });
+
+      SPIPE = dev.createRenderPipeline({ layout: TLAY,
+        vertex: { module: tmod, entryPoint: 'tvs', buffers: [{ arrayStride: RG_TSTRIDE*4, stepMode: 'instance', attributes: [
+          { shaderLocation: 0, offset: 0, format: 'float32x2' }, { shaderLocation: 1, offset: 8, format: 'float32x2' }, { shaderLocation: 2, offset: 16, format: 'float32x2' },
+          { shaderLocation: 3, offset: 24, format: 'float32x2' }, { shaderLocation: 4, offset: 32, format: 'float32x2' }, { shaderLocation: 5, offset: 40, format: 'float32x4' }, { shaderLocation: 6, offset: 56, format: 'float32x4' }] }] },
+        fragment: { module: tmod, entryPoint: 'tfs', targets: [{ format: FMT, blend: { color: { srcFactor: 'one-minus-dst', dstFactor: 'one' }, alpha: { srcFactor: 'zero', dstFactor: 'one' } } }] },
+        primitive: { topology: 'triangle-list' }, depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less-equal' } });
+      TUBUF = dev.createBuffer({ size: 48, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+      SAMP = dev.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+      dev.lost.then(() => { DEV = null; OPENING = null; CANVASES.clear(); DEPTH = null; TA = null; FA = null; });
+      DEV = dev; TA = null; FA = null; return true;
     } catch(e){ DEV = null; return false; }
   })();
   return OPENING;
@@ -9866,21 +9890,35 @@ function ringGpuInit(){
 
 
 
-const RG_STRIDE = 10;
+
+const RG_STRIDE = 11;
+ 
+const ringGpuDepth = (d, d0, d1) => Math.max(0, Math.min(1, Math.log(Math.max(d, d0)/d0)/Math.log(d1/d0)));
  
 function ringGpuBatch(){ let a = new Float32Array(RG_STRIDE*3*4096), n = 0;
   return { get n(){ return n; }, get data(){ return a; },
     tri(p0, p1, p2){ if(n + RG_STRIDE*3 > a.length){ const b = new Float32Array(a.length*2); b.set(a); a = b; } for(const p of [p0, p1, p2]) for(let k = 0; k < RG_STRIDE; k++) a[n++] = p[k]; } }; }
 
- 
+const rgCanvasOf = (key, ww, wh) => { let cv = CANVASES.get(key + ww + 'x' + wh);
+  if(!cv){ const c = new OffscreenCanvas(ww, wh), ctx = c.getContext('webgpu'); ctx.configure({ device: DEV, format: FMT, alphaMode: 'premultiplied' }); cv = { c, ctx }; if(CANVASES.size > 6) CANVASES.clear(); CANVASES.set(key + ww + 'x' + wh, cv); }
+  return cv; };
+let LAND_MAPS = null;
+
+
+const ringGpuLandMaps = () => LAND_MAPS;
+
+
 function ringGpuDraw(batch, ww, wh, o = {}){
   if(!ringGpuReady() || !batch.n) return null;
   try {
-    const key = ww + 'x' + wh; let cv = CANVASES.get(key);
-    if(!cv){ const c = new OffscreenCanvas(ww, wh), ctx = c.getContext('webgpu'); ctx.configure({ device: DEV, format: FMT, alphaMode: 'premultiplied' }); cv = { c, ctx }; if(CANVASES.size > 4) CANVASES.clear(); CANVASES.set(key, cv); }
+    const cv = rgCanvasOf('L', ww, wh);
+    if(!DEPTH || DEPTH.width !== ww || DEPTH.height !== wh){ if(DEPTH) DEPTH.destroy(); DEPTH = DEV.createTexture({ size: [ww, wh], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT }); }
     const vb = DEV.createBuffer({ size: Math.max(16, batch.n*4), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }); DEV.queue.writeBuffer(vb, 0, batch.data, 0, batch.n);
-    DEV.queue.writeBuffer(UBUF, 0, new Float32Array([ww, wh, o.px || 1, (o.seed || 0) % 9973, o.marks ?? 1, 0, 0, 0]));
-    const enc = DEV.createCommandEncoder(), pass = enc.beginRenderPass({ colorAttachments: [{ view: cv.ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 0 }, storeOp: 'store' }] });
+    DEV.queue.writeBuffer(UBUF, 0, new Float32Array([ww, wh, o.px || 1, (o.seed || 0) % 9973, o.marks ?? 1, o.anc || 0, o.dk || 1, 0]));
+    const cm = rgCanvasOf('M', ww, wh), cd = rgCanvasOf('D', ww, wh), att = c => ({ view: c.ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 0 }, storeOp: 'store' });
+    const enc = DEV.createCommandEncoder(), pass = enc.beginRenderPass({ colorAttachments: [att(cv), att(cm), att(cd)],
+      depthStencilAttachment: { view: DEPTH.createView(), depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store' } });
+    LAND_MAPS = [cm.c, cd.c];
     pass.setPipeline(PIPE); pass.setBindGroup(0, BIND); pass.setVertexBuffer(0, vb); pass.draw(batch.n/RG_STRIDE); pass.end(); DEV.queue.submit([enc.finish()]); vb.destroy();
     return cv.c;
   } catch(e){ return null; }
@@ -9890,49 +9928,165 @@ function ringGpuDraw(batch, ww, wh, o = {}){
 
 
 
+
+
+
+
+const RG_TSTRIDE = 18;
+ 
+function ringGpuThingBatch(){ let a = new Float32Array(RG_TSTRIDE*1024), n = 0;
+  return { get n(){ return n; }, get data(){ return a; },
+    put(cx, cy, ux, uy, vx, vy, u0, v0, u1, v1, layer, kind, dz, al, p0, p1, p2, p3){ if(n + RG_TSTRIDE > a.length){ const b = new Float32Array(a.length*2); b.set(a); a = b; }
+      a[n++] = cx; a[n++] = cy; a[n++] = ux; a[n++] = uy; a[n++] = vx; a[n++] = vy; a[n++] = u0; a[n++] = v0; a[n++] = u1; a[n++] = v1; a[n++] = layer; a[n++] = kind; a[n++] = dz; a[n++] = al; a[n++] = p0; a[n++] = p1; a[n++] = p2; a[n++] = p3; } }; }
+
+
+
+
+const TA_S = 4096, TA_L = 3;
+const rgTreeAtlas = () => { if(TA) return TA;
+  const tex = DEV.createTexture({ size: [TA_S, TA_S, TA_L], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT });
+  TA = { tex, y: new Array(TA_L).fill(0), rows: [], map: new Map(), frame: 1 }; TBIND = null; return TA; };
+ 
+function ringGpuSheet(key){ if(!ringGpuReady() || !TA) return null; const e = TA.map.get(key); if(!e) return null; e.seen = TA.frame; e.row.seen = TA.frame; return e.uv; }
+const rgRowFree = (A, row) => { for(const k of row.keys) A.map.delete(k); row.keys.clear(); row.x = 0; };
+
+
+function ringGpuPutSheet(key, cv){
+  if(!ringGpuReady()) return null;
+  try { const A = rgTreeAtlas(), W0 = cv.width, H0 = cv.height, d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, W0, H0).data;
+    let x0 = W0, x1 = -1, y0 = H0, y1 = -1; for(let y = 0; y < H0; y++){ const r = y*W0*4; for(let x = 0; x < W0; x++) if(d[r + x*4 + 3]){ if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y; } }
+    if(x1 < 0){ const uv = [0, 0, 0, 0, 0, 0, 0, 0, 0]; A.map.set(key, { row: { seen: 0 }, uv, seen: A.frame }); return uv; } const w = x1 - x0 + 1, h = y1 - y0 + 1, wP = w + 2, hP = Math.ceil((h + 2)/8)*8; if(wP > TA_S || hP > TA_S) return null;
+
+    let row = A.rows.find(r => r.h === hP && r.x + wP <= TA_S);
+    if(!row){ for(let L = 0; L < TA_L && !row; L++) if(A.y[L] + hP <= TA_S){ row = { L, y: A.y[L], h: hP, x: 0, keys: new Set(), seen: A.frame }; A.y[L] += hP; A.rows.push(row); } }
+    if(!row){ let best = null; for(const r of A.rows) if(r.seen < A.frame && r.h >= hP && r.h <= hP*1.5 && (!best || r.seen < best.seen)) best = r; if(best){ rgRowFree(A, best); row = best; } }
+    if(!row) return null;
+    const px = new Uint8Array(w*h*4); for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){ const i = ((y0 + y)*W0 + x0 + x)*4, o = (y*w + x)*4, al = d[i + 3]/255; px[o] = d[i]*al; px[o + 1] = d[i + 1]*al; px[o + 2] = d[i + 2]*al; px[o + 3] = d[i + 3]; }
+    const ox = row.x + 1, oy = row.y + 1; DEV.queue.writeTexture({ texture: A.tex, origin: [ox, oy, row.L] }, px, { bytesPerRow: w*4, rowsPerImage: h }, [w, h]);
+    row.x += wP; row.seen = A.frame; row.keys.add(key);
+    const uv = [row.L, ox/TA_S, oy/TA_S, (ox + w)/TA_S, (oy + h)/TA_S, x0, y0, w, h]; A.map.set(key, { row, uv, seen: A.frame }); return uv;
+  } catch(e){ RG_GPU_WHY = String(e); return null; } }
+
+
+
+function ringGpuThings(batch, ww, wh, atlas, light){
+  if(!ringGpuReady() || !DEPTH || DEPTH.width !== ww || DEPTH.height !== wh) return null;
+  try {
+    const A = rgTreeAtlas(); A.frame++;
+    const nL = Math.max(1, atlas.pages.length), S = atlas.S;
+    if(!FA || FA_S !== S || FA_L < nL){ if(FA) FA.destroy(); FA_S = S; FA_L = Math.max(nL, 2); FA = DEV.createTexture({ size: [S, S, FA_L], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT }); TBIND = null; }
+
+    atlas.pages.forEach((pg, L) => { const hU = Math.min(S, Math.ceil(pg.used)), wU = Math.min(S, Math.ceil(pg.wide || S)); if(hU < 1 || wU < 1) return; const d = pg.x.getImageData(0, 0, wU, hU).data;
+      for(let i = 0; i < d.length; i += 4){ const a = d[i + 3]; if(a === 255) continue; if(a === 0){ d[i] = d[i + 1] = d[i + 2] = 0; continue; } const k = a/255; d[i] = d[i]*k; d[i + 1] = d[i + 1]*k; d[i + 2] = d[i + 2]*k; }
+      DEV.queue.writeTexture({ texture: FA, origin: [0, 0, L] }, d, { bytesPerRow: wU*4, rowsPerImage: hU }, [wU, hU]); });
+    if(!TBIND) TBIND = DEV.createBindGroup({ layout: TPIPE.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: TUBUF } }, { binding: 1, resource: SAMP },
+      { binding: 2, resource: A.tex.createView({ dimension: '2d-array' }) }, { binding: 3, resource: FA.createView({ dimension: '2d-array' }) }] });
+    const L0 = light.air || [200, 210, 220], N0 = light.night || [8, 12, 30];
+    DEV.queue.writeBuffer(TUBUF, 0, new Float32Array([ww, wh, 0, 0, L0[0]/255, L0[1]/255, L0[2]/255, 1, N0[0]/255, N0[1]/255, N0[2]/255, 1]));
+    const cv = rgCanvasOf('T', ww, wh), nI = batch.n/RG_TSTRIDE;
+    const enc = DEV.createCommandEncoder(), pass = enc.beginRenderPass({ colorAttachments: [{ view: cv.ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 0 }, storeOp: 'store' }],
+      depthStencilAttachment: { view: DEPTH.createView(), depthLoadOp: 'load', depthStoreOp: 'store' } });
+    let ib = null; if(nI > 0){ ib = DEV.createBuffer({ size: batch.n*4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }); DEV.queue.writeBuffer(ib, 0, batch.data, 0, batch.n);
+      pass.setBindGroup(0, TBIND); pass.setVertexBuffer(0, ib);
+
+      const D = batch.data; let i0 = 0, cur = D[11] > 2.5; for(let i = 1; i <= nI; i++){ const g = i < nI && D[i*RG_TSTRIDE + 11] > 2.5; if(i === nI || g !== cur){ pass.setPipeline(cur ? SPIPE : TPIPE); pass.draw(6, i - i0, 0, i0); i0 = i; cur = g; } } }
+    pass.end(); DEV.queue.submit([enc.finish()]); if(ib) ib.destroy();
+    return cv.c;
+  } catch(e){ RG_GPU_WHY = String(e); return null; }
+}
+
+
+
+
+const RG_THINGS_WGSL =  `
+struct TU { size: vec2f, pad: vec2f, air: vec4f, night: vec4f };
+@group(0) @binding(0) var<uniform> tu: TU;
+@group(0) @binding(1) var samp: sampler;
+@group(0) @binding(2) var ta: texture_2d_array<f32>;
+@group(0) @binding(3) var fa: texture_2d_array<f32>;
+struct TO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) q: vec2f, @location(2) @interpolate(flat) lm: vec4f, @location(3) @interpolate(flat) p: vec4f };
+@vertex fn tvs(@builtin(vertex_index) vi: u32, @location(0) c: vec2f, @location(1) U: vec2f, @location(2) V: vec2f, @location(3) uv0: vec2f, @location(4) uv1: vec2f, @location(5) lm: vec4f, @location(6) p: vec4f) -> TO {
+  var Q = array<vec2f, 6>(vec2f(-1.0, -1.0), vec2f(1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, 1.0));
+  let q = Q[vi]; let P = c + U*q.x + V*q.y;
+  var o: TO; o.pos = vec4f(P.x/tu.size.x*2.0 - 1.0, 1.0 - P.y/tu.size.y*2.0, lm.z, 1.0); o.uv = mix(uv0, uv1, q*0.5 + 0.5); o.q = q; o.lm = lm; o.p = p; return o; }
+@fragment fn tfs(i: TO) -> @location(0) vec4f {
+  let L = i32(i.lm.x + 0.5); let st = textureSample(ta, samp, i.uv, L); let sf = textureSample(fa, samp, i.uv, L);
+  let r = length(i.q); let aa = max(fwidth(r), 1e-4); let al = i.lm.w;
+  if(i.lm.y < 0.5){ if(st.a < 0.004){ discard; } let c = st.rgb/st.a; let lit = mix(i.p.x*c + i.p.y*tu.night.rgb, tu.air.rgb, i.p.z); return vec4f(lit, 1.0)*(st.a*al); }
+  if(i.lm.y < 1.5){ if(sf.a < 0.004){ discard; } return sf*al; }
+  if(i.lm.y > 2.5){ let g = clamp(1.0 - r, 0.0, 1.0); if(g <= 0.0){ discard; } return vec4f(i.p.rgb*g, 0.0); }
+  let a = clamp((1.0 - r)/aa, 0.0, 1.0)*al; if(a < 0.004){ discard; } return vec4f(i.p.rgb*a, a); }
+`;
+
+
+
+
+
+
+
+
+
 const RG_WGSL =  `
-struct U { size: vec2f, px: f32, seed: f32, marks: f32, p0: f32, p1: f32, p2: f32 };
+struct U { size: vec2f, px: f32, seed: f32, marks: f32, anc: f32, dk: f32, p2: f32 };
 @group(0) @binding(0) var<uniform> u: U;
 struct VO { @builtin(position) pos: vec4f, @location(0) col: vec4f, @location(1) w: vec2f, @location(2) k: vec2f };
-@vertex fn vs(@location(0) p: vec2f, @location(1) c: vec4f, @location(2) w: vec2f, @location(3) k: vec2f) -> VO {
-  var o: VO; o.pos = vec4f(p.x/u.size.x*2.0 - 1.0, 1.0 - p.y/u.size.y*2.0, 0.0, 1.0); o.col = c; o.w = w; o.k = k; return o; }
-fn hash3(p: vec3f) -> vec4f { var q = fract(p*vec3f(0.1031, 0.1030, 0.0973)); q += dot(q, q.yzx + 33.33);
-  let r = fract((q.xxy + q.yzz)*q.zyx); return vec4f(r, fract(r.x*17.13 + r.y*3.71 + r.z*29.3)); }
+@vertex fn vs(@location(0) p: vec2f, @location(1) c: vec4f, @location(2) w: vec2f, @location(3) k: vec2f, @location(4) dz: f32) -> VO {
+  var o: VO; o.pos = vec4f(p.x/u.size.x*2.0 - 1.0, 1.0 - p.y/u.size.y*2.0, dz, 1.0); o.col = c; o.w = w; o.k = k; return o; }
+fn pcg(v: u32) -> u32 { let s = v*747796405u + 2891336453u; let w = ((s >> ((s >> 28u) + 4u)) ^ s)*277803737u; return (w >> 22u) ^ w; }
+fn rnd4(i: i32, j: i32, salt: u32) -> vec4f { let h = pcg(bitcast<u32>(i) ^ pcg(bitcast<u32>(j) ^ pcg(salt))); let h2 = pcg(h); let h3 = pcg(h2); let h4 = pcg(h3);
+  return vec4f(f32(h >> 8u), f32(h2 >> 8u), f32(h3 >> 8u), f32(h4 >> 8u))/16777216.0; }
+fn vhash(p: vec2f, s: f32) -> f32 { let q = vec2i(floor(p)); return rnd4(q.x, q.y, u32(s)).x; }
 fn vnoise(p: vec2f, s: f32) -> f32 { let i = floor(p); let f = fract(p); let w = f*f*(3.0 - 2.0*f);
-  let a = hash3(vec3f(i, s)).x; let b = hash3(vec3f(i + vec2f(1.0, 0.0), s)).x; let c = hash3(vec3f(i + vec2f(0.0, 1.0), s)).x; let d = hash3(vec3f(i + vec2f(1.0, 1.0), s)).x;
-  return mix(mix(a, b, w.x), mix(c, d, w.x), w.y); }
+  return mix(mix(vhash(i, s), vhash(i + vec2f(1.0, 0.0), s), w.x), mix(vhash(i + vec2f(0.0, 1.0), s), vhash(i + vec2f(1.0, 1.0), s), w.x), w.y); }
+fn seg(p: vec2f, a: vec2f, b: vec2f) -> f32 { let ab = b - a; let t = clamp(dot(p - a, ab)/max(dot(ab, ab), 1e-6), 0.0, 1.0); return length(p - a - ab*t); }
+fn ink(d: f32, hw: f32) -> f32 { return clamp(hw + 0.5 - d, 0.0, 1.0); }
 const TINTS = array<vec3f, 5>(vec3f(0.839, 0.729, 0.471), vec3f(0.376, 0.502, 0.588), vec3f(1.0, 0.973, 0.894), vec3f(0.157, 0.18, 0.204), vec3f(0.588, 0.667, 0.376));
-// one octave of dabs (brush = 0) or strokes (brush = 1) over colour c, al its strength
-fn octave(c0: vec3f, w: vec2f, S: f32, al: f32, mpp: f32, salt: f32, brush: bool, kind: f32) -> vec3f {
-  var c = c0; let base = floor(w/S);
-  for(var i = -1; i <= 1; i++){ for(var j = -1; j <= 1; j++){
-    let cell = base + vec2f(f32(i), f32(j)); let h = hash3(vec3f(cell, salt + log2(S)*7.0)); let h2 = hash3(vec3f(cell + 0.5, salt + 91.0));
-    let ctr = (cell + h.xy)*S; let d = w - ctr;
-    var keep = 1.0; var tone = select(vec3f(0.0), vec3f(1.0, 0.98, 0.91), h.z < 0.5); var mixk = select(0.2, 0.16, h.z < 0.5); var opa = select(0.7, 0.75, h.z < 0.5);
-    var ang = (h2.x - 0.5)*0.5; var len = 0.0; var wid = 0.0;
-    if(brush){ let busy = vnoise(ctr/90.0, u.seed + 941.0); keep = select(0.0, 1.0, busy >= 0.42 && h.w <= (busy - 0.3)*1.6);
-      tone = TINTS[min(4u, u32(h2.y*5.0))]; mixk = 0.2 + 0.14*h2.z; opa = 0.62; len = S*(0.25 + 0.25*h2.w); wid = S*(0.09 + 0.08*h.z); }
-    else { let r = S*(0.2 + 0.16*h.w); opa = opa*0.75;
-      // (by its ground, thin as the canvas's strokes are: tufts on the grass, ripples on the sand, chips on the rock, drift
-      //  lines on the snow, small dabs elsewhere)
-      if(kind < 1.5){ len = r*0.9; wid = r*0.12; } else if(kind < 2.5){ len = r*1.6; wid = r*0.14; } else if(kind < 3.5){ len = r*0.8; wid = r*0.3; ang = ang*3.0; } else if(kind < 4.5){ len = r*1.4; wid = r*0.1; } else { len = r*0.5; wid = r*0.3; } }
-    if(keep < 0.5){ continue; }
-    let cs = cos(ang); let sn = sin(ang); let q = vec2f(d.x*cs + d.y*sn, -d.x*sn + d.y*cs)/vec2f(max(len, 1e-4), max(wid, 1e-4));
-    let rr = length(q); let aa = mpp/max(wid, 1e-4)*1.2; let cov = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, rr);
-    c = mix(c, mix(c, tone, mixk), cov*opa*al); } }
+// The page's map to the world, J (metres a pixel along the page's x and its y), and back
+struct Jac { x: vec2f, y: vec2f, det: f32, ppm: f32 };
+fn toPage(J: Jac, d: vec2f) -> vec2f { return vec2f(J.y.y*d.x - J.y.x*d.y, -J.x.y*d.x + J.x.x*d.y)/J.det; }
+// One grid's marks over colour c (base: the ground's own colour), its octaves faded one into the next
+fn paint(c0: vec3f, base: vec3f, w: vec2f, J: Jac, tgt: f32, salt: u32, brush: bool, kind: f32) -> vec3f {
+  var c = c0; let lv = log2(max(tgt/(J.ppm*2.0), 1e-6)); let k0 = max(0.0, floor(lv)); let f = select(lv - k0, 0.0, lv < 0.0);
+  let lite = mix(base, vec3f(1.0, 0.98, 0.91), 0.16); let dark = base*0.8;
+  for(var o = 0; o < 2; o++){ let k = k0 + f32(o); let al = select(1.0 - f, f, o == 1); if(al < 0.04){ continue; }
+    let S = 2.0*exp2(k); let sp = S*J.ppm; if(sp < 2.5){ continue; }
+    let R = select(0.8, 0.6, brush)*sp + 2.0; let ex = R*(abs(J.x.x) + abs(J.y.x)); let ez = R*(abs(J.x.y) + abs(J.y.y));
+    var i0 = i32(floor((w.x - ex)/S)); var i1 = i32(floor((w.x + ex)/S)); var j0 = i32(floor((w.y - ez)/S)); var j1 = i32(floor((w.y + ez)/S));
+    let ci = i32(floor(w.x/S)); let cj = i32(floor(w.y/S)); i0 = max(i0, ci - 4); i1 = min(i1, ci + 4); j0 = max(j0, cj - 4); j1 = min(j1, cj + 4);
+    let an = select(0, i32(u.anc)*i32(4096.0/S), S <= 4096.0); let sl = salt*16u + u32(k);
+    let lw = max(0.5*u.px, sp*0.05)*0.5;
+    for(var gi = i0; gi <= i1; gi++){ for(var gj = j0; gj <= j1; gj++){
+      let h = rnd4(gi + an, gj, sl); let h2 = rnd4(gi + an, gj, sl + 997u); let ctr = (vec2f(f32(gi), f32(gj)) + h.xy)*S; let p = toPage(J, w - ctr);
+      if(brush){ let busy = vnoise((ctr + vec2f(u.anc*4096.0, 0.0))/90.0, u.seed + 941.0); if(busy < 0.42 || h.w > (busy - 0.3)*1.6){ continue; }
+        let len = sp*(0.5 + 0.5*h.z); let ang = (h2.x - 0.5)*0.5; let ca = cos(ang); let sa = sin(ang)*0.45;
+        let d = min(seg(p, vec2f(-ca, -sa)*len*0.5, vec2f(0.0, -sp*0.03)), seg(p, vec2f(0.0, -sp*0.03), vec2f(ca, sa)*len*0.5));
+        let cov = ink(d, max(1.2*u.px, sp*(0.18 + 0.16*h2.w))*0.5); if(cov <= 0.0){ continue; }
+        c = mix(c, mix(base, TINTS[min(4u, u32(h2.y*5.0))], 0.2 + 0.14*h2.z), cov*0.62*al); continue; }
+      let r = sp*(0.22 + 0.2*h.w); if(dot(p, p) > (2.0*r + 3.0)*(2.0*r + 3.0)){ continue; }
+      var dL = 1e9; var dD = 1e9; var fD = 1e9;
+      if(kind < 1.5 || (kind > 5.5 && kind < 6.5)){ let lb = r*select(0.7, 0.9, kind > 5.5); let lean = (h2.x - 0.5)*lb*0.6;
+        let d = min(min(seg(p, vec2f(-0.25*lb, 0.0), vec2f(-0.3*lb + lean, -lb)), seg(p, vec2f(0.0), vec2f(lean*0.5, -1.2*lb))), seg(p, vec2f(0.25*lb, 0.0), vec2f(0.35*lb + lean, -0.9*lb)));
+        if(h.z < 0.5){ dL = d; } else { dD = d; } }
+      else if(kind < 2.5){ let l2 = r*1.6; dD = min(seg(p, vec2f(-l2, 0.0), vec2f(0.0, -0.175*r)), seg(p, vec2f(0.0, -0.175*r), vec2f(l2, 0.0)));
+        dL = min(seg(p, vec2f(-l2, -0.2*r), vec2f(0.0, -0.375*r)), seg(p, vec2f(0.0, -0.375*r), vec2f(l2, -0.2*r))); }
+      else if(kind < 3.5){ dD = min(min(seg(p, vec2f(-r, -0.3*r), vec2f(-0.2*r, 0.1*r)), seg(p, vec2f(-0.2*r, 0.1*r), vec2f(0.3*r, -0.2*r))), seg(p, vec2f(0.3*r, -0.2*r), vec2f(r, 0.25*r)));
+        dL = abs(length(p - vec2f(0.3*r, 0.5*r)) - max(0.5*u.px, 0.12*r)); }
+      else if(kind < 4.5){ let l2 = r*1.4; dL = seg(p, vec2f(-l2, 0.0), vec2f(l2, -0.12*r)); dD = seg(p, vec2f(-0.6*l2, 0.18*r), vec2f(0.7*l2, 0.1*r)); }
+      else if(kind > 6.5 && kind < 7.5){ dL = abs(length(p) - max(0.5*u.px, 0.3*r)); let rr = max(0.4*u.px, 0.2*r); fD = length(p - vec2f(0.9*r, 0.3*r)) - rr; dD = abs(fD); }
+      else if(kind > 7.5 && kind < 8.5){ if(h.z < 0.4){ let q = p/vec2f(r, 0.3*r); fD = (length(q) - 1.0)*0.3*r; dD = abs(fD); }
+        else { dL = min(min(seg(p, vec2f(-0.3*r, 0.0), vec2f(-0.4*r, -0.9*r)), seg(p, vec2f(0.0), vec2f(0.0, -1.1*r))), seg(p, vec2f(0.3*r, 0.0), vec2f(0.45*r, -0.8*r))); } }
+      else if(kind > 8.5 && kind < 9.5){ dD = min(seg(p, vec2f(-1.5*r, 0.0), vec2f(1.5*r, 0.0)), seg(p, vec2f(0.0, -0.4*r), vec2f(0.0, 0.4*r))); }
+      else { continue; }
+      c = mix(c, dark, max(ink(dD, lw), clamp(0.5 - fD, 0.0, 1.0))*0.7*al); c = mix(c, lite, ink(dL, lw)*0.75*al); } } }
   return c; }
-fn layer(c0: vec3f, w: vec2f, mpp: f32, tgt: f32, salt: f32, brush: bool, kind: f32) -> vec3f {
-  let lv = log2(max(tgt*mpp/2.0, 1e-6)); let k0 = max(0.0, floor(lv)); let f = select(lv - k0, 0.0, lv < 0.0);
-  var c = octave(c0, w, 2.0*exp2(k0), 1.0 - f, mpp, salt, brush, kind);
-  if(f > 0.04){ c = octave(c, w, 2.0*exp2(k0 + 1.0), f, mpp, salt, brush, kind); }
-  return c; }
-@fragment fn fs(i: VO) -> @location(0) vec4f {
-  let mpp = max(length(fwidth(i.w))*0.7071, 1e-5);
+struct FO { @location(0) c: vec4f, @location(1) m: vec4f, @location(2) d: vec4f };
+@fragment fn fs(i: VO) -> FO {
+  let dx = dpdx(i.w); let dy = dpdy(i.w); var J: Jac; J.x = dx; J.y = dy; J.det = dx.x*dy.y - dy.x*dx.y; J.ppm = 1.0/sqrt(max(abs(J.det), 1e-12));
   var c = i.col.rgb;
-  if(i.k.x > 0.5 && u.marks > 0.5){ let s = i.k.y;
-    let cb = layer(c, i.w, mpp, 46.0*u.px, 1.0, true, i.k.x); let cm = layer(cb, i.w, mpp, 26.0*u.px, 2.0, false, i.k.x);
-    c = mix(c, cm, s); }
-  return vec4f(c*i.col.a, i.col.a); }
+  if(i.k.x > 0.5 && u.marks > 0.5 && i.k.y > 0.01 && abs(J.det) > 1e-12){ let base = c;
+    let cb = paint(c, base, i.w, J, 46.0*u.px, 1u, true, i.k.x); let cm = paint(cb, base, i.w, J, 26.0*u.px, 2u, false, i.k.x);
+    c = mix(c, cm, i.k.y); }
+  let g = clamp(i.pos.z*u.dk, 0.0, 1.0); var o: FO; o.c = vec4f(c*i.col.a, i.col.a); o.m = vec4f(1.0); o.d = vec4f(g, g, g, 1.0); return o; }
 `;
 
 
@@ -21825,7 +21979,7 @@ function rgSmallLife(x, X, Y, h, kind, c, R, t = 0){
     x.fillStyle = rsCss(c.slime, 0.68); x.beginPath(); x.ellipse(sx, Y, sw, sh, 0, Math.PI, Math.PI*2); x.fill();
     x.fillStyle = rsCss([255, 255, 255], 0.45); x.beginPath(); x.ellipse(sx - sw*0.3, Y - sh*0.55, sw*0.22, sh*0.16, -0.3, 0, Math.PI*2); x.fill(); }
 }
-function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
+function rgGlow(x, X, Y, r, col, a){ if(!(r > 0.5)) return; if(RG_GLOW_TO && RG_GLOW_TO.x === x){ RG_GLOW_TO.fn(x, X, Y, r, col, a); return; } x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(X, Y, 0, X, Y, r); g.addColorStop(0, rsCss(col, a)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(X - r, Y - r, r*2, r*2); x.restore(); }
 
 
 
@@ -22658,7 +22812,11 @@ const RG_MESH_KEPT = new Map(), RG_NG_MAX = 80, RG_ARCH_KEPT = new Map();
 
 
 
-const RG_SPRITES = new Map(); let RG_SPRITE_PX = 0;
+const RG_SPRITES = new Map(); let RG_SPRITE_PX = 0, RG_GLOW_TO = null;
+
+const RG_GLOW_TREES = ['mushroom', 'crystal', 'glow'];
+
+const RG_FA = { S: 0, pages: [] }, RG_FA_MAX = 6;
 const rgSprite = (key, w, h, draw) => { let sp = RG_SPRITES.get(key); if(sp){ RG_SPRITES.delete(key); RG_SPRITES.set(key, sp); return sp; }
   const [c, x] = kitCanvas(w, h); draw(x); sp = c; RG_SPRITES.set(key, sp); RG_SPRITE_PX += w*h;
   while(RG_SPRITE_PX > 1e7 && RG_SPRITES.size > 1){ const [k0, c0] = RG_SPRITES.entries().next().value; RG_SPRITES.delete(k0); RG_SPRITE_PX -= c0.width*c0.height; } return sp; };
@@ -22970,7 +23128,7 @@ function rgPaintLand(x, mk, dk, V){
 
   const radOf = o => { const M0 = W*0.00025; return o.c === 'bldg' ? o.wM*0.6*M0 : o.c === 'board' || o.c === 'henge' ? o.wM*0.5*M0 : o.c === 'rock' ? o.hM*0.95*M0
     : o.c === 'prop' || o.c === 'solid' ? (o.wM ? o.wM*0.55 : (o.hM || 1)*0.45)*M0 : o.c === 'tree' ? (o.hM || 4)*0.06*M0 : 0; };
-  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: radOf(o), draw: l => rgPaintThing(o, l, dd) }); }
+  for(const o of store){ const dd = keep(o.a, o.z, marginOf(o)); if(dd != null) things.push({ dd, rad: radOf(o), tree: o.c === 'tree', draw: l => rgPaintThing(o, l, dd) }); }
 
 
   const nearCut = wh*3;
@@ -23156,21 +23314,23 @@ function rgPaintLand(x, mk, dk, V){
 
 
       const dqF = cday*24, dqT = dqF - Math.floor(dqF), dqA = Math.floor(dqF)/24, dqB = Math.min(1, dqA + 1/24);
-      const drawTree = (dq, al, pass) => { const hq = Math.round(haze*32)/32, bq = Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
+      const drawTree = (dq, al, pass, gpu) => { const hq = gpu ? 0 : Math.round(haze*32)/32, bq = gpu ? Math.round(V.sun.back*rsSmooth(0.35, 0.7, cday)*(1 - haze)*8)/8 : Math.round(V.sun.back*rsSmooth(0.35, 0.7, dq)*(1 - hq)*8)/8;
       const el = o.w === 'magic' ? V.elementAt(o.a, o.z) : null, green0 = o.kind === 'olive' ? [118, 134, 106] : RG_CACTI.includes(o.kind) ? rsMix([96, 128, 98], V.land, 0.2) : rsMix(o.w === 'ruins' ? [80, 70, 54] : [36, 82, 50], V.land, 0.35);
-      const SZ = rgSeasonOf(V, o), green = SZ.leaf ? rsMix(el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, SZ.leaf, SZ.k) : el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, dq, hq, null, o);
+      const SZ = rgSeasonOf(V, o), green = SZ.leaf ? rsMix(el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, SZ.leaf, SZ.k) : el && !RG_CACTI.includes(o.kind) ? rsMix(green0, el.leaf, 0.35) : green0, c = colsOf(o.w, dq, hq, null, o), cS = gpu ? colsOf(o.w, cday, haze, null, o) : c;
       const tc = { lod: lo, trunk: rgLit(V, [70, 52, 40], dq, hq, AIR), dark: rgLit(V, rsMix(green, BLACK, 0.18), dq, hq, AIR), body: rgLit(V, green, dq, hq, AIR),
         lit: rgLit(V, rsMix(green, [255, 244, 222], 0.3), dq, hq, AIR), glow: c.glow, sd: c.sd, L: LT, fruit: o.fruit ? rgLit(V, (o.rs & 2) ? [196, 58, 40] : [126, 52, 92], dq, hq, AIR) : null,
 
-        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!c.shv, bare: SZ.bare, snow: V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
+        back: bq, sun: rgLit(V, [255, 236, 196], dq, hq, AIR), hM: o.hM, season: V.season, ivy: !!o.ivy, nofoot: !!cS.shv, bare: SZ.bare, snow: V.weather === 'snow', blossom: SZ.blossom ? rgLit(V, SZ.blossom, dq, hq, AIR) : null };
 
-      if(pass === 0 && c.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(c, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
-        x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
+      if(pass === 0 && cS.shv && h*lo > px(7)){ const [dx, dy] = pkShadowWay(cS, h), Ls = Math.hypot(dx, dy), wS = h*(RG_NARROW_TREES.includes(o.kind) ? 0.07 : 0.14);
+        if(gpu){ gtEll(X + dx*0.5, Y + dy*0.5, Ls*0.5 + wS, wS*0.55, Math.atan2(dy, dx), rsMix(cS.dark, BLACK, 0.5), 0.26*x.globalAlpha); gtEll(X, Y, wS*0.55, wS*0.16, 0, rsMix(cS.dark, BLACK, 0.6), 0.3*x.globalAlpha); }
+        else { x.save(); x.translate(X + dx*0.5, Y + dy*0.5); x.rotate(Math.atan2(dy, dx)); x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.5), 0.26); x.beginPath(); x.ellipse(0, 0, Ls*0.5 + wS, wS*0.55, 0, 0, Math.PI*2); x.fill(); x.restore();
 
-        x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.6), 0.3); x.beginPath(); x.ellipse(X, Y, wS*0.55, wS*0.16, 0, 0, Math.PI*2); x.fill(); }
+        x.fillStyle = rsCss(rsMix(c.dark, BLACK, 0.6), 0.3); x.beginPath(); x.ellipse(X, Y, wS*0.55, wS*0.16, 0, 0, Math.PI*2); x.fill(); } }
 
       if(pass === 0 && o.nurse){ const g2 = rsMix([118, 140, 70], V.land, 0.25), nc = { ...tc, hM: undefined, dark: rgLit(V, rsMix(g2, BLACK, 0.2), cday, haze, AIR), body: rgLit(V, g2, cday, haze, AIR), lit: rgLit(V, rsMix(g2, [255, 244, 222], 0.3), cday, haze, AIR) };
-        pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx); }
+        const nurse = () => pkTree(x, X + (o.rs & 4 ? 1 : -1)*f[2]*1.6, Y - f[2]*0.3, f[2]*(4 + (o.rs % 3)), nc, 'acacia', mulberry32(o.rs ^ 0x5a5a), rgPx);
+        if(gpu) gtPaint([X - f[2]*14, X + f[2]*14, Y - f[2]*12, Y + f[2]*3], nurse); else nurse(); }
 
 
 
@@ -23178,11 +23338,23 @@ function rgPaintLand(x, mk, dk, V){
       const Sres = rgStep2(h), Sdet = Math.min(Sres, rgStep2(Math.max(hl, px(8))));
       if(Sres > px(260)){ if(pass) return; if(o.rs & 1) mirrored(X, () => pkTree(x, X, Y, h, pkFlip(tc), o.kind, R, rgPx)); else pkTree(x, X, Y, h, tc, o.kind, R, rgPx); return 'near'; }
       const Sd = Math.max(Sres, px(24)), sw = Math.ceil(Sd*2.4), sh = Math.ceil(Sd*1.4), ax = sw/2, ay = Math.ceil(Sd*1.22), AIRk = AIR.map(v => v >> 3).join('.');
-      const key = [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
-      const sp = rgSprite(key, sw, sh, sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
-        if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); });
+      const key = gpu ? ['g', o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', el ? el.name : '', o.w].join('|')
+        : [o.rs, o.kind, Sd.toFixed(1), (Sdet/Sres*Sd).toFixed(1), dq, hq, bq, c.sd, tc.nofoot ? 1 : 0, SZ.key, tc.snow ? 's' : '', AIRk, el ? el.name : '', c.glow.map(v => v | 0).join('.'), o.w].join('|');
+      const sheet = sx => { const t0 = { ...tc, lod: Math.max(px(8), Sdet/Sres*Sd)/Sd }, R2 = mulberry32(o.rs);
+        if(o.rs & 1){ sx.translate(ax, 0); sx.scale(-1, 1); sx.translate(-ax, 0); pkTree(sx, ax, ay, Sd, pkFlip(t0), o.kind, R2, rgPx); } else pkTree(sx, ax, ay, Sd, t0, o.kind, R2, rgPx); };
+
+
+      if(gpu){ const uv = ringGpuSheet(key) || ringGpuPutSheet(key, rgSprite(key, sw, sh, sheet)); if(!uv) return 'full'; if(!uv[7]) return; const k = h/Sd, qx = X - ax*k + uv[5]*k, qy = Y - ay*k + uv[6]*k, qw = uv[7]*k/2, qh = uv[8]*k/2;
+        GTB.put(qx + qw, qy + qh, qw, 0, 0, qh, uv[1], uv[2], uv[3], uv[4], uv[0], 0, gDz, x.globalAlpha*al, 0.2456 + 0.7544*cday, 0.7544*(1 - cday), haze, 0); return; }
+      const sp = rgSprite(key, sw, sh, sheet);
       const k = h/Sd, ga = x.globalAlpha; x.globalAlpha = ga*al; x.drawImage(sp, X - ax*k, Y - ay*k, sw*k, sh*k); x.globalAlpha = ga; };
-      const r0 = drawTree(dqT < 0.94 ? dqA : dqB, 1, 0); if(r0 !== 'near' && dqT >= 0.06 && dqT < 0.94) drawTree(dqB, dqT, 1); x.globalAlpha = 1; return; }
+      const onCanvas = () => { const r0 = drawTree(dqT < 0.94 ? dqA : dqB, 1, 0); if(r0 !== 'near' && dqT >= 0.06 && dqT < 0.94) drawTree(dqB, dqT, 1); };
+
+
+      if(GTB){ const glowy = RG_GLOW_TREES.includes(o.kind);
+        if(glowy || rgStep2(h) > px(260) || drawTree(1, 1, 0, true) === 'full') gtPaint([X - h*1.6, X + h*1.6, Y - h*1.25, Y + h*0.6], onCanvas); }
+      else onCanvas();
+      x.globalAlpha = 1; return; }
     if(o.c === 'bldg'){ const h = o.hM*f[2], wd = o.wM*f[2], lo = lodOf(o, f), hl = h*lo; if(hl < px(1.2)){ nightDot(o, f, l, wday, haze, hl > px(0.5) ? 1.3 : 1); return; } if(h > nearCut) return;
       const X = f[0], Y = stand(l, X, f[1]); if(!vis(l, X - wd*1.7, X + wd*1.7, Y - h*1.4, Y, o.kind === 'arch' || o.kind === 'needle' || o.kind === 'pylon' ? null : [X - wd*0.4, X + wd*0.4, Y - h*0.3, Y])) return;
 
@@ -23308,7 +23480,11 @@ function rgPaintLand(x, mk, dk, V){
     const X = b[0], Y = o.kind === 'sh' || o.kind === 'sa' || o.kind === 'br' ? b[1] : stand(l, b[0], b[1]);
     if(big && hidden(l, X - W*big*k*0.3, X + W*big*k*0.3, Y - W*big*k)) return;
     const night = 1 - rsSmooth(0.3, 0.7, day), haze = hazeOf(o.d), c = colsOf(o.w, day, haze, null, o);
-    rgWork(x, o, X, Y, k, c, night, o.R, V, e);
+    if(!GTB) return rgWork(x, o, X, Y, k, c, night, o.R, V, e);
+
+    const H = W*({ sp: 0.1, mo: 0.026, do: 0.022, to: 0.126, wr: 0.026, cr: 0.0084, ci: 0.0144, ca: 0.024, pi: 0.45 }[o.kind] || 0)*k + px(12);
+    const B = o.kind === 'sh' || o.kind === 'sa' || o.kind === 'br' || !H ? [0, ww, 0, wh] : o.kind === 'mo' && o.w !== 'builders' ? [X - H*1.6, X + H*1.6, Y - H*1.6, Y + H*1.2] : o.kind === 'ci' || o.kind === 'ca' ? [X - H*1.3, X + H*1.3, Y - H*1.3, Y + H*1.3] : [X - H*1.3, X + H*1.3, Y - H*2.6, Y + H*0.6];
+    gtPaint(B, () => rgWork(x, o, X, Y, k, c, night, o.R, V, e));
   };
 
 
@@ -23748,11 +23924,34 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  let GB = null; const GANC = Math.round(A0E/(M1*4096))*M1*4096, gkCode = k => RG_GRASSY[k] ? 1 : k === 'sand' || k === 'desert' ? 2 : k === 'rock' ? 3 : k === 'snow' || k === 'ice' ? 4 : 5;
-  const gv = (p, c3, al, a, z, kind, sk) => [p[0], p[1], c3[0]/255, c3[1]/255, c3[2]/255, al, (a - GANC)/M1, z/M1, kind, sk];
+  let GB = null; const GANC = Math.round(A0E/(M1*4096))*M1*4096, gkCode = k => RG_GRASSY[k] ? (k === 'steppe' || k === 'savanna' ? 6 : 1) : k === 'sand' || k === 'desert' ? 2 : k === 'rock' ? 3 : k === 'snow' || k === 'ice' ? 4 : k === 'tundra' ? 7 : k === 'marsh' ? 8 : k === 'paving' ? 9 : 5;
+
+
+
+
+
+
+  let GTB = null, gDz = 0, gPg = 0, gX = 0, gY = 0, gH = 0; const FA = RG_FA;
+  const gtAlloc = (w, h) => { const S = FA.S; if(gX + w > S){ gY += gH; gX = 0; gH = 0; } if(gY + h > S){ gPg++; gX = 0; gY = 0; gH = 0; } if(gPg >= RG_FA_MAX) return null;
+    if(!FA.pages[gPg]){ const c = document.createElement('canvas'); c.width = c.height = S; FA.pages[gPg] = { c, x: c.getContext('2d', { willReadFrequently: true }), used: 0, wide: 0 }; }
+    const pg = FA.pages[gPg], r = { L: gPg, x: gX, y: gY }; gX += w; gH = Math.max(gH, h); pg.used = Math.max(pg.used, gY + gH); pg.wide = Math.max(pg.wide, gX); return r; };
+  const gtPaint = (B, fn) => { const x0 = Math.floor(Math.max(B[0], -px(4))), y0 = Math.floor(Math.max(B[2], -px(4))), w = Math.ceil(Math.min(B[1], ww + px(4)) - x0), h = Math.ceil(Math.min(B[3], wh + px(4)) - y0);
+    if(!(w >= 1 && h >= 1)) return; const S = FA.S, sc = Math.min(1, (S - 2)/w, (S - 2)/h), w2 = Math.ceil(w*sc), h2 = Math.ceil(h*sc), r = gtAlloc(w2 + 2, h2 + 2); if(!r) return;
+    GTB.put(x0 + w/2, y0 + h/2, w/2, 0, 0, h/2, (r.x + 1)/S, (r.y + 1)/S, (r.x + 1 + w*sc)/S, (r.y + 1 + h*sc)/S, r.L, 1, gDz, 1, 0, 0, 0, 0);
+    const A = FA.pages[r.L].x, ga = x.globalAlpha; A.save(); A.beginPath(); A.rect(r.x + 1, r.y + 1, w2, h2); A.clip(); A.translate(r.x + 1, r.y + 1); if(sc < 1) A.scale(sc, sc); A.translate(-x0, -y0); A.globalAlpha = ga;
+
+    const B0 = A.getTransform().inverse(), G = { x: A, fn: (c2, X, Y, rr, col, al) => { const T = B0.multiply(c2.getTransform()), Pt = T.transformPoint(new DOMPoint(X, Y)), k = Math.sqrt(Math.abs(T.a*T.d - T.b*T.c)), R = rr*k, a2 = al*c2.globalAlpha;
+      if(R > 0.5 && a2 > 0.004) GTB.put(Pt.x, Pt.y, R, 0, 0, R, 0, 0, 0, 0, 0, 3, gDz, 1, col[0]/255*a2, col[1]/255*a2, col[2]/255*a2, 0); } };
+    const Xp = x; x = A; pkGlowTo(G); RG_GLOW_TO = G; try { fn(); } finally { x = Xp; A.restore(); pkGlowTo(null); RG_GLOW_TO = null; } };
+  const gtEll = (cx, cy, rx, ry, rot, col, a) => { if(!(rx > 0.3 && ry > 0.2 && a > 0.004)) return; const cr = Math.cos(rot), sr = Math.sin(rot);
+    GTB.put(cx, cy, cr*(rx + 0.5), sr*(rx + 0.5), -sr*(ry + 0.5), cr*(ry + 0.5), 0, 0, 0, 0, 0, 2, gDz, a, col[0]/255, col[1]/255, col[2]/255, 0); };
+
+
+  const DZF = reach*4, gdz = d => ringGpuDepth(d, d0, DZF); let gD = 1;
+  const gv = (p, c3, al, a, z, kind, sk, dz = gD) => [p[0], p[1], c3[0]/255, c3[1]/255, c3[2]/255, al, (a - GANC)/M1, z/M1, kind, sk, dz];
   const gQuad = (A, B, w, c3, al) => { const dx = B[0] - A[0], dy = B[1] - A[1], dl = Math.hypot(dx, dy) || 1, nx = -dy/dl*w/2, ny = dx/dl*w/2, v = (X, Y) => gv([X, Y], c3, al, 0, 0, 0, 0);
     GB.tri(v(A[0] + nx, A[1] + ny), v(B[0] + nx, B[1] + ny), v(B[0] - nx, B[1] - ny)); GB.tri(v(A[0] + nx, A[1] + ny), v(B[0] - nx, B[1] - ny), v(A[0] - nx, A[1] - ny)); };
-  const paintCell = q => {
+  const paintCell = q => { if(GB) gD = gdz(q.dd);
     const { l, i, j, P, am, zm, dd, c } = q, h00 = vh(l, i, j), h10 = vh(l, i + 1, j), h11 = vh(l, i + 1, j + 1), h01 = vh(l, i, j + 1), hm = (h00 + h10 + h01 + h11)/4, sea = TR.sea;
     const day = ringDay(L, am), haze = hazeOf(dd), wet = [h00 < sea, h10 < sea, h11 < sea, h01 < sea], nWet = wet[0] + wet[1] + wet[2] + wet[3];
     const dA = ((h10 - h00) + (h11 - h01))/(2*c), dZ = ((h01 - h00) + (h11 - h10))/(2*c), slope = Math.hypot(dA, dZ)/exf(exD(am, zm));
@@ -23776,7 +23975,7 @@ function rgPaintLand(x, mk, dk, V){
       const VA = [i, i + 1, i + 1, i], VZ = [j, j, j + 1, j + 1], cs = g4.map((g, k) => { let c3 = g; if(fp) c3 = rsMix(c3, fp[0], fp[1]); if(rock > 0) c3 = rsMix(c3, rk, rock*0.8); return shade(c3, tb[k], aOf(l, VA[k]), zOf(l, VZ[k]), vLit(l, VA[k], VZ[k]), kSunAt(l, VA[k], VZ[k]), specAt(l, VA[k], VZ[k])); });
       let pA = 0, pB = 1, dM = -1; for(let k = 0; k < 4; k++) for(let m = k + 1; m < 4; m++){ const d2 = Math.abs(cs[k][0] - cs[m][0]) + Math.abs(cs[k][1] - cs[m][1]) + Math.abs(cs[k][2] - cs[m][2]); if(d2 > dM){ dM = d2; pA = k; pB = m; } }
       const cA = [0, 1, 2].map(ch => (cs[0][ch] + cs[1][ch] + cs[2][ch] + cs[3][ch])/4);
-      if(GB){ const wa = [aOf(l, i), aOf(l, i + 1), aOf(l, i + 1), aOf(l, i)], wz = [zOf(l, j), zOf(l, j), zOf(l, j + 1), zOf(l, j + 1)], kd = nWet === 0 ? gkCode(ci0.gk) : 0, V4 = poly.map((p, k) => gv(p, cs[k], 1, wa[k], wz[k], kd, nWet === 0 ? 1 : 0));
+      if(GB){ const wa = [aOf(l, i), aOf(l, i + 1), aOf(l, i + 1), aOf(l, i)], wz = [zOf(l, j), zOf(l, j), zOf(l, j + 1), zOf(l, j + 1)], kd = nWet === 0 ? gkCode(ci0.gk) : 0, qb = q.box, sk = nWet === 0 ? rsSmooth(px(3), px(7), qb[1] - qb[0])*rsSmooth(px(1.5), px(3), qb[3] - qb[2]) : 0, V4 = poly.map((p, k) => gv(p, cs[k], 1, wa[k], wz[k], kd, sk, gdz(Math.hypot(wa[k] - A0E, wz[k] - L.z0))));
         GB.tri(V4[0], V4[1], V4[2]); GB.tri(V4[0], V4[2], V4[3]); }
       else if(dM > 24 && Math.hypot(P[pB][0] - P[pA][0], P[pB][1] - P[pA][1]) > px(2)){ fillTri([P[0], P[1], P[2]], [cs[0], cs[1], cs[2]]); fillTri([P[0], P[2], P[3]], [cs[0], cs[2], cs[3]]); }
       else rsPoly(x, poly, rsCss(cA));
@@ -23796,15 +23995,15 @@ function rgPaintLand(x, mk, dk, V){
       if(nWet === 4 && dd < W*2.5){ const ws = Math.max(W*0.004, c*2), gv = V.time ? wn(am + WT*W*0.0000012*Math.cos(WA), zm + WT*W*0.0000012*Math.sin(WA), ws, 1) : wn(am, zm, ws, 1), gk = rsSmooth(0.5, 0.36, gv)*(0.3 + 0.7*day);
         if(gk > 0.02){ const [bx0, bx1, by0, by1] = q.box, n3 = wn(am, zm, ws, 3), gc = rsMix(wc, [255, 255, 255], 0.35*day + 0.05), ga = gk*(1 - haze), gx = bx0 + (bx1 - bx0)*0.2*n3, gy = (by0 + by1)/2, gw = (bx1 - bx0)*(0.3 + 0.5*n3), gh = Math.max(px(0.6), (by1 - by0)*0.08);
           if(GB) gQuad([gx, gy + gh/2], [gx + gw, gy + gh/2], gh, gc, ga); else { x.fillStyle = rsCss(gc, ga); x.fillRect(gx, gy, gw, gh); } } } }
-    mkPath.push(poly); const g = DKG(dd); let dl = dkPolys.get(g); if(!dl){ dl = []; dkPolys.set(g, dl); } dl.push(poly); };
+    if(GB) return; mkPath.push(poly); const g = DKG(dd); let dl = dkPolys.get(g); if(!dl){ dl = []; dkPolys.set(g, dl); } dl.push(poly); };
 
 
 
   const paintFloor = it => { if(it.q) paintCell(it.q); else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys); else if(it.pc) paintFieldPiece(it.pc); else paintWallPiece(it.wp); };
-  let gpuLaid = false;
+  let gpuLaid = false, landMaps = false;
   if(ringGpuReady()){ GB = ringGpuBatch(); for(let k = shown.length - 1; k >= 0; k--) paintCell(shown[k]);
-    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s }); GB = null;
-    if(cv){ x.drawImage(cv, 0, 0); gpuLaid = true; } else { mkPath.length = 0; dkPolys.clear(); } }
+    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(DZF/d0)/Math.log(reach/d0) }); GB = null;
+    if(cv){ x.drawImage(cv, 0, 0); gpuLaid = landMaps = true; } else { mkPath.length = 0; dkPolys.clear(); } }
   if(gpuLaid){ floor.sort((p, q) => q.dd - p.dd); let clipJ = -2;
     for(const it of floor){ const j = slot(it.r ? it.r.dd : it.pc ? it.pc.dd : it.wp.dd);
       if(j !== clipJ){ if(clipJ !== -2) x.restore(); clipJ = j; x.save(); const n = j >= 0 ? lay[j].near : null;
@@ -23815,15 +24014,25 @@ function rgPaintLand(x, mk, dk, V){
 
 
   items.sort((p, q) => q.dd - p.dd);
-  for(const it of items){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
+
+  if(gpuLaid){ const S = Math.min(4096, Math.max(2048, 2 ** Math.ceil(Math.log2(Math.max(ww, wh)))));
+    if(FA.S !== S){ FA.S = S; FA.pages.length = 0; } for(const pg of FA.pages){ if(pg.used > 0) pg.x.clearRect(0, 0, S, Math.min(S, pg.used + 2)); pg.used = 0; pg.wide = 0; }
+    GTB = ringGpuThingBatch(); gPg = 0; gX = 0; gY = 0; gH = 0;
+    for(const it of items){ const t = it.t; gDz = gdz(t.dd - (t.rad || 0) - Math.min(0.8*cellNear(t.dd), 0.03*t.dd)); if(t.o){ drawWork(t.o, t.l); continue; } if(!t.ok) continue; cur = t;
+      if(t.tree) t.draw(t.l);
+      else if(t.box){ const B = t.box, pd = px(6) + 0.3*Math.max(B[1] - B[0], B[3] - B[2]); gtPaint([B[0] - pd, B[1] + pd, B[2] - pd, B[3] + pd], () => t.draw(t.l)); } }
+    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, Math.min(FA.pages.length, gPg + 1)) }, { air: AIR }); GTB = null;
+    if(tcv) x.drawImage(tcv, 0, 0); else gpuLaid = false; }
+  if(!gpuLaid) for(const it of items){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
     if(n && B){ const c0 = Math.max(0, col(B[0]) - 1), c1 = Math.min(NCOL - 1, col(B[1]) + 1), yb = B[3] + px(2); for(let c = c0; c <= c1; c++) if(n[c] < yb){ clip = true; break; }
       if(clip){ const BIG = wh*4, x0 = c0*CW, x1 = c1*CW; x.save(); x.beginPath(); x.moveTo(-BIG, -BIG); x.lineTo(ww + BIG, -BIG); x.lineTo(ww + BIG, BIG); x.lineTo(x1, BIG);
         for(let c = c1; c >= c0; c--) x.lineTo(c*CW, Math.min(BIG, n[c] + px(0.5))); x.lineTo(x0, BIG); x.lineTo(-BIG, BIG); x.closePath(); x.clip(); } }
     if(t.o) drawWork(t.o, t.l); else if(t.ok){ cur = t; t.draw(t.l); }
     if(clip) x.restore(); }
 
-  mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
-  for(const g of [...dkPolys.keys()].sort((p, q) => q - p)){ dk.fillStyle = `rgb(${g},${g},${g})`; dk.beginPath(); for(const P of dkPolys.get(g)){ P.forEach((p, k) => k ? dk.lineTo(p[0], p[1]) : dk.moveTo(p[0], p[1])); dk.closePath(); } dk.fill(); }
+  const LM = landMaps && ringGpuLandMaps(); if(LM){ mk.drawImage(LM[0], 0, 0); dk.drawImage(LM[1], 0, 0); }
+  else { mk.fillStyle = '#fff'; mk.beginPath(); for(const P of mkPath){ P.forEach((p, k) => k ? mk.lineTo(p[0], p[1]) : mk.moveTo(p[0], p[1])); mk.closePath(); } mk.fill();
+  for(const g of [...dkPolys.keys()].sort((p, q) => q - p)){ dk.fillStyle = `rgb(${g},${g},${g})`; dk.beginPath(); for(const P of dkPolys.get(g)){ P.forEach((p, k) => k ? dk.lineTo(p[0], p[1]) : dk.moveTo(p[0], p[1])); dk.closePath(); } dk.fill(); } }
 
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgDusk(dk)*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); const ge = rsSmooth(0, 0.1, el); g.addColorStop(0, rsCss(col, 0.22*ge)); g.addColorStop(0.4, rsCss(col, 0.07*ge)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
@@ -37051,7 +37260,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Alpha Persei–Mirfak';
+const RELEASE = 'Alpha Persei–Sarvvis';
 
 const RELEASE_DATE = '2026-10-26';
 
@@ -38018,7 +38227,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-26 · f6435c9";
+const STAMP = "2026-10-26 · 25b2ab9";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

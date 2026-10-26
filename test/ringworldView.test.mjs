@@ -107,8 +107,14 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
 
 // (the land on WebGPU, ringGpu.js: where there is none, Node here, the canvas draws it, and the batch of triangles holds
 // what it is given)
-{ const G = await import('../ringGpu.js'), B = G.ringGpuBatch(), v = k => [k, k + 1, 0.5, 0.5, 0.5, 1, 10*k, 20*k, 1, 1];
+{ const G = await import('../ringGpu.js'), B = G.ringGpuBatch(), v = k => [k, k + 1, 0.5, 0.5, 0.5, 1, 10*k, 20*k, 1, 1, 0.5];
   for(let k = 0; k < 5000; k++) B.tri(v(k), v(k + 1), v(k + 2));
-  check('without WebGPU the land is laid on the canvas, and the GPU batch keeps every triangle it is given', !G.ringGpuReady() && G.ringGpuDraw(B, 64, 64) === null && B.n === 5000*3*G.RG_STRIDE && B.data[(4999*3 + 2)*G.RG_STRIDE] === 5001); }
+  check('without WebGPU the land is laid on the canvas, and the GPU batch keeps every triangle it is given', !G.ringGpuReady() && G.ringGpuDraw(B, 64, 64) === null && B.n === 5000*3*G.RG_STRIDE && B.data[(4999*3 + 2)*G.RG_STRIDE] === 5001);
+  // (the things' quads: kept in order as they grow, and without WebGPU none laid there, no sheet kept, the canvas paints)
+  const T = G.ringGpuThingBatch(); for(let k = 0; k < 3000; k++) T.put(k, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, k % 4, 0.5, 1, 0, 0, 0, 0);
+  check('the GPU\'s quads for the things keep their order, and without WebGPU the canvas paints them', T.n === 3000*G.RG_TSTRIDE && T.data[2999*G.RG_TSTRIDE] === 2999 && T.data[2999*G.RG_TSTRIDE + 11] === 3
+    && G.ringGpuThings(T, 64, 64, { S: 2048, pages: [] }, {}) === null && G.ringGpuSheet('x') === null && G.ringGpuPutSheet('x', null) === null && G.ringGpuLandMaps() === null);
+  // (depth by the logarithm of distance: the near given the room, the far still apart)
+  check('depth runs from the eye to the farthest, the near spread out', G.ringGpuDepth(1, 1, 1000) === 0 && G.ringGpuDepth(1000, 1, 1000) === 1 && Math.abs(G.ringGpuDepth(31.62, 1, 1000) - 0.5) < 0.01 && G.ringGpuDepth(5000, 1, 1000) === 1); }
 
 done();
