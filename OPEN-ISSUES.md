@@ -101,6 +101,13 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
+  - RUBY'S NOTES (2026-10-26, 11:54): the buildings, rocks, robots and works as sparse 3D geometry on the GPU, lit there
+    ("if we used extremely sparse geometry it wouldn't cost too much"), billboards kept for the small things, people and
+    the trees ("I like the art style for the trees"), so the 3D land and the 2D things no longer jar; roads that never
+    cross needlessly, hover over the ground or go nowhere; no city block left without buildings; the controls panel to
+    take any number of on/off switches, shown sensibly; for the Ringworld switches for the weather, the costlier effects
+    and a retro mode (the PlayStation look without its jitter); a drone flight that leaves the camera looking straight
+    ahead, and the camera menus ordered so what switches others off stands above them.
   - RUBY'S NOTES (2026-10-26), what is left: the GPU path's next steps (below); many objects lit poorly, and billboards to become 3D objects; the reflections; pop-in and drawing artifacts still in a
     drone film; the happenings taken further (people meeting robots, a fox stalking birds, a hawk stooping on a hare,
     robot wars on a larger scale, groups following the roads); the PS1/PS2 look as a switch of the engine "WITHOUT the

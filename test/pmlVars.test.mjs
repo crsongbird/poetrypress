@@ -52,7 +52,8 @@ check('§RenderMs, §CacheMB, §Fonts, §Profile and §Scale report the machiner
 // ---- §Build: the release's name ----
 {
   const T = await import('../textParsers.js');
-  check('§Build names the release (a planet and its moon, or a star cluster and its member), even unbuilt', /^[A-Z][a-z]+(?: [A-Z][a-z]+)?–[A-Z][a-z]+(?: [A-Z][a-z]+)?$/.test(BUILD) && resolvePmlVariables('§Build', {}) === BUILD);
+  check('§Build names the release (a planet and its moon, or a star cluster and its member), even unbuilt', /^\p{Lu}\p{Ll}+(?: \p{Lu}\p{Ll}+)?–\p{Lu}\p{Ll}+(?: \p{Lu}\p{Ll}+)?$/u.test(BUILD) && resolvePmlVariables('§Build', {}) === BUILD);
+  // (a star's name may carry an accent: Áldu, a Sámi name)
   // a slash in the stamp was read as a directive, leaving only "Jupiter": the name is written with an en dash
   const line = T.buildLines(resolvePmlVariables('<[\\<§Build\\>]/right/basis:140>', {}), true, true)[0];
   const text = (line.parts || [{ segments: line.segments }]).flatMap(p => p.segments).map(s => s.text).join('');

@@ -80,8 +80,11 @@ export function ringGpuInit(){
 // ground: kind (0 none, 1 grass, 6 long grass, 2 sand, 3 rock, 4 snow, 7 tundra, 8 marsh, 9 paving, 5 other ground,
 // unmarked) and how strongly its marks show; and its depth (0 at the eye, 1 at the farthest, ringGpuDepth)
 export const RG_STRIDE = 11;
-/** How deep a distance d lies, between the nearest d0 and the farthest d1: by its logarithm, so the near has the room. */
-export const ringGpuDepth = (d, d0, d1) => Math.max(0, Math.min(1, Math.log(Math.max(d, d0)/d0)/Math.log(d1/d0)));
+/** How deep a distance d lies, between the nearest d0 and the farthest d1: by one over the distance, as a camera's depth
+ * is, so it runs evenly across a triangle of the land however far and large (by the logarithm it bent across the far
+ * land's large triangles, and things far off flickered in and out of the slopes behind them: Ruby, 2026-10-26, "distant
+ * objects z-fight a looot"). */
+export const ringGpuDepth = (d, d0, d1) => Math.max(0, Math.min(1, (1 - d0/Math.max(d, d0))/(1 - d0/d1)));
 /** A growable list of the land's triangles. */
 export function ringGpuBatch(){ let a = new Float32Array(RG_STRIDE*3*4096), n = 0;
   return { get n(){ return n; }, get data(){ return a; },
@@ -95,14 +98,15 @@ let LAND_MAPS = null;
  * as two canvases, for the parts after. */
 export const ringGpuLandMaps = () => LAND_MAPS;
 /** Lay the batch's triangles on a ww × wh canvas of their own, cleared transparent, and keep their depth for the things;
- * returns the canvas (to drawImage), or null. o.dk: the distance map's farthest over the depth's (its scale). */
+ * returns the canvas (to drawImage), or null. o.dk: the log of the distance map's farthest over the nearest; o.dq: one
+ * less the nearest over the depth's farthest (ringGpuDepth's scale). */
 export function ringGpuDraw(batch, ww, wh, o = {}){
   if(!ringGpuReady() || !batch.n) return null;
   try {
     const cv = rgCanvasOf('L', ww, wh);
     if(!DEPTH || DEPTH.width !== ww || DEPTH.height !== wh){ if(DEPTH) DEPTH.destroy(); DEPTH = DEV.createTexture({ size: [ww, wh], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT }); }
     const vb = DEV.createBuffer({ size: Math.max(16, batch.n*4), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }); DEV.queue.writeBuffer(vb, 0, batch.data, 0, batch.n);
-    DEV.queue.writeBuffer(UBUF, 0, new Float32Array([ww, wh, o.px || 1, (o.seed || 0) % 9973, o.marks ?? 1, o.anc || 0, o.dk || 1, 0]));
+    DEV.queue.writeBuffer(UBUF, 0, new Float32Array([ww, wh, o.px || 1, (o.seed || 0) % 9973, o.marks ?? 1, o.anc || 0, o.dk || 1, o.dq || 1]));
     const cm = rgCanvasOf('M', ww, wh), cd = rgCanvasOf('D', ww, wh), att = c => ({ view: c.ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 0 }, storeOp: 'store' });
     const enc = DEV.createCommandEncoder(), pass = enc.beginRenderPass({ colorAttachments: [att(cv), att(cm), att(cd)],
       depthStencilAttachment: { view: DEPTH.createView(), depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store' } });
@@ -163,10 +167,9 @@ export function ringGpuThings(batch, ww, wh, atlas, light){
     const A = rgTreeAtlas(); A.frame++;
     const nL = Math.max(1, atlas.pages.length), S = atlas.S;
     if(!FA || FA_S !== S || FA_L < nL){ if(FA) FA.destroy(); FA_S = S; FA_L = Math.max(nL, 2); FA = DEV.createTexture({ size: [S, S, FA_L], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT }); TBIND = null; }
-    // (each page's used rows read back from its canvas, a plain one in memory, premultiplied and sent up)
-    atlas.pages.forEach((pg, L) => { const hU = Math.min(S, Math.ceil(pg.used)), wU = Math.min(S, Math.ceil(pg.wide || S)); if(hU < 1 || wU < 1) return; const d = pg.x.getImageData(0, 0, wU, hU).data;
-      for(let i = 0; i < d.length; i += 4){ const a = d[i + 3]; if(a === 255) continue; if(a === 0){ d[i] = d[i + 1] = d[i + 2] = 0; continue; } const k = a/255; d[i] = d[i]*k; d[i + 1] = d[i + 1]*k; d[i + 2] = d[i + 2]*k; }
-      DEV.queue.writeTexture({ texture: FA, origin: [0, 0, L] }, d, { bytesPerRow: wU*4, rowsPerImage: hU }, [wU, hU]); });
+    // (each page's used part sent up as it is, the browser premultiplying it on the way)
+    atlas.pages.forEach((pg, L) => { const hU = Math.min(S, Math.ceil(pg.used)), wU = Math.min(S, Math.ceil(pg.wide || S)); if(hU < 1 || wU < 1) return;
+      DEV.queue.copyExternalImageToTexture({ source: pg.c, origin: [0, 0] }, { texture: FA, origin: [0, 0, L], premultipliedAlpha: true }, [wU, hU]); });
     if(!TBIND) TBIND = DEV.createBindGroup({ layout: TPIPE.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: TUBUF } }, { binding: 1, resource: SAMP },
       { binding: 2, resource: A.tex.createView({ dimension: '2d-array' }) }, { binding: 3, resource: FA.createView({ dimension: '2d-array' }) }] });
     const L0 = light.air || [200, 210, 220], N0 = light.night || [8, 12, 30];
@@ -215,7 +218,7 @@ struct TO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) 
 // turned about, finds where the mark's point lies on the page. Ruby, 2026-10-26: "The ground texture made SENSE and was
 // very pretty"
 const RG_WGSL = /* wgsl */`
-struct U { size: vec2f, px: f32, seed: f32, marks: f32, anc: f32, dk: f32, p2: f32 };
+struct U { size: vec2f, px: f32, seed: f32, marks: f32, anc: f32, dk: f32, dq: f32 };
 @group(0) @binding(0) var<uniform> u: U;
 struct VO { @builtin(position) pos: vec4f, @location(0) col: vec4f, @location(1) w: vec2f, @location(2) k: vec2f };
 @vertex fn vs(@location(0) p: vec2f, @location(1) c: vec4f, @location(2) w: vec2f, @location(3) k: vec2f, @location(4) dz: f32) -> VO {
@@ -274,5 +277,5 @@ struct FO { @location(0) c: vec4f, @location(1) m: vec4f, @location(2) d: vec4f 
   if(i.k.x > 0.5 && u.marks > 0.5 && i.k.y > 0.01 && abs(J.det) > 1e-12){ let base = c;
     let cb = paint(c, base, i.w, J, 46.0*u.px, 1u, true, i.k.x); let cm = paint(cb, base, i.w, J, 26.0*u.px, 2u, false, i.k.x);
     c = mix(c, cm, i.k.y); }
-  let g = clamp(i.pos.z*u.dk, 0.0, 1.0); var o: FO; o.c = vec4f(c*i.col.a, i.col.a); o.m = vec4f(1.0); o.d = vec4f(g, g, g, 1.0); return o; }
+  let g = clamp(log(1.0/max(1.0 - i.pos.z*u.dq, 1e-6))/u.dk, 0.0, 1.0); var o: FO; o.c = vec4f(c*i.col.a, i.col.a); o.m = vec4f(1.0); o.d = vec4f(g, g, g, 1.0); return o; }
 `;

@@ -9892,8 +9892,11 @@ function ringGpuInit(){
 
 
 const RG_STRIDE = 11;
- 
-const ringGpuDepth = (d, d0, d1) => Math.max(0, Math.min(1, Math.log(Math.max(d, d0)/d0)/Math.log(d1/d0)));
+
+
+
+
+const ringGpuDepth = (d, d0, d1) => Math.max(0, Math.min(1, (1 - d0/Math.max(d, d0))/(1 - d0/d1)));
  
 function ringGpuBatch(){ let a = new Float32Array(RG_STRIDE*3*4096), n = 0;
   return { get n(){ return n; }, get data(){ return a; },
@@ -9908,13 +9911,14 @@ let LAND_MAPS = null;
 const ringGpuLandMaps = () => LAND_MAPS;
 
 
+
 function ringGpuDraw(batch, ww, wh, o = {}){
   if(!ringGpuReady() || !batch.n) return null;
   try {
     const cv = rgCanvasOf('L', ww, wh);
     if(!DEPTH || DEPTH.width !== ww || DEPTH.height !== wh){ if(DEPTH) DEPTH.destroy(); DEPTH = DEV.createTexture({ size: [ww, wh], format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT }); }
     const vb = DEV.createBuffer({ size: Math.max(16, batch.n*4), usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST }); DEV.queue.writeBuffer(vb, 0, batch.data, 0, batch.n);
-    DEV.queue.writeBuffer(UBUF, 0, new Float32Array([ww, wh, o.px || 1, (o.seed || 0) % 9973, o.marks ?? 1, o.anc || 0, o.dk || 1, 0]));
+    DEV.queue.writeBuffer(UBUF, 0, new Float32Array([ww, wh, o.px || 1, (o.seed || 0) % 9973, o.marks ?? 1, o.anc || 0, o.dk || 1, o.dq || 1]));
     const cm = rgCanvasOf('M', ww, wh), cd = rgCanvasOf('D', ww, wh), att = c => ({ view: c.ctx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: { r: 0, g: 0, b: 0, a: 0 }, storeOp: 'store' });
     const enc = DEV.createCommandEncoder(), pass = enc.beginRenderPass({ colorAttachments: [att(cv), att(cm), att(cd)],
       depthStencilAttachment: { view: DEPTH.createView(), depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store' } });
@@ -9976,9 +9980,8 @@ function ringGpuThings(batch, ww, wh, atlas, light){
     const nL = Math.max(1, atlas.pages.length), S = atlas.S;
     if(!FA || FA_S !== S || FA_L < nL){ if(FA) FA.destroy(); FA_S = S; FA_L = Math.max(nL, 2); FA = DEV.createTexture({ size: [S, S, FA_L], format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT }); TBIND = null; }
 
-    atlas.pages.forEach((pg, L) => { const hU = Math.min(S, Math.ceil(pg.used)), wU = Math.min(S, Math.ceil(pg.wide || S)); if(hU < 1 || wU < 1) return; const d = pg.x.getImageData(0, 0, wU, hU).data;
-      for(let i = 0; i < d.length; i += 4){ const a = d[i + 3]; if(a === 255) continue; if(a === 0){ d[i] = d[i + 1] = d[i + 2] = 0; continue; } const k = a/255; d[i] = d[i]*k; d[i + 1] = d[i + 1]*k; d[i + 2] = d[i + 2]*k; }
-      DEV.queue.writeTexture({ texture: FA, origin: [0, 0, L] }, d, { bytesPerRow: wU*4, rowsPerImage: hU }, [wU, hU]); });
+    atlas.pages.forEach((pg, L) => { const hU = Math.min(S, Math.ceil(pg.used)), wU = Math.min(S, Math.ceil(pg.wide || S)); if(hU < 1 || wU < 1) return;
+      DEV.queue.copyExternalImageToTexture({ source: pg.c, origin: [0, 0] }, { texture: FA, origin: [0, 0, L], premultipliedAlpha: true }, [wU, hU]); });
     if(!TBIND) TBIND = DEV.createBindGroup({ layout: TPIPE.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: TUBUF } }, { binding: 1, resource: SAMP },
       { binding: 2, resource: A.tex.createView({ dimension: '2d-array' }) }, { binding: 3, resource: FA.createView({ dimension: '2d-array' }) }] });
     const L0 = light.air || [200, 210, 220], N0 = light.night || [8, 12, 30];
@@ -10027,7 +10030,7 @@ struct TO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) 
 
 
 const RG_WGSL =  `
-struct U { size: vec2f, px: f32, seed: f32, marks: f32, anc: f32, dk: f32, p2: f32 };
+struct U { size: vec2f, px: f32, seed: f32, marks: f32, anc: f32, dk: f32, dq: f32 };
 @group(0) @binding(0) var<uniform> u: U;
 struct VO { @builtin(position) pos: vec4f, @location(0) col: vec4f, @location(1) w: vec2f, @location(2) k: vec2f };
 @vertex fn vs(@location(0) p: vec2f, @location(1) c: vec4f, @location(2) w: vec2f, @location(3) k: vec2f, @location(4) dz: f32) -> VO {
@@ -10086,7 +10089,7 @@ struct FO { @location(0) c: vec4f, @location(1) m: vec4f, @location(2) d: vec4f 
   if(i.k.x > 0.5 && u.marks > 0.5 && i.k.y > 0.01 && abs(J.det) > 1e-12){ let base = c;
     let cb = paint(c, base, i.w, J, 46.0*u.px, 1u, true, i.k.x); let cm = paint(cb, base, i.w, J, 26.0*u.px, 2u, false, i.k.x);
     c = mix(c, cm, i.k.y); }
-  let g = clamp(i.pos.z*u.dk, 0.0, 1.0); var o: FO; o.c = vec4f(c*i.col.a, i.col.a); o.m = vec4f(1.0); o.d = vec4f(g, g, g, 1.0); return o; }
+  let g = clamp(log(1.0/max(1.0 - i.pos.z*u.dq, 1e-6))/u.dk, 0.0, 1.0); var o: FO; o.c = vec4f(c*i.col.a, i.col.a); o.m = vec4f(1.0); o.d = vec4f(g, g, g, 1.0); return o; }
 `;
 
 
@@ -22816,7 +22819,7 @@ const RG_SPRITES = new Map(); let RG_SPRITE_PX = 0, RG_GLOW_TO = null;
 
 const RG_GLOW_TREES = ['mushroom', 'crystal', 'glow'];
 
-const RG_FA = { S: 0, pages: [] }, RG_FA_MAX = 6;
+const RG_FA = { S: 0, pages: [] }, RG_FA_MAX = 8;
 const rgSprite = (key, w, h, draw) => { let sp = RG_SPRITES.get(key); if(sp){ RG_SPRITES.delete(key); RG_SPRITES.set(key, sp); return sp; }
   const [c, x] = kitCanvas(w, h); draw(x); sp = c; RG_SPRITES.set(key, sp); RG_SPRITE_PX += w*h;
   while(RG_SPRITE_PX > 1e7 && RG_SPRITES.size > 1){ const [k0, c0] = RG_SPRITES.entries().next().value; RG_SPRITES.delete(k0); RG_SPRITE_PX -= c0.width*c0.height; } return sp; };
@@ -23931,12 +23934,18 @@ function rgPaintLand(x, mk, dk, V){
 
 
 
-  let GTB = null, gDz = 0, gPg = 0, gX = 0, gY = 0, gH = 0; const FA = RG_FA;
-  const gtAlloc = (w, h) => { const S = FA.S; if(gX + w > S){ gY += gH; gX = 0; gH = 0; } if(gY + h > S){ gPg++; gX = 0; gY = 0; gH = 0; } if(gPg >= RG_FA_MAX) return null;
-    if(!FA.pages[gPg]){ const c = document.createElement('canvas'); c.width = c.height = S; FA.pages[gPg] = { c, x: c.getContext('2d', { willReadFrequently: true }), used: 0, wide: 0 }; }
-    const pg = FA.pages[gPg], r = { L: gPg, x: gX, y: gY }; gX += w; gH = Math.max(gH, h); pg.used = Math.max(pg.used, gY + gH); pg.wide = Math.max(pg.wide, gX); return r; };
+
+
+
+  let GTB = null, gDz = 0, gNP = 0; const FA = RG_FA;
+  const gtAlloc = (w, h) => { const S = FA.S, hb = h <= 16 ? 16 : Math.min(S, Math.ceil(16*Math.pow(1.25, Math.ceil(Math.log(h/16)/Math.log(1.25)))));
+    for(let L = 0; L < gNP; L++){ const pg = FA.pages[L]; for(const sh of pg.shelves) if(sh.h === hb && sh.x + w <= S){ const r = { L, x: sh.x, y: sh.y }; sh.x += w; pg.wide = Math.max(pg.wide, sh.x); return r; } }
+    for(let L = 0; L < RG_FA_MAX; L++){ if(L >= gNP){ if(!FA.pages[L]){ const c = document.createElement('canvas'); c.width = c.height = S; FA.pages[L] = { c, x: c.getContext('2d', { willReadFrequently: true }), used: 0, wide: 0, shelves: [] }; } gNP = L + 1; }
+      const pg = FA.pages[L]; if(pg.used + hb <= S){ const sh = { y: pg.used, h: hb, x: w }; pg.shelves.push(sh); pg.used += hb; pg.wide = Math.max(pg.wide, w); return { L, x: 0, y: sh.y }; } }
+    return null; };
   const gtPaint = (B, fn) => { const x0 = Math.floor(Math.max(B[0], -px(4))), y0 = Math.floor(Math.max(B[2], -px(4))), w = Math.ceil(Math.min(B[1], ww + px(4)) - x0), h = Math.ceil(Math.min(B[3], wh + px(4)) - y0);
-    if(!(w >= 1 && h >= 1)) return; const S = FA.S, sc = Math.min(1, (S - 2)/w, (S - 2)/h), w2 = Math.ceil(w*sc), h2 = Math.ceil(h*sc), r = gtAlloc(w2 + 2, h2 + 2); if(!r) return;
+    if(!(w >= 1 && h >= 1)) return; const S = FA.S; let sc = Math.min(1, (S - 2)/w, (S - 2)/h), w2, h2, r = null;
+    for(let k = 0; k < 5 && !r; k++, sc /= 2){ w2 = Math.ceil(w*sc); h2 = Math.ceil(h*sc); r = gtAlloc(w2 + 2, h2 + 2); } if(!r) return; sc *= 2;
     GTB.put(x0 + w/2, y0 + h/2, w/2, 0, 0, h/2, (r.x + 1)/S, (r.y + 1)/S, (r.x + 1 + w*sc)/S, (r.y + 1 + h*sc)/S, r.L, 1, gDz, 1, 0, 0, 0, 0);
     const A = FA.pages[r.L].x, ga = x.globalAlpha; A.save(); A.beginPath(); A.rect(r.x + 1, r.y + 1, w2, h2); A.clip(); A.translate(r.x + 1, r.y + 1); if(sc < 1) A.scale(sc, sc); A.translate(-x0, -y0); A.globalAlpha = ga;
 
@@ -24002,7 +24011,7 @@ function rgPaintLand(x, mk, dk, V){
   const paintFloor = it => { if(it.q) paintCell(it.q); else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys); else if(it.pc) paintFieldPiece(it.pc); else paintWallPiece(it.wp); };
   let gpuLaid = false, landMaps = false;
   if(ringGpuReady()){ GB = ringGpuBatch(); for(let k = shown.length - 1; k >= 0; k--) paintCell(shown[k]);
-    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(DZF/d0)/Math.log(reach/d0) }); GB = null;
+    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(reach/d0), dq: 1 - d0/DZF }); GB = null;
     if(cv){ x.drawImage(cv, 0, 0); gpuLaid = landMaps = true; } else { mkPath.length = 0; dkPolys.clear(); } }
   if(gpuLaid){ floor.sort((p, q) => q.dd - p.dd); let clipJ = -2;
     for(const it of floor){ const j = slot(it.r ? it.r.dd : it.pc ? it.pc.dd : it.wp.dd);
@@ -24016,14 +24025,17 @@ function rgPaintLand(x, mk, dk, V){
   items.sort((p, q) => q.dd - p.dd);
 
   if(gpuLaid){ const S = Math.min(4096, Math.max(2048, 2 ** Math.ceil(Math.log2(Math.max(ww, wh)))));
-    if(FA.S !== S){ FA.S = S; FA.pages.length = 0; } for(const pg of FA.pages){ if(pg.used > 0) pg.x.clearRect(0, 0, S, Math.min(S, pg.used + 2)); pg.used = 0; pg.wide = 0; }
-    GTB = ringGpuThingBatch(); gPg = 0; gX = 0; gY = 0; gH = 0;
-    for(const it of items){ const t = it.t; gDz = gdz(t.dd - (t.rad || 0) - Math.min(0.8*cellNear(t.dd), 0.03*t.dd)); if(t.o){ drawWork(t.o, t.l); continue; } if(!t.ok) continue; cur = t;
+    if(FA.S !== S){ FA.S = S; FA.pages.length = 0; } for(const pg of FA.pages){ if(pg.used > 0) pg.x.clearRect(0, 0, S, Math.min(S, pg.used + 2)); pg.used = 0; pg.wide = 0; pg.shelves = []; }
+
+    const ARCHY = { sa: 1, br: 1, sh: 1 }; for(const it of items) if(it.t.o && ARCHY[it.t.o.kind]) canvasItem(it);
+    GTB = ringGpuThingBatch(); gNP = 0;
+    for(const it of items){ const t = it.t; gDz = gdz(t.dd - (t.rad || 0) - Math.min(0.8*cellNear(t.dd), 0.02*t.dd)); if(t.o){ if(!ARCHY[t.o.kind]) drawWork(t.o, t.l); continue; } if(!t.ok) continue; cur = t;
       if(t.tree) t.draw(t.l);
-      else if(t.box){ const B = t.box, pd = px(6) + 0.3*Math.max(B[1] - B[0], B[3] - B[2]); gtPaint([B[0] - pd, B[1] + pd, B[2] - pd, B[3] + pd], () => t.draw(t.l)); } }
-    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, Math.min(FA.pages.length, gPg + 1)) }, { air: AIR }); GTB = null;
+      else if(t.box){ const B = t.box, pd = px(4) + 0.12*Math.max(B[1] - B[0], B[3] - B[2]); gtPaint([B[0] - pd, B[1] + pd, B[2] - pd, B[3] + pd], () => t.draw(t.l)); } }
+    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, gNP) }, { air: AIR }); GTB = null;
     if(tcv) x.drawImage(tcv, 0, 0); else gpuLaid = false; }
-  if(!gpuLaid) for(const it of items){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
+  if(!gpuLaid) for(const it of items) canvasItem(it);
+  function canvasItem(it){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
     if(n && B){ const c0 = Math.max(0, col(B[0]) - 1), c1 = Math.min(NCOL - 1, col(B[1]) + 1), yb = B[3] + px(2); for(let c = c0; c <= c1; c++) if(n[c] < yb){ clip = true; break; }
       if(clip){ const BIG = wh*4, x0 = c0*CW, x1 = c1*CW; x.save(); x.beginPath(); x.moveTo(-BIG, -BIG); x.lineTo(ww + BIG, -BIG); x.lineTo(ww + BIG, BIG); x.lineTo(x1, BIG);
         for(let c = c1; c >= c0; c--) x.lineTo(c*CW, Math.min(BIG, n[c] + px(0.5))); x.lineTo(x0, BIG); x.lineTo(-BIG, BIG); x.closePath(); x.clip(); } }
@@ -37260,7 +37272,7 @@ function fontsRequested(){ return requested.size; }
 
 
 /* ==== release.js ==== */
-const RELEASE = 'Alpha Persei–Sarvvis';
+const RELEASE = 'Alpha Persei–Áldu';
 
 const RELEASE_DATE = '2026-10-26';
 
@@ -38227,7 +38239,7 @@ if(typeof OffscreenCanvasRenderingContext2D !== 'undefined') installInlineGlyphs
 
 
 /* ==== pmlVars.js ==== */
-const STAMP = "2026-10-26 · 25b2ab9";
+const STAMP = "2026-10-26 · 0c4a9f3";
 const BUILD = RELEASE + (STAMP.startsWith('__') ? '' : ' · ' + STAMP);
 
 const ELEMENTS = { whimsy: '♡', sharpness: '√', chaos: '∆', touch: '🜚' };

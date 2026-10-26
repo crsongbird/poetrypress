@@ -114,7 +114,7 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   const T = G.ringGpuThingBatch(); for(let k = 0; k < 3000; k++) T.put(k, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, k % 4, 0.5, 1, 0, 0, 0, 0);
   check('the GPU\'s quads for the things keep their order, and without WebGPU the canvas paints them', T.n === 3000*G.RG_TSTRIDE && T.data[2999*G.RG_TSTRIDE] === 2999 && T.data[2999*G.RG_TSTRIDE + 11] === 3
     && G.ringGpuThings(T, 64, 64, { S: 2048, pages: [] }, {}) === null && G.ringGpuSheet('x') === null && G.ringGpuPutSheet('x', null) === null && G.ringGpuLandMaps() === null);
-  // (depth by the logarithm of distance: the near given the room, the far still apart)
-  check('depth runs from the eye to the farthest, the near spread out', G.ringGpuDepth(1, 1, 1000) === 0 && G.ringGpuDepth(1000, 1, 1000) === 1 && Math.abs(G.ringGpuDepth(31.62, 1, 1000) - 0.5) < 0.01 && G.ringGpuDepth(5000, 1, 1000) === 1); }
+  // (depth by one over the distance, as a camera's: even across a triangle of the land seen in perspective, the near given the room)
+  check('depth runs from the eye to the farthest by one over the distance', G.ringGpuDepth(1, 1, 1000) === 0 && G.ringGpuDepth(1000, 1, 1000) === 1 && Math.abs(G.ringGpuDepth(2, 1, 1000) - 0.5005) < 0.001 && G.ringGpuDepth(5000, 1, 1000) === 1); }
 
 done();

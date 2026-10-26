@@ -1898,7 +1898,7 @@ const RG_SPRITES = new Map(); let RG_SPRITE_PX = 0, RG_GLOW_TO = null;   // (RG_
 // (the trees with a light of their own, which the GPU's relighting of a sheet would put out)
 const RG_GLOW_TREES = ['mushroom', 'crystal', 'glow'];
 // (the frame's pages for the things painted on the GPU's way, kept from frame to frame and cleared as each begins)
-const RG_FA = { S: 0, pages: [] }, RG_FA_MAX = 6;
+const RG_FA = { S: 0, pages: [] }, RG_FA_MAX = 8;
 const rgSprite = (key, w, h, draw) => { let sp = RG_SPRITES.get(key); if(sp){ RG_SPRITES.delete(key); RG_SPRITES.set(key, sp); return sp; }
   const [c, x] = kitCanvas(w, h); draw(x); sp = c; RG_SPRITES.set(key, sp); RG_SPRITE_PX += w*h;
   while(RG_SPRITE_PX > 1e7 && RG_SPRITES.size > 1){ const [k0, c0] = RG_SPRITES.entries().next().value; RG_SPRITES.delete(k0); RG_SPRITE_PX -= c0.width*c0.height; } return sp; };
@@ -3013,12 +3013,18 @@ function rgPaintLand(x, mk, dk, V){
   // sheet serves every light and haze, and its colour runs smoothly with the day); its shadows ellipses (gtEll); any
   // other thing painted as ever, but onto a page of the frame's own (gtPaint: its box on the next free place, the
   // painter's context moved there for it). GTB: the quads, or null on the canvas; gDz: the depth of the thing now drawn
-  let GTB = null, gDz = 0, gPg = 0, gX = 0, gY = 0, gH = 0; const FA = RG_FA;
-  const gtAlloc = (w, h) => { const S = FA.S; if(gX + w > S){ gY += gH; gX = 0; gH = 0; } if(gY + h > S){ gPg++; gX = 0; gY = 0; gH = 0; } if(gPg >= RG_FA_MAX) return null;
-    if(!FA.pages[gPg]){ const c = document.createElement('canvas'); c.width = c.height = S; FA.pages[gPg] = { c, x: c.getContext('2d', { willReadFrequently: true }), used: 0, wide: 0 }; }
-    const pg = FA.pages[gPg], r = { L: gPg, x: gX, y: gY }; gX += w; gH = Math.max(gH, h); pg.used = Math.max(pg.used, gY + gH); pg.wide = Math.max(pg.wide, gX); return r; };
+  // (the pages packed in shelves, each shelf of one height to the next quarter (as WebRender's glyph atlases are), so a
+  //  flat rock and a tall tower don't share one; and if every page is full, a thing is painted smaller rather than lost
+  //  (Ruby, 2026-10-26: whole buildings dropping out of a film's frames, the pages full at 1080 lines))
+  let GTB = null, gDz = 0, gNP = 0; const FA = RG_FA;
+  const gtAlloc = (w, h) => { const S = FA.S, hb = h <= 16 ? 16 : Math.min(S, Math.ceil(16*Math.pow(1.25, Math.ceil(Math.log(h/16)/Math.log(1.25)))));
+    for(let L = 0; L < gNP; L++){ const pg = FA.pages[L]; for(const sh of pg.shelves) if(sh.h === hb && sh.x + w <= S){ const r = { L, x: sh.x, y: sh.y }; sh.x += w; pg.wide = Math.max(pg.wide, sh.x); return r; } }
+    for(let L = 0; L < RG_FA_MAX; L++){ if(L >= gNP){ if(!FA.pages[L]){ const c = document.createElement('canvas'); c.width = c.height = S; FA.pages[L] = { c, x: c.getContext('2d', { willReadFrequently: true }), used: 0, wide: 0, shelves: [] }; } gNP = L + 1; }
+      const pg = FA.pages[L]; if(pg.used + hb <= S){ const sh = { y: pg.used, h: hb, x: w }; pg.shelves.push(sh); pg.used += hb; pg.wide = Math.max(pg.wide, w); return { L, x: 0, y: sh.y }; } }
+    return null; };
   const gtPaint = (B, fn) => { const x0 = Math.floor(Math.max(B[0], -px(4))), y0 = Math.floor(Math.max(B[2], -px(4))), w = Math.ceil(Math.min(B[1], ww + px(4)) - x0), h = Math.ceil(Math.min(B[3], wh + px(4)) - y0);
-    if(!(w >= 1 && h >= 1)) return; const S = FA.S, sc = Math.min(1, (S - 2)/w, (S - 2)/h), w2 = Math.ceil(w*sc), h2 = Math.ceil(h*sc), r = gtAlloc(w2 + 2, h2 + 2); if(!r) return;
+    if(!(w >= 1 && h >= 1)) return; const S = FA.S; let sc = Math.min(1, (S - 2)/w, (S - 2)/h), w2, h2, r = null;
+    for(let k = 0; k < 5 && !r; k++, sc /= 2){ w2 = Math.ceil(w*sc); h2 = Math.ceil(h*sc); r = gtAlloc(w2 + 2, h2 + 2); } if(!r) return; sc *= 2;
     GTB.put(x0 + w/2, y0 + h/2, w/2, 0, 0, h/2, (r.x + 1)/S, (r.y + 1)/S, (r.x + 1 + w*sc)/S, (r.y + 1 + h*sc)/S, r.L, 1, gDz, 1, 0, 0, 0, 0);
     const A = FA.pages[r.L].x, ga = x.globalAlpha; A.save(); A.beginPath(); A.rect(r.x + 1, r.y + 1, w2, h2); A.clip(); A.translate(r.x + 1, r.y + 1); if(sc < 1) A.scale(sc, sc); A.translate(-x0, -y0); A.globalAlpha = ga;
     // (its glows not painted on the page but laid as glows of their own, screened over what is behind them, and free of its box)
@@ -3084,7 +3090,7 @@ function rgPaintLand(x, mk, dk, V){
   const paintFloor = it => { if(it.q) paintCell(it.q); else if(it.r) paintWay(it.r.wy, it.r.run, it.r.decs, it.r.keys); else if(it.pc) paintFieldPiece(it.pc); else paintWallPiece(it.wp); };
   let gpuLaid = false, landMaps = false;
   if(ringGpuReady()){ GB = ringGpuBatch(); for(let k = shown.length - 1; k >= 0; k--) paintCell(shown[k]);
-    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(DZF/d0)/Math.log(reach/d0) }); GB = null;
+    const cv = ringGpuDraw(GB, ww, wh, { px: px(1), seed: s, anc: Math.round(GANC/(M1*4096)), dk: Math.log(reach/d0), dq: 1 - d0/DZF }); GB = null;
     if(cv){ x.drawImage(cv, 0, 0); gpuLaid = landMaps = true; } else { mkPath.length = 0; dkPolys.clear(); } }
   if(gpuLaid){ floor.sort((p, q) => q.dd - p.dd); let clipJ = -2;
     for(const it of floor){ const j = slot(it.r ? it.r.dd : it.pc ? it.pc.dd : it.wp.dd);
@@ -3098,14 +3104,17 @@ function rgPaintLand(x, mk, dk, V){
   items.sort((p, q) => q.dd - p.dd);
   // (on the GPU: every thing a quad over the land's depth, far to near; see gtPaint. If the GPU fails them, the canvas)
   if(gpuLaid){ const S = Math.min(4096, Math.max(2048, 2 ** Math.ceil(Math.log2(Math.max(ww, wh)))));
-    if(FA.S !== S){ FA.S = S; FA.pages.length = 0; } for(const pg of FA.pages){ if(pg.used > 0) pg.x.clearRect(0, 0, S, Math.min(S, pg.used + 2)); pg.used = 0; pg.wide = 0; }
-    GTB = ringGpuThingBatch(); gPg = 0; gX = 0; gY = 0; gH = 0;
-    for(const it of items){ const t = it.t; gDz = gdz(t.dd - (t.rad || 0) - Math.min(0.8*cellNear(t.dd), 0.03*t.dd)); if(t.o){ drawWork(t.o, t.l); continue; } if(!t.ok) continue; cur = t;
+    if(FA.S !== S){ FA.S = S; FA.pages.length = 0; } for(const pg of FA.pages){ if(pg.used > 0) pg.x.clearRect(0, 0, S, Math.min(S, pg.used + 2)); pg.used = 0; pg.wide = 0; pg.shelves = []; }
+    // (the great arches and the shells over the band, beyond everything and as wide as the sky, laid on the canvas first)
+    const ARCHY = { sa: 1, br: 1, sh: 1 }; for(const it of items) if(it.t.o && ARCHY[it.t.o.kind]) canvasItem(it);
+    GTB = ringGpuThingBatch(); gNP = 0;
+    for(const it of items){ const t = it.t; gDz = gdz(t.dd - (t.rad || 0) - Math.min(0.8*cellNear(t.dd), 0.02*t.dd)); if(t.o){ if(!ARCHY[t.o.kind]) drawWork(t.o, t.l); continue; } if(!t.ok) continue; cur = t;
       if(t.tree) t.draw(t.l);
-      else if(t.box){ const B = t.box, pd = px(6) + 0.3*Math.max(B[1] - B[0], B[3] - B[2]); gtPaint([B[0] - pd, B[1] + pd, B[2] - pd, B[3] + pd], () => t.draw(t.l)); } }
-    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, Math.min(FA.pages.length, gPg + 1)) }, { air: AIR }); GTB = null;
+      else if(t.box){ const B = t.box, pd = px(4) + 0.12*Math.max(B[1] - B[0], B[3] - B[2]); gtPaint([B[0] - pd, B[1] + pd, B[2] - pd, B[3] + pd], () => t.draw(t.l)); } }
+    const tcv = ringGpuThings(GTB, ww, wh, { S, pages: FA.pages.slice(0, gNP) }, { air: AIR }); GTB = null;
     if(tcv) x.drawImage(tcv, 0, 0); else gpuLaid = false; }
-  if(!gpuLaid) for(const it of items){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
+  if(!gpuLaid) for(const it of items) canvasItem(it);
+  function canvasItem(it){ const t = it.t, n = t.l ? t.l.near : null, B = t.box; let clip = false;
     if(n && B){ const c0 = Math.max(0, col(B[0]) - 1), c1 = Math.min(NCOL - 1, col(B[1]) + 1), yb = B[3] + px(2); for(let c = c0; c <= c1; c++) if(n[c] < yb){ clip = true; break; }
       if(clip){ const BIG = wh*4, x0 = c0*CW, x1 = c1*CW; x.save(); x.beginPath(); x.moveTo(-BIG, -BIG); x.lineTo(ww + BIG, -BIG); x.lineTo(ww + BIG, BIG); x.lineTo(x1, BIG);
         for(let c = c1; c >= c0; c--) x.lineTo(c*CW, Math.min(BIG, n[c] + px(0.5))); x.lineTo(x0, BIG); x.lineTo(-BIG, BIG); x.closePath(); x.clip(); } }
