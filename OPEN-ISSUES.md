@@ -105,9 +105,11 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     subject, a flight that follows a road or a river), banking into a turn; the far land's painterly height (exf) is by the
     eye's distance, so the far ranges change their height a little as a long flight nears them; a film's frames are still
     about as slow as a still of what the drone sees (more land and woods in view from a height); the GPU path is the cure.
-  - RUBY'S NOTES (2026-10-25, 22:25), what is left: a wider diversity of wildlife (medium and small predators, fantastic
-    life) and interesting weathers; raise the standard of the other textures and items to the new painted style; city
-    buildings laid in their blocks, facing the streets.
+  - RUBY'S NOTES (2026-10-25, 22:25), what is left: raise the standard of the other textures and items to the new
+    painted style (a hedge's flat dark slab under its bushes; a tree near the eye going see-through as a ghost over the
+    view; the small orange crossed things lying in the magic world's grass); city buildings laid in their blocks,
+    facing the streets; the hunters hunting (a fox stalking, a kestrel's stoop landing on something, prey freezing when
+    a hunter is near); hail, meteor showers and valley mist banks among the weathers.
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
   - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path"):
@@ -151,15 +153,15 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
     favor them; less farming in magic worlds, and never mundane farms there.
   - DETAIL IN EARNEST, what is left: how far out detailed objects are drawn and how detailed they are, not only how many
     small things.
-  - WEATHER THAT TOUCHES THINGS, what is left: dust storms, meteor showers and more; rain wetting the ground (puddles,
+  - WEATHER THAT TOUCHES THINGS, what is left: a haboob's moving wall, meteor showers and more; rain wetting the ground (puddles,
     sheen); snow on the rest of what it would gather on (fronds, fences, cars, walls' tops); fogs with fog lights and
     distortions.
   - A RARE REENACTMENT: one seed in 776 stages a Revolutionary War reenactment in the middle distance or the foreground (the
     South always losing badly), the test bed for a wide variety of people and animations: women, people of every color;
     where the seed has elves and other folk, it turns Tolkien or Star Trek.
   - STABILITY: graffiti must not change its kind or place.
-  - WILDLIFE WIDER: insects, ground creatures, cats, middle predators and the rest, not birds in their place; water
-    creatures and better water animation.
+  - WILDLIFE WIDER: insects, ground creatures, cats and the rest, not birds in their place; otters, water creatures
+    and better water animation.
   - PLANTS AND BUILDINGS WIDER: more kinds of trees, grasses and shrubs; the library of buildings kept growing until they
     no longer look the same.
   - SIGNS AND WRITING: graffiti in many typefaces and colors, rival gangs where there are gangs, the odd vertical strokes in

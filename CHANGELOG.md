@@ -4,6 +4,50 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Paikauhale (2026-10-25)
+
+- Hunters have come to the Ringworld, fewer than the animals they hunt and each in its own country:
+  - stoats bounding along with their backs arched, turning white in winter apart from a black tail tip;
+  - badgers out at dusk, grey with a striped white face;
+  - spotted, tufted lynx creeping low through the cold woods;
+  - wolf packs trotting and lying up in the north and on the tundra;
+  - jackals in dry country.
+  Now and then a small one turns up near you.
+- Overhead, a barn owl quarters the fields from dusk, and by day a kestrel hangs on the wind over one spot, head still,
+  then slides on or drops into the grass.
+- Fantastic creatures for the magic world:
+  - drakes, two-legged and winged, soaring like hawks;
+  - moonharts, pale deer with one spiral horn and a mane in the region's light;
+  - lantern moths glowing softly at night;
+  - on any ring with magic in it, pods of vast sky rays rowing slowly through the high air.
+- New weathers, each picked by where the seed puts you:
+  - a sunshower, with its rainbow when the sun is low enough;
+  - blowing dust in dry country, the air turning ochre;
+  - the aurora in the cold, its curtains drifting slowly;
+  - blossom drifting down in spring;
+  - motes of light rising in the magic world;
+  - ash falling over the ruins.
+  None of them ever flashes. The Weather setting offers all six.
+- Fixed boats, jetties and ducks sitting on dry sand on rings with the builders' terraces. The terraces were levelling
+  low coasts to exactly the waterline, which drew them as dry land.
+
+### Under the hood
+- wildKit gained the hunters' forms (`WK_HUNT`, `wkHunter`), the owl, kestrel, drake, sky ray and lantern moth painters,
+  and two new ways to move: `hover`, a kestrel's hunt, and `cruise`, a sky ray's wide circle.
+- The rarer weathers stand on a common sky (`RG_WX_BASE`) and drift in the snow and rain shells (`RG_FALLS`).
+  `rgWeatherOf` reads the biomes where you stand.
+- landKit: the lowest terrace step is now a bank rising from the water instead of a shelf at the waterline.
+- New research notes:
+  - docs/prior-art/ringworld-wildlife.md §9 (the hunters);
+  - docs/prior-art/ringworld-magic-creatures.md §3–6;
+  - docs/prior-art/ringworld-weather.md §4.
+- The wildlife suite checks:
+  - the hunters are fewer than their prey;
+  - the fantastic creatures stay in the magic world;
+  - the badger's face and the stoat's winter coat;
+  - each weather appears only where it belongs;
+  - the new kinds' top speeds.
+
 ## Scorpius–Jabbah (2026-10-25)
 
 - Drone flights follow a route of the seed's own. The route heads out toward the most picturesque thing within reach (a
@@ -482,19 +526,3 @@ prints it).
   bowl faces you. Smoke and turned things keep a faded thing's transparency.
 - The research: docs/prior-art/ringworld-wildlife.md and docs/prior-art/arena-on-a-ringworld.md (the long horizon's
   game); docs/prior-art/film-studio.md (the film studio to come); and docs/ring-ideas.md, the Ringworld's idea book.
-
-## Crux–Imai (2026-10-24)
-
-- Antenna dishes move together, as an array's do: they all listen to one source in the sky at a time, tracking it
-  slowly, then slew to the next every few seconds of a film, each starting a moment after another. Each dish is drawn
-  turned in the round: its bowl when it faces you, its ribbed back when it faces away, its feed out along its axis.
-- Rain falls from a cloud as two to five curtains across its base, each its own width and weight, nearer or farther,
-  slanting with the wind and swelling and ebbing on its own slow time, so a shower moves along the cloud and comes and
-  goes instead of hanging as one panel.
-- The Save image button says "hold for video" in small letters under its label when the surface shown can make a film
-  by itself (it has a clock, a camera or a light to turn); the button stays the same size.
-
-### Under the hood
-- `rgDishAim` gives the array's aim at a moment of the film; `pkDish` draws a dish turned to a bearing and tipped to a
-  height. A surface says whether it can make a film by itself through its caps (`canFilm`); `syncSaveHint` shows the
-  hint. No fingerprint moved.

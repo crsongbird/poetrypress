@@ -69,12 +69,31 @@ export const WK_KINDS = {
   // country as emus are (size: a slime's width, a strider's height)
   slimes:    { way: 'hop', body: 'slime', n: [1, 4], P: 40, range: 8, spread: 2.5, walk: 1.2, run: 4, bolt: 0.1, wander: 1.2, tau: 10, size: 0.5, stride: 0.9, coat: [120, 200, 150] },
   striders:  { way: 'walk', body: 'strider', n: [2, 5], P: 150, range: 50, spread: 5, walk: 1.4, run: 12, bolt: 0.3, wander: 3, tau: 30, size: 2, stride: 2.75, coat: [176, 150, 112] },
+  // (Ruby, 2026-10-25: "a wider diversity of wildlife, medium and small predators, fantastic life": the hunters, each by
+  //  its country and its hours and fewer than what they hunt; docs/prior-art/ringworld-wildlife.md §9. belly: its
+  //  underparts (a badger's legs and belly black); a stoat bounds, a lynx creeps, a wolf pack trots and lies up)
+  stoat:     { way: 'prowl', body: 'hunter', n: [1, 1], P: 30, range: 14, spread: 0, walk: 1.6, run: 6, bolt: 0.15, wander: 0.8, tau: 6, size: 0.3, stride: 0.45, coat: [150, 96, 56], belly: [236, 222, 196] },
+  badger:    { way: 'prowl', body: 'hunter', n: [1, 2], P: 90, range: 25, spread: 2, walk: 0.9, run: 4, bolt: 0.05, wander: 1, tau: 16, size: 0.8, stride: 0.6, coat: [146, 142, 136], belly: [38, 36, 36], pounce: 0 },
+  lynx:      { way: 'prowl', body: 'hunter', n: [1, 1], P: 120, range: 40, spread: 0, walk: 1.0, run: 12, bolt: 0.06, wander: 0.6, tau: 20, size: 1.0, stride: 1.2, coat: [176, 140, 102], belly: [228, 216, 198] },
+  wolves:    { way: 'walk', body: 'hunter', n: [4, 8], P: 200, range: 80, spread: 5, walk: 2.2, run: 11, bolt: 0.2, wander: 2, tau: 30, size: 1.2, stride: 1.7, coat: [126, 120, 110], belly: [214, 208, 196] },
+  jackals:   { way: 'walk', body: 'hunter', n: [1, 3], P: 110, range: 50, spread: 3, walk: 1.8, run: 10, bolt: 0.2, wander: 1.6, tau: 20, size: 0.85, stride: 1.2, coat: [178, 146, 104], belly: [230, 218, 196] },
+  // (the night's and the open field's hunters of the air: an owl quartering low and slow on its broad round wings; a
+  //  kestrel hanging on the wind over one spot, its head still, then sliding on to the next or dropping on its prey)
+  owls:      { way: 'hawk', n: [1, 1], tau: 30, amp: 26, hgt: [1.5, 5], size: 0.9, flap: 1.4, coat: [206, 170, 120], face: [246, 240, 228] },
+  kestrel:   { way: 'hover', n: [1, 1], P: 30, range: 35, hgt: [6, 12], size: 0.75, flap: 7, fly: 8, coat: [176, 100, 60], head: [128, 134, 148] },
+  // (the magic world's fantastic ones, kinds of folklore and of no one's game, docs/prior-art/ringworld-magic-creatures.md
+  //  §3–6: drakes, two-legged and winged, soaring as a raptor does; sky rays, vast and slow, rowing the high air in pods;
+  //  lantern moths glowing softly by night; moonharts, pale deer with one horn and a mane of their region's light)
+  drakes:    { way: 'soar', body: 'drake', n: [1, 2], P: 180, size: 4.2, speed: 11, coat: [92, 74, 104] },
+  skyrays:   { way: 'cruise', body: 'ray', n: [1, 3], size: 38, speed: 4.5, hgt: [170, 380], R: [320, 760], beat: 7, coat: [64, 78, 112], belly: [178, 192, 216] },
+  lanternmoths: { way: 'hawk', body: 'moth', n: [3, 8], tau: 8, amp: 3.5, hgt: [0.6, 4], size: 0.2, flap: 3, coat: [214, 196, 160] },
+  moonharts: { way: 'walk', n: [2, 4], P: 190, range: 45, spread: 4, walk: 1.1, run: 9, bolt: 0.25, wander: 3, tau: 34, size: 1.7, stride: 4.2, coat: [226, 222, 214] },
   // a skein of geese passing over in its V, once in an era, against the wind
   geese:     { way: 'skein', n: [7, 15], P: 520, speed: 16, hgt: [120, 240], size: 1.6, coat: [110, 104, 96] },
 };
-export const WK_FLYERS = ['raptor', 'swallows', 'swifts', 'bats', 'geese', 'butterflies', 'dragonflies'];
+export const WK_FLYERS = ['raptor', 'swallows', 'swifts', 'bats', 'geese', 'butterflies', 'dragonflies', 'owls', 'kestrel', 'drakes', 'skyrays', 'lanternmoths'];
 // (the birds: drawn larger than life still, as a painter does birds so that they read, Ruby: "increase the size of … birds")
-export const WK_BIRDS = ['rooks', 'pigeons', 'starlings', 'sparrows', 'magpies', 'jays', 'goldfinches', 'parakeets', 'robins', 'heron', 'egret', 'raptor', 'swallows', 'swifts', 'geese'];
+export const WK_BIRDS = ['rooks', 'pigeons', 'starlings', 'sparrows', 'magpies', 'jays', 'goldfinches', 'parakeets', 'robins', 'heron', 'egret', 'raptor', 'swallows', 'swifts', 'geese', 'owls', 'kestrel'];
 export const wkCount = (kind, s) => { const K = WK_KINDS[kind]; return K.n[0] + Math.floor(wkHash(s, 1, 5)*(K.n[1] - K.n[0] + 1)); };
 
 // a walker's or a flock's LEG into era k: where its member j is bound (round the era's home), when it sets off, how fast
@@ -130,7 +149,7 @@ function wkAt0(kind, s, j, t, env = {}){
     const gone = ea*dl;
     if(K.way === 'hop'){ const hops = gone/(L.bolt ? 2.6 : 0.8); y = Math.abs(Math.sin(Math.PI*hops))*(L.bolt ? 0.35 : 0.18); }
     // (a fox now and then ends its trot in the mouser's pounce: up half a metre and down, nose first)
-    if(K.way === 'prowl' && !L.bolt && wkHash(e.k, 32, s) < 0.35){ const q = (gone - (dl - 1.6))/1.6; if(q > 0) y = 0.5*Math.sin(Math.PI*Math.min(1, q)); if(q > 0) return { x, z, y, face: Math.atan2(dz, dx), pose: 'pounce', ph: q, head: 0.5, on: 1 }; }
+    if(K.way === 'prowl' && !L.bolt && wkHash(e.k, 32, s) < 0.35*(K.pounce ?? 1)){ const q = (gone - (dl - 1.6))/1.6; if(q > 0) y = 0.5*Math.sin(Math.PI*Math.min(1, q)); if(q > 0) return { x, z, y, face: Math.atan2(dz, dx), pose: 'pounce', ph: q, head: 0.5, on: 1 }; }
     return { x, z, y, face: Math.atan2(dz + nz*0.001, dx + nx*0.001), pose: L.bolt ? 'run' : 'walk', ph: gone/K.stride, head: L.bolt ? 0.8 : 0.45, on: 1 }; }
   case 'paddle': { const an = wkHash(j, 33, s)*Math.PI*2, rd = K.spread*Math.sqrt(wkHash(j, 34, s)*n), w = wkWander(s + j*91, tt, K.tau), w2 = wkWander(s + j*91, tt + 1, K.tau);
     const x = Math.cos(an)*rd + w[0]*K.wander, z = Math.sin(an)*rd + w[1]*K.wander, vx = (w2[0] - w[0])*K.wander, vz = (w2[1] - w[1])*K.wander;
@@ -158,6 +177,19 @@ function wkAt0(kind, s, j, t, env = {}){
     const ca = Math.cos(hd), sa = Math.sin(hd), off = 160*(2*wkHash(e.k, 52, s) - 1), r = Math.ceil(j/2), side = j % 2 ? -1 : 1, wob = wkWander(s + j*3, tt, 9);
     const back = r*3.4 + wob[0]*0.6, lat = side*r*2.3 + wob[1]*0.5, H = K.hgt[0] + (K.hgt[1] - K.hgt[0])*wkHash(e.k, 53, s);
     return { x: ca*(u - back) - sa*(off + lat), z: sa*(u - back) + ca*(off + lat), y: H + wob[1]*2, face: hd, pose: 'fly', ph: tt*3 + j*0.7, head: 1, on: Math.min(1, (Lh - Math.abs(u))/(Lh*0.2)) }; }
+  // (a kestrel's hunt: it hangs on the wind over one spot, facing into it, its head held still while its wings beat fast;
+  //  then it slides on to the next, or now and then drops, wings half shut, to the grass and rises again)
+  case 'hover': { const e = wkEra(s + j*41, tt, K.P), [wa] = env.wind || [0, 3], spot = k => [K.range*(2*wkHash(k, 57, s + j) - 1), K.range*(2*wkHash(k, 58, s + j) - 1), K.hgt[0] + (K.hgt[1] - K.hgt[0])*wkHash(k, 59, s + j)];
+    const a = spot(e.k), b = spot(e.k + 1), u = (tt - e.t0)/e.d, stoop = wkHash(e.k, 60, s + j) < 0.3, hv = 0.66, sd = 0.1, w = wkWander(s + j*13, tt, 2.5);
+    if(u < hv){ const dn = stoop ? wkSmooth((u - (hv - sd))/sd) : 0;
+      return { x: a[0] + w[0]*0.25, z: a[1] + w[1]*0.25, y: a[2]*(1 - dn) + 0.4*dn + w[1]*0.15, face: wa + Math.PI, pose: dn > 0.05 ? 'stoop' : 'hover', ph: tt*K.flap, head: 0, on: 1 }; }
+    const p = wkSmooth((u - hv)/(1 - hv)), y0 = stoop ? 0.4 : a[2];
+    return { x: a[0] + (b[0] - a[0])*p, z: a[1] + (b[1] - a[1])*p, y: y0 + (b[2] - y0)*p + 2*Math.sin(Math.PI*p), face: Math.atan2(b[1] - a[1], b[0] - a[0]), pose: 'glide', ph: tt*K.flap*0.4, head: 1, on: 1 }; }
+  // (a pod of sky rays rowing round a wide circle of their own, high and slow, one behind another, rising and sinking
+  //  on the air as whales do on the sea; ph their wings' slow beat)
+  case 'cruise': { const R = K.R[0] + (K.R[1] - K.R[0])*wkHash(s, 54, 1), sgn = wkHash(s, 55, 1) < 0.5 ? 1 : -1, th = wkHash(s, 56, 1)*Math.PI*2 + sgn*(tt*K.speed - j*K.size*1.7)/R;
+    const lat = (j % 2 ? 1 : -1)*Math.ceil(j/2)*K.size*0.9, rr = R + lat, h = K.hgt[0] + (K.hgt[1] - K.hgt[0])*(0.5 + 0.5*wkNoise(s + 3, tt/160)) + 6*wkNoise(s + j*11, tt/30);
+    return { x: rr*Math.cos(th), z: rr*Math.sin(th), y: h, face: th + sgn*Math.PI/2, pose: 'fly', ph: tt/K.beat + j*0.27, head: 1, on: 1 }; }
   }
   return { on: 0 };
 }
@@ -200,9 +232,74 @@ function wkQuad(x, X, Y, m, kind, st, c, px){
   if(!cervid && L > px(4)) wkEll(x, (ne[0] + nose[0])/2 + d*hl*0.15, (ne[1] + nose[1])/2 + hl*0.1, hl*0.25, hl*0.12, 0, wkCss([238, 232, 222]));
   if(L > px(5)) for(const e of [0, 1]) wkPolyF(x, [[ne[0] - d*hl*0.05*e, ne[1] - hl*0.22], [ne[0] - d*hl*(0.35 + 0.1*e), ne[1] - hl*(cervid ? 0.62 : 0.55)], [ne[0] + d*hl*0.08, ne[1] - hl*0.3]], wkCss(e ? coat.dark : coat.body));
   // a stag's antlers: a beam back and up, its tines forward
-  if(cervid && st.stag && L > px(6)){ const ab = [ne[0], ne[1] - hl*0.3], aw = Math.max(px(0.4), L*0.02), col = wkCss(wkMix(coat.lit, [230, 220, 196], 0.5)), sz = kind === 'elk' ? 1.4 : 1;
+  // (a moonhart: one long spiral horn from its brow, ivory; its mane its region's light, glowing softly by night)
+  if(kind === 'moonharts' && L > px(5)){ const gl = c.glow || [220, 230, 255], nt = st.nt || 0, hb = [ne[0] + d*hl*0.05, ne[1] - hl*0.3], ht = [ne[0] + d*hl*0.55, ne[1] - hl*1.6], hw = Math.max(px(0.4), L*0.018);
+    wkLine(x, [nb, ne].map(([a2, b2], i) => [a2 + d*px2*nw*(i ? 0.45 : 0.9), b2 + pz2*nw*(i ? 0.45 : 0.9)]), wkCss(gl, 0.5 + 0.4*nt), Math.max(px(0.5), nw*0.4));
+    wkLine(x, [hb, ht], wkCss(wkMix(coat.lit, [246, 238, 214], 0.7)), hw);
+    if(L > px(14)) for(let k = 1; k < 5; k++){ const p = [hb[0] + (ht[0] - hb[0])*k/5, hb[1] + (ht[1] - hb[1])*k/5]; wkLine(x, [[p[0] - hw, p[1] + hw*0.6], [p[0] + hw, p[1] - hw*0.6]], wkCss(coat.dark, 0.5), hw*0.4); } }
+  if(cervid && st.stag && L > px(6) && kind !== 'moonharts'){ const ab = [ne[0], ne[1] - hl*0.3], aw = Math.max(px(0.4), L*0.02), col = wkCss(wkMix(coat.lit, [230, 220, 196], 0.5)), sz = kind === 'elk' ? 1.4 : 1;
     const tip = [ab[0] - d*L*0.16*sz, ab[1] - L*0.36*sz]; wkLine(x, [ab, [ab[0] - d*L*0.05*sz, ab[1] - L*0.18*sz], tip], col, aw);
     for(const k of [0.3, 0.55, 0.8]){ const p = [ab[0] + (tip[0] - ab[0])*k, ab[1] + (tip[1] - ab[1])*k]; wkLine(x, [p, [p[0] + d*L*0.09*sz, p[1] - L*0.06*sz]], col, aw*0.8); } } }
+
+// THE HUNTERS' FORMS (docs/prior-art/ringworld-wildlife.md §9), each to its body's length: back, its back's height off the
+// ground; deep, its chest; leg, a leg's width; neck and head, their lengths; its ears; tail: [length, width, how far it
+// hangs below level (radians)]; tip, a tail's darker tip; and its marks (a badger's striped face and black legs, a lynx's
+// spots, a canid's pale muzzle and belly); bound, a mustelid's arched bounding; creep, a cat's low stalk
+const WK_HUNT = {
+  stoat:   { back: 0.3, deep: 0.22, leg: 0.06, neck: 0.14, head: 0.17, ear: 'round', tail: [0.42, 0.07, 0.25], tip: [26, 22, 20], bound: 1 },
+  badger:  { back: 0.36, deep: 0.36, leg: 0.09, neck: 0.06, head: 0.25, ear: 'round', tail: [0.14, 0.09, 0.9], legs: 'belly', stripe: 1 },
+  lynx:    { back: 0.66, deep: 0.3, leg: 0.055, neck: 0.12, head: 0.17, ear: 'tuft', tail: [0.16, 0.07, 0.5], tip: [30, 26, 24], spots: 1, creep: 1 },
+  wolves:  { back: 0.72, deep: 0.33, leg: 0.055, neck: 0.2, head: 0.25, ear: 'point', tail: [0.42, 0.13, 1.15], mask: 1 },
+  jackals: { back: 0.68, deep: 0.28, leg: 0.045, neck: 0.18, head: 0.24, ear: 'big', tail: [0.38, 0.11, 1.15], tip: [44, 36, 30], mask: 1 },
+};
+// A HUNTER in profile: its legs by its gait, its tail as it carries it (a wolf's hanging, level as it runs), its body
+// lit along the back, its head and ears and marks; a stoat bounding with its back arched, white in winter (st.wint)
+function wkHunter(x, X, Y, m, kind, st, c, px){
+  const K = WK_KINDS[kind], F = WK_HUNT[kind], d = st.dir, sk = Math.max(0.3, st.side), L = K.size*m, q = u => X + d*u*sk;
+  const coat = c.mat(kind === 'stoat' && (st.wint || 0) > 0.5 ? [238, 236, 230] : K.coat), belly = c.mat(K.belly || K.coat), fill = wkCss(coat.body);
+  const lift = st.y*m, moving = st.pose === 'run' || st.pose === 'walk' || st.pose === 'pounce', run = st.pose === 'run' || (!!F.bound && moving), ph = st.ph*Math.PI*2, lie = st.lie || 0;
+  const creep = F.creep && st.pose === 'walk' ? 0.22 : 0, arch = F.bound && moving ? Math.max(0, Math.sin(ph)) : 0;
+  const back = L*F.back*(1 - 0.62*lie)*(1 - creep), deep = L*F.deep, by = Y - lift - back + deep*0.5, lw = Math.max(px(0.4), L*F.leg), bA = arch*L*0.1;
+  const legCol = far => wkCss(F.legs === 'belly' ? wkMix(belly.body, [0, 0, 0], far ? 0.3 : 0) : far ? coat.dark : wkMix(coat.body, coat.dark, 0.45));
+  if(L > px(3) && lie <= 0.6) [[0.3, 0], [0.24, Math.PI], [-0.3, Math.PI*0.5], [-0.36, Math.PI*1.5]].forEach(([u, o], i) => { const far = i % 2 === 1, hind = i >= 2;
+    const sw = run ? (hind ? -1 : 1)*Math.sin(ph)*(F.bound ? 0.9 : 0.7) : st.pose === 'walk' ? Math.sin(ph + o)*0.38 : 0, uu = F.bound ? u*(1 - 0.45*arch) : u;
+    const top = [q(uu*L), by + deep*0.25 - bA*0.5], len = Math.max(L*0.05, Y - lift - top[1]), knee = [top[0] + d*(Math.sin(sw)*0.5 + (hind ? -0.1 : 0.05))*len, top[1] + len*0.5], ft = [top[0] + d*Math.sin(sw)*len, top[1] + Math.cos(sw)*len];
+    wkLine(x, [top, knee, ft], legCol(far), lw); });
+  if(lie > 0.6 && L > px(3)) for(const u of [0.24, -0.26]) wkEll(x, q(u*L), Y - deep*0.15, L*0.15*sk, deep*0.2, 0, legCol(false));
+  // (its tail, hung as it carries it; level and streaming as it runs, raised as it pounces)
+  x.lineCap = 'round'; const tl = F.tail, tb = [q(-L*0.38), by - deep*0.18 - bA*0.4], dr = tl[2]*(run ? 0.35 : 1) - (st.pose === 'pounce' ? 0.6 : 0), tlen = L*tl[0];
+  const te = lie > 0.6 ? [tb[0] - d*tlen*0.95*sk, Y - lift - L*0.03] : [tb[0] - d*Math.cos(dr)*tlen*sk, tb[1] + Math.sin(dr)*tlen], tm = [(tb[0] + te[0])/2 - d*tlen*0.06, (tb[1] + te[1])/2 - tlen*0.08];
+  const tw = Math.max(px(0.5), L*tl[1]), tnx = -(te[1] - tb[1]), tny = te[0] - tb[0], tnl = Math.hypot(tnx, tny) || 1, plume = (u, w) => { const a2 = u < 0.5 ? tb : tm, b2 = u < 0.5 ? tm : te, v = u < 0.5 ? u*2 : u*2 - 1, px0 = a2[0] + (b2[0] - a2[0])*v, py0 = a2[1] + (b2[1] - a2[1])*v; return [[px0 + tnx/tnl*w, py0 + tny/tnl*w], [px0 - tnx/tnl*w, py0 - tny/tnl*w]]; };
+  const prof = [0, 0.3, 0.6, 0.85, 1].map(u => [u, tw*0.5*(u < 0.3 ? 0.55 + 1.5*u : 1 - 0.85*((u - 0.3)/0.7)**1.6)]), side1 = prof.map(([u, w]) => plume(u, w)[0]), side2 = prof.map(([u, w]) => plume(u, w)[1]).reverse();
+  wkPolyF(x, [...side1, ...side2], fill);
+  if(F.tip && L > px(4)){ const t1 = [0.62, 0.8, 1].map(u => [u, tw*0.5*(1 - 0.85*((u - 0.3)/0.7)**1.6)]); wkPolyF(x, [...t1.map(([u, w]) => plume(u, w*1.05)[0]), ...t1.map(([u, w]) => plume(u, w*1.05)[1]).reverse()], wkCss(c.mat(F.tip).body)); }
+  // (its body: a stoat's one long arched stroke; the rest chest, haunch and barrel; lit along the back, paler beneath)
+  if(F.bound){ const arc = (u0, u1, dy) => [0, 0.25, 0.5, 0.75, 1].map(k => { const u = u0 + (u1 - u0)*k, v = (u + 0.3)/0.58; return [q(u*L), by + dy - bA*Math.sin(Math.PI*Math.max(0, Math.min(1, v)))]; });
+    wkLine(x, arc(-0.3, 0.28, 0), fill, deep);
+    if(L > px(4)) wkLine(x, arc(-0.2, 0.24, deep*0.26), wkCss(kind === 'stoat' && (st.wint || 0) > 0.5 ? coat.lit : belly.body), deep*0.32);
+    if(L > px(6)) wkLine(x, arc(-0.2, 0.18, -deep*0.3), wkCss(coat.lit, 0.5), deep*0.16); }
+  else { wkEll(x, X, by, L*0.36*sk, deep*0.42, 0, fill); wkEll(x, q(L*0.2), by - deep*0.04, L*0.2*sk, deep*0.52, 0, fill); wkEll(x, q(-L*0.22), by - deep*0.06, L*0.18*sk, deep*0.5, 0, fill);
+    if(F.mask && L > px(5)) wkEll(x, q(L*0.04), by + deep*0.3, L*0.28*sk, deep*0.13, 0, wkCss(belly.body, 0.85));
+    if(F.spots && L > px(10)) for(const [u, v] of [[-0.18, 0.08], [0.02, -0.06], [0.14, 0.14], [-0.28, -0.08], [-0.04, 0.22], [0.2, -0.02]]) wkEll(x, q(u*L), by + v*deep, deep*0.08, deep*0.06, 0, wkCss(coat.dark, 0.55));
+    if(L > px(5)) wkEll(x, q(-L*0.02), by - deep*0.3, L*0.34*sk, deep*0.15, 0, wkCss(coat.lit, 0.5)); }
+  // (its neck and head: down to the scent, up to look, low and long as it runs)
+  const hu = run ? 0.35 : st.pose === 'pounce' ? 0.15 : st.head, na = run ? 0.2 : (F.stripe ? -0.9 : -0.8) + 1.6*hu, nl = L*F.neck, nb = [q(L*0.3), by - deep*0.12 - bA*0.6];
+  const ne = [nb[0] + d*Math.cos(na)*nl, nb[1] - Math.sin(na)*nl]; wkLine(x, [nb, ne], fill, deep*0.66); x.lineCap = 'butt';
+  const hl = L*F.head, ha = hu < 0.3 ? -0.8 : run ? 0.05 : -0.18, nose = [ne[0] + d*Math.cos(ha)*hl, ne[1] - Math.sin(ha)*hl], cat = F.ear === 'tuft';
+  const headCol = F.stripe ? wkCss(c.mat([236, 234, 228]).body) : fill;
+  if(cat){ wkEll(x, ne[0] + d*hl*0.25, ne[1] - hl*0.05, hl*0.42, hl*0.36, 0, headCol); wkEll(x, ne[0] + d*hl*0.62, ne[1] + hl*0.08, hl*0.2, hl*0.15, 0, wkCss(belly.body)); }
+  else { const hp = [[ne[0] - d*hl*0.12, ne[1] - hl*(F.stripe ? 0.4 : 0.32)], [ne[0] + d*hl*0.25, ne[1] - hl*(F.stripe ? 0.36 : 0.3)], nose, [ne[0] + d*hl*0.05, ne[1] + hl*(F.stripe ? 0.32 : 0.24)]];
+    wkPolyF(x, hp, headCol);
+    if(F.stripe && L > px(5)){ x.save(); x.beginPath(); hp.forEach(([a2, b2], i) => i ? x.lineTo(a2, b2) : x.moveTo(a2, b2)); x.closePath(); x.clip();
+      wkLine(x, [[ne[0] + (nose[0] - ne[0])*0.82, ne[1] + (nose[1] - ne[1])*0.82 - hl*0.04], [ne[0] - d*hl*0.15, ne[1] - hl*0.12]], wkCss(belly.body), Math.max(px(0.4), hl*0.16)); x.restore(); } }
+  if(F.mask && L > px(6)) wkEll(x, ne[0] + (nose[0] - ne[0])*0.6, ne[1] + (nose[1] - ne[1])*0.6 + hl*0.08, hl*0.28, hl*0.1, ha*-d*0.5, wkCss(belly.body));
+  if(L > px(14)) wkEll(x, ne[0] + (nose[0] - ne[0])*(cat ? 0.42 : 0.45) + d*hl*0.02, ne[1] + (nose[1] - ne[1])*0.45 - hl*0.1, Math.max(px(0.4), hl*0.05), Math.max(px(0.4), hl*0.04), 0, wkCss([18, 16, 14]));
+  // (its ears: a badger's and a stoat's small and round, a wolf's pointed, a jackal's tall, a lynx's with their black tufts)
+  if(L > px(4)){ const eb = [ne[0] + d*hl*(cat ? 0.15 : 0), ne[1] - hl*(cat ? 0.3 : 0.26)], earCol = wkCss(F.stripe ? belly.body : coat.dark);
+    if(F.ear === 'round') wkEll(x, eb[0] - d*hl*0.06, eb[1] - hl*0.04, hl*0.13, hl*0.11, 0, earCol);
+    else { const tall = F.ear === 'big' ? 0.62 : F.ear === 'tuft' ? 0.42 : 0.46, tip = [eb[0] - d*hl*0.1, eb[1] - hl*tall];
+      wkPolyF(x, [[eb[0] - d*hl*0.16, eb[1] + hl*0.04], tip, [eb[0] + d*hl*0.12, eb[1] + hl*0.02]], earCol);
+      if(cat && L > px(8)) wkLine(x, [tip, [tip[0] - d*hl*0.02, tip[1] - hl*0.2]], wkCss([22, 20, 18]), Math.max(px(0.3), hl*0.05)); } } }
 
 // A HARE: sitting hunched on its great haunch, ears up when it listens and laid back when it feeds or runs; running
 // stretched long, its hind feet thrown past its fore
@@ -283,6 +380,8 @@ function wkBird(x, X, Y, m, kind, st, c, px){
     if(b > px(3)) wkLine(x, [[X, by + b*0.2], [X + d*b*0.04, y]], ink, Math.max(px(0.3), b*0.04)); return; }
   // in the air
   const wader = K.way === 'wade';
+  if(kind === 'owls') return wkOwl(x, X, y, S, st, c, col, px);
+  if(kind === 'kestrel') return wkKestrel(x, X, y, S, d, st, c, col, px);
   if(kind === 'raptor' || (wader && st.pose === 'fly')){ const span = (wader ? 1.7*K.size/0.95 : K.size)*m, fl = st.pose === 'fly' ? Math.sin(st.ph*Math.PI*2)*0.35 : st.pose === 'soar' ? 0.06 + 0.04*Math.sin(st.ph) : 0.02;
     // (a broad plank of wing, bowed, its tips fingered; the tail fanned; seen from below as it circles)
     const ws = span*0.5, cw = span*0.09, tip = sg => [X + sg*ws, y - span*fl*0.6];
@@ -350,6 +449,80 @@ function wkSongbirdUp(x, X, y, S, d, fl, K, c, col, px){
   if(S > px(5)) wkLine(x, [[hx + d*sp*0.08, hy], [hx + d*sp*0.17, hy + sp*0.02]], wkCss(c.mat(K.bill || [52, 46, 42]).body), Math.max(px(0.3), S*0.04));
   wingAt(d, true); }
 
+// AN OWL quartering: glides between short runs of deep, slow beats, its broad round-tipped wings held level, pale
+// beneath, a big round head with its pale face disc, a short tail; seen from below as it turns
+function wkOwl(x, X, y, S, st, c, col, px){
+  const K = WK_KINDS.owls, run = 0.5 + 0.5*Math.sin(st.ph*Math.PI*2/6), fl = Math.sin(st.ph*Math.PI*2)*0.4*wkSmooth((run - 0.35)/0.3), sp = S*0.5, ch = S*0.17, face = c.mat(K.face);
+  for(const sg of [-1, 1]){ const lift = sp*fl*0.5;
+    wkPolyF(x, [[X, y - ch*0.35], [X + sg*sp*0.5, y - lift*0.5 - ch*0.3], [X + sg*sp*0.96, y - lift], [X + sg*sp*0.9, y - lift + ch*0.55], [X + sg*sp*0.45, y - lift*0.45 + ch*0.7], [X, y + ch*0.45]], wkCss(col.body));
+    wkPolyF(x, [[X, y - ch*0.2], [X + sg*sp*0.5, y - lift*0.5 - ch*0.1], [X + sg*sp*0.48, y - lift*0.45 + ch*0.6], [X, y + ch*0.4]], wkCss(face.body, 0.85));
+    if(S > px(10)) for(let k = 0; k < 3; k++) wkLine(x, [[X + sg*sp*(0.66 + k*0.1), y - lift*(0.7 + k*0.1) - ch*0.15], [X + sg*sp*(0.64 + k*0.1), y - lift*(0.7 + k*0.1) + ch*0.45]], wkCss(col.dark, 0.6), Math.max(px(0.3), ch*0.08)); }
+  wkEll(x, X, y + ch*0.1, ch*0.5, ch*0.8, 0, wkCss(face.body));
+  wkPolyF(x, [[X - ch*0.35, y + ch*0.7], [X - ch*0.45, y + ch*1.25], [X + ch*0.45, y + ch*1.25], [X + ch*0.35, y + ch*0.7]], wkCss(col.body));
+  wkEll(x, X, y - ch*0.6, ch*0.56, ch*0.5, 0, wkCss(col.body)); wkEll(x, X, y - ch*0.56, ch*0.42, ch*0.38, 0, wkCss(face.body));
+  if(S > px(12)) for(const e of [-1, 1]) wkEll(x, X + e*ch*0.16, y - ch*0.6, Math.max(px(0.3), ch*0.07), Math.max(px(0.3), ch*0.07), 0, wkCss([18, 14, 12])); }
+// A KESTREL: hanging on the wind, its body tipped up, its tail fanned down, its pointed wings beating fast above it and
+// its head still; with its wings half shut as it drops; gliding on, a narrow pointed plank with a long tail
+function wkKestrel(x, X, y, S, d, st, c, col, px){
+  const K = WK_KINDS.kestrel, head = c.mat(K.head), fl = Math.sin(st.ph*Math.PI*2), ink = wkCss(col.dark);
+  if(st.pose === 'glide'){ const ws = S*0.5, cw = S*0.07;
+    for(const sg of [-1, 1]) wkPolyF(x, [[X, y - cw*0.4], [X + sg*ws*0.45, y - cw*0.9], [X + sg*ws, y - cw*0.2], [X + sg*ws*0.4, y + cw*0.6], [X, y + cw*0.5]], wkCss(sg === d ? col.body : col.dark));
+    wkPolyF(x, [[X - cw*0.35, y + cw*0.4], [X - cw*0.5, y + cw*3.6], [X + cw*0.5, y + cw*3.6], [X + cw*0.35, y + cw*0.4]], wkCss(head.body));
+    wkEll(x, X, y - cw*0.6, cw*0.6, cw*0.6, 0, wkCss(head.body)); return; }
+  const shut = st.pose === 'stoop' ? 0.45 : 1, sh = [X + d*S*0.02, y - S*0.05];
+  wkPolyF(x, [[X - d*S*0.06, y + S*0.04], [X - d*S*0.2, y + S*0.36], [X - d*S*0.04, y + S*0.4], [X + d*S*0.03, y + S*0.06]], wkCss(head.body));
+  if(S > px(10)) wkLine(x, [[X - d*S*0.19, y + S*0.33], [X - d*S*0.04, y + S*0.37]], ink, Math.max(px(0.3), S*0.03));
+  for(const sg of [-1, 1]){ const tip = [X + sg*S*0.46*shut, y - S*(0.16 + 0.2*fl*shut)*shut - S*0.1*(1 - shut)];
+    wkPolyF(x, [sh, [X + sg*S*0.22*shut, y - S*(0.2 + 0.1*fl)*shut], tip, [X + sg*S*0.16*shut, y + S*0.02]], wkCss(sg === d ? col.body : wkMix(col.body, col.dark, 0.5)));
+    if(S > px(8)) wkLine(x, [[X + sg*S*0.3*shut, y - S*(0.16 + 0.14*fl)*shut], tip], ink, Math.max(px(0.3), S*0.035)); }
+  wkEll(x, X, y, S*0.07, S*0.16, -d*0.5, wkCss(col.body)); if(S > px(6)) wkEll(x, X + d*S*0.03, y + S*0.02, S*0.04, S*0.1, -d*0.5, wkCss(wkMix(col.lit, [240, 226, 200], 0.5)));
+  wkEll(x, X + d*S*0.08, y - S*0.15, S*0.06, S*0.055, 0, wkCss(head.body)); if(S > px(8)) wkLine(x, [[X + d*S*0.12, y - S*0.14], [X + d*S*0.15, y - S*0.12]], ink, Math.max(px(0.3), S*0.025)); }
+// A DRAKE (docs/prior-art/ringworld-magic-creatures.md §3): a wyvern, two-legged and winged, soaring on a thermal as a
+// raptor does. Its arm out to the wrist and three long fingers fanned behind it, the membrane between them scalloped
+// along the trailing edge and a little see-through; its long neck and horned head ahead, its long tail and its spade
+// behind; its hide of its region's element
+function wkDrake(x, X, Y, m, st, c, px){
+  const K = WK_KINDS.drakes, S = K.size*m, y = Y - st.y*m, d = st.dir || 1, gl = c.glow || K.coat, hide = c.mat(wkMix(K.coat, gl, 0.3)), mem = c.mat(wkMix(wkMix(K.coat, gl, 0.55), [255, 255, 255], 0.12));
+  if(S < px(1.4)){ x.fillStyle = wkCss(hide.dark); x.fillRect(X - px(0.6), y - px(0.4), px(1.2), px(0.8)); return; }
+  const fl = st.pose === 'soar' ? 0.1 + 0.05*Math.sin(st.ph) : st.pose === 'glide' ? 0.04 : Math.sin(st.ph*Math.PI*2)*0.4, ws = S*0.5, ch = S*0.08, lw = Math.max(px(0.4), ch*0.25);
+  const mixP = (p, q2, t) => [p[0] + (q2[0] - p[0])*t, p[1] + (q2[1] - p[1])*t];
+  for(const sg of [-d, d]){ const sh = [X + d*ch*0.4, y - ch*0.2], wr = [X + sg*ws*0.42, y - ws*fl*0.8 - ch*1.1], root = [X - d*ch*0.9, y + ch*0.4];
+    const fs = [0.98, 0.8, 0.58].map((r, k) => [X + sg*ws*r, y - ws*fl*(0.95 - k*0.25) + ch*(k*1.6 - 0.4)]), sc = (p, q2) => mixP(mixP(p, q2, 0.5), wr, 0.22);
+    wkPolyF(x, [sh, wr, fs[0], sc(fs[0], fs[1]), fs[1], sc(fs[1], fs[2]), fs[2], mixP(mixP(fs[2], root, 0.5), wr, 0.18), root], wkCss(sg === d ? mem.body : mem.dark, 0.9));
+    wkLine(x, [sh, wr], wkCss(hide.body), lw*1.5); if(S > px(8)) for(const f of fs) wkLine(x, [wr, f], wkCss(hide.dark), lw); }
+  x.lineCap = 'round';
+  wkLine(x, [[X - d*ch*1.2, y + ch*0.1], [X - d*ch*3.6, y + ch*0.9], [X - d*ch*5.6, y + ch*0.4]], wkCss(hide.body), Math.max(px(0.4), ch*0.45));
+  if(S > px(6)){ const te = [X - d*ch*5.6, y + ch*0.4]; wkPolyF(x, [[te[0] + d*ch*0.2, te[1] - ch*0.4], [te[0] - d*ch*0.9, te[1]], [te[0] + d*ch*0.2, te[1] + ch*0.4]], wkCss(hide.dark)); }
+  wkEll(x, X, y, ch*1.7, ch*0.62, -d*0.08, wkCss(hide.body)); if(S > px(6)) wkEll(x, X + d*ch*0.2, y + ch*0.22, ch*1.2, ch*0.25, 0, wkCss(hide.lit, 0.6));
+  const hd = [X + d*ch*3.2, y - ch*1.0]; wkLine(x, [[X + d*ch*1.3, y - ch*0.1], [X + d*ch*2.3, y - ch*0.8], hd], wkCss(hide.body), Math.max(px(0.4), ch*0.5)); x.lineCap = 'butt';
+  wkPolyF(x, [[hd[0] - d*ch*0.3, hd[1] - ch*0.35], [hd[0] + d*ch*1.1, hd[1] + ch*0.05], [hd[0] - d*ch*0.2, hd[1] + ch*0.35]], wkCss(hide.body));
+  if(S > px(10)) wkLine(x, [[hd[0] - d*ch*0.1, hd[1] - ch*0.3], [hd[0] - d*ch*0.8, hd[1] - ch*0.9]], wkCss(wkMix(hide.lit, [236, 226, 200], 0.5)), lw); }
+// A SKY RAY (docs/prior-art/ringworld-magic-creatures.md §4): seen from below and to the side, high up: a broad lens of a
+// body, its wings rising and falling slowly with a wave running out along them (the near one lower on the page), the
+// horns of its head fins forward, a long whip of a tail behind; pale beneath, its region's light along its wings' edges
+// by night, steady (never a flash)
+function wkRay(x, X, Y, m, st, c, px){
+  const K = WK_KINDS.skyrays, S = K.size*m, y = Y - st.y*m, d = st.dir || 1, sk = Math.max(0.2, st.side ?? 1), gl = c.glow || K.belly, nt = st.nt || 0;
+  const back = c.mat(K.coat), bel = c.mat(wkMix(K.belly, gl, 0.22));
+  if(S < px(1.6)){ x.fillStyle = wkCss(bel.dark); x.fillRect(X - px(0.8), y - px(0.4), px(1.6), px(0.8)); return; }
+  const b = Math.sin(st.ph*Math.PI*2), b2 = Math.sin(st.ph*Math.PI*2 - 1.2), half = S*0.5, len = S*0.4*(0.5 + 0.5*sk), th = S*0.075, fore = 0.5, spr = 1 - 0.7*sk;
+  const tipOf = (sg, wv) => [X + sg*half*spr*0.95 - d*len*0.15, y + sg*half*fore*sk - half*0.24*wv];
+  for(const sg of [-1, 1]){ const tip = tipOf(sg, b2), mid = [X + sg*half*spr*0.5 + d*len*0.12, y + sg*half*fore*sk*0.55 - half*0.14*b];
+    wkPolyF(x, [[X + d*len*0.42, y - th*0.2*sg], mid, tip, [X + sg*half*spr*0.4 - d*len*0.4, y + sg*half*fore*sk*0.4 - half*0.09*b], [X - d*len*0.48, y]], wkCss(sg > 0 ? bel.body : wkMix(bel.body, back.dark, 0.45)));
+    if(nt > 0.05 && S > px(6)) for(let k = 1; k <= 4; k++){ const p = [mid[0] + (tip[0] - mid[0])*k/4.5, mid[1] + (tip[1] - mid[1])*k/4.5]; wkEll(x, p[0], p[1], Math.max(px(0.5), S*0.012), Math.max(px(0.5), S*0.012), 0, wkCss(gl, 0.6*nt)); } }
+  wkEll(x, X, y, len*0.55, th, 0, wkCss(bel.lit));
+  if(S > px(8)) for(const sg of [-1, 1]) wkLine(x, [[X + d*len*0.5, y + sg*th*0.5], [X + d*len*0.72, y + sg*th*0.9], [X + d*len*0.78, y + sg*th*0.3]], wkCss(back.dark), Math.max(px(0.4), th*0.4));
+  wkLine(x, [[X - d*len*0.5, y], [X - d*len*1.1, y + th*0.6 + half*0.04*b], [X - d*len*1.7, y + th*0.2]], wkCss(back.dark), Math.max(px(0.3), th*0.25)); }
+// A LANTERN MOTH (docs/prior-art/ringworld-magic-creatures.md §5): pale soft wings folding as they beat, and by night a
+// glow round it of its region's light that breathes slowly, seconds to a breath, each its own; never a flash
+function wkMoth(x, X, Y, m, st, c, px){
+  const K = WK_KINDS.lanternmoths, S = Math.max(px(1.4), K.size*m), y = Y - st.y*m, gl = c.glow || [250, 222, 160], nt = st.nt || 0;
+  const br = 0.75 + 0.25*Math.sin(st.ph/K.flap*Math.PI*2/3.4 + (st.hue || 0)*1.7);
+  if(nt > 0.05){ const r = S*3.2, g = x.createRadialGradient(X, y, 0, X, y, r); g.addColorStop(0, wkCss(gl, 0.42*nt*br)); g.addColorStop(1, wkCss(gl, 0)); x.fillStyle = g; x.beginPath(); x.arc(X, y, r, 0, Math.PI*2); x.fill(); }
+  const op = 0.3 + 0.7*Math.abs(Math.sin(st.ph*Math.PI)), wc = wkMix(c.mat(K.coat).lit, gl, 0.5*nt);
+  for(const k of [-1, 1]) wkEll(x, X + k*S*0.3*op, y - S*0.08, S*0.3*op, S*0.34, k*0.5, wkCss(wc, 0.9));
+  wkEll(x, X, y, S*0.06, S*0.2, 0, wkCss(wkMix(wc, gl, 0.5))); }
+
 // ON THE WATER: a body half under, a head on its neck (a mallard's green, a swan's curve), up-ended to feed with its
 // tail to the sky, and the V of its wake behind it as it goes
 function wkSwimmer(x, X, Y, m, kind, st, c, px){
@@ -368,6 +541,10 @@ export function wkPaint(x, X, Y, m, kind, st, c, px){
   if(K.way === 'paddle') return wkSwimmer(x, X, Y, m, kind, st, c, px);
   if(K.body === 'slime') return wkSlime(x, X, Y, m, st, c, px);
   if(K.body === 'strider') return wkStrider(x, X, Y, m, st, c, px);
+  if(K.body === 'drake') return wkDrake(x, X, Y, m, st, c, px);
+  if(K.body === 'ray') return wkRay(x, X, Y, m, st, c, px);
+  if(K.body === 'moth') return wkMoth(x, X, Y, m, st, c, px);
+  if(K.body === 'hunter'){ if(K.size*m < px(1.4)){ x.fillStyle = wkCss(c.mat(K.coat).dark); x.fillRect(X - px(0.7), Y - st.y*m - px(1.2), px(1.4), px(1)); return; } return wkHunter(x, X, Y, m, kind, st, c, px); }
   if(K.way === 'walk' || K.way === 'hop' || K.way === 'prowl'){ const L = K.size*m; if(L < px(1.4)){ x.fillStyle = wkCss(c.mat(K.coat).dark); x.fillRect(X - px(0.7), Y - st.y*m - px(1.2), px(1.4), px(1)); return; } return wkQuad(x, X, Y, m, kind, st, c, px); }
   return wkBird(x, X, Y, m, kind, st, c, px);
 }

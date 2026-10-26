@@ -129,7 +129,9 @@ function rgView(E, n, ww, wh){
   const TR = { sea: LK.sea, snow: LK.snowline, cloud: W*0.03*(0.7 + 0.6*mnHash(seed | 0, 4, 77)), raw: (a, z, fine) => LK.height(a, z, fine) };   // (cloud: the cumulus's base)
   const v0 = LK.height(0, L.zS, W*0.001);
   // (the weather, by the seed or chosen; in snow the land lies white down to the ground you stand on)
-  const wx = rgWeatherOf(seed, E.P(n, 'weather', 'by the seed'), world); if(wx === 'snow') TR.snow = v0 - W*0.004;
+  const bw0 = LK.biomes(0, L.zS, v0), bOf = nm => bw0[LK_BIOMES.findIndex(b => b.name === nm)] || 0;
+  const wx0 = rgWeatherOf(seed, E.P(n, 'weather', 'by the seed'), world, { dry: bOf('steppe') + bOf('desert') + bOf('savanna'), cold: bOf('tundra') + bOf('taiga') + bOf('ice') });
+  const wx = RG_WX_BASE[wx0] || wx0, wfx = RG_WX_BASE[wx0] ? wx0 : null; if(wx === 'snow') TR.snow = v0 - W*0.004;
   const T = (a, z, fine) => LK.height(a, z, fine); T.true = T;
   // (a carried eye keeps its height over where it took off, and rises as it is told, but never sinks into a hill it
   //  flies over: kept some way above the ground under it; L.hc then its height over that ground)
@@ -186,7 +188,7 @@ function rgView(E, n, ww, wh){
   return { E, L, p, W, seed, sun: { D, at: sunAt, sd: sunSd, LT: [lt[0]/ll, lt[1]/ll], screen: [sunR, -sunU], back: sunUp ? rsSmooth(0.15, 0.75, D[0]*L.fx + D[1]*L.fy + D[2]*L.fz) : 0 }, world, forms, T, TR, LK, detail, unit, F, cx, cy, ww, wh, proj, at, psi, th, hx: Math.cos(psi), hz: Math.sin(psi), land, sky, g1, g2, worldAt, regionAt, elementAt, regions: RG, dryAt, forestAt, cityAt, lightsOf, lightsAt, districtAt, psi,
     // (Flora is what grows, Fauna what lives and moves; Detail how far and how finely: Low, Medium, High, Ultra, as a
     //  reach on the things sown round the eye, Medium as it always was: RG_DETAIL)
-    season: seedChoice(seed, 'season')(), life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, L.a0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
+    season: seedChoice(seed, 'season')(), life: num(n, 'life', 50)/100, fauna: num(n, 'fauna', 40)/100, detailK: RG_DETAIL[detail], works: num(n, 'works', 50)/100, clutter: num(n, 'clutter', 50)/100, weather: wx, wfx, air: num(n, 'air', 60)/100, dayHere: ringDay(L, L.a0), px: E.px, saturn: E.P(n, 'saturn', 'by the seed'),
     // THE SCENE'S CLOCK (the Moving Image's Time Passing): seconds since the film began, and the time between its frames
     // (0 in a still, so a still draws as it always did); and the ring's slow spin under the stars since then
     // (in a film, its frame and the scene's mean seconds a frame, from which the scene's own clocks run evenly; and a
@@ -353,7 +355,9 @@ function rgLit(V, c, day, haze, air){ const n = rsMix(rsMix(c, [8, 12, 30], 0.82
 function rgAirOf(V, day){ const dusk = rgClamp(1 - Math.abs(day - 0.5)*3.2), w = V.world.list[0];
   const a = rsMix(rsMix(rsMix(V.sky, [6, 8, 20], 0.86), rsMix(V.sky, [255, 255, 255], 0.38), rsSmooth(0.3, 0.75, day)), rsMix([255, 150, 118], V.g1, 0.2), dusk*0.55);
   // (a world's own air: the smoke over ruins, the neon's glow in the haze, the magic's)
-  return w === 'ruins' ? rsMix(a, [150, 112, 88], 0.32) : w === 'neon' ? rsMix(a, V.g1, 0.22 + 0.2*(1 - day)) : w === 'magic' ? rsMix(a, V.g2, 0.15) : a; }
+  const b = w === 'ruins' ? rsMix(a, [150, 112, 88], 0.32) : w === 'neon' ? rsMix(a, V.g1, 0.22 + 0.2*(1 - day)) : w === 'magic' ? rsMix(a, V.g2, 0.15) : a;
+  // (dust: the air ochre, the far land gone into it; ash: sepia and dim, docs/prior-art/ringworld-weather.md §5–6)
+  const lit = rsSmooth(0.3, 0.75, day); return V.wfx === 'dust' ? rsMix(b, rsMix([24, 18, 14], [212, 168, 112], lit), 0.55) : V.wfx === 'ash' ? rsMix(b, rsMix([20, 16, 14], [172, 138, 112], lit), 0.42) : b; }
 
 // THE STARS BEHIND, STILL IN THE WORLD (Ruby: "stars should not pan with the camera"; then "With the starfield LOCKED TO
 // THE CAMERA then it looks like, when the camera rotates, the entire ring rotates. The starfield should be pretty
@@ -380,12 +384,27 @@ function rgPanSky(c, x, V){
 // ---------------- THE ARCH ----------------
 // THE WEATHER (Ruby: "more clouds, slightly rare weather effects … atmospherics, possibly rays from the sun"): by the seed
 // mostly clear, often clouds, now and then fog, rarely rain, a storm or snow (never snow where it's neon or ruins hot)
-function rgWeatherOf(seed, chosen, world){ if(chosen && chosen !== 'by the seed') return chosen; const u = mnHash(seed | 0, 77, 5);
+export function rgWeatherOf(seed, chosen, world, here = {}){ if(chosen && chosen !== 'by the seed') return chosen; const u = mnHash(seed | 0, 77, 5), v = mnHash(seed | 0, 79, 5);
   // (Ruby: "rain is too common": a seed in twenty-two rains, one in forty storms)
   // (Ruby, 2026-10-25: "feel like it snows too much": snow only in a seed's winter (December to February, the edges of
   //  November and March), else the same lot falls as rain)
   const s = seedChoice(seed, 'season')(), winter = s > 0.88 || s < 0.16;
-  return u < 0.5 ? 'clear' : u < 0.82 ? 'clouds' : u < 0.9 ? 'fog' : u < 0.945 ? 'rain' : u < 0.97 ? 'storm' : world.list.includes('neon') || !winter ? 'rain' : 'snow'; }
+  const b = u < 0.5 ? 'clear' : u < 0.82 ? 'clouds' : u < 0.9 ? 'fog' : u < 0.945 ? 'rain' : u < 0.97 ? 'storm' : world.list.includes('neon') || !winter ? 'rain' : 'snow';
+  // (Ruby, 2026-10-25: "interesting weathers": the rarer ones, each by the place the seed stands you and its season,
+  //  docs/prior-art/ringworld-weather.md §4: some rain falls with the sun out (a sunshower, its rainbow); in dry country
+  //  a day of blowing dust; on a clear night in the cold, the aurora; in spring the blossom drifting; in the magic world
+  //  motes of light rising; over the ruins a slow fall of ash)
+  const dry = here.dry || 0, cold = here.cold || 0, has = w => world.list.includes(w);
+  if(b === 'rain' && v < 0.4 && !has('neon')) return 'sunshower';
+  if(b !== 'clear' && b !== 'clouds') return b;
+  if(dry > 0.5 && v < 0.3) return 'dust';
+  if(cold > 0.5 && b === 'clear' && v >= 0.3 && v < 0.55) return 'aurora';
+  if(s > 0.2 && s < 0.38 && dry < 0.5 && v >= 0.55 && v < 0.7) return 'petals';
+  if(has('magic') && v >= 0.7 && v < 0.85) return 'motes';
+  if(has('ruins') && v >= 0.85 && v < 0.95) return 'ash';
+  return b; }
+// (each rarer weather's sky is one of the common ones': what the sky, the clouds and the light read; V.wfx its own)
+export const RG_WX_BASE = { sunshower: 'clouds', dust: 'fog', aurora: 'clear', petals: 'clear', motes: 'clear', ash: 'clouds' };
 // THE GAS GIANTS the ring may orbit (Ruby: "a random gas giant including Jupiter, Saturn, Uranus, Neptune (with some of
 // their moons)"; docs/prior-art/ringworld-time.md): Saturn is paintSaturn's; the other three here, in flat shapes as a
 // space painter blocks them: JUPITER's cream zones and rust belts, their edges waved, the Great Red Spot in the south;
@@ -475,6 +494,19 @@ function rgPaintArch(x, mk, V){
     for(let k = 0; k < 14; k++){ const az = RB()*Math.PI*2, el = 0.02 + 0.5*Math.pow(RB(), 1.5), len = 0.25 + 0.5*RB(), p0 = skyAt(az, el), p1 = skyAt(az + len, el + (RB() - 0.5)*0.06), pm = skyAt(az + len*0.5, el + 0.02 + (RB() - 0.5)*0.05); if(!p0 || !p1 || !pm) { RB(); RB(); continue; }
       const tint = RB() < 0.5 ? rsMix(AIR, [255, 226, 196], 0.35) : rsMix(AIR, [120, 140, 200], 0.35), wd = F*(0.06 + 0.1*RB())*(1 - el), al = 0.035*kday*(1 - 0.5*el); if(al < 0.004) continue;
       for(const [kw, ka] of [[1, 0.5], [0.6, 0.8], [0.3, 1]]){ x.strokeStyle = rsCss(tint, al*ka); x.lineWidth = wd*kw; x.beginPath(); x.moveTo(p0[0], p0[1]); x.quadraticCurveTo(pm[0], pm[1], p1[0], p1[1]); x.stroke(); } }
+    x.restore(); }
+  // THE AURORA (docs/prior-art/ringworld-weather.md §4): in the cold under a clear sky, curtains of light over one side
+  //  of it (where the ring's thin air shows space, by day too, fainter), a violet hem at their foot, green above it, red fading out high; their folds drifting slowly (a
+  //  fold crosses a few degrees of sky a minute), their rays fixed in them, their light breathing by a tenth or so over a
+  //  couple of minutes; never a flash
+  if(V.wfx === 'aurora'){ const na = 1 - 0.45*kday, RA = rgRand(s, 805), tA = rgCloudTime(V), az0 = RA()*Math.PI*2, span = 1.6 + RA()*1.2, N = 90;
+    x.save(); x.globalCompositeOperation = 'screen';
+    for(let band = 0; band < 3; band++){ const e0 = 0.2 + 0.1*band + 0.05*RA(), hgt = 0.22 + 0.16*RA(), phs = RA()*10, br = (0.85 + 0.1*Math.sin(tA*0.05 + band*2))*na*(1 - band*0.25), lw = Math.max(px(1), F*span/N*1.7);
+      for(let k = 0; k < N; k++){ const u = k/(N - 1), az = az0 + (u - 0.5)*span + 0.06*Math.sin(u*9 + phs + tA*0.03), el = e0 + 0.05*Math.sin(u*5 + phs*1.3 + tA*0.02);
+        const p0 = skyAt(az, el), p1 = skyAt(az, el + hgt*(0.7 + 0.3*Math.sin(u*13 + phs))); if(!p0 || !p1) continue;
+        const a = 0.4*br*Math.sin(Math.PI*u)*(0.6 + 0.4*Math.sin(u*31 + phs*2)); if(a < 0.01) continue;
+        const g = x.createLinearGradient(p0[0], p0[1], p1[0], p1[1]); g.addColorStop(0, rsCss([160, 100, 230], a*0.5)); g.addColorStop(0.08, rsCss([120, 255, 170], a)); g.addColorStop(0.45, rsCss([90, 240, 150], a*0.55));
+        g.addColorStop(0.8, rsCss([230, 70, 110], a*0.28)); g.addColorStop(1, rsCss([230, 70, 110], 0)); x.strokeStyle = g; x.lineWidth = lw; x.beginPath(); x.moveTo(p0[0], p0[1]); x.lineTo(p1[0], p1[1]); x.stroke(); } }
     x.restore(); }
   // THE FAR SKY'S OWN THINGS, by the seed: the nebula's washes in the page's accents, now and then a planet or a comet
   x.save(); x.globalCompositeOperation = 'screen';
@@ -841,7 +873,7 @@ function rgPaintArch(x, mk, V){
       g.addColorStop(0, rsCss(col, str)); g.addColorStop(0.35, rsCss(col, str*0.45)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g;
       for(const k2 of [1, 0.55, 0.25]){ x.beginPath(); x.moveTo(sp[0], sp[1]); x.arc(sp[0], sp[1], Lr, a - wa*k2*1.6, a + wa*k2*1.6); x.closePath(); x.fill(); } } x.restore(); }
   // a RAINBOW after the rain, opposite the sun, when the sun is low behind you: its bands round the point opposite it
-  if(((wx === 'rain' && mnHash(s, 78, 5) < 0.3) || (wx === 'clouds' && R0() < 0.15)) && V.sun.D && -V.sun.D[0] < 0.6 && -V.sun.D[0] > -0.05){ const D = V.sun.D, A = proj(L.Px - D[0], -D[1], L.z0 - D[2]);
+  if(((wx === 'rain' && mnHash(s, 78, 5) < 0.3) || (wx === 'clouds' && R0() < 0.15) || V.wfx === 'sunshower') && V.sun.D && -V.sun.D[0] < 0.6 && -V.sun.D[0] > -0.05){ const D = V.sun.D, A = proj(L.Px - D[0], -D[1], L.z0 - D[2]);
     if(A){ const r0 = 2*F*Math.tan(21*Math.PI/180), BOW = [[220, 60, 60], [240, 150, 50], [240, 230, 80], [80, 200, 90], [70, 120, 230], [140, 80, 200]]; x.save(); x.globalCompositeOperation = 'screen'; x.lineWidth = r0*0.018;
       BOW.forEach((cb, k) => { x.strokeStyle = rsCss(cb, 0.16*(0.4 + 0.6*kday)); x.beginPath(); x.arc(A[0], A[1], r0*(1.0 - k*0.018), Math.PI, 0); x.stroke(); });
       // (as a bow is (docs/prior-art/ringworld-sky.md §9): the sky inside it brighter, a fainter second bow at 51° with its
@@ -1582,6 +1614,8 @@ function rgStore(V){
     // (Ruby, 2026-10-25: "increase the size of and diversity of birds … and reduce their number overall": half as many
     //  flocks, each kind by its country: parakeets where it is warm and in town, goldfinches over the meadows, magpies
     //  and jays at the woods' edges, robins near cover, the rooks, starlings, pigeons and sparrows as before)
+    // (a place's biomes by name)
+    const biome = (a, z) => { const bw = V.LK.biomes(a, z, T.true(a, z, W*0.01)), o = {}; LK_BIOMES.forEach((b, i) => o[b.name] = bw[i]); return o; };
     const birdOf = (w, a, z, u, town) => { const fo = V.forestAt(a, z), dr = V.dryAt(a, z), bw = V.LK.biomes(a, z, T.true(a, z, W*0.01)), warm = bw[LK_BIOMES.findIndex(b => b.name === 'jungle')] + bw[LK_BIOMES.findIndex(b => b.name === 'savanna')];
       if(warm > 0.3 && u < 0.5) return 'parakeets';
       if(town) return u < 0.35 ? 'pigeons' : u < 0.6 ? 'sparrows' : u < 0.8 ? 'magpies' : u < 0.9 ? 'parakeets' : 'robins';
@@ -1599,8 +1633,32 @@ function rgStore(V){
     // (and near you, where they are seen best: a hare or two, a fox, a few birds on the grass, swallows over it)
     sowD(25, W*0.005, W*0.012, W*0.05, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.38*LIFE*(0.3 + 0.7*wildish(w))) return null; const g = ground(a, z); if(g.wet || g.slope > 0.8) return null;
       const u = R(), town = inTown(w, a, z), fo = V.forestAt(a, z); if(u > 0.45 && R() < 0.5) return null;   // (fewer birds near, the rest as before)
-      return wild(u < 0.3 ? (town ? 'butterflies' : fo > 0.5 ? 'butterflies' : u < 0.2 ? 'hare' : 'fox') : u < 0.45 ? (fo > 0.5 ? 'robins' : 'swallows') : birdOf(w, a, z, R(), town), w); });
-    sow(23, W*0.4, W*0.8, W*2.4, 1, (a, z, r, R) => R() < 0.35*LIFE ? wild('geese', V.worldAt(a, z)) : null); }
+      // (and now and then one of the small hunters near you: a stoat in the open, a badger by the wood's edge, a jackal
+      //  in dry country)
+      const hunterNear = () => { const b = biome(a, z); return b.steppe + b.desert + b.savanna > 0.45 ? 'jackals' : fo > 0.12 && fo < 0.5 && R() < 0.4 ? 'badger' : 'stoat'; };
+      return wild(u < 0.3 ? (town ? 'butterflies' : fo > 0.5 ? 'butterflies' : u < 0.17 ? 'hare' : u < 0.23 ? 'fox' : hunterNear()) : u < 0.45 ? (fo > 0.5 ? 'robins' : 'swallows') : birdOf(w, a, z, R(), town), w); });
+    sow(23, W*0.4, W*0.8, W*2.4, 1, (a, z, r, R) => R() < 0.35*LIFE ? wild('geese', V.worldAt(a, z)) : null);
+    // THE HUNTERS (Ruby, 2026-10-25: "a wider diversity of wildlife, medium and small predators";
+    //  docs/prior-art/ringworld-wildlife.md §9): fewer than what they hunt, each by its country. Wolves and lynx in the
+    //  cold woods and on the tundra, stoats in the open there and on the meadows; badgers where wood meets meadow; lynx in
+    //  the deep woods; jackals on the steppe, the savanna and the desert's edge. Never in a town, wolves only in the wild
+    //  worlds; and over the open fields an owl quartering or a kestrel hanging on the wind
+    sowD(28, W*0.012, W*0.025, W*0.5, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.1*LIFE*wildish(w)) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+      if(g.wet || g.slope > 0.8 || inTown(w, a, z)) return null; const b = biome(a, z), cold = b.tundra + b.taiga + b.ice, dry = b.steppe + b.desert + b.savanna, u = R(), wildW = w === 'wilds' || w === 'magic';
+      if(cold > 0.45) return wild(u < 0.45 && wildW ? 'wolves' : u < 0.7 && fo > 0.15 ? 'lynx' : 'stoat', w);
+      if(dry > 0.45) return wild(u < 0.75 ? 'jackals' : 'badger', w);
+      return wild(u < 0.35 && fo > 0.08 && fo < 0.6 ? 'badger' : u < 0.55 && fo > 0.35 ? 'lynx' : u < 0.68 && wildW && fo > 0.2 ? 'wolves' : 'stoat', w); });
+    sowD(29, W*0.03, W*0.06, W*0.7, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(R() > 0.22*LIFE*wildish(w)) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+      if(g.wet || fo > 0.4 || inTown(w, a, z)) return null; return wild(R() < 0.5 ? 'owls' : 'kestrel', w); });
+    // THE MAGIC WORLD'S FANTASTIC ONES (docs/prior-art/ringworld-magic-creatures.md §3–6): drakes soaring over it,
+    //  moonharts where its woods meet its meadows, lantern moths about its woods and waters (and the ruins'); and on a
+    //  ring with magic in it, pods of sky rays rowing the high air anywhere over it
+    sowD(30, W*0.06, W*0.12, W*1.2, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(w !== 'magic' || R() > 0.3*LIFE) return null; return wild('drakes', w); });
+    sowD(31, W*0.02, W*0.04, W*0.6, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if(w !== 'magic' || R() > 0.4*LIFE) return null; const g = ground(a, z), fo = V.forestAt(a, z);
+      if(g.wet || g.slope > 0.6 || fo < 0.1 || fo > 0.65 || inTown(w, a, z)) return null; return wild('moonharts', w); });
+    sowD(32, W*0.008, W*0.016, W*0.12, 1, (a, z, r, R) => { const w = V.worldAt(a, z); if((w !== 'magic' && w !== 'ruins') || R() > (w === 'magic' ? 0.35 : 0.15)*LIFE) return null; const g = ground(a, z);
+      if(g.wet && !g.coast) return null; if(!g.coast && V.forestAt(a, z) < 0.2) return null; return wild('lanternmoths', w); });
+    if(V.world.list.includes('magic')) sow(33, W*0.15, W*0.3, W*1.2, 1, (a, z, r, R) => R() < 0.3*LIFE ? wild('skyrays', V.worldAt(a, z)) : null); }
   // SMALL THINGS near you (Ruby: "small things that get found closer to the player"): fences and mailboxes in the wilds,
   // lamps, benches and bicycles in town, barrels and crates in the ruins, now and then a person, for scale
   // (each where it belongs: hay, a scarecrow, a tractor in the open fields; a well, a shrine, a mailbox by a village; a
@@ -2131,7 +2189,11 @@ function rgPaintLand(x, mk, dk, V){
   // (drawn half again their size, as a painter does the creatures in a landscape so that they are found at all)
   const RG_WILD_LICENCE = 1.5, rgWildHere = (o, night) => { const k = o.kind, q = ((o.rs >>> 8) % 1000)/1000, wet = /rain|storm/.test(V.weather), cold = /snow/.test(V.weather);
     const av = k === 'bats' ? (cold ? 0 : rsSmooth(0.2, 0.5, night)) : ['swallows', 'swifts', 'butterflies', 'dragonflies', 'raptor'].includes(k) ? (1 - rsSmooth(0.25, 0.6, night))*(cold ? 0 : wet ? (k === 'swallows' ? 0.7 : 0) : 1)
-      : ['rooks', 'pigeons', 'starlings', 'sparrows', 'magpies', 'jays', 'goldfinches', 'parakeets', 'robins'].includes(k) ? (1 - rsSmooth(0.35, 0.7, night))*(V.weather === 'storm' ? 0.3 : 1) : k === 'fox' ? 0.35 + 0.65*rsSmooth(0.15, 0.45, night) : 1;
+      : ['rooks', 'pigeons', 'starlings', 'sparrows', 'magpies', 'jays', 'goldfinches', 'parakeets', 'robins'].includes(k) ? (1 - rsSmooth(0.35, 0.7, night))*(V.weather === 'storm' ? 0.3 : 1) : k === 'fox' || k === 'jackals' ? 0.35 + 0.65*rsSmooth(0.15, 0.45, night)
+      // (the hunters by their hours: a badger out at dusk and by night, an owl from dusk, a lynx most at dusk and dawn, a
+      //  kestrel and a drake by day and out of the rain; lantern moths only by night)
+      : k === 'badger' ? rsSmooth(0.2, 0.5, night) : k === 'owls' ? rsSmooth(0.15, 0.45, night)*(wet ? 0.3 : 1) : k === 'lynx' ? 0.3 + 0.7*rsSmooth(0.1, 0.4, night) : k === 'stoat' ? 1 - 0.5*rsSmooth(0.3, 0.7, night)
+      : k === 'kestrel' ? (1 - rsSmooth(0.25, 0.6, night))*(wet ? 0 : cold ? 0.5 : 1) : k === 'drakes' ? (1 - rsSmooth(0.3, 0.7, night))*(wet ? 0.2 : 1) : k === 'lanternmoths' ? rsSmooth(0.3, 0.6, night)*(wet || cold ? 0.2 : 1) : 1;
     return av >= 1 ? 1 : av <= 0 ? 0 : rsSmooth(q - 0.04, q + 0.04, av); };
   const rgPaintWild = (o, l, dd) => { const K = WK_KINDS[o.kind], wday = ringDay(L, o.a), night = 1 - rsSmooth(0.3, 0.7, wday), pres = rgWildHere(o, night); if(pres < 0.02) return;
     const haze = hazeOf(dd), cday = wday*(1 - cloudShadeAt(o.a, o.z)*rsSmooth(0.3, 0.7, wday))*(0.5 + 0.5*litAt(o.a, o.z, meshH(o.a, o.z) + 0.8*M1s)), n = wkCount(o.kind, o.rs), t = V.time ? MT : 0, step = V.frame !== null && V.time ? Math.min(2.5, rgStep(V)) : 0;
@@ -2145,7 +2207,7 @@ function rgPaintLand(x, mk, dk, V){
       let al = pres*st.on; if(step > 0.2){ const p = wkAt(o.kind, o.rs, j, t - step, env), fp = p.on ? foot(o.a + p.x*M1, o.z + p.z*M1) : null;
         if(fp) al *= rsSmooth(Math.max(px(2), sz)*2.5, Math.max(px(2), sz)*0.9, Math.hypot(fp[0] - X, fp[1] - p.y*fp[2] - yy)); }
       if(al < 0.03) continue;
-      out2.push([m, () => { x.globalAlpha = al; wkPaint(x, X, Y, m*LIC, o.kind, { ...st, y: st.y/LIC, dir: !g2 || g2[0] >= X ? 1 : -1, side, stag: j === 0 && (o.rs & 4), hue: j, nt: night }, c, rgPx); x.globalAlpha = 1; }]); }
+      out2.push([m, () => { x.globalAlpha = al; wkPaint(x, X, Y, m*LIC, o.kind, { ...st, y: st.y/LIC, dir: !g2 || g2[0] >= X ? 1 : -1, side, stag: j === 0 && (o.rs & 4), hue: j, nt: night, wint: rgWinter(V) }, c, rgPx); x.globalAlpha = 1; }]); }
     out2.sort((p, q) => p[0] - q[0]); for(const [, d] of out2) d(); };
   const rgPaintThing = (o0, l, dd) => { const o = moved(o0);
     // (a building standing near the eye is drawn faint as it grows to fill the frame, gone before it could block it)
@@ -2789,7 +2851,8 @@ function rgPaintLand(x, mk, dk, V){
   const sp = V.sun.at; if(sp && V.weather !== 'fog'){ const el = Math.asin(Math.max(-1, Math.min(1, -V.sun.D[0]))); if(el < 0.45){ const r = F*(0.6 + 0.5*(0.45 - el)), dk = ringDay(L, 0), col = rsMix([255, 232, 196], [255, 160, 120], rgClamp(1 - Math.abs(dk - 0.5)*3.2)*0.6);
     x.save(); x.globalCompositeOperation = 'screen'; const g = x.createRadialGradient(sp[0], sp[1], 0, sp[0], sp[1], r); g.addColorStop(0, rsCss(col, 0.22)); g.addColorStop(0.4, rsCss(col, 0.07)); g.addColorStop(1, rsCss(col, 0)); x.fillStyle = g; x.fillRect(sp[0] - r, sp[1] - r, r*2, r*2); x.restore(); } }
   if(V.weather === 'storm'){ x.fillStyle = rsCss([20, 24, 44], 0.16); x.fillRect(0, 0, ww, wh); }
-  if(/rain|storm|snow/.test(V.weather)) rgFalling(x, dk, V, { d0, reach, M1, AIR });
+  if(V.wfx === 'dust' || V.wfx === 'ash'){ x.fillStyle = rsCss(V.wfx === 'dust' ? [196, 146, 88] : [120, 92, 74], V.wfx === 'dust' ? 0.14 : 0.1); x.fillRect(0, 0, ww, wh); }
+  if(/rain|storm|snow/.test(V.weather) || RG_FALLS[V.wfx]) rgFalling(x, dk, V, { d0, reach, M1, AIR });
   // LIGHTNING LIGHTS THE LAND (Ruby: "should change the whole scene lighting fairly starkly as well as shading"): while a
   // bolt burns, the whole land takes its light, cold and hard: lit from the bolt's side of the frame, its lights pushed
   // toward a blue-white and its shadows deepened (an overlay, so the contrast rises rather than the brightness), the side
@@ -2818,34 +2881,53 @@ function rgPaintLand(x, mk, dk, V){
 // the wind, and is hidden wherever the land stands nearer than it. Beyond the last shell the fall is a veil over the far
 // land and all on it, deeper the farther (the snow's whiteness, the rain's grey: the land's haze, hazeOf).
 // Each flake by the hash of its cell of the sky round the eye, so a film sees the same flakes fall
+// THE OTHER THINGS THAT FALL OR DRIFT (Ruby, 2026-10-25: "interesting weathers"; docs/prior-art/ringworld-weather.md
+// §4–9), each on the same shells: n, how many to snow's or rain's; dots or streaks; vF its fall (m/s, rising below 0),
+// drift on the wind, sway, D its size (m): a sunshower's rain thin and lit by the low sun; ash grey and slow as snow;
+// petals tumbling, turning edge-on and back; dust streaming level on the wind; motes of light rising, breathing slowly
+// (tens of seconds to a breath, never a flash)
+const RG_FALLS = {
+  sunshower: { n: 0.5, vF: 8.5, drift: 0.18, D: 0.0022, col: [255, 240, 212], a: 0.36 },
+  ash:       { dots: 1, n: 0.7, vF: 0.7, drift: 0.6, sway: 0.4, D: 0.02, col: [126, 120, 114] },
+  petals:    { dots: 1, n: 0.7, vF: 0.4, drift: 0.9, sway: 0.7, D: 0.026, col: [246, 212, 222], flip: 1 },
+  motes:     { dots: 1, n: 0.4, vF: -0.15, drift: 0.12, sway: 0.5, D: 0.035, glow: 1 },
+  dust:      { n: 0.6, vF: 0.25, drift: 2.4, D: 0.004, col: [206, 164, 112], a: 0.2, level: 1 },
+};
 function rgFalling(x, dk, V, { d0, reach, M1, AIR }){
-  const { L, F, ww, wh, W } = V, px = V.px, snow = V.weather === 'snow', storm = V.weather === 'storm', s = V.seed | 0;
+  const { L, F, ww, wh, W } = V, px = V.px, FX = RG_FALLS[V.wfx] || null, snow = V.weather === 'snow' || !!(FX && FX.dots), storm = V.weather === 'storm', s = V.seed | 0;
   let dd = null; try { dd = dk.getImageData(0, 0, ww, wh).data; } catch(e){ dd = null; }
   const landAt = (X, Y) => { if(!dd) return Infinity; const i = ((Math.round(Y)*ww + Math.round(X)) << 2); const g = dd[i]; return g >= 254 ? Infinity : d0*Math.pow(reach/d0, g/255); };
   // (the shells: [nearest, farthest metres, flakes or streaks to a radian of the view, how much larger than life])
-  const SH = snow ? [[1.2, 3.5, 30, 1.7], [3.5, 9, 80, 1.5], [9, 24, 190, 1.4], [24, 60, 400, 1.3], [60, 150, 700, 1.2]]
-    : [[1.5, 5, 50, 1], [5, 14, 130, 1], [14, 40, 320, 1], [40, 110, 640, 1]];
-  const t = V.time ? rgClock(V, 1/24) : 0, [wA, wS] = rgWind(V), vF = snow ? 1.4 : 8.5, drift = snow ? 0.5 : 0.18, wu = Math.cos(wA)*wS*drift, ww2 = Math.sin(wA)*wS*drift;
-  const hl = Math.hypot(L.fy, L.fz) || 1, th0 = Math.atan2(L.fz/hl, L.fy/hl), half = 2*Math.atan(Math.hypot(ww, wh)/(4*F)) + 0.2, CW = 0.035, D = snow ? 0.02 : 0.0022;
-  const colS = rsMix([250, 252, 255], AIR, 0.1), colR = rsMix([214, 222, 236], AIR, 0.3);
+  const SH = (snow ? [[1.2, 3.5, 30, 1.7], [3.5, 9, 80, 1.5], [9, 24, 190, 1.4], [24, 60, 400, 1.3], [60, 150, 700, 1.2]]
+    : [[1.5, 5, 50, 1], [5, 14, 130, 1], [14, 40, 320, 1], [40, 110, 640, 1]]).map(([a, b, nR, lic]) => [a, b, FX ? nR*FX.n : nR, lic]);
+  const t = V.time ? rgClock(V, 1/24) : 0, [wA, wS] = rgWind(V), vF = FX ? FX.vF : snow ? 1.4 : 8.5, drift = FX ? FX.drift : snow ? 0.5 : 0.18, wu = Math.cos(wA)*wS*drift, ww2 = Math.sin(wA)*wS*drift;
+  const hl = Math.hypot(L.fy, L.fz) || 1, th0 = Math.atan2(L.fz/hl, L.fy/hl), half = 2*Math.atan(Math.hypot(ww, wh)/(4*F)) + 0.2, CW = 0.035, D = FX ? FX.D : snow ? 0.02 : 0.0022;
+  const glowC = rsMix(V.g2, [255, 255, 255], 0.45), colS = FX ? (FX.glow || !FX.col ? glowC : rsMix(FX.col, AIR, 0.15)) : rsMix([250, 252, 255], AIR, 0.1), colR = FX && FX.col ? rsMix(rsMix([214, 222, 236], FX.col, rsSmooth(0.3, 0.7, V.dayHere)), AIR, 0.2) : rsMix([214, 222, 236], AIR, 0.3);
   const dots = [], lines = [];
   SH.forEach(([r0, r1, nRad, lic], li) => { const nc = Math.max(1, Math.round(nRad*CW));
     for(let c = Math.floor((th0 - half)/CW); c <= Math.ceil((th0 + half)/CW); c++){ const R = rgRand(s, 860 + li, c & 0xffff);
       for(let k = 0; k < nc; k++){ const th = (c + R())*CW, r = r0 + (r1 - r0)*R(), hMin = -0.6*r - 2, hMax = 1.1*r + 3, span = hMax - hMin, h0 = hMin + span*R(), ph = R()*6.283, sz = R();
-        const h = hMin + ((((h0 - vF*t) - hMin) % span) + span) % span, sway = snow ? Math.sin(t*0.9 + ph)*0.35 : 0;
+        const h = hMin + ((((h0 - vF*t) - hMin) % span) + span) % span, sway = snow ? Math.sin(t*0.9 + ph)*(FX ? FX.sway : 0.35) : 0;
         const u = r*Math.cos(th) + ((wu*t + sway) % 6) , w = r*Math.sin(th) + ((ww2*t) % 6), P = V.proj(L.Px - h*M1, u*M1, L.z0 + w*M1); if(!P) continue;
         const X = P[0], Y = P[1]; if(X < -4 || X > ww + 4 || Y < -4 || Y > wh + 4) continue;
         const dist = Math.hypot(h, u, w - 0)*M1; if(landAt(Math.min(ww - 1, Math.max(0, X)), Math.min(wh - 1, Math.max(0, Y))) < dist) continue;
         const fade = 1 - (li/(SH.length))*0.55;
-        if(snow){ const rad = Math.max(0.6, D*0.5*(0.6 + 0.8*sz)*F*M1/P[2]*lic); dots.push([X, Y, rad, fade*(0.65 + 0.3*sz)]); }
-        else { const Q = V.proj(L.Px - (h + 0.5)*M1, (u - wu*0.06)*M1, L.z0 + (w - ww2*0.06)*M1); if(Q) lines.push([X, Y, Q[0], Q[1], fade*(storm ? 0.42 : 0.32), Math.max(0.5, D*F*M1/P[2]*1.4)]); } } } });
+        if(snow){ const rad = Math.max(0.6, D*0.5*(0.6 + 0.8*sz)*F*M1/P[2]*lic); dots.push([X, Y, rad, fade*(0.65 + 0.3*sz), ph]); }
+        else { const Q = FX && FX.level ? V.proj(L.Px - (h + 0.04)*M1, (u - wu*0.35)*M1, L.z0 + (w - ww2*0.35)*M1) : V.proj(L.Px - (h + 0.5)*M1, (u - wu*0.06)*M1, L.z0 + (w - ww2*0.06)*M1);
+          if(Q) lines.push([X, Y, Q[0], Q[1], fade*(FX ? FX.a : storm ? 0.42 : 0.32), Math.max(0.5, D*F*M1/P[2]*1.4)]); } } } });
+  // (petals: each turning edge-on and back as it tumbles; motes: a soft halo, each breathing on its own slow clock)
+  if(FX && FX.dots && (FX.flip || FX.glow)){ dots.sort((p, q) => p[2] - q[2]);
+    for(const [X, Y, r, a, ph] of dots){ if(FX.flip){ const k = 0.25 + 0.75*Math.abs(Math.sin(t*1.7 + ph*3)); x.fillStyle = rsCss(colS, a); x.beginPath(); x.ellipse(X, Y, Math.max(0.5, r*1.3*k), Math.max(0.5, r*0.8), ph, 0, Math.PI*2); x.fill(); continue; }
+      const br = 0.6 + 0.4*Math.sin(t*0.3 + ph*5), rr = Math.max(1.5, r*3.5), g = x.createRadialGradient(X, Y, 0, X, Y, rr); g.addColorStop(0, rsCss(colS, a*0.9*br)); g.addColorStop(0.3, rsCss(colS, a*0.35*br)); g.addColorStop(1, rsCss(colS, 0));
+      x.fillStyle = g; x.fillRect(X - rr, Y - rr, rr*2, rr*2); }
+    return; }
   if(snow){ dots.sort((p, q) => p[2] - q[2]); for(const [X, Y, r, a] of dots){ x.fillStyle = rsCss(colS, a); if(r < 0.9){ x.fillRect(X - r, Y - r, r*2, r*2); continue; } x.beginPath(); x.arc(X, Y, r, 0, Math.PI*2); x.fill();
       if(r > px(2.5)){ x.fillStyle = rsCss(colS, a*0.25); x.beginPath(); x.arc(X, Y, r*1.8, 0, Math.PI*2); x.fill(); } } }   // (a near flake out of focus: its soft halo)
   else { x.lineCap = 'round'; for(const [X, Y, X2, Y2, a, lw] of lines){ x.strokeStyle = rsCss(colR, a); x.lineWidth = lw; x.beginPath(); x.moveTo(X, Y); x.lineTo(X2, Y2); x.stroke(); } x.lineCap = 'butt'; }
 }
 
 // the weather (both parts read it the same way, so the arch's clouds and the land's rain agree)
-const RG_WEATHER_SEL = ['weather', 'Weather', 'select', 'by the seed', { options: ['by the seed', 'clear', 'clouds', 'rain', 'storm', 'snow', 'fog'] }];
+const RG_WEATHER_SEL = ['weather', 'Weather', 'select', 'by the seed', { options: ['by the seed', 'clear', 'clouds', 'rain', 'storm', 'snow', 'fog', 'sunshower', 'dust', 'aurora', 'petals', 'motes', 'ash'] }];
 export const RING_STEPS = {
   ringarch: { cat: 'Textures', label: 'The Arch', hidden: true, sealed: true, ins: ['over', 'look toward', 'look up', 'zoom', 'sun height', 'sun from', 'land hue', 'sky hue', 'light hue', 'second light hue'], outs: ['picture', 'ring'],
     io: { ins: ['image', 'value', 'value', 'value', 'value', 'value', 'colour', 'colour', 'colour', 'colour'], outs: ['image', 'field'] },

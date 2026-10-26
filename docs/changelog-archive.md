@@ -2,6 +2,22 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Crux–Imai (2026-10-24)
+
+- Antenna dishes move together, as an array's do: they all listen to one source in the sky at a time, tracking it
+  slowly, then slew to the next every few seconds of a film, each starting a moment after another. Each dish is drawn
+  turned in the round: its bowl when it faces you, its ribbed back when it faces away, its feed out along its axis.
+- Rain falls from a cloud as two to five curtains across its base, each its own width and weight, nearer or farther,
+  slanting with the wind and swelling and ebbing on its own slow time, so a shower moves along the cloud and comes and
+  goes instead of hanging as one panel.
+- The Save image button says "hold for video" in small letters under its label when the surface shown can make a film
+  by itself (it has a clock, a camera or a light to turn); the button stays the same size.
+
+### Under the hood
+- `rgDishAim` gives the array's aim at a moment of the film; `pkDish` draws a dish turned to a bearing and tipped to a
+  height. A surface says whether it can make a film by itself through its caps (`canFilm`); `syncSaveHint` shows the
+  hint. No fingerprint moved.
+
 ## Crux–Mimosa (2026-10-24)
 
 - Rain on Glass seen through keeps its drops: each now has a faint body, its dark rim and its highlight over the bent

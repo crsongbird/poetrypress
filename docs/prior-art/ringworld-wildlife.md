@@ -432,3 +432,51 @@ overall?"
   with its patch or beating with its patch near the shoulder and darker tips (`wkSongbirdUp`, `wkSongbirdDown`).
   Parakeets where it is warm and in town, goldfinches over the meadows, magpies and jays at the woods' edges, robins
   near cover; egrets beside herons at warm water; the rooks, starlings, pigeons and sparrows given their own marks too.
+
+## 9 · The hunters, small and middling
+
+Ruby, 2026-10-25: "can we introduce a wider diversity of wildlife, medium and small predators, fantastic life,
+interesting weathers". (The fantastic ones are in docs/prior-art/ringworld-magic-creatures.md §3–6, the weathers in
+docs/prior-art/ringworld-weather.md §4.)
+
+- Stoat: body 24–32 cm, tail 9–14 cm; "orangey-brown" back, creamy white throat and belly, black-tipped tail; in cold
+  country "almost completely white" in winter but for the black tip (ermine); a "distinctive bounding gait, arching its
+  back as it moves"; active "both by day and by night"; grassland, heath, farmland, woodland
+  [src](https://www.wildlifetrusts.org/node/25). Its tail "around half the length of its body"
+  [src](https://www.woodlandtrust.org.uk/blog/2019/02/stoat-or-weasel-how-to-tell-the-difference/).
+- European badger: body 60–90 cm, shoulder 25–30 cm, tail 12–24 cm; silvery-grey back, black legs and chest, two black
+  head bands and a "wide, white band" from nose to crown; mainly nocturnal and crepuscular; woodland, clearings,
+  pasture, scrub; short-legged, but it "can run at full gallop" [src](https://en.wikipedia.org/wiki/European_badger).
+- Eurasian lynx: body 73–106 cm, shoulder 55–75 cm, a "short 'bobbed' tail with an all-black tip", black ear tufts,
+  reddish or brown with black spots; "mainly nocturnal or crepuscular", solitary; boreal and montane forest; "mainly an
+  ambush predator", "stalking, sneaking and jumping on prey" [src](https://en.wikipedia.org/wiki/Eurasian_lynx).
+- Grey wolf: 1.0–1.3 m nose to tail, shoulder 60–90 cm, tail 35–52 cm, grey, brown and cinnamon; travels at about
+  8 km/h; packs of 2–36, "most have 5 to 9"; tundra, taiga, forest, prairie, arid land
+  [src](https://animaldiversity.org/site/accounts/information/Canis_lupus.html).
+- Golden jackal: body 80–105 cm, golden to yellow-brown, alone, in pairs or small packs, "primarily nocturnal"
+  [src](https://www.kora.ch/en/species/golden-jackal/profile); the coyote, its dry-country cousin, "freezes with stiff
+  legs, then pounces" on mice [src](https://www.azgfd.com/species/coyote/).
+- Barn owl: wingspan 89 cm, a "pure white underside", a white heart-shaped face [src](https://www.wildlifetrusts.org/wildlife-explorer/birds/birds-prey/barn-owl);
+  it "slowly and deliberately flies in lines above a field", hovers, drops onto its prey, seen "within the hours
+  either side of dawn and dusk" [src](https://www.lancswt.org.uk/node/5894).
+- Kestrel: wingspan 76 cm, the male's head and tail grey, his back ginger-brown
+  [src](https://www.lancswt.org.uk/wildlife-explorer/birds/birds-prey/kestrel); it hovers into a light headwind and
+  "fans out" its tail [src](https://gwct.org.uk/wildlife/species-of-the-month/2021/common-kestrel/); measured
+  wind-hovering at 9.1 ± 2.8 m up, in winds of 5–11 m/s
+  [src](https://cob.silverchair.com/jeb/article/155/1/519/6382/Field-Measurements-Of-Hanging-Flight-Aerodynamics).
+- How few: "every kilogram of meat-eating mammal needs 111 kilograms of prey" (Carbone and Gittleman, 2002)
+  [src](https://innovations-report.com/life-sciences/report-8728). Skyrim's wolves come alone or up to three, and
+  players "hear their howls before they are spotted" [src](https://content2.uesp.net/wiki/Skyrim:Animals); Breath of the
+  Wild ties each wolf to its region (forest, desert, snow) [src](https://zelda-archive.fandom.com/wiki/Wolf).
+- So in the painter [est]: five hunters on the ground and two in the air, each a few strokes in profile by its own form
+  (`WK_HUNT`, `wkHunter`): its back's height and chest, its legs, its ears (a badger's and stoat's small and round, a
+  wolf's pointed, a jackal's tall, a lynx's tufted), its tail as a plume widest a third of the way out, hung as it
+  carries it and level as it runs. A stoat bounds with its back arched in one long stroke and turns ermine in a seed's
+  winter; a badger is grey with black legs and a white face crossed by its stripe; a lynx is spotted, long-legged,
+  bob-tailed, creeping low on the walk; wolves trot in packs of four to eight and lie up; jackals come by ones to
+  threes. Wolves and lynx keep to the cold woods and the tundra (wolves only in the wild worlds), stoats to the open
+  country, badgers to where wood meets meadow, jackals to the steppe, savanna and the desert's edge; none in a town. An
+  owl quarters low and slow over open fields from dusk, gliding between short runs of beats; a kestrel hangs on the
+  wind over one spot facing into it, its head still, then slides on or drops to the grass (`hover`). By their hours: a
+  badger and an owl at dusk and by night, a lynx most at dusk and dawn, a kestrel by day and never in the rain. Sown
+  about a third as often as what they hunt, and now and then one of the small ones near you.

@@ -555,6 +555,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     and go one by one with their hours and weather (`rgWildHere`), and are drawn half again their size
     (`RG_WILD_LICENCE`) so they are found at all, the birds larger again (`WK_BIRDS`) and fewer, each kind by its field
     marks, magpies, jays, goldfinches, parakeets, robins and egrets among them (docs/prior-art/ringworld-wildlife.md §8);
+    the hunters fewer than what they hunt, each by its country and hours, each in its own form (`WK_HUNT`, `wkHunter`):
+    stoats, badgers, lynx, wolves and jackals, an owl quartering and a kestrel hanging on the wind (`hover`;
+    docs/prior-art/ringworld-wildlife.md §9); the magic world's drakes, moonharts, lantern moths and its sky rays rowing
+    the high air (`cruise`; docs/prior-art/ringworld-magic-creatures.md §3–6);
     the sheep, gulls, insects, fairies and kites drift on the same noise. Each thing reaches toward the eye by its own
     size in the paint order, so no nearer cell is laid over a boulder's or a hut's foot.
   - **Motion without flicker** (Ruby: "clouds and smoke should follow the wind and never flicker";
@@ -654,7 +658,10 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     head on or from behind (`pkPropEnd`), otherwise narrowed and mirrored. Boards, signs and milestones are never
     mirrored and show their bare backs from behind (`PK_BACKED`, `c.back`). Whatever is mirrored keeps its light on
     the sun's side (`pkFlip`). Trees are mirrored by the seed.
-  - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow; heaps of
+  - **Weather** (`rgWeatherOf`, the parts' Weather setting): by the seed clear, clouds, fog, rain, storm or snow, and by
+    the place the rarer ones, each on a common sky (`RG_WX_BASE`) with its own things drifting in the falling shells
+    (`RG_FALLS`): a sunshower and its rainbow, dust in dry country, the aurora in the cold, blossom in spring, motes of
+    light in the magic world, ash over the ruins (docs/prior-art/ringworld-weather.md §4); heaps of
     cloud lit from the sun's side, rain in veils, lightning, a rainbow opposite a low sun, rays from a low or clouded
     sun, the sun's glare low over the land, mist thickening with depth. Rain and snow fall in the world in shells of
     distance round the eye, hidden behind the land, the farthest a veil over the land (`rgFalling`;

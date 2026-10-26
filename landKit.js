@@ -119,7 +119,9 @@ export function lkLand(seed, o){
   const h0 = raw(0, z0m, 2), lift = Math.max(0, 7 - h0);
   const heightM = (u, v, fineM) => { let h = raw(u, v, fineM); const d = Math.hypot(u - Cm*Math.round(u/Cm), v - z0m);
     if(d < 1600){ if(lift > 0) h += lift*Math.exp(-(d/520)*(d/520)); const hs = h0 + lift; if(d < 160) h = hs + (h - hs)*(0.25 + 0.75*lkSmooth(0, 140, d)); }
-    if(o.terrace && h > 0){ const st = o.terrace/M, q = h/st, f = q - Math.floor(q); h = (Math.floor(q) + lkSmooth(0.7, 1, f))*st; }
+    // (the lowest step kept a little above the water, a bank rising to its first shelf: levelled flat to the sea's own
+    //  height it would read as dry land to the painter and as water to what is sown, ducks and jetties on the sand)
+    if(o.terrace && h > 0){ const st = o.terrace/M, q = h/st, f = q - Math.floor(q), t = (Math.floor(q) + lkSmooth(0.7, 1, f))*st; h = q < 1 ? Math.max(h*0.35, t) : t; }
     return h; };
   const height = (a, z, fine) => heightM(a/M, z/M, Math.max(0.5, (fine || W*0.001)/M))*M;
   // CLIMATE at a place of height h (ring units): warmth by the seed and the region, a little patchy, cooled with
