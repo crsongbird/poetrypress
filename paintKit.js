@@ -822,17 +822,35 @@ const PK_BUILT = {
     // the ridge turret on the topmost roof and its spire to the cross, one piece from the roof up (never floating free)
     x.fillStyle = pkCss(tar); x.fillRect(X - wd*0.05, Y - h*0.62, wd*0.1, h*0.14); pkGable(x, X - wd*0.08, X + wd*0.08, Y - h*0.62, Y - h*0.68, { ...c, dark: tar }, 0.1);
     pkPoly(x, [[X - wd*0.035, Y - h*0.67], [X, Y - h], [X + wd*0.035, Y - h*0.67]], pkCss(tar)); },
-  row(x, X, Y, h, wd, c, night, lit, o){ // a terrace: three to five narrow houses sharing their walls, each its own brick or paint, sash
-    // windows with frames, a bay window now and then, steps to the door, chimney stacks with their pots
+  row(x, X, Y, h, wd, c, night, lit, o){ // a terrace: three to five narrow houses sharing their walls under one long roof, each its own
+    // brick or paint, sash windows with frames, a bay window now and then, steps to the door; the roof's ridge running
+    // along the street, chimney stacks on the party walls with their pots, a dormer here and there
+    // (Ruby, 2026-10-25: "this building is a little awkwardly shaped and kind of ugly": each house had its own steep
+    //  gable to the street, and seen at a slant the row read as a cluster of spikes; a terrace is roofed as one, its
+    //  ridge along the street, as the London terrace is: docs/prior-art/ringworld-countryside.md)
     const n = 3 + Math.floor(o.R()*3), hw = wd/n, M = [[150, 76, 58], [210, 196, 168], [150, 150, 146], [196, 120, 96], [110, 130, 150], [176, 168, 120]];
-    for(let q = 0; q < n; q++){ const hx = X - wd/2 + hw*(q + 0.5), hh = h*(0.75 + 0.25*o.R()), wc = pkMat(c, M[Math.floor(o.R()*M.length)], 0.6), ye = Y - hh*0.75;
-      pkShade(x, [[hx - hw/2, Y], [hx - hw/2, ye], [hx + hw/2, ye], [hx + hw/2, Y]], wc.body, ye, Y, 0.14); pkGable(x, hx - hw/2, hx + hw/2, ye, Y - hh, pkMat(c, [PK_SLATE, [150, 84, 64], [118, 108, 100], [92, 98, 112]][(q*3 + n) % 4], 0.55), 0);   // (each house its own slate or tile, never one dark comb along the row)
-      const sx = hx + hw/2 - hw*0.08, st = pkMat(c, PK_BRICK, 0.6); pkShade(x, [[sx, Y - hh*0.86], [sx, Y - hh*1.04], [sx + hw*0.16, Y - hh*1.04], [sx + hw*0.16, Y - hh*0.86]], st.body, Y - hh*1.04, Y - hh*0.86);
-      if(o.detail){ for(let k = 0; k < 3; k++) pkBar(x, sx + hw*(0.015 + k*0.05), Y - hh*1.09, hw*0.03, hh*0.05, PK_TERRA, o.px);
-        const dx = hx - hw*0.22, dh = (Y - ye)*0.4; pkShade(x, [[dx - dh*0.22, Y - (Y - ye)*0.05], [dx - dh*0.22, Y - dh], [dx + dh*0.22, Y - dh], [dx + dh*0.22, Y - (Y - ye)*0.05]], pkMat(c, [[40, 50, 70], [110, 30, 34], [30, 70, 60]][q % 3], 0.7).body, Y - dh, Y);
+    const ye = Y - h*0.7, yr = Y - h*0.97, ov = wd*0.02, rf = pkMat(c, [PK_SLATE, [118, 108, 100], [92, 98, 112]][Math.floor(o.R()*3)], 0.55);
+    // (the roof's slope toward you, one band the row's length, a hair over its ends; its far slope's edge the ridge)
+    pkShade(x, [[X - wd/2 - ov, ye], [X - wd/2 + wd*0.03, yr], [X + wd/2 - wd*0.03, yr], [X + wd/2 + ov, ye]], rf.body, yr, ye, 0.2);
+    pkBar(x, X - wd/2 + wd*0.03, yr - Math.max(o.px(0.4), h*0.012), wd*0.94, Math.max(o.px(0.4), h*0.02), rf.dark, o.px);
+    for(let q = 0; q < n; q++){ const hx = X - wd/2 + hw*(q + 0.5), wc = pkMat(c, M[Math.floor(o.R()*M.length)], 0.6);
+      pkShade(x, [[hx - hw/2, Y], [hx - hw/2, ye], [hx + hw/2, ye], [hx + hw/2, Y]], wc.body, ye, Y, 0.14);
+      // (each house's own slates, a little lighter or darker in its stretch of the roof; a dormer now and then)
+      const tone = o.R(); x.fillStyle = pkCss(tone < 0.5 ? rf.lit : rf.dark, 0.18); x.fillRect(hx - hw/2, yr, hw, ye - yr);
+      if(o.detail && o.R() < 0.4){ const dw = hw*0.32, db = ye - (ye - yr)*0.15, dt = ye - (ye - yr)*0.62; pkShade(x, [[hx - dw/2, db], [hx - dw/2, dt], [hx + dw/2, dt], [hx + dw/2, db]], wc.lit, dt, db);
+        pkGable(x, hx - dw/2, hx + dw/2, dt, dt - (db - dt)*0.55, rf, 0.12); pkFrame(x, hx - dw*0.3, dt + (db - dt)*0.18, dw*0.6, (db - dt)*0.62, c, night, o); }
+      if(o.detail){ const dx = hx - hw*0.22, dh = (Y - ye)*0.4; pkShade(x, [[dx - dh*0.22, Y - (Y - ye)*0.05], [dx - dh*0.22, Y - dh], [dx + dh*0.22, Y - dh], [dx + dh*0.22, Y - (Y - ye)*0.05]], pkMat(c, [[40, 50, 70], [110, 30, 34], [30, 70, 60]][q % 3], 0.7).body, Y - dh, Y);
         pkBar(x, dx - dh*0.32, Y - (Y - ye)*0.05, dh*0.64, (Y - ye)*0.05, wc.lit, o.px);
         const bay = o.R() < 0.4; for(let f = 1; f <= 2; f++){ if(bay && f === 1) { const by = Y - (Y - ye)*0.5; pkShade(x, [[hx - hw*0.02, Y - (Y - ye)*0.1], [hx - hw*0.02, by], [hx + hw*0.42, by], [hx + hw*0.42, Y - (Y - ye)*0.1]], wc.lit, by, Y); pkFrame(x, hx + hw*0.04, by + (Y - ye)*0.06, hw*0.32, (Y - ye)*0.28, c, night, o); continue; }
-          pkFrame(x, hx + hw*0.05, Y - (Y - ye)*0.42*f - (Y - ye)*0.02, hw*0.28, (Y - ye)*0.24, c, night, o); } } } },
+          pkFrame(x, hx + hw*0.05, Y - (Y - ye)*0.42*f - (Y - ye)*0.02, hw*0.28, (Y - ye)*0.24, c, night, o); } }
+      // (a cornice under the eaves, the house's own trim)
+      pkBar(x, hx - hw/2, ye, hw, Math.max(o.px(0.4), h*0.02), wc.lit, o.px); }
+    // (chimney stacks on the party walls and the ends, standing from behind the ridge, with their pots)
+    const st = pkMat(c, PK_BRICK, 0.6);
+    for(let q = 0; q <= n; q++){ if(q % 2 && q !== n) continue; const sx = X - wd/2 + hw*q + (q === 0 ? hw*0.12 : q === n ? -hw*0.12 : 0), sw = hw*0.2;
+      pkShade(x, [[sx - sw/2, yr + h*0.02], [sx - sw/2, Y - h*1.1], [sx + sw/2, Y - h*1.1], [sx + sw/2, yr + h*0.02]], st.body, Y - h*1.1, yr);
+      pkBar(x, sx - sw*0.6, Y - h*1.1, sw*1.2, h*0.02, st.lit, o.px);
+      if(o.detail) for(let k = 0; k < 2; k++) pkBar(x, sx - sw*0.35 + k*sw*0.45, Y - h*1.15, sw*0.25, h*0.05, PK_TERRA, o.px); } },
   pagoda(x, X, Y, h, wd, c, night, lit, o){ // five roofs stacked, each narrower, their eaves curling up; a spire of rings
     const n = 3 + Math.floor(o.R()*3), w2 = wd/2, roof = pkMix(c.dark, [60, 50, 50], 0.3), wall = pkMix(c.body, [190, 70, 50], 0.45);
     for(let q = 0; q < n; q++){ const u = q/n, yb = Y - h*0.82*u, yt = Y - h*0.82*(u + 1/n), w = w2*(1 - u*0.55);

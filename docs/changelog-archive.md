@@ -2,6 +2,18 @@
 
 The releases before the newest twenty (CHANGELOG.md), newest first.
 
+## Crux–Mimosa (2026-10-24)
+
+- Rain on Glass seen through keeps its drops: each now has a faint body, its dark rim and its highlight over the bent
+  surface beneath, where before, seeing through, the drops all but vanished at the preview's size.
+
+### Under the hood
+- `genGlassRain` lays a seeing-through drop as a rim and a highlight over a faint body, composited by their own
+  coverage. No fingerprint moved.
+- Reviewed the tests the film and See Through lean on (test/moving.test.mjs, test/textureLayers.test.mjs,
+  test/persistenceCoverage.test.mjs, where the film sheet's mark controls are left out of the look as the sheet's other
+  controls are): nothing stale.
+
 ## Hyades–Chamukuy (2026-10-24)
 
 - Rain on Glass sees through: laid over another surface with See Through on, each raindrop is a little lens over what

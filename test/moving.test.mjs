@@ -124,12 +124,11 @@ check('CRC-32 is the standard one', crc32(new TextEncoder().encode('123456789'))
   check('a mark starts where the control stands and comes back to it at the film\'s end, so the film loops (sway, sweep, drift)', ['sway', 'sweep', 'drift'].every(h => Math.abs(mv(h, 0) - 50) < 1e-9 && Math.abs(mv(h, 1) - 50) < 1e-6));
   check('a sway swings round where it stands; a sweep goes out to the farther end and back, never snapping; a drift wanders', Math.abs(mv('sway', 0.125) - 70) < 1e-9 && Math.abs(mv('sweep', 0.25) - 90) < 1e-9 && us.every((u, k) => !k || Math.abs(mv('sweep', u) - mv('sweep', us[k - 1])) < 3) && us.some(u => Math.abs(mv('drift', u) - 50) > 5));
   check('a mark keeps to the control\'s ends, and an angle wraps round', mv('sway', 0.125, { v0: 95 }) === 100 && Math.abs(markValue({ how: 'sweep', v0: 350, lo: 0, hi: 360, amt: 0.25, times: 1, wrap: true }, 0.5) - 80) < 1e-9);
-  // (a drone flight, Ruby: "drone shot camera including movement": the eye flies ahead and climbs, setting off and arriving
-  //  gently, the whole way told from the first frame so the world it flies over is built once)
+  // (a drone flight, Ruby: "generate a route per seed that the camera follows": the film tells the route how far along the
+  //  eye is, eased at both ends, and how long the film is; the route's turns and looking down are the seed's)
   const df = [0, 0.25, 0.5, 0.75, 1].map(u => a('drone', u));
-  check('a drone flight flies ahead and climbs (low first, then rising), from where it stands to the whole way, gently at both ends', df[0].fly.d === 0 && df[0].fly.rise === 0 && df[4].fly.d > 50 && df[4].fly.rise > 5 && df[2].fly.rise < df[4].fly.rise*0.3
-    && df.every((c, k) => !k || c.fly.d > df[k - 1].fly.d) && df[1].fly.d < df[4].fly.d*0.25 && df.every(c => c.fly.to === df[4].fly.d) && df[4].view > 40 && df[4].zoom === 100);
-  check('a longer film flies farther at the same speed, a fly-over\'s', Math.abs(cameraAlso('drone', 1, 40, 100, 30).fly.d - 3*df[4].fly.d) < 1e-9 && df[4].fly.d/10 >= 3.5 && df[4].fly.d/10 <= 6.7*1.1);
+  check('a drone flight follows the seed\'s route from its start to its end, gently at both ends', df.every(c => c.fly.route === 'seed' && c.fly.secs === 10) && df[0].fly.u === 0 && df[4].fly.u === 1
+    && df.every((c, k) => !k || c.fly.u > df[k - 1].fly.u) && df[1].fly.u < 0.25 && df[3].fly.u > 0.75 && cameraAlso('drone', 0.5, 40, 100, 30).fly.secs === 30);
   check('the view and zoom keep to their ranges', a('in', 1, 40, 380).zoom === 400 && a('out', 1, 40, 30).zoom === 25 && a('tilt', 0.5, 95).view >= 0 && a('spiral', 1, 90).view <= 100 && a('in', 1, 40, 300).zoom === 400);
 }
 // ---- the sheet's markup: each choice a radio group with one chosen by default, each group under a legend ----

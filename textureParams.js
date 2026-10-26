@@ -206,8 +206,7 @@ export const TEXTURE_PARAMS = {
   // ◯ PAINTED RINGWORLD (chains.js 'ringpaint'; Ruby: "a generative art piece that still looks like being on a ringworld"): Ringworld's camera, painted
   ringpaint:     [sliderOf('zoom', 'Band Width', 45),
                   sliderOf('amt', 'Landforms', 50),
-                  // who and what: the seed's own world, or one chosen; Mixed lays three side by side
-                  sliderOf('world', 'World', 0, { ticks:[0,14,29,43,57,71,86,100], names:['By the Seed','Wilds','Cities','Neon','Builders','Magic','Ruins','Mixed'] }),
+                  // (no World: every ring half wilds, its other worlds in stretches by the seed; Ruby, 2026-10-25)
                   // what grows (Flora) and what lives and moves (Fauna), each its own (Ruby: "maybe flora and fauna levels should
                   // be controlled seperately?"); the oil paint retired, its two sliders become Fauna and Detail
                   sliderOf('shape', 'Flora', 50),

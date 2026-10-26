@@ -212,7 +212,7 @@ check('importing the same spell twice does not duplicate it',
 {
   // (the camera taken out: an old look of a surface with a camera, saved before it, has none)
   const base = save(), { lookVersion, cameraTurn, cameraView, cameraZoom, ...old } = base;
-  check('a look says which format it was saved in', base.lookVersion === 11);
+  check('a look says which format it was saved in', base.lookVersion === 12);
   // (format 9: Floral Imprints' sixth slider became its Medium, its ink hues moved to the first two, the defaults emptied)
   load({ ...old, lookVersion: 8, texture: true, textureType: 'imprints', texP6: '70', textureTint2: '#1F4E8C', textureTint12: '#AA2200' });
   { const b = save(); check('an old Floral Imprints look: its Medium starts By the Seed, its default ink is the medium\'s own, a chosen second ink kept', b.texP6 === '0' && b.textureTint1 === '' && /^#AA2200$/i.test(b.textureTint2)); }
@@ -236,11 +236,15 @@ check('importing the same spell twice does not duplicate it',
   check('an old Circuit Board look at Magitech (four eras) stays the board it was: Atomic, at 75 of five eras', +s.texP7 === 75);
   load({ ...old, lookVersion: 4, texture: true, textureType: 'ringworld', texP2: '70', texP4: '40', texP7: '30', cameraTurn: '40', cameraView: '55', cameraZoom: '100' });
   s = save();
-  check('…its Landforms and Altitude carry on, its Cities as Works', s.textureType === 'ringpaint' && +s.texP2 === 70 && +s.texP6 === 30 && +s.texP5 === 42);
+  check('…its Landforms and Altitude carry on, its Cities as Works', s.textureType === 'ringpaint' && +s.texP2 === 70 && +s.texP5 === 30 && +s.texP4 === 42);   // (format 12 stepped them down a place)
   // format 11: the Ringworld's oil paint retired, its Paint and Brush sliders become Fauna and Detail (Ruby)
   load({ ...old, lookVersion: 10, texture: true, textureType: 'ringpaint', texP4: '70', texP7: '60', texP8: '88' });
   s = save();
-  check('an older Ringworld look meets Fauna and Detail at their defaults (40, Medium), its Life its Flora', +s.texP7 === 40 && +s.texP8 === 37 && +s.texP4 === 70);
+  check('an older Ringworld look meets Fauna and Detail at their defaults (40, Medium), its Life its Flora', +s.texP6 === 40 && +s.texP7 === 37 && +s.texP3 === 70);
+  // format 12: the Ringworld's World slider gone (Ruby: every ring half wilds); the sliders after it step down a place
+  load({ ...old, lookVersion: 11, texture: true, textureType: 'ringpaint', texP3: '57', texP4: '61', texP5: '22', texP6: '33', texP7: '44', texP8: '62', texP9: '77' });
+  s = save();
+  check('an older Ringworld look keeps every setting a place down, its World let go', +s.texP3 === 61 && +s.texP4 === 22 && +s.texP5 === 33 && +s.texP6 === 44 && +s.texP7 === 62 && +s.texP8 === 77);
   // format 4: the Tilt sliders onto the camera dial (Dune Ripples' fourth, Moss on Stone's fourth, Scrying Pool's sixth)
   load({ ...old, lookVersion: 3, texture: true, textureType: 'dunes', texP1: '140', texP4: '60', cameraTurn: '90', cameraView: '0', cameraZoom: '100' });
   s = save();

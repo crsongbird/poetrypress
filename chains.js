@@ -2626,15 +2626,16 @@ export const TEXTURE_CHAINS = {
       ['ringarch', { band: 45, '~band': '0,100', walls: 25, '~walls': '0,50', altitude: 15, '~altitude': '0,100', landforms: 50, '~landforms': '0,100', world: 0, '~world': '0,100', life: 50, '~life': '0,100', works: 50, '~works': '0,100', air: 60 }, 600, 120],   // 16
       ['ringland', { band: 45, '~band': '0,100', walls: 25, '~walls': '0,50', altitude: 15, '~altitude': '0,100', landforms: 50, '~landforms': '0,100', world: 0, '~world': '0,100', life: 50, '~life': '0,100', works: 50, '~works': '0,100', clutter: 50, '~clutter': '0,100', air: 60 }, 880, 160],   // 17
       ['material', { relief: 16, gloss: 25, shine: 30, shadow: 40, occlusion: 25, ambient: 50 }, 1440, 220],   // 18
-      ['surface', { name: 'Ringworld', ground: 'colour' }, 1720, 200],                                     // 19
-      ['knob', { slot: '9' }, 40, 1160]],                                                                     // 20 (Clutter)
+      ['surface', { name: 'Ringworld', ground: 'colour' }, 1720, 200]],                                    // 19
+    // (Ruby, 2026-10-25: "remove the 'world' slider": every ring half wilds, its other worlds in stretches by the seed;
+    //  the knobs a place up from Flora: 3 Flora, 4 Works, 5 Altitude, 6 Fauna, 7 Detail, 8 Clutter)
     wires: [[1, 1, 16, 'band'], [1, 1, 17, 'band'], [2, 1, 16, 'landforms'], [2, 1, 17, 'landforms'],
-      [2, 1, 16, 'walls'], [2, 1, 17, 'walls'], [3, 1, 16, 'world'], [3, 1, 17, 'world'],
-      [4, 1, 16, 'life'], [4, 1, 17, 'life'], [5, 1, 16, 'works'], [5, 1, 17, 'works'],
-      [6, 1, 16, 'altitude'], [6, 1, 17, 'altitude'], [7, 1, 17, 'fauna'], [8, 1, 17, 'detail'],
+      [2, 1, 16, 'walls'], [2, 1, 17, 'walls'],
+      [3, 1, 16, 'life'], [3, 1, 17, 'life'], [4, 1, 16, 'works'], [4, 1, 17, 'works'],
+      [5, 1, 16, 'altitude'], [5, 1, 17, 'altitude'], [6, 1, 17, 'fauna'], [7, 1, 17, 'detail'], [8, 1, 17, 'clutter'],
       [9, 2, 16, 5], [9, 1, 16, 6], [9, 2, 17, 5], [9, 1, 17, 6], [10, 1, 16, 2], [10, 2, 16, 3], [10, 3, 16, 4], [10, 1, 17, 2], [10, 2, 17, 3], [10, 3, 17, 4],
       [11, 1, 16, 7], [11, 1, 17, 7], [12, 1, 16, 8], [12, 1, 17, 8], [13, 1, 16, 9], [13, 1, 17, 9], [14, 1, 16, 10], [14, 1, 17, 10],
-      [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1], [20, 1, 17, 'clutter']] },
+      [15, 1, 16, 1], [16, 1, 17, 1], [17, 1, 18, 1], [18, 1, 19, 1]] },
   rainwater: { label: 'Rain on Water', div: 2, teach: 'Rain falling on still water. Raindrops makes every drop that has fallen in the last moment: a ring wave spreading from where it struck, a short packet of ripples that weakens as it widens, the newest still splashing. It hands on three maps: the ripples as heights, the splashes, and how far off each point of the water lies. Tint colors the water by that distance (your Water Hue near, the Sky Hue it reflects toward the horizon), and Displace bends that reflection through the ripples; the Light Engine raises the ripples and catches the light on them; Glow makes the splashes sparkle. View looks from overhead (0) across the water toward the horizon, where the rings grow small and the water calms. Try: Spread at 100 for wide old rings, or wire Raindrops\' Ripples into a Displace to see the poem through the water.', nodes: [
       ['knob', { slot: '1' }, 40, 40],               // 1  (100 of 40–250)
       ['knob', { slot: '2' }, 40, 140],                     // 2

@@ -102,17 +102,13 @@ export const SPELLS = {
 
 /** The Moving Image's camera, beyond its turn (the sheet's Also; docs/prior-art/film-animation.md §C): how much closer
  *  a push in comes by the film's end (a pull back goes as far the other way), how far a tilt leans across the view
- *  (in the view's points, 0 to 100) at its middle, a spiral's pull back and lean by its end, and a drone flight's
- *  speed and climb. */
+ *  (in the view's points, 0 to 100) at its middle, and a spiral's pull back and lean by its end (a drone flight's speed
+ *  and climb are its route's: stepsRing.js RG_DRONE). */
 export const FILM_CAMERA = {
   push: 1.5,
   tilt: 30,
   spiralPull: 1.5,
   spiralTilt: 25,
-  // (a drone flight: how fast the eye flies ahead along where it first looks, and how fast it climbs by the end, in metres a
-  //  second (a fly-over's 8 to 15 mph, docs/prior-art/film-animation.md §C), so a longer film flies farther, never faster)
-  droneSpeed: 7,
-  droneClimb: 2.5,
 };
 
 // ---------- sharing ----------

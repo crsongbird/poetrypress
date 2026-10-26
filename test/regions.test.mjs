@@ -38,22 +38,25 @@ const W = 0.0566, M = W*0.00025;
   for(let k = 0; k < 2000 && n < 20; k++){ const a = k*W*0.01, z = 0.1*W, { id, id2, b } = R.at(a, z), q = R.at(a + W*0.01, z); if(q.id !== id){ n++; if(b < W*0.02 && q.b < W*0.02 && id2 === q.id) ok++; } }
   check(`on either side of a border each point knows it is near it, and which region lies over it (${ok} of ${n})`, n > 5 && ok >= n*0.8); }
 
-// the Ringworld's World: each band names its world; By the Seed picks one of the six (now and then Mixed),
-// and Mixed lays three different ones side by side
-{ const { rgWorldOf, RG_WORLDS } = await import('../stepsRing.js');
-  const named = [14, 29, 43, 57, 71, 86].map(v => rgWorldOf(1234, v).name), seeded = Array.from({ length: 60 }, (_, s) => rgWorldOf(s*7919, 0)), mixed = rgWorldOf(99, 100);
-  check('the Ringworld\'s World: each band its world, in order', named.join() === RG_WORLDS.slice(1, 7).join());
-  check('…By the Seed picks among them (and sometimes Mixed), each world a single list but Mixed\'s three, all different',
-    seeded.every(w => RG_WORLDS.includes(w.name) && w.name !== 'seed') && new Set(seeded.map(w => w.name)).size >= 5 && seeded.every(w => w.name === 'mixed' ? w.list.length === 3 : w.list.join() === w.name)
-    && mixed.name === 'mixed' && new Set(mixed.list).size === 3); }
+// THE RING'S WORLDS (Ruby, 2026-10-25: "make sure the rings are 50% wilds, and all of the other regions are clustered
+// regions on rings in seed dependent ways"): every ring the wilds and two to four others by the seed; about half its
+// regions wild; the others in stretches, a region's neighbours mostly of its world
+{ const { rgWorldOf } = await import('../stepsRing.js'), rings = Array.from({ length: 40 }, (_, s) => rgWorldOf(s*7919 + 3, 0));
+  check('every ring is the wilds and two to four others, each once', rings.every(w => w.list[0] === 'wilds' && w.list.length >= 3 && w.list.length <= 5 && new Set(w.list).size === w.list.length));
+  check('the seeds choose among all the others', new Set(rings.flatMap(w => w.list.slice(1))).size === 5);
+  let wild = 0, all = 0, same = 0, pairs = 0;
+  for(const s of [3, 77, 4242, 9001]){ const w = rgWorldOf(s, 0), R = K.rkRegions(s, { W, worlds: w.list, half: true }); let prev = null;
+    for(let k = 0; k < 900; k++){ const a = k*2*Math.PI/900, I = R.info(R.at(a, 0).id); all++; if(I.world === 'wilds') wild++; if(prev && prev.id !== I.id){ pairs++; if(prev.world === I.world) same++; } prev = I; } }
+  check(`about half of each ring is wild (${(100*wild/all).toFixed(0)}%)`, wild/all > 0.35 && wild/all < 0.65);
+  check(`the worlds come in stretches: most regions border one of their own world along the ring (${same} of ${pairs})`, same/pairs > 0.5); }
 
 // THE STORE: border marks where the ways cross, walls round old-world towns, nothing built on a wall
 { const { installCanvasMock } = await import('./canvasMock.mjs'); installCanvasMock();
   const T = await import('../textureGenerators.js'), SR = await import('../stepsRing.js'), defs = T.paramsFor('ringpaint'), t6 = T.TEXTURE_CAPS.ringpaint.tintDefaults || [];
-  const store = (seed, world) => { const o = { seed, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 200/3072, camera: { view: 100, zoom: 100 } };
-    defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); o.p3 = String(world); T.clearTextureCache(); T.getTextureCanvas('ringpaint', 200, 120, o); return SR.ringKeptStores().pop(); };
+  const store = seed => { const o = { seed, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 200/3072, camera: { view: 100, zoom: 100 } };
+    defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); T.clearTextureCache(); T.getTextureCanvas('ringpaint', 200, 120, o); return SR.ringKeptStores().pop(); };
   let marks = 0, signs = 0, named = 0, walls = 0, onWall = 0, wrongWorld = 0, region = 0, things = 0, bldgs = 0, tooSteep = 0;
-  for(const [seed, world] of [[15, 14], [26, 28], [5, 71], [4, 71], [7, 86]]){ const st = store(seed, world); if(!st) continue;
+  for(const seed of [15, 26, 5, 4, 7, 3]){ const st = store(seed); if(!st) continue;
     // (Ruby: "buildings should never spawn in the air": each stands where its ground falls no more than its kind allows)
     for(const o of st) if(o.c === 'bldg' && o.up !== undefined){ bldgs++; if((o.up + o.down) > o.wM*(SR.RG_FALL[o.kind] ?? SR.RG_FALL.house) + 1e-6) tooSteep++; }
     for(const o of st){ things++; if(o.region) region++; if(['boundary', 'banner', 'welcome'].includes(o.kind)){ marks++; if(o.kind === 'welcome'){ signs++; if(o.mark && o.mark.say) named++; } } }

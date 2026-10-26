@@ -7,8 +7,9 @@
  *   rkRegions(seed, o)  the floor parted into regions some five kilometres along and two across, each the land nearest
  *                       one point of a jittered grid (a Voronoi cell, as map makers part a world), its borders
  *                       wandering a little as real borders do, round the ring so the arch overhead is parted as the
- *                       land at your feet is. o.W is the band's width (ring units), o.worlds the worlds a Mixed ring
- *                       shares out (one per region). Returns { at(a, z), info(id) }: at gives the region there (its
+ *                       land at your feet is. o.W is the band's width (ring units), o.worlds the worlds a ring
+ *                       shares out (one per region; with o.half the first, the wilds, over about half the ring and
+ *                       the others in clustered stretches). Returns { at(a, z), info(id) }: at gives the region there (its
  *                       id; id2, the region over its nearest border; and b, how far inside that border the point
  *                       lies, in ring units: the same object every call, so read it at once); info gives a region's
  *                       name, world, element and faction
@@ -89,7 +90,16 @@ export function rkRegions(seed, o){
     const pa = (i + 0.12 + 0.76*rkU(i, j, s + 811))*DA, pz = (j + 0.12 + 0.76*rkU(i, j, s + 812))*DZ, fi0 = Math.floor(pa/FA), fj0 = Math.floor(pz/FZ); let fd = Infinity, fid = 0;
     for(let di = -1; di <= 1; di++) for(let dj = -1; dj <= 1; dj++){ const fi = fi0 + di, fj = fj0 + dj, ff = wrap(fi, NF), qa = (fi + 0.2 + 0.6*rkU(ff, fj, s + 841))*FA, qz = (fj + 0.2 + 0.6*rkU(ff, fj, s + 842))*FZ, d = (qa - pa)*(qa - pa) + (qz - pz)*(qz - pz);
       if(d < fd){ fd = d; fid = ff*16 + fj + 8; } }
-    const world = worlds.length < 2 ? worlds[0] : worlds[Math.floor(R()*worlds.length)];
+    // (half wilds, the rest in clusters, Ruby, 2026-10-25: "make sure the rings are 50% wilds, and all of the other regions
+    //  are clustered regions on rings in seed dependent ways": o.half, the ring's own worlds after the wilds in o.worlds.
+    //  A slow noise round the ring by the region's place parts it, the wilds where it is low, about half; where it is
+    //  high a second, slower noise says which of the others, so neighbours share their world and each comes in a stretch)
+    const pickW = R();
+    const world = o.half && worlds.length > 1 ? (() => { const PC = Math.max(2, Math.round(NA/6)), u = i*PC/NA, v = j*0.2;
+        const n1 = lkNoise(u, v, s + 850, PC) + 0.3*lkNoise(u*2, v*1.6, s + 851, PC*2); if(n1 < 0) return worlds[0];
+        const n2 = 0.5 + 0.5*lkNoise(u*0.6 + 3.7, v*0.3, s + 852, PC) + 0.25*lkNoise(u*1.7, v, s + 853, PC*2), k = worlds.length - 1;
+        return worlds[1 + Math.max(0, Math.min(k - 1, Math.floor(n2*k)))]; })()
+      : worlds.length < 2 ? worlds[0] : worlds[Math.floor(pickW*worlds.length)];
     let element = null; if(world === 'magic'){ let tot = 0; for(const e of RK_ELEMENTS) tot += e.wt; let q = R()*tot; for(const e of RK_ELEMENTS){ q -= e.wt; if(q < 0){ element = e; break; } } element = element || RK_ELEMENTS[0]; }
     r = { id, name: rkName(R, world), world, element, faction: faction(fid) }; if(kept.size > 4000) kept.clear(); kept.set(id, r); return r; };
   return { at, info };

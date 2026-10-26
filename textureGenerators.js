@@ -530,7 +530,8 @@ function cameraOf(type, opts){
   return { turn: r2(((num(c.turn, d.turn ?? 0) % 360) + 360) % 360), view: r2(Math.max(0, Math.min(130, num(c.view, d.view ?? 0)))), zoom: r2(Math.max(25, Math.min(400, num(c.zoom, d.zoom ?? 100)))),
     ...(time || film ? { time, dt, ...(film ? { frame: Math.max(0, Math.round(+c.frame)), step: r2(Math.max(0, num(c.step, 0))), ...(c.side ? { side: c.side < 0 ? -1 : 1 } : {}), ...(num(c.fps, 0) > 0 ? { fps: Math.round(num(c.fps, 0)) } : {}) } : {}) } : {}),
     // (and where the eye has been carried, in a drone shot: metres along its heading and up, to a centimetre; none at rest)
-    ...(c.fly && (num(c.fly.d, 0) || num(c.fly.to, 0)) ? { fly: { d: r2(num(c.fly.d, 0)), rise: r2(num(c.fly.rise, 0)), head: r2(num(c.fly.head, 0)), to: r2(num(c.fly.to, num(c.fly.d, 0))) } } : {}) };
+    ...(c.fly && c.fly.route === 'seed' ? { fly: { route: 'seed', u: Math.round(Math.max(0, Math.min(1, num(c.fly.u, 0)))*10000)/10000, secs: r2(Math.max(1, num(c.fly.secs, 10))) } }
+      : c.fly && (num(c.fly.d, 0) || num(c.fly.to, 0)) ? { fly: { d: r2(num(c.fly.d, 0)), rise: r2(num(c.fly.rise, 0)), head: r2(num(c.fly.head, 0)), to: r2(num(c.fly.to, num(c.fly.d, 0))) } } : {}) };
 }
 // THE PAGE'S TRUE SHAPE (Ruby: the saved image's board was not the preview's): the parts that grow by chance on
 // their grid (texCore `pageGrid`) are given the export's own size, and grow on its grid at every size. A request
@@ -633,7 +634,7 @@ function describeRequest(type, w, h, opts){
             + (chainReadsPoem(type) && opts.text ? `_q${layoutHash(poemLines(opts.text))}` : '')
             // (whether it is Text Aware, and whether it fills the letters, only for a surface that reads the poem)
             + ((type === 'athanor' || type === 'athanorsteps' || chainReadsPoem(type)) ? (opts.fill ? '_F' + Math.round(+opts.fill*100) : '') + (opts.around ? '_R' + Math.round(+opts.around*100) : '') + (opts.aware === false ? '_A0' : '') : '')
-            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time || cam.frame !== undefined ? `_T${cam.time}x${cam.dt}` + (cam.frame !== undefined ? `f${cam.frame}s${cam.step}` + (cam.side ? `d${cam.side}` : '') : '') : '') + (cam.fly ? `_F${cam.fly.d}u${cam.fly.rise}h${cam.fly.head}t${cam.fly.to}` : '') : '')(cameraOf(type, opts)))
+            + ((cam => cam ? `_cm${cam.turn}_${cam.view}_${cam.zoom}` + (cam.time || cam.frame !== undefined ? `_T${cam.time}x${cam.dt}` + (cam.frame !== undefined ? `f${cam.frame}s${cam.step}` + (cam.side ? `d${cam.side}` : '') : '') : '') + (cam.fly ? (cam.fly.route ? `_R${cam.fly.u}s${cam.fly.secs}` : `_F${cam.fly.d}u${cam.fly.rise}h${cam.fly.head}t${cam.fly.to}`) : '') : '')(cameraOf(type, opts)))
             + (inkKeyed ? `_i${opts.ink || ''}` : '')
             + ((pg => pg ? `_p${pg[0]}x${pg[1]}` : '')(pageOf(type, w, h, opts)))
             // (SEE THROUGH: the lens stacked under the picture, only for a surface that can bend what lies beneath)

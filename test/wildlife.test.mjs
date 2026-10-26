@@ -54,7 +54,7 @@ for(const kind of kinds){ let worst = 0;
 { const { installCanvasMock } = await import('./canvasMock.mjs'); installCanvasMock();
   const T = await import('../textureGenerators.js'), R = await import('../stepsRing.js'), defs = T.paramsFor('ringpaint'), t6 = T.TEXTURE_CAPS.ringpaint.tintDefaults || [];
   const draw = (turn, clutter) => { const o = { seed: 4242, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 120/3072, camera: { turn, view: 100, zoom: 100 } };
-    defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); o.p9 = String(clutter); T.getTextureCanvas('ringpaint', 120, 80, o); return R.ringKeptStores().slice(-1)[0] || []; };
+    defs.forEach((d, j) => o['p' + (j + 1)] = String(d.def)); o.p8 = String(clutter); T.getTextureCanvas('ringpaint', 120, 80, o); return R.ringKeptStores().slice(-1)[0] || []; };
   const a = draw(0, 50), b = draw(140, 61), ids = new Set(a.map(o => o.id)), byRs = new Map(a.map(o => [o.c + o.rs, o.id]));
   check(`every thing in the world has an id of its own and tags (${a.length} things)`, a.length > 50 && ids.size === a.length && a.every(o => o.id && Array.isArray(o.tags) && o.tags.length >= 2));
   const trees = b.filter(o => o.c === 'tree');

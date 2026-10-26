@@ -4,6 +4,35 @@ Patch notes, newest first: one section per release, named for its moon. The
 newest section is also the release's commit message (`node build.mjs --notes`
 prints it).
 
+## Scorpius–Jabbah (2026-10-25)
+
+- Drone flights follow a route of the seed's own. The route heads out toward the most picturesque thing within reach (a
+  coast, a town, a summit or a lake), passes it to one side and carries on. The drone climbs to a proper height of about
+  25 to 80 m, turns to watch the subject as it goes by, and looks down a little. It keeps clear of the hills it crosses.
+- Drone films render faster. Land the drone has already flown over is kept, so it is not worked out again, and shadows
+  no longer have to be recomputed every frame.
+- No more World slider. Every Ringworld is now wild over about half its length, with two to four other worlds (cities,
+  neon, the builders', magic, ruins), picked by the seed, in stretches of their own. Saved looks keep all their other
+  settings.
+- Paved towns have proper streets. Wherever a world paves its roads, the streets follow one grid turned to suit the
+  seed: local streets block by block, a collector every third street and a wide arterial every ninth, laid out by how
+  dense the town is. Paved roads between towns run straight. Dirt and gravel paths still wander with the land.
+- Rows of houses sit under one long roof, its ridge running along the street, with chimneys between the houses and a
+  dormer here and there. They no longer look like a cluster of spikes when seen at an angle.
+- It snows less: only in a seed's winter, and more lightly.
+
+### Under the hood
+- `rgDroneRoute` plans each seed's route, and the film sends only how far along it the camera is (`fly.route`). The
+  route's world is built once, scattered along its whole line (`L.path` is now a line of points).
+- Corner data for the land is now looked up by its place in the world, wrapping round in each ring's store (`kAt`), so
+  land the camera has passed is reused.
+- `rkRegions` gained `half`: the wilds and the seed's clustered worlds. `rgWorldOf` picks a ring's worlds, and the
+  Ringworld's knobs each moved down a place. Saved looks are converted from format 11 to 12.
+- The streets' grid and their hierarchy (`PAVED`, `PAVES`), and engineered paved roads (`walk`'s stiff).
+- Reviewed the tests: the regions suite now checks the half-wild rings and their clustered worlds instead of the World
+  slider. The audit suite checks the format-12 conversion. The Ringworld and moving suites check the drone's route.
+- New research notes: docs/prior-art/ringworld-streets.md (road hierarchy, block sizes, procedural cities).
+
 ## Scorpius–Iklil (2026-10-25)
 
 - Drone flights. In the film window, Camera round now has a new Also choice, Drone flight. The camera itself flies ahead
@@ -469,15 +498,3 @@ prints it).
 - `rgDishAim` gives the array's aim at a moment of the film; `pkDish` draws a dish turned to a bearing and tipped to a
   height. A surface says whether it can make a film by itself through its caps (`canFilm`); `syncSaveHint` shows the
   hint. No fingerprint moved.
-
-## Crux–Mimosa (2026-10-24)
-
-- Rain on Glass seen through keeps its drops: each now has a faint body, its dark rim and its highlight over the bent
-  surface beneath, where before, seeing through, the drops all but vanished at the preview's size.
-
-### Under the hood
-- `genGlassRain` lays a seeing-through drop as a rim and a highlight over a faint body, composited by their own
-  coverage. No fingerprint moved.
-- Reviewed the tests the film and See Through lean on (test/moving.test.mjs, test/textureLayers.test.mjs,
-  test/persistenceCoverage.test.mjs, where the film sheet's mark controls are left out of the look as the sheet's other
-  controls are): nothing stale.

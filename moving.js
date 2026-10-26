@@ -108,7 +108,10 @@ export function cameraAlso(kind, u, view, zoom, secs = 10){
   // (a drone flight, Ruby: "drone shot camera including movement": the eye itself carried ahead, setting off and
   //  arriving gently, skimming low and then climbing as it goes, as a fly-over is flown, its gaze dipping a little as it
   //  climbs; fly: metres flown and climbed so far, and the whole way; secs: the film's length)
-  if(kind === 'drone'){ const s = u*u*(3 - 2*u), to = F.droneSpeed*Math.max(1, secs); return { view: v(view + 6*s), zoom, fly: { d: to*s, rise: F.droneClimb*Math.max(1, secs)*s*s*0.5, to } }; }
+  //  (Ruby: "generate a route per seed that the camera follows … make sure the route is picturesque": the route itself, its
+  //  turning and its looking down, are the seed's, worked out where the world is: stepsRing's rgDroneRoute; here only how
+  //  far along it the eye is, eased at both ends, and the film's length)
+  if(kind === 'drone'){ const s = u*u*(3 - 2*u); return { view, zoom, fly: { route: 'seed', u: s, secs: Math.max(1, secs) } }; }
   return { view, zoom };
 }
 

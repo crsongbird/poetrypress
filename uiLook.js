@@ -135,7 +135,7 @@ export function applyPersisted(s){
 // Circuit Board's five eras; 5 Ringworld's Stand At slider becoming Traffic; 6 the dial's handle the light (looks lit
 // from its far side turned half round); 7 the Black Hole seen from the camera dial.
 // Older looks are translated on load
-const LOOK_VERSION = 11;
+const LOOK_VERSION = 12;
 // SEE THROUGH's default for a look that doesn't say (Ruby: on for a new page, saved looks as they were): a look someone saved
 // carries its version and was made without it; the app's own looks (its presets, the page it opens on) carry none
 const seeByDefault = s => !(+(s && s.lookVersion) > 0);
@@ -202,7 +202,13 @@ export function serializeCurrentSettings(){
 /** A look made with a texture that has since been retired, as its successor.
  *  Zen Garden became Dune Ripples; Foxing and Fold Ghost merged into Old
  *  Paper — their knobs translated so the look stays close to what it was. */
-function retireLook(s){ return retireFormat11(retireRingworld(retireFormat10(retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s))))))))))))); }
+function retireLook(s){ return retireFormat12(retireFormat11(retireRingworld(retireFormat10(retireFormat9(retireFormat8(retireFormat7(retireFormat6(retireFormat5(retireFormat4(retireCamera(retireBaseLayer(retireBlend(retireLookOnce(s)))))))))))))); }
+/** THE RINGWORLD'S WORLD SLIDER RETIRED (format 12; Ruby, 2026-10-25: "remove the 'world' slider and make sure the rings
+ *  are 50% wilds"): every ring is half wilds now, its other worlds by the seed; the sliders after it step down a place
+ *  (Flora third, Works, Altitude, Fauna, Detail, Clutter eighth), so an older look keeps each of its settings. */
+function retireFormat12Layer(L){ if(!L || L.textureType !== 'ringpaint') return L; const o = { ...L };
+  for(let k = 3; k <= 8; k++){ const v = L['texP' + (k + 1)]; if(v !== undefined) o['texP' + k] = v; else delete o['texP' + k]; } delete o.texP9; return o; }
+function retireFormat12(s){ if(!s || +s.lookVersion >= 12) return s; let o = retireFormat12Layer(s); if(o && o.baseLayer) o = { ...o, baseLayer: retireFormat12Layer(o.baseLayer) }; return o; }
 /** THE RINGWORLD'S PAINT RETIRED (format 11; Ruby: "Retiring the paint filter and remapping those sliders for other
  *  purposes"): its seventh slider is Fauna now and its eighth Detail. An older look meets them at their defaults (Fauna as
  *  the new one, Detail at Medium, which is how the land was always drawn), and its Life is the Flora it always set. */

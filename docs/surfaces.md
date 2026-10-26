@@ -347,9 +347,8 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     sand at the water, snow above the snowline; the patchwork of fields far off (`rgFieldPatch`). Far land is drawn up to
     3.2 times taller than it is (a painter's exaggeration, by how far along the floor it lies from where you stand, so
     still the land's and not the camera's: `exH`), never above the walls; its colours by its true height.
-  - **World** (`RG_WORLDS`, `RG_PROF`): By the Seed, Wilds, Cities, Neon,
-    Builders, Magic, Ruins, Mixed (three, region by region: `rkRegions`). Each world's
-    weights say what it raises; its ground, its lights (the page's accents for
+  - **Worlds** (`RG_WORLDS`, `RG_PROF`): Wilds, Cities, Neon, Builders, Magic, Ruins, region by region (`rkRegions`; the
+    ring's worlds below). Each world's weights say what it raises; its ground, its lights (the page's accents for
     Neon and Magic, through two Accent parts: `ringpaint` is colorKeyed; the magic
     world's leaning to its regions' elements), its air's tint.
   - **The camera sweeps; the world stays** (Ruby: "we should be able to sweep
@@ -358,7 +357,7 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     turns"; docs/prior-art/ringworld-terrain.md §4): nested rings of square cells, each ring's twice the last (a geometry
     clipmap), the finest round where you stand, each corner's height the land kit's at its own place asked for detail
     down to its cell's size (`vh`); each ring's outer part eases into the next coarser ring's shape, so their edges meet.
-    Every corner's height, ground colour and sunlight is kept by its place and its ring's cell size (`rawH`), so a turn,
+    Every corner's height, ground colour and sunlight is kept by its place and its ring's cell size (`tH`), so a turn,
     a zoom, a rise or a film's frames ask the land kit nothing twice (Ruby: "during animations the ring is continuously
     regenerated"). Each corner is shaded by its own slope (`kSunAt`), the cells between graded from corner to corner, so
     a hill never shows rows of facets; the walk toward the sun for its shadow begins past its own cell, so a slope never
@@ -434,6 +433,13 @@ Alphabetical. These are the non-obvious facts about particular surfaces.
     row of houses or a factory hardly at all, a pueblo or a castle on its hill much more); the land under a building is
     levelled to its middle's height and eased back over a skirt (`rgPads`), so its door meets the ground. A field
     whose corners fall more than one in four (a terrace seven in ten) is not sown.
+  - **The ring's worlds** (Ruby: "make sure the rings are 50% wilds, and all of the other regions are clustered regions on
+    rings in seed dependent ways"): no World slider; every ring the wilds over about half its regions and two to four
+    other worlds by the seed (`rgWorldOf`), each in clustered stretches by a slow noise round the ring (rkRegions' half).
+  - **Streets** (Ruby: "the moment things get paved or neon they need to be organized and hierarchical";
+    docs/prior-art/ringworld-streets.md): where a world paves, one grid of streets fixed in the world, turned by the seed:
+    local streets every block, a collector every third line, an arterial every ninth, each by the town's density; paved
+    roads between towns engineered and straight; earth and gravel paths still wander.
   - **The eye carried** (Ruby: "drone shot camera including movement (this introduces player movement)"): the eye may
     stand anywhere along the ring and across it, not only where the seed stands you (`L.a0`, `L.z0`; the seed's own place
     `L.zS`); the film's Drone flight carries it (docs/prior-art/film-animation.md §C). The land kit, the store and the

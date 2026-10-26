@@ -11,9 +11,15 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 - THE LAND IN STEPS, NOW WITHOUT LINES: shelves closer to the first painted ring's ridge-behind-ridge look, fewer in
   the city worlds; the lit lines along crests and shelf lips are gone, and the land gleams where it turns between the
   sun and the eye instead, brightest looking into the sun. Is the gleam strong enough, and on the right ground?
-- DRONE FLIGHT: Film → Camera round → Also → Drone flight carries the eye ahead along where it first looks at a
-  fly-over's speed, low and then climbing, over the land as it is (the world built once for the whole flight, so nothing
-  pops). Right speed and climb? Which flights next (dronie, rocket, orbit, following a road)?
+- DRONE FLIGHT, NOW ALONG THE SEED'S ROUTE: Film → Camera round → Also → Drone flight follows a route of the seed's own,
+  out toward its most picturesque thing (a coast, a town, a summit, a lake), past it at its side and on, rising to a
+  drone's height, turning to watch the subject as it passes and looking down. Picturesque enough? Which flights next?
+- HALF WILDS: no World slider; every ring is wilds over about half of it, its other two to four worlds in stretches by
+  the seed. Old looks keep their other settings. Is the balance right?
+- STREETS: paved towns lay a grid of streets (local, collector, arterial by the town's density), paved roads between
+  towns run straight and engineered; dirt paths still wander. Does it read as a city sim's?
+- THE TERRACE: a row of houses now under one long roof, ridge along the street, chimneys on the party walls.
+- LESS SNOW: snow only in a seed's winter, and lighter.
 - THE SKY'S GRID GONE: the overcast is now one solid sheet; the grid seen at 720p should be gone. Still there on that seed?
 - NOTHING SEE-THROUGH: boulders, huts and other things are painted after every patch of land under them, so the ground
   no longer shows through their lower parts. Any still see-through? (Which seed was it?)
@@ -95,9 +101,13 @@ Only what Ruby hasn't seen yet. When Ruby answers one, or speaks to it, it goes 
 ## 2 · Ruby's notes to act on
 - RUBY'S ORDERS (2026-10-24 and 25; "Nothing I am saying is a suggestion"; every idea in docs/ring-ideas.md approved for
   production). In the order they are being built:
-  - THE DRONE SHOT, what is left: more flights (a dronie flying back and up, a rocket straight up, an orbit round a
-    thing, a flight that follows a road or a river), banking into a turn; the far land's painterly height (exf) is by the
-    eye's distance, so the far ranges change their height a little as a long flight nears them; a path chosen on the dial.
+  - THE DRONE SHOT, what is left: more flights (a dronie flying back and up, a rocket straight up, an orbit round the
+    subject, a flight that follows a road or a river), banking into a turn; the far land's painterly height (exf) is by the
+    eye's distance, so the far ranges change their height a little as a long flight nears them; a film's frames are still
+    about as slow as a still of what the drone sees (more land and woods in view from a height); the GPU path is the cure.
+  - RUBY'S NOTES (2026-10-25, 22:25), what is left: a wider diversity of wildlife (medium and small predators, fantastic
+    life) and interesting weathers; raise the standard of the other textures and items to the new painted style; city
+    buildings laid in their blocks, facing the streets.
   - THE FILM WINDOW, what is left: a journey (the eye carried along a seed's own interesting path, up to two days long,
     now that the land is generated); clearer moves, more of them; then keys on a reel (docs/prior-art/film-studio.md).
   - THE GPU PATH (Ruby: "how much of this can be drawn on the GPU game engine style … a performance optimized code path"):

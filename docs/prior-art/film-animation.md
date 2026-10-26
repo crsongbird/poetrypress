@@ -298,6 +298,13 @@ The main page stays as it is. The marks show only in a marking mode entered from
     the whole way), so each frame is its own surface; the world it flies over is built once for the whole way (the store
     sown along the flight's line), so no frame sees a thing appear or vanish; the land's mesh follows the eye, kept by
     place, and the eye never sinks into a hill it crosses.
+  - The route by the seed (Ruby: "allow the camera to pitch down a bit, turn, maybe generate a route per seed that the
+    camera follows … make sure the route is picturesque"): what a pilot flies to, weighed within the flight's reach
+    ahead, a coast, a town, a summit above the land round it, a lake to cross; the route runs out toward the best of
+    them, passes it at its side (a reveal, never flown into) and goes on; the eye looks ahead, turns toward the subject
+    as it nears and passes (at most seventy degrees aside), looks down 4° more at the start and some 20° by the pass,
+    and rises soon to a drone's own height (25 to 80 m by the film's length), keeping clear of what it crosses
+    (`rgDroneRoute`). The film tells it only how far along (eased at both ends) and the film's length.
 
 ### D. Moving controls: sway, sweep, drift (moderate; the "arbitrary settings")
 

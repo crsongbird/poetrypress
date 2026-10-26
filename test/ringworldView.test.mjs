@@ -75,4 +75,14 @@ for(const hd of [11, 33, 61]) check(`a brick building ${hd} px tall at its true 
   check('a flight\'s world is built once: the same store at its start, its middle and its end', A.st === B.st && B.st === C.st && A.st.length > 50);
   check('the eye has gone somewhere: its rings stand about another place', B.m.ca && A.m.ca && B.m.ca[0] !== A.m.ca[0]); }
 
+// THE DRONE'S ROUTE (Ruby: "generate a route per seed that the camera follows … make sure the route is picturesque"): the
+// seed's own, the same each time; it goes somewhere (its end far from its start), and as it goes the eye turns and looks down
+{ const { installCanvasMock } = await import('./canvasMock.mjs'); installCanvasMock();
+  const T = await import('../textureGenerators.js'), SR = await import('../stepsRing.js'), defs = T.paramsFor('ringpaint'), t6 = T.TEXTURE_CAPS.ringpaint.tintDefaults || [];
+  const shot = u => { const o = { seed: 511298746, light: 154, lightTilt: 40, tint1: t6[0], tint2: t6[1], hues: t6.slice(2), scale: 160/3072, camera: { view: 100, zoom: 100, turn: 0, fly: { route: 'seed', u, secs: 12 } } };
+    defs.forEach((dd, j) => o['p' + (j + 1)] = String(dd.def)); T.clearTextureCache(); T.getTextureCanvas('ringpaint', 160, 100, o); return { st: SR.ringKeptStores().pop(), m: SR.ringMeshOf() }; };
+  const a = shot(0), b = shot(0.5), c = shot(1), c2 = shot(1);
+  check('the seed\'s route is its own: the same flight twice', JSON.stringify(c.m.ca) === JSON.stringify(c2.m.ca) && JSON.stringify(c.m.cz) === JSON.stringify(c2.m.cz));
+  check('the route goes somewhere, and its world is built once for all of it', (c.m.ca[0] !== a.m.ca[0] || c.m.cz[0] !== a.m.cz[0]) && a.st === b.st && b.st === c.st); }
+
 done();

@@ -24,10 +24,15 @@ design judgment.
   hidden wherever the land stands nearer. Each by the hash of its cell of the sky round the eye, so a film's flakes
   are the same flakes frame to frame.
 - Beyond the shells the fall is a veil over the far land and everything on it: the land's haze reaches its full depth
-  far sooner (snow some 900 m, a storm 1.3 km, rain 2.6 km, the AMS's moderate snow), its colour the snow's white or the
+  far sooner (snow some 1.4 km, the AMS's light snow, a storm 1.3 km, rain 2.6 km), its colour the snow's white or the
   rain's grey.
 - What lies: snow over the open ground, thinner on the steep, the rock showing on cliffs, a town's ways a little
   trodden; along every conifer tier's top, in caps on broadleaf crowns, on bare twigs, on roofs; the meadow flowers
   closed, the tufts frosted.
 - The overcast ceiling is laid as one solid sheet and laid on the sky once (Ruby: "there's a grid on this seed"): its
   quads, each see-through and each edge stroked, had laid every seam twice.
+
+## 3 · Less of it (Ruby, 2026-10-25: "feel like it snows too much") [est]
+
+- Snow only in a seed's winter (December to February and the edges of November and March); the same seeds fall as rain
+  in the other seasons. The fall less than half as thick, and the veil a light snow's.

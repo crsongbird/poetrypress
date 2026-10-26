@@ -1275,7 +1275,7 @@ let RENDER_SCALE = 1, PAGE_SIZE = null;
 // (the Ringworld's clouds drift, its stars wheel, its lights flicker); 0 at rest, so a still is as it always was
 let SCENE_TIME = 0, SCENE_DT = 0, SCENE_FRAME = null, SCENE_STEP = 0, SCENE_SIDE = 0, SCENE_FPS = 0, SCENE_FLY = null;
 // (where a drone flight has carried the eye: { d, rise, head, to } in metres and degrees, or none)
-export function setSceneFly(f){ SCENE_FLY = f && (f.d || f.to) ? { d: +f.d || 0, rise: +f.rise || 0, head: +f.head || 0, to: +f.to || 0 } : null; }
+export function setSceneFly(f){ SCENE_FLY = f && f.route === 'seed' ? { route: 'seed', u: +f.u || 0, secs: +f.secs || 10 } : f && (f.d || f.to) ? { d: +f.d || 0, rise: +f.rise || 0, head: +f.head || 0, to: +f.to || 0 } : null; }
 // (a film's frame and its mean step, the scene's seconds a frame over the whole film: from these the scene runs its own
 //  clocks evenly and only forward, however the hours are spread over the frames; none in a still)
 // (and, held the length of a film, which way round the Ringworld's dusk comes: the dial's light would turn it over as the
